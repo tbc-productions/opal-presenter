@@ -25,9 +25,12 @@ import pytest
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.ui.media import MediaType, get_supported_media_suffix
+from openlp.core.ui.icons import UiIcons
+from openlp.plugins.media.lib.db import Item
 from openlp.plugins.media.lib.mediaitem import MediaMediaItem
 
 
@@ -167,3 +170,200 @@ def test_load_item_metadata_columns(media_item):
     # THEN: Date column should be populated, tooltip enriched with type and size
     assert result.text(1) == datetime.fromtimestamp(1700000000.0).strftime('%Y-%m-%d %H:%M')
     assert result.toolTip(0) == '/media/video.mp4\nMP4 · 150.0 MB'
+
+
+@patch('openlp.plugins.media.lib.mediaitem.critical_error_message_box')
+def test_generate_slide_data_blocks_unsupported_media(mocked_error_dialog: MagicMock, media_item, tmp_path):
+    """
+    Test that generate_slide_data returns False when the platform cannot decode the file.
+    """
+    # GIVEN: a real file path and media controller reporting unsupported
+    media_path = tmp_path / 'unsupported.mp4'
+    media_path.write_bytes(b'test')
+    mocked_db_item = Item(name='unsupported.mp4', file_path=str(media_path))
+    mocked_tree_item = MagicMock()
+    mocked_tree_item.data.return_value = mocked_db_item
+    mocked_service_item = MagicMock()
+    mocked_media_controller = MagicMock()
+    mocked_media_controller.is_media_supported.return_value = (False, 'decode unsupported')
+    Registry().register('media_controller', mocked_media_controller)
+
+    # WHEN: generate_slide_data is called
+    result = media_item.generate_slide_data(mocked_service_item, item=mocked_tree_item)
+
+    # THEN: it should reject the media and show a user-facing error
+    assert result is False
+    mocked_error_dialog.assert_called_once()
+
+
+@patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem.validate_and_load')
+@patch('openlp.plugins.media.lib.mediaitem.critical_error_message_box')
+def test_validate_and_load_filters_unsupported_files(mocked_error_dialog: MagicMock,
+                                                     mocked_super_validate: MagicMock,
+                                                     media_item,
+                                                     tmp_path):
+    """
+    Test that validate_and_load only forwards supported files to the base implementation.
+    """
+    # GIVEN: one supported file and one unsupported file
+    supported = tmp_path / 'supported.mp4'
+    unsupported = tmp_path / 'unsupported.mp4'
+    supported.write_bytes(b'supported')
+    unsupported.write_bytes(b'unsupported')
+    mocked_media_controller = MagicMock()
+
+    def _is_supported(path):
+        return (False, 'decode unsupported') if str(path).endswith('unsupported.mp4') else (True, '')
+
+    mocked_media_controller.is_media_supported.side_effect = _is_supported
+    Registry().register('media_controller', mocked_media_controller)
+
+    # WHEN: validate_and_load is called with mixed files
+    media_item.validate_and_load([supported, unsupported])
+
+    # THEN: only supported files should be forwarded and an error should be shown
+    mocked_super_validate.assert_called_once_with([supported], None)
+    mocked_error_dialog.assert_called_once()
+
+
+def test_generate_thumbnail_path_prefers_file_hash(media_item, tmp_path):
+    """Media thumbnails should use file_hash when available for stable cache names."""
+    media_item.service_path = tmp_path
+    item = Item(name='clip.mp4', file_path=str(tmp_path / 'clip.mp4'))
+    item.file_hash = 'abc123'
+    assert media_item.generate_thumbnail_path(item) == tmp_path / 'abc123.png'
+
+
+@patch('openlp.plugins.media.lib.mediaitem.delete_file')
+def test_delete_item_removes_generated_thumbnail(mocked_delete_file: MagicMock, media_item, tmp_path):
+    """Delete should remove the generated PNG thumbnail path."""
+    media_item.service_path = tmp_path
+    item = Item(name='clip.mp4', file_path=str(tmp_path / 'clip.mp4'))
+    item.file_hash = 'abc123'
+
+    media_item.delete_item(item)
+
+    mocked_delete_file.assert_called_once_with(tmp_path / 'abc123.png')
+
+
+@patch('openlp.plugins.media.lib.mediaitem.media_info')
+@patch('openlp.plugins.media.lib.mediaitem.build_icon')
+@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
+@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+def test_load_item_video_uses_cached_thumbnail(mocked_suffixes: MagicMock,
+                                               mocked_validate_thumb: MagicMock,
+                                               mocked_build_icon: MagicMock,
+                                               mocked_media_info: MagicMock,
+                                               media_item,
+                                               tmp_path):
+    """When video thumbnail is valid in cache, no regeneration should be attempted."""
+    media_item.service_path = tmp_path
+    video_file = tmp_path / 'clip.mp4'
+    video_file.write_bytes(b'test')
+    item = Item(name='clip.mp4', file_path=str(video_file))
+    item.file_hash = 'abc123'
+    mocked_suffixes.return_value = (['*.mp3'], ['*.mp4'])
+    mocked_validate_thumb.return_value = True
+    mocked_build_icon.return_value = UiIcons().video
+
+    tree_item = media_item.load_item(item)
+
+    assert tree_item is not None
+    mocked_build_icon.assert_called_once_with(tmp_path / 'abc123.png')
+    mocked_media_info.assert_not_called()
+
+
+@patch('openlp.plugins.media.lib.mediaitem.media_info')
+@patch('openlp.plugins.media.lib.mediaitem.build_icon')
+@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
+@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+def test_load_item_video_generates_thumbnail_when_missing(mocked_suffixes: MagicMock,
+                                                          mocked_validate_thumb: MagicMock,
+                                                          mocked_build_icon: MagicMock,
+                                                          mocked_media_info: MagicMock,
+                                                          media_item,
+                                                          tmp_path):
+    """When video thumbnail cache is invalid, generation should be attempted and icon built from new thumb."""
+    media_item.service_path = tmp_path
+    video_file = tmp_path / 'clip.mp4'
+    video_file.write_bytes(b'test')
+    item = Item(name='clip.mp4', file_path=str(video_file))
+    item.file_hash = 'abc123'
+    mocked_suffixes.return_value = (['*.mp3'], ['*.mp4'])
+    mocked_validate_thumb.return_value = False
+    mocked_build_icon.return_value = UiIcons().video
+    mocked_info_instance = MagicMock()
+    mocked_info_instance.create_media_thumbnail.return_value = True
+    mocked_media_info.return_value = mocked_info_instance
+
+    tree_item = media_item.load_item(item)
+
+    assert tree_item is not None
+    mocked_info_instance.create_media_thumbnail.assert_called_once_with(str(video_file), str(tmp_path / 'abc123.png'))
+    mocked_build_icon.assert_called_once_with(tmp_path / 'abc123.png')
+
+
+@patch('openlp.plugins.media.lib.mediaitem.media_info')
+@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
+@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+def test_load_item_video_defers_thumbnail_generation_on_initial_load(mocked_suffixes: MagicMock,
+                                                                     mocked_validate_thumb: MagicMock,
+                                                                     mocked_media_info: MagicMock,
+                                                                     media_item,
+                                                                     tmp_path):
+    """Initial media list load should not probe/decode video when thumbnail cache is missing."""
+    media_item.service_path = tmp_path
+    video_file = tmp_path / 'clip.mp4'
+    video_file.write_bytes(b'test')
+    item = Item(name='clip.mp4', file_path=str(video_file))
+    item.file_hash = 'abc123'
+    mocked_suffixes.return_value = (['*.mp3'], ['*.mp4'])
+    mocked_validate_thumb.return_value = False
+
+    tree_item = media_item.load_item(item, is_initial_load=True)
+
+    assert tree_item is not None
+    assert tree_item.data(0, media_item.pending_thumbnail_role) is True
+    mocked_media_info.assert_not_called()
+
+
+@patch('openlp.plugins.media.lib.mediaitem.media_info')
+@patch('openlp.plugins.media.lib.mediaitem.build_icon')
+@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
+def test_on_focus_generates_deferred_thumbnails(mocked_validate_thumb: MagicMock,
+                                                mocked_build_icon: MagicMock,
+                                                mocked_media_info: MagicMock,
+                                                media_item,
+                                                tmp_path):
+    """Deferred thumbnails should be generated once the media tab gains focus."""
+    media_item.service_path = tmp_path
+    video_file = tmp_path / 'clip.mp4'
+    video_file.write_bytes(b'test')
+    item = Item(name='clip.mp4', file_path=str(video_file))
+    item.file_hash = 'abc123'
+    media_item.list_view = QtWidgets.QTreeWidget()
+
+    tree_item = QtWidgets.QTreeWidgetItem(['clip.mp4'])
+    tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+    tree_item.setData(0, media_item.pending_thumbnail_role, True)
+    media_item.list_view.addTopLevelItem(tree_item)
+
+    mocked_validate_thumb.return_value = False
+    mocked_build_icon.return_value = UiIcons().video
+    mocked_info_instance = MagicMock()
+    mocked_info_instance.create_media_thumbnail.return_value = True
+    mocked_media_info.return_value = mocked_info_instance
+
+    media_item.on_focus()
+
+    mocked_info_instance.create_media_thumbnail.assert_called_once_with(str(video_file), str(tmp_path / 'abc123.png'))
+    mocked_build_icon.assert_called_once_with(tmp_path / 'abc123.png')
+    assert tree_item.data(0, media_item.pending_thumbnail_role) is False
+
+
+def test_fixed_canvas_icon_dimensions(media_item):
+    """Fallback icon should render on fixed 88x50 canvas."""
+    icon = media_item._fixed_canvas_icon(UiIcons().video)
+    pixmap = icon.pixmap(88, 50)
+    assert pixmap.width() == 88
+    assert pixmap.height() == 50

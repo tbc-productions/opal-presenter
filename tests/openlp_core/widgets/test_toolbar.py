@@ -24,7 +24,9 @@ Package to test the OpenLP default toolbars.
 from unittest.mock import MagicMock, patch
 import pytest
 
-from openlp.core.widgets.toolbar import MediaToolbar
+from PySide6 import QtCore, QtGui
+
+from openlp.core.widgets.toolbar import MediaToolbar, ClickableSlider
 
 
 HIDE_COMPONENTS = [
@@ -90,3 +92,82 @@ def test_mediatoolbar_set_label_works(MockedUiIcons, label_visibility, label_tex
     toolbar.identification_label.setVisible.assert_called_once_with(label_visibility)
     # 'None' texts are empty
     toolbar.identification_label.setText.assert_called_once_with(label_text if label_text else '')
+
+
+def test_clickable_slider_click_at_left_edge(qapp):
+    """
+    Test that clicking at the left edge of the slider sets minimum value.
+    """
+    # GIVEN: A ClickableSlider with range 0-100
+    slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+    slider.setMinimum(0)
+    slider.setMaximum(100)
+    slider.setFixedWidth(100)
+    slider.show()
+    slider.raise_()
+
+    # WHEN: A click event at x=0 (left edge) is simulated
+    event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseButtonPress,
+        QtCore.QPointF(0, 0),
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mousePressEvent(event)
+
+    # THEN: The slider value should be at or near minimum
+    assert slider.value() <= 5, f"Expected value <= 5, got {slider.value()}"
+
+
+def test_clickable_slider_click_at_right_edge(qapp):
+    """
+    Test that clicking at the right edge of the slider sets maximum value.
+    """
+    # GIVEN: A ClickableSlider with range 0-100
+    slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+    slider.setMinimum(0)
+    slider.setMaximum(100)
+    slider.setFixedWidth(100)
+    slider.show()
+    slider.raise_()
+
+    # WHEN: A click event at x=99 (right edge) is simulated
+    event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseButtonPress,
+        QtCore.QPointF(99, 0),
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mousePressEvent(event)
+
+    # THEN: The slider value should be at or near maximum
+    assert slider.value() >= 95, f"Expected value >= 95, got {slider.value()}"
+
+
+def test_clickable_slider_click_at_middle(qapp):
+    """
+    Test that clicking in the middle of the slider sets middle value.
+    """
+    # GIVEN: A ClickableSlider with range 0-100
+    slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+    slider.setMinimum(0)
+    slider.setMaximum(100)
+    slider.setFixedWidth(100)
+    slider.show()
+    slider.raise_()
+
+    # WHEN: A click event at x=50 (middle) is simulated
+    event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseButtonPress,
+        QtCore.QPointF(50, 0),
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mousePressEvent(event)
+
+    # THEN: The slider value should be around 50 (allows 5% tolerance)
+    assert 45 <= slider.value() <= 55, f"Expected value 45-55, got {slider.value()}"
+

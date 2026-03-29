@@ -207,6 +207,7 @@ def test_load_media(media_env, settings):
     media_env.media_controller.media_reset = MagicMock()
     media_env.media_controller.media_play = MagicMock()
     media_env.media_controller.set_controls_visible = MagicMock()
+    media_env.media_controller.is_media_supported = MagicMock(return_value=(True, ''))
     # WHEN: load_media() is called
     media_env.media_controller.load_media(DisplayControllerType.Live, mocked_service_item)
 
@@ -286,6 +287,59 @@ def test_media_play_msg(media_env):
 
     # THEN: The underlying method is called
     mocked_media_play.assert_called_with(1)
+
+
+def test_media_play_sets_visibility_before_play(media_env, settings):
+    """
+    Test that media_play shows the media widget before starting playback.
+    """
+    # GIVEN: A live controller playing a local video file
+    call_order = []
+    mocked_slide_controller = MagicMock()
+    mocked_slide_controller.is_live = True
+    mocked_slide_controller.media_play_item = MediaPlayItem()
+    mocked_slide_controller.media_play_item.media_file = Path('video.mp4')
+    mocked_slide_controller.media_play_item.media_type = MediaType.Video
+    mocked_slide_controller.media_play_item.is_background = False
+    mocked_slide_controller.media_play_item.request_play = False
+    mocked_slide_controller.media_play_item.length = 100
+    mocked_slide_controller.media_play_item.timer = 0
+    mocked_slide_controller.media_play_item.start_time = 0
+    mocked_slide_controller.media_player = MagicMock()
+    mocked_slide_controller.audio_player = MagicMock()
+    mocked_slide_controller.mediabar = MagicMock()
+    mocked_slide_controller.mediabar.seek_slider = MagicMock()
+    mocked_slide_controller.mediabar.volume_slider = MagicMock()
+    mocked_slide_controller.mediabar.actions_map = {
+        'playbackPlay': MagicMock(),
+        'playbackPause': MagicMock(),
+        'playbackStop': MagicMock(),
+        'playbackLoop': MagicMock()
+    }
+    mocked_slide_controller.set_hide_mode = MagicMock()
+    mocked_slide_controller._set_theme = MagicMock()
+    mocked_slide_controller.output_has_changed = MagicMock()
+
+    media_env.media_controller.is_media_supported = MagicMock(return_value=(True, ''))
+    media_env.media_controller._define_display = MagicMock(return_value=MagicMock())
+    media_env.media_controller.media_volume = MagicMock()
+    media_env.media_controller._media_bar = MagicMock()
+    settings.setValue('media/live volume', 100)
+
+    def _visibility_side_effect(*args, **kwargs):
+        call_order.append('visible')
+
+    def _play_side_effect(*args, **kwargs):
+        call_order.append('play')
+
+    media_env.media_controller._media_set_visibility = MagicMock(side_effect=_visibility_side_effect)
+    mocked_slide_controller.media_player.play = MagicMock(side_effect=_play_side_effect)
+
+    # WHEN: media_play is called
+    media_env.media_controller.media_play(mocked_slide_controller)
+
+    # THEN: Visibility should be set before playback starts
+    assert call_order.index('visible') < call_order.index('play')
 
 
 def test_media_pause_msg(media_env):
@@ -587,6 +641,7 @@ def test_media_play(media_env, settings):
     media_env.live_hide_timer = MagicMock()
     mocked_controller = MagicMock()
     mocked_controller.media_play_item.is_background = False
+    mocked_controller.media_play_item.media_file = None
     media_env.is_theme_background = False
 
     # WHEN: media_play is called
@@ -597,6 +652,85 @@ def test_media_play(media_env, settings):
     assert result is True
     media_env.live_hide_timer.stop.assert_called_once_with()
     mocked_controller._set_theme.assert_called_once()
+
+
+@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+def test_load_media_rejects_unsupported_file(mocked_error_dialog: MagicMock, media_env):
+    """
+    Test that load_media() bails out early when media support probe fails.
+    """
+    # GIVEN: a controller and service item with a media file
+    mocked_slide_controller = MagicMock()
+    mocked_slide_controller.is_live = True
+    mocked_slide_controller.media_play_item = MediaPlayItem()
+    mocked_service_item = MagicMock()
+    mocked_service_item.is_capable.return_value = False
+    mocked_service_item.get_frame_path.return_value = str(TEST_PATH / 'mp4_file.mp4')
+    mocked_service_item.media_length = 1234
+    mocked_service_item.start_time = 0
+    mocked_service_item.end_time = 1234
+    media_env.media_controller._display_controllers = MagicMock(return_value=mocked_slide_controller)
+    media_env.media_controller.media_reset = MagicMock()
+    media_env.media_controller._check_file_type_and_load = MagicMock(return_value=True)
+    media_env.media_controller.is_media_supported = MagicMock(return_value=(False, 'decode unsupported'))
+
+    # WHEN: load_media is called
+    result = media_env.media_controller.load_media(DisplayControllerType.Live, mocked_service_item)
+
+    # THEN: it should fail with a visible error and not continue load/play workflow
+    assert result is False
+    mocked_error_dialog.assert_called_once()
+    media_env.media_controller.media_reset.assert_called()
+    media_env.media_controller._check_file_type_and_load.assert_not_called()
+
+
+@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+def test_media_play_rejects_unsupported_file(mocked_error_dialog: MagicMock, media_env):
+    """
+    Test that media_play() returns False when media support probe fails.
+    """
+    # GIVEN: a controller with a media file
+    mocked_controller = MagicMock()
+    mocked_controller.is_live = True
+    mocked_controller.media_play_item = MediaPlayItem()
+    mocked_controller.media_play_item.media_file = str(TEST_PATH / 'mp4_file.mp4')
+    mocked_controller.media_play_item.is_background = False
+    mocked_controller.mediabar = MagicMock()
+    media_env.media_controller.is_media_supported = MagicMock(return_value=(False, 'decode unsupported'))
+    media_env.media_controller.media_reset = MagicMock()
+
+    # WHEN: media_play is called
+    result = media_env.media_controller.media_play(mocked_controller)
+
+    # THEN: it should fail early and not start playback
+    assert result is False
+    mocked_error_dialog.assert_called_once()
+    media_env.media_controller.media_reset.assert_called_once_with(mocked_controller)
+
+
+@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+def test_handle_media_playback_error_updates_state(mocked_error_dialog: MagicMock, media_env):
+    """
+    Test runtime playback error handling updates controller state and UI.
+    """
+    # GIVEN: a playing controller with a media file
+    mocked_controller = MagicMock()
+    mocked_controller.media_play_item = MediaPlayItem()
+    mocked_controller.media_play_item.media_file = str(TEST_PATH / 'mp4_file.mp4')
+    mocked_controller.media_play_item.is_playing = MediaState.Playing
+    media_env.media_controller._handling_media_error = False
+    media_env.media_controller._media_set_visibility = MagicMock()
+    media_env.media_controller._media_bar = MagicMock()
+
+    # WHEN: runtime playback error occurs
+    media_env.media_controller.handle_media_playback_error(mocked_controller, 'AV1 decode unsupported')
+
+    # THEN: it should show error and transition to stopped state
+    mocked_error_dialog.assert_called_once()
+    media_env.media_controller._media_set_visibility.assert_called_once_with(mocked_controller, False)
+    media_env.media_controller._media_bar.assert_called_once_with(mocked_controller, 'stop')
+    assert mocked_controller.media_play_item.is_playing == MediaState.Stopped
+    mocked_controller.output_has_changed.assert_called_once()
 
 
 @pytest.mark.parametrize("tests", [[False, QtCore.Qt.CheckState.Unchecked, False, False, MediaType.Audio, False],

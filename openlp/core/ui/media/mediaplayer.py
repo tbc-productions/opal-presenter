@@ -25,6 +25,7 @@ import logging
 import os
 import re
 import sysconfig
+import time
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtMultimedia import QAudioInput, QAudioOutput, QCamera, QMediaDevices, QMediaCaptureSession, QMediaPlayer
@@ -32,7 +33,7 @@ from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtCore import QUrl
 
 from openlp.core.common.mixins import LogMixin
-from openlp.core.common.platform import is_win
+from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.display.window import DisplayWindow
 from openlp.core.ui.slidecontroller import SlideController
@@ -58,6 +59,28 @@ class MediaPlayer(MediaBase, LogMixin):
         """
         super(MediaPlayer, self).__init__(parent, "qt6")
         self.parent = parent
+        self._active_playback = False
+        self._ffmpeg_message_timestamp = 0.0
+        self._ffmpeg_last_message = ''
+
+    # Class-level Qt message handler state
+    _qt_handler_installed = False
+    _qt_previous_handler = None
+    _registered_players = set()
+
+    @classmethod
+    def _notify_ffmpeg_error(cls, text: str):
+        # Only surface errors for players that are actively trying to play media.
+        for player in list(cls._registered_players):
+            if not getattr(player, '_active_playback', False):
+                continue
+            now = time.monotonic()
+            if player._ffmpeg_last_message == text and now - player._ffmpeg_message_timestamp < 1.5:
+                continue
+            player._ffmpeg_last_message = text
+            player._ffmpeg_message_timestamp = now
+            Registry().get("media_controller").handle_media_playback_error(player.controller, text)
+            break
 
     def setup(self, controller: SlideController, display: DisplayWindow) -> None:
         """
@@ -68,13 +91,21 @@ class MediaPlayer(MediaBase, LogMixin):
         :return:
         """
         if controller.is_live:
-            controller.media_widget = QtWidgets.QWidget(controller)
+            # Create media widget as a top-level window with tool window flags
+            # This ensures it renders on the presentation display and stays visible
+            # when OpenLP loses focus (due to WindowStaysOnTopHint)
+            controller.media_widget = QtWidgets.QWidget(None)
             controller.media_widget.setWindowFlags(
                 QtCore.Qt.WindowType.FramelessWindowHint
                 | QtCore.Qt.WindowType.Tool
                 | QtCore.Qt.WindowType.WindowStaysOnTopHint)
             controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_X11NetWmWindowTypeDialog)
-
+            # On macOS, Tool windows are hidden when the app is deactivated unless this is set.
+            # Matches the same attribute used on DisplayWindow.
+            if is_macosx():
+                controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+            # Prevent the media widget from stealing focus when shown
+            controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         else:
             controller.media_widget = QtWidgets.QWidget(display)
         self.media_player = QMediaPlayer(None)
@@ -88,6 +119,9 @@ class MediaPlayer(MediaBase, LogMixin):
         self.display = display
         self.media_player.positionChanged.connect(self.position_changed_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
+        self.media_player.errorOccurred.connect(self.error_occurred_event)
+        self._install_qt_message_handler()
+        MediaPlayer._registered_players.add(self)
         # device stream objects. setVideoOutput is called when loading stream, video_widget can't be used by both
         # QMediaCaptureSession and QMediaPlayer
         self.media_capture_session = QMediaCaptureSession()
@@ -101,6 +135,16 @@ class MediaPlayer(MediaBase, LogMixin):
         Handle the end of Media event and update UI
         """
         if self.controller.media_play_item.media_type == MediaType.Dual:
+            return
+        if event == QMediaPlayer.MediaStatus.LoadedMedia:
+            self._active_playback = True
+        if event in (QMediaPlayer.MediaStatus.EndOfMedia,
+                     QMediaPlayer.MediaStatus.InvalidMedia,
+                     QMediaPlayer.MediaStatus.NoMedia):
+            self._active_playback = False
+        if event in (QMediaPlayer.MediaStatus.InvalidMedia, QMediaPlayer.MediaStatus.StalledMedia):
+            message = self.media_player.errorString() or 'Media decode failed to start on this platform.'
+            Registry().get("media_controller").handle_media_playback_error(self.controller, message)
             return
         if event == QMediaPlayer.MediaStatus.EndOfMedia:
             if self.controller.is_live:
@@ -121,6 +165,41 @@ class MediaPlayer(MediaBase, LogMixin):
             Registry().get("media_controller").live_media_tick.emit()
         else:
             Registry().get("media_controller").preview_media_tick.emit()
+
+    def error_occurred_event(self, error, error_text='') -> None:
+        """
+        Handle media backend errors and pass to media controller for user feedback.
+        """
+        if error == QMediaPlayer.Error.NoError:
+            return
+        self._active_playback = False
+        message = str(error_text or self.media_player.errorString() or error)
+        self.log_debug(f"Media player error: {message}")
+        Registry().get("media_controller").handle_media_playback_error(self.controller, message)
+
+    @staticmethod
+    def _looks_like_ffmpeg_decode_error(message: str) -> bool:
+        text = (message or '').lower()
+        return ('[av' in text and 'error' in text) or \
+            ('ffmpeg' in text and ('error' in text or 'failed' in text)) or \
+            ('hardware accelerated' in text and 'decoding' in text) or \
+            ('get current frame error' in text) or \
+            ('failed to get pixel format' in text)
+
+    @classmethod
+    def _install_qt_message_handler(cls):
+        if cls._qt_handler_installed:
+            return
+
+        def _handler(msg_type, context, message):
+            text = str(message)
+            if cls._looks_like_ffmpeg_decode_error(text):
+                cls._notify_ffmpeg_error(text)
+            if cls._qt_previous_handler:
+                cls._qt_previous_handler(msg_type, context, message)
+
+        cls._qt_previous_handler = QtCore.qInstallMessageHandler(_handler)
+        cls._qt_handler_installed = True
 
     def toggle_loop(self, loop_required: bool) -> None:
         """
@@ -198,6 +277,7 @@ class MediaPlayer(MediaBase, LogMixin):
                 self.device_audio_input.setMuted(False)
         else:
             self.media_player.play()
+        self._active_playback = True
         # TODO handle variable start times for first play
 
     def pause(self) -> None:
@@ -214,6 +294,7 @@ class MediaPlayer(MediaBase, LogMixin):
                 self.device_audio_input.setMuted(True)
         else:
             self.media_player.pause()
+        self._active_playback = False
 
     def stop(self) -> None:
         """
@@ -229,6 +310,7 @@ class MediaPlayer(MediaBase, LogMixin):
                 self.device_audio_input.setMuted(True)
         else:
             self.media_player.stop()
+        self._active_playback = False
 
     def duration(self) -> int:
         """

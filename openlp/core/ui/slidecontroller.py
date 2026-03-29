@@ -46,7 +46,7 @@ from openlp.core.lib.ui import create_action
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.icons import UiIcons
-from openlp.core.ui.media import MediaPlayItem, media_empty_song
+from openlp.core.ui.media import MediaPlayItem, MediaState, media_empty_song
 from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.widgets.views import ListPreviewWidget
@@ -406,7 +406,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Build a Media ToolBar
         self.mediabar = MediaToolbar(self)
         self.mediabar.identification_label.setText(translate('OpenLP.SlideController', 'Media'))
-        self.mediabar.on_action = lambda *args: self.send_to_plugins(*args)
+        self.mediabar.on_action = lambda sender_name, *args: Registry().execute(sender_name, [self, args])
         self.controller_layout.addWidget(self.mediabar)
         self.mediabar.setVisible(False)
         if self.is_live:
@@ -1428,7 +1428,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not hasattr(self, 'desktop_capture_timer'):
             return
         fps_options = [5, 15, 30]
-        needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen
+        media_is_playing = (hasattr(self, 'media_play_item') and
+                             self.media_play_item.is_playing == MediaState.Playing and
+                             not self.media_play_item.is_background)
+        needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen or media_is_playing
         if needs_timer:
             fps_index = self.settings.value('advanced/desktop capture fps')
             fps = fps_options[min(max(fps_index, 0), len(fps_options) - 1)]

@@ -176,7 +176,9 @@ class UiIcons(metaclass=Singleton):
             'video': {'icon': 'mdi.file-video-outline'},
             'view_list': {'icon': 'mdi.view-list'},
             'view_grid': {'icon': 'mdi.view-grid'},
-            'volunteer': {'icon': 'mdi.account-group'}
+            'volunteer': {'icon': 'mdi.account-group'},
+            'volume_high': {'icon': 'mdi.volume-high'},
+            'volume_off': {'icon': 'mdi.volume-off'}
         }
         self.load_icons(self._icon_list)
         self.main_icon = build_icon(':/icon/openlp-logo.svg')

@@ -34,7 +34,7 @@ from openlp.core.lib.ui import critical_error_message_box, warning_message_box
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.ui.media import MediaState, MediaPlayItem, MediaType, format_play_seconds, \
+from openlp.core.ui.media import MediaState, MediaPlayItem, MediaType, \
     format_play_time, parse_stream_path, get_volume, toggle_looping_playback, saved_looping_playback, save_volume, \
     media_state
 from openlp.core.ui.media.remote import register_views
@@ -70,6 +70,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         self.live_hide_timer.setSingleShot(True)
         self.live_kill_timer = QtCore.QTimer()
         self.live_kill_timer.setSingleShot(True)
+        self._handling_media_error = False
         # Signals
         self.live_hide_timer.timeout.connect(self._on_media_hide_live)
         self.live_kill_timer.timeout.connect(self._on_media_kill_live)
@@ -257,6 +258,12 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller.media_play_item.start_time = service_item.start_time
         controller.media_play_item.timer = service_item.start_time
         controller.media_play_item.end_time = service_item.end_time
+        if controller.media_play_item.media_file:
+            supported, error_text = self.is_media_supported(controller.media_play_item.media_file)
+            if not supported:
+                self._show_unsupported_media_error(controller.media_play_item.media_file, error_text)
+                self.media_reset(controller)
+                return False
         is_loaded = self._check_file_type_and_load(controller)
         if not is_loaded:
             # Media could not be loaded correctly
@@ -328,6 +335,27 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         return media_info().get_media_duration(str(media_path))
 
+    @staticmethod
+    def is_media_supported(media_path: Union[str, Path]) -> tuple[bool, str]:
+        """
+        Check whether this media file can be decoded by the current platform/backend.
+
+        :param media_path: The file path to probe.
+        :returns: (supported, backend_error_text)
+        """
+        return media_info().is_media_supported(str(media_path))
+
+    def _show_unsupported_media_error(self, media_path: Union[str, Path], error_text: str = '') -> None:
+        details = error_text or translate(
+            'OpenLP.MediaController',
+            'The media backend reported that this file cannot be decoded on this platform.')
+        critical_error_message_box(
+            translate('OpenLP.MediaController', 'Unsupported Media on This Platform'),
+            translate('OpenLP.MediaController',
+                      'Unable to play media file:\n{file}\n\n{details}').format(file=str(media_path),
+                                                                               details=details)
+        )
+
     def _check_file_type_and_load(self, controller: SlideController) -> bool:
         """
         Load the media files into the correct media players.  The players have been determined earlier.
@@ -374,10 +402,16 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         :param controller: The controller to be played
         """
         self.log_debug(f"media_play is_live:{controller.is_live}")
+        if controller.media_play_item.media_file:
+            supported, error_text = self.is_media_supported(controller.media_play_item.media_file)
+            if not supported:
+                self._show_unsupported_media_error(controller.media_play_item.media_file, error_text)
+                self.media_reset(controller)
+                return False
         controller.mediabar.seek_slider.blockSignals(True)
         controller.mediabar.volume_slider.blockSignals(True)
-        display = self._define_display(controller)
         controller.media_play_item.request_play = False
+        self._media_set_visibility(controller, True)
         if is_load:
             if controller.media_play_item.media_file:
                 if controller.media_play_item.media_autostart:
@@ -399,8 +433,6 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller.media_player and controller.media_play_item.external_stream:
             controller.media_player.play()
         self.media_volume(controller, get_volume(controller))
-        #     if not start_hidden:
-        self._media_set_visibility(controller, True)
         self._media_bar(controller, "play")
         # Start Timer for ui updates
         controller.mediabar.seek_slider.blockSignals(False)
@@ -415,6 +447,27 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             #  display.load_verses(media_empty_song)
         controller.output_has_changed()
         return True
+
+    def handle_media_playback_error(self, controller: SlideController, error_text: str) -> None:
+        """
+        Handle runtime decode/playback errors.
+
+        :param controller: The slide controller where playback failed.
+        :param error_text: The backend error details.
+        """
+        if self._handling_media_error:
+            return
+        self._handling_media_error = True
+        try:
+            media_path = controller.media_play_item.media_file
+            if media_path:
+                self._show_unsupported_media_error(media_path, error_text)
+            self._media_set_visibility(controller, False)
+            controller.media_play_item.is_playing = MediaState.Stopped
+            self._media_bar(controller, 'stop')
+            controller.output_has_changed()
+        finally:
+            self._handling_media_error = False
 
     def tick(self, controller) -> None:
         """
@@ -472,8 +525,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
 
         :param controller: the slidecontroller to be updated
         """
-        controller.mediabar.position_label.setText(f"{format_play_time(controller.media_play_item.timer)}/"
-                                                   f"{format_play_time(controller.media_play_item.length)}")
+        controller.mediabar.position_label.setText(format_play_time(controller.media_play_item.timer))
+        controller.mediabar.duration_label.setText(format_play_time(controller.media_play_item.length))
 
     def media_pause_msg(self, msg: list) -> bool:
         """
@@ -607,7 +660,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         else:
             controller.media_player.volume(volume)
         controller.mediabar.volume_slider.setValue(volume)
-        controller.mediabar.volume_label.setText(f"{format_play_seconds(volume)}")
+        controller.mediabar.volume_label.setText(str(int(volume)))
 
     def media_seek_msg(self, msg: list):
         """

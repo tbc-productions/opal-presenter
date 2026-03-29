@@ -34,6 +34,27 @@ from openlp.core.ui.icons import UiIcons
 log = logging.getLogger(__name__)
 
 
+class ClickableSlider(QtWidgets.QSlider):
+    """
+    A QSlider subclass that allows clicking anywhere on the progress bar to jump to that position.
+    """
+
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        """
+        Handle mouse press events to allow click-to-seek.
+        """
+        if self.orientation() == QtCore.Qt.Orientation.Horizontal:
+            click_x = event.pos().x()
+            slider_width = self.width()
+            if slider_width > 0:
+                ratio = click_x / slider_width
+                new_value = int(self.minimum() + ratio * (self.maximum() - self.minimum()))
+                new_value = max(self.minimum(), min(self.maximum(), new_value))
+                self.setValue(new_value)
+        else:
+            super().mousePressEvent(event)
+
+
 class OpenLPToolbar(QtWidgets.QToolBar):
     """
     Lots of toolbars around the place, so it makes sense to have a common way to manage them. This is the base toolbar
@@ -138,76 +159,126 @@ class OpenLPToolbar(QtWidgets.QToolBar):
         pass
 
 
-class MediaToolbar(OpenLPToolbar):
+class MediaToolbar(QtWidgets.QWidget):
+    """
+    A two-row media control bar.
+    Row 1: playback buttons + volume control.
+    Row 2: current-time label | seek slider | total-time label.
+    """
+
     def __init__(self, parent, hide_components=[], action_prefixes=''):
         super().__init__(parent)
         self.on_action = lambda *args: None
         self.hide_components = hide_components
         self.action_prefixes = action_prefixes
+        self._last_nonzero_volume = 100
+        # Inner toolbar holds the action buttons so actions_map still works.
+        self._toolbar = OpenLPToolbar(self)
         self.setup_ui()
 
+    @property
+    def actions_map(self):
+        return self._toolbar.actions_map
+
     def setup_ui(self):
-        # Build a Media ToolBar
-        self.setObjectName('slide_controller_toolbar')
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setSpacing(0)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        outer.addWidget(self._toolbar)
+
         self.identification_label = QtWidgets.QLabel()
         self.identification_label.setContentsMargins(0, 0, 8, 0)
-        self.set_label(None)  # Hiding it by default
-        self.add_toolbar_widget(self.identification_label)
-        self.add_toolbar_action(self.action_prefixes + 'playbackPlay', text='media_playback_play',
-                                icon=UiIcons().play,
-                                tooltip=translate('OpenLP.SlideController', 'Start playing media.'),
-                                triggers=self._on_action)
-        self.add_toolbar_action(self.action_prefixes + 'playbackPause', text='media_playback_pause',
-                                icon=UiIcons().pause,
-                                tooltip=translate('OpenLP.SlideController', 'Pause playing media.'),
-                                triggers=self._on_action)
-        self.add_toolbar_action(self.action_prefixes + 'playbackStop', text='media_playback_stop',
-                                icon=UiIcons().stop,
-                                tooltip=translate('OpenLP.SlideController', 'Stop playing media.'),
-                                triggers=self._on_action)
+        self.set_label(None)
+        self._toolbar.add_toolbar_widget(self.identification_label)
+
+        self._toolbar.add_toolbar_action(
+            self.action_prefixes + 'playbackPlay', text='media_playback_play',
+            icon=UiIcons().play,
+            tooltip=translate('OpenLP.SlideController', 'Start playing media.'),
+            triggers=self._on_action)
+        self._toolbar.add_toolbar_action(
+            self.action_prefixes + 'playbackPause', text='media_playback_pause',
+            icon=UiIcons().pause,
+            tooltip=translate('OpenLP.SlideController', 'Pause playing media.'),
+            triggers=self._on_action)
+        self._toolbar.add_toolbar_action(
+            self.action_prefixes + 'playbackStop', text='media_playback_stop',
+            icon=UiIcons().stop,
+            tooltip=translate('OpenLP.SlideController', 'Stop playing media.'),
+            triggers=self._on_action)
         if 'loop' not in self.hide_components:
-            self.add_toolbar_action(self.action_prefixes + 'playbackLoop', text='media_playback_loop',
-                                    icon=UiIcons().get_icon_variant_selected('repeat'), checked=False,
-                                    tooltip=translate('OpenLP.SlideController', 'Loop playing media.'),
-                                    triggers=self._on_action)
-        self.position_label = QtWidgets.QLabel()
-        self.position_label.setText(' 00:00 / 00:00')
-        self.position_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.position_label.setToolTip(translate('OpenLP.SlideController', 'Media timer.'))
-        self.position_label.setMinimumSize(90, 0)
-        self.position_label.setObjectName(self.action_prefixes + 'position_label')
-        self.add_toolbar_widget(self.position_label)
-        if 'seek' not in self.hide_components:
-            # Build the media seek_slider.
-            self.seek_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-            self.seek_slider.setMaximum(1000)
-            self.seek_slider.setTracking(True)
-            self.seek_slider.setMouseTracking(True)
-            self.seek_slider.setToolTip(translate('OpenLP.SlideController', 'Video position.'))
-            self.seek_slider.setGeometry(QtCore.QRect(90, 260, 221, 24))
-            self.seek_slider.setObjectName(self.action_prefixes + 'seek_slider')
-            self.add_toolbar_widget(self.seek_slider)
-            self.seek_slider.valueChanged.connect(self._on_action)
-        self.volume_label = QtWidgets.QLabel()
-        self.volume_label.setText(' 00:00')
-        self.volume_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.volume_label.setToolTip(translate('OpenLP.SlideController', 'Volume.'))
-        self.volume_label.setMinimumSize(90, 0)
-        self.volume_label.setObjectName(self.action_prefixes + 'volume_label')
-        self.add_toolbar_widget(self.volume_label)
+            self._toolbar.add_toolbar_action(
+                self.action_prefixes + 'playbackLoop', text='media_playback_loop',
+                icon=UiIcons().get_icon_variant_selected('repeat'), checked=False,
+                tooltip=translate('OpenLP.SlideController', 'Loop playing media.'),
+                triggers=self._on_action)
+
+        self._toolbar.add_spacer()
+
         if 'volume' not in self.hide_components:
-            # Build the volume_slider.
+            self.volume_button = QtWidgets.QToolButton()
+            self.volume_button.setObjectName(self.action_prefixes + 'volume_mute_button')
+            self.volume_button.setToolTip(translate('OpenLP.SlideController', 'Mute/Unmute audio.'))
+            self.volume_button.setAutoRaise(True)
+            self.volume_button.clicked.connect(self._toggle_mute)
+            self._toolbar.add_toolbar_widget(self.volume_button)
+
             self.volume_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-            self.volume_slider.setTickInterval(10)
+            self.volume_slider.setSingleStep(5)
+            self.volume_slider.setPageStep(5)
+            self.volume_slider.setTickInterval(5)
             self.volume_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksAbove)
             self.volume_slider.setMinimum(0)
             self.volume_slider.setMaximum(100)
             self.volume_slider.setTracking(True)
             self.volume_slider.setToolTip(translate('OpenLP.SlideController', 'Audio Volume.'))
-            self.volume_slider.setGeometry(QtCore.QRect(90, 160, 221, 24))
+            self.volume_slider.setFixedWidth(80)
             self.volume_slider.setObjectName(self.action_prefixes + 'volume_slider')
-            self.add_toolbar_widget(self.volume_slider)
+            self.volume_slider.setValue(100)
+            self._toolbar.add_toolbar_widget(self.volume_slider)
             self.volume_slider.valueChanged.connect(self._on_action)
+            self._update_volume_button_icon(self.volume_slider.value())
+
+        self.volume_label = QtWidgets.QLabel('100')
+        self.volume_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.volume_label.setToolTip(translate('OpenLP.SlideController', 'Volume.'))
+        self.volume_label.setMinimumWidth(28)
+        self.volume_label.setObjectName(self.action_prefixes + 'volume_label')
+        self._toolbar.add_toolbar_widget(self.volume_label)
+
+        if 'seek' not in self.hide_components:
+            seek_row = QtWidgets.QWidget()
+            seek_layout = QtWidgets.QHBoxLayout(seek_row)
+            seek_layout.setContentsMargins(4, 0, 4, 4)
+            seek_layout.setSpacing(6)
+
+            self.position_label = QtWidgets.QLabel('00:00')
+            self.position_label.setAlignment(
+                QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+            self.position_label.setToolTip(translate('OpenLP.SlideController', 'Current position.'))
+            self.position_label.setMinimumWidth(40)
+            self.position_label.setObjectName(self.action_prefixes + 'position_label')
+            seek_layout.addWidget(self.position_label)
+
+            self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+            self.seek_slider.setMaximum(1000)
+            self.seek_slider.setTracking(True)
+            self.seek_slider.setMouseTracking(True)
+            self.seek_slider.setToolTip(translate('OpenLP.SlideController', 'Video position. Click to seek.'))
+            self.seek_slider.setObjectName(self.action_prefixes + 'seek_slider')
+            seek_layout.addWidget(self.seek_slider, stretch=1)
+            self.seek_slider.valueChanged.connect(self._on_action)
+
+            self.duration_label = QtWidgets.QLabel('00:00')
+            self.duration_label.setAlignment(
+                QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+            self.duration_label.setToolTip(translate('OpenLP.SlideController', 'Total duration.'))
+            self.duration_label.setMinimumWidth(40)
+            self.duration_label.setObjectName(self.action_prefixes + 'duration_label')
+            seek_layout.addWidget(self.duration_label)
+
+            outer.addWidget(seek_row)
 
     def set_label(self, label):
         if label:
@@ -218,5 +289,35 @@ class MediaToolbar(OpenLPToolbar):
             self.identification_label.setVisible(False)
 
     def _on_action(self, *args):
-        sender = self.sender().objectName() if self.sender().objectName() else self.sender().text()
-        Registry().execute("{text}".format(text=sender), [self.parent, args])
+        sender_name = self.sender().objectName() if self.sender().objectName() else self.sender().text()
+        if sender_name == self.action_prefixes + 'volume_slider':
+            value = self.volume_slider.value()
+            if value > 0:
+                self._last_nonzero_volume = value
+            self._update_volume_button_icon(value)
+        self.on_action(sender_name, *args)
+
+    def _toggle_mute(self):
+        if 'volume' in self.hide_components:
+            return
+        current = self.volume_slider.value()
+        if current > 0:
+            self._last_nonzero_volume = current
+            self.volume_slider.setValue(0)
+        else:
+            self.volume_slider.setValue(self._last_nonzero_volume or 100)
+
+    def _update_volume_button_icon(self, value: int):
+        if not hasattr(self, 'volume_button'):
+            return
+        if value == 0:
+            icon = UiIcons().volume_off
+        else:
+            icon = UiIcons().volume_high
+        if not isinstance(icon, QtGui.QIcon):
+            style = QtWidgets.QApplication.style() or self.style()
+            if value == 0:
+                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolumeMuted)
+            else:
+                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolume)
+        self.volume_button.setIcon(icon)
