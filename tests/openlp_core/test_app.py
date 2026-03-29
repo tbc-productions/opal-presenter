@@ -27,8 +27,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.app import parse_options, backup_if_version_changed, main as app_main, setup_portable_settings, \
-    apply_ui_font_scale
+from openlp.core.app import parse_options, backup_if_version_changed, main as app_main, setup_portable_settings
 from openlp.core.common.platform import is_win
 from openlp.core.common.settings import Settings
 from openlp.core.ui.style import UiThemes
@@ -188,48 +187,6 @@ def test_parse_options_all_no_file():
     assert args.portable is True, 'The portable flag should be set to True'
     assert args.verbose is False, 'The verbose flag should be set to False'
     assert args.rargs == [], 'The service file should be blank'
-
-
-def test_apply_ui_font_scale_applies_point_size():
-    """
-    Test that apply_ui_font_scale applies percentage scaling to point-size based fonts.
-    """
-    # GIVEN: A settings object and application/font mocks
-    settings = MagicMock()
-    settings.value.return_value = 110
-    application = MagicMock()
-    font = MagicMock()
-    font.pointSizeF.return_value = 10.0
-    font.pixelSize.return_value = -1
-    application.font.return_value = font
-
-    # WHEN: Applying UI font scale
-    apply_ui_font_scale(settings, application)
-
-    # THEN: The font should be scaled and applied
-    font.setPointSizeF.assert_called_once_with(11.0)
-    application.setFont.assert_called_once_with(font)
-
-
-def test_apply_ui_font_scale_clamps_values():
-    """
-    Test that apply_ui_font_scale clamps out-of-range values.
-    """
-    # GIVEN: A settings object with out-of-range value and application/font mocks
-    settings = MagicMock()
-    settings.value.return_value = 200
-    application = MagicMock()
-    font = MagicMock()
-    font.pointSizeF.return_value = 10.0
-    font.pixelSize.return_value = -1
-    application.font.return_value = font
-
-    # WHEN: Applying UI font scale
-    apply_ui_font_scale(settings, application)
-
-    # THEN: It should clamp to 125%
-    font.setPointSizeF.assert_called_once_with(12.5)
-    application.setFont.assert_called_once_with(font)
 
 
 def test_parse_options_file():

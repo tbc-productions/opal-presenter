@@ -58,7 +58,7 @@ from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
 from openlp.core.ui.splashscreen import SplashScreen
-from openlp.core.ui.style import (apply_ui_font_scale, get_application_stylesheet,  # noqa: F401
+from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
                                    set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
 from openlp.core.version import check_for_update, get_version
 
@@ -529,7 +529,6 @@ def main():
         # font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
         font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
         application.setFont(font)
-    apply_ui_font_scale(settings, application)
     verbose = getattr(args, 'verbose', False)
     cache_path = portable_path / 'Other' if args.portable else AppLocation.get_directory(AppLocation.CacheDir)
     set_up_logging(cache_path, verbose)

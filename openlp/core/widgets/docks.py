@@ -28,6 +28,7 @@ from PySide6 import QtCore, QtWidgets
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
 from openlp.core.lib.plugin import StringContent
+from openlp.core.ui.style import get_dock_panel_header_stylesheet
 
 
 log = logging.getLogger(__name__)
@@ -73,6 +74,7 @@ class OpenLPDockWidget(QtWidgets.QDockWidget):
         super(OpenLPDockWidget, self).__init__(parent)
         if name:
             self.setObjectName(name)
+        self.setStyleSheet(get_dock_panel_header_stylesheet())
         if icon:
             self.setWindowIcon(build_icon(icon))
         # Sort out the minimum width.

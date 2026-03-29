@@ -23,7 +23,7 @@ The :mod:`settingsform` provides a user interface for the OpenLP settings
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.state import State
 from openlp.core.api.tab import ApiTab
@@ -38,7 +38,6 @@ from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
 from openlp.core.ui.media.mediatab import MediaTab
 from openlp.core.ui.settingsdialog import Ui_SettingsDialog
-from openlp.core.ui.style import apply_ui_font_scale
 
 
 log = logging.getLogger(__name__)
@@ -127,11 +126,61 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         log.debug('Inserting {text} tab'.format(text=tab_widget.tab_title))
         # add the tab to get it to display in the correct part of the screen
         self.stacked_layout.addWidget(tab_widget)
+        self._normalise_settings_tab_layout(tab_widget)
         if is_visible:
             list_item = QtWidgets.QListWidgetItem(build_icon(tab_widget.icon_path), tab_widget.tab_title_visible)
             list_item.setData(QtCore.Qt.ItemDataRole.UserRole, tab_widget.tab_title)
             self.setting_list_widget.addItem(list_item)
             tab_widget.load()
+
+    @staticmethod
+    def _normalise_settings_tab_layout(tab_widget):
+        """
+        Apply a minimum spacing baseline to nested settings layouts for better readability.
+        """
+        for group_box in tab_widget.findChildren(QtWidgets.QGroupBox):
+            layout_attr = getattr(group_box, 'layout', None)
+            group_layout = layout_attr() if callable(layout_attr) else layout_attr
+            if group_layout is not None:
+                left, top, right, bottom = group_layout.contentsMargins().left(), group_layout.contentsMargins().top(), \
+                    group_layout.contentsMargins().right(), group_layout.contentsMargins().bottom()
+                if left == 0 and top == 0 and right == 0 and bottom == 0:
+                    group_layout.setContentsMargins(12, 14, 12, 12)
+                if group_layout.spacing() < 12:
+                    group_layout.setSpacing(12)
+
+        for form_layout in tab_widget.findChildren(QtWidgets.QFormLayout):
+            if form_layout.horizontalSpacing() < 14:
+                form_layout.setHorizontalSpacing(14)
+            if form_layout.verticalSpacing() < 14:
+                form_layout.setVerticalSpacing(14)
+            form_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
+        for box_layout in tab_widget.findChildren(QtWidgets.QBoxLayout):
+            if box_layout.spacing() < 14:
+                box_layout.setSpacing(14)
+            group_box_count = 0
+            for index in range(box_layout.count()):
+                item = box_layout.itemAt(index)
+                widget = item.widget() if item is not None else None
+                if isinstance(widget, QtWidgets.QGroupBox):
+                    group_box_count += 1
+            if group_box_count >= 2 and box_layout.spacing() < 24:
+                box_layout.setSpacing(24)
+
+        for grid_layout in tab_widget.findChildren(QtWidgets.QGridLayout):
+            if grid_layout.horizontalSpacing() < 14:
+                grid_layout.setHorizontalSpacing(14)
+            if grid_layout.verticalSpacing() < 14:
+                grid_layout.setVerticalSpacing(14)
+
+        for check_box in tab_widget.findChildren(QtWidgets.QCheckBox):
+            if check_box.minimumHeight() < 24:
+                check_box.setMinimumHeight(24)
+
+        for radio_button in tab_widget.findChildren(QtWidgets.QRadioButton):
+            if radio_button.minimumHeight() < 24:
+                radio_button.setMinimumHeight(24)
 
     def accept(self):
         """
@@ -155,13 +204,6 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # Now lets process all the post save handlers
         while self.processes:
             Registry().execute(self.processes.pop(0))
-        # Ensure UI theme/font changes are applied using final saved values on the first OK click.
-        try:
-            application = Registry().get('application-qt')
-            if application is not None:
-                apply_ui_font_scale(self.settings, application)
-        except Exception:
-            pass
         return QtWidgets.QDialog.accept(self)
 
     def reject(self):

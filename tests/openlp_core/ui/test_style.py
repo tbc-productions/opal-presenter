@@ -76,8 +76,10 @@ def test_has_ui_theme_qdarkstyle_false_when_unavailable(mock_settings):
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
 @patch('openlp.core.ui.style.is_win')
+@patch('openlp.core.ui.style.is_macosx')
 @patch('openlp.core.app.QtWidgets.QApplication.palette')
-def test_get_application_stylesheet_not_alternate_rows(mocked_palette, mocked_is_win, mock_settings):
+def test_get_application_stylesheet_not_alternate_rows(mocked_palette, mocked_is_macosx, mocked_is_win,
+                                                       mock_settings):
     """Test that the alternate rows stylesheet is returned when enabled in settings"""
     def settings_values(key):
         if key == 'advanced/ui_theme_name':
@@ -86,6 +88,7 @@ def test_get_application_stylesheet_not_alternate_rows(mocked_palette, mocked_is
             return False
 
     # GIVEN: We're not on Windows and UI theme is not QDarkStyle
+    mocked_is_macosx.return_value = False
     mocked_is_win.return_value = False
     mock_settings.value = MagicMock(side_effect=settings_values)
     mocked_palette.return_value.color.return_value.name.return_value = 'color'
@@ -100,7 +103,8 @@ def test_get_application_stylesheet_not_alternate_rows(mocked_palette, mocked_is
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
 @patch('openlp.core.ui.style.is_win')
-def test_get_application_stylesheet_win_repair(mocked_is_win, mock_settings):
+@patch('openlp.core.ui.style.is_macosx')
+def test_get_application_stylesheet_win_repair(mocked_is_macosx, mocked_is_win, mock_settings):
     """Test that the Windows repair stylesheet is returned when on Windows"""
     def settings_values(key):
         if key == 'advanced/ui_theme_name':
@@ -109,6 +113,7 @@ def test_get_application_stylesheet_win_repair(mocked_is_win, mock_settings):
             return True
 
     # GIVEN: We're on Windows and Theme is not QDarkStyle
+    mocked_is_macosx.return_value = False
     mocked_is_win.return_value = True
     mock_settings.value = MagicMock(side_effect=settings_values)
 
@@ -122,7 +127,8 @@ def test_get_application_stylesheet_win_repair(mocked_is_win, mock_settings):
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
 @patch('openlp.core.ui.style.is_win')
-def test_get_application_stylesheet_not_win_repair(mocked_is_win, mock_settings):
+@patch('openlp.core.ui.style.is_macosx')
+def test_get_application_stylesheet_not_win_repair(mocked_is_macosx, mocked_is_win, mock_settings):
     """Test that the Windows repair stylesheet is not returned when not in Windows"""
     def settings_values(key):
         if key == 'advanced/ui_theme_name':
@@ -131,6 +137,7 @@ def test_get_application_stylesheet_not_win_repair(mocked_is_win, mock_settings)
             return True
 
     # GIVEN: We're on Windows and Theme is not QDarkStyle
+    mocked_is_macosx.return_value = False
     mocked_is_win.return_value = False
     mock_settings.value = MagicMock(side_effect=settings_values)
 

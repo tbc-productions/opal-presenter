@@ -291,7 +291,6 @@ class Settings(QtCore.QSettings):
         'advanced/prefer windowed screen capture': False,
         'advanced/search as type': True,
         'advanced/ui_theme_name': UiThemes.Automatic,
-        'advanced/ui font scale': 100,
         'advanced/delete service item confirmation': False,
         'advanced/hidpi mode': HiDPIMode.Default,
         'alerts/font face': QtGui.QFont().family(),

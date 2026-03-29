@@ -197,9 +197,6 @@ def test_add_middle_header_bar(media_item: BibleMediaItem):
     assert media_item.results_view_tab is not None
     assert media_item.page_layout.addWidget.call_args_list == [
         call(media_item.search_tab_bar),
-        call(media_item.search_tab),
-        call(media_item.select_tab),
-        call(media_item.options_tab),
         call(media_item.search_button_widget),
         call(media_item.results_view_tab)
     ]
@@ -210,11 +207,9 @@ def test_on_focus_search_tab_visible(media_item: BibleMediaItem):
     Test the correct widget gets focus when the BibleMediaItem receives focus
     """
     # GIVEN: An instance of :class:`MediaManagerItem` and mocked out tabs and primary widgets
-    media_item.search_tab = MagicMock(**{'isVisible.return_value': True})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Search})
     media_item.search_edit = MagicMock()
-    media_item.select_tab = MagicMock(**{'isVisible.return_value': False})
     media_item.select_book_combo_box = MagicMock()
-    media_item.options_tab = MagicMock(**{'isVisible.return_value': False})
     media_item.version_combo_box = MagicMock()
 
     # WHEN: Calling on_focus
@@ -231,11 +226,9 @@ def test_on_focus_select_tab_visible(media_item: BibleMediaItem):
     Test the correct widget gets focus when the BibleMediaItem receives focus
     """
     # GIVEN: An instance of :class:`MediaManagerItem` and mocked out tabs and primary widgets
-    media_item.search_tab = MagicMock(**{'isVisible.return_value': False})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Select})
     media_item.search_edit = MagicMock()
-    media_item.select_tab = MagicMock(**{'isVisible.return_value': True})
     media_item.select_book_combo_box = MagicMock()
-    media_item.options_tab = MagicMock(**{'isVisible.return_value': False})
     media_item.version_combo_box = MagicMock()
 
     # WHEN: Calling on_focus
@@ -253,11 +246,9 @@ def test_on_focus_options_tab_visible(media_item: BibleMediaItem):
     Test the correct widget gets focus when the BibleMediaItem receives focus
     """
     # GIVEN: An instance of :class:`MediaManagerItem` and mocked out tabs and primary widgets
-    media_item.search_tab = MagicMock(**{'isVisible.return_value': False})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Options})
     media_item.search_edit = MagicMock()
-    media_item.select_tab = MagicMock(**{'isVisible.return_value': False})
     media_item.select_book_combo_box = MagicMock()
-    media_item.options_tab = MagicMock(**{'isVisible.return_value': True})
     media_item.version_combo_box = MagicMock()
 
     # WHEN: Calling on_focus
@@ -691,30 +682,24 @@ def test_on_delete_click_response_yes(media_item: BibleMediaItem):
         assert media_item.plugin.manager.delete_bible.called is True
 
 
-@pytest.mark.parametrize('index, btn_enabled, search_visible, select_visible, options_visible',
-                         [(SearchTabs.Search, True, True, False, False),
-                          (SearchTabs.Select, True, False, True, False),
-                          (SearchTabs.Options, False, False, False, True)])
+@pytest.mark.parametrize('index, btn_enabled',
+                         [(SearchTabs.Search, True),
+                          (SearchTabs.Select, True),
+                          (SearchTabs.Options, False)])
 def test_on_search_tab_bar_current_changed(media_item: BibleMediaItem, index: int, btn_enabled: bool,
-                                           search_visible: bool, select_visible: bool, options_visible: bool):
+                                           ):
     """
     Test on_search_tab_bar_current_changed when each tab is selected
     """
     # GIVEN: An instance of :class:`MediaManagerItem` and mocked out search_tab and select_tab
-    media_item.search_tab = MagicMock()
-    media_item.select_tab = MagicMock()
-    media_item.options_tab = MagicMock()
     media_item.search_button = MagicMock()
     media_item.on_focus = MagicMock()
 
     # WHEN: The search_tab has been selected
     media_item.on_search_tab_bar_current_changed(index)
 
-    # THEN: The search_button should be enabled, search_tab should be setVisible and select_tab should be hidden
+    # THEN: The search_button should be enabled and focus updated
     media_item.search_button.setEnabled.assert_called_once_with(btn_enabled)
-    media_item.search_tab.setVisible.assert_called_once_with(search_visible)
-    media_item.select_tab.setVisible.assert_called_once_with(select_visible)
-    media_item.options_tab.setVisible.assert_called_once_with(options_visible)
     media_item.on_focus.assert_called_once_with()
 
 
@@ -1007,7 +992,7 @@ def test_on_advanced_book_combo_box_set_up_comboboxes(media_item: BibleMediaItem
     media_item.select_book_combo_box = MagicMock(**{'currentData.return_value': 2})
     media_item.bible = mocked_bible_1
     media_item.plugin.manager.get_verse_count_by_book_ref_id.return_value = 6
-    media_item.select_tab = MagicMock(**{'isVisible.return_value': True})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Select})
     media_item.search_button = MagicMock()
     with patch.object(media_item, 'adjust_combo_box') as mocked_adjust_combo_box:
         # WHEN: Calling on_advanced_book_combo_box
@@ -1262,7 +1247,7 @@ def test_on_search_button_search_tab(media_item: BibleMediaItem):
     # GIVEN: An instance of :class:`MediaManagerItem`, and a mocked text_search method
     media_item.bible = mocked_bible_1
     media_item.search_button = MagicMock()
-    media_item.search_tab = MagicMock(**{'isVisible.return_value': True})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Search})
     with patch.object(media_item, 'text_search') as mocked_text_search:
 
         # WHEN: Calling on_search_button_clicked and the 'Search' tab is selected
@@ -1279,8 +1264,7 @@ def test_on_search_button_select_tab(media_item: BibleMediaItem):
     # GIVEN: An instance of :class:`MediaManagerItem`, and a mocked select_search method
     media_item.bible = mocked_bible_1
     media_item.search_button = MagicMock()
-    media_item.search_tab = MagicMock(**{'isVisible.return_value': False})
-    media_item.select_tab = MagicMock(**{'isVisible.return_value': True})
+    media_item.search_tab_bar = MagicMock(**{'currentIndex.return_value': SearchTabs.Select})
     with patch.object(media_item, 'select_search') as mocked_select_search:
 
         # WHEN: Calling on_search_button_clicked and the 'Select' tab is selected

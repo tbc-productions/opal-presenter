@@ -136,14 +136,15 @@ class Ui_MainWindow(object):
         self.load_progress_bar.setStyleSheet(PROGRESSBAR_STYLE)
         self.default_theme_label = QtWidgets.QLabel(self.status_bar)
         self.default_theme_label.setObjectName('default_theme_label')
+        self.default_theme_label.setContentsMargins(8, 0, 12, 0)
         self.status_bar.addPermanentWidget(self.default_theme_label)
         # Create the MediaManager
         self.media_manager_dock = OpenLPDockWidget(main_window, 'media_manager_dock',
                                                    UiIcons().box)
-        self.media_manager_dock.setStyleSheet(get_library_stylesheet())
         # Create the media manager tabs.
         self.media_tool_box = MediaToolBox()
         self.media_tool_box.setObjectName('media_tool_box')
+        self.media_tool_box.setStyleSheet(get_library_stylesheet())
         self.media_manager_dock.setWidget(self.media_tool_box)
         main_window.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)
         # Create the service manager
@@ -485,7 +486,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.copy_data = False
         self.settings.set_up_default_values()
         self.about_form = AboutForm(self)
-        SettingsForm(self)
+        SettingsForm()
         self.formatting_tag_form = FormattingTagForm(self)
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface

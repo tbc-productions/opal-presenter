@@ -72,6 +72,21 @@ QTabWidget#media_tool_box QTabBar::tab:selected,
 QToolBox#media_tool_box::tab:selected {}
 """
 
+DOCK_PANEL_HEADER_STYLE = """
+QDockWidget::title {
+    padding: 8px 12px;
+    min-height: 30px;
+    font-weight: 600;
+}
+"""
+
+
+def get_dock_panel_header_stylesheet():
+    """
+    Return stylesheet used to make dock panel headers easier to read.
+    """
+    return DOCK_PANEL_HEADER_STYLE
+
 PROGRESSBAR_STYLE = """
 QProgressBar{
     height: 10px;
@@ -96,6 +111,16 @@ def get_macos_native_style_name():
     """
     available = QtWidgets.QStyleFactory.keys()
     return next((s for s in available if s.lower() == 'macos' or s.lower() == 'macintosh'), None)
+
+
+def get_native_system_font():
+    """
+    Return the platform's general UI font for native themed rendering.
+    """
+    try:
+        return QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.GeneralFont)
+    except Exception:
+        return QtWidgets.QApplication.font()
 
 
 def is_ui_theme_dark():
@@ -187,6 +212,7 @@ def set_default_theme(app):
             native = get_macos_native_style_name()
             if native:
                 app.setStyle(native)
+        app.setFont(get_native_system_font())
         # Ensure any previously-customized palette is reset when using the native theme.
         app.setPalette(app.style().standardPalette())
         return
@@ -269,18 +295,26 @@ def get_application_stylesheet():
     :return str: The correct stylesheet as a string
     """
     stylesheet = ''
-    if is_ui_theme(UiThemes.Native):
+    ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
+    use_alternate_rows = Registry().get('settings').value('advanced/alternate rows')
+    is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
+    is_native_theme = ui_theme_name == UiThemes.Native
+    if is_macosx() and not is_qdarkstyle:
         return stylesheet
-    if is_ui_theme(UiThemes.QDarkStyle):
+    if is_native_theme:
+        return stylesheet
+    if is_qdarkstyle:
         stylesheet = qdarkstyle.load_stylesheet_pyqt()
     else:
-        if not Registry().get('settings').value('advanced/alternate rows'):
+        if not use_alternate_rows:
             base_color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorGroup.Active,
                                                                 QtGui.QPalette.ColorRole.Base)
             alternate_rows_repair_stylesheet = get_alternate_rows_repair_stylesheet(base_color.name())
             stylesheet += alternate_rows_repair_stylesheet
         if is_win():
             stylesheet += WIN_REPAIR_STYLESHEET
+    if not is_win():
+        stylesheet += DOCK_PANEL_HEADER_STYLE
     stylesheet += 'QWidget#slide_controller_toolbar QToolButton::checked {' \
         '  background-color: palette(highlight);' \
         '  color: palette(highlighted-text);' \
@@ -297,68 +331,3 @@ def get_library_stylesheet():
     if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.QDarkStyle):
         return ''
     return MEDIA_MANAGER_STYLE
-
-
-def apply_ui_font_scale(settings, application):
-    """
-    Apply the user-selected UI font scaling percentage to the QApplication font.
-
-    Stores the original (unscaled) font point size in the Registry on the first call so that subsequent calls
-    (e.g. triggered live from the Settings dialog) always scale relative to the base size rather than the already-
-    scaled current size.
-    """
-    scale_percent = settings.value('advanced/ui font scale')
-    try:
-        scale_percent = int(scale_percent)
-    except (TypeError, ValueError):
-        scale_percent = 100
-    scale_percent = max(75, min(125, scale_percent))
-    scale_factor = scale_percent / 100.0
-
-    # Look up the stored base font size; fall back to the current application font on first call.
-    base_point_size = -1
-    try:
-        # Check if the service exists first to avoid unnecessary warnings
-        registry = Registry()
-        if 'base_font_point_size' in registry.service_list:
-            stored = registry.get('base_font_point_size')
-            if stored is not None:
-                base_point_size = float(stored)
-    except Exception:
-        pass
-
-    font = application.font()
-    if base_point_size <= 0:
-        # First call (or Registry unavailable) — current font IS the base; store it.
-        try:
-            base_point_size = float(font.pointSizeF())
-        except (TypeError, ValueError):
-            base_point_size = -1
-        if base_point_size > 0:
-            try:
-                Registry().register('base_font_point_size', base_point_size)
-            except Exception:
-                pass
-
-    if base_point_size > 0:
-        font.setPointSizeF(base_point_size * scale_factor)
-        application.setFont(font)
-    else:
-        try:
-            pixel_size = int(font.pixelSize())
-        except (TypeError, ValueError):
-            pixel_size = -1
-        if pixel_size > 0:
-            font.setPixelSize(int(pixel_size * scale_factor))
-            application.setFont(font)
-
-    # Force existing widgets to refresh so font-size changes are visible immediately.
-    try:
-        for widget in application.allWidgets():
-            widget.style().unpolish(widget)
-            widget.style().polish(widget)
-            widget.updateGeometry()
-            widget.update()
-        application.processEvents()
-    except Exception:
-        pass

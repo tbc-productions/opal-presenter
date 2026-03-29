@@ -94,19 +94,3 @@ def test_new_service_message(settings):
     assert settings.value('advanced/new service message') is False
 
 
-def test_ui_font_size_scale(settings):
-    """
-    Test that when the UI font size option is changed then the settings are updated.
-    """
-    # GIVEN: Settings, a settings form and a general tab
-    settings.setValue('advanced/ui font scale', 100)
-    settings_form = SettingsForm(None)
-    general_tab = GeneralTab(settings_form)
-    settings_form.insert_tab(general_tab, is_visible=True)
-
-    # WHEN: I set the UI font scale and then save
-    general_tab.ui_font_size_spin_box.setValue(125)
-    settings_form.accept()
-
-    # THEN: the settings should be updated
-    assert settings.value('advanced/ui font scale') == 125
