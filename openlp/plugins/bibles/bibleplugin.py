@@ -35,6 +35,11 @@ from openlp.plugins.bibles.lib.mediaitem import BibleMediaItem
 log = logging.getLogger(__name__)
 
 
+bible_reference_defaults = {
+    'bibles/reference format': '${bible_reference} (${copyright})'
+}
+
+
 class BiblePlugin(Plugin):
     """
     The Bible plugin provides a plugin for managing and displaying Bibles.
@@ -47,6 +52,7 @@ class BiblePlugin(Plugin):
         self.icon_path = UiIcons().bible
         self.icon = UiIcons().bible
         self.manager = BibleManager(self)
+        self.settings.extend_default_settings(bible_reference_defaults)
         State().add_service('bible', self.weight, is_plugin=True)
         State().update_pre_conditions('bible', self.check_pre_conditions())
 

@@ -24,6 +24,7 @@ import re
 from enum import IntEnum, unique
 from typing import Any
 
+import mako
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.enum import BibleSearch, DisplayStyle, LayoutStyle
@@ -42,6 +43,9 @@ from openlp.plugins.bibles.lib import get_reference_match, get_reference_separat
 from openlp.plugins.bibles.lib.versereferencelist import VerseReferenceList
 
 log = logging.getLogger(__name__)
+
+
+DEFAULT_BIBLE_REFERENCE_FORMAT = '${bible_reference} (${copyright})'
 
 
 VALID_TEXT_SEARCH = re.compile(r'\w\w\w')
@@ -143,13 +147,16 @@ class BibleMediaItem(MediaManagerItem):
         self.add_to_service_item = False
 
     def add_middle_header_bar(self):
+        header_layout = self.panel_layout if hasattr(self, 'panel_layout') else self.page_layout
         self.search_tab_bar = QtWidgets.QTabWidget(self)
         self.search_tab_bar.setDocumentMode(True)
         self.search_tab_bar.tabBar().setExpanding(False)
-        self.panel_layout.addWidget(self.search_tab_bar)
+        self.search_tab_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                          QtWidgets.QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(self.search_tab_bar)
         # Add the Search tab.
         self.search_tab = QtWidgets.QWidget()
-        self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.search_layout = QtWidgets.QFormLayout(self.search_tab)
         self.search_layout.setContentsMargins(0, 8, 0, 8)
         self.search_layout.setSpacing(8)
@@ -161,7 +168,7 @@ class BibleMediaItem(MediaManagerItem):
         self.search_tab_bar.addTab(self.search_tab, translate('BiblesPlugin.MediaItem', 'Find'))
         # Add the Select tab.
         self.select_tab = QtWidgets.QWidget()
-        self.select_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self.select_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.select_layout = QtWidgets.QFormLayout(self.select_tab)
         self.select_layout.setContentsMargins(8, 8, 8, 8)
         self.select_layout.setSpacing(8)
@@ -196,7 +203,7 @@ class BibleMediaItem(MediaManagerItem):
         self.search_tab_bar.addTab(self.select_tab, translate('BiblesPlugin.MediaItem', 'Select'))
         # General Search Opions
         self.options_tab = QtWidgets.QWidget()
-        self.options_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self.options_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.general_bible_layout = QtWidgets.QFormLayout(self.options_tab)
         self.general_bible_layout.setContentsMargins(8, 8, 8, 8)
         self.general_bible_layout.setSpacing(8)
@@ -223,15 +230,24 @@ class BibleMediaItem(MediaManagerItem):
         self.search_button_layout.addWidget(self.save_results_button)
         self.search_button = QtWidgets.QPushButton(self)
         self.search_button_layout.addWidget(self.search_button)
-        self.panel_layout.addWidget(self.search_button_widget)
+        self.search_button_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                            QtWidgets.QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(self.search_button_widget)
         self.results_view_tab = QtWidgets.QTabBar(self)
         self.results_view_tab.addTab('')
         self.results_view_tab.addTab('')
         self.results_view_tab.setCurrentIndex(ResultsTab.Search)
-        self.panel_layout.addWidget(self.results_view_tab)
+        self.results_view_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                            QtWidgets.QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(self.results_view_tab)
 
     def setup_ui(self):
         super().setup_ui()
+        # Keep the header compact and let the results list consume available height.
+        self.panel_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
+        self.page_layout.setStretchFactor(self.panel_widget, 0)
+        self.page_layout.setStretchFactor(self.list_view, 1)
+        self._update_search_tab_bar_height(self.search_tab_bar.currentIndex())
         sort_model = QtCore.QSortFilterProxyModel(self.select_book_combo_box)
         model = self.select_book_combo_box.model()
         # Reparent the combo box model to the sort proxy, otherwise it will be deleted when we change the comobox's
@@ -481,11 +497,34 @@ class BibleMediaItem(MediaManagerItem):
         :param int index: The tab selected
         :return: None
         """
+        if hasattr(self, 'search_tab_bar'):
+            self._update_search_tab_bar_height(index)
         if index == SearchTabs.Search or index == SearchTabs.Select:
             self.search_button.setEnabled(True)
         else:
             self.search_button.setEnabled(False)
         self.on_focus()
+
+    def _update_search_tab_bar_height(self, index):
+        """
+        Keep the search tab bar only as tall as the active tab content.
+
+        :param index: The selected tab index.
+        :return: None
+        """
+        if not hasattr(self, 'search_tab_bar'):
+            return
+        page = self.search_tab_bar.widget(index)
+        if page is None:
+            return
+        page_margins = page.contentsMargins()
+        page_height = page.sizeHint().height() + page_margins.top() + page_margins.bottom()
+        tab_bar_height = self.search_tab_bar.tabBar().sizeHint().height()
+        frame = self.search_tab_bar.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth,
+                                                        None, self.search_tab_bar) * 2
+        total_height = tab_bar_height + page_height + frame
+        self.search_tab_bar.setMinimumHeight(total_height)
+        self.search_tab_bar.setMaximumHeight(total_height)
 
     def on_results_view_tab_current_changed(self, index):
         """
@@ -991,10 +1030,20 @@ class BibleMediaItem(MediaManagerItem):
             'bibles': bibles
         }
         # Add footer
-        service_item.raw_footer.append(verses.format_verses())
         if data['second_bible']:
             verses.add_version(data['second_version'], data['second_copyright'], data['second_permissions'])
-        service_item.raw_footer.append(verses.format_versions())
+        bible_reference = verses.format_verses()
+        versions = verses.format_versions(copyright=False, permission=False)
+        copyright_text = verses.format_copyrights()
+        permission_text = verses.format_permissions()
+        service_item.raw_footer.append(self._render_bible_reference(
+            bible_reference=bible_reference,
+            version=versions,
+            copyright=copyright_text,
+            permission=permission_text
+        ))
+        if permission_text:
+            service_item.raw_footer.append(permission_text)
         # If there are no more items we check whether we have to add bible_text.
         if bible_text:
             raw_slides.append(bible_text.lstrip())
@@ -1011,13 +1060,41 @@ class BibleMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.CanLoop)
         service_item.add_capability(ItemCapabilities.CanEditTitle)
         # Service Item: Title
-        service_item.title = '{verse} {version}'.format(verse=verses.format_verses(), version=verses.format_versions())
+        service_item.title = '{verse} ({version})'.format(
+            verse=verses.format_verses(),
+            version=verses.format_versions(copyright=False, permission=False)
+        )
         # Service Item: Theme
         if self.settings_tab.bible_theme:
             service_item.theme = self.settings_tab.bible_theme
         for slide in raw_slides:
             service_item.add_from_text(slide)
         return True
+
+    def _render_bible_reference(self, bible_reference, version, copyright, permission):
+        """
+        Render the user configured Bible reference footer template.
+
+        :return: A string containing the rendered footer reference.
+        """
+        try:
+            footer_template = self.settings.value('bibles/reference format')
+        except KeyError:
+            footer_template = DEFAULT_BIBLE_REFERENCE_FORMAT
+        if not footer_template:
+            footer_template = DEFAULT_BIBLE_REFERENCE_FORMAT
+        mako_vars = {
+            'bible_reference': bible_reference,
+            'version': version,
+            'copyright': copyright,
+            'permission': permission
+        }
+        try:
+            return mako.template.Template(footer_template).render_unicode(**mako_vars).replace('\n', '').strip()
+        except Exception:
+            log.error('Failed to render Bible reference footer template:\n' +
+                      mako.exceptions.text_error_template().render())
+            return '{bible_reference} ({copyright})'.format(bible_reference=bible_reference, copyright=copyright)
 
     def format_verse(self, old_chapter, chapter, verse):
         """
