@@ -746,6 +746,10 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if not is_live or self.live_kill_timer.isActive():
             return
         Registry().execute("live_display_show")
+        # If there is no media to resume, nothing more to do (e.g. plain song with no background media).
+        play_item = self.live_controller.media_play_item
+        if not play_item.media_file and not play_item.audio_file and not play_item.external_stream:
+            return
         if self.live_controller.media_play_item.is_playing != MediaState.Playing:
             self.media_play(self.live_controller)
         else:
