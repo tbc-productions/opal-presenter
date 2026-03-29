@@ -99,7 +99,7 @@ def main_window_reduced(settings, state):
     with patch('openlp.core.ui.mainwindow.SettingsForm'), \
             patch('openlp.core.ui.mainwindow.OpenLPDockWidget'), \
             patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot'), \
-            patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \
+        patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \
             patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.addDockWidget'), \
             patch('openlp.core.ui.mainwindow.QtGui.QActionGroup'), \
             patch('openlp.core.ui.mainwindow.ServiceManager'), \
@@ -558,6 +558,7 @@ def test_restore_current_media_manager_item(main_window_reduced):
     # save current plugin: True; current media plugin: 2
     main_window_reduced.settings.setValue('advanced/save current plugin', True)
     main_window_reduced.settings.setValue('advanced/current media plugin', 2)
+    main_window_reduced.media_tool_box.setCurrentIndex = MagicMock()
 
     # WHEN: Call the restore method.
     main_window_reduced.restore_current_media_manager_item()

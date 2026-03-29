@@ -62,7 +62,7 @@ from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
 from openlp.core.ui.thememanager import ThemeManager
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.docks import MediaDockManager, OpenLPDockWidget
+from openlp.core.widgets.docks import MediaDockManager, MediaToolBox, OpenLPDockWidget
 
 
 class Ui_MainWindow(object):
@@ -141,8 +141,8 @@ class Ui_MainWindow(object):
         self.media_manager_dock = OpenLPDockWidget(main_window, 'media_manager_dock',
                                                    UiIcons().box)
         self.media_manager_dock.setStyleSheet(get_library_stylesheet())
-        # Create the media toolbox
-        self.media_tool_box = QtWidgets.QToolBox(self.media_manager_dock)
+        # Create the media manager tabs.
+        self.media_tool_box = MediaToolBox()
         self.media_tool_box.setObjectName('media_tool_box')
         self.media_manager_dock.setWidget(self.media_tool_box)
         main_window.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)

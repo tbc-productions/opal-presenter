@@ -23,7 +23,7 @@ The :mod:`~openlp.core.widgets.docks` module contains a customised base dock wid
 """
 import logging
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
@@ -31,6 +31,34 @@ from openlp.core.lib.plugin import StringContent
 
 
 log = logging.getLogger(__name__)
+
+
+class MediaToolBox(QtWidgets.QTabWidget):
+    """
+    Tab-based media container with a QToolBox-compatible API.
+    """
+
+    def __init__(self, parent=None):
+        super(MediaToolBox, self).__init__(parent)
+        self.setDocumentMode(True)
+        self.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
+        # Keep tabs at natural width and show scroll arrows when space is limited.
+        self.setUsesScrollButtons(True)
+        self.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
+        self.setMovable(True)
+        self.tabBar().setExpanding(False)
+
+    def addItem(self, widget, icon, label):
+        return self.addTab(widget, icon, label)
+
+    def removeItem(self, index):
+        self.removeTab(index)
+
+    def itemText(self, index):
+        return self.tabText(index)
+
+    def setItemEnabled(self, index, enabled):
+        self.setTabEnabled(index, enabled)
 
 
 class OpenLPDockWidget(QtWidgets.QDockWidget):

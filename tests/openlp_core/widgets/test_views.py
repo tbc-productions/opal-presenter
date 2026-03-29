@@ -26,12 +26,13 @@ import pytest
 from types import GeneratorType
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.widgets.views import ListPreviewWidget, ListWidgetWithDnD, TreeWidgetWithDnD, handle_mime_data_urls
+from openlp.core.widgets.views import FileTreeWidgetItem, ListPreviewWidget, ListWidgetWithDnD, TreeWidgetWithDnD, \
+    handle_mime_data_urls
 from openlp.core.ui.icons import UiIcons
 from tests.utils.osdinteraction import read_service_from_file
 
@@ -699,6 +700,44 @@ def test_treewidgetwithdnd_constructor():
     assert widget.allow_internal_dnd is False
     assert widget.indentation() == 0
     assert widget.isAnimated() is True
+
+
+def test_treewidgetwithdnd_setup_columns(qapp):
+    """setup_columns shows the header, sets correct labels, and enables sorting"""
+    # GIVEN: A TreeWidgetWithDnD
+    widget = TreeWidgetWithDnD(name='Test')
+
+    # WHEN: setup_columns is called with four labels
+    widget.setup_columns(['Name', 'Type', 'Size', 'Date'])
+
+    # THEN: The header should be visible with the right labels, and sorting enabled
+    assert widget.columnCount() == 4
+    assert widget.headerItem().text(0) == 'Name'
+    assert widget.headerItem().text(1) == 'Type'
+    assert widget.headerItem().text(2) == 'Size'
+    assert widget.headerItem().text(3) == 'Date'
+    assert widget.isSortingEnabled() is True
+    assert widget.header().isHidden() is False
+
+
+
+def test_file_tree_widget_item_fallback_string_sort(qapp):
+    """FileTreeWidgetItem falls back to alphabetical sort when no numeric key is set"""
+    # GIVEN: A tree with two items and no sort data set
+    tree = QtWidgets.QTreeWidget()
+    tree.setColumnCount(1)
+    item_a = FileTreeWidgetItem(['Apple'])
+    item_b = FileTreeWidgetItem(['Banana'])
+    tree.addTopLevelItem(item_b)
+    tree.addTopLevelItem(item_a)
+
+    # WHEN: The tree is sorted ascending
+    tree.setSortingEnabled(True)
+    tree.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
+
+    # THEN: Items sort alphabetically
+    assert tree.topLevelItem(0) is item_a
+    assert tree.topLevelItem(1) is item_b
 
 
 def test_initial_slide_count(preview_widget):

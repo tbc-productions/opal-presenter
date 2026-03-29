@@ -177,9 +177,9 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_label.setObjectName('theme_style_label')
         self.ui_theme_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
         if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.addItems(['', '', '', ''])
+            self.ui_theme_style_combo_box.addItems(['', '', '', '', ''])
         else:
-            self.ui_theme_style_combo_box.addItems(['', '', ''])
+            self.ui_theme_style_combo_box.addItems(['', '', '', ''])
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
@@ -274,8 +274,9 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
         self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
         self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
+        self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'Native OS'))
         if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
+            self.ui_theme_style_combo_box.setItemText(4, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
         self.ui_font_size_label.setText(translate('OpenLP.AdvancedTab', 'Interface Font Size:'))
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
 
@@ -337,8 +338,10 @@ class GeneralTab(SettingsTab):
             return 1
         if ui_theme == UiThemes.DefaultDark:
             return 2
+        if ui_theme == UiThemes.Native:
+            return 3
         if ui_theme == UiThemes.QDarkStyle:
-            return 3 if has_ui_theme(UiThemes.QDarkStyle) else 2
+            return 4 if has_ui_theme(UiThemes.QDarkStyle) else 3
 
         return 0
 
@@ -350,9 +353,6 @@ class GeneralTab(SettingsTab):
         :param index "Interface Theme" ComboBox current index
         :return UiThemes enum item
         """
-        if not has_ui_theme(UiThemes.QDarkStyle) and index == 3:
-            index = 2
-
         if index == 0:
             return UiThemes.Automatic
         if index == 1:
@@ -360,7 +360,9 @@ class GeneralTab(SettingsTab):
         if index == 2:
             return UiThemes.DefaultDark
         if index == 3:
-            return UiThemes.QDarkStyle
+            return UiThemes.Native
+        if index == 4:
+            return UiThemes.QDarkStyle if has_ui_theme(UiThemes.QDarkStyle) else UiThemes.Native
 
         return UiThemes.Automatic
 

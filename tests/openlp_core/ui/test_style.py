@@ -265,10 +265,11 @@ def test_is_ui_theme_dark_qdarkstyle_dark(mock_settings):
     assert result is True
 
 
+@patch('openlp.core.ui.style.is_macosx', return_value=False)
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-def test_set_default_theme_defaultdark_theme_sets_palette(mock_settings):
-    """Test that the set_default_theme sets App Palette for DefaultDark UI theme"""
-    # GIVEN: UI theme is DefaultDark
+def test_set_default_theme_defaultdark_theme_sets_palette(_mock_is_macosx, mock_settings):
+    """Test that the set_default_theme sets App Palette for DefaultDark UI theme on non-macOS"""
+    # GIVEN: UI theme is DefaultDark on a non-macOS platform
     mock_settings.value.return_value = UiThemes.DefaultDark
     mock_app = MagicMock()
 
@@ -279,11 +280,14 @@ def test_set_default_theme_defaultdark_theme_sets_palette(mock_settings):
     mock_app.setPalette.assert_called_once()
 
 
+@patch('openlp.core.ui.style.is_macosx', return_value=False)
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
 @patch('openlp.core.ui.style.is_system_darkmode')
-def test_set_default_theme_automatic_theme_system_dark_sets_palette(mocked_is_system_darkmode, mock_settings):
+def test_set_default_theme_automatic_theme_system_dark_sets_palette(mocked_is_system_darkmode,
+                                                                    _mock_is_macosx,
+                                                                    mock_settings):
     """Test that the set_default_theme sets App Palette for Automatic UI theme on System with Dark Theme"""
-    # GIVEN: UI theme is Automatic on System with Dark Theme
+    # GIVEN: UI theme is Automatic on System with Dark Theme (non-macOS)
     mock_settings.value.return_value = UiThemes.Automatic
     mocked_is_system_darkmode.return_value = True
     mock_app = MagicMock()
@@ -357,3 +361,37 @@ def test_set_default_theme_defaultlight_theme_calls_set_default_lightmode(mock_s
 
     # THEN: set_default_darkmode should be changed
     mock_set_default_lightmode.assert_called_once()
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_macosx', return_value=True)
+@patch('openlp.core.ui.style.get_macos_native_style_name', return_value='macOS')
+def test_set_default_theme_native_theme_on_macos_sets_native_style(mock_get_native_style, _mock_is_macosx, mock_settings):
+    """Test that Native UI theme applies native macOS style and standard palette on macOS."""
+    # GIVEN: UI theme is Native on macOS with native style available
+    mock_settings.value.return_value = UiThemes.Native
+    mock_app = MagicMock()
+
+    # WHEN: set_default_theme() is called
+    set_default_theme(mock_app)
+
+    # THEN: app style should be set to native and palette reset
+    mock_get_native_style.assert_called_once_with()
+    mock_app.setStyle.assert_called_once_with('macOS')
+    mock_app.setPalette.assert_called_once_with(mock_app.style().standardPalette())
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_macosx', return_value=False)
+def test_set_default_theme_native_theme_non_macos_resets_palette_only(_mock_is_macosx, mock_settings):
+    """Test that Native UI theme only resets palette on non-macOS."""
+    # GIVEN: UI theme is Native on a non-macOS platform
+    mock_settings.value.return_value = UiThemes.Native
+    mock_app = MagicMock()
+
+    # WHEN: set_default_theme() is called
+    set_default_theme(mock_app)
+
+    # THEN: app style should not be changed, but palette should reset
+    mock_app.setStyle.assert_not_called()
+    mock_app.setPalette.assert_called_once_with(mock_app.style().standardPalette())

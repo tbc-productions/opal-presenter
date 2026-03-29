@@ -304,6 +304,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(True)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self._drag_start_pos = None
 
     def activateDnD(self):
         """
@@ -326,6 +327,11 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
             self.no_results_text = UiStrings().NoResults
         super().clear()
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event):
         """
         Drag and drop event does not care what data is selected as the recipient will use events to request the data
@@ -335,6 +341,10 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
             event.ignore()
             return
         if not self.selectedItems():
+            event.ignore()
+            return
+        if self._drag_start_pos is None or \
+                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
             event.ignore()
             return
         drag = QtGui.QDrag(self)
@@ -405,6 +415,49 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
                              self.no_results_text)
 
 
+class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
+    """
+    A QTreeWidgetItem that supports numeric sorting for file metadata columns
+    (size, date). Call set_sort_data(column, raw_value) to store a numeric sort
+    key alongside the display text; columns without a sort key fall back to the
+    default string comparison.
+    """
+    _SORT_ROLE = QtCore.Qt.ItemDataRole.UserRole + 100
+
+    def set_sort_data(self, column: int, value) -> None:
+        self.setData(column, FileTreeWidgetItem._SORT_ROLE, value)
+
+    def __lt__(self, other):
+        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
+        my_val = self.data(col, FileTreeWidgetItem._SORT_ROLE)
+        other_val = other.data(col, FileTreeWidgetItem._SORT_ROLE)
+        if my_val is not None and other_val is not None:
+            return my_val < other_val
+        # Fall back to plain string comparison — avoids PySide6 recursion via super().__lt__
+        return self.text(col) < other.text(col)
+
+
+class TreeBranchLineStyle(QtWidgets.QProxyStyle):
+    """
+    A proxy style that draws simple connector lines between tree branches,
+    using the palette's mid color so it adapts to themes and dark mode.
+    """
+    def drawPrimitive(self, element, option, painter, widget=None):
+        if element == QtWidgets.QStyle.PrimitiveElement.PE_IndicatorBranch:
+            color = option.palette.mid().color()
+            painter.save()
+            painter.setPen(color)
+            mid_x = option.rect.center().x()
+            mid_y = option.rect.center().y()
+            if option.state & QtWidgets.QStyle.StateFlag.State_Item:
+                painter.drawLine(mid_x, option.rect.top(), mid_x, mid_y)
+                painter.drawLine(mid_x, mid_y, option.rect.right(), mid_y)
+            if option.state & QtWidgets.QStyle.StateFlag.State_Sibling:
+                painter.drawLine(mid_x, mid_y, mid_x, option.rect.bottom())
+            painter.restore()
+        super().drawPrimitive(element, option, painter, widget)
+
+
 class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
     """
     Provide a tree widget to store objects and handle drag and drop events
@@ -420,6 +473,30 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self.default_indentation = self.indentation()
         self.setIndentation(0)
         self.setAnimated(True)
+        self._drag_start_pos = None
+        self._branch_line_style = TreeBranchLineStyle()
+        self.setStyle(self._branch_line_style)
+
+    def setup_columns(self, labels: list):
+        """
+        Enable a column header with the given labels. The first column stretches to fill available space;
+        remaining columns resize to their content. Also reduces the font slightly for a more compact display.
+
+        :param labels: List of column header strings, e.g. ['Name', 'Type', 'Size']
+        """
+        self.setColumnCount(len(labels))
+        self.setHeaderLabels(labels)
+        self.header().show()
+        self.header().setStretchLastSection(False)
+        for i in range(len(labels)):
+            self.header().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Interactive)
+        for i in range(1, len(labels)):
+            self.header().resizeSection(i, 130)
+        self.setSortingEnabled(True)
+        self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
+        font = self.font()
+        font.setPointSize(max(font.pointSize() - 1, 8))
+        self.setFont(font)
 
     def activateDnD(self):
         """
@@ -429,6 +506,11 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
         Registry().register_function(('%s_dnd' % self.mime_data_text), self.parent().handle_mime_data)
         Registry().register_function(('%s_dnd_internal' % self.mime_data_text), self.parent().dnd_move_internal)
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """
@@ -441,6 +523,10 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
             event.ignore()
             return
         if not self.selectedItems():
+            event.ignore()
+            return
+        if self._drag_start_pos is None or \
+                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
             event.ignore()
             return
         drag = QtGui.QDrag(self)

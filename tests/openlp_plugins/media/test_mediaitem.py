@@ -22,6 +22,7 @@
 Test the media plugin
 """
 import pytest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -143,3 +144,26 @@ def test_add_network_stream(media_item):
 
         # THEN: The mocked method should have been called
         mocked_validate_and_load.assert_called_once_with(['networkstream:rmtp://localhost'])
+
+
+def test_load_item_metadata_columns(media_item):
+    """Test that load_item populates the Date column and tooltip with type and size for a normal media file"""
+    # GIVEN: A media file item and a controlled stat result
+    file_path = Path('/media/video.mp4')
+    item = MagicMock(file_path=file_path)
+    mocked_stat = MagicMock()
+    mocked_stat.st_size = 150 * 1024 * 1024  # 150.0 MB
+    mocked_stat.st_mtime = 1700000000.0
+
+    with patch.object(Path, 'exists', return_value=True), \
+            patch.object(Path, 'stat', return_value=mocked_stat), \
+            patch('openlp.plugins.media.lib.mediaitem.QtCore.QFileInfo') as mocked_qfileinfo, \
+            patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix', return_value=([], [])):
+        mocked_qfileinfo.return_value.isFile.return_value = True
+
+        # WHEN: load_item() is called
+        result = media_item.load_item(item)
+
+    # THEN: Date column should be populated, tooltip enriched with type and size
+    assert result.text(1) == datetime.fromtimestamp(1700000000.0).strftime('%Y-%m-%d %H:%M')
+    assert result.toolTip(0) == '/media/video.mp4\nMP4 · 150.0 MB'

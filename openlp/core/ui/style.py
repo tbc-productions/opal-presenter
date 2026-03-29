@@ -57,7 +57,8 @@ QToolBar
 """
 
 MEDIA_MANAGER_STYLE = """
-::tab#media_tool_box {
+QTabWidget#media_tool_box QTabBar::tab,
+QToolBox#media_tool_box::tab {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
         stop: 0 palette(button), stop: 1.0 palette(mid));
     border: 0;
@@ -67,7 +68,8 @@ MEDIA_MANAGER_STYLE = """
     text-align: left;
 }
 /* This is here to make the tabs on KDE with the Breeze theme work */
-::tab:selected {}
+QTabWidget#media_tool_box QTabBar::tab:selected,
+QToolBox#media_tool_box::tab:selected {}
 """
 
 PROGRESSBAR_STYLE = """
@@ -84,13 +86,22 @@ class UiThemes(Enum):
     Automatic = 'automatic'
     DefaultLight = 'light:default'
     DefaultDark = 'dark:default'
+    Native = 'native'
     QDarkStyle = 'dark:qdarkstyle'
+
+
+def get_macos_native_style_name():
+    """
+    Return the available macOS native Qt style name, or ``None`` if not available.
+    """
+    available = QtWidgets.QStyleFactory.keys()
+    return next((s for s in available if s.lower() == 'macos' or s.lower() == 'macintosh'), None)
 
 
 def is_ui_theme_dark():
     ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
 
-    if ui_theme_name is None or ui_theme_name == UiThemes.Automatic:
+    if ui_theme_name is None or ui_theme_name in (UiThemes.Automatic, UiThemes.Native):
         return is_system_darkmode()
     else:
         return ui_theme_name.value.startswith('dark:')
@@ -171,6 +182,14 @@ def set_default_theme(app):
     """
     Setup theme
     """
+    if is_ui_theme(UiThemes.Native):
+        if is_macosx():
+            native = get_macos_native_style_name()
+            if native:
+                app.setStyle(native)
+        # Ensure any previously-customized palette is reset when using the native theme.
+        app.setPalette(app.style().standardPalette())
+        return
     if is_ui_theme(UiThemes.DefaultDark) or (is_ui_theme(UiThemes.Automatic) and is_ui_theme_dark()):
         set_default_darkmode(app)
     elif is_ui_theme(UiThemes.DefaultLight):
@@ -179,9 +198,14 @@ def set_default_theme(app):
 
 def set_default_lightmode(app):
     """
-    Setup lightmode on the application if Default Lightt theme is enabled in the OpenLP Settings.
+    Setup lightmode on the application if Default Light theme is enabled in the OpenLP Settings.
     """
-    app.setStyle('Fusion')
+    if is_macosx():
+        native = get_macos_native_style_name()
+        if native:
+            app.setStyle(native)
+    else:
+        app.setStyle('Fusion')
     app.setPalette(app.style().standardPalette())
 
 
@@ -197,6 +221,12 @@ def set_default_darkmode(app):
         * Allowed palette to be set on any operating system;
         * Split Windows Dark Mode detection to another function.
     """
+    if is_macosx():
+        native = get_macos_native_style_name()
+        if native:
+            app.setStyle(native)
+        # macOS native style handles dark mode through the system palette; skip the manual palette override.
+        return
     app.setStyle('Fusion')
     dark_palette = QtGui.QPalette()
     dark_color = QtGui.QColor(45, 45, 45)
@@ -239,6 +269,8 @@ def get_application_stylesheet():
     :return str: The correct stylesheet as a string
     """
     stylesheet = ''
+    if is_ui_theme(UiThemes.Native):
+        return stylesheet
     if is_ui_theme(UiThemes.QDarkStyle):
         stylesheet = qdarkstyle.load_stylesheet_pyqt()
     else:
@@ -262,10 +294,9 @@ def get_library_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
-    if not is_ui_theme(UiThemes.QDarkStyle):
-        return MEDIA_MANAGER_STYLE
-    else:
+    if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.QDarkStyle):
         return ''
+    return MEDIA_MANAGER_STYLE
 
 
 def apply_ui_font_scale(settings, application):

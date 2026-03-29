@@ -21,10 +21,11 @@
 """
 This module contains tests for the lib submodule of the Presentations plugin.
 """
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.lib import ServiceItemContext
 from openlp.core.lib.serviceitem import ItemCapabilities
@@ -296,3 +297,33 @@ def test_search_not_found(mock_setup, mock_item, registry):
 
     # THEN: a file should be found
     assert result == [], 'The result file should be empty'
+
+
+def test_load_item_metadata_columns(media_item):
+    """Test that load_item populates the Date column and tooltip with type and size for an accessible file"""
+    # GIVEN: A presentation file item and a controlled stat result
+    file_path = Path('/presentations/slides.pptx')
+    item = MagicMock(file_path=file_path)
+    mocked_stat = MagicMock()
+    mocked_stat.st_size = 5 * 1024 * 1024  # 5.0 MB
+    mocked_stat.st_mtime = 1700000000.0
+    mocked_controller = MagicMock()
+    mocked_doc = MagicMock()
+    mocked_doc.get_thumbnail_path.return_value = None
+    mocked_controller.add_document.return_value = mocked_doc
+    media_item.controllers = {'pptx': mocked_controller}
+
+    with patch.object(Path, 'exists', return_value=True), \
+            patch('os.access', return_value=True), \
+            patch.object(Path, 'stat', return_value=mocked_stat), \
+            patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.find_controller_by_type',
+                  return_value='pptx'), \
+            patch('openlp.plugins.presentations.lib.mediaitem.UiIcons') as mocked_icons:
+        mocked_icons.return_value.delete = QtGui.QIcon()
+
+        # WHEN: load_item() is called for initial load (skips generating thumbnails)
+        result = media_item.load_item(item, is_initial_load=True)
+
+    # THEN: Date column should be populated, tooltip enriched with type and size
+    assert result.text(1) == datetime.fromtimestamp(1700000000.0).strftime('%Y-%m-%d %H:%M')
+    assert result.toolTip(0) == '/presentations/slides.pptx\nPPTX · 5.0 MB'
