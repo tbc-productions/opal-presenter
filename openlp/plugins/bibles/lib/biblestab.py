@@ -34,6 +34,9 @@ from openlp.plugins.bibles.lib import get_reference_separator, update_reference_
 log = logging.getLogger(__name__)
 
 
+DEFAULT_BIBLE_REFERENCE_FORMAT = '${bible_reference} (${copyright})'
+
+
 class BiblesTab(SettingsTab):
     """
     BiblesTab is the Bibles settings tab in the settings dialog.
@@ -145,6 +148,29 @@ class BiblesTab(SettingsTab):
         self.bible_search_while_typing_check_box = QtWidgets.QCheckBox(self.bible_quick_settings_group_box)
         self.bible_search_while_typing_check_box.setObjectName('bible_search_while_typing_check_box')
         self.search_settings_layout.addRow(self.bible_search_while_typing_check_box)
+        self.reference_format_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.reference_format_group_box.setObjectName('reference_format_group_box')
+        self.reference_format_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                  QtWidgets.QSizePolicy.Policy.Fixed)
+        self.reference_format_layout = QtWidgets.QVBoxLayout(self.reference_format_group_box)
+        self.reference_format_layout.setObjectName('reference_format_layout')
+        self.reference_format_label = QtWidgets.QLabel(self.reference_format_group_box)
+        self.reference_format_label.setWordWrap(True)
+        self.reference_format_label.setObjectName('reference_format_label')
+        self.reference_format_layout.addWidget(self.reference_format_label)
+        self.reference_format_text_edit = QtWidgets.QTextEdit(self.reference_format_group_box)
+        self.reference_format_text_edit.setObjectName('reference_format_text_edit')
+        self.reference_format_text_edit.setAcceptRichText(False)
+        self.reference_format_text_edit.setTabChangesFocus(True)
+        self.reference_format_text_edit.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                  QtWidgets.QSizePolicy.Policy.Fixed)
+        self.reference_format_text_edit.setMaximumHeight(90)
+        self.reference_format_layout.addWidget(self.reference_format_text_edit)
+        self.reference_format_help_label = QtWidgets.QLabel(self.reference_format_group_box)
+        self.reference_format_help_label.setOpenExternalLinks(True)
+        self.reference_format_help_label.setObjectName('reference_format_help_label')
+        self.reference_format_layout.addWidget(self.reference_format_help_label)
+        self.right_layout.addWidget(self.reference_format_group_box)
         self.left_layout.addStretch()
         self.right_layout.addStretch()
         # Signals and slots
@@ -229,6 +255,14 @@ class BiblesTab(SettingsTab):
                                                                    'Search automatically while typing (Text search must'
                                                                    ' contain a\nminimum of {count} characters and a '
                                                                    'space for performance reasons)').format(count='8'))
+        self.reference_format_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Bible Reference Format'))
+        self.reference_format_label.setText(
+            translate('BiblesPlugin.BiblesTab', 'Template used to display Bible references in the footer.'))
+        self.reference_format_text_edit.setToolTip(translate(
+            'BiblesPlugin.BiblesTab',
+            'Mako variables:\n${bible_reference}\n${version}\n${copyright}\n${permission}'))
+        self.reference_format_help_label.setText('<a href="https://docs.makotemplates.org">{}</a>'.format(
+            translate('BiblesPlugin.BiblesTab', 'Mako Syntax')))
 
     def on_bible_theme_combo_box_changed(self):
         self.bible_theme = self.bible_theme_combo_box.currentText()
@@ -416,6 +450,8 @@ class BiblesTab(SettingsTab):
         self.hide_combined_quick_error_check_box.setChecked(self.hide_combined_quick_error)
         self.bible_search_while_typing = self.settings.value('bibles/is search while typing enabled')
         self.bible_search_while_typing_check_box.setChecked(self.bible_search_while_typing)
+        self.bible_reference_format = self.settings.value('bibles/reference format')
+        self.reference_format_text_edit.setPlainText(self.bible_reference_format)
 
     def save(self):
         self.settings.setValue('bibles/is verse number visible', self.is_verse_number_visible)
@@ -447,6 +483,9 @@ class BiblesTab(SettingsTab):
         self.settings.setValue('bibles/reset to combined quick search', self.reset_to_combined_quick_search)
         self.settings.setValue('bibles/hide combined quick error', self.hide_combined_quick_error)
         self.settings.setValue('bibles/is search while typing enabled', self.bible_search_while_typing)
+        self.bible_reference_format = self.reference_format_text_edit.toPlainText().strip() or \
+            DEFAULT_BIBLE_REFERENCE_FORMAT
+        self.settings.setValue('bibles/reference format', self.bible_reference_format)
         if self.tab_visited:
             self.settings_form.register_post_process('bibles_config_updated')
         self.tab_visited = False

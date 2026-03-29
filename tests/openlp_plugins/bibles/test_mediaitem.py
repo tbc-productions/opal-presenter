@@ -1717,3 +1717,31 @@ def test_generate_slide_data_data_string_one_bible(media_item: BibleMediaItem):
             }
         ]
     }
+
+
+def test_generate_slide_data_title_uses_version_only(media_item: BibleMediaItem):
+    """
+    Test that the generated service item title is reference plus version only.
+    """
+    # GIVEN: Mocked service item and one verse with copyright metadata
+    mocked_service_item = MagicMock()
+    slide_data = {
+        'book': 'Matthew',
+        'chapter': '1',
+        'verse': '2',
+        'version': 'Bible version 104',
+        'copyright': 'copywrong',
+        'permissions': 'all the permissions',
+        'second_bible': '',
+        'text': 'text from matthew 1:2'
+    }
+    mocked_items = [MagicMock(**{'data.return_value': slide_data})]
+    media_item.format_verse = MagicMock()
+    media_item.settings_tab = MagicMock()
+
+    # WHEN: Called generate_slide_data
+    media_item.generate_slide_data(mocked_service_item, item=mocked_items)
+
+    # THEN: The title should include version in parentheses and omit copyright text
+    assert mocked_service_item.title.endswith(' (Bible version 104)')
+    assert 'copywrong' not in mocked_service_item.title

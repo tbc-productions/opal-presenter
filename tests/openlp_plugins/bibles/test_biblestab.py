@@ -31,7 +31,8 @@ __default_settings__ = {
     'bibles/verse separator': 'verse separator',
     'bibles/range separator': 'range separator',
     'bibles/list separator': 'list separator',
-    'bibles/end separator': 'end separator'
+    'bibles/end separator': 'end separator',
+    'bibles/reference format': '${bible_reference} (${copyright})'
 }
 
 
@@ -82,3 +83,18 @@ def test_load_when_seperators_unset(form):
     assert form.range_separator_check_box.isChecked() is False
     assert form.list_separator_check_box.isChecked() is False
     assert form.end_separator_check_box.isChecked() is False
+
+
+def test_load_reference_format(form):
+    """
+    Test that the Bible reference format template is loaded into the text edit.
+    """
+    # GIVEN: A configured template value
+    expected_template = '${bible_reference} - ${version}'
+    form.settings.setValue('bibles/reference format', expected_template)
+
+    # WHEN: Load is invoked
+    form.load()
+
+    # THEN: The template text should be loaded
+    assert form.reference_format_text_edit.toPlainText() == expected_template

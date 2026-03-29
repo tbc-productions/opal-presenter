@@ -108,3 +108,19 @@ class VerseReferenceList(object):
         if result.endswith(','):
             return result[:len(result) - 1]
         return result
+
+    def format_copyrights(self):
+        """
+        Format a string with all copyrights from the used bible versions.
+
+        :return: A semicolon separated string with copyrights.
+        """
+        return '; '.join([version['copyright'] for version in self.version_list if version['copyright'].strip()])
+
+    def format_permissions(self):
+        """
+        Format a string with all permission strings from the used bible versions.
+
+        :return: A semicolon separated string with permissions.
+        """
+        return '; '.join([version['permission'] for version in self.version_list if version['permission'].strip()])
