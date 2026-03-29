@@ -30,7 +30,7 @@ from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib.settingstab import SettingsTab
-from openlp.core.ui.style import UiThemes, apply_ui_font_scale, has_ui_theme, reapply_ui_theme
+from openlp.core.ui.style import UiThemes, apply_ui_font_scale, has_ui_theme
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.edits import PathEdit
 
@@ -270,7 +270,7 @@ class GeneralTab(SettingsTab):
         self.new_service_message_check_box.setText(translate('OpenLP.AdvancedTab',
                                                              'Alert if New clicked on blank service'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
-        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme:'))
+        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
         self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
         self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
         self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
@@ -407,7 +407,6 @@ class GeneralTab(SettingsTab):
         Apply settings after the tab has loaded
         """
         self.settings_form.register_post_process('slidecontroller_live_spin_delay')
-        reapply_ui_theme()
         try:
             application = Registry().get('application-qt')
             if application is not None:

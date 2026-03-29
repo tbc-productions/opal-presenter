@@ -287,9 +287,12 @@ def apply_ui_font_scale(settings, application):
     # Look up the stored base font size; fall back to the current application font on first call.
     base_point_size = -1
     try:
-        stored = Registry().get('base_font_point_size')
-        if stored is not None:
-            base_point_size = float(stored)
+        # Check if the service exists first to avoid unnecessary warnings
+        registry = Registry()
+        if 'base_font_point_size' in registry.service_list:
+            stored = registry.get('base_font_point_size')
+            if stored is not None:
+                base_point_size = float(stored)
     except Exception:
         pass
 
@@ -318,25 +321,13 @@ def apply_ui_font_scale(settings, application):
             font.setPixelSize(int(pixel_size * scale_factor))
             application.setFont(font)
 
-
-def reapply_ui_theme():
-    """
-    Re-apply the current UI theme to the running application without requiring a restart.
-
-    Resets the application palette and any existing stylesheet before applying the theme and stylesheet that
-    correspond to the current ``advanced/ui_theme_name`` setting. Safe to call from the Settings dialog's
-    ``post_set_up`` path; returns silently if the application or main window are not yet available.
-    """
+    # Force existing widgets to refresh so font-size changes are visible immediately.
     try:
-        application = Registry().get('application-qt')
-        main_window = Registry().get('main_window')
-        if application is None or main_window is None:
-            return
+        for widget in application.allWidgets():
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.updateGeometry()
+            widget.update()
+        application.processEvents()
     except Exception:
-        return
-    # Reset palette to the current style's default before applying a potentially different theme.
-    application.setPalette(application.style().standardPalette())
-    application.setStyleSheet('')
-    set_default_theme(application)
-    stylesheet = get_application_stylesheet()
-    main_window.setStyleSheet(stylesheet)
+        pass

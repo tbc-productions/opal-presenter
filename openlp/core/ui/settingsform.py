@@ -38,7 +38,7 @@ from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
 from openlp.core.ui.media.mediatab import MediaTab
 from openlp.core.ui.settingsdialog import Ui_SettingsDialog
-from openlp.core.ui.style import apply_ui_font_scale, reapply_ui_theme
+from openlp.core.ui.style import apply_ui_font_scale
 
 
 log = logging.getLogger(__name__)
@@ -159,7 +159,6 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         try:
             application = Registry().get('application-qt')
             if application is not None:
-                reapply_ui_theme()
                 apply_ui_font_scale(self.settings, application)
         except Exception:
             pass
