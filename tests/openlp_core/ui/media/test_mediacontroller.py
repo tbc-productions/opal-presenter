@@ -61,8 +61,9 @@ def test_setup(mocked_register_views: MagicMock, media_env: MediaController):
     # GIVEN: A media controller, and function list
     expected_functions_list = ['bootstrap_initialise', 'bootstrap_post_set_up', 'bootstrap_completion',
                                'playbackPlay', 'playbackPause', 'playbackStop', 'playbackLoop', 'seek_slider',
-                               'volume_slider', 'media_hide', 'media_blank', 'media_unblank', 'songs_hide',
-                               'songs_blank', 'songs_unblank', 'media_state']
+                               'seek_slider_pressed', 'seek_slider_released', 'volume_slider', 'media_hide',
+                               'media_blank', 'media_unblank', 'songs_hide', 'songs_blank', 'songs_unblank',
+                               'media_state']
     # WHEN: Setup is called
     media_env.setup()
     # THEN: the functions should be defined along with the api blueprint
@@ -474,6 +475,77 @@ def test_media_seek_msg(media_env, registry):
 
     # THEN: The underlying method is called
     mocked_media_seek.assert_called_with(1, 800)
+
+
+def test_media_seek_pressed_msg(media_env):
+    """Test that seek-slider press messages call media_seek_pressed()."""
+    message = (1, [])
+
+    with patch.object(media_env.media_controller, 'media_seek_pressed') as mocked_media_seek_pressed:
+        media_env.media_controller.media_seek_pressed_msg(message)
+
+    mocked_media_seek_pressed.assert_called_with(1)
+
+
+def test_media_seek_released_msg(media_env):
+    """Test that seek-slider release messages call media_seek_released()."""
+    message = (1, [])
+
+    with patch.object(media_env.media_controller, 'media_seek_released') as mocked_media_seek_released:
+        media_env.media_controller.media_seek_released_msg(message)
+
+    mocked_media_seek_released.assert_called_with(1)
+
+
+def test_media_seek_pressed_pauses_when_playing(media_env):
+    """Pressing seek should pause playback if media is currently playing."""
+    mocked_controller = MagicMock()
+    mocked_controller.media_play_item = MagicMock()
+    mocked_controller.media_play_item.is_playing = MediaState.Playing
+
+    media_env.media_controller.media_pause = MagicMock()
+    media_env.media_controller.media_seek_pressed(mocked_controller)
+
+    assert mocked_controller.media_play_item._resume_media_after_seek is True
+    media_env.media_controller.media_pause.assert_called_once_with(mocked_controller)
+
+
+def test_media_seek_pressed_does_not_pause_when_not_playing(media_env):
+    """Pressing seek should not pause if media is already paused/stopped."""
+    mocked_controller = MagicMock()
+    mocked_controller.media_play_item = MagicMock()
+    mocked_controller.media_play_item.is_playing = MediaState.Paused
+
+    media_env.media_controller.media_pause = MagicMock()
+    media_env.media_controller.media_seek_pressed(mocked_controller)
+
+    assert mocked_controller.media_play_item._resume_media_after_seek is False
+    media_env.media_controller.media_pause.assert_not_called()
+
+
+def test_media_seek_released_resumes_when_flagged(media_env):
+    """Releasing seek should resume playback if it was playing before scrub."""
+    mocked_controller = MagicMock()
+    mocked_controller.media_play_item = MagicMock()
+    mocked_controller.media_play_item._resume_media_after_seek = True
+
+    media_env.media_controller.media_play = MagicMock()
+    media_env.media_controller.media_seek_released(mocked_controller)
+
+    media_env.media_controller.media_play.assert_called_once_with(mocked_controller)
+    assert mocked_controller.media_play_item._resume_media_after_seek is False
+
+
+def test_media_seek_released_does_not_resume_when_not_flagged(media_env):
+    """Releasing seek should not resume playback if media was not playing before scrub."""
+    mocked_controller = MagicMock()
+    mocked_controller.media_play_item = MagicMock()
+    mocked_controller.media_play_item._resume_media_after_seek = False
+
+    media_env.media_controller.media_play = MagicMock()
+    media_env.media_controller.media_seek_released(mocked_controller)
+
+    media_env.media_controller.media_play.assert_not_called()
 
 
 def test_media_reset(media_env, settings):

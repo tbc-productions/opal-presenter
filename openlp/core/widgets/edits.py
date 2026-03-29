@@ -62,6 +62,7 @@ class SearchEdit(QtWidgets.QLineEdit):
         super().__init__(parent)
         self.settings_section = settings_section
         self._current_search_type = -1
+        self._search_button_gap = 4
         self.clear_button = QtWidgets.QToolButton(self)
         self.clear_button.setIcon(UiIcons().backspace)
         self.clear_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
@@ -81,11 +82,8 @@ class SearchEdit(QtWidgets.QLineEdit):
         frame_width = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth)
         right_padding = self.clear_button.width() + frame_width
         if hasattr(self, 'menu_button'):
-            left_padding = self.menu_button.width()
-            stylesheet = 'QLineEdit {{ padding-left:{left}px; padding-right: {right}px; }} '.format(left=left_padding,
-                                                                                                    right=right_padding)
-        else:
-            stylesheet = 'QLineEdit {{ padding-right: {right}px; }} '.format(right=right_padding)
+            right_padding += self.menu_button.width() + self._search_button_gap
+        stylesheet = 'QLineEdit {{ padding-right: {right}px; }} '.format(right=right_padding)
         self.setStyleSheet(stylesheet)
         msz = self.minimumSizeHint()
         self.setMinimumSize(max(msz.width(), self.clear_button.width() + (frame_width * 2) + 2),
@@ -103,7 +101,8 @@ class SearchEdit(QtWidgets.QLineEdit):
                                (self.rect().bottom() + 1 - size.height()) // 2)
         if hasattr(self, 'menu_button'):
             size = self.menu_button.size()
-            self.menu_button.move(self.rect().left() + frame_width + 2, (self.rect().bottom() + 1 - size.height()) // 2)
+            menu_left = self.clear_button.x() - self._search_button_gap - size.width()
+            self.menu_button.move(menu_left, (self.rect().bottom() + 1 - size.height()) // 2)
 
     def current_search_type(self):
         """
@@ -156,8 +155,12 @@ class SearchEdit(QtWidgets.QLineEdit):
             self.menu_button.setIcon(UiIcons().shortcuts)
             self.menu_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
             self.menu_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-            self.menu_button.setStyleSheet('QToolButton { border: none; padding: 0px 10px 0px 0px; }')
-            self.menu_button.resize(QtCore.QSize(28, 18))
+            self.menu_button.setAutoRaise(True)
+            self.menu_button.setStyleSheet(
+                'QToolButton { border: none; padding: 0px 14px 0px 4px; } '
+                'QToolButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: center right; right: 2px; }'
+            )
+            self.menu_button.resize(QtCore.QSize(36, 18))
         self.menu_button.setMenu(menu)
         self.set_current_search_type(
             self.settings.value('{section}/last used search type'.format(section=self.settings_section)))

@@ -144,7 +144,7 @@ class PresentationMediaItem(FolderLibraryItem):
         self.display_type_label.setBuddy(self.display_type_combo_box)
         self.display_layout.addRow(self.display_type_label, self.display_type_combo_box)
         # Add the Presentation widget to the page layout.
-        self.page_layout.addWidget(self.presentation_widget)
+        self.panel_layout.addWidget(self.presentation_widget)
 
     def build_file_mask_string(self):
         """
