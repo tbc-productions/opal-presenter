@@ -266,3 +266,77 @@ def get_library_stylesheet():
         return MEDIA_MANAGER_STYLE
     else:
         return ''
+
+
+def apply_ui_font_scale(settings, application):
+    """
+    Apply the user-selected UI font scaling percentage to the QApplication font.
+
+    Stores the original (unscaled) font point size in the Registry on the first call so that subsequent calls
+    (e.g. triggered live from the Settings dialog) always scale relative to the base size rather than the already-
+    scaled current size.
+    """
+    scale_percent = settings.value('advanced/ui font scale')
+    try:
+        scale_percent = int(scale_percent)
+    except (TypeError, ValueError):
+        scale_percent = 100
+    scale_percent = max(75, min(125, scale_percent))
+    scale_factor = scale_percent / 100.0
+
+    # Look up the stored base font size; fall back to the current application font on first call.
+    base_point_size = -1
+    try:
+        stored = Registry().get('base_font_point_size')
+        if stored is not None:
+            base_point_size = float(stored)
+    except Exception:
+        pass
+
+    font = application.font()
+    if base_point_size <= 0:
+        # First call (or Registry unavailable) — current font IS the base; store it.
+        try:
+            base_point_size = float(font.pointSizeF())
+        except (TypeError, ValueError):
+            base_point_size = -1
+        if base_point_size > 0:
+            try:
+                Registry().register('base_font_point_size', base_point_size)
+            except Exception:
+                pass
+
+    if base_point_size > 0:
+        font.setPointSizeF(base_point_size * scale_factor)
+        application.setFont(font)
+    else:
+        try:
+            pixel_size = int(font.pixelSize())
+        except (TypeError, ValueError):
+            pixel_size = -1
+        if pixel_size > 0:
+            font.setPixelSize(int(pixel_size * scale_factor))
+            application.setFont(font)
+
+
+def reapply_ui_theme():
+    """
+    Re-apply the current UI theme to the running application without requiring a restart.
+
+    Resets the application palette and any existing stylesheet before applying the theme and stylesheet that
+    correspond to the current ``advanced/ui_theme_name`` setting. Safe to call from the Settings dialog's
+    ``post_set_up`` path; returns silently if the application or main window are not yet available.
+    """
+    try:
+        application = Registry().get('application-qt')
+        main_window = Registry().get('main_window')
+        if application is None or main_window is None:
+            return
+    except Exception:
+        return
+    # Reset palette to the current style's default before applying a potentially different theme.
+    application.setPalette(application.style().standardPalette())
+    application.setStyleSheet('')
+    set_default_theme(application)
+    stylesheet = get_application_stylesheet()
+    main_window.setStyleSheet(stylesheet)

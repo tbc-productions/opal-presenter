@@ -28,8 +28,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.registry import Registry
 from openlp.core.lib.settingstab import SettingsTab
-from openlp.core.ui.style import UiThemes, has_ui_theme
+from openlp.core.ui.style import UiThemes, apply_ui_font_scale, has_ui_theme, reapply_ui_theme
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.edits import PathEdit
 
@@ -182,6 +183,14 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
+        self.ui_font_size_label = QtWidgets.QLabel(self.ui_group_box)
+        self.ui_font_size_label.setObjectName('ui_font_size_label')
+        self.ui_font_size_spin_box = QtWidgets.QSpinBox(self.ui_group_box)
+        self.ui_font_size_spin_box.setObjectName('ui_font_size_spin_box')
+        self.ui_font_size_spin_box.setRange(75, 125)
+        self.ui_font_size_spin_box.setSuffix('%')
+        self.ui_layout.addRow(self.ui_font_size_label)
+        self.ui_layout.addRow(self.ui_font_size_spin_box)
         self.right_layout.addWidget(self.ui_group_box)
         # Push everything in both columns to the top
         self.left_layout.addStretch()
@@ -261,12 +270,13 @@ class GeneralTab(SettingsTab):
         self.new_service_message_check_box.setText(translate('OpenLP.AdvancedTab',
                                                              'Alert if New clicked on blank service'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
-        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
+        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme:'))
         self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
         self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
         self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
         if has_ui_theme(UiThemes.QDarkStyle):
             self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
+        self.ui_font_size_label.setText(translate('OpenLP.AdvancedTab', 'Interface Font Size:'))
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
 
     def load(self):
@@ -306,6 +316,7 @@ class GeneralTab(SettingsTab):
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
         ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
+        self.ui_font_size_spin_box.setValue(self.settings.value('advanced/ui font scale'))
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
         self.new_service_message_check_box.setChecked(self.settings.value('advanced/new service message'))
         self.hide_mouse_check_box.setChecked(self.settings.value('advanced/hide mouse'))
@@ -384,7 +395,11 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('advanced/hide mouse', self.hide_mouse_check_box.isChecked())
         self.settings.setValue('advanced/search as type', self.is_search_as_you_type_enabled)
         theme_name = GeneralTab.get_ui_theme_name(self.ui_theme_style_combo_box.currentIndex())
+        # Commit any in-progress spinbox edit before reading the value.
+        self.ui_font_size_spin_box.interpretText()
         self.settings.setValue('advanced/ui_theme_name', theme_name)
+        self.settings.setValue('advanced/ui font scale', self.ui_font_size_spin_box.value())
+        self.settings.sync()
         self.post_set_up()
 
     def post_set_up(self):
@@ -392,6 +407,13 @@ class GeneralTab(SettingsTab):
         Apply settings after the tab has loaded
         """
         self.settings_form.register_post_process('slidecontroller_live_spin_delay')
+        reapply_ui_theme()
+        try:
+            application = Registry().get('application-qt')
+            if application is not None:
+                apply_ui_font_scale(self.settings, application)
+        except Exception:
+            pass
 
     def on_logo_background_color_changed(self, color):
         """

@@ -38,6 +38,7 @@ from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
 from openlp.core.ui.media.mediatab import MediaTab
 from openlp.core.ui.settingsdialog import Ui_SettingsDialog
+from openlp.core.ui.style import apply_ui_font_scale, reapply_ui_theme
 
 
 log = logging.getLogger(__name__)
@@ -96,8 +97,25 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             if item.text() == starting_tab_name:
                 starting_tab_row = index
                 break
+        self._set_minimum_dialog_size()
         self.setting_list_widget.setCurrentRow(starting_tab_row)
         return QtWidgets.QDialog.exec(self)
+
+    def _set_minimum_dialog_size(self):
+        """
+        Set a minimum dialog size using the original dialog baseline, capped to the available viewport.
+        """
+        original_size = QtCore.QSize(1200, 700)
+        required_width = original_size.width()
+        required_height = original_size.height()
+        screen = self.screen() or QtWidgets.QApplication.primaryScreen()
+        if screen:
+            available_size = screen.availableGeometry().size()
+            required_width = min(required_width, available_size.width())
+            required_height = min(required_height, available_size.height())
+        minimum_size = QtCore.QSize(max(required_width, 0), max(required_height, 0))
+        self.setMinimumSize(minimum_size)
+        self.resize(max(self.width(), minimum_size.width()), max(self.height(), minimum_size.height()))
 
     def insert_tab(self, tab_widget, is_visible=True):
         """
@@ -137,6 +155,14 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # Now lets process all the post save handlers
         while self.processes:
             Registry().execute(self.processes.pop(0))
+        # Ensure UI theme/font changes are applied using final saved values on the first OK click.
+        try:
+            application = Registry().get('application-qt')
+            if application is not None:
+                reapply_ui_theme()
+                apply_ui_font_scale(self.settings, application)
+        except Exception:
+            pass
         return QtWidgets.QDialog.accept(self)
 
     def reject(self):
@@ -202,7 +228,9 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 # Make the matching tab visible
                 tab_widget.tab_visited = True
                 self.stacked_layout.setCurrentIndex(tab_index)
-                self.stacked_layout.currentWidget().tab_visible()
+                current_widget = self.stacked_layout.currentWidget()
+                self.content_widget.resize(current_widget.sizeHint())
+                current_widget.tab_visible()
 
     def register_post_process(self, function):
         """

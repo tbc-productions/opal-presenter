@@ -21,7 +21,7 @@
 """
 The UI widgets of the settings dialog.
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
@@ -48,9 +48,18 @@ class Ui_SettingsDialog(object):
         self.setting_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setting_list_widget.setObjectName('setting_list_widget')
         self.dialog_layout.addWidget(self.setting_list_widget, 0, 0, 1, 1)
-        self.stacked_layout = QtWidgets.QStackedLayout()
+        self.dialog_layout.setColumnStretch(0, 0)
+        self.dialog_layout.setColumnStretch(1, 1)
+        self.content_widget = QtWidgets.QWidget(settings_dialog)
+        self.content_widget.setObjectName('content_widget')
+        self.stacked_layout = QtWidgets.QStackedLayout(self.content_widget)
         self.stacked_layout.setObjectName('stacked_layout')
-        self.dialog_layout.addLayout(self.stacked_layout, 0, 1, 1, 1)
+        self.scroll_area = QtWidgets.QScrollArea(settings_dialog)
+        self.scroll_area.setObjectName('scroll_area')
+        self.scroll_area.setWidgetResizable(False)
+        self.scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.scroll_area.setWidget(self.content_widget)
+        self.dialog_layout.addWidget(self.scroll_area, 0, 1, 1, 1)
         self.button_box = create_button_box(settings_dialog, 'button_box', ['cancel', 'ok', 'help'])
         self.dialog_layout.addWidget(self.button_box, 1, 1, 1, 1)
         self.retranslate_ui(settings_dialog)
