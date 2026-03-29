@@ -720,6 +720,18 @@ def test_treewidgetwithdnd_setup_columns(qapp):
     assert widget.header().isHidden() is False
 
 
+def test_treewidgetwithdnd_keeps_first_column_wide_enough(qapp):
+    """The first column keeps at least 70 percent of the visible width."""
+    widget = TreeWidgetWithDnD(name='Test')
+
+    widget.resize(500, 300)
+    widget.show()
+    widget.setup_columns(['Name', 'Date'])
+    qapp.processEvents()
+
+    assert widget.columnWidth(0) >= int(widget.viewport().width() * widget.first_column_min_ratio)
+
+
 
 def test_file_tree_widget_item_fallback_string_sort(qapp):
     """FileTreeWidgetItem falls back to alphabetical sort when no numeric key is set"""

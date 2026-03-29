@@ -94,6 +94,36 @@ def test_mediatoolbar_set_label_works(MockedUiIcons, label_visibility, label_tex
     toolbar.identification_label.setText.assert_called_once_with(label_text if label_text else '')
 
 
+@patch('openlp.core.widgets.toolbar.UiIcons')
+def test_mediatoolbar_places_seek_controls_in_toolbar(MockedUiIcons, settings):
+    """Seek controls should be in their own toolbar directly below the main toolbar."""
+    toolbar = MediaToolbar(None)
+
+    assert toolbar.layout().count() == 2
+    assert toolbar.layout().itemAt(0).widget() is toolbar._toolbar
+    assert toolbar.layout().itemAt(1).widget() is toolbar._seek_toolbar
+    assert toolbar.seek_slider.parent() is toolbar._seek_toolbar
+
+
+@patch('openlp.core.widgets.toolbar.UiIcons')
+def test_mediatoolbar_volume_label_width_is_fixed(MockedUiIcons, settings):
+    """Changing volume text should not change volume label width."""
+    toolbar = MediaToolbar(None)
+
+    fixed_width = toolbar.volume_label.width()
+    toolbar.volume_label.setText('5')
+    narrow_width = toolbar.volume_label.width()
+    toolbar.volume_label.setText('100')
+    wide_width = toolbar.volume_label.width()
+
+    assert narrow_width == fixed_width
+    assert wide_width == fixed_width
+
+    margins = toolbar.volume_label.contentsMargins()
+    minimum_required = toolbar.volume_label.fontMetrics().horizontalAdvance('100') + margins.left() + margins.right()
+    assert fixed_width >= minimum_required
+
+
 def test_clickable_slider_click_at_left_edge(qapp):
     """
     Test that clicking at the left edge of the slider sets minimum value.
@@ -170,4 +200,43 @@ def test_clickable_slider_click_at_middle(qapp):
 
     # THEN: The slider value should be around 50 (allows 5% tolerance)
     assert 45 <= slider.value() <= 55, f"Expected value 45-55, got {slider.value()}"
+
+
+def test_clickable_slider_click_then_drag_scrubs_position(qapp):
+    """Click-to-seek should still allow immediate drag scrubbing."""
+    slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+    slider.setMinimum(0)
+    slider.setMaximum(100)
+    slider.setFixedWidth(100)
+    slider.show()
+    slider.raise_()
+
+    press_event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseButtonPress,
+        QtCore.QPointF(10, 0),
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mousePressEvent(press_event)
+
+    move_event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseMove,
+        QtCore.QPointF(90, 0),
+        QtCore.Qt.MouseButton.NoButton,
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mouseMoveEvent(move_event)
+
+    release_event = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseButtonRelease,
+        QtCore.QPointF(90, 0),
+        QtCore.Qt.MouseButton.LeftButton,
+        QtCore.Qt.MouseButton.NoButton,
+        QtCore.Qt.KeyboardModifier.NoModifier
+    )
+    slider.mouseReleaseEvent(release_event)
+
+    assert slider.value() >= 80, f"Expected value >= 80 after dragging, got {slider.value()}"
 

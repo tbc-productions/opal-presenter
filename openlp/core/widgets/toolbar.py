@@ -43,16 +43,20 @@ class ClickableSlider(QtWidgets.QSlider):
         """
         Handle mouse press events to allow click-to-seek.
         """
-        if self.orientation() == QtCore.Qt.Orientation.Horizontal:
+        if self.orientation() == QtCore.Qt.Orientation.Horizontal and \
+                event.button() == QtCore.Qt.MouseButton.LeftButton:
             click_x = event.pos().x()
             slider_width = self.width()
             if slider_width > 0:
                 ratio = click_x / slider_width
+                ratio = max(0.0, min(1.0, ratio))
                 new_value = int(self.minimum() + ratio * (self.maximum() - self.minimum()))
                 new_value = max(self.minimum(), min(self.maximum(), new_value))
+                # Move the handle to the click location first, then let Qt continue handling the press.
+                # This keeps drag scrubbing working naturally after clicking anywhere on the slider.
+                self.setSliderPosition(new_value)
                 self.setValue(new_value)
-        else:
-            super().mousePressEvent(event)
+        super().mousePressEvent(event)
 
 
 class OpenLPToolbar(QtWidgets.QToolBar):
@@ -67,6 +71,7 @@ class OpenLPToolbar(QtWidgets.QToolBar):
         super().__init__(parent)
         # useful to be able to reuse button icons...
         self.setIconSize(QtCore.QSize(20, 20))
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.actions_map: dict[str, QtGui.QAction] = {}
         log.debug('Init done for %s' % parent.__class__.__name__)
 
@@ -161,9 +166,9 @@ class OpenLPToolbar(QtWidgets.QToolBar):
 
 class MediaToolbar(QtWidgets.QWidget):
     """
-    A two-row media control bar.
-    Row 1: playback buttons + volume control.
-    Row 2: current-time label | seek slider | total-time label.
+    A two-toolbar media control bar.
+    Top row: playback and volume controls.
+    Bottom row: current-time label, seek slider, and total-time label.
     """
 
     def __init__(self, parent, hide_components=[], action_prefixes=''):
@@ -243,23 +248,26 @@ class MediaToolbar(QtWidgets.QWidget):
         self.volume_label = QtWidgets.QLabel('100')
         self.volume_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.volume_label.setToolTip(translate('OpenLP.SlideController', 'Volume.'))
-        self.volume_label.setMinimumWidth(28)
+        self.volume_label.setContentsMargins(0, 0, 8, 0)
+        volume_text_width = self.volume_label.fontMetrics().horizontalAdvance('100')
+        volume_margins = self.volume_label.contentsMargins()
+        self.volume_label.setFixedWidth(volume_text_width + volume_margins.left() + volume_margins.right() + 6)
         self.volume_label.setObjectName(self.action_prefixes + 'volume_label')
         self._toolbar.add_toolbar_widget(self.volume_label)
 
         if 'seek' not in self.hide_components:
-            seek_row = QtWidgets.QWidget()
-            seek_layout = QtWidgets.QHBoxLayout(seek_row)
-            seek_layout.setContentsMargins(4, 0, 4, 4)
-            seek_layout.setSpacing(6)
+            self._seek_toolbar = OpenLPToolbar(self)
+            self._seek_toolbar.setObjectName(self.action_prefixes + 'seek_toolbar')
+            self._seek_toolbar.setIconSize(QtCore.QSize(16, 16))
 
             self.position_label = QtWidgets.QLabel('00:00')
             self.position_label.setAlignment(
                 QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
             self.position_label.setToolTip(translate('OpenLP.SlideController', 'Current position.'))
             self.position_label.setMinimumWidth(40)
+            self.position_label.setContentsMargins(8, 0, 0, 0)
             self.position_label.setObjectName(self.action_prefixes + 'position_label')
-            seek_layout.addWidget(self.position_label)
+            self._seek_toolbar.add_toolbar_widget(self.position_label)
 
             self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
             self.seek_slider.setMaximum(1000)
@@ -267,18 +275,30 @@ class MediaToolbar(QtWidgets.QWidget):
             self.seek_slider.setMouseTracking(True)
             self.seek_slider.setToolTip(translate('OpenLP.SlideController', 'Video position. Click to seek.'))
             self.seek_slider.setObjectName(self.action_prefixes + 'seek_slider')
-            seek_layout.addWidget(self.seek_slider, stretch=1)
+            self.seek_slider.setMinimumWidth(140)
+            self.seek_slider.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                           QtWidgets.QSizePolicy.Policy.Fixed)
+            self._seek_toolbar.add_toolbar_widget(self.seek_slider)
             self.seek_slider.valueChanged.connect(self._on_action)
+            self.seek_slider.sliderPressed.connect(self._on_seek_slider_pressed)
+            self.seek_slider.sliderReleased.connect(self._on_seek_slider_released)
 
             self.duration_label = QtWidgets.QLabel('00:00')
             self.duration_label.setAlignment(
                 QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
             self.duration_label.setToolTip(translate('OpenLP.SlideController', 'Total duration.'))
             self.duration_label.setMinimumWidth(40)
+            self.duration_label.setContentsMargins(0, 0, 8, 0)
             self.duration_label.setObjectName(self.action_prefixes + 'duration_label')
-            seek_layout.addWidget(self.duration_label)
+            self._seek_toolbar.add_toolbar_widget(self.duration_label)
 
-            outer.addWidget(seek_row)
+            outer.addWidget(self._seek_toolbar)
+
+    def _on_seek_slider_pressed(self):
+        self.on_action(self.action_prefixes + 'seek_slider_pressed')
+
+    def _on_seek_slider_released(self):
+        self.on_action(self.action_prefixes + 'seek_slider_released')
 
     def set_label(self, label):
         if label:

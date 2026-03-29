@@ -462,6 +462,8 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
     """
     Provide a tree widget to store objects and handle drag and drop events
     """
+    first_column_min_ratio = 0.7
+
     def __init__(self, parent=None, name=''):
         """
         Initialise the tree widget
@@ -469,7 +471,9 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         super(TreeWidgetWithDnD, self).__init__(parent)
         self.mime_data_text = name
         self.allow_internal_dnd = False
+        self._resizing_columns = False
         self.header().close()
+        self.header().sectionResized.connect(self._on_section_resized)
         self.default_indentation = self.indentation()
         self.setIndentation(0)
         self.setAnimated(True)
@@ -492,11 +496,36 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
             self.header().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Interactive)
         for i in range(1, len(labels)):
             self.header().resizeSection(i, 130)
+        self._ensure_first_column_width()
         self.setSortingEnabled(True)
         self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
         font = self.font()
         font.setPointSize(max(font.pointSize() - 1, 8))
         self.setFont(font)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._ensure_first_column_width()
+
+    def _on_section_resized(self, section, old_size, new_size):
+        """Keep the first column readable if interactive resizing makes it too small."""
+        if old_size == new_size or self._resizing_columns:
+            return
+        self._ensure_first_column_width()
+
+    def _ensure_first_column_width(self):
+        """Ensure the first column keeps most of the available width."""
+        if self.columnCount() < 2 or self._resizing_columns:
+            return
+        available_width = self.viewport().width()
+        minimum_width = int(available_width * self.first_column_min_ratio)
+        if self.columnWidth(0) >= minimum_width:
+            return
+        self._resizing_columns = True
+        try:
+            self.header().resizeSection(0, minimum_width)
+        finally:
+            self._resizing_columns = False
 
     def activateDnD(self):
         """

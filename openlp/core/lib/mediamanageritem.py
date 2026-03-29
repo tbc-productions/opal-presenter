@@ -100,6 +100,12 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.page_layout = QtWidgets.QVBoxLayout(self)
         self.page_layout.setSpacing(0)
         self.page_layout.setContentsMargins(0, 0, 0, 0)
+        self.panel_widget = QtWidgets.QWidget(self)
+        self.panel_widget.setObjectName(f'{self.plugin.name}_panel_widget')
+        self.panel_layout = QtWidgets.QVBoxLayout(self.panel_widget)
+        self.panel_layout.setSpacing(6)
+        self.panel_layout.setContentsMargins(8, 0, 8, 8)
+        self.page_layout.addWidget(self.panel_widget)
         self.required_icons()
         self.setup_ui()
         self.retranslate_ui()
@@ -145,7 +151,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         if self.toolbar is None:
             self.toolbar = OpenLPToolbar(self)
-            self.page_layout.addWidget(self.toolbar)
+            self.panel_layout.addWidget(self.toolbar)
 
     def setup_ui(self):
         """
@@ -315,7 +321,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.search_button_layout.addStretch()
         self.search_button_layout.addWidget(self.search_text_button)
         self.search_layout.addLayout(self.search_button_layout)
-        self.page_layout.addWidget(self.search_widget)
+        self.panel_layout.addWidget(self.search_widget)
         # Signals and slots
         self.search_text_edit.returnPressed.connect(self.on_search_text_button_clicked)
         self.search_text_button.clicked.connect(self.on_search_text_button_clicked)

@@ -79,6 +79,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         Registry().register_function("playbackStop", self.media_stop_msg)
         Registry().register_function("playbackLoop", self.media_loop_msg)
         Registry().register_function("seek_slider", self.media_seek_msg)
+        Registry().register_function("seek_slider_pressed", self.media_seek_pressed_msg)
+        Registry().register_function("seek_slider_released", self.media_seek_released_msg)
         Registry().register_function("volume_slider", self.media_volume_msg)
         Registry().register_function("media_hide", self.media_hide)
         Registry().register_function("media_blank", self.media_blank)
@@ -672,6 +674,50 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller = msg[0]
         seek_value = msg[1][0]
         self.media_seek(controller, seek_value)
+
+    def media_seek_pressed_msg(self, msg: list):
+        """
+        Responds to the request fired when the seek slider is pressed.
+
+        :param msg: First element is the controller which should be used
+        """
+        controller = msg[0]
+        self.media_seek_pressed(controller)
+
+    def media_seek_pressed(self, controller: SlideController):
+        """
+        Pause playback while scrubbing starts and remember whether to resume later.
+
+        :param controller: The controller to update.
+        """
+        if not hasattr(controller, 'media_play_item'):
+            return
+        was_playing = controller.media_play_item.is_playing == MediaState.Playing
+        controller.media_play_item._resume_media_after_seek = was_playing
+        if was_playing:
+            self.media_pause(controller)
+
+    def media_seek_released_msg(self, msg: list):
+        """
+        Responds to the request fired when the seek slider is released.
+
+        :param msg: First element is the controller which should be used
+        """
+        controller = msg[0]
+        self.media_seek_released(controller)
+
+    def media_seek_released(self, controller: SlideController):
+        """
+        Resume playback after scrubbing if media was playing before the drag.
+
+        :param controller: The controller to update.
+        """
+        if not hasattr(controller, 'media_play_item'):
+            return
+        should_resume = bool(getattr(controller.media_play_item, '_resume_media_after_seek', False))
+        controller.media_play_item._resume_media_after_seek = False
+        if should_resume:
+            self.media_play(controller)
 
     def media_seek(self, controller: SlideController, seek_value):
         """

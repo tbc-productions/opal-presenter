@@ -276,8 +276,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Build the full toolbar
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.setObjectName('slide_controller_toolbar')
-        size_toolbar_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
-                                                    QtWidgets.QSizePolicy.Policy.Fixed)
+        size_toolbar_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                QtWidgets.QSizePolicy.Policy.Fixed)
         size_toolbar_policy.setHorizontalStretch(0)
         size_toolbar_policy.setVerticalStretch(0)
         size_toolbar_policy.setHeightForWidth(self.toolbar.sizePolicy().hasHeightForWidth())
@@ -695,7 +695,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.log_debug('on_controller_size_changed is_event:{}'.format(event is not None))
         if self.is_live and self.ignore_toolbar_resize_events is False:
-            spare_space = self.controller.width() - self.toolbar.size().width()
+            toolbar_width = max(self.toolbar.sizeHint().width(), self.toolbar.minimumSizeHint().width())
+            spare_space = self.controller.width() - toolbar_width
             if spare_space <= 0 and not self.hide_menu.isVisible():
                 self.set_hide_mode_menu(narrow=True)
             # Add threshold to prevent flickering.
