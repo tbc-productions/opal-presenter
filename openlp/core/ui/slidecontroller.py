@@ -23,6 +23,7 @@ The :mod:`slidecontroller` module contains the most important part of OpenLP - t
 """
 import copy
 import datetime
+import platform
 from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
@@ -50,6 +51,33 @@ from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.widgets.views import ListPreviewWidget
 
+try:
+    from mss import mss as mss_factory  # type: ignore[reportMissingImports]
+    HAS_MSS = True
+except ImportError:
+    mss_factory = None
+    HAS_MSS = False
+
+if platform.system() == 'Darwin':
+    try:
+        from openlp.core.display.screencapturekit import ScreenCaptureKitBackend, HAS_SCREEN_CAPTURE_KIT
+    except ImportError:
+        ScreenCaptureKitBackend = None
+        HAS_SCREEN_CAPTURE_KIT = False
+else:
+    ScreenCaptureKitBackend = None
+    HAS_SCREEN_CAPTURE_KIT = False
+
+if platform.system() == 'Windows':
+    try:
+        from openlp.core.display.windowscapture import WindowsCaptureBackend, HAS_WINDOWS_CAPTURE
+    except ImportError:
+        WindowsCaptureBackend = None
+        HAS_WINDOWS_CAPTURE = False
+else:
+    WindowsCaptureBackend = None
+    HAS_WINDOWS_CAPTURE = False
+
 # Threshold which has to be trespassed to toggle.
 HIDE_MENU_THRESHOLD = 80
 
@@ -63,7 +91,6 @@ LOOP_LIST = [
 ]
 WIDE_MENU = [
     'show_screen_button',
-    'blank_screen_button',
     'theme_screen_button',
     'desktop_screen_button'
 ]
@@ -410,6 +437,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.shortcut_timer = QtCore.QTimer()
             self.shortcut_timer.setObjectName('shortcut_timer')
             self.shortcut_timer.setSingleShot(True)
+            self.desktop_capture_timer = QtCore.QTimer()
+            self.desktop_capture_timer.setObjectName('desktop_capture_timer')
+            self.desktop_capture_timer.timeout.connect(self._on_desktop_capture_timer)
             shortcuts = [
                 {'key': 'V', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Verse"')},
                 {'key': 'C', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Chorus"')},
@@ -1217,12 +1247,16 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.screen_capture = None
             self.slide_changed_time = max(self.slide_changed_time, datetime.datetime.now())
         if self.service_item:
-            if (self.is_live and self.current_hide_mode and
+            mirror_live_preview = self.is_live and self.settings.value('core/live preview shows presentation screen')
+            if mirror_live_preview:
+                wait_for(self.is_slide_loaded)
+                self.display_maindisplay()
+            if (self.is_live and self.current_hide_mode and not mirror_live_preview and
                self.settings.value('core/live preview shows blank screen')):
                 # If live, hidden and setting 'live preview shows blank screen' is active
                 # blank the live preview panel.
                 self.preview_display.hide_display(self.current_hide_mode)
-            if self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay):
+            if not mirror_live_preview and self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay):
                 if (self.is_live and not self.current_hide_mode):
                     # If live and not hidden grab screen-cap of main display in case the service item
                     # provides it's own display.
@@ -1235,10 +1269,13 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                     image_path = Path(self.service_item.get_rendered_frame(self.selected_row))
                     self.screen_capture = image_path
                     self.preview_display.set_single_image('#000', image_path)
-            else:
+            elif not mirror_live_preview:
                 self.preview_display.go_to_slide(self.selected_row)
             if (not self.current_hide_mode and self.preview_display.hide_mode):
                 self.preview_display.show_display()
+        if self.is_live:
+            mirror = self.settings.value('core/live preview shows presentation screen')
+            self._update_desktop_capture_timer(mirror)
         # Used for updating the main view in Web Remote.
         self.output_has_changed()
 
@@ -1309,22 +1346,106 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
     def _capture_maindisplay_desktop(self):
         current_screen = ScreenList().current
         display_rect = current_screen.display_geometry
-        screen_rect = current_screen.geometry
-        # As we capture using current screen object, we need relative coordinates.
-        # (OpenLP is storing screen positions like a big one-screen, and we can't change this without
-        # disrupting existing users)
-        relative_x = display_rect.x() - screen_rect.x()
-        relative_y = display_rect.y() - screen_rect.y()
-        width = display_rect.width()
-        height = display_rect.height()
-        win_image = current_screen.try_grab_screen_part(relative_x, relative_y, width, height)
-        return win_image
+        capture_method = self.settings.value('advanced/desktop capture method')
+        if capture_method == 2:
+            if HAS_SCREEN_CAPTURE_KIT and ScreenCaptureKitBackend:
+                if not hasattr(self, 'screen_capture_kit_backend'):
+                    self.screen_capture_kit_backend = ScreenCaptureKitBackend()
+                sckit_image = self.screen_capture_kit_backend.capture_display(display_rect)
+                if sckit_image:
+                    return sckit_image
+            else:
+                self.log_debug('_capture_maindisplay ScreenCaptureKit selected but unavailable, using Qt capture')
+        if capture_method == 3:
+            if HAS_WINDOWS_CAPTURE and WindowsCaptureBackend:
+                if not hasattr(self, 'windows_capture_backend'):
+                    self.windows_capture_backend = WindowsCaptureBackend()
+                wincap_image = self.windows_capture_backend.capture_display(display_rect)
+                if wincap_image:
+                    return wincap_image
+            else:
+                self.log_debug('_capture_maindisplay Windows capture selected but unavailable, using Qt capture')
+        if capture_method == 1:
+            if HAS_MSS:
+                mss_image = self._capture_maindisplay_desktop_mss(current_screen, display_rect)
+                if mss_image:
+                    return mss_image
+            else:
+                self.log_debug('_capture_maindisplay mss selected but package is not available, using Qt capture')
+        return self._capture_maindisplay_desktop_qt(current_screen, display_rect)
+
+    def _capture_maindisplay_desktop_qt(self, current_screen, display_rect):
+        # Use the primary screen with absolute virtual-desktop coordinates.
+        # On macOS, calling grabWindow(0, ...) on a non-primary QScreen offsets from the virtual
+        # desktop origin rather than the screen itself, so subtracting the screen offset would
+        # incorrectly land on the primary screen. Using QApplication.primaryScreen() with absolute
+        # coordinates works correctly on all supported platforms.
+        primary_screen = QtWidgets.QApplication.primaryScreen()
+        target_screen = primary_screen or current_screen.raw_screen
+        if not target_screen:
+            return None
+        try:
+            return target_screen.grabWindow(0, display_rect.x(), display_rect.y(),
+                                            display_rect.width(), display_rect.height())
+        except BaseException as e:
+            self.log_debug(f'_capture_maindisplay_desktop_qt failed: {e}')
+            return None
+
+    def _capture_maindisplay_desktop_mss(self, current_screen, display_rect):
+        # Grab the exact display region using absolute virtual-desktop coordinates.
+        # mss accepts arbitrary {left, top, width, height} dicts and captures from the
+        # virtual desktop, so no monitor selection or cropping is needed.
+        try:
+            region = {
+                'left': display_rect.x(),
+                'top': display_rect.y(),
+                'width': display_rect.width(),
+                'height': display_rect.height()
+            }
+            with mss_factory() as sct:
+                mss_image = sct.grab(region)
+            if not mss_image:
+                return None
+            image = QtGui.QImage(mss_image.bgra, mss_image.width, mss_image.height, mss_image.width * 4,
+                                 QtGui.QImage.Format.Format_ARGB32)
+            return QtGui.QPixmap.fromImage(image)
+        except Exception as e:
+            self.log_debug(f'_capture_maindisplay mss capture failed: {e}')
+            return None
+
+    def _on_desktop_capture_timer(self):
+        """Periodic timer callback: refresh the live preview with a fresh desktop capture."""
+        mirror = self.settings.value('core/live preview shows presentation screen')
+        if not mirror and self._current_hide_mode != HideMode.Screen:
+            self.desktop_capture_timer.stop()
+            return
+        if not self.service_item:
+            return
+        self.display_maindisplay()
+
+    def _update_desktop_capture_timer(self, mirror_live_preview=False):
+        """Start or stop the desktop capture timer based on whether live mirroring is needed."""
+        if not hasattr(self, 'desktop_capture_timer'):
+            return
+        fps_options = [5, 15, 30]
+        needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen
+        if needs_timer:
+            fps_index = self.settings.value('advanced/desktop capture fps')
+            fps = fps_options[min(max(fps_index, 0), len(fps_options) - 1)]
+            interval = 1000 // fps
+            if not self.desktop_capture_timer.isActive() or self.desktop_capture_timer.interval() != interval:
+                self.desktop_capture_timer.start(interval)
+        else:
+            self.desktop_capture_timer.stop()
 
     def _capture_maindisplay_window(self):
         win_image = None
         for display in self.displays:
             if display.is_display:
-                if display.hide_mode == HideMode.Screen or display.hide_mode == HideMode.Blank:
+                if display.hide_mode == HideMode.Screen:
+                    # Mirror the presentation screen desktop while in "Show Desktop" mode.
+                    win_image = self._capture_maindisplay_desktop()
+                elif display.hide_mode == HideMode.Blank:
                     # Sending a black image to avoid artifacts
                     size = display.size()
                     win_image = QtGui.QPixmap(size)
