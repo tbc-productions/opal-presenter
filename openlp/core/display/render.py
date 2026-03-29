@@ -866,15 +866,28 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
 
     def save_screenshot(self, fname=None):
         """
-        Save a screenshot, either returning it or saving it to file. Do some extra work to actually get a picture.
+        Save a screenshot, either returning it or saving it to file.
+
+        Uses direct webview rendering on standard DPI systems for performance.
+        Falls back to grab() on HiDPI systems to avoid artifacts.
         """
-        self.setVisible(True)
-        QtWidgets.QApplication.instance().processEvents()
-        wait_for(lambda: False, timeout=1)
-        pixmap = self.grab()
-        self.setVisible(False)
-        pixmap = QtGui.QPixmap(self.webview.size())
-        self.webview.render(pixmap)
+        # Check if running in HiDPI mode
+        screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
+        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+        is_hidpi = device_pixel_ratio > 1.0
+        
+        if is_hidpi or not self.isVisible():
+            # Use grab() method for HiDPI or hidden widgets
+            self.setVisible(True)
+            QtWidgets.QApplication.instance().processEvents()
+            wait_for(lambda: False, timeout=1)
+            pixmap = self.grab()
+            self.setVisible(False)
+        else:
+            # Use direct rendering for standard DPI
+            pixmap = QtGui.QPixmap(self.webview.size())
+            self.webview.render(pixmap)
+        
         if fname:
             ext = os.path.splitext(fname)[-1][1:]
             pixmap.save(fname, ext)

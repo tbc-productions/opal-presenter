@@ -69,6 +69,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setHeaderHidden(True)
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
+        self._drag_start_pos = None
 
     def dragEnterEvent(self, event):
         """
@@ -108,6 +109,11 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         else:
             event.ignore()
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event):
         """
         Drag and drop event does not care what data is selected as the recipient will use events to request the data
@@ -118,6 +124,10 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
             event.ignore()
             return
         if not self.itemAt(self.mapFromGlobal(QtGui.QCursor.pos())):
+            event.ignore()
+            return
+        if self._drag_start_pos is None or \
+                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
             event.ignore()
             return
         drag = QtGui.QDrag(self)

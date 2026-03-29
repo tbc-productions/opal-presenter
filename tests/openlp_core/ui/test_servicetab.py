@@ -37,3 +37,34 @@ def test_creation(settings):
 
     # THEN:
     assert "Service" == service_tab.tab_title, 'The tab title should be Service'
+
+
+def test_live_preview_shows_presentation_screen_load_default(settings):
+    """
+    Test that new setting defaults to disabled in Service settings.
+    """
+    # GIVEN: A new Service Tab
+    settings_form = SettingsForm(None)
+    service_tab = ServiceTab(settings_form)
+
+    # WHEN: Settings are loaded
+    service_tab.load()
+
+    # THEN: The mirror-presentation option should be disabled by default
+    assert service_tab.live_preview_shows_presentation_screen_check_box.isChecked() is False
+
+
+def test_live_preview_shows_presentation_screen_save(settings):
+    """
+    Test that new setting is persisted from Service settings.
+    """
+    # GIVEN: A new Service Tab
+    settings_form = SettingsForm(None)
+    service_tab = ServiceTab(settings_form)
+
+    # WHEN: Enabling the option and saving
+    service_tab.live_preview_shows_presentation_screen_check_box.setChecked(True)
+    service_tab.save()
+
+    # THEN: The setting should be saved
+    assert service_tab.settings.value('core/live preview shows presentation screen') is True

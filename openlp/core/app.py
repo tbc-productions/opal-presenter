@@ -58,7 +58,8 @@ from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
 from openlp.core.ui.splashscreen import SplashScreen
-from openlp.core.ui.style import get_application_stylesheet, set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes
+from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
+                                   set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
 from openlp.core.version import check_for_update, get_version
 
 

@@ -21,9 +21,10 @@
 
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
 from sqlalchemy.sql.expression import or_
 
 from openlp.core.common import delete_file
@@ -38,6 +39,7 @@ from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
 from openlp.core.ui.media import get_supported_media_suffix, parse_stream_path, MediaType
+from openlp.core.widgets.views import FileTreeWidgetItem
 
 from openlp.plugins.media.lib.db import Folder, Item
 
@@ -46,6 +48,14 @@ from openlp.plugins.media.forms.networkstreamselectorform import NetworkStreamSe
 
 
 log = logging.getLogger(__name__)
+
+
+def _format_file_size(size: int) -> str:
+    """Return a human-readable file size string."""
+    for unit, threshold in (('GB', 1 << 30), ('MB', 1 << 20), ('KB', 1 << 10)):
+        if size >= threshold:
+            return f'{size / threshold:.1f} {unit}'
+    return f'{size} B'
 
 
 class MediaMediaItem(FolderLibraryItem):
@@ -80,6 +90,8 @@ class MediaMediaItem(FolderLibraryItem):
         Registry().register_function('mediaitem_media_rebuild', self.rebuild_players)
         # Allow DnD from the desktop
         self.list_view.activateDnD()
+        self.list_view.setup_columns([translate('MediaPlugin.MediaItem', 'Name'),
+                                      translate('MediaPlugin.MediaItem', 'Date')])
 
     def setup(self):
         """
@@ -240,7 +252,7 @@ class MediaMediaItem(FolderLibraryItem):
         tree_item = None
         if track_str.startswith('devicestream:') or track_str.startswith('networkstream:'):
             (stream_type, name, mrl, _) = parse_stream_path(track_str)
-            tree_item = QtWidgets.QTreeWidgetItem([name])
+            tree_item = FileTreeWidgetItem([name])
             tree_item.setText(0, name)
             if stream_type == MediaType.DeviceStream:
                 tree_item.setIcon(0, UiIcons().device_stream)
@@ -250,14 +262,15 @@ class MediaMediaItem(FolderLibraryItem):
         elif not Path(item.file_path).exists():
             # File doesn't exist, mark as error.
             file_name = Path(item.file_path).name
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setText(0, file_name)
             tree_item.setIcon(0, UiIcons().error)
             tree_item.setToolTip(0, track_str)
         elif track_info.isFile():
             # Normal media file handling.
-            file_name = Path(item.file_path).name
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            file_path_obj = Path(item.file_path)
+            file_name = file_path_obj.name
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setText(0, file_name)
             search = "*." + file_name.split('.')[-1].lower()
             _, v_suffixes = get_supported_media_suffix()
@@ -265,7 +278,17 @@ class MediaMediaItem(FolderLibraryItem):
                 tree_item.setIcon(0, UiIcons().audio)
             else:
                 tree_item.setIcon(0, UiIcons().video)
+            file_type = file_path_obj.suffix.lstrip('.').upper()
             tree_item.setToolTip(0, track_str)
+            try:
+                stat = file_path_obj.stat()
+                size_str = _format_file_size(stat.st_size)
+                mtime = stat.st_mtime
+                tree_item.setText(1, datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'))
+                tree_item.set_sort_data(1, mtime)
+                tree_item.setToolTip(0, f'{track_str}\n{file_type} · {size_str}')
+            except OSError:
+                pass
         if tree_item:
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
         return tree_item

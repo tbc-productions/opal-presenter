@@ -20,6 +20,7 @@
 ##########################################################################
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -36,11 +37,20 @@ from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
+from openlp.core.widgets.views import FileTreeWidgetItem
 
 from openlp.plugins.images.lib.db import Folder, Item
 
 
 log = logging.getLogger(__name__)
+
+
+def _format_file_size(size: int) -> str:
+    """Return a human-readable file size string."""
+    for unit, threshold in (('GB', 1 << 30), ('MB', 1 << 20), ('KB', 1 << 10)):
+        if size >= threshold:
+            return f'{size / threshold:.1f} {unit}'
+    return f'{size} B'
 
 
 class ImageMediaItem(FolderLibraryItem):
@@ -69,6 +79,8 @@ class ImageMediaItem(FolderLibraryItem):
         Registry().register_function('slidecontroller_live_started', self.on_display_changed)
         # Allow DnD from the desktop.
         self.list_view.activateDnD()
+        self.list_view.setup_columns([translate('ImagePlugin.MediaItem', 'Name'),
+                                      translate('ImagePlugin.MediaItem', 'Date')])
 
     def retranslate_ui(self):
         super().retranslate_ui()
@@ -144,13 +156,13 @@ class ImageMediaItem(FolderLibraryItem):
         ext = file_path.suffix.lower()
         return self.service_path / '{name:s}{ext}'.format(name=item.file_hash or file_path.stem, ext=ext)
 
-    def load_item(self, item: Item, is_initial_load: bool = False) -> QtWidgets.QTreeWidgetItem:
-        """Given an item object, return a QTreeWidgetItem"""
+    def load_item(self, item: Item, is_initial_load: bool = False) -> FileTreeWidgetItem:
+        """Given an item object, return a FileTreeWidgetItem"""
         tree_item = None
         file_path = Path(item.file_path)
         file_name = file_path.name
         if not file_path.exists():
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setIcon(0, UiIcons().delete)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
@@ -165,10 +177,20 @@ class ImageMediaItem(FolderLibraryItem):
                 if slide_height and slide_height > 0:
                     size = QtCore.QSize(-1, slide_height)
                 icon = create_thumb(file_path, thumbnail_path, size=size)
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
+            file_type = file_path.suffix.lstrip('.').upper()
             tree_item.setToolTip(0, str(file_path))
+            try:
+                stat = file_path.stat()
+                size_str = _format_file_size(stat.st_size)
+                mtime = stat.st_mtime
+                tree_item.setText(1, datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'))
+                tree_item.set_sort_data(1, mtime)
+                tree_item.setToolTip(0, f'{file_path}\n{file_type} · {size_str}')
+            except OSError:
+                pass
         return tree_item
 
     def delete_item(self, item: Item):

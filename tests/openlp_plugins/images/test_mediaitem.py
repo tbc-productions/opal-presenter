@@ -21,12 +21,13 @@
 """
 This module contains tests for the lib submodule of the Images plugin.
 """
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.enum import ImageThemeMode
 from openlp.core.common.registry import Registry
@@ -322,3 +323,27 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
         assert result.text(0) == 'tractor.jpg'
         assert result.toolTip(0) == str(image_path)
         mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'), size=QtCore.QSize(-1, 400))
+
+
+@patch('openlp.plugins.images.lib.mediaitem.validate_thumb')
+@patch('openlp.plugins.images.lib.mediaitem.build_icon')
+def test_load_item_metadata_columns(mocked_build_icon: MagicMock, mocked_validate_thumb: MagicMock,
+                                    media_item: ImageMediaItem):
+    """Test that load_item populates the Date column and tooltip with type and size for an existing file"""
+    # GIVEN: A valid image file and a controlled stat result
+    media_item.service_path = Path(TEST_RESOURCES_PATH) / 'images'
+    mocked_validate_thumb.return_value = True
+    image_path = Path(TEST_RESOURCES_PATH) / 'images' / 'tractor.jpg'
+    item = MagicMock(file_path=image_path, file_hash=None)
+    mocked_stat = MagicMock()
+    mocked_stat.st_size = 2 * 1024 * 1024  # 2.0 MB
+    mocked_stat.st_mtime = 1700000000.0
+    mocked_build_icon.return_value = QtGui.QIcon()
+
+    with patch.object(Path, 'stat', return_value=mocked_stat):
+        # WHEN: load_item() is called
+        result = media_item.load_item(item)
+
+    # THEN: Date column should be populated, tooltip enriched with type and size
+    assert result.text(1) == datetime.fromtimestamp(1700000000.0).strftime('%Y-%m-%d %H:%M')
+    assert result.toolTip(0) == f'{image_path}\nJPG · 2.0 MB'

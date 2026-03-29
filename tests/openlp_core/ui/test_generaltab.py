@@ -92,3 +92,5 @@ def test_new_service_message(settings):
 
     # THEN: the settings should be updated
     assert settings.value('advanced/new service message') is False
+
+

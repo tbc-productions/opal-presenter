@@ -57,7 +57,8 @@ QToolBar
 """
 
 MEDIA_MANAGER_STYLE = """
-::tab#media_tool_box {
+QTabWidget#media_tool_box QTabBar::tab,
+QToolBox#media_tool_box::tab {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
         stop: 0 palette(button), stop: 1.0 palette(mid));
     border: 0;
@@ -67,8 +68,24 @@ MEDIA_MANAGER_STYLE = """
     text-align: left;
 }
 /* This is here to make the tabs on KDE with the Breeze theme work */
-::tab:selected {}
+QTabWidget#media_tool_box QTabBar::tab:selected,
+QToolBox#media_tool_box::tab:selected {}
 """
+
+DOCK_PANEL_HEADER_STYLE = """
+QDockWidget::title {
+    padding: 8px 12px;
+    min-height: 30px;
+    font-weight: 600;
+}
+"""
+
+
+def get_dock_panel_header_stylesheet():
+    """
+    Return stylesheet used to make dock panel headers easier to read.
+    """
+    return DOCK_PANEL_HEADER_STYLE
 
 PROGRESSBAR_STYLE = """
 QProgressBar{
@@ -84,13 +101,32 @@ class UiThemes(Enum):
     Automatic = 'automatic'
     DefaultLight = 'light:default'
     DefaultDark = 'dark:default'
+    Native = 'native'
     QDarkStyle = 'dark:qdarkstyle'
+
+
+def get_macos_native_style_name():
+    """
+    Return the available macOS native Qt style name, or ``None`` if not available.
+    """
+    available = QtWidgets.QStyleFactory.keys()
+    return next((s for s in available if s.lower() == 'macos' or s.lower() == 'macintosh'), None)
+
+
+def get_native_system_font():
+    """
+    Return the platform's general UI font for native themed rendering.
+    """
+    try:
+        return QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.GeneralFont)
+    except Exception:
+        return QtWidgets.QApplication.font()
 
 
 def is_ui_theme_dark():
     ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
 
-    if ui_theme_name is None or ui_theme_name == UiThemes.Automatic:
+    if ui_theme_name is None or ui_theme_name in (UiThemes.Automatic, UiThemes.Native):
         return is_system_darkmode()
     else:
         return ui_theme_name.value.startswith('dark:')
@@ -171,6 +207,15 @@ def set_default_theme(app):
     """
     Setup theme
     """
+    if is_ui_theme(UiThemes.Native):
+        if is_macosx():
+            native = get_macos_native_style_name()
+            if native:
+                app.setStyle(native)
+        app.setFont(get_native_system_font())
+        # Ensure any previously-customized palette is reset when using the native theme.
+        app.setPalette(app.style().standardPalette())
+        return
     if is_ui_theme(UiThemes.DefaultDark) or (is_ui_theme(UiThemes.Automatic) and is_ui_theme_dark()):
         set_default_darkmode(app)
     elif is_ui_theme(UiThemes.DefaultLight):
@@ -179,9 +224,14 @@ def set_default_theme(app):
 
 def set_default_lightmode(app):
     """
-    Setup lightmode on the application if Default Lightt theme is enabled in the OpenLP Settings.
+    Setup lightmode on the application if Default Light theme is enabled in the OpenLP Settings.
     """
-    app.setStyle('Fusion')
+    if is_macosx():
+        native = get_macos_native_style_name()
+        if native:
+            app.setStyle(native)
+    else:
+        app.setStyle('Fusion')
     app.setPalette(app.style().standardPalette())
 
 
@@ -197,6 +247,12 @@ def set_default_darkmode(app):
         * Allowed palette to be set on any operating system;
         * Split Windows Dark Mode detection to another function.
     """
+    if is_macosx():
+        native = get_macos_native_style_name()
+        if native:
+            app.setStyle(native)
+        # macOS native style handles dark mode through the system palette; skip the manual palette override.
+        return
     app.setStyle('Fusion')
     dark_palette = QtGui.QPalette()
     dark_color = QtGui.QColor(45, 45, 45)
@@ -239,16 +295,26 @@ def get_application_stylesheet():
     :return str: The correct stylesheet as a string
     """
     stylesheet = ''
-    if is_ui_theme(UiThemes.QDarkStyle):
+    ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
+    use_alternate_rows = Registry().get('settings').value('advanced/alternate rows')
+    is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
+    is_native_theme = ui_theme_name == UiThemes.Native
+    if is_macosx() and not is_qdarkstyle:
+        return stylesheet
+    if is_native_theme:
+        return stylesheet
+    if is_qdarkstyle:
         stylesheet = qdarkstyle.load_stylesheet_pyqt()
     else:
-        if not Registry().get('settings').value('advanced/alternate rows'):
+        if not use_alternate_rows:
             base_color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorGroup.Active,
                                                                 QtGui.QPalette.ColorRole.Base)
             alternate_rows_repair_stylesheet = get_alternate_rows_repair_stylesheet(base_color.name())
             stylesheet += alternate_rows_repair_stylesheet
         if is_win():
             stylesheet += WIN_REPAIR_STYLESHEET
+    if not is_win():
+        stylesheet += DOCK_PANEL_HEADER_STYLE
     stylesheet += 'QWidget#slide_controller_toolbar QToolButton::checked {' \
         '  background-color: palette(highlight);' \
         '  color: palette(highlighted-text);' \
@@ -262,7 +328,6 @@ def get_library_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
-    if not is_ui_theme(UiThemes.QDarkStyle):
-        return MEDIA_MANAGER_STYLE
-    else:
+    if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.QDarkStyle):
         return ''
+    return MEDIA_MANAGER_STYLE

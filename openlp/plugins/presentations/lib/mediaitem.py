@@ -20,9 +20,10 @@
 ##########################################################################
 import logging
 import os
+from datetime import datetime
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
-from pathlib import Path
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
@@ -31,6 +32,7 @@ from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
+from openlp.core.widgets.views import FileTreeWidgetItem
 
 from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.messagelistener import MessageListener
@@ -38,6 +40,14 @@ from openlp.plugins.presentations.lib.pdfcontroller import PDF_CONTROLLER_FILETY
 
 
 log = logging.getLogger(__name__)
+
+
+def _format_file_size(size: int) -> str:
+    """Return a human-readable file size string."""
+    for unit, threshold in (('GB', 1 << 30), ('MB', 1 << 20), ('KB', 1 << 10)):
+        if size >= threshold:
+            return f'{size / threshold:.1f} {unit}'
+    return f'{size} B'
 
 
 class PresentationMediaItem(FolderLibraryItem):
@@ -79,6 +89,8 @@ class PresentationMediaItem(FolderLibraryItem):
         Registry().register_function('mediaitem_suffixes', self.build_file_mask_string)
         # Allow DnD from the desktop
         self.list_view.activateDnD()
+        self.list_view.setup_columns([translate('PresentationPlugin.MediaItem', 'Name'),
+                                      translate('PresentationPlugin.MediaItem', 'Date')])
 
     def required_icons(self):
         """
@@ -179,7 +191,7 @@ class PresentationMediaItem(FolderLibraryItem):
         file_path = Path(item.file_path)
         file_name = file_path.name
         if not file_path.exists() or not os.access(file_path, os.R_OK):
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setIcon(0, UiIcons().delete)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
@@ -209,10 +221,20 @@ class PresentationMediaItem(FolderLibraryItem):
                                                translate('PresentationPlugin.MediaItem',
                                                          'This type of presentation is not supported.'))
                     return None
-            tree_item = QtWidgets.QTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([file_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
+            file_type = file_path.suffix.lstrip('.').upper()
             tree_item.setToolTip(0, str(file_path))
+            try:
+                stat = file_path.stat()
+                size_str = _format_file_size(stat.st_size)
+                mtime = stat.st_mtime
+                tree_item.setText(1, datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'))
+                tree_item.set_sort_data(1, mtime)
+                tree_item.setToolTip(0, f'{file_path}\n{file_type} · {size_str}')
+            except OSError:
+                pass
         return tree_item
 
     def delete_item(self, item):

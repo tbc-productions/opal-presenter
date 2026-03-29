@@ -143,23 +143,25 @@ class BibleMediaItem(MediaManagerItem):
         self.add_to_service_item = False
 
     def add_middle_header_bar(self):
-        self.search_tab_bar = QtWidgets.QTabBar(self)
-        self.search_tab_bar.setExpanding(False)
+        self.search_tab_bar = QtWidgets.QTabWidget(self)
+        self.search_tab_bar.setDocumentMode(True)
+        self.search_tab_bar.tabBar().setExpanding(False)
         self.page_layout.addWidget(self.search_tab_bar)
         # Add the Search tab.
         self.search_tab = QtWidgets.QWidget()
         self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.search_tab_bar.addTab(translate('BiblesPlugin.MediaItem', 'Find'))
         self.search_layout = QtWidgets.QFormLayout(self.search_tab)
+        self.search_layout.setContentsMargins(8, 8, 8, 8)
+        self.search_layout.setSpacing(8)
         self.search_edit = SearchEdit(self.search_tab, 'bibles')
         self.search_layout.addRow(translate('BiblesPlugin.MediaItem', 'Find:'), self.search_edit)
-        self.search_tab.setVisible(True)
-        self.page_layout.addWidget(self.search_tab)
+        self.search_tab_bar.addTab(self.search_tab, translate('BiblesPlugin.MediaItem', 'Find'))
         # Add the Select tab.
         self.select_tab = QtWidgets.QWidget()
         self.select_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.search_tab_bar.addTab(translate('BiblesPlugin.MediaItem', 'Select'))
         self.select_layout = QtWidgets.QFormLayout(self.select_tab)
+        self.select_layout.setContentsMargins(8, 8, 8, 8)
+        self.select_layout.setSpacing(8)
         self.book_layout = QtWidgets.QHBoxLayout()
         self.select_book_combo_box = create_horizontal_adjusting_combo_box(self.select_tab, 'select_book_combo_box')
         self.book_layout.addWidget(self.select_book_combo_box)
@@ -187,13 +189,13 @@ class BibleMediaItem(MediaManagerItem):
         self.to_verse = QtWidgets.QComboBox(self.select_tab)
         self.to_layout.addWidget(self.to_verse)
         self.select_layout.addRow(translate('BiblesPlugin.MediaItem', 'To:'), self.to_layout)
-        self.select_tab.setVisible(False)
-        self.page_layout.addWidget(self.select_tab)
+        self.search_tab_bar.addTab(self.select_tab, translate('BiblesPlugin.MediaItem', 'Select'))
         # General Search Opions
         self.options_tab = QtWidgets.QWidget()
         self.options_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.search_tab_bar.addTab(translate('BiblesPlugin.MediaItem', 'Options'))
         self.general_bible_layout = QtWidgets.QFormLayout(self.options_tab)
+        self.general_bible_layout.setContentsMargins(8, 8, 8, 8)
+        self.general_bible_layout.setSpacing(8)
         self.version_combo_box = create_horizontal_adjusting_combo_box(self, 'version_combo_box')
         self.general_bible_layout.addRow('{version}:'.format(version=UiStrings().Version), self.version_combo_box)
         self.second_combo_box = create_horizontal_adjusting_combo_box(self, 'second_combo_box')
@@ -201,8 +203,7 @@ class BibleMediaItem(MediaManagerItem):
         self.style_combo_box = create_horizontal_adjusting_combo_box(self, 'style_combo_box')
         self.style_combo_box.addItems(['', '', '', ''])
         self.general_bible_layout.addRow(UiStrings().LayoutStyle, self.style_combo_box)
-        self.options_tab.setVisible(False)
-        self.page_layout.addWidget(self.options_tab)
+        self.search_tab_bar.addTab(self.options_tab, translate('BiblesPlugin.MediaItem', 'Options'))
         # This widget is the easier way to reset the spacing of search_button_layout. (Because page_layout has had its
         # spacing set to 0)
         self.search_button_widget = QtWidgets.QWidget()
@@ -280,12 +281,13 @@ class BibleMediaItem(MediaManagerItem):
 
         :return: None
         """
-        if self.search_tab.isVisible():
+        current_tab = self.search_tab_bar.currentIndex()
+        if current_tab == SearchTabs.Search:
             self.search_edit.setFocus()
             self.search_edit.selectAll()
-        if self.select_tab.isVisible():
+        elif current_tab == SearchTabs.Select:
             self.select_book_combo_box.setFocus()
-        if self.options_tab.isVisible():
+        elif current_tab == SearchTabs.Options:
             self.version_combo_box.setFocus()
 
     def config_update(self):
@@ -478,9 +480,6 @@ class BibleMediaItem(MediaManagerItem):
             self.search_button.setEnabled(True)
         else:
             self.search_button.setEnabled(False)
-        self.search_tab.setVisible(index == SearchTabs.Search)
-        self.select_tab.setVisible(index == SearchTabs.Select)
-        self.options_tab.setVisible(index == SearchTabs.Options)
         self.on_focus()
 
     def on_results_view_tab_current_changed(self, index):
@@ -625,7 +624,7 @@ class BibleMediaItem(MediaManagerItem):
             log.warning('Not enough chapters in %s', book_ref_id)
             critical_error_message_box(message=translate('BiblesPlugin.MediaItem', 'Bible not fully loaded.'))
         else:
-            if self.select_tab.isVisible():
+            if self.search_tab_bar.currentIndex() == SearchTabs.Select:
                 self.search_button.setEnabled(True)
             self.adjust_combo_box(1, self.chapter_count, self.from_chapter)
             self.adjust_combo_box(1, self.chapter_count, self.to_chapter)
@@ -711,9 +710,10 @@ class BibleMediaItem(MediaManagerItem):
         self.search_button.setEnabled(False)
         self.application.set_busy_cursor()
         self.application.process_events()
-        if self.search_tab.isVisible():
+        current_tab = self.search_tab_bar.currentIndex()
+        if current_tab == SearchTabs.Search:
             self.text_search()
-        elif self.select_tab.isVisible():
+        elif current_tab == SearchTabs.Select:
             self.select_search()
         self.search_button.setEnabled(True)
         self.results_view_tab.setCurrentIndex(ResultsTab.Search)

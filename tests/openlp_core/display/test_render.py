@@ -21,7 +21,7 @@
 """
 Test the :mod:`~openlp.core.display.render` package.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from openlp.core.display.render import compare_chord_lyric_width, find_formatting_tags, remove_tags, render_chords, \
     render_chords_for_printing, render_tags, ThemePreviewRenderer
@@ -265,3 +265,77 @@ def test_format_slide_no_split(settings):
 
     # THEN: The formatted slides should have all the text and no blank slides
     assert formatted_slides == ['line one<br>line two']
+
+
+def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
+    """
+    Test that ThemePreviewRenderer.save_screenshot captures via grab() on HiDPI systems.
+    """
+    # GIVEN: A ThemePreviewRenderer with mocked internals
+    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    mocked_pixmap = MagicMock()
+    preview_renderer.setVisible = MagicMock()
+    preview_renderer.grab = MagicMock(return_value=mocked_pixmap)
+    preview_renderer.isVisible = MagicMock(return_value=True)
+    preview_renderer.geometry = MagicMock()
+    preview_renderer.webview = MagicMock()
+
+    # Mock a HiDPI screen
+    mocked_screen = MagicMock()
+    mocked_screen.devicePixelRatio.return_value = 2.0
+
+    with patch('openlp.core.display.render.wait_for') as mocked_wait_for, \
+            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance, \
+            patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
+        mocked_qapplication_instance.return_value = MagicMock()
+        mocked_screen_at.return_value = mocked_screen
+
+        # WHEN: save_screenshot is called
+        result = preview_renderer.save_screenshot()
+
+        # THEN: It should use grab() and return that pixmap without webview.render() being called
+        preview_renderer.setVisible.assert_has_calls([call(True), call(False)])
+        mocked_qapplication_instance.return_value.processEvents.assert_called_once_with()
+        mocked_wait_for.assert_called_once()
+        wait_for_args, wait_for_kwargs = mocked_wait_for.call_args
+        assert callable(wait_for_args[0])
+        assert wait_for_kwargs == {'timeout': 1}
+        preview_renderer.grab.assert_called_once_with()
+        preview_renderer.webview.render.assert_not_called()
+        assert result == mocked_pixmap
+
+
+def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi(settings):
+    """
+    Test that ThemePreviewRenderer.save_screenshot uses webview.render() on standard DPI systems.
+    """
+    # GIVEN: A ThemePreviewRenderer with mocked internals
+    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    mocked_pixmap = MagicMock()
+    preview_renderer.grab = MagicMock(return_value=mocked_pixmap)
+    preview_renderer.isVisible = MagicMock(return_value=True)
+    preview_renderer.geometry = MagicMock()
+    preview_renderer.webview = MagicMock()
+    preview_renderer.webview.size = MagicMock(return_value=MagicMock())
+
+    # Mock a standard DPI screen
+    mocked_screen = MagicMock()
+    mocked_screen.devicePixelRatio.return_value = 1.0
+
+    with patch('openlp.core.display.render.QtGui.QPixmap') as mocked_qpixmap, \
+            patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
+        mocked_qpixmap.return_value = mocked_pixmap
+        mocked_screen_at.return_value = mocked_screen
+
+        # WHEN: save_screenshot is called
+        result = preview_renderer.save_screenshot()
+
+        # THEN: It should use webview.render() and return that pixmap without grab() being called
+        mocked_qpixmap.assert_called_once_with(preview_renderer.webview.size())
+        preview_renderer.webview.render.assert_called_once_with(mocked_pixmap)
+        preview_renderer.grab.assert_not_called()
+        assert result == mocked_pixmap
