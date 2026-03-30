@@ -257,11 +257,15 @@ class DebugLogPlugin(Plugin):
         if self.show_debug_log_panel_action:
             self.show_debug_log_panel_action.setVisible(True)
             self.show_debug_log_panel_action.setChecked(True)
-        if self.debug_log_dock:
-            self.debug_log_dock.setVisible(True)
         if self._handler is None:
             self._handler = DebugLogHandler(self._emitter)
             logging.getLogger().addHandler(self._handler)
+
+    def app_startup(self):
+        # restoreState() runs after initialise(), so we must show the dock here
+        # to ensure it is visible regardless of the previously saved window state.
+        if self.debug_log_dock:
+            self.debug_log_dock.setVisible(True)
 
     def finalise(self):
         if self._handler is not None:
