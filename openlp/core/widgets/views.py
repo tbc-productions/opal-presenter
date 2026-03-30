@@ -265,6 +265,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         # 'pos' represents the vert position of of the slide (0 = in view, 1 = top, 2 = middle, 3 = bottom)
         if not (isinstance(auto_scrolling, dict) and 'dist' in auto_scrolling and 'pos' in auto_scrolling and
                 isinstance(auto_scrolling['dist'], int) and isinstance(auto_scrolling['pos'], int)):
+            # Even when auto-scroll is disabled/misconfigured, we must still change the selected slide.
+            self.selectRow(slide)
             return
         # prevent scrolling past list bounds
         scroll_to_slide = slide + auto_scrolling['dist']

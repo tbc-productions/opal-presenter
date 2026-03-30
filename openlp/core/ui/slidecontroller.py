@@ -147,6 +147,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.media_player = None
         self.audio_player = None
         self.media_play_item = MediaPlayItem()
+        self._slide_selected_retry_pending = False
+        self._slide_selected_retry_scheduled = False
+        self._pending_live_preview_capture = False
         Registry().set_flag('has doubleclick added item to service', True)
         Registry().set_flag('replace service manager item', False)
 
@@ -452,6 +455,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.desktop_capture_timer = QtCore.QTimer()
             self.desktop_capture_timer.setObjectName('desktop_capture_timer')
             self.desktop_capture_timer.timeout.connect(self._on_desktop_capture_timer)
+            self.live_preview_capture_timer = QtCore.QTimer()
+            self.live_preview_capture_timer.setObjectName('live_preview_capture_timer')
+            self.live_preview_capture_timer.setSingleShot(True)
+            self.live_preview_capture_timer.timeout.connect(self._on_live_preview_capture_timer)
             shortcuts = [
                 {'key': 'V', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Verse"')},
                 {'key': 'C', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Chorus"')},
@@ -1343,6 +1350,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.slide_selected()
 
+    def _process_pending_slide_selected(self):
+        """
+        Retry one deferred slide selection request.
+        """
+        self._slide_selected_retry_scheduled = False
+        if self._slide_selected_retry_pending:
+            self._slide_selected_retry_pending = False
+            self.slide_selected()
+
     def slide_selected(self, start=False):
         """
         Generate the preview when you click on a slide. If this is the Live Controller also display on the screen.
@@ -1358,6 +1374,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not self.slide_selected_lock.acquire(start, timeout):
             if start:
                 self.log_debug(f'Could not get lock in slide_selected after waiting {timeout}, skip to avoid deadlock.')
+            else:
+                # Do not drop rapid follow-up input while previous slide update is still in progress.
+                self._slide_selected_retry_pending = True
+                if not self._slide_selected_retry_scheduled:
+                    self._slide_selected_retry_scheduled = True
+                    QtCore.QTimer.singleShot(0, self._process_pending_slide_selected)
             return
         # If "click live slide to unblank" is enabled, unblank the display. And start = Item is sent to Live.
         # Note: If this if statement is placed at the bottom of this function instead of top slide transitions are lost.
@@ -1406,8 +1428,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if self.service_item:
             mirror_live_preview = self.is_live and self.settings.value('core/live preview shows presentation screen')
             if mirror_live_preview:
-                wait_for(self.is_slide_loaded)
-                self.display_maindisplay()
+                self._schedule_live_preview_capture()
             if (self.is_live and self.current_hide_mode and not mirror_live_preview and
                self.settings.value('core/live preview shows blank screen')):
                 # If live, hidden and setting 'live preview shows blank screen' is active
@@ -1417,8 +1438,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 if (self.is_live and not self.current_hide_mode):
                     # If live and not hidden grab screen-cap of main display in case the service item
                     # provides it's own display.
-                    wait_for(self.is_slide_loaded)
-                    self.display_maindisplay()
+                    self._schedule_live_preview_capture()
                 elif not self.settings.value('core/live preview shows blank screen'):
                     # If not live and setting 'live preview shows blank screen' is not active,
                     # use the slide's thumbnail/icon instead in case the service item
@@ -1435,6 +1455,28 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self._update_desktop_capture_timer(mirror)
         # Used for updating the main view in Web Remote.
         self.output_has_changed()
+
+    def _schedule_live_preview_capture(self):
+        """
+        Defer live preview capture until after the current transition delay so the UI thread stays responsive.
+        """
+        if not self.is_live or not self.service_item or not hasattr(self, 'live_preview_capture_timer'):
+            return
+        self._pending_live_preview_capture = True
+        slide_delay_time = self.service_item.get_transition_delay() if self.get_hide_mode() is None else 1
+        if self.settings.value('themes/item transitions') and self.get_hide_mode() is None:
+            slide_delay_time = max(slide_delay_time, self._get_item_transition_speed_seconds())
+        delay_ms = max(0, int(slide_delay_time * 1000))
+        self.live_preview_capture_timer.start(delay_ms)
+
+    def _on_live_preview_capture_timer(self):
+        """Timer callback to perform one deferred live preview capture."""
+        if not self._pending_live_preview_capture:
+            return
+        self._pending_live_preview_capture = False
+        if not self.is_live or not self.service_item:
+            return
+        self.display_maindisplay()
 
     def output_has_changed(self):
         """
