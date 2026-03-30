@@ -158,7 +158,8 @@ class AdvancedTab(SettingsTab):
         self.desktop_capture_fps_layout.setContentsMargins(0, 0, 0, 0)
         self.desktop_capture_fps_label = QtWidgets.QLabel(self.desktop_capture_fps_widget)
         self.desktop_capture_fps_combobox = QtWidgets.QComboBox(self.desktop_capture_fps_widget)
-        self.desktop_capture_fps_combobox.addItems(['', '', ''])
+        # Provide 4 options: 5, 15, 24, 30 fps
+        self.desktop_capture_fps_combobox.addItems(['', '', '', ''])
         self.desktop_capture_fps_layout.addWidget(self.desktop_capture_fps_label)
         self.desktop_capture_fps_layout.addWidget(self.desktop_capture_fps_combobox)
         self.desktop_capture_fps_widget.setLayout(self.desktop_capture_fps_layout)
@@ -221,7 +222,8 @@ class AdvancedTab(SettingsTab):
         self.desktop_capture_fps_label.setText(translate('OpenLP.AdvancedTab', 'Screen capture rate:'))
         self.desktop_capture_fps_combobox.setItemText(0, translate('OpenLP.AdvancedTab', '5 fps'))
         self.desktop_capture_fps_combobox.setItemText(1, translate('OpenLP.AdvancedTab', '15 fps'))
-        self.desktop_capture_fps_combobox.setItemText(2, translate('OpenLP.AdvancedTab', '30 fps'))
+        self.desktop_capture_fps_combobox.setItemText(2, translate('OpenLP.AdvancedTab', '24 fps'))
+        self.desktop_capture_fps_combobox.setItemText(3, translate('OpenLP.AdvancedTab', '30 fps'))
         self.proxy_widget.retranslate_ui()
 
     def load(self):
@@ -255,7 +257,8 @@ class AdvancedTab(SettingsTab):
         self.desktop_capture_method_combobox.setCurrentIndex(min(max(capture_method, 0),
                                        self.desktop_capture_method_combobox.count() - 1))
         fps_index = self.settings.value('advanced/desktop capture fps')
-        self.desktop_capture_fps_combobox.setCurrentIndex(min(max(fps_index, 0), 2))
+        # Clamp to available items (now 4 options)
+        self.desktop_capture_fps_combobox.setCurrentIndex(min(max(fps_index, 0), self.desktop_capture_fps_combobox.count() - 1))
         # Disable mss option if the package is not available
         try:
             import mss  # noqa
