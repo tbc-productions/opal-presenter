@@ -296,7 +296,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
     def set_single_image_data(self, bg_color, image_data):
         self.run_in_display('setFullscreenImageFromData', bg_color, image_data)
 
-    def set_startup_screen(self):
+    def _get_logo_settings(self, respect_hide_on_startup=False):
+        """
+        Resolve the configured logo colors and image URI.
+
+        :param bool respect_hide_on_startup: Honor the startup hide-logo setting.
+        :return: Tuple of background color and image URI.
+        """
         bg_color = self.settings.value('core/logo background color')
         image = self.settings.value('core/logo file')
         if path_to_str(image).startswith(':'):
@@ -306,9 +312,12 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 image_uri = image.as_uri().replace('file://', 'openlp-library://local-file/')
             except Exception:
                 image_uri = ''
-        # if set to hide logo on startup, do not send the logo
-        if self.settings.value('core/logo hide on startup'):
+        if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):
             image_uri = ''
+        return bg_color, image_uri
+
+    def set_startup_screen(self):
+        bg_color, image_uri = self._get_logo_settings(respect_hide_on_startup=True)
         self.run_in_display('setStartupSplashScreen', bg_color, image_uri)
 
     def set_url(self, url):
@@ -535,6 +544,9 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.run_in_display('toBlack')
         elif mode == HideMode.Theme:
             self.run_in_display('toTheme')
+        elif mode == HideMode.Logo:
+            bg_color, image_uri = self._get_logo_settings()
+            self.run_in_display('toLogo', bg_color, image_uri)
         self.hide_mode = mode
 
     def disable_display(self):

@@ -1292,6 +1292,7 @@ def test_live_stolen_focus_shortcuts(settings: Settings):
     slide_controller.desktop_screen = MagicMock()
     slide_controller.blank_screen = MagicMock()
     slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
 
     # WHEN: __add_actions_to_widget is called
     slide_controller._SlideController__add_actions_to_widget(mocked_widget)
@@ -1301,7 +1302,8 @@ def test_live_stolen_focus_shortcuts(settings: Settings):
         slide_controller.previous_item, slide_controller.next_item,
         slide_controller.previous_service, slide_controller.next_service,
         slide_controller.show_screen, slide_controller.desktop_screen,
-        slide_controller.theme_screen, slide_controller.blank_screen
+        slide_controller.theme_screen, slide_controller.logo_screen,
+        slide_controller.blank_screen
     ])
 
 

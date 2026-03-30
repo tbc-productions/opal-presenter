@@ -67,6 +67,35 @@ body.is-desktop .pause-overlay {
   opacity: 0 !important;
 }
 
+#logo-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+  z-index: 4;
+}
+
+#logo-screen.show {
+  opacity: 1;
+}
+
+body.transition #logo-screen {
+  transition: opacity 800ms ease-in-out !important;
+}
+
+#logo-screen-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 .reveal .slide-background {
   opacity: 1;
   visibility: visible;

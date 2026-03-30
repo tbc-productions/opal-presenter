@@ -75,6 +75,8 @@ class Controller(object):
                 self.stop()
             elif hide_mode == HideMode.Theme:
                 self.blank(hide_mode)
+            elif hide_mode == HideMode.Logo:
+                self.blank(hide_mode)
             elif hide_mode == HideMode.Blank:
                 self.blank(hide_mode)
             else:
@@ -232,6 +234,12 @@ class Controller(object):
             if not self.doc.is_active():
                 return
             Registry().execute('live_display_hide', HideMode.Theme)
+        elif hide_mode == HideMode.Logo:
+            if not self.doc.is_loaded():
+                return
+            if not self.doc.is_active():
+                return
+            Registry().execute('live_display_hide', HideMode.Logo)
         elif hide_mode == HideMode.Blank:
             if not self.activate():
                 return

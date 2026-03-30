@@ -35,12 +35,16 @@ class HideMode(object):
         This mode is used to hide all output, but covers the display with the current theme background, as opposed to
         black.
 
+    ``Logo``
+        This mode is used to hide all output, but covers the display with the configured logo background image.
+
     ``Desktop``
         This mode hides all output by minimising the display, leaving the user's desktop showing.
     """
     Blank = 1
     Theme = 2
     Screen = 3
+    Logo = 4
 
 
 class DisplayControllerType(object):

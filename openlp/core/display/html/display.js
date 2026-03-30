@@ -318,6 +318,10 @@ var Display = {
   _footerContainer: null,
   /** @type {HTMLElement} */
   _backgroundsContainer: null,
+  /** @type {HTMLElement} */
+  _logoScreen: null,
+  /** @type {HTMLImageElement} */
+  _logoScreenImage: null,
   _alerts: [],
   _slides: {},
   _alertSettings: {},
@@ -347,6 +351,8 @@ var Display = {
     height: "100%"
   },
   _lastRequestAnimationFrameHandle: null,
+  _logoBackgroundOverrideActive: false,
+  _savedBackgroundAttributes: null,
 
   /**
    * Start up reveal and do any other initialisation
@@ -375,6 +381,8 @@ var Display = {
     Display._slidesContainer = $(".slides")[0];
     Display._footerContainer = $(".footer")[0];
     Display._backgroundsContainer = $(".backgrounds")[0];
+    Display._logoScreen = $("#logo-screen")[0];
+    Display._logoScreenImage = $("#logo-screen-image")[0];
     Display._doTransitions = isDisplay;
     Reveal.initialize(Display._revealConfig);
     Reveal.addEventListener('slidechanged', Display._onSlideChanged);
@@ -927,6 +935,8 @@ var Display = {
         if (!Reveal.isPaused()) {
           Reveal.togglePause();
         }
+        // Hide logo only after black mode is active to avoid flashing slide content.
+        Display._hideLogoScreen();
         Display._reenableGlobalTransitions(function() {
           var documentBody = $("body")[0];
           documentBody.style.opacity = 1;
@@ -941,6 +951,8 @@ var Display = {
   toTheme: function () {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
+      Display._restoreThemeBackgroundFromLogo();
       /*
         Reveal's black overlay should be shown before the transitions are
         restored, to avoid screen flashes
@@ -964,6 +976,7 @@ var Display = {
   toTransparent: function () {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
       var documentBody = $("body")[0];
       documentBody.style.opacity = 0;
       if (!Reveal.isPaused()) {
@@ -1008,6 +1021,106 @@ var Display = {
     });
   },
   /**
+   * Hide all but the configured logo background.
+   * @param {string} bg_color - The logo screen background color
+   * @param {string} image - Path to the logo image
+  */
+  toLogo: function (bg_color, image) {
+    return new Promise((resolve, reject) => {
+      Display._abortLastTransitionOperation();
+      Display._restorePauseBehavior();
+      var documentBody = $("body")[0];
+      var wasSlideLayerVisible = parseFloat(getComputedStyle(Display._slidesContainer).opacity || "1") > 0.01;
+      documentBody.style.opacity = 1;
+      Display._hideLogoScreen();
+      if (wasSlideLayerVisible) {
+        Display._slidesContainer.style.opacity = 1;
+        Display._footerContainer.style.opacity = 1;
+      }
+      if (Reveal.isPaused()) {
+        Reveal.togglePause();
+      }
+      if (Display._logoScreen) {
+        Display._logoScreen.style.backgroundColor = bg_color || "#000";
+      }
+
+      function hideSlideLayerAndResolve() {
+        Display._slidesContainer.style.opacity = 0;
+        Display._footerContainer.style.opacity = 0;
+        Display._setThemeBackgroundToLogo(bg_color, image);
+        resolve();
+      }
+
+      function fadeLogoOverSlide() {
+        Display._requestAnimationFrameExclusive(function() {
+          if (!Display._logoScreen) {
+            hideSlideLayerAndResolve();
+            return;
+          }
+          Display._logoScreen.classList.add("show");
+          var logoScreenStyle = getComputedStyle(Display._logoScreen);
+          var hasOpacityTransition =
+            document.body.classList.contains("transition") &&
+            logoScreenStyle.transitionDuration !== "0s";
+          if (!hasOpacityTransition) {
+            hideSlideLayerAndResolve();
+            return;
+          }
+          var transitionDone = false;
+          var onTransitionEnd = function(event) {
+            if (event.target !== Display._logoScreen || event.propertyName !== "opacity") {
+              return;
+            }
+            transitionDone = true;
+            Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
+            hideSlideLayerAndResolve();
+          };
+          Display._logoScreen.addEventListener("transitionend", onTransitionEnd);
+          // Safety fallback in case transitionend is skipped by the browser.
+          setTimeout(function() {
+            if (!transitionDone) {
+              Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
+              hideSlideLayerAndResolve();
+            }
+          }, 900);
+        });
+      }
+
+      Display._reenableGlobalTransitions(function() {
+        if (Display._logoScreenImage && image) {
+          Display._logoScreenImage.onload = function() {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            fadeLogoOverSlide();
+          };
+          Display._logoScreenImage.onerror = function() {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            Display._logoScreenImage.removeAttribute("src");
+            Display._logoScreenImage.style.display = "none";
+            fadeLogoOverSlide();
+          };
+          Display._logoScreenImage.style.display = "block";
+          Display._logoScreenImage.src = image;
+          if (Display._logoScreenImage.complete && Display._logoScreenImage.naturalWidth > 0) {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            fadeLogoOverSlide();
+          }
+        }
+        else {
+          if (Display._logoScreenImage) {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            Display._logoScreenImage.removeAttribute("src");
+            Display._logoScreenImage.style.display = "none";
+          }
+          fadeLogoOverSlide();
+        }
+      });
+    });
+  },
+  /**
    * Show the screen
   */
   show: function () {
@@ -1019,6 +1132,8 @@ var Display = {
         happens
       */
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
+      Display._restoreThemeBackgroundFromLogo();
 
       Display._slidesContainer.style.opacity = 1;
       Display._footerContainer.style.opacity = 1;
@@ -1031,6 +1146,66 @@ var Display = {
         resolve();
       });
     });
+  },
+
+  _hideLogoScreen: function() {
+    if (Display._logoScreen) {
+      Display._logoScreen.classList.remove("show");
+    }
+  },
+
+  _getRootSlideSection: function() {
+    return $(".slides > section")[0];
+  },
+
+  _setThemeBackgroundToLogo: function(bg_color, image) {
+    var rootSlide = Display._getRootSlideSection();
+    if (!rootSlide) {
+      return;
+    }
+    if (!Display._logoBackgroundOverrideActive) {
+      Display._savedBackgroundAttributes = {
+        background: rootSlide.getAttribute("data-background"),
+        size: rootSlide.getAttribute("data-background-size")
+      };
+    }
+    if (image) {
+      rootSlide.setAttribute("data-background", "url('" + image + "')");
+    }
+    else {
+      rootSlide.setAttribute("data-background", bg_color || "#000");
+    }
+    rootSlide.setAttribute("data-background-size", "cover");
+    Display._logoBackgroundOverrideActive = true;
+    Reveal.sync();
+  },
+
+  _restoreThemeBackgroundFromLogo: function() {
+    if (!Display._logoBackgroundOverrideActive) {
+      return;
+    }
+    var rootSlide = Display._getRootSlideSection();
+    if (!rootSlide) {
+      Display._logoBackgroundOverrideActive = false;
+      Display._savedBackgroundAttributes = null;
+      return;
+    }
+    var saved = Display._savedBackgroundAttributes || {};
+    if (saved.background) {
+      rootSlide.setAttribute("data-background", saved.background);
+    }
+    else {
+      rootSlide.removeAttribute("data-background");
+    }
+    if (saved.size) {
+      rootSlide.setAttribute("data-background-size", saved.size);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-size");
+    }
+    Display._logoBackgroundOverrideActive = false;
+    Display._savedBackgroundAttributes = null;
+    Reveal.sync();
   },
 
   _reenableGlobalTransitions: function(afterCallback) {

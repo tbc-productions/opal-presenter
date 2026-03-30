@@ -92,11 +92,13 @@ LOOP_LIST = [
 WIDE_MENU = [
     'show_screen_button',
     'theme_screen_button',
+    'logo_screen_button',
     'desktop_screen_button'
 ]
 
 NON_TEXT_MENU = [
     'show_screen_button',
+    'logo_screen_button',
     'blank_screen_button',
     'desktop_screen_button'
 ]
@@ -323,6 +325,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                               icon=UiIcons().get_icon_variant_selected('live_theme'),
                                               checked=False, can_shortcuts=True, category=self.category,
                                               triggers=self.on_toggle_theme)
+            self.logo_screen = create_action(self, 'logoScreen',
+                                             text=translate('OpenLP.SlideController', 'Show Logo'),
+                                             icon=UiIcons().get_icon_variant_selected('live_logo'),
+                                             checked=False, can_shortcuts=True, category=self.category,
+                                             triggers=self.on_toggle_logo)
             self.blank_screen = create_action(self, 'blankScreen',
                                               text=translate('OpenLP.SlideController', 'Show Black'),
                                               icon=UiIcons().get_icon_variant_selected('live_black'),
@@ -336,6 +343,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.hide_menu.setDefaultAction(self.show_screen)
             self.hide_menu.menu().addAction(self.show_screen)
             self.hide_menu.menu().addAction(self.theme_screen)
+            self.hide_menu.menu().addAction(self.logo_screen)
             self.hide_menu.menu().addAction(self.blank_screen)
             self.hide_menu.menu().addAction(self.desktop_screen)
             # Wide menu of display control buttons.
@@ -347,6 +355,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.theme_screen_button.setObjectName('theme_screen_button')
             self.toolbar.add_toolbar_widget(self.theme_screen_button)
             self.theme_screen_button.setDefaultAction(self.theme_screen)
+            self.logo_screen_button = QtWidgets.QToolButton(self.toolbar)
+            self.logo_screen_button.setObjectName('logo_screen_button')
+            self.toolbar.add_toolbar_widget(self.logo_screen_button)
+            self.logo_screen_button.setDefaultAction(self.logo_screen)
             self.blank_screen_button = QtWidgets.QToolButton(self.toolbar)
             self.blank_screen_button.setObjectName('blank_screen_button')
             self.toolbar.add_toolbar_widget(self.blank_screen_button)
@@ -617,6 +629,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.set_hide_mode(HideMode.Blank)
         elif action == 'theme':
             self.set_hide_mode(HideMode.Theme)
+        elif action == 'logo':
+            self.set_hide_mode(HideMode.Logo)
         elif action == 'desktop':
             self.set_hide_mode(HideMode.Screen)
         elif action == 'show':
@@ -687,6 +701,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.show_screen,
             self.desktop_screen,
             self.theme_screen,
+            self.logo_screen,
             self.blank_screen])
 
     def on_controller_size_changed(self, event=None):
@@ -1154,6 +1169,23 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.set_hide_mode(HideMode.Theme)
 
+    def on_toggle_logo(self, checked=None):
+        """
+        Toggle the logo screen
+        """
+        if self._current_hide_mode == HideMode.Logo:
+            self.set_hide_mode(None)
+        else:
+            self.set_hide_mode(HideMode.Logo)
+
+    def on_logo_display(self, checked=None):
+        """
+        Handle the logo screen button
+
+        :param checked: the new state of the of the widget
+        """
+        self.set_hide_mode(HideMode.Logo)
+
     def on_toggle_desktop(self, checked=None):
         """
         Toggle the desktop
@@ -1188,6 +1220,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.show_screen.setChecked(hide_mode is None)
         self.blank_screen.setChecked(hide_mode == HideMode.Blank)
         self.theme_screen.setChecked(hide_mode == HideMode.Theme)
+        self.logo_screen.setChecked(hide_mode == HideMode.Logo)
         self.desktop_screen.setChecked(hide_mode == HideMode.Screen)
         # Update plugin display
         if self.service_item is not None:
