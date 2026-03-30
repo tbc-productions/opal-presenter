@@ -23,6 +23,7 @@ from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.settingstab import SettingsTab
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 
 
 class PresentationTab(SettingsTab):
@@ -85,10 +86,33 @@ class PresentationTab(SettingsTab):
         self.odp_display_check_box.setObjectName('odp_display_check_box')
         self.impress_layout.addWidget(self.odp_display_check_box)
         self.left_layout.addWidget(self.impress_group_box)
+        # PDF transitions
+        self.pdf_transition_group_box = QtWidgets.QGroupBox(self.left_column)
+        self.pdf_transition_group_box.setObjectName('pdf_transition_group_box')
+        self.pdf_transition_layout = QtWidgets.QFormLayout(self.pdf_transition_group_box)
+        self.pdf_transition_layout.setObjectName('pdf_transition_layout')
+        self.pdf_transition_enabled_check_box = QtWidgets.QCheckBox(self.pdf_transition_group_box)
+        self.pdf_transition_enabled_check_box.setObjectName('pdf_transition_enabled_check_box')
+        self.pdf_transition_layout.setWidget(0, QtWidgets.QFormLayout.ItemRole.SpanningRole,
+                             self.pdf_transition_enabled_check_box)
+        self.pdf_transition_effect_label = QtWidgets.QLabel(self.pdf_transition_group_box)
+        self.pdf_transition_effect_label.setObjectName('pdf_transition_effect_label')
+        self.pdf_transition_effect_combo_box = QtWidgets.QComboBox(self.pdf_transition_group_box)
+        self.pdf_transition_effect_combo_box.setObjectName('pdf_transition_effect_combo_box')
+        self.pdf_transition_effect_combo_box.addItems(['', '', '', '', ''])
+        self.pdf_transition_layout.addRow(self.pdf_transition_effect_label, self.pdf_transition_effect_combo_box)
+        self.pdf_transition_speed_label = QtWidgets.QLabel(self.pdf_transition_group_box)
+        self.pdf_transition_speed_label.setObjectName('pdf_transition_speed_label')
+        self.pdf_transition_speed_combo_box = QtWidgets.QComboBox(self.pdf_transition_group_box)
+        self.pdf_transition_speed_combo_box.setObjectName('pdf_transition_speed_combo_box')
+        self.pdf_transition_speed_combo_box.addItems(['', '', ''])
+        self.pdf_transition_layout.addRow(self.pdf_transition_speed_label, self.pdf_transition_speed_combo_box)
+        self.left_layout.addWidget(self.pdf_transition_group_box)
         # setup layout
         self.left_layout.addStretch()
         self.right_column.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.right_layout.addStretch()
+        self.pdf_transition_enabled_check_box.toggled.connect(self._on_pdf_transition_toggled)
 
     def retranslate_ui(self):
         """
@@ -114,6 +138,27 @@ class PresentationTab(SettingsTab):
         self.odp_display_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Use Impress Slide Show Settings / Presentation Display setting'))
+        self.pdf_transition_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'PDF transition'))
+        self.pdf_transition_enabled_check_box.setText(
+            translate('PresentationPlugin.PresentationTab', 'Show transitions between PDF slides'))
+        self.pdf_transition_effect_label.setText(translate('PresentationPlugin.PresentationTab', 'Effect:'))
+        self.pdf_transition_effect_combo_box.setItemText(TransitionType.Fade,
+                                                         translate('PresentationPlugin.PresentationTab', 'Fade'))
+        self.pdf_transition_effect_combo_box.setItemText(TransitionType.Slide,
+                                                         translate('PresentationPlugin.PresentationTab', 'Slide'))
+        self.pdf_transition_effect_combo_box.setItemText(TransitionType.Convex,
+                                                         translate('PresentationPlugin.PresentationTab', 'Convex'))
+        self.pdf_transition_effect_combo_box.setItemText(TransitionType.Concave,
+                                                         translate('PresentationPlugin.PresentationTab', 'Concave'))
+        self.pdf_transition_effect_combo_box.setItemText(TransitionType.Zoom,
+                                                         translate('PresentationPlugin.PresentationTab', 'Zoom'))
+        self.pdf_transition_speed_label.setText(translate('PresentationPlugin.PresentationTab', 'Speed:'))
+        self.pdf_transition_speed_combo_box.setItemText(TransitionSpeed.Normal,
+                                                        translate('PresentationPlugin.PresentationTab', 'Normal'))
+        self.pdf_transition_speed_combo_box.setItemText(TransitionSpeed.Fast,
+                                                        translate('PresentationPlugin.PresentationTab', 'Fast'))
+        self.pdf_transition_speed_combo_box.setItemText(TransitionSpeed.Slow,
+                                                        translate('PresentationPlugin.PresentationTab', 'Slow'))
 
     def set_controller_text(self, checkbox, controller):
         if checkbox.isEnabled():
@@ -149,6 +194,12 @@ class PresentationTab(SettingsTab):
         self.odp_display_check_box.setChecked(
             self.settings.value('presentations/impress use display setting') == QtCore.Qt.CheckState.Checked)
         self.odp_display_check_box.setEnabled(impress_available)
+        self.pdf_transition_enabled_check_box.setChecked(bool(self.settings.value('presentations/pdf transitions')))
+        self.pdf_transition_effect_combo_box.setCurrentIndex(
+            self._get_transition_type_value(self.settings.value('presentations/pdf transition type')))
+        self.pdf_transition_speed_combo_box.setCurrentIndex(
+            self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed')))
+        self._on_pdf_transition_toggled(self.pdf_transition_enabled_check_box.isChecked())
 
     def save(self):
         """
@@ -188,9 +239,48 @@ class PresentationTab(SettingsTab):
         if self.settings.value(setting_key) != self.odp_display_check_box.checkState():
             self.settings.setValue(setting_key, self.odp_display_check_box.checkState())
             changed = True
+        setting_key = 'presentations/pdf transitions'
+        if bool(self.settings.value(setting_key)) != self.pdf_transition_enabled_check_box.isChecked():
+            self.settings.setValue(setting_key, self.pdf_transition_enabled_check_box.isChecked())
+            changed = True
+        setting_key = 'presentations/pdf transition type'
+        if self._get_transition_type_value(self.settings.value(setting_key)) != \
+                self.pdf_transition_effect_combo_box.currentIndex():
+            self.settings.setValue(setting_key, self.pdf_transition_effect_combo_box.currentIndex())
+            changed = True
+        setting_key = 'presentations/pdf transition speed'
+        if self._get_transition_speed_value(self.settings.value(setting_key)) != \
+                self.pdf_transition_speed_combo_box.currentIndex():
+            self.settings.setValue(setting_key, self.pdf_transition_speed_combo_box.currentIndex())
+            changed = True
         if changed:
             self.settings_form.register_post_process('mediaitem_presentation_rebuild')
             self.settings_form.register_post_process('mediaitem_suffixes')
+
+    def _on_pdf_transition_toggled(self, enabled):
+        self.pdf_transition_effect_label.setEnabled(enabled)
+        self.pdf_transition_effect_combo_box.setEnabled(enabled)
+        self.pdf_transition_speed_label.setEnabled(enabled)
+        self.pdf_transition_speed_combo_box.setEnabled(enabled)
+
+    @staticmethod
+    def _get_transition_type_value(value):
+        if isinstance(value, str):
+            converted = TransitionType.from_string(value)
+            return converted if converted is not None else TransitionType.Fade
+        if value in (TransitionType.Fade, TransitionType.Slide, TransitionType.Convex,
+                     TransitionType.Concave, TransitionType.Zoom):
+            return value
+        return TransitionType.Fade
+
+    @staticmethod
+    def _get_transition_speed_value(value):
+        if isinstance(value, str):
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        return TransitionSpeed.Normal
 
     def tab_visible(self):
         """

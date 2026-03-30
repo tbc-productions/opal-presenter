@@ -157,10 +157,10 @@ class SearchEdit(QtWidgets.QLineEdit):
             self.menu_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
             self.menu_button.setAutoRaise(True)
             self.menu_button.setStyleSheet(
-                'QToolButton { border: none; padding: 0px 14px 0px 4px; } '
+                'QToolButton { border: none; padding: 0px 18px 0px 4px; } '
                 'QToolButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: center right; right: 2px; }'
             )
-            self.menu_button.resize(QtCore.QSize(36, 18))
+            self.menu_button.resize(QtCore.QSize(40, 18))
         self.menu_button.setMenu(menu)
         self.set_current_search_type(
             self.settings.value('{section}/last used search type'.format(section=self.settings_section)))

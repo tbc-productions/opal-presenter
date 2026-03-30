@@ -40,6 +40,7 @@ from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, Hi
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder, is_serializable
 from openlp.core.common.path import files_to_paths, str_to_path
 from openlp.core.common.platform import is_linux, is_win, is_macosx
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui.style import UiThemes
 
 if is_win():
@@ -428,6 +429,9 @@ class Settings(QtCore.QSettings):
         'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint control window': QtCore.Qt.CheckState.Unchecked,
         'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,
+        'presentations/pdf transitions': False,
+        'presentations/pdf transition type': TransitionType.Fade,
+        'presentations/pdf transition speed': TransitionSpeed.Normal,
         'presentations/last directory': None,
         'presentations/db type': 'sqlite',
         'presentations/db username': '',

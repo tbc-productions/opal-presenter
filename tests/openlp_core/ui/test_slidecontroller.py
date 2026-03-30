@@ -38,6 +38,7 @@ from openlp.core.common.settings import Settings
 from openlp.core.common.utils import wait_for
 from openlp.core.lib import ItemCapabilities, ServiceItemAction
 from openlp.core.lib.serviceitem import ServiceItem
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui import HideMode
 from openlp.core.ui.slidecontroller import NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, InfoLabel, LiveController, \
     PreviewController, SlideController
@@ -1241,6 +1242,38 @@ def test_process_item_provides_own_theme(mocked_execute: MagicMock, registry: Re
 
     # THEN: _set_theme should be called once
     slide_controller._set_theme.assert_called_once()
+
+
+def test_set_theme_applies_pdf_transition_settings(settings: Settings):
+    """
+    Test that PDF presentation transition settings override theme transition values.
+    """
+    # GIVEN: A service item with PDF transition settings and a slide controller with mocked displays
+    slide_controller = SlideController(None)
+    slide_controller.preview_display = MagicMock()
+    slide_controller.displays = [MagicMock()]
+    service_item = MagicMock()
+    service_item.service_item_type = 'image'
+    theme_data = MagicMock()
+    theme_data.display_slide_transition = False
+    theme_data.display_slide_transition_type = TransitionType.Fade
+    theme_data.display_slide_transition_speed = TransitionSpeed.Normal
+    service_item.get_theme_data.return_value = theme_data
+    service_item.pdf_transition_settings = {
+        'enabled': True,
+        'type': TransitionType.Zoom,
+        'speed': TransitionSpeed.Slow
+    }
+
+    # WHEN: _set_theme is called
+    slide_controller._set_theme(service_item)
+
+    # THEN: The theme transition settings should be overridden and sent to display/preview
+    assert theme_data.display_slide_transition is True
+    assert theme_data.display_slide_transition_type == TransitionType.Zoom
+    assert theme_data.display_slide_transition_speed == TransitionSpeed.Slow
+    slide_controller.preview_display.set_theme.assert_called_once_with(theme_data, service_item_type='image')
+    slide_controller.displays[0].set_theme.assert_called_once_with(theme_data, service_item_type='image')
 
 
 def test_live_stolen_focus_shortcuts(settings: Settings):

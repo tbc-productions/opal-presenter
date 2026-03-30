@@ -29,6 +29,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.lib import ServiceItemContext
 from openlp.core.lib.serviceitem import ItemCapabilities
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
 
@@ -200,6 +201,45 @@ def test_generate_slide_data_from_pdf(media_item):
     # THEN: Should be categorized as images and overrides the theme
     assert mocked_service_item.name == 'images'
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
+    assert mocked_service_item.pdf_transition_settings == {
+        'enabled': False,
+        'type': TransitionType.Fade,
+        'speed': TransitionSpeed.Normal
+    }
+
+
+def test_generate_slide_data_rebuilds_missing_first_thumbnail_cache(media_item):
+    """
+    Test that generate_slide_data retries thumbnail export by clearing stale cache when slide 1 is missing.
+    """
+    # GIVEN: A presentation service item where initial thumbnail lookup fails, but succeeds after cache cleanup.
+    media_item.list_view = MagicMock()
+    media_item.display_type_combo_box = MagicMock(
+        currentText=MagicMock(return_value='Powerpoint'),
+        currentIndex=MagicMock(return_value=0),
+        itemData=MagicMock(return_value='Powerpoint')
+    )
+    mocked_service_item = MagicMock()
+    mocked_doc = MagicMock()
+    mocked_doc.get_thumbnail_path.side_effect = [None, None, Path('slide1.png'), None]
+    mocked_doc.get_titles_and_notes.return_value = ([], [])
+    mocked_controller = MagicMock()
+    mocked_controller.add_document.return_value = mocked_doc
+    media_item.controllers = {'Powerpoint': mocked_controller}
+
+    with patch.object(Path, 'exists', return_value=True), patch('os.access', return_value=True):
+        # WHEN: generate_slide_data is called for a PPTX file.
+        success = media_item.generate_slide_data(
+            mocked_service_item,
+            item=MagicMock(),
+            file_path=Path('test.pptx')
+        )
+
+    # THEN: The stale cache should be cleaned and thumbnails regenerated successfully.
+    assert success is True
+    mocked_doc.presentation_deleted.assert_called_once()
+    assert mocked_doc.load_presentation.call_count == 2
+    mocked_service_item.add_from_command.assert_called_once()
 
 
 @patch('openlp.core.lib.ui.Registry')

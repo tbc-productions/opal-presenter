@@ -98,7 +98,6 @@ class AppleScriptBaseController(PresentationController):
         except Exception:
             log.exception('script execution failed')
 
-
 class AppleScriptBaseDocument(PresentationDocument):
     """
     Class which holds information and controls a single presentation.
