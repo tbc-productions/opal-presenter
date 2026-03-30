@@ -180,6 +180,22 @@ describe("The Display object", function () {
     expect(Reveal.initialize).toHaveBeenCalled();
   });
 
+  it("should not initialise Reveal twice on repeated init for same display DOM", function () {
+    spyOn(Reveal, "initialize");
+    spyOn(Reveal, "addEventListener");
+    document.body.innerHTML = "";
+    _createDiv({"class": "slides"});
+    _createDiv({"class": "footer"});
+    Display._isInitialised = false;
+
+    Display.init();
+    Display.init();
+
+    expect(Reveal.initialize).toHaveBeenCalledTimes(1);
+    expect(Reveal.addEventListener).toHaveBeenCalledTimes(1);
+    Display._isInitialised = false;
+  });
+
   it("should have checkerboard class when init is called when not display", function () {
     spyOn(Reveal, "initialize");
     spyOn(Reveal, "addEventListener");
@@ -1001,6 +1017,68 @@ describe("Display.setFullscreenImage", function () {
     expect($(".slides > section > img")[0].getAttribute("src")).toEqual("file:///openlp1.jpg");
     expect($(".slides > section > img")[0].getAttribute("style")).toEqual("height: 100%; width: 100%; margin: 0; object-fit: contain;");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("should update existing fullscreen image without calling Reveal sync/slide", function () {
+    var image = "file:///openlp2.jpg";
+    let bg_color = "#111";
+    var section = document.createElement("section");
+    section.setAttribute("id", 0);
+    section.setAttribute("data-background", "#000");
+    var img = document.createElement("img");
+    img.src = "file:///openlp1.jpg";
+    section.appendChild(img);
+    Display._slidesContainer.appendChild(section);
+    Display._slides = {'0': 0};
+
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setFullscreenImage(bg_color, image);
+
+    expect($(".slides > section > img")[0].getAttribute("src")).toEqual("file:///openlp2.jpg");
+    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("#111");
+    expect(Reveal.sync).not.toHaveBeenCalled();
+    expect(Reveal.slide).not.toHaveBeenCalled();
+  });
+});
+
+describe("Display.setFullscreenImageFromData", function () {
+  beforeEach(function() {
+    document.body.innerHTML = "";
+    var slides_container = _createDiv({"class": "slides"});
+    var footer_container = _createDiv({"class": "footer"});
+    Display._slidesContainer = slides_container;
+    Display._footerContainer = footer_container;
+    Display._slides = {};
+  });
+
+  it("should set fullscreen image from data using replaceSlides path", function () {
+    spyOn(Display, "replaceSlides");
+    var image_data = "abc123";
+
+    Display.setFullscreenImageFromData("#000", image_data);
+
+    expect(Display.replaceSlides).toHaveBeenCalledTimes(1);
+    expect(Display._slides['0']).toEqual(0);
+  });
+
+  it("should update existing fullscreen image data without replaceSlides", function () {
+    var section = document.createElement("section");
+    section.setAttribute("id", 0);
+    section.setAttribute("data-background", "#000");
+    var img = document.createElement("img");
+    img.src = "data:image/jpeg;base64,old";
+    section.appendChild(img);
+    Display._slidesContainer.appendChild(section);
+    Display._slides = {'0': 0};
+    spyOn(Display, "replaceSlides");
+
+    Display.setFullscreenImageFromData("#222", "new-data");
+
+    expect(Display.replaceSlides).not.toHaveBeenCalled();
+    expect($(".slides > section > img")[0].getAttribute("src")).toEqual("data:image/jpeg;base64,new-data");
+    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("#222");
   });
 });
 

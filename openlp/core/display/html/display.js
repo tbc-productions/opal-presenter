@@ -333,6 +333,8 @@ var Display = {
   _itemTransitionSpeedSeconds: 0.8,
   _itemTransitionType: "balanced",
   _skipNextTransition: false,
+  _isInitialised: false,
+  _initialisedSlidesContainer: null,
   _themeApplied: true,
   _revealConfig: {
     margin: 0.0,
@@ -395,8 +397,17 @@ var Display = {
     Display._doTransitions = isDisplay;
     Display._itemTransitionSpeedSeconds = itemTransitionSpeed;
     Display._itemTransitionType = itemTransitionType;
+    // Prevent duplicate Reveal wiring on repeated init calls in the same document lifecycle.
+    var isSameSlidesContainer = !!Display._slidesContainer &&
+      Display._initialisedSlidesContainer === Display._slidesContainer;
+    if (Display._isInitialised && isSameSlidesContainer) {
+      Display.setItemTransition(doItemTransitions && isDisplay, itemTransitionSpeed, itemTransitionType);
+      return;
+    }
     Reveal.initialize(Display._revealConfig);
     Reveal.addEventListener('slidechanged', Display._onSlideChanged);
+    Display._isInitialised = true;
+    Display._initialisedSlidesContainer = Display._slidesContainer;
     Display.setItemTransition(doItemTransitions && isDisplay, itemTransitionSpeed, itemTransitionType);
     displayWatcher.setInitialised(true);
   },
@@ -585,6 +596,14 @@ var Display = {
    */
   setFullscreenImage: function(bg_color, image) {
     Display._setPresentationSlideTransition(false);
+    var existingSection = Display._getReusableFullscreenSection();
+    if (existingSection) {
+      existingSection.setAttribute("data-background", bg_color);
+      var existingImage = existingSection.querySelector("img");
+      existingImage.src = image;
+      existingImage.setAttribute("style", "height: 100%; width: 100%; margin: 0; object-fit: contain;");
+      return;
+    }
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
@@ -604,18 +623,45 @@ var Display = {
    */
   setFullscreenImageFromData: function(bg_color, image_data) {
     Display._setPresentationSlideTransition(false);
+    var dataUri = 'data:image/jpeg;base64,' + image_data;
+    var existingSection = Display._getReusableFullscreenSection();
+    if (existingSection) {
+      existingSection.setAttribute("data-background", bg_color);
+      var existingImage = existingSection.querySelector("img");
+      existingImage.src = dataUri;
+      existingImage.setAttribute("style", "height: 100%; width: 100%");
+      return;
+    }
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
     section.setAttribute("data-background", bg_color);
     section.setAttribute("style", "height: 100%; width: 100%;");
     var img = document.createElement('img');
-    img.src = 'data:image/jpeg;base64,' + image_data;
+    img.src = dataUri;
     img.setAttribute("style", "height: 100%; width: 100%");
     section.appendChild(img);
-    Display._slidesContainer.appendChild(section);
     Display._slides['0'] = 0;
-    Display.reinit();
+    Display.replaceSlides(section);
+  },
+  /**
+   * Return existing fullscreen image section if current content matches expected single image layout.
+   */
+  _getReusableFullscreenSection: function() {
+    if (!Display._slidesContainer || Display._slidesContainer.children.length !== 1) {
+      return null;
+    }
+    if (Object.keys(Display._slides).length !== 1 || !Object.prototype.hasOwnProperty.call(Display._slides, '0')) {
+      return null;
+    }
+    var section = Display._slidesContainer.children[0];
+    if (!section || section.tagName !== 'SECTION') {
+      return null;
+    }
+    if (!section.querySelector('img')) {
+      return null;
+    }
+    return section;
   },
   /**
    * Display an alert. If there's an alert already showing, add this one to the queue
