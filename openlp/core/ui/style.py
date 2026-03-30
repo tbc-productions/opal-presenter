@@ -57,6 +57,7 @@ QToolBar
 """
 
 MEDIA_MANAGER_STYLE = """
+QWidget#media_tool_box QTabBar::tab,
 QTabWidget#media_tool_box QTabBar::tab,
 QToolBox#media_tool_box::tab {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -67,7 +68,19 @@ QToolBox#media_tool_box::tab {
     margin-bottom: 0;
     text-align: left;
 }
+
+QWidget#media_tool_box QTabBar::tab:first,
+QTabWidget#media_tool_box QTabBar::tab:first,
+QToolBox#media_tool_box::tab:first {
+    min-width: 0px;
+    max-width: 0px;
+    width: 0px;
+    padding: 0px;
+    margin: 0px;
+    border: 0px;
+}
 /* This is here to make the tabs on KDE with the Breeze theme work */
+QWidget#media_tool_box QTabBar::tab:selected,
 QTabWidget#media_tool_box QTabBar::tab:selected,
 QToolBox#media_tool_box::tab:selected {}
 """

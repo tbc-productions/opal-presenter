@@ -22,8 +22,9 @@
 The :mod:`~openlp.core.widgets.docks` module contains a customised base dock widget and dock widgets
 """
 import logging
+import math
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
@@ -34,32 +35,206 @@ from openlp.core.ui.style import get_dock_panel_header_stylesheet
 log = logging.getLogger(__name__)
 
 
-class MediaToolBox(QtWidgets.QTabWidget):
+class LibraryTabBar(QtWidgets.QTabBar):
     """
-    Tab-based media container with a QToolBox-compatible API.
+    QTabBar with support for zero-width placeholder tabs.
     """
 
     def __init__(self, parent=None):
+        super(LibraryTabBar, self).__init__(parent)
+        self._placeholder_indices = set()
+
+    def set_placeholder(self, index, enabled=True):
+        if enabled:
+            self._placeholder_indices.add(index)
+        else:
+            self._placeholder_indices.discard(index)
+
+    def clear_placeholders(self):
+        self._placeholder_indices.clear()
+
+    def tabSizeHint(self, index):
+        size = super(LibraryTabBar, self).tabSizeHint(index)
+        if index in self._placeholder_indices:
+            return QtCore.QSize(0, size.height())
+        return size
+
+
+class MediaToolBox(QtWidgets.QWidget):
+    """
+    Two-row tab-based media container backed by a QStackedWidget.
+    """
+
+    currentChanged = QtCore.Signal(int)
+
+    def __init__(self, parent=None):
         super(MediaToolBox, self).__init__(parent)
-        self.setDocumentMode(True)
-        self.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
-        # Keep tabs at natural width and show scroll arrows when space is limited.
-        self.setUsesScrollButtons(True)
-        self.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
-        self.setMovable(True)
-        self.tabBar().setExpanding(False)
+        self._items = []
+        self._current_index = -1
+        self._syncing = False
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self._top_tab_bar = LibraryTabBar(self)
+        self._top_tab_bar.setDocumentMode(True)
+        self._top_tab_bar.setExpanding(False)
+        self._top_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
+        self._top_tab_bar.setUsesScrollButtons(False)
+        self._top_tab_bar.currentChanged.connect(self._on_top_tab_changed)
+        layout.addWidget(self._top_tab_bar)
+
+        self._bottom_tab_bar = LibraryTabBar(self)
+        self._bottom_tab_bar.setDocumentMode(True)
+        self._bottom_tab_bar.setExpanding(False)
+        self._bottom_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
+        self._bottom_tab_bar.setUsesScrollButtons(False)
+        self._bottom_tab_bar.currentChanged.connect(self._on_bottom_tab_changed)
+        layout.addWidget(self._bottom_tab_bar)
+
+        self._stack = QtWidgets.QStackedWidget(self)
+        layout.addWidget(self._stack)
+
+    @staticmethod
+    def _clear_tab_bar(tab_bar):
+        while tab_bar.count() > 0:
+            tab_bar.removeTab(0)
+
+    @staticmethod
+    def _add_placeholder_tab(tab_bar):
+        placeholder_index = tab_bar.addTab('')
+        tab_bar.setTabData(placeholder_index, None)
+        tab_bar.setTabEnabled(placeholder_index, False)
+        if isinstance(tab_bar, LibraryTabBar):
+            tab_bar.set_placeholder(placeholder_index, True)
+
+    def _split_index(self):
+        return int(math.ceil(len(self._items) / 2.0))
+
+    def _as_icon(self, icon):
+        if isinstance(icon, QtGui.QIcon):
+            return icon
+        return build_icon(icon)
+
+    def _update_tab_row_heights(self):
+        base_height = max(self.fontMetrics().height() + 12, 24)
+        top_height = self._top_tab_bar.sizeHint().height() if self._top_tab_bar.count() > 1 else 0
+        bottom_height = self._bottom_tab_bar.sizeHint().height() if self._bottom_tab_bar.count() > 1 else 0
+        self._top_tab_bar.setFixedHeight(max(top_height, base_height) if self._top_tab_bar.count() else 0)
+        self._bottom_tab_bar.setFixedHeight(max(bottom_height, base_height)
+                                            if self._bottom_tab_bar.count() > 1 else 0)
+
+    def _sync_tab_selection(self):
+        self._syncing = True
+        top_count = self._split_index()
+        if 0 <= self._current_index < len(self._items):
+            if self._current_index < top_count:
+                self._top_tab_bar.setCurrentIndex(self._current_index + 1)
+                self._bottom_tab_bar.setCurrentIndex(0)
+            else:
+                self._top_tab_bar.setCurrentIndex(0)
+                self._bottom_tab_bar.setCurrentIndex((self._current_index - top_count) + 1)
+        else:
+            self._top_tab_bar.setCurrentIndex(0)
+            self._bottom_tab_bar.setCurrentIndex(0)
+        self._syncing = False
+
+    def _rebuild_tab_bars(self):
+        top_count = self._split_index()
+        self._top_tab_bar.clear_placeholders()
+        self._bottom_tab_bar.clear_placeholders()
+        self._clear_tab_bar(self._top_tab_bar)
+        self._clear_tab_bar(self._bottom_tab_bar)
+
+        self._add_placeholder_tab(self._top_tab_bar)
+        self._add_placeholder_tab(self._bottom_tab_bar)
+
+        for index, item in enumerate(self._items):
+            tab_bar = self._top_tab_bar if index < top_count else self._bottom_tab_bar
+            row_index = tab_bar.addTab(item['icon'], item['label'])
+            tab_bar.setTabData(row_index, index)
+            tab_bar.setTabEnabled(row_index, item['enabled'])
+
+        self._bottom_tab_bar.setVisible(len(self._items) > top_count)
+        self._update_tab_row_heights()
+        self._sync_tab_selection()
+
+    def _on_top_tab_changed(self, tab_index):
+        if self._syncing or tab_index <= 0:
+            return
+        index = self._top_tab_bar.tabData(tab_index)
+        if isinstance(index, int):
+            self.setCurrentIndex(index)
+
+    def _on_bottom_tab_changed(self, tab_index):
+        if self._syncing or tab_index <= 0:
+            return
+        index = self._bottom_tab_bar.tabData(tab_index)
+        if isinstance(index, int):
+            self.setCurrentIndex(index)
 
     def addItem(self, widget, icon, label):
-        return self.addTab(widget, icon, label)
+        tab_icon = self._as_icon(icon)
+        self._items.append({'widget': widget, 'icon': tab_icon, 'label': label, 'enabled': True})
+        self._stack.addWidget(widget)
+        self._rebuild_tab_bars()
+        new_index = len(self._items) - 1
+        if self._current_index == -1:
+            self.setCurrentIndex(0)
+        return new_index
 
     def removeItem(self, index):
-        self.removeTab(index)
+        if index < 0 or index >= len(self._items):
+            return
+        widget = self._items[index]['widget']
+        self._stack.removeWidget(widget)
+        del self._items[index]
+        if index < self._current_index:
+            self._current_index -= 1
+        elif index == self._current_index and self._current_index >= len(self._items):
+            self._current_index = len(self._items) - 1
+        if not self._items:
+            self._current_index = -1
+            self._rebuild_tab_bars()
+            self.currentChanged.emit(-1)
+            return
+        self._rebuild_tab_bars()
+        self.setCurrentIndex(self._current_index)
 
     def itemText(self, index):
-        return self.tabText(index)
+        return self._items[index]['label']
 
     def setItemEnabled(self, index, enabled):
-        self.setTabEnabled(index, enabled)
+        if index < 0 or index >= len(self._items):
+            return
+        self._items[index]['enabled'] = enabled
+        self._rebuild_tab_bars()
+
+    def count(self):
+        return len(self._items)
+
+    def widget(self, index):
+        if index < 0 or index >= len(self._items):
+            return None
+        return self._items[index]['widget']
+
+    def currentWidget(self):
+        return self.widget(self._current_index)
+
+    def currentIndex(self):
+        return self._current_index
+
+    def setCurrentIndex(self, index):
+        if index < 0 or index >= len(self._items):
+            return
+        if self._current_index == index and self._stack.currentIndex() == index:
+            self._sync_tab_selection()
+            return
+        self._current_index = index
+        self._stack.setCurrentIndex(index)
+        self._sync_tab_selection()
+        self.currentChanged.emit(index)
 
 
 class OpenLPDockWidget(QtWidgets.QDockWidget):
