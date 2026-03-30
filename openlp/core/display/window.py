@@ -272,6 +272,12 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
 
         if has_custom_geometry:
             self.show()
+        elif is_macosx():
+            # On macOS, showFullScreen() creates a native fullscreen Space whose compositing
+            # does not support WA_TranslucentBackground, causing a black screen instead of
+            # transparency when hiding the display. Using show() with the screen geometry
+            # (already set via setGeometry) avoids this issue.
+            self.show()
         else:
             self.showFullScreen()
 
