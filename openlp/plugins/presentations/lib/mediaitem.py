@@ -29,6 +29,7 @@ from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, build_icon, create_thumb, validate_thumb
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
@@ -203,8 +204,7 @@ class PresentationMediaItem(FolderLibraryItem):
                 thumbnail_path = doc.get_thumbnail_folder() / 'icon.png'
                 preview_path = doc.get_thumbnail_path(1, True)
                 if not preview_path and not is_initial_load:
-                    doc.load_presentation()
-                    preview_path = doc.get_thumbnail_path(1, True)
+                    preview_path = self._ensure_first_thumbnail(doc)
                 doc.close_presentation()
                 if not (preview_path and preview_path.exists()):
                     icon = UiIcons().delete
@@ -306,6 +306,7 @@ class PresentationMediaItem(FolderLibraryItem):
             service_item.add_capability(ItemCapabilities.CanLoop)
             service_item.add_capability(ItemCapabilities.CanAppend)
             service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
+            service_item.pdf_transition_settings = self._get_pdf_transition_settings()
             service_item.name = 'images'
             # force a nonexistent theme
             service_item.theme = -1
@@ -372,10 +373,8 @@ class PresentationMediaItem(FolderLibraryItem):
                                 return False
                         controller = self.controllers[service_item.processor]
                         doc = controller.add_document(file_path)
-                        if doc.get_thumbnail_path(1, True) is None:
-                            doc.load_presentation()
+                        thumbnail_path = self._ensure_first_thumbnail(doc)
                         i = 1
-                        thumbnail_path = doc.get_thumbnail_path(i, True)
                         if thumbnail_path:
                             # Get titles and notes
                             titles, notes = doc.get_titles_and_notes()
@@ -425,6 +424,46 @@ class PresentationMediaItem(FolderLibraryItem):
                                                              'The presentation {name} no longer exists.'
                                                              ).format(name=file_path))
                     return False
+
+    def _get_pdf_transition_settings(self):
+        return {
+            'enabled': bool(self.settings.value('presentations/pdf transitions')),
+            'type': self._get_transition_type_value(self.settings.value('presentations/pdf transition type')),
+            'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
+        }
+
+    @staticmethod
+    def _ensure_first_thumbnail(doc):
+        thumbnail_path = doc.get_thumbnail_path(1, True)
+        if thumbnail_path:
+            return thumbnail_path
+        doc.load_presentation()
+        thumbnail_path = doc.get_thumbnail_path(1, True)
+        if thumbnail_path:
+            return thumbnail_path
+        # Recover from stale/incomplete cache where metadata files exist but slide thumbnails do not.
+        doc.presentation_deleted()
+        doc.load_presentation()
+        return doc.get_thumbnail_path(1, True)
+
+    @staticmethod
+    def _get_transition_type_value(value):
+        if isinstance(value, str):
+            converted = TransitionType.from_string(value)
+            return converted if converted is not None else TransitionType.Fade
+        if value in (TransitionType.Fade, TransitionType.Slide, TransitionType.Convex,
+                     TransitionType.Concave, TransitionType.Zoom):
+            return value
+        return TransitionType.Fade
+
+    @staticmethod
+    def _get_transition_speed_value(value):
+        if isinstance(value, str):
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        return TransitionSpeed.Normal
 
     def find_controller_by_type(self, file_path):
         """

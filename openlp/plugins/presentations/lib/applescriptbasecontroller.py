@@ -99,7 +99,8 @@ class AppleScriptBaseController(PresentationController):
             log.exception('script execution failed')
 
 
-class AppleScriptBaseDocument(PresentationDocument):
+
+# The correct AppleScriptBaseDocument definition is below (starting at line 102)
     """
     Class which holds information and controls a single presentation.
     """

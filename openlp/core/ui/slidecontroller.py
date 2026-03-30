@@ -41,7 +41,7 @@ from openlp.core.display.screens import ScreenList
 from openlp.core.display.window import DisplayWindow
 from openlp.core.lib import ServiceItemAction, image_to_byte
 from openlp.core.lib.serviceitem import ItemCapabilities
-from openlp.core.lib.theme import BackgroundType
+from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_action
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
@@ -898,11 +898,41 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         # Get theme
         theme_data = service_item.get_theme_data()
+        self._apply_pdf_presentation_transitions(service_item, theme_data)
         # Set theme for preview
         self.preview_display.set_theme(theme_data, service_item_type=service_item.service_item_type)
         # Set theme for displays
         for display in self.displays:
             display.set_theme(theme_data, service_item_type=service_item.service_item_type)
+
+    def _apply_pdf_presentation_transitions(self, service_item, theme_data):
+        transition_settings = getattr(service_item, 'pdf_transition_settings', None)
+        if not isinstance(transition_settings, dict) or not transition_settings.get('enabled', False):
+            return
+        theme_data.display_slide_transition = True
+        theme_data.display_slide_transition_type = self._get_transition_type_value(
+            transition_settings.get('type', TransitionType.Fade))
+        theme_data.display_slide_transition_speed = self._get_transition_speed_value(
+            transition_settings.get('speed', TransitionSpeed.Normal))
+
+    @staticmethod
+    def _get_transition_type_value(value):
+        if isinstance(value, str):
+            converted = TransitionType.from_string(value)
+            return converted if converted is not None else TransitionType.Fade
+        if value in (TransitionType.Fade, TransitionType.Slide, TransitionType.Convex,
+                     TransitionType.Concave, TransitionType.Zoom):
+            return value
+        return TransitionType.Fade
+
+    @staticmethod
+    def _get_transition_speed_value(value):
+        if isinstance(value, str):
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        return TransitionSpeed.Normal
 
     def _process_item(self, service_item, slide_no, is_reloading=False):
         """

@@ -158,7 +158,7 @@ class BibleMediaItem(MediaManagerItem):
         self.search_tab = QtWidgets.QWidget()
         self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.search_layout = QtWidgets.QFormLayout(self.search_tab)
-        self.search_layout.setContentsMargins(0, 8, 0, 8)
+        self.search_layout.setContentsMargins(8, 8, 8, 8)
         self.search_layout.setSpacing(8)
         self.search_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.search_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -220,6 +220,8 @@ class BibleMediaItem(MediaManagerItem):
         # spacing set to 0)
         self.search_button_widget = QtWidgets.QWidget()
         self.search_button_layout = QtWidgets.QHBoxLayout(self.search_button_widget)
+        self.search_button_layout.setContentsMargins(0, 0, 0, 0)
+        self.search_button_layout.setSpacing(6)
         self.search_button_layout.addStretch()
         # Note: If we use QPushButton instead of the QToolButton, the icon will be larger than the Lock icon.
         self.clear_button = QtWidgets.QPushButton()
@@ -239,10 +241,19 @@ class BibleMediaItem(MediaManagerItem):
         self.results_view_tab.setCurrentIndex(ResultsTab.Search)
         self.results_view_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                             QtWidgets.QSizePolicy.Policy.Fixed)
-        header_layout.addWidget(self.results_view_tab)
+        header_layout.addSpacing(4)
+        self.results_view_tab_container = QtWidgets.QWidget(self)
+        self.results_view_tab_container_layout = QtWidgets.QHBoxLayout(self.results_view_tab_container)
+        self.results_view_tab_container_layout.setContentsMargins(8, 0, 8, 0)
+        self.results_view_tab_container_layout.setSpacing(0)
+        self.results_view_tab_container_layout.addWidget(self.results_view_tab)
+        header_layout.addWidget(self.results_view_tab_container)
+        header_layout.addSpacing(4)
 
     def setup_ui(self):
         super().setup_ui()
+        # Let the tab bars span the full library width in the Bibles panel.
+        self.panel_layout.setContentsMargins(0, 0, 0, 8)
         # Keep the header compact and let the results list consume available height.
         self.panel_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         self.page_layout.setStretchFactor(self.panel_widget, 0)

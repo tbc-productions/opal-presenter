@@ -151,7 +151,9 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         if self.toolbar is None:
             self.toolbar = OpenLPToolbar(self)
-            self.panel_layout.addWidget(self.toolbar)
+            # Keep toolbars edge-to-edge across Library tabs while retaining panel padding
+            # for plugin-specific controls added below.
+            self.page_layout.insertWidget(0, self.toolbar)
 
     def setup_ui(self):
         """
