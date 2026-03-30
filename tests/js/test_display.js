@@ -269,6 +269,14 @@ describe("Transitions", function () {
     expect(Reveal.configure).toHaveBeenCalledWith({"backgroundTransition": "fade", "transitionSpeed": "default"});
   });
 
+  it("should apply custom transition speed when setItemTransition() is called", function () {
+    spyOn(Reveal, "configure");
+    Display.setItemTransition(true, 2.0);
+    expect(Reveal.configure).toHaveBeenCalledWith({"backgroundTransition": "fade", "transitionSpeed": "slow"});
+    expect(document.body.style.getPropertyValue('--item-transition-ms')).toEqual('2000ms');
+    expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('cubic-bezier(0.4, 0, 0.2, 1)');
+  });
+
   it("should have enabled transitions when _doTransitions is true and applyTheme is run", function () {
     Display._doTransitions = true;
     var theme = {
@@ -322,6 +330,37 @@ describe("Transitions", function () {
 
     expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("convex-vertical-reverse");
     expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("slow");
+  });
+
+  it("should use item transition speed for item replacement transition timing", function () {
+    spyOn(Display, "reinit");
+    spyOn(Display, "applyTheme");
+    spyOn(Display, "_removeLastSection");
+    spyOn(window, "setTimeout");
+    spyOn(Reveal, "getIndices").and.returnValue({h: 0, v: 0});
+    spyOn(Reveal, "slide");
+
+    Display._doItemTransitions = true;
+    Display._itemTransitionSpeedSeconds = 2.0;
+    var slidesDiv = _createDiv({"class": "slides"});
+    slidesDiv.innerHTML = "<section><section><p></p></section></section>";
+    Display._slidesContainer = slidesDiv;
+    var newSlides = document.createElement("section");
+    newSlides.innerHTML = "<section><p></p></section>";
+
+    Display.replaceSlides(newSlides);
+
+    expect(window.setTimeout).toHaveBeenCalledWith(Display._removeLastSection, 2100);
+    expect(newSlides.getAttribute("data-transition-speed")).toEqual("slow");
+  });
+
+  it("should apply selected transition type easing when setItemTransition() is called", function () {
+    spyOn(Reveal, "configure");
+    Display.setItemTransition(true, 0.8, "linear");
+    expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('linear');
+
+    Display.setItemTransition(true, 0.8, "balanced");
+    expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('cubic-bezier(0.4, 0, 0.2, 1)');
   });
 });
 
@@ -894,6 +933,50 @@ describe("Display.setImageSlides", function () {
     expect($(".slides > section > section > img")[1].getAttribute("src")).toEqual("openlp-library://local-file//openlp2.jpg");
     expect($(".slides > section > section > img")[1].getAttribute("style")).toEqual("width: 100%; height: 100%; margin: 0; object-fit: contain;");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("should use reveal background image mode when requested", function () {
+    var slides = [{
+      "path": "openlp-library://local-file//openlp1.jpg",
+      "use_background_image": true,
+      "pdf_transition_enabled": true,
+      "pdf_transition_effect": TransitionType.Fade,
+      "pdf_transition_speed_seconds": 0.8,
+      "pdf_transition_easing": "balanced"
+    }];
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setImageSlides(slides);
+
+    expect($(".slides > section > section > img").length).toEqual(1);
+    expect($(".slides > section > section > img")[0].getAttribute("src")).toEqual("openlp-library://local-file//openlp1.jpg");
+    expect($(".slides > section > section > img")[0].classList.contains("pdf-slide-image")).toBeTrue();
+    expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBeTrue();
+    expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("fade-horizontal");
+    expect($(".slides > section > section")[0].getAttribute("data-transition-speed")).toEqual("default");
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeTrue();
+    expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-ms")).toEqual("800ms");
+    expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-easing")).toEqual("cubic-bezier(0.4, 0, 0.2, 1)");
+    expect(Reveal.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("should disable transitions for PDF background slides when disabled in settings", function () {
+    var slides = [{
+      "path": "openlp-library://local-file//openlp1.jpg",
+      "use_background_image": true,
+      "pdf_transition_enabled": false,
+      "pdf_transition_effect": TransitionType.Zoom,
+      "pdf_transition_speed_seconds": 1.2,
+      "pdf_transition_easing": "ease-out"
+    }];
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setImageSlides(slides);
+
+    expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeFalse();
   });
 });
 

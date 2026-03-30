@@ -341,11 +341,26 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Add stuff after page initialisation
         """
         item_transitions = self.settings.value('themes/item transitions')
+        item_transition_speed = self.settings.value('themes/item transition speed')
+        if isinstance(item_transition_speed, bool):
+            item_transition_speed = 0.8
+        else:
+            try:
+                item_transition_speed = float(item_transition_speed)
+            except (TypeError, ValueError):
+                item_transition_speed = 0.8
+        item_transition_speed = max(0.1, item_transition_speed)
+        valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
+        item_transition_type = self.settings.value('themes/item transition type')
+        if item_transition_type not in valid_item_transition_types:
+            item_transition_type = 'balanced'
         hide_mouse = (self.settings.value('advanced/hide mouse') and self.is_display)
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
                             'doItemTransitions': item_transitions,
+                            'itemTransitionSpeed': item_transition_speed,
+                            'itemTransitionType': item_transition_type,
                             'slideNumbersInFooter': slide_numbers_in_footer,
                             'hideMouse': hide_mouse,
                             'displayTitle': self.window_title

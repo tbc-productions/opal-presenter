@@ -88,10 +88,19 @@ class PresentationMediaItem(FolderLibraryItem):
         self.single_service_item = False
         Registry().register_function('mediaitem_presentation_rebuild', self.populate_display_types)
         Registry().register_function('mediaitem_suffixes', self.build_file_mask_string)
+        Registry().register_function('presentations_pdf_transition_settings_changed',
+                                     self.apply_pdf_transition_settings_to_active_items)
         # Allow DnD from the desktop
         self.list_view.activateDnD()
         self.list_view.setup_columns([translate('PresentationPlugin.MediaItem', 'Name'),
                                       translate('PresentationPlugin.MediaItem', 'Date')])
+
+    @staticmethod
+    def apply_pdf_transition_settings_to_active_items():
+        for controller_key in ('preview_controller', 'live_controller'):
+            controller = Registry().get(controller_key)
+            if controller and hasattr(controller, 'apply_pdf_transition_settings'):
+                controller.apply_pdf_transition_settings()
 
     def required_icons(self):
         """
@@ -342,6 +351,19 @@ class PresentationMediaItem(FolderLibraryItem):
                     thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
                     while image_path.is_file():
                         service_item.add_from_image(image_path, file_name, thumbnail=thumbnail_path)
+                        # Hint the display layer to use Reveal background images so fade transitions cross-fade natively.
+                        service_item.slides[-1]['use_background_image'] = True
+                        service_item.slides[-1]['pdf_transition_enabled'] = bool(
+                            service_item.pdf_transition_settings.get('enabled', False)
+                        )
+                        service_item.slides[-1]['pdf_transition_effect'] = service_item.pdf_transition_settings.get(
+                            'effect', TransitionType.Fade
+                        )
+                        service_item.slides[-1]['pdf_transition_speed_seconds'] = \
+                            service_item.pdf_transition_settings.get('speed_seconds', 0.8)
+                        service_item.slides[-1]['pdf_transition_easing'] = service_item.pdf_transition_settings.get(
+                            'easing', 'balanced'
+                        )
                         i += 1
                         image_path = doc.get_temp_folder() / 'mainslide{number:0>3d}.png'.format(number=i)
                         thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
@@ -426,9 +448,43 @@ class PresentationMediaItem(FolderLibraryItem):
                     return False
 
     def _get_pdf_transition_settings(self):
+        speed_value = self.settings.value('presentations/pdf transition speed')
+        speed_lookup = {
+            TransitionSpeed.Fast: 0.4,
+            TransitionSpeed.Normal: 0.8,
+            TransitionSpeed.Slow: 1.2,
+            'fast': 0.4,
+            'normal': 0.8,
+            'slow': 1.2
+        }
+        if isinstance(speed_value, bool):
+            speed_seconds = 0.8
+        elif speed_value in speed_lookup:
+            speed_seconds = speed_lookup[speed_value]
+        elif isinstance(speed_value, str) and speed_value.strip().lower() in speed_lookup:
+            speed_seconds = speed_lookup[speed_value.strip().lower()]
+        else:
+            try:
+                speed_seconds = float(speed_value)
+            except (TypeError, ValueError):
+                speed_seconds = 0.8
+        speed_seconds = max(0.1, speed_seconds)
+
+        easing_value = self.settings.value('presentations/pdf transition easing')
+        valid_easing_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
+        if isinstance(easing_value, str):
+            easing_value = easing_value.strip().lower()
+        if not isinstance(easing_value, str) or easing_value not in valid_easing_types:
+            easing_value = 'balanced'
+
+        effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
         return {
             'enabled': bool(self.settings.value('presentations/pdf transitions')),
-            'type': self._get_transition_type_value(self.settings.value('presentations/pdf transition type')),
+            'effect': effect,
+            'speed_seconds': speed_seconds,
+            'easing': easing_value,
+            # Backward-compatible aliases for existing consumers/tests.
+            'type': effect,
             'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
         }
 

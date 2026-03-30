@@ -203,6 +203,9 @@ def test_generate_slide_data_from_pdf(media_item):
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.pdf_transition_settings == {
         'enabled': False,
+        'effect': TransitionType.Fade,
+        'speed_seconds': 0.8,
+        'easing': 'balanced',
         'type': TransitionType.Fade,
         'speed': TransitionSpeed.Normal
     }

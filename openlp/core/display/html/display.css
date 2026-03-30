@@ -15,6 +15,10 @@
 body {
   background: transparent;
   color: rgb(255, 255, 255) !important;
+  --item-transition-ms: 800ms;
+  --item-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --presentation-slide-transition-ms: 800ms;
+  --presentation-slide-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.checkerboard {
@@ -43,7 +47,7 @@ body.transition,
 body.transition .reveal .slides,
 body.transition .reveal .footer {
   /* Transition speed for content visibility */
-  transition: opacity 800ms ease-in-out !important;
+  transition: opacity var(--item-transition-ms) var(--item-transition-easing) !important;
 }
 
 body {
@@ -87,7 +91,7 @@ body.is-desktop .pause-overlay {
 }
 
 body.transition #logo-screen {
-  transition: opacity 800ms ease-in-out !important;
+  transition: opacity var(--item-transition-ms) var(--item-transition-easing) !important;
 }
 
 #logo-screen-image {
@@ -101,15 +105,6 @@ body.transition #logo-screen {
   visibility: visible;
   transition: none !important;
   z-index: 2;
-  /* important required to override inline attributes */
-  background-repeat: no-repeat !important;
-  background-size: cover !important;
-  background-position: 50% 50% !important;
-}
-
-.reveal .slide-background:nth-child(n+3) {
-  /* Hide backgrounds beyond the first 2 (prevents ugly transitions in corner case) */
-  visibility: hidden;
 }
 
 .reveal .slide-background.future,
@@ -117,18 +112,37 @@ body.transition #logo-screen {
   opacity: 0;
 }
 
+.reveal .slide-background.use-background-image,
+.reveal .slide-background[data-background-size="contain"] {
+  background-color: #000 !important;
+}
+
+.reveal .slide-background.use-background-image .slide-background-content,
+.reveal .slide-background[data-background-size="contain"] .slide-background-content {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% 50% !important;
+}
+
+body.presentation-slide-transition .reveal .slides section[data-transition=fade],
+body.presentation-slide-transition .reveal.fade .slides section:not([data-transition]),
+body.presentation-slide-transition .reveal.fade .slides > section > section:not([data-transition]) {
+  transition: opacity var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
+}
+
+body.presentation-slide-transition .reveal .slide-background {
+  transition: all var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
+}
+
 body.transition .reveal .slide-background {
-  transition: all 800ms ease-in-out !important;
+  transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
 }
 
 .reveal .slides > section,
 .reveal .slides > section > section {
   padding: 0;
   max-height: 100%;
-}
-
-.reveal .slides > section {
-  /* Need to override reveal styles to use our text alignment */
+  /* Override reveal's display: none to keep sections in layout, enabling CSS opacity transitions (cross-fade) */
   display: flex !important;
   flex-direction: column;
   word-wrap: break-word;
@@ -136,6 +150,18 @@ body.transition .reveal .slide-background {
 
 .reveal .slides > section p {
   margin: 0;
+}
+
+.reveal .slides > section > section.use-background-image {
+  background-color: #000 !important;
+}
+
+.reveal .slides > section > section.use-background-image .pdf-slide-image {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0;
+  object-fit: contain !important;
+  object-position: center center;
 }
 
 section.text-slides.stack.present {

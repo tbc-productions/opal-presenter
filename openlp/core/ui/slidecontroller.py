@@ -926,9 +926,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             return
         theme_data.display_slide_transition = True
         theme_data.display_slide_transition_type = self._get_transition_type_value(
-            transition_settings.get('type', TransitionType.Fade))
+            transition_settings.get('effect', transition_settings.get('type', TransitionType.Fade)))
         theme_data.display_slide_transition_speed = self._get_transition_speed_value(
-            transition_settings.get('speed', TransitionSpeed.Normal))
+            transition_settings.get('speed', transition_settings.get('speed_seconds', TransitionSpeed.Normal)))
 
     @staticmethod
     def _get_transition_type_value(value):
@@ -948,6 +948,96 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
             return value
         return TransitionSpeed.Normal
+
+    def _get_item_transition_speed_seconds(self):
+        value = self.settings.value('themes/item transition speed')
+        if isinstance(value, bool):
+            speed = 0.8
+        else:
+            try:
+                speed = float(value)
+            except (TypeError, ValueError):
+                speed = 0.8
+        return max(0.1, speed)
+
+    def apply_pdf_transition_settings(self):
+        """
+        Apply current PDF transition settings immediately to currently displayed converted PDF slides.
+        """
+        if not self.service_item or not isinstance(getattr(self.service_item, 'slides', None), list):
+            return
+        has_pdf_slides = any(isinstance(slide, dict) and slide.get('use_background_image')
+                             for slide in self.service_item.slides)
+        if not has_pdf_slides:
+            return
+        enabled = bool(self.settings.value('presentations/pdf transitions'))
+        effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
+        speed_seconds = self._get_pdf_transition_speed_seconds(self.settings.value('presentations/pdf transition speed'))
+        easing = self._get_pdf_transition_easing_type(self.settings.value('presentations/pdf transition easing'))
+        self.service_item.pdf_transition_settings = {
+            'enabled': enabled,
+            'effect': effect,
+            'speed_seconds': speed_seconds,
+            'easing': easing,
+            'type': effect,
+            'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
+        }
+        for slide in self.service_item.slides:
+            if isinstance(slide, dict) and slide.get('use_background_image'):
+                slide['pdf_transition_enabled'] = enabled
+                slide['pdf_transition_effect'] = effect
+                slide['pdf_transition_speed_seconds'] = speed_seconds
+                slide['pdf_transition_easing'] = easing
+        displays_to_update = []
+        if getattr(self, 'preview_display', None):
+            displays_to_update.append(self.preview_display)
+        displays_to_update.extend(self.displays)
+        payload = {
+            'enabled': enabled,
+            'effect': effect,
+            'speedSeconds': speed_seconds,
+            'easing': easing
+        }
+        for display in displays_to_update:
+            if display and getattr(display, '_is_initialised', False):
+                display.run_in_display('updatePdfSlideTransitions', payload)
+
+    @staticmethod
+    def _get_pdf_transition_speed_seconds(value):
+        speed_lookup = {
+            TransitionSpeed.Fast: 0.4,
+            TransitionSpeed.Normal: 0.8,
+            TransitionSpeed.Slow: 1.2,
+            'fast': 0.4,
+            'normal': 0.8,
+            'slow': 1.2
+        }
+        if isinstance(value, bool):
+            return 0.8
+        if value in speed_lookup:
+            return speed_lookup[value]
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in speed_lookup:
+                return speed_lookup[lowered]
+            try:
+                value = float(value)
+            except ValueError:
+                return 0.8
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return 0.8
+        return max(0.1, value)
+
+    @staticmethod
+    def _get_pdf_transition_easing_type(value):
+        valid_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
+        if isinstance(value, str):
+            normalised = value.strip().lower()
+            if normalised in valid_types:
+                return normalised
+        return 'balanced'
 
     def _process_item(self, service_item, slide_no, is_reloading=False):
         """
@@ -970,8 +1060,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.screen_capture = None
             # If item transitions are on, make sure the delay is longer than the animation
             self.slide_changed_time = datetime.datetime.now()
-            if self.settings.value('themes/item transitions') and self.service_item.get_transition_delay() < 1:
-                self.slide_changed_time += datetime.timedelta(seconds=0.5)
+            if self.settings.value('themes/item transitions'):
+                transition_delay = self.service_item.get_transition_delay()
+                item_transition_delay = self._get_item_transition_speed_seconds()
+                if transition_delay < item_transition_delay:
+                    self.slide_changed_time += datetime.timedelta(seconds=item_transition_delay - transition_delay)
         if self.service_item.is_command() and not self.service_item.is_media():
             # Prevent that the same presentation is started multiple times.
             if (old_item is None or old_item.sha256_file_hash != self.service_item.sha256_file_hash):
@@ -1532,6 +1625,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         slide_delay_time = 0
         if self.service_item:
             slide_delay_time = self.service_item.get_transition_delay() if self.get_hide_mode() is None else 1
+            if self.settings.value('themes/item transitions') and self.get_hide_mode() is None:
+                slide_delay_time = max(slide_delay_time, self._get_item_transition_speed_seconds())
         slide_ready_time = self.slide_changed_time + datetime.timedelta(seconds=slide_delay_time)
         return datetime.datetime.now() > slide_ready_time
 
