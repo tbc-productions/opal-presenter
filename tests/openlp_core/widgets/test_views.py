@@ -727,7 +727,7 @@ def test_treewidgetwithdnd_keeps_first_column_wide_enough(qapp):
     widget.resize(500, 300)
     widget.show()
     widget.setup_columns(['Name', 'Date'])
-    qapp.processEvents()
+    qapp.process_events()
 
     assert widget.columnWidth(0) >= int(widget.viewport().width() * widget.first_column_min_ratio)
 

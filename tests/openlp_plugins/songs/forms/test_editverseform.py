@@ -29,10 +29,17 @@ from PySide6 import QtCore, QtTest, QtGui, QtWidgets
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.plugins.songs.forms.editverseform import EditVerseForm
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 
 @pytest.fixture()
 def edit_verse_form(registry: Registry, settings: Settings) -> EditVerseForm:
+    settings.extend_default_settings({'songs/section color {key}'.format(key=key): color
+                                      for key, color in DEFAULT_SECTION_COLORS.items()})
+    settings.extend_default_settings({
+        'songs/section background opacity minimum': 10,
+        'songs/section background opacity maximum': 60,
+    })
     main_window = QtWidgets.QMainWindow()
     registry.register('main_window', main_window)
     frm = EditVerseForm()
@@ -41,14 +48,12 @@ def edit_verse_form(registry: Registry, settings: Settings) -> EditVerseForm:
     del main_window
 
 
-@patch('openlp.plugins.songs.forms.editverseform.QtWidgets.QDialog')
-def test_exec(MockQDialog: MagicMock, edit_verse_form: EditVerseForm):
+def test_exec(edit_verse_form: EditVerseForm):
     """Test the Exec method of the form"""
-    # GIVEN: An EditVerseForm with the QDialog mocked out
-    MockQDialog.exec.return_value = 1
-
-    # WHEN: exec() is called
-    result = edit_verse_form.exec()
+    # GIVEN: An EditVerseForm with QDialog.exec mocked
+    with patch.object(QtWidgets.QDialog, 'exec', return_value=1):
+        # WHEN: exec() is called
+        result = edit_verse_form.exec()
 
     # THEN: The result should be Accepted
     assert result == 1
@@ -351,7 +356,8 @@ def test_set_verse_single(settings: Settings, edit_verse_form: EditVerseForm):
             patch.object(edit_verse_form, 'verse_number_box') as mocked_verse_number_box, \
             patch.object(edit_verse_form, 'insert_button') as mocked_insert_button, \
             patch.object(edit_verse_form, 'transpose_widget') as mocked_transpose_widget, \
-            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit:
+            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit, \
+            patch.object(edit_verse_form, 'update_section_tag_highlighting') as mocked_update_section:
         # WHEN: set_verse() is called
         edit_verse_form.set_verse('Amazing grace, how sweet the sound', single=True)
 
@@ -361,6 +367,7 @@ def test_set_verse_single(settings: Settings, edit_verse_form: EditVerseForm):
         mocked_insert_button.setVisible.assert_called_once_with(False)
         mocked_transpose_widget.setVisible.assert_called_once_with(False)
         mocked_verse_text_edit.setPlainText.assert_called_once_with('Amazing grace, how sweet the sound')
+        mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
         mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
 
@@ -376,7 +383,8 @@ def test_set_verse_multiple(settings: Settings, edit_verse_form: EditVerseForm):
             patch.object(edit_verse_form, 'verse_number_box') as mocked_verse_number_box, \
             patch.object(edit_verse_form, 'insert_button') as mocked_insert_button, \
             patch.object(edit_verse_form, 'transpose_widget') as mocked_transpose_widget, \
-            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit:
+            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit, \
+            patch.object(edit_verse_form, 'update_section_tag_highlighting') as mocked_update_section:
         # WHEN: set_verse() is called
         edit_verse_form.set_verse(None)
 
@@ -386,6 +394,7 @@ def test_set_verse_multiple(settings: Settings, edit_verse_form: EditVerseForm):
         mocked_insert_button.setVisible.assert_called_once_with(True)
         mocked_transpose_widget.setVisible.assert_called_once_with(True)
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
+        mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
         mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
 
@@ -401,7 +410,8 @@ def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form:
             patch.object(edit_verse_form, 'verse_number_box') as mocked_verse_number_box, \
             patch.object(edit_verse_form, 'insert_button') as mocked_insert_button, \
             patch.object(edit_verse_form, 'transpose_widget') as mocked_transpose_widget, \
-            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit:
+            patch.object(edit_verse_form, 'verse_text_edit') as mocked_verse_text_edit, \
+            patch.object(edit_verse_form, 'update_section_tag_highlighting') as mocked_update_section:
         # WHEN: set_verse() is called
         edit_verse_form.set_verse(None)
 
@@ -411,6 +421,7 @@ def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form:
         mocked_insert_button.setVisible.assert_called_once_with(True)
         mocked_transpose_widget.setVisible.assert_not_called()
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
+        mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
         mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
 
@@ -500,3 +511,36 @@ def test_update_suggested_verse_number_no_match(edit_verse_form: EditVerseForm):
 
         # THEN: The method should have exited early
         mocked_verse_number_box.setValue.assert_called_once_with(1)
+
+
+def test_update_section_tag_highlighting_sets_visual_label(edit_verse_form: EditVerseForm):
+    """Section syntax lines should be visually replaced by a friendly label."""
+    # GIVEN: A section tag line
+    edit_verse_form.verse_text_edit.setPlainText('---[Verse:3]---\nAmazing grace')
+
+    with patch.object(edit_verse_form.verse_text_edit, 'setExtraSelections') as mocked_set_extra_selections, \
+            patch.object(edit_verse_form.verse_text_edit, 'set_visual_line_overrides') as mocked_set_overrides:
+        # WHEN: highlighting is refreshed
+        edit_verse_form.update_section_tag_highlighting()
+
+        # THEN: One highlighted section should exist and line override should display "Verse 3"
+        selections = mocked_set_extra_selections.call_args.args[0]
+        assert len(selections) == 1
+        overrides = mocked_set_overrides.call_args.args[0]
+        assert list(overrides.values())[0]['text'] == 'Verse 3'
+
+
+def test_update_section_tag_highlighting_uses_verse_opacity_step(edit_verse_form: EditVerseForm):
+    """Verse number should drive opacity (Verse 3 -> 25%)."""
+    # GIVEN: A section tag line for verse number 3
+    edit_verse_form.verse_text_edit.setPlainText('---[Verse:3]---\nAmazing grace')
+
+    with patch.object(edit_verse_form.verse_text_edit, 'setExtraSelections') as mocked_set_extra_selections, \
+            patch.object(edit_verse_form.verse_text_edit, 'set_visual_line_overrides'):
+        # WHEN: highlighting is refreshed
+        edit_verse_form.update_section_tag_highlighting()
+
+        # THEN: Alpha should be 30% (10% (minimum) + 2 * 10%)
+        selection = mocked_set_extra_selections.call_args.args[0][0]
+        alpha = selection.format.background().color().alphaF()
+        assert alpha == pytest.approx(0.30, rel=0.05)

@@ -43,6 +43,7 @@ from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.ui import create_button, create_button_box, critical_error_message_box, \
     find_and_set_in_combo_box, set_case_insensitive_completer
 from openlp.core.state import State
+from openlp.core.widgets.edits import FormattingTagDelegate
 from openlp.core.widgets.comboboxes import create_combo_box
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.plugins.songs.forms.editverseform import EditVerseForm
@@ -51,6 +52,7 @@ from openlp.plugins.songs.lib import VerseType, clean_song
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
 from openlp.plugins.songs.lib.mediaitem import MediaManagerItem
 from openlp.plugins.songs.lib.openlyricsxml import SongXML
+from openlp.plugins.songs.lib.sectioncolors import color_from_settings, verse_number_from_text
 from openlp.plugins.songs.lib.ui import SongStrings, show_key_warning
 
 
@@ -159,6 +161,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.verse_list_widget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.verse_list_widget.setObjectName('verse_list_widget')
+        self.verse_list_widget.setItemDelegate(FormattingTagDelegate(self.verse_list_widget))
         self.lyrics_label.setBuddy(self.verse_list_widget)
         self.lyrics_tab_layout.addWidget(self.verse_list_widget, 2, 1)
         self.verse_order_label = QtWidgets.QLabel(self.lyrics_tab)
@@ -907,13 +910,19 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         Tag the Song List rows based on the verse list
         """
         row_label = []
+        row_colors = []
         for row in range(self.verse_list_widget.rowCount()):
             item = self.verse_list_widget.item(row, 0)
             verse_def = item.data(QtCore.Qt.ItemDataRole.UserRole)
             verse_tag = VerseType.translated_tag(verse_def[0])
             row_def = '{tag}{verse}'.format(tag=verse_tag, verse=verse_def[1:])
             row_label.append(row_def)
+            row_colors.append(color_from_settings(self.settings, verse_def[0], verse_number_from_text(verse_def[1:])))
         self.verse_list_widget.setVerticalHeaderLabels(row_label)
+        for row, color in enumerate(row_colors):
+            header_item = self.verse_list_widget.verticalHeaderItem(row)
+            if header_item:
+                header_item.setBackground(QtGui.QBrush(color))
         self.verse_list_widget.resizeRowsToContents()
         self.verse_list_widget.repaint()
 
@@ -1203,6 +1212,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
 
         """
         self.verse_list_widget.removeRow(self.verse_list_widget.currentRow())
+        self.tag_rows()
         if not self.verse_list_widget.selectedItems():
             self.verse_edit_button.setEnabled(False)
             self.verse_delete_button.setEnabled(False)

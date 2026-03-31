@@ -29,12 +29,14 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib.ui import critical_error_message_box
 from openlp.plugins.songs.forms.editversedialog import Ui_EditVerseDialog
 from openlp.plugins.songs.lib import VerseType, transpose_lyrics
+from openlp.plugins.songs.lib.sectioncolors import color_from_settings, verse_number_from_text
 from openlp.plugins.songs.lib.ui import show_key_warning
 
 
 log = logging.getLogger(__name__)
 
 VERSE_REGEX = re.compile(r'---\[(.+):\D*(\d*)\D*.*\]---')
+VERSE_LINE_REGEX = re.compile(r'^\s*---\[(.+?)(?::(.*?))?\]---\s*$')
 
 
 class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
@@ -56,6 +58,8 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         self.forced_split_button.clicked.connect(self.on_forced_split_button_clicked)
         self.transpose_down_button.clicked.connect(self.on_transpose_down_button_clicked)
         self.transpose_up_button.clicked.connect(self.on_transpose_up_button_clicked)
+        self.verse_text_edit.textChanged.connect(self.on_verse_text_changed)
+        self._updating_section_styles = False
 
     def exec(self):
         self.transpose_widget.setVisible(Registry().get('settings').value('songs/enable chords'))
@@ -120,6 +124,9 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         The cursor position has been changed
         """
         self.update_suggested_verse_number()
+
+    def on_verse_text_changed(self):
+        self.update_section_tag_highlighting()
 
     def on_transpose_up_button_clicked(self):
         """
@@ -221,8 +228,63 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
             if Registry().get('settings').value('songs/enable chords'):
                 self.transpose_widget.setVisible(True)
         self.verse_text_edit.setPlainText(text)
+        self.update_section_tag_highlighting()
         self.verse_text_edit.setFocus()
         self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+
+    def update_section_tag_highlighting(self):
+        """
+        Highlight all lines containing section tags with their configured section color.
+        In source mode, do not apply any visual overrides.
+        """
+        if self._updating_section_styles:
+            return
+        self._updating_section_styles = True
+        # In source mode, clear all visual effects
+        if not self.verse_text_edit.rich_text_mode:
+            self.verse_text_edit.setExtraSelections([])
+            self.verse_text_edit.set_visual_line_overrides({})
+            self._updating_section_styles = False
+            return
+        settings = Registry().get('settings')
+        selections = []
+        visual_overrides = {}
+        hidden_foreground = QtGui.QColor(self.palette().color(QtGui.QPalette.ColorRole.Text))
+        hidden_foreground.setAlpha(0)
+        block = self.verse_text_edit.document().firstBlock()
+        try:
+            while block.isValid():
+                block_cursor = QtGui.QTextCursor(block)
+                block_format = block_cursor.blockFormat()
+                match = VERSE_LINE_REGEX.match(block.text())
+                if match:
+                    verse_name = match.group(1)
+                    verse_index = VerseType.from_loose_input(verse_name)
+                    verse_tag = VerseType.tags[verse_index]
+                    verse_number = verse_number_from_text(match.group(2), default=1)
+                    color = color_from_settings(settings, verse_tag, verse_number)
+                    selection = QtWidgets.QTextEdit.ExtraSelection()
+                    selection.cursor = QtGui.QTextCursor(block)
+                    selection.format.setProperty(QtGui.QTextFormat.Property.FullWidthSelection, True)
+                    selection.format.setBackground(QtGui.QBrush(color))
+                    selection.format.setForeground(QtGui.QBrush(hidden_foreground))
+                    selections.append(selection)
+                    visual_overrides[block.blockNumber()] = {
+                        'text': '{section} {number}'.format(section=VerseType.translated_name(verse_tag),
+                                                            number=verse_number),
+                        'background': color
+                    }
+                    block_format.setTopMargin(10.0)
+                    block_format.setBottomMargin(10.0)
+                else:
+                    block_format.setTopMargin(0.0)
+                    block_format.setBottomMargin(0.0)
+                block_cursor.setBlockFormat(block_format)
+                block = block.next()
+            self.verse_text_edit.setExtraSelections(selections)
+            self.verse_text_edit.set_visual_line_overrides(visual_overrides)
+        finally:
+            self._updating_section_styles = False
 
     def get_verse(self):
         """

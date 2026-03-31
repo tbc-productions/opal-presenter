@@ -47,6 +47,7 @@ from openlp.plugins.songs.lib.db import Song, init_schema
 from openlp.plugins.songs.lib.importer import SongFormat
 from openlp.plugins.songs.lib.importers.openlp import OpenLPSongImport
 from openlp.plugins.songs.lib.mediaitem import SongMediaItem
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 from openlp.plugins.songs.lib.songstab import SongsTab
 
 
@@ -106,6 +107,11 @@ ${title}<br/>
 %endif
 """,
 }
+song_footer.update({'songs/section color {key}'.format(key=key): color for key, color in DEFAULT_SECTION_COLORS.items()})
+song_footer.update({
+    'songs/section background opacity minimum': 10,
+    'songs/section background opacity maximum': 60,
+})
 
 
 class SongsPlugin(Plugin):

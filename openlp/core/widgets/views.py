@@ -22,6 +22,7 @@
 The :mod:`listpreviewwidget` is a widget that lists the slides in the slide controller.
 It is based on a QTableWidget but represents its contents in list form.
 """
+import re
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -40,6 +41,29 @@ SCROLL_HINT = {
     2: QtWidgets.QAbstractItemView.ScrollHint.PositionAtCenter,
     3: QtWidgets.QAbstractItemView.ScrollHint.PositionAtBottom
 }
+
+SONG_SECTION_DEFAULT_COLORS = {
+    'intro': '#4ADE80',
+    'verse': '#60A5FA',
+    'pre_chorus': '#FBBF24',
+    'chorus': '#F87171',
+    'bridge': '#C084FC',
+    'ending': '#94A3B8',
+    'other': '#E2E8F0'
+}
+
+SONG_SECTION_COLOR_KEYS = {
+    'v': 'verse',
+    'c': 'chorus',
+    'b': 'bridge',
+    'p': 'pre_chorus',
+    'i': 'intro',
+    'e': 'ending',
+    'o': 'other'
+}
+
+RGB_HEX_REGEX = re.compile(r'^#[0-9A-Fa-f]{6}$')
+RGBA_HEX_REGEX = re.compile(r'^#[0-9A-Fa-f]{8}$')
 
 
 def handle_mime_data_urls(mime_data):
@@ -108,6 +132,36 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.auto_row_height = 100
         # Connect signals
         self.verticalHeader().sectionResized.connect(self.row_resized)
+
+    def _resolve_song_section_color(self, verse_tag):
+        section_key = SONG_SECTION_COLOR_KEYS.get(str(verse_tag).lower()[:1], 'other')
+        default_color = SONG_SECTION_DEFAULT_COLORS[section_key]
+        color_value = self.settings.value('songs/section color {key}'.format(key=section_key))
+        color_value = str(color_value).strip().upper() if color_value is not None else default_color
+        if not color_value.startswith('#'):
+            color_value = '#{value}'.format(value=color_value)
+        if RGBA_HEX_REGEX.match(color_value):
+            color_value = color_value[:7]
+        if not RGB_HEX_REGEX.match(color_value):
+            color_value = default_color
+        return QtGui.QColor(color_value)
+
+    @staticmethod
+    def _resolve_verse_number(verse_text):
+        match = re.search(r'(\d+)', str(verse_text))
+        if not match:
+            return 1
+        try:
+            return max(1, int(match.group(1)))
+        except (TypeError, ValueError):
+            return 1
+
+    def _resolve_opacity(self, verse_number):
+        """Resolve opacity from verse number using settings for min/max values."""
+        minimum = int(self.settings.value('songs/section background opacity minimum'))
+        maximum = int(self.settings.value('songs/section background opacity maximum'))
+        opacity_percent = min(maximum, minimum + ((verse_number - 1) * 10))
+        return opacity_percent / 100.0
 
     def resizeEvent(self, event):
         """
@@ -188,6 +242,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.clear_list()
         row = 0
         text = []
+        header_colors = []
         slides = self.service_item.display_slides if self.service_item.is_text() else self.service_item.slides
         for slide_index, slide in enumerate(slides):
             self.setRowCount(self.slide_count() + 1)
@@ -200,8 +255,12 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     verse_def = '%s%s' % (verse_def[0], verse_def[1:])
                     two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
                     row = two_line_def
+                    color = self._resolve_song_section_color(verse_def[0])
+                    color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
+                    header_colors.append(color)
                 else:
                     row += 1
+                    header_colors.append(None)
                 item.setText(slide['text'])
             else:
                 label = QtWidgets.QLabel()
@@ -241,6 +300,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                         slide_height = min(slide_height, self.auto_row_height)
                 self.setCellWidget(slide_index, 0, container)
                 row += 1
+                header_colors.append(None)
             text.append(str(row))
             self.setItem(slide_index, 0, item)
             if slide_height:
@@ -249,6 +309,12 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 self.setRowHeight(slide_index, 1)
                 self.setRowHeight(slide_index, int(slide_height))
         self.setVerticalHeaderLabels(text)
+        for row, color in enumerate(header_colors):
+            if color is None:
+                continue
+            header_item = self.verticalHeaderItem(row)
+            if header_item:
+                header_item.setBackground(QtGui.QBrush(color))
         if self.service_item.is_text():
             self.resizeRowsToContents()
         self.setColumnWidth(0, self.viewport().width())

@@ -19,12 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.enum import SongFirstSlideMode
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.plugins.songs.lib.db import AuthorType
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS, SECTION_KEYS_ORDERED, normalize_rgb_hex
 
 
 class SongsTab(SettingsTab):
@@ -127,6 +128,51 @@ class SongsTab(SettingsTab):
         self.footer_layout.addWidget(self.footer_tabs)
         self.right_layout.addWidget(self.footer_group_box)
 
+        # Section background group box
+        self.section_colors_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.section_colors_group_box.setObjectName('section_colors_group_box')
+        self.section_colors_layout = QtWidgets.QFormLayout(self.section_colors_group_box)
+        self.section_colors_layout.setObjectName('section_colors_layout')
+        self.section_color_intro_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_intro_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_intro_label, self.section_color_intro_edit)
+        self.section_color_verse_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_verse_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_verse_label, self.section_color_verse_edit)
+        self.section_color_pre_chorus_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_pre_chorus_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_pre_chorus_label, self.section_color_pre_chorus_edit)
+        self.section_color_chorus_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_chorus_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_chorus_label, self.section_color_chorus_edit)
+        self.section_color_bridge_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_bridge_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_bridge_label, self.section_color_bridge_edit)
+        self.section_color_ending_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_ending_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_ending_label, self.section_color_ending_edit)
+        self.section_color_other_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_color_other_edit = QtWidgets.QLineEdit(self.section_colors_group_box)
+        self.section_colors_layout.addRow(self.section_color_other_label, self.section_color_other_edit)
+        self.section_colors_layout.addRow(QtWidgets.QLabel(''))  # Separator
+        self.section_background_opacity_maximum_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_background_opacity_maximum_spin_box = QtWidgets.QSpinBox(self.section_colors_group_box)
+        self.section_background_opacity_maximum_spin_box.setMinimum(0)
+        self.section_background_opacity_maximum_spin_box.setMaximum(100)
+        self.section_background_opacity_maximum_spin_box.setSingleStep(5)
+        self.section_background_opacity_maximum_spin_box.setSuffix('%')
+        self.section_colors_layout.addRow(self.section_background_opacity_maximum_label,
+                                          self.section_background_opacity_maximum_spin_box)
+        self.section_background_opacity_minimum_label = QtWidgets.QLabel(self.section_colors_group_box)
+        self.section_background_opacity_minimum_spin_box = QtWidgets.QSpinBox(self.section_colors_group_box)
+        self.section_background_opacity_minimum_spin_box.setMinimum(0)
+        self.section_background_opacity_minimum_spin_box.setMaximum(100)
+        self.section_background_opacity_minimum_spin_box.setSingleStep(5)
+        self.section_background_opacity_minimum_spin_box.setSuffix('%')
+        self.section_colors_layout.addRow(self.section_background_opacity_minimum_label,
+                                          self.section_background_opacity_minimum_spin_box)
+        self.right_layout.addWidget(self.section_colors_group_box)
+
         # CCLI SongSelect login group box
         self.ccli_login_group_box = QtWidgets.QGroupBox(self.left_column)
         self.ccli_login_group_box.setObjectName('ccli_login_group_box')
@@ -214,6 +260,38 @@ class SongsTab(SettingsTab):
         self.preview_pre_chorus_check_box.stateChanged.connect(self.on_preview_pre_chorus_check_box_changed)
         self.preview_ending_check_box.stateChanged.connect(self.on_preview_ending_check_box_changed)
         self.preview_other_check_box.stateChanged.connect(self.on_preview_other_check_box_changed)
+        self.section_colors = DEFAULT_SECTION_COLORS.copy()
+        self.section_color_edits = {
+            'intro': self.section_color_intro_edit,
+            'verse': self.section_color_verse_edit,
+            'pre_chorus': self.section_color_pre_chorus_edit,
+            'chorus': self.section_color_chorus_edit,
+            'bridge': self.section_color_bridge_edit,
+            'ending': self.section_color_ending_edit,
+            'other': self.section_color_other_edit
+        }
+        self.section_color_buttons = {}
+        for edit in self.section_color_edits.values():
+            edit.setPlaceholderText('#RRGGBB')
+            edit.setMaxLength(7)
+        for section_key, edit in self.section_color_edits.items():
+            picker_button = QtWidgets.QToolButton(self.section_colors_group_box)
+            picker_button.setText('...')
+            picker_button.clicked.connect(lambda checked=False, key=section_key: self.on_section_color_pick_clicked(key))
+            edit.editingFinished.connect(lambda key=section_key: self.on_section_color_edit_finished(key))
+            row_widget = QtWidgets.QWidget(self.section_colors_group_box)
+            row_layout = QtWidgets.QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.addWidget(edit)
+            row_layout.addWidget(picker_button)
+            self.section_colors_layout.removeWidget(edit)
+            self.section_colors_layout.setWidget(SECTION_KEYS_ORDERED.index(section_key),
+                                                 QtWidgets.QFormLayout.ItemRole.FieldRole, row_widget)
+            self.section_color_buttons[section_key] = picker_button
+        self.section_background_opacity_maximum_spin_box.valueChanged.connect(
+            self._on_opacity_maximum_changed)
+        self.section_background_opacity_minimum_spin_box.valueChanged.connect(
+            self._on_opacity_minimum_changed)
 
     def retranslate_ui(self):
         self.mode_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Song related settings'))
@@ -243,6 +321,18 @@ class SongsTab(SettingsTab):
             translate('SongsPlugin.SongsTab', 'Neo-Latin') + ' (Do-Re-Mi-Fa-Sol-La-Si)')
         self.song_key_warning_check_box.setText(translate('SongsPlugin.SongsTab', 'Warn about missing song key'))
         self.footer_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Footer'))
+        self.section_colors_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Section Background'))
+        self.section_color_intro_label.setText(translate('SongsPlugin.SongsTab', 'Intro:'))
+        self.section_color_verse_label.setText(translate('SongsPlugin.SongsTab', 'Verse:'))
+        self.section_color_pre_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Pre-Chorus:'))
+        self.section_color_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Chorus:'))
+        self.section_color_bridge_label.setText(translate('SongsPlugin.SongsTab', 'Bridge:'))
+        self.section_color_ending_label.setText(translate('SongsPlugin.SongsTab', 'Ending:'))
+        self.section_color_other_label.setText(translate('SongsPlugin.SongsTab', 'Other:'))
+        self.section_background_opacity_maximum_label.setText(
+            translate('SongsPlugin.SongsTab', 'Maximum background opacity:'))
+        self.section_background_opacity_minimum_label.setText(
+            translate('SongsPlugin.SongsTab', 'Minimum background opacity:'))
         # Preview first line feature
         self.preview_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Preview'))
         self.preview_info_label.setText(translate('SongsPlugin.SongsTab',
@@ -366,6 +456,52 @@ class SongsTab(SettingsTab):
     def on_preview_other_check_box_changed(self, check_state):
         self.preview_other = (check_state == QtCore.Qt.CheckState.Checked)
 
+    def _normalize_section_color_edits(self):
+        for section_key in SECTION_KEYS_ORDERED:
+            color_text = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
+            self.section_colors[section_key] = color_text
+            self.section_color_edits[section_key].setText(color_text)
+            self._update_section_color_picker_preview(section_key)
+
+    def _update_section_color_picker_preview(self, section_key):
+        color_text = self.section_colors.get(section_key, DEFAULT_SECTION_COLORS[section_key])
+        button = self.section_color_buttons[section_key]
+        button.setStyleSheet('background-color: {color};'.format(color=color_text))
+
+    def on_section_color_edit_finished(self, section_key):
+        color_text = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
+        self.section_colors[section_key] = color_text
+        self.section_color_edits[section_key].setText(color_text)
+        self._update_section_color_picker_preview(section_key)
+
+    def on_section_color_pick_clicked(self, section_key):
+        current_color = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
+        picked_color = QtWidgets.QColorDialog.getColor(QtGui.QColor(current_color), self)
+        if not picked_color.isValid():
+            return
+        color_text = normalize_rgb_hex(picked_color.name().upper(), self.section_colors[section_key])
+        self.section_colors[section_key] = color_text
+        self.section_color_edits[section_key].setText(color_text)
+        self._update_section_color_picker_preview(section_key)
+
+    def _on_opacity_maximum_changed(self):
+        """Ensure maximum opacity is >= minimum opacity."""
+        minimum = self.section_background_opacity_minimum_spin_box.value()
+        maximum = self.section_background_opacity_maximum_spin_box.value()
+        if maximum < minimum:
+            self.section_background_opacity_maximum_spin_box.blockSignals(True)
+            self.section_background_opacity_maximum_spin_box.setValue(minimum)
+            self.section_background_opacity_maximum_spin_box.blockSignals(False)
+
+    def _on_opacity_minimum_changed(self):
+        """Ensure minimum opacity is <= maximum opacity."""
+        minimum = self.section_background_opacity_minimum_spin_box.value()
+        maximum = self.section_background_opacity_maximum_spin_box.value()
+        if minimum > maximum:
+            self.section_background_opacity_minimum_spin_box.blockSignals(True)
+            self.section_background_opacity_minimum_spin_box.setValue(maximum)
+            self.section_background_opacity_minimum_spin_box.blockSignals(False)
+
     def load(self):
         """
         Load the songs settings
@@ -426,6 +562,23 @@ class SongsTab(SettingsTab):
         self.preview_other = self.settings.value('songs/preview_other')
         self.preview_other_check_box.setChecked(self.preview_other)
 
+        for section_key in SECTION_KEYS_ORDERED:
+            color_setting_key = 'songs/section color {key}'.format(key=section_key)
+            color_value = self.settings.value(color_setting_key)
+            self.section_colors[section_key] = normalize_rgb_hex(color_value, DEFAULT_SECTION_COLORS[section_key])
+            self.section_color_edits[section_key].setText(self.section_colors[section_key])
+            self._update_section_color_picker_preview(section_key)
+
+        # Load section background opacity settings
+        opacity_minimum = int(self.settings.value('songs/section background opacity minimum'))
+        opacity_maximum = int(self.settings.value('songs/section background opacity maximum'))
+        self.section_background_opacity_maximum_spin_box.blockSignals(True)
+        self.section_background_opacity_minimum_spin_box.blockSignals(True)
+        self.section_background_opacity_maximum_spin_box.setValue(opacity_maximum)
+        self.section_background_opacity_minimum_spin_box.setValue(opacity_minimum)
+        self.section_background_opacity_maximum_spin_box.blockSignals(False)
+        self.section_background_opacity_minimum_spin_box.blockSignals(False)
+
     def save(self):
         """
         Save the song settings
@@ -452,6 +605,16 @@ class SongsTab(SettingsTab):
         self.settings.setValue('songs/preview_pre_chorus', self.preview_pre_chorus)
         self.settings.setValue('songs/preview_ending', self.preview_ending)
         self.settings.setValue('songs/preview_other', self.preview_other)
+
+        self._normalize_section_color_edits()
+        for section_key in SECTION_KEYS_ORDERED:
+            self.settings.setValue('songs/section color {key}'.format(key=section_key), self.section_colors[section_key])
+
+        # Save section background opacity settings
+        self.settings.setValue('songs/section background opacity minimum',
+                              self.section_background_opacity_minimum_spin_box.value())
+        self.settings.setValue('songs/section background opacity maximum',
+                              self.section_background_opacity_maximum_spin_box.value())
 
         # Only save password if it's blank or the user acknowleges the warning
         if (self.ccli_password.text() == ''):
