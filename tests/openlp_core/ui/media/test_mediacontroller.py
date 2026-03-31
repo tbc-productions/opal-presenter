@@ -370,7 +370,7 @@ def test_media_stop_msg(media_env):
         media_env.media_controller.media_stop_msg(message)
 
     # THEN: The underlying method is called
-    mocked_media_stop.assert_called_with(1)
+    mocked_media_stop.assert_called_with(1, blank_on_stop=True)
 
 
 def test_media_stop(media_env, settings):
@@ -435,6 +435,7 @@ def test_media_stop_no_hide_change(media_env, settings):
     media_env.media_controller.is_theme_background = False
     media_env.media_controller.live_hide_timer = MagicMock()
     media_env.media_controller._define_display = MagicMock(return_value=mocked_display)
+
     # WHEN: media_stop() is called
     result = media_env.media_controller.media_stop(mocked_slide_controller)
 
@@ -445,6 +446,82 @@ def test_media_stop_no_hide_change(media_env, settings):
     media_env.media_controller.live_hide_timer.start.assert_called_once()
     mocked_slide_controller.set_hide_mode.assert_not_called()
     assert mocked_slide_controller.media_play_item.is_playing == MediaState.Stopped
+
+
+def test_media_stop_blanks_live_screen_when_triggered(media_env, settings):
+    """
+    Test that a triggered live media stop switches the live output to Black.
+    """
+    # GIVEN: A live media controller with visible media output
+    mocked_slide_controller = MagicMock()
+    mocked_media_player = MagicMock()
+    mocked_audio_player = MagicMock()
+    mocked_display = MagicMock(hide_mode=HideMode.Screen)
+    mocked_slide_controller.media_play_item = MediaPlayItem()
+    mocked_slide_controller.media_play_item.is_background = False
+    mocked_slide_controller.media_play_item.media_file = Path()
+    mocked_slide_controller.media_play_item.audio_file = Path()
+    mocked_slide_controller.set_hide_mode = MagicMock()
+    mocked_slide_controller.is_live = True
+    mocked_slide_controller.media_player = mocked_media_player
+    mocked_slide_controller.audio_player = mocked_audio_player
+    media_env.media_controller.live_hide_timer = MagicMock()
+    media_env.media_controller._define_display = MagicMock(return_value=mocked_display)
+
+    # WHEN: media_stop() is called by the explicit stop trigger
+    result = media_env.media_controller.media_stop(mocked_slide_controller, blank_on_stop=True)
+
+    # THEN: The output should switch to Black instead of restoring the display
+    assert result is True
+    mocked_media_player.pause.assert_called_once_with()
+    mocked_media_player.stop.assert_not_called()
+    media_env.media_controller.live_hide_timer.start.assert_called_once()
+    mocked_slide_controller.set_hide_mode.assert_called_once_with(HideMode.Blank)
+
+
+def test_on_media_hide_live_stops_deferred_media_after_hiding(media_env, registry: Registry):
+    """
+    Test that deferred stop media is stopped only after the live media widget is hidden.
+    """
+    # GIVEN: A live controller with a stop deferred until hide
+    mocked_live_controller = MagicMock()
+    mocked_live_controller.media_play_item = MediaPlayItem()
+    mocked_live_controller.media_play_item._stop_after_hide = True
+    mocked_live_controller.media_play_item.media_file = Path()
+    mocked_live_controller.media_player = MagicMock()
+    registry.register('live_controller', mocked_live_controller)
+    media_env.media_controller._media_set_visibility = MagicMock()
+    media_env.media_controller.media_pause = MagicMock()
+
+    # WHEN: the delayed live hide callback runs
+    media_env.media_controller._on_media_hide_live()
+
+    # THEN: the media should be hidden first and only then stopped
+    media_env.media_controller.media_pause.assert_not_called()
+    media_env.media_controller._media_set_visibility.assert_called_once_with(mocked_live_controller, False)
+    mocked_live_controller.media_player.stop.assert_called_once_with()
+    assert mocked_live_controller.media_play_item._stop_after_hide is False
+
+
+def test_live_media_stopped_blanks_when_not_looping(media_env, settings, registry: Registry):
+    """
+    Test that end-of-media in live mode switches the output to Black when not looping.
+    """
+    # GIVEN: A live controller with a non-looping, non-theme media item
+    mocked_live_controller = MagicMock()
+    mocked_live_controller.media_play_item = MediaPlayItem()
+    mocked_live_controller.media_play_item.is_theme_background = False
+    registry.register('live_controller', mocked_live_controller)
+    settings.setValue('media/live loop', False)
+    media_env.media_controller.media_stop = MagicMock()
+    media_env.media_controller.tick = MagicMock()
+
+    # WHEN: the live media reaches end-of-media
+    media_env.media_controller.live_media_stopped()
+
+    # THEN: the live output should be blanked to Black
+    media_env.media_controller.media_stop.assert_called_once_with(mocked_live_controller, blank_on_stop=True)
+    media_env.media_controller.tick.assert_called_once_with(mocked_live_controller)
 
 
 def test_media_volume_msg(media_env):
@@ -653,7 +730,7 @@ def test_on_media_stop(media_env):
     media_env.media_controller.on_media_stop()
 
     # The mocked live controller should be called
-    media_env.media_controller.media_stop.assert_called_once_with(mocked_live_controller)
+    media_env.media_controller.media_stop.assert_called_once_with(mocked_live_controller, blank_on_stop=True)
 
 
 def test_display_controllers_live(media_env):

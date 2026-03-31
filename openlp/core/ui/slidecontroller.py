@@ -23,7 +23,6 @@ The :mod:`slidecontroller` module contains the most important part of OpenLP - t
 """
 import copy
 import datetime
-import platform
 from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
@@ -51,35 +50,9 @@ from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.widgets.views import ListPreviewWidget
 
-try:
-    from mss import mss as mss_factory  # type: ignore[reportMissingImports]
-    HAS_MSS = True
-except ImportError:
-    mss_factory = None
-    HAS_MSS = False
-
-if platform.system() == 'Darwin':
-    try:
-        from openlp.core.display.screencapturekit import ScreenCaptureKitBackend, HAS_SCREEN_CAPTURE_KIT
-    except ImportError:
-        ScreenCaptureKitBackend = None
-        HAS_SCREEN_CAPTURE_KIT = False
-else:
-    ScreenCaptureKitBackend = None
-    HAS_SCREEN_CAPTURE_KIT = False
-
-if platform.system() == 'Windows':
-    try:
-        from openlp.core.display.windowscapture import WindowsCaptureBackend, HAS_WINDOWS_CAPTURE
-    except ImportError:
-        WindowsCaptureBackend = None
-        HAS_WINDOWS_CAPTURE = False
-else:
-    WindowsCaptureBackend = None
-    HAS_WINDOWS_CAPTURE = False
-
 # Threshold which has to be trespassed to toggle.
 HIDE_MENU_THRESHOLD = 80
+DESKTOP_CAPTURE_INTERVAL_MS = 1000 // 15
 
 NARROW_MENU = [
     'hide_menu'
@@ -1091,6 +1064,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                       old_item.is_media())
         new_item_provides_own_display = (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                          self.service_item.is_media())
+        if self.is_live and self.service_item.is_media():
+            for display in self.displays:
+                display.hide_display(HideMode.Screen)
         if self.is_live and not old_item_provides_own_display and new_item_provides_own_display:
             for display in self.displays:
                 display.finish_with_current_item()
@@ -1311,12 +1287,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
         # Update ui buttons
-        if hide_mode is None:
-            self.hide_menu.setDefaultAction(self.blank_screen)
-            self.settings.setValue('core/screen blank', False)
-        else:
-            self.hide_menu.setDefaultAction(self.show_screen)
-            self.settings.setValue('core/screen blank', True)
+        _hide_mode_actions = {
+            None: self.show_screen,
+            HideMode.Blank: self.blank_screen,
+            HideMode.Theme: self.theme_screen,
+            HideMode.Logo: self.logo_screen,
+            HideMode.Screen: self.desktop_screen,
+        }
+        self.hide_menu.setDefaultAction(_hide_mode_actions[hide_mode])
+        self.settings.setValue('core/screen blank', hide_mode is not None)
         self.show_screen.setChecked(hide_mode is None)
         self.blank_screen.setChecked(hide_mode == HideMode.Blank)
         self.theme_screen.setChecked(hide_mode == HideMode.Theme)
@@ -1330,7 +1309,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 Registry().execute('{text}_blank'.format(text=self.service_item.name.lower()),
                                    [self.service_item, self.is_live, hide_mode])
             else:
-                if not self.service_item.is_command():
+                if not self.service_item.is_command() and not self.service_item.is_media():
                     Registry().execute('live_display_show')
                 Registry().execute('{text}_unblank'.format(text=self.service_item.name.lower()),
                                    [self.service_item, self.is_live])
@@ -1490,8 +1469,17 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Gets an image of the display screen and updates the preview frame.
         """
         display_image = self._capture_maindisplay()
-        # display_image.setDevicePixelRatio(self.preview_display.devicePixelRatio())
-        base64_image = image_to_byte(display_image)
+        if display_image:
+            # Scale to physical pixel size to stay sharp on HiDPI displays.
+            dpr = self.preview_display.devicePixelRatioF()
+            logical_size = self.preview_display.size()
+            physical_size = QtCore.QSize(int(logical_size.width() * dpr), int(logical_size.height() * dpr))
+            display_image = display_image.scaled(
+                physical_size,
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.SmoothTransformation
+            )
+        base64_image = image_to_byte(display_image, quality=90)
         self.screen_capture = base64_image
         self.preview_display.set_single_image_data('#000', base64_image)
 
@@ -1517,6 +1505,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        screen_rect.top() + screen_rect.height())
             fallback_to_windowed = display_above_horizontal or display_above_vertical \
                 or display_beyond_horizontal or display_beyond_vertical
+        if not fallback_to_windowed and ScreenList().current.is_primary:
+            # grabWindow on the primary screen captures other windows; use widget grab instead.
+            fallback_to_windowed = True
         if fallback_to_windowed:
             if self.service_item and (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                       self.service_item.is_media() or self.service_item.is_command()):
@@ -1545,32 +1536,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
     def _capture_maindisplay_desktop(self):
         current_screen = ScreenList().current
         display_rect = current_screen.display_geometry
-        capture_method = self.settings.value('advanced/desktop capture method')
-        if capture_method == 2:
-            if HAS_SCREEN_CAPTURE_KIT and ScreenCaptureKitBackend:
-                if not hasattr(self, 'screen_capture_kit_backend'):
-                    self.screen_capture_kit_backend = ScreenCaptureKitBackend()
-                sckit_image = self.screen_capture_kit_backend.capture_display(display_rect)
-                if sckit_image:
-                    return sckit_image
-            else:
-                self.log_debug('_capture_maindisplay ScreenCaptureKit selected but unavailable, using Qt capture')
-        if capture_method == 3:
-            if HAS_WINDOWS_CAPTURE and WindowsCaptureBackend:
-                if not hasattr(self, 'windows_capture_backend'):
-                    self.windows_capture_backend = WindowsCaptureBackend()
-                wincap_image = self.windows_capture_backend.capture_display(display_rect)
-                if wincap_image:
-                    return wincap_image
-            else:
-                self.log_debug('_capture_maindisplay Windows capture selected but unavailable, using Qt capture')
-        if capture_method == 1:
-            if HAS_MSS:
-                mss_image = self._capture_maindisplay_desktop_mss(current_screen, display_rect)
-                if mss_image:
-                    return mss_image
-            else:
-                self.log_debug('_capture_maindisplay mss selected but package is not available, using Qt capture')
         return self._capture_maindisplay_desktop_qt(current_screen, display_rect)
 
     def _capture_maindisplay_desktop_qt(self, current_screen, display_rect):
@@ -1590,28 +1555,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.log_debug(f'_capture_maindisplay_desktop_qt failed: {e}')
             return None
 
-    def _capture_maindisplay_desktop_mss(self, current_screen, display_rect):
-        # Grab the exact display region using absolute virtual-desktop coordinates.
-        # mss accepts arbitrary {left, top, width, height} dicts and captures from the
-        # virtual desktop, so no monitor selection or cropping is needed.
-        try:
-            region = {
-                'left': display_rect.x(),
-                'top': display_rect.y(),
-                'width': display_rect.width(),
-                'height': display_rect.height()
-            }
-            with mss_factory() as sct:
-                mss_image = sct.grab(region)
-            if not mss_image:
-                return None
-            image = QtGui.QImage(mss_image.bgra, mss_image.width, mss_image.height, mss_image.width * 4,
-                                 QtGui.QImage.Format.Format_ARGB32)
-            return QtGui.QPixmap.fromImage(image)
-        except Exception as e:
-            self.log_debug(f'_capture_maindisplay mss capture failed: {e}')
-            return None
-
     def _on_desktop_capture_timer(self):
         """Periodic timer callback: refresh the live preview with a fresh desktop capture."""
         mirror = self.settings.value('core/live preview shows presentation screen')
@@ -1626,17 +1569,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """Start or stop the desktop capture timer based on whether live mirroring is needed."""
         if not hasattr(self, 'desktop_capture_timer'):
             return
-        fps_options = [5, 15, 30]
+        fps_options = [5, 15, 24, 30]
         media_is_playing = (hasattr(self, 'media_play_item') and
                              self.media_play_item.is_playing == MediaState.Playing and
                              not self.media_play_item.is_background)
         needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen or media_is_playing
         if needs_timer:
-            fps_index = self.settings.value('advanced/desktop capture fps')
-            fps = fps_options[min(max(fps_index, 0), len(fps_options) - 1)]
-            interval = 1000 // fps
-            if not self.desktop_capture_timer.isActive() or self.desktop_capture_timer.interval() != interval:
-                self.desktop_capture_timer.start(interval)
+            if not self.desktop_capture_timer.isActive() or \
+                    self.desktop_capture_timer.interval() != DESKTOP_CAPTURE_INTERVAL_MS:
+                self.desktop_capture_timer.start(DESKTOP_CAPTURE_INTERVAL_MS)
         else:
             self.desktop_capture_timer.stop()
 

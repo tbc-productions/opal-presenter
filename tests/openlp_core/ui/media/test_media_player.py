@@ -387,12 +387,18 @@ def test_media_status_changed_live_media(base_media_player, registry):
     """
     # GIVEN: A the lived set up
     base_media_player.controller.media_play_item.media_type = MediaType.Video
+    base_media_player.controller.media_play_item.length = 1000
     base_media_player.controller.is_live = True
+    base_media_player.media_player.loops.return_value = QMediaPlayer.Loops.Once
+    base_media_player.media_player.isSeekable.return_value = True
+    base_media_player.media_player.duration.return_value = 1000
     mocked_controller = MagicMock()
     Registry().register("media_controller", mocked_controller)
     # WHEN: the media state changes and it is end of media
     base_media_player.media_status_changed_event(QMediaPlayer.MediaStatus.EndOfMedia)
     # THEN: the live media status event is triggered
+    base_media_player.media_player.setPosition.assert_called_once_with(999)
+    base_media_player.media_player.pause.assert_called_once_with()
     mocked_controller.live_media_status_changed.emit.assert_called_once()
     mocked_controller.preview_media_status_changed.emit.assert_not_called()
 
@@ -427,6 +433,28 @@ def test_media_status_changed_dual(base_media_player, registry):
     # THEN: the live media status event is triggered
     mocked_controller.live_media_status_changed.emit.assert_not_called()
     mocked_controller.preview_media_status_changed.emit.assert_not_called()
+
+
+def test_media_status_changed_does_not_pause_last_frame_when_looping(base_media_player, registry):
+    """
+    Test that looping playback does not force a pause on the last frame.
+    """
+    # GIVEN: A looping video player
+    base_media_player.controller.media_play_item.media_type = MediaType.Video
+    base_media_player.controller.is_live = True
+    base_media_player.media_player.loops.return_value = QMediaPlayer.Loops.Infinite
+    base_media_player.media_player.isSeekable.return_value = True
+    base_media_player.media_player.duration.return_value = 1000
+    mocked_controller = MagicMock()
+    Registry().register("media_controller", mocked_controller)
+
+    # WHEN: end-of-media is reported
+    base_media_player.media_status_changed_event(QMediaPlayer.MediaStatus.EndOfMedia)
+
+    # THEN: the player should not be repositioned or paused by the last-frame helper
+    base_media_player.media_player.setPosition.assert_not_called()
+    base_media_player.media_player.pause.assert_not_called()
+    mocked_controller.live_media_status_changed.emit.assert_called_once()
 
 
 def test_media_status_changed_not_end(base_media_player, registry):

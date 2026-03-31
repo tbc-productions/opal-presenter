@@ -147,10 +147,27 @@ class MediaPlayer(MediaBase, LogMixin):
             Registry().get("media_controller").handle_media_playback_error(self.controller, message)
             return
         if event == QMediaPlayer.MediaStatus.EndOfMedia:
+            self._pause_on_last_frame_if_not_looping()
             if self.controller.is_live:
                 Registry().get("media_controller").live_media_status_changed.emit()
             else:
                 Registry().get("media_controller").preview_media_status_changed.emit()
+
+    def _pause_on_last_frame_if_not_looping(self) -> None:
+        """Keep the final video frame visible when playback reaches the end without looping."""
+        if self.controller.media_play_item.media_type != MediaType.Video:
+            return
+        loops = self.media_player.loops()
+        if loops != QMediaPlayer.Loops.Once or not self.media_player.isSeekable():
+            return
+        duration = max(int(self.media_player.duration() or 0),
+                       int(getattr(self.controller.media_play_item, 'length', 0) or 0))
+        if duration <= 0:
+            return
+        last_frame_position = max(duration - 1, 0)
+        self.media_player.setPosition(last_frame_position)
+        self.media_player.pause()
+        self.controller.media_play_item.timer = last_frame_position
 
     def position_changed_event(self, position) -> None:
         """

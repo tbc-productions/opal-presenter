@@ -61,9 +61,7 @@ LINUX_MODULES = [
 ]
 
 MACOSX_MODULES = [
-    'objc',
     'Pyro5',
-    'AppKit'
 ]
 
 

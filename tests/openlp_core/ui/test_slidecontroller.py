@@ -40,8 +40,8 @@ from openlp.core.lib import ItemCapabilities, ServiceItemAction
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui import HideMode
-from openlp.core.ui.slidecontroller import NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, InfoLabel, LiveController, \
-    PreviewController, SlideController
+from openlp.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
+    InfoLabel, LiveController, PreviewController, SlideController
 
 
 def test_initial_slide_controller(registry: Registry, settings: Settings):
@@ -1916,97 +1916,43 @@ def test__capture_maindisplay_window_uses_desktop_capture_when_screen_hidden(moc
 
 
 @patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_MSS', True)
-def test__capture_maindisplay_desktop_uses_mss_when_selected(mocked_screenlist: MagicMock,
-                                                              settings: Settings):
+def test__capture_maindisplay_desktop_uses_qt_capture(mocked_screenlist: MagicMock, settings: Settings):
     """
-    Test that desktop capture delegates to mss when selected in advanced settings.
+    Test that desktop capture always uses the Qt capture path.
     """
-    # GIVEN: A slide controller and mss capture selected
-    settings.setValue('advanced/desktop capture method', 1)
-    slide_controller = SlideController(None)
-    mocked_current_screen = MagicMock()
-    mocked_display_rect = MagicMock()
-    mocked_current_screen.display_geometry = mocked_display_rect
-    mocked_current_screen.number = 0
-    mocked_screenlist.return_value.current = mocked_current_screen
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
-    slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
-
-    # WHEN: desktop capture is requested
-    pixmap = slide_controller._capture_maindisplay_desktop()
-
-    # THEN: mss path should be preferred
-    assert pixmap == 'mss_capture'
-    slide_controller._capture_maindisplay_desktop_mss.assert_called_once_with(mocked_current_screen,
-                                                                               mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
-
-
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_SCREEN_CAPTURE_KIT', True)
-@patch('openlp.core.ui.slidecontroller.ScreenCaptureKitBackend')
-def test__capture_maindisplay_desktop_uses_screencapturekit_when_selected(mocked_sckit_backend: MagicMock,
-                                                                           mocked_screenlist: MagicMock,
-                                                                           settings: Settings):
-    """
-    Test that desktop capture delegates to ScreenCaptureKit when selected in advanced settings.
-    """
-    # GIVEN: A slide controller and ScreenCaptureKit capture selected
-    settings.setValue('advanced/desktop capture method', 2)
+    # GIVEN: A slide controller with a current display geometry
     slide_controller = SlideController(None)
     mocked_current_screen = MagicMock()
     mocked_display_rect = MagicMock()
     mocked_current_screen.display_geometry = mocked_display_rect
     mocked_screenlist.return_value.current = mocked_current_screen
-    mocked_backend_instance = MagicMock()
-    mocked_backend_instance.capture_display.return_value = 'sckit_capture'
-    mocked_sckit_backend.return_value = mocked_backend_instance
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
     slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
 
     # WHEN: desktop capture is requested
     pixmap = slide_controller._capture_maindisplay_desktop()
 
-    # THEN: ScreenCaptureKit path should be preferred
-    assert pixmap == 'sckit_capture'
-    mocked_backend_instance.capture_display.assert_called_once_with(mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_mss.assert_not_called()
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
+    # THEN: the Qt capture path should be used
+    assert pixmap == 'qt_capture'
+    slide_controller._capture_maindisplay_desktop_qt.assert_called_once_with(mocked_current_screen,
+                                                                              mocked_display_rect)
 
 
-@patch('openlp.core.ui.slidecontroller.platform.system', return_value='Windows')
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_WINDOWS_CAPTURE', True)
-@patch('openlp.core.ui.slidecontroller.WindowsCaptureBackend')
-def test__capture_maindisplay_desktop_uses_windowscapture_when_selected(mocked_windows_backend: MagicMock,
-                                                                         mocked_screenlist: MagicMock,
-                                                                         mocked_platform_system: MagicMock,
-                                                                         settings: Settings):
+def test__update_desktop_capture_timer_uses_fixed_interval(settings: Settings):
     """
-    Test that desktop capture delegates to WindowsCapture backend when selected in advanced settings.
+    Test that desktop capture refresh uses the fixed interval.
     """
-    # GIVEN: A slide controller and Windows capture selected
-    settings.setValue('advanced/desktop capture method', 3)
+    # GIVEN: A slide controller with a desktop capture timer
     slide_controller = SlideController(None)
-    mocked_current_screen = MagicMock()
-    mocked_display_rect = MagicMock()
-    mocked_current_screen.display_geometry = mocked_display_rect
-    mocked_screenlist.return_value.current = mocked_current_screen
-    mocked_backend_instance = MagicMock()
-    mocked_backend_instance.capture_display.return_value = 'windows_capture'
-    mocked_windows_backend.return_value = mocked_backend_instance
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
-    slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
+    slide_controller.desktop_capture_timer = MagicMock()
+    slide_controller.desktop_capture_timer.isActive.return_value = False
+    slide_controller.desktop_capture_timer.interval.return_value = 0
+    slide_controller._current_hide_mode = None
 
-    # WHEN: desktop capture is requested
-    pixmap = slide_controller._capture_maindisplay_desktop()
+    # WHEN: live preview mirroring enables the timer
+    slide_controller._update_desktop_capture_timer(mirror_live_preview=True)
 
-    # THEN: Windows capture path should be preferred
-    assert pixmap == 'windows_capture'
-    mocked_backend_instance.capture_display.assert_called_once_with(mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_mss.assert_not_called()
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
+    # THEN: the timer should start with the fixed capture interval
+    slide_controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
