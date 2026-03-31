@@ -25,6 +25,7 @@ import logging
 import re
 from pathlib import Path
 
+import qtawesome as qta
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import CONTROL_CHARS
@@ -33,6 +34,7 @@ from openlp.core.common.path import path_to_str, str_to_path
 from openlp.core.common.registry import Registry
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.lib.ui import create_action, create_widget_action
+from openlp.core.ui.formattingtagform import FormattingTagForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.enums import PathEditType
@@ -358,28 +360,625 @@ class PathEdit(QtWidgets.QWidget):
             self.pathChanged.emit(path)
 
 
+class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
+    """
+    Item delegate that renders formatting tag syntax visually using HTML,
+    suitable for read-only list/table views that display lyrics or slides.
+    """
+
+    @staticmethod
+    def _tags_to_html(text):
+        """
+        Convert formatting tag tokens in *text* to HTML for styled display.
+        HTML special characters in the source text are escaped first so that
+        ampersands and angle brackets in lyrics are not mis-interpreted.
+        """
+        html = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        for tag in FormattingTags.get_html_tags():
+            start_html = tag['start html'].replace('-webkit-text-fill-color', 'color')
+            end_html = tag['end html']
+            html = html.replace(tag['start tag'], start_html)
+            html = html.replace(tag['end tag'], end_html)
+        html = html.replace('\n', '<br>')
+        return html
+
+    def paint(self, painter, option, index):
+        text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
+        if not text:
+            super().paint(painter, option, index)
+            return
+        painter.save()
+        style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
+        style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+        doc = QtGui.QTextDocument()
+        doc.setHtml(self._tags_to_html(text))
+        doc.setTextWidth(option.rect.width() - 4)
+        painter.translate(option.rect.left() + 2, option.rect.top() + 2)
+        doc.drawContents(painter, QtCore.QRectF(0, 0, option.rect.width(), option.rect.height()))
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
+        if not text:
+            return super().sizeHint(option, index)
+        doc = QtGui.QTextDocument()
+        doc.setHtml(self._tags_to_html(text))
+        width = option.rect.width() if option.rect.width() > 0 else 200
+        doc.setTextWidth(width - 4)
+        return QtCore.QSize(int(doc.idealWidth()), int(doc.size().height()) + 4)
+
+
 class SpellTextEdit(QtWidgets.QPlainTextEdit):
     """
     Spell checking widget based on QPlanTextEdit.
 
     Based on code from http://john.nachtimwald.com/2009/08/22/qplaintextedit-with-in-line-spell-check
     """
-    def __init__(self, parent=None, formatting_tags_allowed=True):
+    def __init__(self, parent=None, formatting_tags_allowed=True, visual_mode_only=False):
         """
         Constructor.
         """
         global ENCHANT_AVAILABLE
         super(SpellTextEdit, self).__init__(parent)
         self.formatting_tags_allowed = formatting_tags_allowed
+        self.visual_mode_only = visual_mode_only
+        self.rich_text_mode = formatting_tags_allowed
+        self.highlighter = Highlighter(self.document(), formatting_tags_allowed=self.formatting_tags_allowed)
+        self.highlighter.set_rich_text_mode(self.rich_text_mode)
+        self._toolbar = None
+        self._mode_button = None
+        self._tag_actions = {}       # maps start tag token → QAction for toolbar state tracking
+        self._color_actions = {}     # maps start_tag → QAction for color dropdown state
+        self._color_action_ends = {} # maps start_tag → end_tag for color toggle logic
+        self._formatting_tag_form = None
+        self._visual_line_overrides = {}
+        if self.formatting_tags_allowed:
+            self._setup_formatting_toolbar()
         # Default dictionary based on the current locale.
         if ENCHANT_AVAILABLE:
             try:
                 self.dictionary = enchant.Dict()
-                self.highlighter = Highlighter(self.document())
                 self.highlighter.spelling_dictionary = self.dictionary
             except (Error, DictNotFoundError):
                 ENCHANT_AVAILABLE = False
                 log.debug('Could not load default dictionary')
+
+    @staticmethod
+    def split_marker_style_for_text(text):
+        """
+        Return the pen style that should be used for a split marker line.
+        """
+        text = text.strip()
+        if text == '[---]':
+            return QtCore.Qt.PenStyle.DotLine
+        if text == '[--}{--]' or text == '[===]':
+            return QtCore.Qt.PenStyle.SolidLine
+        return None
+
+    @staticmethod
+    def split_marker_width_for_text(text):
+        """
+        Return the pen width that should be used for a split marker line.
+        """
+        return 2.5 if text.strip() == '[===]' else 1.0
+
+    def _setup_formatting_toolbar(self):
+        """
+        Create a lightweight formatting toolbar docked at the top of the editor.
+        """
+        self._toolbar = QtWidgets.QToolBar(self)
+        self._toolbar.setIconSize(QtCore.QSize(16, 16))
+        self._toolbar.setMovable(False)
+        self._toolbar.setFloatable(False)
+        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+
+        button_definitions = [
+            ('', 'st', translate('OpenLP.SpellTextEdit', 'Bold'),
+             self._mdi_icon_or_fallback('mdi.format-bold', UiIcons().bold), True),
+            ('', 'it', translate('OpenLP.SpellTextEdit', 'Italic'),
+             self._mdi_icon_or_fallback('mdi.format-italic', UiIcons().italic), True),
+            ('', 'u', translate('OpenLP.SpellTextEdit', 'Underline'),
+             self._mdi_icon_or_fallback('mdi.format-underline', UiIcons().text), True),
+            ('X₂', 'sb', translate('OpenLP.SpellTextEdit', 'Subscript'), None, False),
+            ('X²', 'su', translate('OpenLP.SpellTextEdit', 'Superscript'), None, False),
+            ('', 'uc', translate('OpenLP.SpellTextEdit', 'Uppercase'),
+             self._mdi_icon_or_fallback('mdi.format-letter-case-upper', UiIcons().text), True)
+        ]
+        for caption, tag, tooltip, icon, icon_only in button_definitions:
+            action = self._toolbar.addAction(caption)
+            if icon:
+                action.setIcon(icon)
+            action.setToolTip(tooltip)
+            action.setCheckable(True)
+            self._tag_actions[tag] = action
+            tool_button = self._toolbar.widgetForAction(action)
+            if tool_button and icon_only:
+                tool_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+            action.triggered.connect(lambda checked=False, start_tag=tag: self._apply_formatting_by_tag(start_tag))
+
+        self._color_button = QtWidgets.QToolButton(self._toolbar)
+        self._color_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._color_button.setIcon(self._mdi_icon_or_fallback('mdi.format-color-text', UiIcons().theme))
+        self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Color formatting'))
+        self._color_menu = QtWidgets.QMenu(self._color_button)
+        self._color_button.setMenu(self._color_menu)
+        self._populate_color_menu()
+        self._toolbar.addWidget(self._color_button)
+
+        self._edit_color_button = QtWidgets.QToolButton(self._toolbar)
+        self._edit_color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._edit_color_button.setIcon(self._mdi_icon_or_fallback('mdi.palette', UiIcons().theme))
+        self._edit_color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
+        self._edit_color_button.clicked.connect(self._edit_formatting_tags)
+        self._toolbar.addWidget(self._edit_color_button)
+
+        self._toolbar.addSeparator()
+        remove_action = self._toolbar.addAction('')
+        remove_action.setIcon(self._mdi_icon_or_fallback('mdi.format-clear', UiIcons().delete))
+        remove_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
+        remove_button = self._toolbar.widgetForAction(remove_action)
+        if remove_button:
+            remove_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        remove_action.triggered.connect(self.remove_formatting)
+
+        remove_unused_action = self._toolbar.addAction('')
+        remove_unused_action.setIcon(self._mdi_icon_or_fallback('mdi.format-color-marker-cancel', UiIcons().delete))
+        remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
+        remove_unused_button = self._toolbar.widgetForAction(remove_unused_action)
+        if remove_unused_button:
+            remove_unused_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        remove_unused_action.triggered.connect(self.remove_unused_tags)
+
+        self._toolbar.addSeparator()
+        self._mode_button = QtWidgets.QToolButton(self._toolbar)
+        self._mode_button.setCheckable(True)
+        self._mode_button.toggled.connect(lambda checked: self.set_rich_text_mode(not checked))
+        self._toolbar.addWidget(self._mode_button)
+        self._update_mode_button_text()
+
+        toolbar_height = self._toolbar.sizeHint().height()
+        self.setViewportMargins(0, toolbar_height + 2, 0, 0)
+        self.cursorPositionChanged.connect(self._update_toolbar_state)
+
+    @staticmethod
+    def _mdi_icon_or_fallback(mdi_name, fallback_icon):
+        """
+        Return an MDI icon when available, otherwise use a supplied fallback icon.
+        """
+        try:
+            return qta.icon(mdi_name)
+        except Exception:
+            return fallback_icon
+
+    def _update_mode_button_text(self):
+        """
+        Update mode button text for the current mode.
+        """
+        if not self._mode_button:
+            return
+        self._mode_button.setText('')
+        self._mode_button.setIcon(self._mdi_icon_or_fallback('mdi.code-tags', UiIcons().shortcuts))
+        self._mode_button.blockSignals(True)
+        self._mode_button.setChecked(not self.rich_text_mode)
+        self._mode_button.blockSignals(False)
+        self._mode_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Source mode'))
+
+    def _populate_color_menu(self):
+        """
+        Populate the toolbar's color dropdown from available formatting tags.
+
+        Each entry is a QWidgetAction whose widget is a QLabel rendered with
+        the tag's actual HTML styling, mirroring the Preview column in the
+        formatting-tag dialog.  Actions are checkable for word-processor UX.
+        """
+        self._color_menu.clear()
+        self._color_actions.clear()
+        self._color_action_ends.clear()
+        try:
+            html_tags = FormattingTags.get_html_tags()
+        except Exception:
+            html_tags = []
+        for html in html_tags:
+            start_tag = html.get('start tag')
+            end_tag = html.get('end tag')
+            start_html = html.get('start html', '')
+            end_html = html.get('end html', '')
+            if not start_tag or not end_tag:
+                continue
+            if not re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE):
+                continue
+            desc = html.get('desc', start_tag)
+            widget_action = QtWidgets.QWidgetAction(self._color_menu)
+            widget_action.setCheckable(True)
+            label = self._build_color_menu_label(start_html, end_html, desc, start_tag)
+            widget_action.setDefaultWidget(label)
+            self._color_menu.addAction(widget_action)
+            self._color_actions[start_tag] = widget_action
+            self._color_action_ends[start_tag] = end_tag
+            widget_action.triggered.connect(
+                lambda checked=False, st=start_tag, et=end_tag: self._toggle_color_tag(st, et))
+
+    def _build_color_menu_label(self, start_html, end_html, desc, start_tag):
+        """
+        Build a two-column widget with a styled description and the opening tag token.
+        """
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(12)
+
+        label = QtWidgets.QLabel(container)
+        label.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
+        label.setContentsMargins(0, 0, 12, 0)
+        # Normalize -webkit-text-fill-color → color so QLabel renders it correctly.
+        normalized = start_html.replace('-webkit-text-fill-color', 'color')
+        label.setText('{start}{text}{end}'.format(start=normalized, text=desc, end=end_html))
+        layout.addWidget(label, 1)
+
+        tag_label = QtWidgets.QLabel(start_tag, container)
+        tag_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        tag_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
+        tag_palette = tag_label.palette()
+        tag_color = tag_palette.color(QtGui.QPalette.ColorRole.WindowText)
+        tag_color.setAlphaF(0.65)
+        tag_palette.setColor(QtGui.QPalette.ColorRole.WindowText, tag_color)
+        tag_label.setPalette(tag_palette)
+        layout.addWidget(tag_label, 0)
+        return container
+
+    def _edit_formatting_tags(self):
+        """
+        Open the formatting tag dialog and refresh the color dropdown if tags were saved.
+        """
+        if self._formatting_tag_form is None:
+            parent = self.window() or Registry().get('main_window')
+            self._formatting_tag_form = FormattingTagForm(parent)
+        if self._formatting_tag_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            self._populate_color_menu()
+            self._update_toolbar_state()
+
+    def resizeEvent(self, event):
+        """
+        Keep the formatting toolbar positioned above the editable viewport.
+        """
+        super().resizeEvent(event)
+        if self._toolbar:
+            self._toolbar.setGeometry(0, 0, self.viewport().width(), self._toolbar.sizeHint().height())
+
+    def set_rich_text_mode(self, enabled):
+        """
+        Toggle between plain text and rich text visual mode.
+        """
+        self.rich_text_mode = bool(enabled)
+        self.highlighter.set_rich_text_mode(self.rich_text_mode)
+        self._update_mode_button_text()
+        self.viewport().update()
+        self.highlighter.rehighlight()
+
+    def set_visual_line_overrides(self, overrides):
+        """
+        Set optional display text overrides keyed by block number.
+
+        :param overrides: Dict[int, str] where key is the document block number.
+        """
+        self._visual_line_overrides = overrides if isinstance(overrides, dict) else {}
+        self.viewport().update()
+
+    @staticmethod
+    def _tag_token_pair(start_tag_token):
+        """
+        Build a token pair (start/end) for a start tag name like ``st``.
+        """
+        return '{{{tag}}}'.format(tag=start_tag_token), '{{/{tag}}}'.format(tag=start_tag_token)
+
+    def _known_tag_tokens(self):
+        """
+        Return all known formatting tag tokens for this install.
+        """
+        known_tokens = set()
+        for html in FormattingTags.get_html_tags():
+            start_tag = html.get('start tag')
+            end_tag = html.get('end tag')
+            if start_tag:
+                known_tokens.add(start_tag)
+            if end_tag:
+                known_tokens.add(end_tag)
+        return known_tokens
+
+    def _toggle_color_tag(self, start_tag, end_tag):
+        """
+        Toggle a color formatting tag on/off at the current cursor position.
+        """
+        if self._is_tag_active_at_cursor(start_tag, end_tag):
+            self._remove_specific_tag_at_cursor(start_tag, end_tag)
+        else:
+            self._apply_formatting_tokens(start_tag, end_tag)
+
+    def _apply_formatting_by_tag(self, start_tag_token):
+        """
+        Toggle a formatting tag on/off for the current selection or word.
+
+        When the cursor is already inside a region wrapped by this tag the tag
+        tokens are removed (word-processor toggle-off behaviour).  Otherwise
+        the tag is applied around the selection or word.
+        """
+        start_tag, end_tag = self._tag_token_pair(start_tag_token)
+        if self._is_tag_active_at_cursor(start_tag, end_tag):
+            self._remove_specific_tag_at_cursor(start_tag, end_tag)
+        else:
+            self._apply_formatting_tokens(start_tag, end_tag)
+
+    def _is_tag_active_at_cursor(self, start_tag, end_tag):
+        """
+        Return True when the cursor (or selection start) sits inside a region
+        wrapped by *start_tag* / *end_tag*.
+        """
+        cursor = self.textCursor()
+        pos = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
+        text = self.toPlainText()
+        for region in Highlighter._iter_tag_regions(
+                text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+            r_start = region['start_token_start']
+            r_end = region['end_token_start'] + region['end_token_length']
+            if r_start <= pos <= r_end:
+                return True
+        return False
+
+    def _remove_specific_tag_at_cursor(self, start_tag, end_tag):
+        """
+        Remove the start/end tokens of any regions matching *start_tag* / *end_tag*
+        that contain or overlap the current cursor position or selection.
+        """
+        cursor = self.textCursor()
+        text = self.toPlainText()
+        sel_start = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
+        sel_end = cursor.selectionEnd() if cursor.hasSelection() else cursor.position()
+
+        # Collect the widest edit range from all overlapping regions.
+        edit_start = sel_start
+        edit_end = sel_end
+        found = False
+        for region in Highlighter._iter_tag_regions(
+                text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+            r_start = region['start_token_start']
+            r_end = region['end_token_start'] + region['end_token_length']
+            if r_start <= sel_end and r_end >= sel_start:
+                edit_start = min(edit_start, r_start)
+                edit_end = max(edit_end, r_end)
+                found = True
+        if not found:
+            return
+
+        segment = text[edit_start:edit_end]
+        cleaned = segment.replace(start_tag, '').replace(end_tag, '')
+        if cleaned == segment:
+            return
+
+        # Calculate the new cursor offset within the cleaned segment.
+        offset = sel_start - edit_start
+        offset_cleaned = len(re.sub(
+            re.escape(start_tag) + '|' + re.escape(end_tag), '', segment[:offset]))
+
+        edit_cursor = QtGui.QTextCursor(self.document())
+        edit_cursor.setPosition(edit_start)
+        edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        edit_cursor.beginEditBlock()
+        edit_cursor.removeSelectedText()
+        edit_cursor.insertText(cleaned)
+        edit_cursor.endEditBlock()
+        edit_cursor.setPosition(edit_start + offset_cleaned)
+        self.setTextCursor(edit_cursor)
+
+    def _update_toolbar_state(self):
+        """
+        Reflect the formatting state at the cursor position in the toolbar buttons.
+
+        Each tracked button is checked when the cursor (or selection start) is
+        inside a region wrapped by that button's tag, mirroring the word-processor
+        convention where Bold is highlighted while the caret is in bold text.
+        """
+        if not self._tag_actions:
+            return
+        if not self.rich_text_mode:
+            for action in self._tag_actions.values():
+                action.blockSignals(True)
+                action.setChecked(False)
+                action.blockSignals(False)
+            return
+        text = self.toPlainText()
+        cursor = self.textCursor()
+        pos = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
+        for tag_token, action in self._tag_actions.items():
+            start_tag, end_tag = self._tag_token_pair(tag_token)
+            active = False
+            for region in Highlighter._iter_tag_regions(
+                    text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+                r_start = region['start_token_start']
+                r_end = region['end_token_start'] + region['end_token_length']
+                if r_start <= pos <= r_end:
+                    active = True
+                    break
+            action.blockSignals(True)
+            action.setChecked(active)
+            action.blockSignals(False)
+        for start_tag, action in self._color_actions.items():
+            end_tag = self._color_action_ends.get(start_tag, '')
+            active = False
+            if end_tag:
+                for region in Highlighter._iter_tag_regions(
+                        text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+                    r_start = region['start_token_start']
+                    r_end = region['end_token_start'] + region['end_token_length']
+                    if r_start <= pos <= r_end:
+                        active = True
+                        break
+            action.blockSignals(True)
+            action.setChecked(active)
+            action.blockSignals(False)
+
+    def _apply_formatting_tokens(self, start_tag, end_tag):
+        """
+        Apply explicit start/end formatting tokens around the current selection or word.
+
+        The cursor (or selection) is restored to the same logical content position
+        after the tags are inserted so the caret does not jump unexpectedly.
+        """
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        if cursor.hasSelection():
+            sel_start = cursor.selectionStart()
+            selected_text = cursor.selectedText()
+            cursor.removeSelectedText()
+            cursor.insertText('{start}{text}{end}'.format(start=start_tag, text=selected_text, end=end_tag))
+            # Restore selection over the content region (between the tokens).
+            cursor.setPosition(sel_start + len(start_tag))
+            cursor.setPosition(sel_start + len(start_tag) + len(selected_text),
+                               QtGui.QTextCursor.MoveMode.KeepAnchor)
+        else:
+            original_pos = cursor.position()
+            word_cursor = QtGui.QTextCursor(cursor)
+            word_cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
+            if word_cursor.hasSelection():
+                word_start = word_cursor.selectionStart()
+                selected_text = word_cursor.selectedText()
+                word_cursor.removeSelectedText()
+                word_cursor.insertText('{start}{text}{end}'.format(start=start_tag, text=selected_text, end=end_tag))
+                cursor = word_cursor
+                # Restore cursor at the same relative position within the word content.
+                cursor.setPosition(word_start + len(start_tag) + (original_pos - word_start))
+            else:
+                insert_text = '{start}{end}'.format(start=start_tag, end=end_tag)
+                cursor.insertText(insert_text)
+                for _ in range(len(end_tag)):
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.Left)
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+        self.setFocus()
+
+    def remove_formatting(self):
+        """
+        Remove all inline formatting tags from the selected text.
+
+        When no text is selected the word under the cursor is used and the
+        selection is expanded outward to absorb any immediately adjacent known
+        tag tokens (so clicking inside ``{st}Hello{/st}`` and pressing Clear
+        removes both the word formatting and its surrounding tokens).
+        """
+        cursor = self.textCursor()
+        expand_to_adjacent = not cursor.hasSelection()
+        if expand_to_adjacent:
+            cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
+        if not cursor.hasSelection():
+            return
+        known_tokens = self._known_tag_tokens()
+        full_text = self.toPlainText()
+        sel_start = cursor.selectionStart()
+        sel_end = cursor.selectionEnd()
+        if expand_to_adjacent:
+            changed = True
+            while changed:
+                changed = False
+                for match in re.finditer(r'\{/?[^\}\s]+\}', full_text):
+                    if match.group(0) not in known_tokens:
+                        continue
+                    if match.end() == sel_start:
+                        sel_start = match.start()
+                        changed = True
+                    elif match.start() == sel_end:
+                        sel_end = match.end()
+                        changed = True
+        selected_text = full_text[sel_start:sel_end]
+        cleaned = re.sub(
+            r'\{/?[^\}\s]+\}',
+            lambda m: '' if m.group(0) in known_tokens else m.group(0),
+            selected_text
+        )
+        if cleaned == selected_text:
+            return
+        cursor.setPosition(sel_start)
+        cursor.setPosition(sel_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        cursor.beginEditBlock()
+        cursor.removeSelectedText()
+        cursor.insertText(cleaned)
+        cursor.endEditBlock()
+        cursor.setPosition(sel_start)
+        cursor.setPosition(sel_start + len(cleaned), QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(cursor)
+
+    def remove_unused_tags(self):
+        """
+        Remove formatting tags that are not known in this OpenLP installation.
+        """
+        known_tokens = self._known_tag_tokens()
+        text = self.toPlainText()
+        cleaned_text = re.sub(r'\{/?[^\}\s]+\}',
+                              lambda match: match.group(0) if match.group(0) in known_tokens else '',
+                              text)
+        if cleaned_text != text:
+            self.setPlainText(cleaned_text)
+
+    def paintEvent(self, event):
+        """
+        Draw visual split lines for split markers while keeping raw marker text in the document.
+        """
+        super().paintEvent(event)
+        if not self.rich_text_mode:
+            return
+        painter = QtGui.QPainter(self.viewport())
+        pen_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+        block = self.firstVisibleBlock()
+        offset = self.contentOffset()
+        cursor = self.textCursor()
+        sel_start = cursor.selectionStart()
+        sel_end = cursor.selectionEnd()
+        full_text = self.toPlainText()
+        while block.isValid():
+            geometry = self.blockBoundingGeometry(block).translated(offset)
+            top = geometry.top()
+            bottom = top + self.blockBoundingRect(block).height()
+            if top > event.rect().bottom():
+                break
+            if bottom >= event.rect().top():
+                pen_style = self.split_marker_style_for_text(block.text())
+                if pen_style:
+                    color = QtGui.QColor(pen_color)
+                    if block.text().strip() == '[---]':
+                        color.setAlphaF(0.5)
+                    pen = QtGui.QPen(color, self.split_marker_width_for_text(block.text()), pen_style)
+                    painter.setPen(pen)
+                    y = int(top + (self.fontMetrics().height() / 2))
+                    painter.drawLine(6, y, self.viewport().width() - 6, y)
+                override = self._visual_line_overrides.get(block.blockNumber())
+                if override:
+                    # Check if this block is selected. If so, skip the nice label and show raw text.
+                    block_start = block.position()
+                    block_end = block.position() + block.length() - 1
+                    is_block_selected = (sel_start < block_end and sel_end > block_start)
+                    if is_block_selected:
+                        # Skip visual override for selected blocks to show raw marker text
+                        block = block.next()
+                        continue
+                    if isinstance(override, dict):
+                        override_text = override.get('text', '')
+                        override_color = override.get('background')
+                    else:
+                        override_text = str(override)
+                        override_color = None
+                    if not isinstance(override_color, QtGui.QColor) or not override_color.isValid():
+                        override_color = self.palette().color(QtGui.QPalette.ColorRole.Base)
+                    row_rect = QtCore.QRectF(0, top, self.viewport().width(), self.blockBoundingRect(block).height())
+                    painter.fillRect(row_rect, QtGui.QBrush(override_color))
+                    font = QtGui.QFont(self.font())
+                    font.setBold(True)
+                    painter.setFont(font)
+                    painter.setPen(QtGui.QPen(pen_color))
+                    text_rect = QtCore.QRectF(10, top, self.viewport().width() - 20,
+                                              self.blockBoundingRect(block).height())
+                    painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft,
+                                     override_text)
+            block = block.next()
 
     def mousePressEvent(self, event):
         """
@@ -494,12 +1093,141 @@ class Highlighter(QtGui.QSyntaxHighlighter):
     """
     WORDS = r'(?i)[\w\']+'
 
-    def __init__(self, *args):
+    def __init__(self, *args, formatting_tags_allowed=True):
         """
         Constructor
         """
         super(Highlighter, self).__init__(*args)
         self.spelling_dictionary = None
+        self.formatting_tags_allowed = formatting_tags_allowed
+        self.rich_text_mode = formatting_tags_allowed
+        self._format_cache = {}
+
+    def set_rich_text_mode(self, enabled):
+        """
+        Toggle rich text visual highlighting mode.
+        """
+        self.rich_text_mode = bool(enabled)
+
+    def _format_from_start_html(self, start_html):
+        """
+        Build a best-effort character format from a formatting tag's start html.
+        """
+        if start_html in self._format_cache:
+            return self._format_cache[start_html]
+        text_format = QtGui.QTextCharFormat()
+        lower_html = start_html.lower()
+        if '<strong' in lower_html or '<b>' in lower_html:
+            text_format.setFontWeight(QtGui.QFont.Weight.Bold)
+        if '<em' in lower_html or '<i>' in lower_html:
+            text_format.setFontItalic(True)
+        if '<u>' in lower_html or 'text-decoration: underline' in lower_html:
+            text_format.setFontUnderline(True)
+        if '<sup' in lower_html:
+            text_format.setVerticalAlignment(QtGui.QTextCharFormat.VerticalAlignment.AlignSuperScript)
+        if '<sub' in lower_html:
+            text_format.setVerticalAlignment(QtGui.QTextCharFormat.VerticalAlignment.AlignSubScript)
+
+        color_match = re.search(r'(?:-webkit-text-fill-color|color)\s*:\s*([^;"\']+)', start_html,
+                                flags=re.IGNORECASE)
+        if color_match:
+            color = QtGui.QColor(color_match.group(1).strip())
+            if color.isValid():
+                text_format.setForeground(color)
+
+        font_size_match = re.search(r'font-size\s*:\s*([0-9]*\.?[0-9]+)\s*(%|pt|px)?', start_html,
+                                    flags=re.IGNORECASE)
+        if font_size_match:
+            value = float(font_size_match.group(1))
+            unit = (font_size_match.group(2) or 'pt').lower()
+            base_size = self.document().defaultFont().pointSizeF()
+            if base_size <= 0:
+                base_size = 12.0
+            if unit == '%':
+                text_format.setFontPointSize(base_size * value / 100.0)
+            elif unit == 'px':
+                text_format.setFontPointSize(value * 0.75)
+            else:
+                text_format.setFontPointSize(value)
+
+        weight_match = re.search(r'font-weight\s*:\s*(\d{3})', start_html, flags=re.IGNORECASE)
+        if weight_match:
+            weight_value = int(weight_match.group(1))
+            text_format.setFontWeight(QtGui.QFont.Weight.Bold if weight_value >= 600 else QtGui.QFont.Weight.Normal)
+
+        opacity_match = re.search(r'opacity\s*:\s*([0-9]*\.?[0-9]+)', start_html, flags=re.IGNORECASE)
+        if opacity_match:
+            opacity = max(0.0, min(1.0, float(opacity_match.group(1))))
+            if text_format.foreground().style() == QtCore.Qt.BrushStyle.NoBrush:
+                color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorRole.Text)
+            else:
+                color = text_format.foreground().color()
+            if color.isValid():
+                color.setAlphaF(opacity)
+                text_format.setForeground(color)
+
+        self._format_cache[start_html] = text_format
+        return text_format
+
+    @staticmethod
+    def _iter_tag_regions(text, html_tags):
+        """
+        Yield exact start-tag, content and end-tag ranges for known tags in a block.
+        """
+        for html in html_tags:
+            start_tag = html.get('start tag')
+            end_tag = html.get('end tag')
+            if not start_tag or not end_tag:
+                continue
+            start_index = 0
+            while True:
+                start_pos = text.find(start_tag, start_index)
+                if start_pos == -1:
+                    break
+                end_pos = text.find(end_tag, start_pos + len(start_tag))
+                if end_pos == -1:
+                    break
+                content_start = start_pos + len(start_tag)
+                yield {
+                    'html': html,
+                    'start_token_start': start_pos,
+                    'start_token_length': len(start_tag),
+                    'content_start': content_start,
+                    'content_length': end_pos - content_start,
+                    'end_token_start': end_pos,
+                    'end_token_length': len(end_tag)
+                }
+                start_index = end_pos + len(end_tag)
+
+    @staticmethod
+    def _unknown_token_format():
+        """
+        Return the format used for unknown formatting tag tokens.
+        """
+        unknown_token_format = QtGui.QTextCharFormat()
+        unknown_color = QtGui.QColor(QtCore.Qt.GlobalColor.red)
+        unknown_token_format.setForeground(unknown_color)
+        return unknown_token_format
+
+    @staticmethod
+    def _hidden_token_format():
+        """
+        Return the format used to hide marker/tag tokens in rich text mode.
+        """
+        hidden_token_format = QtGui.QTextCharFormat()
+        transparent = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorRole.Text)
+        transparent.setAlpha(0)
+        hidden_token_format.setForeground(transparent)
+        # Collapse advance width to effectively zero:
+        # - 0.001pt makes the glyph height near-zero
+        # - stretch=1 compresses horizontal glyph metrics to 1% of normal width,
+        #   overcoming Qt's minimum font-size clamping
+        # - AbsoluteSpacing(0) ensures no inter-character gap is added on top
+        hidden_token_format.setFontPointSize(0.001)
+        hidden_token_format.setFontStretch(1)
+        hidden_token_format.setFontLetterSpacingType(QtGui.QFont.SpacingType.AbsoluteSpacing)
+        hidden_token_format.setFontLetterSpacing(0)
+        return hidden_token_format
 
     def highlightBlock(self, text):
         """
@@ -508,6 +1236,7 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         Note, this is a Qt hook.
         """
         if not self.spelling_dictionary:
+            self._highlight_visual_tags(str(text))
             return
         text = str(text)
         char_format = QtGui.QTextCharFormat()
@@ -516,6 +1245,177 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         for word_object in re.finditer(self.WORDS, text):
             if not self.spelling_dictionary.check(word_object.group()):
                 self.setFormat(word_object.start(), word_object.end() - word_object.start(), char_format)
+        self._highlight_visual_tags(text)
+
+    @staticmethod
+    def _find_closing_tag_depth_aware(text, start_tag, end_tag, start_pos=0, start_depth=1):
+        """
+        Find the position of *end_tag* that balances *start_depth* open levels,
+        scanning *text* from *start_pos*.  Nested occurrences of *start_tag*
+        increment the depth counter so the returned position is the true outer
+        close, not the first `end_tag` found.
+
+        Returns -1 if no balanced close exists within *text*.
+        """
+        depth = start_depth
+        pos = start_pos
+        st_len = len(start_tag)
+        et_len = len(end_tag)
+        while pos < len(text):
+            next_open = text.find(start_tag, pos)
+            next_close = text.find(end_tag, pos)
+            if next_close == -1:
+                return -1
+            if next_open != -1 and next_open < next_close:
+                depth += 1
+                pos = next_open + st_len
+            else:
+                depth -= 1
+                if depth == 0:
+                    return next_close
+                pos = next_close + et_len
+        return -1
+
+    def _highlight_visual_tags(self, text):
+        """
+        Highlight formatting tags and split markers for a richer editing experience.
+
+        Multi-line tags are handled via Qt's block-state mechanism:
+          - state 0  : block ends outside any tag span (default / clean).
+          - state N>0: block ends inside the span of html_tags[N-1].
+        Each call sets ``currentBlockState`` so the next block can resume
+        mid-span formatting through ``previousBlockState``.
+        """
+        if not self.rich_text_mode:
+            self.setCurrentBlockState(0)
+            return
+
+        split_style = SpellTextEdit.split_marker_style_for_text(text)
+        if split_style:
+            self.setFormat(0, len(text), self._hidden_token_format())
+            # Propagate the incoming span state through split-marker blocks so
+            # formatting tags that straddle a split continue on the far side.
+            prev = self.previousBlockState()
+            self.setCurrentBlockState(prev if prev > 0 else 0)
+            return
+
+        if not self.formatting_tags_allowed:
+            self.setCurrentBlockState(0)
+            return
+
+        try:
+            html_tags = FormattingTags.get_html_tags()
+        except Exception:
+            html_tags = []
+
+        known_tokens = set()
+        for html in html_tags:
+            if html.get('start tag'):
+                known_tokens.add(html['start tag'])
+            if html.get('end tag'):
+                known_tokens.add(html['end tag'])
+
+        hidden_fmt = self._hidden_token_format()
+        unknown_fmt = self._unknown_token_format()
+
+        # Assume this block ends clean; continuation logic overrides when needed.
+        self.setCurrentBlockState(0)
+
+        prev_state = self.previousBlockState()
+        block_start = 0  # offset within `text` where "normal" pair scanning begins
+
+        # ------------------------------------------------------------------
+        # Handle continuation: previous block ended inside an open tag span.
+        # ------------------------------------------------------------------
+        if prev_state > 0:
+            tag_idx = prev_state - 1
+            if tag_idx < len(html_tags):
+                active_html = html_tags[tag_idx]
+                start_tag = active_html.get('start tag') or ''
+                end_tag = active_html.get('end tag') or ''
+                tag_fmt = self._format_from_start_html(active_html.get('start html', ''))
+                # Use depth-aware search: nested same-tag pairs inside this block
+                # must not prematurely close the outer span inherited from the
+                # previous block (start_depth=1 because we enter already one level deep).
+                end_pos = self._find_closing_tag_depth_aware(
+                    text, start_tag, end_tag, start_pos=0, start_depth=1) if end_tag else -1
+                if end_pos == -1:
+                    # Entire block is inside this span; propagate state to next block.
+                    self.setFormat(0, len(text), tag_fmt)
+                    self.setCurrentBlockState(prev_state)
+                    # Suppress any stray token markers within this continuation block.
+                    for m in re.finditer(r'\{/?[^\}\s]+\}', text):
+                        tok = m.group(0)
+                        self.setFormat(m.start(), len(tok),
+                                       hidden_fmt if tok in known_tokens else unknown_fmt)
+                    for m in re.finditer(r'&nbsp;', text):
+                        self.setFormat(m.start(), 6, hidden_fmt)
+                    return
+                else:
+                    # End tag found: format the leading content, hide the end token.
+                    self.setFormat(0, end_pos, tag_fmt)
+                    self.setFormat(end_pos, len(end_tag), hidden_fmt)
+                    block_start = end_pos + len(end_tag)
+
+        # ------------------------------------------------------------------
+        # Process complete tag pairs within the remainder of this block.
+        # ------------------------------------------------------------------
+        remaining = text[block_start:]
+        for region in self._iter_tag_regions(remaining, html_tags):
+            abs_st = block_start + region['start_token_start']
+            abs_content = block_start + region['content_start']
+            abs_et = block_start + region['end_token_start']
+            self.setFormat(abs_st, region['start_token_length'], hidden_fmt)
+            if region['content_length'] > 0:
+                tag_fmt = self._format_from_start_html(region['html'].get('start html', ''))
+                self.setFormat(abs_content, region['content_length'], tag_fmt)
+            self.setFormat(abs_et, region['end_token_length'], hidden_fmt)
+
+        # ------------------------------------------------------------------
+        # Detect a tag that opens in this block but closes in a later block.
+        # Only one unclosed tag is tracked (tags do not nest in OpenLP).
+        # ------------------------------------------------------------------
+        for i, html in enumerate(html_tags):
+            start_tag = html.get('start tag')
+            end_tag = html.get('end tag')
+            if not start_tag or not end_tag:
+                continue
+            search_pos = 0
+            unclosed_rel = -1
+            while True:
+                open_pos = remaining.find(start_tag, search_pos)
+                if open_pos == -1:
+                    break
+                # Depth-aware: find the balanced close for this open, so nested
+                # same-tag pairs (e.g. inner {st}...{/st} inside outer {st}) are
+                # skipped and the outer open is correctly detected as unclosed.
+                close_pos = self._find_closing_tag_depth_aware(
+                    remaining, start_tag, end_tag,
+                    start_pos=open_pos + len(start_tag), start_depth=1)
+                if close_pos == -1:
+                    unclosed_rel = open_pos
+                    break
+                search_pos = close_pos + len(end_tag)
+            if unclosed_rel >= 0:
+                abs_open = block_start + unclosed_rel
+                self.setFormat(abs_open, len(start_tag), hidden_fmt)
+                content_start = abs_open + len(start_tag)
+                if content_start < len(text):
+                    tag_fmt = self._format_from_start_html(html.get('start html', ''))
+                    self.setFormat(content_start, len(text) - content_start, tag_fmt)
+                self.setCurrentBlockState(i + 1)
+                break
+
+        # ------------------------------------------------------------------
+        # Final pass: ensure all inline tokens are hidden or flagged, and
+        # &nbsp; entities are invisible.
+        # ------------------------------------------------------------------
+        for m in re.finditer(r'\{/?[^\}\s]+\}', text):
+            tok = m.group(0)
+            self.setFormat(m.start(), len(tok),
+                           hidden_fmt if tok in known_tokens else unknown_fmt)
+        for m in re.finditer(r'&nbsp;', text):
+            self.setFormat(m.start(), 6, hidden_fmt)
 
 
 class SpellAction(QtGui.QAction):

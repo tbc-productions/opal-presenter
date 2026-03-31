@@ -36,7 +36,7 @@ class Ui_EditVerseDialog(object):
         edit_verse_dialog.setModal(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(edit_verse_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
-        self.verse_text_edit = SpellTextEdit(edit_verse_dialog)
+        self.verse_text_edit = SpellTextEdit(edit_verse_dialog, visual_mode_only=True)
         self.verse_text_edit.setObjectName('verse_text_edit')
         self.dialog_layout.addWidget(self.verse_text_edit)
         self.verse_type_layout = QtWidgets.QHBoxLayout()
