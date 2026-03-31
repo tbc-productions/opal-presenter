@@ -15,10 +15,12 @@
 *eric[1-9]project
 *.coverage
 .cache
+.claude
 .coverage
 .directory
 .eggs
 .idea
+.github
 .kdev4
 .komodotools
 .pylintrc
