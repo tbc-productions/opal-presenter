@@ -185,8 +185,6 @@ test-macos:
     - "# Installing macOS only dependencies from PyPI"
     - >
       pip install py-applescript
-      pyobjc-core
-      pyobjc-framework-Cocoa
       Pyro5
     - "# Installing PyICU"
     - brew install pkg-config icu4c

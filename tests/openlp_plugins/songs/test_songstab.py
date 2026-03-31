@@ -22,18 +22,25 @@
 This module contains tests for the lib submodule of the Songs plugin.
 """
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtWidgets
 from openlp.core.common.enum import SongFirstSlideMode
 
 from openlp.core.common.registry import Registry
 from openlp.plugins.songs.lib.songstab import SongsTab
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 __default_settings__ = {
     'songs/footer template': """${title}""",
     'songs/chord notation': 'english'
 }
+__default_settings__.update({'songs/section color {key}'.format(key=key): color
+                             for key, color in DEFAULT_SECTION_COLORS.items()})
+__default_settings__.update({
+    'songs/section background opacity minimum': 10,
+    'songs/section background opacity maximum': 60,
+})
 
 
 @pytest.fixture()
@@ -168,9 +175,10 @@ def test_password_change(mocked_settings_set_val, mocked_question, form):
     mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     # WHEN: save is invoked
     form.save()
-    # THEN: footer should not have been saved (one less call than the change test below)
+    # THEN: password should have been saved but footer should not have been rewritten
     mocked_question.assert_called_once()
-    assert mocked_settings_set_val.call_count == 20
+    mocked_settings_set_val.assert_any_call('songs/songselect password', 'new_password')
+    assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
 @patch('openlp.plugins.songs.lib.songstab.QtWidgets.QMessageBox.question')
@@ -184,9 +192,10 @@ def test_password_change_cancelled(mocked_settings_set_val, mocked_question, for
     mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.No
     # WHEN: save is invoked
     form.save()
-    # THEN: footer should not have been saved (one less call than the change test below)
+    # THEN: password and footer should not have been rewritten
     mocked_question.assert_called_once()
-    assert mocked_settings_set_val.call_count == 19
+    assert call('songs/songselect password', 'new_password') not in mocked_settings_set_val.call_args_list
+    assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
 @patch('openlp.core.common.settings.Settings.setValue')
@@ -197,8 +206,8 @@ def test_footer_nochange(mocked_settings_set_val, form):
     # GIVEN: A normal song form
     # WHEN: save is invoked
     form.save()
-    # THEN: footer should not have been saved (one less call than the change test below)
-    assert mocked_settings_set_val.call_count == 20
+    # THEN: footer should not have been saved
+    assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
 @patch('openlp.core.common.settings.Settings.setValue')
@@ -210,8 +219,8 @@ def test_footer_change(mocked_settings_set_val, form):
     form.footer_edit_box.setPlainText('A new footer')
     # WHEN: save is invoked
     form.save()
-    # THEN: footer should have been saved (one more call to setValue than the nochange test)
-    assert mocked_settings_set_val.call_count == 21
+    # THEN: footer should have been saved
+    mocked_settings_set_val.assert_any_call('songs/footer template', 'A new footer')
     assert form.footer_edit_box.toPlainText() == 'A new footer'
 
 

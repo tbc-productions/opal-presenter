@@ -155,10 +155,10 @@ class Registry(metaclass=Singleton):
                     result = function(*args, **kwargs)
                     if result is not None:
                         results.append(result)
-                except TypeError:
-                    # Who has called me can help in debugging
+                except Exception:
+                    # Capture and log any exception from listeners with full traceback to aid debugging
                     trace_error_handler(log)
-                    log.exception('Exception for function {function}'.format(function=function))
+                    log.exception('Exception while executing listener %r for event %s', function, event)
         else:
             if log.getEffectiveLevel() == logging.DEBUG:
                 trace_error_handler(log)

@@ -328,6 +328,10 @@
 		// The current scale of the presentation (see width/height config)
 		scale = 1,
 
+		// Re-entrancy guard for layout() to prevent the 'resize' event dispatched
+		// on dom.wrapper from bubbling to window and re-triggering onWindowResize.
+		layoutInProgress = false,
+
 		// CSS transform that is currently applied to the slides container,
 		// split into two groups
 		slidesTransform = { layout: '', overview: '' },
@@ -2234,6 +2238,9 @@
 	 */
 	function layout() {
 
+		if( layoutInProgress ) return;
+		layoutInProgress = true;
+
 		if( dom.wrapper && !isPrintingPDF() ) {
 
 			if( !config.disableLayout ) {
@@ -2346,6 +2353,8 @@
 			}
 
 		}
+
+		layoutInProgress = false;
 
 	}
 

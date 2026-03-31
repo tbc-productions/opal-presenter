@@ -257,20 +257,21 @@ def build_icon(icon):
     return button_icon
 
 
-def image_to_byte(image: QtGui.QPixmap, base_64: bool = True) -> QtCore.QByteArray | str:
+def image_to_byte(image: QtGui.QPixmap, base_64: bool = True, quality: int = -1) -> QtCore.QByteArray | str:
     """
     Resize an image to fit on the current screen for the web and returns it as a byte stream.
 
     :param image: The image to be converted.
     :param base_64: If True returns the image as Base64 bytes, otherwise the image is returned as a byte array.
         To preserve original intention, this defaults to True
+    :param quality: JPEG quality (0-100, -1 = default ~75).
     """
     log.debug('image_to_byte - start')
     byte_array = QtCore.QByteArray()
     # use buffer to store pixmap into byteArray
     buffer = QtCore.QBuffer(byte_array)
     buffer.open(QtCore.QIODevice.WriteOnly)
-    image.save(buffer, "JPEG")
+    image.save(buffer, "JPEG", quality)
     log.debug('image_to_byte - end')
     if not base_64:
         return byte_array

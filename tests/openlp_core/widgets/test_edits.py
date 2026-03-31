@@ -32,7 +32,7 @@ from openlp.core.common.path import path_to_str
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit
+from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter
 from openlp.core.widgets.enums import PathEditType
 
 
@@ -459,3 +459,505 @@ def test_history_combo_get_items(history_combo: HistoryComboBox):
 
     # THEN: The list of items should contain both strings.
     assert history_combo.getItems() == ['test1', 'test2']
+
+
+@pytest.mark.parametrize('line, expected', [
+    ('[---]', QtCore.Qt.PenStyle.DotLine),
+    (' [---] ', QtCore.Qt.PenStyle.DotLine),
+    ('[--}{--]', QtCore.Qt.PenStyle.SolidLine),
+    ('[===]', QtCore.Qt.PenStyle.SolidLine),
+    (' [--}{--] ', QtCore.Qt.PenStyle.SolidLine),
+    ('plain text', None)
+])
+def test_spell_text_edit_split_marker_style_for_text(line, expected):
+    """Test split marker line style detection used by the visual split renderer."""
+    assert SpellTextEdit.split_marker_style_for_text(line) == expected
+
+
+@pytest.mark.parametrize('line, expected', [
+    ('[===]', 2.5),
+    (' [===] ', 2.5),
+    ('[---]', 1.0),
+    ('[--}{--]', 1.0),
+    ('plain text', 1.0)
+])
+def test_spell_text_edit_split_marker_width_for_text(line, expected):
+    """Test split marker line width detection used by the visual split renderer."""
+    assert SpellTextEdit.split_marker_width_for_text(line) == expected
+
+
+def test_highlighter_format_from_start_html_maps_css(mock_settings):
+    """Test conversion of HTML/CSS from formatting tags into QTextCharFormat settings."""
+    document = QtGui.QTextDocument()
+    highlighter = Highlighter(document)
+
+    text_format = highlighter._format_from_start_html(
+        '<span style="-webkit-text-fill-color:red; font-size:80%; font-weight:700; opacity:0.5;">')
+
+    assert text_format.fontWeight() == QtGui.QFont.Weight.Bold
+    assert text_format.fontPointSize() > 0
+    assert text_format.foreground().color().isValid() is True
+    assert text_format.foreground().color().alphaF() == pytest.approx(0.5, rel=0.05)
+
+
+def test_highlighter_unknown_tag_opacity(mock_settings):
+    """Unknown formatting tags should be rendered in red."""
+    text_format = Highlighter._unknown_token_format()
+    color = text_format.foreground().color()
+    assert color.red() > 200
+    assert color.green() < 100
+    assert color.blue() < 100
+
+
+def test_highlighter_hidden_token_format(mock_settings):
+    """Hidden tokens in rich mode should be transparent, near-zero size, and zero-width."""
+    text_format = Highlighter._hidden_token_format()
+    assert text_format.foreground().color().alpha() == 0
+    assert text_format.fontPointSize() == pytest.approx(0.001, rel=0.05)
+    assert text_format.fontStretch() == 1
+    assert text_format.fontLetterSpacingType() == QtGui.QFont.SpacingType.AbsoluteSpacing
+    assert text_format.fontLetterSpacing() == pytest.approx(0.0, abs=0.01)
+
+
+def test_highlighter_iter_tag_regions_separates_tokens_from_content(mock_settings):
+    """Known tag parsing should isolate the token ranges from the inner content range."""
+    regions = list(Highlighter._iter_tag_regions(
+        '{st}Hello{/st}',
+        [{'start tag': '{st}', 'end tag': '{/st}', 'start html': '<strong>'}]
+    ))
+
+    assert regions == [{
+        'html': {'start tag': '{st}', 'end tag': '{/st}', 'start html': '<strong>'},
+        'start_token_start': 0,
+        'start_token_length': 4,
+        'content_start': 4,
+        'content_length': 5,
+        'end_token_start': 9,
+        'end_token_length': 5
+    }]
+
+
+def test_highlighter_find_closing_tag_depth_aware_simple(mock_settings):
+    """Depth-aware close finder should return the first close when there is no nesting."""
+    pos = Highlighter._find_closing_tag_depth_aware('{st}Hello{/st}', '{st}', '{/st}',
+                                                    start_pos=4, start_depth=1)
+    assert pos == 9
+
+
+def test_highlighter_find_closing_tag_depth_aware_nested(mock_settings):
+    """Depth-aware close finder should skip nested same-tag pairs and find the outer close."""
+    # Outer open at 0, inner open at 9 and close at 15, outer close at 22.
+    text = '{st}a{st}b{/st}c{/st}'
+    pos = Highlighter._find_closing_tag_depth_aware(text, '{st}', '{/st}',
+                                                    start_pos=4, start_depth=1)
+    # The outer close is at position 16.
+    assert pos == text.rfind('{/st}')
+
+
+def test_highlighter_find_closing_tag_depth_aware_returns_minus_one_when_unclosed(mock_settings):
+    """Depth-aware close finder should return -1 when no balanced close exists."""
+    pos = Highlighter._find_closing_tag_depth_aware('{st}a{st}b{/st}c', '{st}', '{/st}',
+                                                    start_pos=4, start_depth=1)
+    assert pos == -1
+
+
+def test_highlighter_nested_same_tag_does_not_close_outer_span_prematurely(mock_settings):
+    """An inner {st}...{/st} must not terminate the outer continuation span."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    # Outer {st} opens on line 0 and closes on line 1 AFTER an inner {st}...{/st}.
+    editor.setPlainText('{st}Line one\nFor the {st}kingdom{/st} power Amen.{/st}')
+
+    doc = editor.document()
+    block0 = doc.findBlockByNumber(0)
+    block1 = doc.findBlockByNumber(1)
+    assert block0.isValid() and block1.isValid()
+
+    # Block 0: outer {st} is unclosed so userState > 0.
+    assert block0.userState() > 0
+
+    # Block 1: outer {st} closes (after the inner pair) so ends clean.
+    assert block1.userState() == 0
+
+    # Document text must be unchanged.
+    assert editor.toPlainText() == '{st}Line one\nFor the {st}kingdom{/st} power Amen.{/st}'
+
+
+def test_highlighter_multi_line_block_state_continues_span(mock_settings):
+    """A tag that opens in one block and closes in the next should not corrupt document text."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    # Two-line text: tag opens on line 1 and closes on line 2.
+    editor.setPlainText('{st}Line one\nLine two{/st}')
+
+    doc = editor.document()
+
+    # Both blocks must exist with correct raw text.
+    block0 = doc.findBlockByNumber(0)
+    block1 = doc.findBlockByNumber(1)
+    assert block0.isValid()
+    assert block1.isValid()
+    assert block0.text() == '{st}Line one'
+    assert block1.text() == 'Line two{/st}'
+
+    # The full document text must be unchanged (highlighter must not mutate it).
+    assert editor.toPlainText() == '{st}Line one\nLine two{/st}'
+
+    # Block 0 should have been highlighted with a continuation state (> 0) because
+    # the open tag has no matching close on the same line.  We read it via the
+    # block's stored user-state which Qt copies from setCurrentBlockState.
+    assert block0.userState() > 0
+
+    # Block 1 ends clean — the span closes within it.
+    assert block1.userState() == 0
+
+
+def test_highlighter_span_continues_across_split_marker(mock_settings):
+    """A formatting tag that straddles a split marker should propagate its state through it."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    # Bold tag open on line 0, split marker on line 1, closing tag on line 2.
+    editor.setPlainText('{st}Before split\n[---]\nAfter split{/st}')
+
+    doc = editor.document()
+    block0 = doc.findBlockByNumber(0)  # '{st}Before split'
+    block1 = doc.findBlockByNumber(1)  # '[---]'
+    block2 = doc.findBlockByNumber(2)  # 'After split{/st}'
+
+    assert block0.isValid() and block1.isValid() and block2.isValid()
+
+    # Block 0: unclosed tag → state > 0.
+    assert block0.userState() > 0
+
+    # Block 1: split marker must PROPAGATE the incoming state (not reset to 0)
+    # so block 2 can resume the span correctly.
+    assert block1.userState() == block0.userState()
+
+    # Block 2: span closes here → ends clean.
+    assert block2.userState() == 0
+
+    # Document text must be unchanged.
+    assert editor.toPlainText() == '{st}Before split\n[---]\nAfter split{/st}'
+
+
+def test_spell_text_edit_toggle_rich_mode(mock_settings):
+    """Rich/plain mode toggle should update both editor and highlighter state."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.set_rich_text_mode(False)
+    assert editor.rich_text_mode is False
+    assert editor.highlighter.rich_text_mode is False
+    editor.set_rich_text_mode(True)
+    assert editor.rich_text_mode is True
+    assert editor.highlighter.rich_text_mode is True
+
+
+def test_spell_text_edit_source_button_mapping(mock_settings):
+    """Source button checked state should map to plain mode (unchecked means rich mode)."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    assert editor.rich_text_mode is True
+    assert editor._mode_button.isChecked() is False
+    assert editor._mode_button.text() == ''
+    assert editor._mode_button.toolTip() == 'Source mode'
+
+    editor._mode_button.setChecked(True)
+    assert editor.rich_text_mode is False
+    assert editor.highlighter.rich_text_mode is False
+
+    editor._mode_button.setChecked(False)
+    assert editor.rich_text_mode is True
+    assert editor.highlighter.rich_text_mode is True
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mock_settings):
+    """Color dropdown should include formatting tags that define text colors."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="-webkit-text-fill-color:red">'},
+        {'desc': 'Bold', 'start tag': '{st}', 'end tag': '{/st}', 'start html': '<strong>'}
+    ]
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    # Only the color tag should appear in the dropdown.
+    assert list(editor._color_actions.keys()) == ['{r}']
+
+
+@patch('openlp.core.widgets.edits.FormattingTagForm')
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_html_tags: MagicMock,
+                                                                      mock_formatting_tag_form: MagicMock,
+                                                                      mock_settings):
+    """The edit button should open the formatting tag dialog and refresh the dropdown when accepted."""
+    mock_get_html_tags.side_effect = [
+        [
+            {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+             'start html': '<span style="-webkit-text-fill-color:red">'}
+        ],
+        [
+            {'desc': 'Blue', 'start tag': '{bl}', 'end tag': '{/bl}',
+             'start html': '<span style="-webkit-text-fill-color:blue">'}
+        ]
+    ]
+    mock_formatting_tag_form.return_value.exec.return_value = QtWidgets.QDialog.DialogCode.Accepted
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    assert list(editor._color_actions.keys()) == ['{r}']
+
+    editor._edit_color_button.click()
+
+    mock_formatting_tag_form.assert_called_once()
+    mock_formatting_tag_form.return_value.exec.assert_called_once_with()
+    assert list(editor._color_actions.keys()) == ['{bl}']
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_color_menu_actions_are_checkable(mock_get_html_tags: MagicMock, mock_settings):
+    """Color menu actions should be checkable so the word-processor toggle UX works."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="-webkit-text-fill-color:red">'}
+    ]
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    for action in editor._color_actions.values():
+        assert action.isCheckable()
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_color_menu_label_contains_styled_text(mock_get_html_tags: MagicMock, mock_settings):
+    """Color menu items should render styled name and tag token in separate columns."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="-webkit-text-fill-color:red">'}
+    ]
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    # The QWidgetAction's default widget should be a two-column widget.
+    action = editor._color_actions['{r}']
+    widget = action.defaultWidget()
+    assert isinstance(widget, QtWidgets.QWidget)
+    labels = widget.findChildren(QtWidgets.QLabel, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly)
+    assert len(labels) == 2
+    assert 'Red' in labels[0].text()
+    assert '{r}' == labels[1].text()
+    assert labels[0].contentsMargins().right() == 12
+    assert '{/r}' not in labels[0].text()
+    assert 'color' in labels[0].text().lower() or 'red' in labels[0].text().lower()
+    assert labels[1].palette().color(QtGui.QPalette.ColorRole.WindowText).alphaF() == pytest.approx(0.65, rel=0.05)
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_color_menu_toggle_applies_and_removes(mock_get_html_tags: MagicMock, mock_settings):
+    """Clicking a color option should apply the tag when inactive and remove it when active."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="-webkit-text-fill-color:red">'}
+    ]
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('Hello')
+    cursor = editor.textCursor()
+    cursor.setPosition(2)
+    editor.setTextCursor(cursor)
+
+    # First click — not active: wraps word.
+    editor._toggle_color_tag('{r}', '{/r}')
+    assert editor.toPlainText() == '{r}Hello{/r}'
+
+    # Move cursor inside the tagged region.
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{r}Hel'))
+    editor.setTextCursor(cursor)
+
+    # Second click — active: removes tag tokens.
+    editor._toggle_color_tag('{r}', '{/r}')
+    assert editor.toPlainText() == 'Hello'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_tags: MagicMock, mock_settings):
+    """The color dropdown action should become checked when the cursor is inside that color region."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="-webkit-text-fill-color:red">'}
+    ]
+
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{r}Hello{/r} world')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{r}He'))
+    editor.setTextCursor(cursor)
+
+    editor._update_toolbar_state()
+
+    assert editor._color_actions['{r}'].isChecked() is True
+
+    # Move outside: should uncheck.
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{r}Hello{/r} wo'))
+    editor.setTextCursor(cursor)
+    editor._update_toolbar_state()
+
+    assert editor._color_actions['{r}'].isChecked() is False
+
+
+def test_spell_text_edit_apply_formatting_wrap_selection(mock_settings):
+    """Applying formatting with selected text should wrap it with tags."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('Hello')
+    cursor = editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(5, QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '{st}Hello{/st}'
+    # Selection should be placed over the content region (not the tokens).
+    result_cursor = editor.textCursor()
+    assert result_cursor.selectionStart() == len('{st}')
+    assert result_cursor.selectionEnd() == len('{st}Hello')
+
+
+def test_spell_text_edit_apply_formatting_wrap_word_without_selection(mock_settings):
+    """Applying formatting without selection should wrap the current word under cursor."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('Hello world')
+    cursor = editor.textCursor()
+    cursor.setPosition(1)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('it')
+
+    assert editor.toPlainText() == '{it}Hello{/it} world'
+    # Cursor should be at the same relative offset within the word content.
+    # Original offset = 1, start_tag = '{it}' (length 4) → new pos = 0 + 4 + 1 = 5.
+    assert editor.textCursor().position() == len('{it}H')
+
+
+def test_spell_text_edit_apply_formatting_insert_without_selection_no_word(mock_settings):
+    """Applying formatting without selection should insert paired tags when cursor is not on a word."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('   ')
+    cursor = editor.textCursor()
+    cursor.setPosition(1)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('it')
+
+    assert editor.toPlainText() == ' {it}{/it}  '
+    assert editor.textCursor().position() == len(' {it}')
+
+
+def test_spell_text_edit_remove_unused_tags(mock_settings):
+    """Unknown tags should be removed while known tags remain."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Known{/st} {unknown}X{/unknown}')
+
+    editor.remove_unused_tags()
+
+    assert editor.toPlainText() == '{st}Known{/st} X'
+
+
+def test_spell_text_edit_remove_formatting_strips_tags_from_selection(mock_settings):
+    """Remove formatting should strip all known formatting tags from the selected range."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Bold text{/st} and {it}italic{/it}')
+
+    # Select the first tagged segment including its tokens
+    cursor = editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len('{st}Bold text{/st}'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    assert editor.toPlainText() == 'Bold text and {it}italic{/it}'
+
+
+def test_spell_text_edit_remove_formatting_uses_word_when_no_selection(mock_settings):
+    """Remove formatting without a selection should expand to strip adjacent tag tokens too."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Hello{/st}')
+
+    # Place cursor inside the content word — WordUnderCursor selects 'Hello'
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}Hel'))
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    # Both the surrounding {st}/{/st} tokens and the word are now tag-free
+    assert editor.toPlainText() == 'Hello'
+
+
+def test_spell_text_edit_toolbar_buttons_are_checkable(mock_settings):
+    """Every toolbar formatting button should be a checkable action."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    for tag_token, action in editor._tag_actions.items():
+        assert action.isCheckable(), f'Action for {tag_token!r} should be checkable'
+
+
+def test_spell_text_edit_update_toolbar_state_checks_button_when_cursor_in_tag(mock_settings):
+    """The toolbar button for a tag should become checked when the cursor is inside that tag."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Bold{/st} normal')
+
+    # Move cursor inside the bold region
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}Bo'))
+    editor.setTextCursor(cursor)
+
+    editor._update_toolbar_state()
+
+    assert editor._tag_actions['st'].isChecked() is True
+    assert editor._tag_actions['it'].isChecked() is False
+
+
+def test_spell_text_edit_update_toolbar_state_unchecks_outside_tag(mock_settings):
+    """The toolbar button should be unchecked when the cursor is outside any tagged region."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Bold{/st} normal')
+
+    # Move cursor into the plain text area
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}Bold{/st} nor'))
+    editor.setTextCursor(cursor)
+
+    editor._update_toolbar_state()
+
+    assert editor._tag_actions['st'].isChecked() is False
+
+
+def test_spell_text_edit_apply_formatting_by_tag_toggles_off_when_active(mock_settings):
+    """Clicking a toolbar button while inside a tagged region should remove those tag tokens."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Hello{/st}')
+
+    # Position cursor inside the bold region
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}Hel'))
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == 'Hello'
+
+
+def test_spell_text_edit_apply_formatting_by_tag_applies_when_not_active(mock_settings):
+    """Clicking a toolbar button outside any tagged region should wrap the word in that tag."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('Hello')
+
+    # Position cursor inside the plain word
+    cursor = editor.textCursor()
+    cursor.setPosition(2)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '{st}Hello{/st}'

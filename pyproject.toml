@@ -68,16 +68,11 @@ dependencies = [
     "flask-cors",
     "lxml",
     "Mako",
-    "mss",
     "pillow",
     "platformdirs",
     "PyICU",
-    "pyobjc-framework-Cocoa; platform_system==\"Darwin\"",
-    "pyobjc-framework-ScreenCaptureKit; platform_system==\"Darwin\"",
-    "pyobjc; platform_system==\"Darwin\"",
     "PySide6",
     "Pyro5; platform_system==\"Darwin\"",
-    "dxcam; platform_system==\"Windows\"",
     "pywin32; platform_system==\"Windows\"",
     "qrcode",
     "QtAwesome",
@@ -156,16 +151,11 @@ dependencies = [
 # For those who have problems running "hatch run openlp"
 run_openlp = "python run_openlp.py"
 
-[tool.hatch.envs.test]
 dependencies = [
     "flake8",
     "hatchling",
-    "hatch-vcs",
-    "PyMuPDF",
-    "PyMySQL",
     "pyenchant >= 1.6",
     "pyodbc",
-    "pysword",
     "pytest",
     "pytest-qt",
     "pytest-cov",

@@ -152,24 +152,25 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
 
     def _media_status_changed_live(self) -> None:
         """
-        The player has stopped so updated the live UI
+        The player has reached end-of-media; delegate to the full stopped handler.
         """
-        self._media_bar(self.live_controller, "stop")
+        self.live_media_stopped()
 
     def _media_status_changed_preview(self) -> None:
         """
-        The playerr has stopped so updated the preview UI
+        The player has reached end-of-media; delegate to the full stopped handler.
         """
-        self._media_bar(self.preview_controller, "stop")
+        self.preview_media_stopped()
 
     def live_media_stopped(self) -> None:
         """
         The live media has stopped
         """
-        self.media_stop(self.live_controller)
+        should_loop = (Registry().get("settings").value("media/live loop")
+                       or self.live_controller.media_play_item.is_theme_background)
+        self.media_stop(self.live_controller, blank_on_stop=not should_loop)
         self.tick(self.live_controller)
-        if (Registry().get("settings").value("media/live loop")
-                or self.live_controller.media_play_item.is_theme_background):
+        if should_loop:
             self.has_started = False
             self.media_play(self.live_controller)
 
@@ -177,12 +178,13 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         The Preview media has stopped
         """
-        self.media_stop(self.preview_controller)
-        self.tick(self.preview_controller)
         if (Registry().get("settings").value("media/preview loop")
                 or self.preview_controller.media_play_item.is_theme_background):
             self.has_started = False
             self.media_play(self.preview_controller)
+        else:
+            self.media_pause(self.preview_controller)
+            self.tick(self.preview_controller)
 
     def setup_display(self, controller: SlideController) -> None:
         """
@@ -444,8 +446,10 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             display = self._define_display(controller)
             if controller.is_live:
                 controller.set_hide_mode(None)
+                controller._set_theme(controller.service_item)
                 display.hide_display(HideMode.Screen)
-            controller._set_theme(controller.service_item)
+            else:
+                controller._set_theme(controller.service_item)
             #  display.load_verses(media_empty_song)
         controller.output_has_changed()
         return True
@@ -600,33 +604,43 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
 
         :param msg: First element is the controller which should be used
         """
-        return self.media_stop(msg[0])
+        return self.media_stop(msg[0], blank_on_stop=True)
 
     def on_media_stop(self):
         """
         Responds to the request to stop a loaded video from the web.
         """
-        return self.media_stop(self.live_controller)
+        return self.media_stop(self.live_controller, blank_on_stop=True)
 
-    def media_stop(self, controller: SlideController) -> bool:
+    def media_stop(self, controller: SlideController, blank_on_stop: bool = False) -> bool:
         """
         Responds to the request to stop a loaded video
 
         :param controller: The controller that needs to be stopped
+        :param blank_on_stop: If ``True`` and the controller is live, switch the output to Black.
         """
         self.log_debug(f"media_stop is_live:{controller.is_live}")
+        stop_after_hide = (controller.is_live and blank_on_stop and not controller.media_play_item.is_background and
+                           bool(controller.media_play_item.media_file))
+        controller.media_play_item._stop_after_hide = stop_after_hide
         if controller.audio_player and controller.media_play_item.audio_file:
             controller.audio_player.stop()
         if controller.media_player and controller.media_play_item.media_file:
-            controller.media_player.stop()
+            if stop_after_hide:
+                controller.media_player.pause()
+            else:
+                controller.media_player.stop()
         if controller.is_live:
             self.live_hide_timer.start(HIDE_DELAY_TIME)
             if not controller.media_play_item.is_background:
-                display = self._define_display(controller)
-                if display.hide_mode == HideMode.Screen:
-                    Registry().execute("live_display_hide", HideMode.Blank)
+                if blank_on_stop:
+                    controller.set_hide_mode(HideMode.Blank)
                 else:
-                    controller.set_hide_mode(display.hide_mode or HideMode.Blank)
+                    display = self._define_display(controller)
+                    if display.hide_mode == HideMode.Screen:
+                        Registry().execute("live_display_show")
+                    else:
+                        controller.set_hide_mode(display.hide_mode or HideMode.Blank)
         else:
             self._media_set_visibility(controller, False)
         self._media_bar(controller, "stop")
@@ -782,14 +796,21 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         Local function to hide the live media
         """
-        self.media_pause(self.live_controller)
-        self._media_set_visibility(self.live_controller, False)
+        if getattr(self.live_controller.media_play_item, '_stop_after_hide', False):
+            self.live_controller.media_play_item._stop_after_hide = False
+            self._media_set_visibility(self.live_controller, False)
+            if self.live_controller.media_player and self.live_controller.media_play_item.media_file:
+                self.live_controller.media_player.stop()
+        else:
+            self.media_pause(self.live_controller)
+            self._media_set_visibility(self.live_controller, False)
 
     def _on_media_kill_live(self):
         """
         Local function to kill the live media
         """
         self._media_set_visibility(self.live_controller, False)
+        self.live_controller.media_play_item = MediaPlayItem()
 
     def _media_set_visibility(self, controller: SlideController, visible):
         """
@@ -831,7 +852,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         else:
             if playing and not self.live_controller.media_play_item.is_theme_background:
                 self.media_pause(self.live_controller)
-            self._media_set_visibility(self.live_controller, False)
+            if self.live_controller.media_play_item.is_background or hide_mode == HideMode.Screen:
+                self._media_set_visibility(self.live_controller, False)
 
     def media_unblank(self, msg: list):
         """
@@ -844,16 +866,19 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         self.log_debug(f"media_blank is_live:{is_live}")
         if not is_live or self.live_kill_timer.isActive():
             return
-        Registry().execute("live_display_show")
-        # If there is no media to resume, nothing more to do (e.g. plain song with no background media).
         play_item = self.live_controller.media_play_item
+        # If there is no media, just show the display and return.
         if not play_item.media_file and not play_item.audio_file and not play_item.external_stream:
+            Registry().execute("live_display_show")
             return
-        if self.live_controller.media_play_item.is_playing != MediaState.Playing:
+        # For background media, show the display first (video plays behind the JS window).
+        if play_item.is_background:
+            Registry().execute("live_display_show")
+        if play_item.is_playing != MediaState.Playing:
             self.media_play(self.live_controller)
         else:
             self._media_set_visibility(self.live_controller, True)
-            if not self.live_controller.media_play_item.is_background:
+            if not play_item.is_background:
                 display = self._define_display(self.live_controller)
                 display.hide_display(HideMode.Screen)
 

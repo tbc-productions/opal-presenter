@@ -483,7 +483,7 @@ def test_row_resized_setting_changed(mocked_parent: QtWidgets.QWidget, mock_sett
 
 def test_autoscroll_setting_invalid(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
     """
-    Test if 'advanced/autoscrolling' setting None or invalid, that no autoscrolling occurs on change_slide().
+    Test if 'advanced/autoscrolling' setting None or invalid, that no autoscrolling occurs but slide selection does.
     """
     # GIVEN: A setting for autoscrolling and a ListPreviewWidget.
     # Mock Settings().value('advanced/autoscrolling')
@@ -510,10 +510,10 @@ def test_autoscroll_setting_invalid(mocked_parent: QtWidgets.QWidget, mock_setti
         mock_settings.value.return_value = {'dist': 1, 'pos': 'fail'}
         list_preview_widget.change_slide(0)
 
-    # THEN: no further functions should be called
+    # THEN: no scroll functions should be called, but the selected row should still be updated
     assert mocked_slide_count.call_count == 0, 'Should not be called'
     assert mocked_scroll_to_item.call_count == 0, 'Should not be called'
-    assert mocked_select_row.call_count == 0, 'Should not be called'
+    assert mocked_select_row.call_count == 6, 'Should be called once for each change_slide() call'
     assert mocked_item.call_count == 0, 'Should not be called'
 
 
@@ -727,7 +727,7 @@ def test_treewidgetwithdnd_keeps_first_column_wide_enough(qapp):
     widget.resize(500, 300)
     widget.show()
     widget.setup_columns(['Name', 'Date'])
-    qapp.processEvents()
+    qapp.process_events()
 
     assert widget.columnWidth(0) >= int(widget.viewport().width() * widget.first_column_min_ratio)
 

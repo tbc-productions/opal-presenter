@@ -281,8 +281,6 @@ class Settings(QtCore.QSettings):
         'advanced/proxy https': '',
         'advanced/proxy username': '',
         'advanced/proxy password': '',
-        'advanced/desktop capture method': 0,
-        'advanced/desktop capture fps': 1,
         'advanced/recent file count': 4,
         'advanced/save current plugin': False,
         'advanced/slide limits': SlideLimits.End,

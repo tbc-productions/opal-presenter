@@ -40,8 +40,8 @@ from openlp.core.lib import ItemCapabilities, ServiceItemAction
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui import HideMode
-from openlp.core.ui.slidecontroller import NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, InfoLabel, LiveController, \
-    PreviewController, SlideController
+from openlp.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
+    InfoLabel, LiveController, PreviewController, SlideController
 
 
 def test_initial_slide_controller(registry: Registry, settings: Settings):
@@ -124,6 +124,51 @@ def test_slide_selected(settings: Settings):
     mocked_display.go_to_slide.assert_called_once_with(4)
 
 
+def test_slide_selected_defers_when_lock_busy(settings: Settings):
+    """
+    Test that slide_selected() defers a retry instead of dropping input when lock is busy.
+    """
+    # GIVEN: A slide controller with a busy slide_selected_lock
+    slide_controller = SlideController(None)
+    slide_controller.slide_selected_lock = MagicMock()
+    slide_controller.slide_selected_lock.acquire.return_value = False
+    slide_controller.service_item = MagicMock()
+    slide_controller.service_item.is_command.return_value = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.preview_widget.current_slide_number.return_value = 2
+    slide_controller.preview_widget.slide_count.return_value = 5
+    slide_controller.displays = [MagicMock()]
+
+    # WHEN: slide_selected() is called while lock is held
+    with patch.object(QtCore.QTimer, 'singleShot') as mocked_single_shot:
+        slide_controller.slide_selected()
+
+    # THEN: A deferred retry should be scheduled and no immediate display update should happen
+    assert slide_controller._slide_selected_retry_pending is True
+    assert slide_controller._slide_selected_retry_scheduled is True
+    mocked_single_shot.assert_called_once_with(0, slide_controller._process_pending_slide_selected)
+    slide_controller.displays[0].go_to_slide.assert_not_called()
+
+
+def test_process_pending_slide_selected_consumes_retry(settings: Settings):
+    """
+    Test that processing deferred slide selection clears flags and retries once.
+    """
+    # GIVEN: A slide controller with a pending deferred retry
+    slide_controller = SlideController(None)
+    slide_controller._slide_selected_retry_pending = True
+    slide_controller._slide_selected_retry_scheduled = True
+    slide_controller.slide_selected = MagicMock()
+
+    # WHEN: The deferred retry callback is executed
+    slide_controller._process_pending_slide_selected()
+
+    # THEN: Flags should be reset and slide_selected retried once
+    assert slide_controller._slide_selected_retry_pending is False
+    assert slide_controller._slide_selected_retry_scheduled is False
+    slide_controller.slide_selected.assert_called_once_with()
+
+
 def test_text_service_item_blank(settings: Settings):
     """
     Test that loading a text-based service item into the slide controller sets the correct blank menu
@@ -196,7 +241,10 @@ def test_on_controller_size_changed_wide(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=False))
     slide_controller.set_hide_mode_menu = MagicMock()
 
@@ -216,7 +264,10 @@ def test_on_controller_size_changed_narrow(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=False))
     slide_controller.set_hide_mode_menu = MagicMock()
 
@@ -236,7 +287,10 @@ def test_on_controller_size_changed_can_not_expand(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=True))
     slide_controller.set_hide_mode_menu = MagicMock()
 
@@ -1358,6 +1412,7 @@ def test_update_preview_live(settings: Settings):
     # Mocked Live Item
     mocked_live_item = MagicMock()
     mocked_live_item.get_rendered_frame.return_value = ''
+    mocked_live_item.get_transition_delay.return_value = 0
     mocked_live_item.is_capable = MagicMock()
     mocked_live_item.is_capable.side_effect = [True, True]
     mocked_main_window = MagicMock()
@@ -1380,14 +1435,16 @@ def test_update_preview_live(settings: Settings):
     slide_controller.slide_count = 0
     slide_controller.slide_changed_time = datetime.datetime.now()
     slide_controller.is_slide_loaded = MagicMock()
+    slide_controller.live_preview_capture_timer = MagicMock()
 
     # WHEN: update_preview is called
     slide_controller.update_preview()
 
-    # THEN: A screen_grab should have been called
+    # THEN: Live preview capture should be deferred, keeping update_preview non-blocking
     assert 0 == slide_controller.slide_preview.setPixmap.call_count, 'setPixmap should NOT have been called'
     assert 0 == slide_controller.display.preview.call_count, 'display.preview() should NOT have been called'
-    assert 1 == slide_controller.display_maindisplay.call_count, 'display_maindisplay() should have been called'
+    assert 0 == slide_controller.display_maindisplay.call_count, 'display_maindisplay() should NOT have been called'
+    slide_controller.live_preview_capture_timer.start.assert_called_once_with(0)
 
 
 def test_update_preview_live_hidden_blank(settings: Settings):
@@ -1562,6 +1619,7 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
     """
     # GIVEN: A mocked text/image style service item shown on live controller
     mocked_live_item = MagicMock()
+    mocked_live_item.get_transition_delay.return_value = 0
     mocked_live_item.is_capable.return_value = False
     mocked_main_window = MagicMock()
     Registry().register('main_window', mocked_main_window)
@@ -1579,14 +1637,53 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
     slide_controller.slide_count = 0
     slide_controller.slide_changed_time = datetime.datetime.now()
     slide_controller.is_slide_loaded = MagicMock(return_value=True)
+    slide_controller.live_preview_capture_timer = MagicMock()
 
     # WHEN: the mirror-presentation-screen setting is enabled
     settings.setValue('core/live preview shows presentation screen', True)
     slide_controller.update_preview()
 
-    # THEN: Preview should use mirrored display capture instead of rendered slide preview
-    slide_controller.display_maindisplay.assert_called_once_with()
+    # THEN: Preview should schedule mirrored display capture instead of blocking update_preview
+    slide_controller.display_maindisplay.assert_not_called()
+    slide_controller.live_preview_capture_timer.start.assert_called_once_with(0)
     assert slide_controller.preview_display.go_to_slide.call_count == 0
+
+
+def test_on_live_preview_capture_timer_runs_pending_capture(settings: Settings):
+    """
+    Test that deferred live preview capture executes when pending.
+    """
+    # GIVEN: A live slide controller with pending capture
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.service_item = MagicMock()
+    slide_controller._pending_live_preview_capture = True
+    slide_controller.display_maindisplay = MagicMock()
+
+    # WHEN: The deferred capture timer fires
+    slide_controller._on_live_preview_capture_timer()
+
+    # THEN: One capture should be executed and pending flag cleared
+    slide_controller.display_maindisplay.assert_called_once_with()
+    assert slide_controller._pending_live_preview_capture is False
+
+
+def test_on_live_preview_capture_timer_ignores_when_not_pending(settings: Settings):
+    """
+    Test that deferred live preview capture does nothing when no capture is pending.
+    """
+    # GIVEN: A live slide controller without pending capture
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.service_item = MagicMock()
+    slide_controller._pending_live_preview_capture = False
+    slide_controller.display_maindisplay = MagicMock()
+
+    # WHEN: The deferred capture timer fires
+    slide_controller._on_live_preview_capture_timer()
+
+    # THEN: No capture should run
+    slide_controller.display_maindisplay.assert_not_called()
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
@@ -1828,97 +1925,43 @@ def test__capture_maindisplay_window_uses_desktop_capture_when_screen_hidden(moc
 
 
 @patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_MSS', True)
-def test__capture_maindisplay_desktop_uses_mss_when_selected(mocked_screenlist: MagicMock,
-                                                              settings: Settings):
+def test__capture_maindisplay_desktop_uses_qt_capture(mocked_screenlist: MagicMock, settings: Settings):
     """
-    Test that desktop capture delegates to mss when selected in advanced settings.
+    Test that desktop capture always uses the Qt capture path.
     """
-    # GIVEN: A slide controller and mss capture selected
-    settings.setValue('advanced/desktop capture method', 1)
-    slide_controller = SlideController(None)
-    mocked_current_screen = MagicMock()
-    mocked_display_rect = MagicMock()
-    mocked_current_screen.display_geometry = mocked_display_rect
-    mocked_current_screen.number = 0
-    mocked_screenlist.return_value.current = mocked_current_screen
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
-    slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
-
-    # WHEN: desktop capture is requested
-    pixmap = slide_controller._capture_maindisplay_desktop()
-
-    # THEN: mss path should be preferred
-    assert pixmap == 'mss_capture'
-    slide_controller._capture_maindisplay_desktop_mss.assert_called_once_with(mocked_current_screen,
-                                                                               mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
-
-
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_SCREEN_CAPTURE_KIT', True)
-@patch('openlp.core.ui.slidecontroller.ScreenCaptureKitBackend')
-def test__capture_maindisplay_desktop_uses_screencapturekit_when_selected(mocked_sckit_backend: MagicMock,
-                                                                           mocked_screenlist: MagicMock,
-                                                                           settings: Settings):
-    """
-    Test that desktop capture delegates to ScreenCaptureKit when selected in advanced settings.
-    """
-    # GIVEN: A slide controller and ScreenCaptureKit capture selected
-    settings.setValue('advanced/desktop capture method', 2)
+    # GIVEN: A slide controller with a current display geometry
     slide_controller = SlideController(None)
     mocked_current_screen = MagicMock()
     mocked_display_rect = MagicMock()
     mocked_current_screen.display_geometry = mocked_display_rect
     mocked_screenlist.return_value.current = mocked_current_screen
-    mocked_backend_instance = MagicMock()
-    mocked_backend_instance.capture_display.return_value = 'sckit_capture'
-    mocked_sckit_backend.return_value = mocked_backend_instance
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
     slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
 
     # WHEN: desktop capture is requested
     pixmap = slide_controller._capture_maindisplay_desktop()
 
-    # THEN: ScreenCaptureKit path should be preferred
-    assert pixmap == 'sckit_capture'
-    mocked_backend_instance.capture_display.assert_called_once_with(mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_mss.assert_not_called()
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
+    # THEN: the Qt capture path should be used
+    assert pixmap == 'qt_capture'
+    slide_controller._capture_maindisplay_desktop_qt.assert_called_once_with(mocked_current_screen,
+                                                                              mocked_display_rect)
 
 
-@patch('openlp.core.ui.slidecontroller.platform.system', return_value='Windows')
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.HAS_WINDOWS_CAPTURE', True)
-@patch('openlp.core.ui.slidecontroller.WindowsCaptureBackend')
-def test__capture_maindisplay_desktop_uses_windowscapture_when_selected(mocked_windows_backend: MagicMock,
-                                                                         mocked_screenlist: MagicMock,
-                                                                         mocked_platform_system: MagicMock,
-                                                                         settings: Settings):
+def test__update_desktop_capture_timer_uses_fixed_interval(settings: Settings):
     """
-    Test that desktop capture delegates to WindowsCapture backend when selected in advanced settings.
+    Test that desktop capture refresh uses the fixed interval.
     """
-    # GIVEN: A slide controller and Windows capture selected
-    settings.setValue('advanced/desktop capture method', 3)
+    # GIVEN: A slide controller with a desktop capture timer
     slide_controller = SlideController(None)
-    mocked_current_screen = MagicMock()
-    mocked_display_rect = MagicMock()
-    mocked_current_screen.display_geometry = mocked_display_rect
-    mocked_screenlist.return_value.current = mocked_current_screen
-    mocked_backend_instance = MagicMock()
-    mocked_backend_instance.capture_display.return_value = 'windows_capture'
-    mocked_windows_backend.return_value = mocked_backend_instance
-    slide_controller._capture_maindisplay_desktop_mss = MagicMock(return_value='mss_capture')
-    slide_controller._capture_maindisplay_desktop_qt = MagicMock(return_value='qt_capture')
+    slide_controller.desktop_capture_timer = MagicMock()
+    slide_controller.desktop_capture_timer.isActive.return_value = False
+    slide_controller.desktop_capture_timer.interval.return_value = 0
+    slide_controller._current_hide_mode = None
 
-    # WHEN: desktop capture is requested
-    pixmap = slide_controller._capture_maindisplay_desktop()
+    # WHEN: live preview mirroring enables the timer
+    slide_controller._update_desktop_capture_timer(mirror_live_preview=True)
 
-    # THEN: Windows capture path should be preferred
-    assert pixmap == 'windows_capture'
-    mocked_backend_instance.capture_display.assert_called_once_with(mocked_display_rect)
-    slide_controller._capture_maindisplay_desktop_mss.assert_not_called()
-    slide_controller._capture_maindisplay_desktop_qt.assert_not_called()
+    # THEN: the timer should start with the fixed capture interval
+    slide_controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')

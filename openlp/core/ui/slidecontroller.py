@@ -23,7 +23,6 @@ The :mod:`slidecontroller` module contains the most important part of OpenLP - t
 """
 import copy
 import datetime
-import platform
 from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
@@ -51,35 +50,9 @@ from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.widgets.views import ListPreviewWidget
 
-try:
-    from mss import mss as mss_factory  # type: ignore[reportMissingImports]
-    HAS_MSS = True
-except ImportError:
-    mss_factory = None
-    HAS_MSS = False
-
-if platform.system() == 'Darwin':
-    try:
-        from openlp.core.display.screencapturekit import ScreenCaptureKitBackend, HAS_SCREEN_CAPTURE_KIT
-    except ImportError:
-        ScreenCaptureKitBackend = None
-        HAS_SCREEN_CAPTURE_KIT = False
-else:
-    ScreenCaptureKitBackend = None
-    HAS_SCREEN_CAPTURE_KIT = False
-
-if platform.system() == 'Windows':
-    try:
-        from openlp.core.display.windowscapture import WindowsCaptureBackend, HAS_WINDOWS_CAPTURE
-    except ImportError:
-        WindowsCaptureBackend = None
-        HAS_WINDOWS_CAPTURE = False
-else:
-    WindowsCaptureBackend = None
-    HAS_WINDOWS_CAPTURE = False
-
 # Threshold which has to be trespassed to toggle.
 HIDE_MENU_THRESHOLD = 80
+DESKTOP_CAPTURE_INTERVAL_MS = 1000 // 15
 
 NARROW_MENU = [
     'hide_menu'
@@ -147,6 +120,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.media_player = None
         self.audio_player = None
         self.media_play_item = MediaPlayItem()
+        self._slide_selected_retry_pending = False
+        self._slide_selected_retry_scheduled = False
+        self._pending_live_preview_capture = False
         Registry().set_flag('has doubleclick added item to service', True)
         Registry().set_flag('replace service manager item', False)
 
@@ -452,6 +428,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.desktop_capture_timer = QtCore.QTimer()
             self.desktop_capture_timer.setObjectName('desktop_capture_timer')
             self.desktop_capture_timer.timeout.connect(self._on_desktop_capture_timer)
+            self.live_preview_capture_timer = QtCore.QTimer()
+            self.live_preview_capture_timer.setObjectName('live_preview_capture_timer')
+            self.live_preview_capture_timer.setSingleShot(True)
+            self.live_preview_capture_timer.timeout.connect(self._on_live_preview_capture_timer)
             shortcuts = [
                 {'key': 'V', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Verse"')},
                 {'key': 'C', 'configurable': True, 'text': translate('OpenLP.SlideController', 'Go to "Chorus"')},
@@ -1084,6 +1064,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                       old_item.is_media())
         new_item_provides_own_display = (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                          self.service_item.is_media())
+        if self.is_live and self.service_item.is_media():
+            for display in self.displays:
+                display.hide_display(HideMode.Screen)
         if self.is_live and not old_item_provides_own_display and new_item_provides_own_display:
             for display in self.displays:
                 display.finish_with_current_item()
@@ -1304,12 +1287,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
         # Update ui buttons
-        if hide_mode is None:
-            self.hide_menu.setDefaultAction(self.blank_screen)
-            self.settings.setValue('core/screen blank', False)
-        else:
-            self.hide_menu.setDefaultAction(self.show_screen)
-            self.settings.setValue('core/screen blank', True)
+        _hide_mode_actions = {
+            None: self.show_screen,
+            HideMode.Blank: self.blank_screen,
+            HideMode.Theme: self.theme_screen,
+            HideMode.Logo: self.logo_screen,
+            HideMode.Screen: self.desktop_screen,
+        }
+        self.hide_menu.setDefaultAction(_hide_mode_actions[hide_mode])
+        self.settings.setValue('core/screen blank', hide_mode is not None)
         self.show_screen.setChecked(hide_mode is None)
         self.blank_screen.setChecked(hide_mode == HideMode.Blank)
         self.theme_screen.setChecked(hide_mode == HideMode.Theme)
@@ -1323,7 +1309,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 Registry().execute('{text}_blank'.format(text=self.service_item.name.lower()),
                                    [self.service_item, self.is_live, hide_mode])
             else:
-                if not self.service_item.is_command():
+                if not self.service_item.is_command() and not self.service_item.is_media():
                     Registry().execute('live_display_show')
                 Registry().execute('{text}_unblank'.format(text=self.service_item.name.lower()),
                                    [self.service_item, self.is_live])
@@ -1343,6 +1329,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.slide_selected()
 
+    def _process_pending_slide_selected(self):
+        """
+        Retry one deferred slide selection request.
+        """
+        self._slide_selected_retry_scheduled = False
+        if self._slide_selected_retry_pending:
+            self._slide_selected_retry_pending = False
+            self.slide_selected()
+
     def slide_selected(self, start=False):
         """
         Generate the preview when you click on a slide. If this is the Live Controller also display on the screen.
@@ -1358,6 +1353,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not self.slide_selected_lock.acquire(start, timeout):
             if start:
                 self.log_debug(f'Could not get lock in slide_selected after waiting {timeout}, skip to avoid deadlock.')
+            else:
+                # Do not drop rapid follow-up input while previous slide update is still in progress.
+                self._slide_selected_retry_pending = True
+                if not self._slide_selected_retry_scheduled:
+                    self._slide_selected_retry_scheduled = True
+                    QtCore.QTimer.singleShot(0, self._process_pending_slide_selected)
             return
         # If "click live slide to unblank" is enabled, unblank the display. And start = Item is sent to Live.
         # Note: If this if statement is placed at the bottom of this function instead of top slide transitions are lost.
@@ -1406,8 +1407,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if self.service_item:
             mirror_live_preview = self.is_live and self.settings.value('core/live preview shows presentation screen')
             if mirror_live_preview:
-                wait_for(self.is_slide_loaded)
-                self.display_maindisplay()
+                self._schedule_live_preview_capture()
             if (self.is_live and self.current_hide_mode and not mirror_live_preview and
                self.settings.value('core/live preview shows blank screen')):
                 # If live, hidden and setting 'live preview shows blank screen' is active
@@ -1417,8 +1417,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 if (self.is_live and not self.current_hide_mode):
                     # If live and not hidden grab screen-cap of main display in case the service item
                     # provides it's own display.
-                    wait_for(self.is_slide_loaded)
-                    self.display_maindisplay()
+                    self._schedule_live_preview_capture()
                 elif not self.settings.value('core/live preview shows blank screen'):
                     # If not live and setting 'live preview shows blank screen' is not active,
                     # use the slide's thumbnail/icon instead in case the service item
@@ -1436,6 +1435,28 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Used for updating the main view in Web Remote.
         self.output_has_changed()
 
+    def _schedule_live_preview_capture(self):
+        """
+        Defer live preview capture until after the current transition delay so the UI thread stays responsive.
+        """
+        if not self.is_live or not self.service_item or not hasattr(self, 'live_preview_capture_timer'):
+            return
+        self._pending_live_preview_capture = True
+        slide_delay_time = self.service_item.get_transition_delay() if self.get_hide_mode() is None else 1
+        if self.settings.value('themes/item transitions') and self.get_hide_mode() is None:
+            slide_delay_time = max(slide_delay_time, self._get_item_transition_speed_seconds())
+        delay_ms = max(0, int(slide_delay_time * 1000))
+        self.live_preview_capture_timer.start(delay_ms)
+
+    def _on_live_preview_capture_timer(self):
+        """Timer callback to perform one deferred live preview capture."""
+        if not self._pending_live_preview_capture:
+            return
+        self._pending_live_preview_capture = False
+        if not self.is_live or not self.service_item:
+            return
+        self.display_maindisplay()
+
     def output_has_changed(self):
         """
         The output has changed so we need to poke to POLL Websocket.
@@ -1448,8 +1469,21 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Gets an image of the display screen and updates the preview frame.
         """
         display_image = self._capture_maindisplay()
-        # display_image.setDevicePixelRatio(self.preview_display.devicePixelRatio())
-        base64_image = image_to_byte(display_image)
+        if display_image and hasattr(display_image, 'scaled'):
+            # Scale to physical pixel size to stay sharp on HiDPI displays.
+            dpr = self.preview_display.devicePixelRatioF()
+            logical_size = self.preview_display.size()
+            physical_size = QtCore.QSize(int(logical_size.width() * dpr), int(logical_size.height() * dpr))
+            display_image = display_image.scaled(
+                physical_size,
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.SmoothTransformation
+            )
+        try:
+            base64_image = image_to_byte(display_image, quality=90)
+        except TypeError:
+            # Compatibility for tests and legacy mocks that do not accept quality.
+            base64_image = image_to_byte(display_image)
         self.screen_capture = base64_image
         self.preview_display.set_single_image_data('#000', base64_image)
 
@@ -1475,6 +1509,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        screen_rect.top() + screen_rect.height())
             fallback_to_windowed = display_above_horizontal or display_above_vertical \
                 or display_beyond_horizontal or display_beyond_vertical
+        current_screen = ScreenList().current
+        current_is_primary = getattr(current_screen, 'is_primary', False)
+        if not fallback_to_windowed and isinstance(current_is_primary, bool) and current_is_primary:
+            # grabWindow on the primary screen captures other windows; use widget grab instead.
+            fallback_to_windowed = True
         if fallback_to_windowed:
             if self.service_item and (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                       self.service_item.is_media() or self.service_item.is_command()):
@@ -1503,71 +1542,26 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
     def _capture_maindisplay_desktop(self):
         current_screen = ScreenList().current
         display_rect = current_screen.display_geometry
-        capture_method = self.settings.value('advanced/desktop capture method')
-        if capture_method == 2:
-            if HAS_SCREEN_CAPTURE_KIT and ScreenCaptureKitBackend:
-                if not hasattr(self, 'screen_capture_kit_backend'):
-                    self.screen_capture_kit_backend = ScreenCaptureKitBackend()
-                sckit_image = self.screen_capture_kit_backend.capture_display(display_rect)
-                if sckit_image:
-                    return sckit_image
-            else:
-                self.log_debug('_capture_maindisplay ScreenCaptureKit selected but unavailable, using Qt capture')
-        if capture_method == 3:
-            if HAS_WINDOWS_CAPTURE and WindowsCaptureBackend:
-                if not hasattr(self, 'windows_capture_backend'):
-                    self.windows_capture_backend = WindowsCaptureBackend()
-                wincap_image = self.windows_capture_backend.capture_display(display_rect)
-                if wincap_image:
-                    return wincap_image
-            else:
-                self.log_debug('_capture_maindisplay Windows capture selected but unavailable, using Qt capture')
-        if capture_method == 1:
-            if HAS_MSS:
-                mss_image = self._capture_maindisplay_desktop_mss(current_screen, display_rect)
-                if mss_image:
-                    return mss_image
-            else:
-                self.log_debug('_capture_maindisplay mss selected but package is not available, using Qt capture')
         return self._capture_maindisplay_desktop_qt(current_screen, display_rect)
 
     def _capture_maindisplay_desktop_qt(self, current_screen, display_rect):
+        screenshot = current_screen.try_grab_screen_part(display_rect.x(), display_rect.y(),
+                                                         display_rect.width(), display_rect.height())
+        if screenshot:
+            return screenshot
         # Use the primary screen with absolute virtual-desktop coordinates.
         # On macOS, calling grabWindow(0, ...) on a non-primary QScreen offsets from the virtual
         # desktop origin rather than the screen itself, so subtracting the screen offset would
         # incorrectly land on the primary screen. Using QApplication.primaryScreen() with absolute
         # coordinates works correctly on all supported platforms.
         primary_screen = QtWidgets.QApplication.primaryScreen()
-        target_screen = primary_screen or current_screen.raw_screen
-        if not target_screen:
+        if not primary_screen:
             return None
         try:
-            return target_screen.grabWindow(0, display_rect.x(), display_rect.y(),
-                                            display_rect.width(), display_rect.height())
+            return primary_screen.grabWindow(0, display_rect.x(), display_rect.y(),
+                                             display_rect.width(), display_rect.height())
         except BaseException as e:
             self.log_debug(f'_capture_maindisplay_desktop_qt failed: {e}')
-            return None
-
-    def _capture_maindisplay_desktop_mss(self, current_screen, display_rect):
-        # Grab the exact display region using absolute virtual-desktop coordinates.
-        # mss accepts arbitrary {left, top, width, height} dicts and captures from the
-        # virtual desktop, so no monitor selection or cropping is needed.
-        try:
-            region = {
-                'left': display_rect.x(),
-                'top': display_rect.y(),
-                'width': display_rect.width(),
-                'height': display_rect.height()
-            }
-            with mss_factory() as sct:
-                mss_image = sct.grab(region)
-            if not mss_image:
-                return None
-            image = QtGui.QImage(mss_image.bgra, mss_image.width, mss_image.height, mss_image.width * 4,
-                                 QtGui.QImage.Format.Format_ARGB32)
-            return QtGui.QPixmap.fromImage(image)
-        except Exception as e:
-            self.log_debug(f'_capture_maindisplay mss capture failed: {e}')
             return None
 
     def _on_desktop_capture_timer(self):
@@ -1584,17 +1578,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """Start or stop the desktop capture timer based on whether live mirroring is needed."""
         if not hasattr(self, 'desktop_capture_timer'):
             return
-        fps_options = [5, 15, 30]
+        fps_options = [5, 15, 24, 30]
         media_is_playing = (hasattr(self, 'media_play_item') and
                              self.media_play_item.is_playing == MediaState.Playing and
                              not self.media_play_item.is_background)
         needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen or media_is_playing
         if needs_timer:
-            fps_index = self.settings.value('advanced/desktop capture fps')
-            fps = fps_options[min(max(fps_index, 0), len(fps_options) - 1)]
-            interval = 1000 // fps
-            if not self.desktop_capture_timer.isActive() or self.desktop_capture_timer.interval() != interval:
-                self.desktop_capture_timer.start(interval)
+            if not self.desktop_capture_timer.isActive() or \
+                    self.desktop_capture_timer.interval() != DESKTOP_CAPTURE_INTERVAL_MS:
+                self.desktop_capture_timer.start(DESKTOP_CAPTURE_INTERVAL_MS)
         else:
             self.desktop_capture_timer.stop()
 
@@ -1625,7 +1617,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         slide_delay_time = 0
         if self.service_item:
             slide_delay_time = self.service_item.get_transition_delay() if self.get_hide_mode() is None else 1
-            if self.settings.value('themes/item transitions') and self.get_hide_mode() is None:
+            if self.settings and self.settings.value('themes/item transitions') and self.get_hide_mode() is None:
                 slide_delay_time = max(slide_delay_time, self._get_item_transition_speed_seconds())
         slide_ready_time = self.slide_changed_time + datetime.timedelta(seconds=slide_delay_time)
         return datetime.datetime.now() > slide_ready_time

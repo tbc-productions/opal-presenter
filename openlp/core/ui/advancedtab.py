@@ -22,7 +22,6 @@
 The :mod:`advancedtab` provides an advanced settings facility.
 """
 import logging
-import platform
 
 from PySide6 import QtWidgets
 
@@ -36,22 +35,6 @@ from openlp.core.widgets.widgets import ProxyWidget
 
 
 log = logging.getLogger(__name__)
-
-if platform.system() == 'Darwin':
-    try:
-        from openlp.core.display.screencapturekit import HAS_SCREEN_CAPTURE_KIT
-    except ImportError:
-        HAS_SCREEN_CAPTURE_KIT = False
-else:
-    HAS_SCREEN_CAPTURE_KIT = False
-
-if platform.system() == 'Windows':
-    try:
-        from openlp.core.display.windowscapture import HAS_WINDOWS_CAPTURE
-    except ImportError:
-        HAS_WINDOWS_CAPTURE = False
-else:
-    HAS_WINDOWS_CAPTURE = False
 
 
 class AdvancedTab(SettingsTab):
@@ -142,27 +125,6 @@ class AdvancedTab(SettingsTab):
         self.hidpi_mode_layout.addWidget(self.hidpi_mode_combobox)
         self.hidpi_mode_widget.setLayout(self.hidpi_mode_layout)
         self.misc_workaround_layout.addWidget(self.hidpi_mode_widget)
-        self.desktop_capture_method_widget = QtWidgets.QWidget(self.misc_workaround_group_box)
-        self.desktop_capture_method_layout = QtWidgets.QHBoxLayout(self.desktop_capture_method_widget)
-        self.desktop_capture_method_layout.setContentsMargins(0, 0, 0, 0)
-        self.desktop_capture_method_label = QtWidgets.QLabel(self.desktop_capture_method_widget)
-        self.desktop_capture_method_combobox = QtWidgets.QComboBox(self.desktop_capture_method_widget)
-        # Keep all methods visible across platforms and disable unsupported ones in load().
-        self.desktop_capture_method_combobox.addItems(['', '', '', ''])
-        self.desktop_capture_method_layout.addWidget(self.desktop_capture_method_label)
-        self.desktop_capture_method_layout.addWidget(self.desktop_capture_method_combobox)
-        self.desktop_capture_method_widget.setLayout(self.desktop_capture_method_layout)
-        self.misc_workaround_layout.addWidget(self.desktop_capture_method_widget)
-        self.desktop_capture_fps_widget = QtWidgets.QWidget(self.misc_workaround_group_box)
-        self.desktop_capture_fps_layout = QtWidgets.QHBoxLayout(self.desktop_capture_fps_widget)
-        self.desktop_capture_fps_layout.setContentsMargins(0, 0, 0, 0)
-        self.desktop_capture_fps_label = QtWidgets.QLabel(self.desktop_capture_fps_widget)
-        self.desktop_capture_fps_combobox = QtWidgets.QComboBox(self.desktop_capture_fps_widget)
-        self.desktop_capture_fps_combobox.addItems(['', '', ''])
-        self.desktop_capture_fps_layout.addWidget(self.desktop_capture_fps_label)
-        self.desktop_capture_fps_layout.addWidget(self.desktop_capture_fps_combobox)
-        self.desktop_capture_fps_widget.setLayout(self.desktop_capture_fps_layout)
-        self.misc_workaround_layout.addWidget(self.desktop_capture_fps_widget)
         self.left_layout.addWidget(self.misc_workaround_group_box)
         # Proxies
         self.proxy_widget = ProxyWidget(self.right_column)
@@ -213,15 +175,6 @@ class AdvancedTab(SettingsTab):
         self.hidpi_mode_combobox.setItemText(0, translate('OpenLP.AdvancedTab', 'Default'))
         self.hidpi_mode_combobox.setItemText(1, translate('OpenLP.AdvancedTab', 'Legacy'))
         self.hidpi_mode_combobox.setItemText(2, translate('OpenLP.AdvancedTab', 'DPI Unaware (Windows only)'))
-        self.desktop_capture_method_label.setText(translate('OpenLP.AdvancedTab', 'Desktop capture method:'))
-        self.desktop_capture_method_combobox.setItemText(0, translate('OpenLP.AdvancedTab', 'Qt (default)'))
-        self.desktop_capture_method_combobox.setItemText(1, translate('OpenLP.AdvancedTab', 'mss'))
-        self.desktop_capture_method_combobox.setItemText(2, translate('OpenLP.AdvancedTab', 'ScreenCaptureKit (macOS)'))
-        self.desktop_capture_method_combobox.setItemText(3, translate('OpenLP.AdvancedTab', 'Windows Capture (DXGI)'))
-        self.desktop_capture_fps_label.setText(translate('OpenLP.AdvancedTab', 'Screen capture rate:'))
-        self.desktop_capture_fps_combobox.setItemText(0, translate('OpenLP.AdvancedTab', '5 fps'))
-        self.desktop_capture_fps_combobox.setItemText(1, translate('OpenLP.AdvancedTab', '15 fps'))
-        self.desktop_capture_fps_combobox.setItemText(2, translate('OpenLP.AdvancedTab', '30 fps'))
         self.proxy_widget.retranslate_ui()
 
     def load(self):
@@ -248,36 +201,6 @@ class AdvancedTab(SettingsTab):
             self.data_directory_path_edit.hide()
         self.data_directory_protect_check_box.setChecked(self.settings.value('advanced/protect data directory'))
         self.hidpi_mode_combobox.setCurrentIndex(self.settings.value('advanced/hidpi mode'))
-        capture_method = self.settings.value('advanced/desktop capture method')
-        # Compatibility: previous Windows backend used index 2.
-        if platform.system() == 'Windows' and capture_method == 2:
-            capture_method = 3
-        self.desktop_capture_method_combobox.setCurrentIndex(min(max(capture_method, 0),
-                                       self.desktop_capture_method_combobox.count() - 1))
-        fps_index = self.settings.value('advanced/desktop capture fps')
-        self.desktop_capture_fps_combobox.setCurrentIndex(min(max(fps_index, 0), 2))
-        # Disable mss option if the package is not available
-        try:
-            import mss  # noqa
-        except ImportError:
-            mss_item = self.desktop_capture_method_combobox.model().item(1)
-            if mss_item:
-                mss_item.setEnabled(False)
-            if self.desktop_capture_method_combobox.currentIndex() == 1:
-                self.desktop_capture_method_combobox.setCurrentIndex(0)
-        sckit_item = self.desktop_capture_method_combobox.model().item(2)
-        if sckit_item:
-            sckit_supported = platform.system() == 'Darwin' and HAS_SCREEN_CAPTURE_KIT
-            sckit_item.setEnabled(sckit_supported)
-        windows_item = self.desktop_capture_method_combobox.model().item(3)
-        if windows_item:
-            windows_supported = platform.system() == 'Windows' and HAS_WINDOWS_CAPTURE
-            windows_item.setEnabled(windows_supported)
-        if self.desktop_capture_method_combobox.currentIndex() in (2, 3):
-            current_item = self.desktop_capture_method_combobox.model().item(
-                self.desktop_capture_method_combobox.currentIndex())
-            if current_item and not current_item.isEnabled():
-                self.desktop_capture_method_combobox.setCurrentIndex(0)
 
     def save(self):
         """
@@ -294,8 +217,6 @@ class AdvancedTab(SettingsTab):
         self.settings.setValue('advanced/alternate rows', self.alternate_rows_check_box.isChecked())
         self.settings.setValue('advanced/protect data directory', self.data_directory_protect_check_box.isChecked())
         self.settings.setValue('advanced/hidpi mode', self.hidpi_mode_combobox.currentIndex())
-        self.settings.setValue('advanced/desktop capture method', self.desktop_capture_method_combobox.currentIndex())
-        self.settings.setValue('advanced/desktop capture fps', self.desktop_capture_fps_combobox.currentIndex())
         self.proxy_widget.save()
 
     def cancel(self):
