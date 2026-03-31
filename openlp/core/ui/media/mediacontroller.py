@@ -166,14 +166,13 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         The live media has stopped
         """
-        if (Registry().get("settings").value("media/live loop")
-                or self.live_controller.media_play_item.is_theme_background):
+        should_loop = (Registry().get("settings").value("media/live loop")
+                       or self.live_controller.media_play_item.is_theme_background)
+        self.media_stop(self.live_controller, blank_on_stop=not should_loop)
+        self.tick(self.live_controller)
+        if should_loop:
             self.has_started = False
             self.media_play(self.live_controller)
-        else:
-            self.media_pause(self.live_controller)
-            self.live_controller.set_hide_mode(HideMode.Blank)
-            self.tick(self.live_controller)
 
     def preview_media_stopped(self) -> None:
         """

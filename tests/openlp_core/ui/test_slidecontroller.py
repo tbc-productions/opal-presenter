@@ -241,7 +241,10 @@ def test_on_controller_size_changed_wide(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=10)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=False))
     slide_controller.set_hide_mode_menu = MagicMock()
 
@@ -261,7 +264,10 @@ def test_on_controller_size_changed_narrow(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=110)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=False))
     slide_controller.set_hide_mode_menu = MagicMock()
 
@@ -281,7 +287,10 @@ def test_on_controller_size_changed_can_not_expand(settings: Settings):
     slide_controller.is_live = True
     slide_controller.ignore_toolbar_resize_events = False
     slide_controller.controller = MagicMock(width=MagicMock(return_value=100))
-    slide_controller.toolbar = MagicMock(size=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95))))
+    slide_controller.toolbar = MagicMock(
+        sizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95))),
+        minimumSizeHint=MagicMock(return_value=MagicMock(width=MagicMock(return_value=95)))
+    )
     slide_controller.hide_menu = MagicMock(isVisible=MagicMock(return_value=True))
     slide_controller.set_hide_mode_menu = MagicMock()
 
