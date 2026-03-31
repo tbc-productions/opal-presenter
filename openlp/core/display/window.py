@@ -272,6 +272,12 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
 
         if has_custom_geometry:
             self.show()
+        elif is_macosx():
+            # On macOS, showFullScreen() creates a native fullscreen Space whose compositing
+            # does not support WA_TranslucentBackground, causing a black screen instead of
+            # transparency when hiding the display. Using show() with the screen geometry
+            # (already set via setGeometry) avoids this issue.
+            self.show()
         else:
             self.showFullScreen()
 
@@ -290,7 +296,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
     def set_single_image_data(self, bg_color, image_data):
         self.run_in_display('setFullscreenImageFromData', bg_color, image_data)
 
-    def set_startup_screen(self):
+    def _get_logo_settings(self, respect_hide_on_startup=False):
+        """
+        Resolve the configured logo colors and image URI.
+
+        :param bool respect_hide_on_startup: Honor the startup hide-logo setting.
+        :return: Tuple of background color and image URI.
+        """
         bg_color = self.settings.value('core/logo background color')
         image = self.settings.value('core/logo file')
         if path_to_str(image).startswith(':'):
@@ -300,9 +312,12 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 image_uri = image.as_uri().replace('file://', 'openlp-library://local-file/')
             except Exception:
                 image_uri = ''
-        # if set to hide logo on startup, do not send the logo
-        if self.settings.value('core/logo hide on startup'):
+        if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):
             image_uri = ''
+        return bg_color, image_uri
+
+    def set_startup_screen(self):
+        bg_color, image_uri = self._get_logo_settings(respect_hide_on_startup=True)
         self.run_in_display('setStartupSplashScreen', bg_color, image_uri)
 
     def set_url(self, url):
@@ -326,11 +341,26 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Add stuff after page initialisation
         """
         item_transitions = self.settings.value('themes/item transitions')
+        item_transition_speed = self.settings.value('themes/item transition speed')
+        if isinstance(item_transition_speed, bool):
+            item_transition_speed = 0.8
+        else:
+            try:
+                item_transition_speed = float(item_transition_speed)
+            except (TypeError, ValueError):
+                item_transition_speed = 0.8
+        item_transition_speed = max(0.1, item_transition_speed)
+        valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
+        item_transition_type = self.settings.value('themes/item transition type')
+        if item_transition_type not in valid_item_transition_types:
+            item_transition_type = 'balanced'
         hide_mouse = (self.settings.value('advanced/hide mouse') and self.is_display)
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
                             'doItemTransitions': item_transitions,
+                            'itemTransitionSpeed': item_transition_speed,
+                            'itemTransitionType': item_transition_type,
                             'slideNumbersInFooter': slide_numbers_in_footer,
                             'hideMouse': hide_mouse,
                             'displayTitle': self.window_title
@@ -529,6 +559,9 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.run_in_display('toBlack')
         elif mode == HideMode.Theme:
             self.run_in_display('toTheme')
+        elif mode == HideMode.Logo:
+            bg_color, image_uri = self._get_logo_settings()
+            self.run_in_display('toLogo', bg_color, image_uri)
         self.hide_mode = mode
 
     def disable_display(self):

@@ -369,6 +369,8 @@ def test_after_loaded(display_window_env, mock_settings, registry):
     # THEN: The following functions should have been called
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': True,
                                                                    'doItemTransitions': True,
+                                                                   'itemTransitionSpeed': 0.8,
+                                                                   'itemTransitionType': 'balanced',
                                                                    'slideNumbersInFooter': True,
                                                                    'hideMouse': True,
                                                                    'displayTitle': None})
@@ -396,6 +398,8 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
     # THEN: Display.init should be called where is_display=false, do_item_transitions=true, show_mouse=false
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': False,
                                                                    'doItemTransitions': True,
+                                                                   'itemTransitionSpeed': 0.8,
+                                                                   'itemTransitionType': 'balanced',
                                                                    'slideNumbersInFooter': True,
                                                                    'hideMouse': False,
                                                                    'displayTitle': None})
@@ -687,6 +691,36 @@ def test_hide_display_to_theme(display_window_env, mock_settings):
 
     # THEN: Should run the correct javascript on the display and set the hide mode
     display_window.run_in_display.assert_called_once_with('toTheme')
+
+
+def test_hide_display_to_logo(display_window_env, mock_settings):
+    """
+    Test hide to logo in the hide_display function
+    """
+    # GIVEN: Display window and logo settings
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    logo_path = Path('/tmp/openlp-logo.png')
+
+    def get_setting_value(key):
+        values = {
+            'core/logo background color': '#001122',
+            'core/logo file': logo_path,
+            'advanced/disable transparent display': False
+        }
+        return values.get(key, False)
+
+    mock_settings.value.side_effect = get_setting_value
+
+    # WHEN: Hide display is run with HideMode.Logo
+    display_window.hide_display(HideMode.Logo)
+
+    # THEN: Should run the correct javascript on the display with logo data
+    display_window.run_in_display.assert_called_once_with(
+        'toLogo',
+        '#001122',
+        'openlp-library://local-file//tmp/openlp-logo.png'
+    )
 
 
 def test_hide_display_to_transparent(display_window_env, mock_settings):

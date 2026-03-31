@@ -318,6 +318,10 @@ var Display = {
   _footerContainer: null,
   /** @type {HTMLElement} */
   _backgroundsContainer: null,
+  /** @type {HTMLElement} */
+  _logoScreen: null,
+  /** @type {HTMLImageElement} */
+  _logoScreenImage: null,
   _alerts: [],
   _slides: {},
   _alertSettings: {},
@@ -326,6 +330,8 @@ var Display = {
   _animationState: AnimationState.NoAnimation,
   _doTransitions: false,
   _doItemTransitions: false,
+  _itemTransitionSpeedSeconds: 0.8,
+  _itemTransitionType: "balanced",
   _skipNextTransition: false,
   _themeApplied: true,
   _revealConfig: {
@@ -347,12 +353,16 @@ var Display = {
     height: "100%"
   },
   _lastRequestAnimationFrameHandle: null,
+  _logoBackgroundOverrideActive: false,
+  _savedBackgroundAttributes: null,
 
   /**
    * Start up reveal and do any other initialisation
    * @param {object} options - The initialisation options:
    *                           * {bool} isDisplay         - Is this a real display output
    *                           * {bool} doItemTransitions - Transition between service items
+   *                           * {number} itemTransitionSpeed - Transition duration between service items in seconds
+   *                           * {string} itemTransitionType - Transition easing type for service item transitions
    *                           * {bool} hideMouse         - Hide the cursor when hovering on this display
    */
   init: function (options) {
@@ -360,6 +370,11 @@ var Display = {
     options = options || {};
     let isDisplay = options.isDisplay || false;
     let doItemTransitions = options.doItemTransitions || false;
+    let itemTransitionSpeed = Number(options.itemTransitionSpeed);
+    if (!Number.isFinite(itemTransitionSpeed) || itemTransitionSpeed <= 0) {
+      itemTransitionSpeed = 0.8;
+    }
+    let itemTransitionType = Display._normaliseItemTransitionType(options.itemTransitionType);
     let hideMouse = options.hideMouse || false;
     if (options.slideNumbersInFooter) {
       Display._revealConfig.slideNumber = Display.setFooterSlideNumbers;
@@ -375,10 +390,14 @@ var Display = {
     Display._slidesContainer = $(".slides")[0];
     Display._footerContainer = $(".footer")[0];
     Display._backgroundsContainer = $(".backgrounds")[0];
+    Display._logoScreen = $("#logo-screen")[0];
+    Display._logoScreenImage = $("#logo-screen-image")[0];
     Display._doTransitions = isDisplay;
+    Display._itemTransitionSpeedSeconds = itemTransitionSpeed;
+    Display._itemTransitionType = itemTransitionType;
     Reveal.initialize(Display._revealConfig);
     Reveal.addEventListener('slidechanged', Display._onSlideChanged);
-    Display.setItemTransition(doItemTransitions && isDisplay);
+    Display.setItemTransition(doItemTransitions && isDisplay, itemTransitionSpeed, itemTransitionType);
     displayWatcher.setInitialised(true);
   },
   /**
@@ -392,16 +411,90 @@ var Display = {
   /**
    * Enable/Disable item transitions
    */
-  setItemTransition: function (enable) {
+  setItemTransition: function (enable, speedSeconds, transitionType) {
     Display._doItemTransitions = enable;
+    if (Number.isFinite(speedSeconds) && speedSeconds > 0) {
+      Display._itemTransitionSpeedSeconds = speedSeconds;
+    }
+    Display._itemTransitionType = Display._normaliseItemTransitionType(transitionType || Display._itemTransitionType);
+    var transitionSpeedName = Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds);
+    var transitionMs = Math.round(Display._itemTransitionSpeedSeconds * 1000);
+    document.body.style.setProperty('--item-transition-ms', transitionMs + 'ms');
+    document.body.style.setProperty('--item-transition-easing', Display._getTransitionEasing(Display._itemTransitionType));
     var body = $("body")[0];
     if (enable) {
       body.classList.add("transition");
-      Reveal.configure({"backgroundTransition": "fade", "transitionSpeed": "default"});
+      Reveal.configure({"backgroundTransition": "fade", "transitionSpeed": transitionSpeedName});
     } else {
       body.classList.remove("transition");
       Reveal.configure({"backgroundTransition": "none"});
     }
+  },
+
+  _getRevealTransitionSpeed: function (speedSeconds) {
+    if (speedSeconds <= 0.75) {
+      return "fast";
+    }
+    if (speedSeconds >= 1.5) {
+      return "slow";
+    }
+    return "default";
+  },
+
+  _normaliseItemTransitionType: function (transitionType) {
+    var validTypes = ["linear", "ease", "ease-in", "ease-out", "ease-in-out", "balanced"];
+    if (typeof transitionType !== "string") {
+      return "balanced";
+    }
+    return validTypes.includes(transitionType) ? transitionType : "balanced";
+  },
+
+  _getTransitionEasing: function (transitionType) {
+    if (transitionType === "balanced") {
+      return "cubic-bezier(0.4, 0, 0.2, 1)";
+    }
+    return transitionType;
+  },
+
+  _setPresentationSlideTransition: function (enabled, speedSeconds, transitionType) {
+    var body = $("body")[0];
+    if (!enabled) {
+      body.classList.remove("presentation-slide-transition");
+      return;
+    }
+    var durationSeconds = Number(speedSeconds);
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      durationSeconds = 0.8;
+    }
+    var easing = Display._normaliseItemTransitionType(transitionType);
+    body.classList.add("presentation-slide-transition");
+    body.style.setProperty('--presentation-slide-transition-ms', Math.round(durationSeconds * 1000) + 'ms');
+    body.style.setProperty('--presentation-slide-transition-easing', Display._getTransitionEasing(easing));
+  },
+
+  _getPresentationTransitionEffect: function (effect) {
+    switch (effect) {
+      case TransitionType.Slide:
+      case "slide":
+        return "slide";
+      case TransitionType.Convex:
+      case "convex":
+        return "convex";
+      case TransitionType.Concave:
+      case "concave":
+        return "concave";
+      case TransitionType.Zoom:
+      case "zoom":
+        return "zoom";
+      case TransitionType.Fade:
+      case "fade":
+      default:
+        return "fade";
+    }
+  },
+
+  _getPresentationTransitionName: function (effect) {
+    return Display._getPresentationTransitionEffect(effect) + "-horizontal";
   },
   /**
    * Clear the current list of slides
@@ -427,7 +520,7 @@ var Display = {
   replaceSlides: function (new_slides, is_text=false) {
     if (Display._doItemTransitions) {
       new_slides.setAttribute('data-transition', "fade");
-      new_slides.setAttribute('data-transition-speed', "default");
+      new_slides.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
     }
     new_slides.classList.add("future");
     Display.applyTheme(new_slides, is_text);
@@ -438,7 +531,7 @@ var Display = {
       Reveal.slide(1, currentSlide.v);
       Display.reinit();
       // Timeout to allow time to transition before deleting the old slides
-      setTimeout (Display._removeLastSection, 5000);
+      setTimeout(Display._removeLastSection, Math.round(Display._itemTransitionSpeedSeconds * 1000) + 100);
     } else {
       Reveal.slide(0, currentSlide.v);
       Reveal.sync();
@@ -472,6 +565,7 @@ var Display = {
    * @param {string} image - Path to the splash image
    */
   setStartupSplashScreen: function(bg_color, image) {
+    Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
@@ -490,6 +584,7 @@ var Display = {
    * @param {string} image - Path to the image
    */
   setFullscreenImage: function(bg_color, image) {
+    Display._setPresentationSlideTransition(false);
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
@@ -508,6 +603,7 @@ var Display = {
    * @param {string} image_data - base64 encoded image data
    */
   setFullscreenImageFromData: function(bg_color, image_data) {
+    Display._setPresentationSlideTransition(false);
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
@@ -692,6 +788,7 @@ var Display = {
    * @param {Object[]} slides - A list of slides to add as JS objects: {"verse": "v1", "text": "line 1\nline2"}
    */
   setTextSlides: function (slides) {
+    Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
     var slide_html;
     var parentSection = document.createElement("section");
@@ -726,6 +823,7 @@ var Display = {
    * @param String slide - Text to put on the slide
    */
   setTextSlide: function (text) {
+    Display._setPresentationSlideTransition(false);
     if (Display._slides.hasOwnProperty("test-slide") && Object.keys(Display._slides).length === 1) {
       var slide = $("#" + "test-slide")[0];
       var html = _prepareText(text);
@@ -757,25 +855,77 @@ var Display = {
   setImageSlides: function (slides) {
     Display._clearSlidesList();
     var parentSection = document.createElement("section");
+    var hasPdfBackgroundSlides = slides.some(function (slide) {
+      return !!slide.use_background_image;
+    });
+    if (hasPdfBackgroundSlides) {
+      var firstPdfSlide = slides.find(function (slide) {
+        return !!slide.use_background_image;
+      });
+      Display._setPresentationSlideTransition(
+        !!firstPdfSlide.pdf_transition_enabled,
+        firstPdfSlide.pdf_transition_speed_seconds,
+        firstPdfSlide.pdf_transition_easing
+      );
+    } else {
+      Display._setPresentationSlideTransition(false);
+    }
     slides.forEach(function (slide, index) {
       var section = document.createElement("section");
       section.setAttribute("id", index);
       section.setAttribute("style", "height: 100%; width: 100%;");
-      var img = document.createElement('img');
-      img.src = Display._getFileUrl(slide.path);
-      img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: contain;");
-      img.setAttribute('data-slide', index);
-      section.appendChild(img);
+      section.setAttribute('data-slide', index);
+      if (slide.use_background_image) {
+        section.classList.add("use-background-image");
+        section.style.backgroundColor = "#000";
+        var pdfImg = document.createElement('img');
+        pdfImg.src = Display._getFileUrl(slide.path);
+        pdfImg.classList.add('pdf-slide-image');
+        pdfImg.setAttribute('data-slide', index);
+        section.appendChild(pdfImg);
+        if (slide.pdf_transition_enabled) {
+          section.setAttribute("data-transition", Display._getPresentationTransitionName(slide.pdf_transition_effect));
+          section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
+        } else {
+          section.setAttribute("data-transition", "none");
+        }
+      } else {
+        var img = document.createElement('img');
+        img.src = Display._getFileUrl(slide.path);
+        img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: contain;");
+        img.setAttribute('data-slide', index);
+        section.appendChild(img);
+      }
       parentSection.appendChild(section);
       Display._slides[index.toString()] = index;
     });
     Display.replaceSlides(parentSection);
+  },
+
+  updatePdfSlideTransitions: function (settings) {
+    settings = settings || {};
+    var enabled = !!settings.enabled;
+    var speedSeconds = Number(settings.speedSeconds);
+    var easing = settings.easing;
+    var effect = settings.effect;
+    Display._setPresentationSlideTransition(enabled, speedSeconds, easing);
+    $(".slides > section > section.use-background-image").forEach(function (section) {
+      if (enabled) {
+        section.setAttribute("data-transition", Display._getPresentationTransitionName(effect));
+        section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(speedSeconds));
+      } else {
+        section.setAttribute("data-transition", "none");
+        section.removeAttribute("data-transition-speed");
+      }
+    });
+    Reveal.sync();
   },
   /**
    * Set a video
    * @param {Object} video - The video to show as a JS object: {"path": "url/to/file"}
    */
   setVideo: function (video) {
+    Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
     var section = document.createElement("section");
     section.setAttribute("data-background", "#000");
@@ -927,6 +1077,8 @@ var Display = {
         if (!Reveal.isPaused()) {
           Reveal.togglePause();
         }
+        // Hide logo only after black mode is active to avoid flashing slide content.
+        Display._hideLogoScreen();
         Display._reenableGlobalTransitions(function() {
           var documentBody = $("body")[0];
           documentBody.style.opacity = 1;
@@ -941,6 +1093,8 @@ var Display = {
   toTheme: function () {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
+      Display._restoreThemeBackgroundFromLogo();
       /*
         Reveal's black overlay should be shown before the transitions are
         restored, to avoid screen flashes
@@ -964,6 +1118,7 @@ var Display = {
   toTransparent: function () {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
       var documentBody = $("body")[0];
       documentBody.style.opacity = 0;
       if (!Reveal.isPaused()) {
@@ -1008,6 +1163,106 @@ var Display = {
     });
   },
   /**
+   * Hide all but the configured logo background.
+   * @param {string} bg_color - The logo screen background color
+   * @param {string} image - Path to the logo image
+  */
+  toLogo: function (bg_color, image) {
+    return new Promise((resolve, reject) => {
+      Display._abortLastTransitionOperation();
+      Display._restorePauseBehavior();
+      var documentBody = $("body")[0];
+      var wasSlideLayerVisible = parseFloat(getComputedStyle(Display._slidesContainer).opacity || "1") > 0.01;
+      documentBody.style.opacity = 1;
+      Display._hideLogoScreen();
+      if (wasSlideLayerVisible) {
+        Display._slidesContainer.style.opacity = 1;
+        Display._footerContainer.style.opacity = 1;
+      }
+      if (Reveal.isPaused()) {
+        Reveal.togglePause();
+      }
+      if (Display._logoScreen) {
+        Display._logoScreen.style.backgroundColor = bg_color || "#000";
+      }
+
+      function hideSlideLayerAndResolve() {
+        Display._slidesContainer.style.opacity = 0;
+        Display._footerContainer.style.opacity = 0;
+        Display._setThemeBackgroundToLogo(bg_color, image);
+        resolve();
+      }
+
+      function fadeLogoOverSlide() {
+        Display._requestAnimationFrameExclusive(function() {
+          if (!Display._logoScreen) {
+            hideSlideLayerAndResolve();
+            return;
+          }
+          Display._logoScreen.classList.add("show");
+          var logoScreenStyle = getComputedStyle(Display._logoScreen);
+          var hasOpacityTransition =
+            document.body.classList.contains("transition") &&
+            logoScreenStyle.transitionDuration !== "0s";
+          if (!hasOpacityTransition) {
+            hideSlideLayerAndResolve();
+            return;
+          }
+          var transitionDone = false;
+          var onTransitionEnd = function(event) {
+            if (event.target !== Display._logoScreen || event.propertyName !== "opacity") {
+              return;
+            }
+            transitionDone = true;
+            Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
+            hideSlideLayerAndResolve();
+          };
+          Display._logoScreen.addEventListener("transitionend", onTransitionEnd);
+          // Safety fallback in case transitionend is skipped by the browser.
+          setTimeout(function() {
+            if (!transitionDone) {
+              Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
+              hideSlideLayerAndResolve();
+            }
+          }, 900);
+        });
+      }
+
+      Display._reenableGlobalTransitions(function() {
+        if (Display._logoScreenImage && image) {
+          Display._logoScreenImage.onload = function() {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            fadeLogoOverSlide();
+          };
+          Display._logoScreenImage.onerror = function() {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            Display._logoScreenImage.removeAttribute("src");
+            Display._logoScreenImage.style.display = "none";
+            fadeLogoOverSlide();
+          };
+          Display._logoScreenImage.style.display = "block";
+          Display._logoScreenImage.src = image;
+          if (Display._logoScreenImage.complete && Display._logoScreenImage.naturalWidth > 0) {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            fadeLogoOverSlide();
+          }
+        }
+        else {
+          if (Display._logoScreenImage) {
+            Display._logoScreenImage.onload = null;
+            Display._logoScreenImage.onerror = null;
+            Display._logoScreenImage.removeAttribute("src");
+            Display._logoScreenImage.style.display = "none";
+          }
+          fadeLogoOverSlide();
+        }
+      });
+    });
+  },
+  /**
    * Show the screen
   */
   show: function () {
@@ -1019,6 +1274,8 @@ var Display = {
         happens
       */
       Display._abortLastTransitionOperation();
+      Display._hideLogoScreen();
+      Display._restoreThemeBackgroundFromLogo();
 
       Display._slidesContainer.style.opacity = 1;
       Display._footerContainer.style.opacity = 1;
@@ -1031,6 +1288,66 @@ var Display = {
         resolve();
       });
     });
+  },
+
+  _hideLogoScreen: function() {
+    if (Display._logoScreen) {
+      Display._logoScreen.classList.remove("show");
+    }
+  },
+
+  _getRootSlideSection: function() {
+    return $(".slides > section")[0];
+  },
+
+  _setThemeBackgroundToLogo: function(bg_color, image) {
+    var rootSlide = Display._getRootSlideSection();
+    if (!rootSlide) {
+      return;
+    }
+    if (!Display._logoBackgroundOverrideActive) {
+      Display._savedBackgroundAttributes = {
+        background: rootSlide.getAttribute("data-background"),
+        size: rootSlide.getAttribute("data-background-size")
+      };
+    }
+    if (image) {
+      rootSlide.setAttribute("data-background", "url('" + image + "')");
+    }
+    else {
+      rootSlide.setAttribute("data-background", bg_color || "#000");
+    }
+    rootSlide.setAttribute("data-background-size", "cover");
+    Display._logoBackgroundOverrideActive = true;
+    Reveal.sync();
+  },
+
+  _restoreThemeBackgroundFromLogo: function() {
+    if (!Display._logoBackgroundOverrideActive) {
+      return;
+    }
+    var rootSlide = Display._getRootSlideSection();
+    if (!rootSlide) {
+      Display._logoBackgroundOverrideActive = false;
+      Display._savedBackgroundAttributes = null;
+      return;
+    }
+    var saved = Display._savedBackgroundAttributes || {};
+    if (saved.background) {
+      rootSlide.setAttribute("data-background", saved.background);
+    }
+    else {
+      rootSlide.removeAttribute("data-background");
+    }
+    if (saved.size) {
+      rootSlide.setAttribute("data-background-size", saved.size);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-size");
+    }
+    Display._logoBackgroundOverrideActive = false;
+    Display._savedBackgroundAttributes = null;
+    Reveal.sync();
   },
 
   _reenableGlobalTransitions: function(afterCallback) {
@@ -1195,6 +1512,9 @@ var Display = {
     }
     var slides = targetElement.children;
     for (var i = 0; i < slides.length; i++) {
+      if (slides[i].classList.contains("use-background-image")) {
+        continue;
+      }
       slides[i].setAttribute("data-transition", new_transition_type);
       slides[i].setAttribute("data-transition-speed", new_transition_speed);
     }
