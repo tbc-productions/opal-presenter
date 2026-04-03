@@ -350,6 +350,8 @@ class PresentationDocument(object):
             notes_path = self.get_thumbnail_folder() / 'slideNotes{number:d}.txt'.format(number=slide_no)
             try:
                 note = notes_path.read_text(encoding='utf-8')
+            except FileNotFoundError:
+                note = ''
             except Exception:
                 log.exception(f'Failed to open/read notes file {notes_path}')
                 note = ''
