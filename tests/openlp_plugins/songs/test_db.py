@@ -176,8 +176,10 @@ def test_init_on_load_with_media_files(mock_detail_cache, mock_sort_cache, mock_
         song.init_on_load()
 
     # THEN: song_detail should include '(A)' to indicate media presence
-    assert song.song_detail == 'Media Song (A) (Media Author)'
-    assert mock_detail_cache['101-2025-04-23'] == 'Media Song (A) (Media Author)'
+    # THEN: song_detail should not include '(A)'; audio presence is tracked via song_has_audio
+    assert song.song_detail == 'Media Song (Media Author)'
+    assert mock_detail_cache['101-2025-04-23'] == 'Media Song (Media Author)'
+    assert song.song_has_audio is True
 
 
 def test_add_author():

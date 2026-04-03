@@ -351,15 +351,15 @@ class Song(Base):
             sort_key_cache[self.title] = sort_key
         self.sort_key = sort_key
 
+        author_list = [author.display_name for author in self.authors]
+        self.song_has_audio = len(self.media_files) > 0
+        self.song_author_display = create_separated_list(author_list) if author_list else ''
+
         key = f'{self.id}-{self.last_modified}'
         song_detail = song_detail_cache.get(key)
         if song_detail is None or force_song_detail_recalculation:
-            author_list = [author.display_name for author in self.authors]
-            text = create_separated_list(author_list) if author_list else self.title
-            if len(self.media_files) > 0:
-                song_detail = f'{self.title} (A) ({text})'
-            else:
-                song_detail = '{title} ({author})'.format(title=self.title, author=text)
+            text = self.song_author_display if self.song_author_display else self.title
+            song_detail = '{title} ({author})'.format(title=self.title, author=text)
             song_detail_cache[key] = song_detail
         self.song_detail = song_detail
 
