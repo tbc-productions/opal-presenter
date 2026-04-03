@@ -1547,7 +1547,7 @@ def test_load_service_modified_saved_with_file_path(registry: Registry):
     service_manager.is_modified = MagicMock(return_value=True)
     service_manager.save_modified_service = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Save)
     service_manager.decide_save_method = MagicMock()
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: A service is loaded
     service_manager.load_service(Path.home() / 'service.osz')
@@ -1555,7 +1555,7 @@ def test_load_service_modified_saved_with_file_path(registry: Registry):
     # THEN: The service should be loaded
     service_manager.decide_save_method.assert_called_once_with()
     mocked_settings.setValue.assert_called_once_with('servicemanager/last directory', Path.home())
-    service_manager.load_file.assert_called_once_with(Path.home() / 'service.osz')
+    service_manager.load_file_in_thread.assert_called_once_with(Path.home() / 'service.osz')
 
 
 @patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName')
@@ -1582,13 +1582,13 @@ def test_load_service_no_file_path_passed_file_selected(mocked_get_open_file_nam
     registry.register('main_window', None)
     service_manager = ServiceManager(None)
     mocked_get_open_file_name.return_value = (Path.home() / 'service.osz', None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: A service is loaded
     service_manager.load_service()
 
     # THEN: The service should be loaded
-    service_manager.load_file.assert_called_once_with(Path.home() / 'service.osz')
+    service_manager.load_file_in_thread.assert_called_once_with(Path.home() / 'service.osz')
 
 
 def test_on_recent_service_clicked_modified_cancel_save(registry: Registry):
@@ -1617,7 +1617,7 @@ def test_on_recent_service_clicked_modified_saved_with_file_path(registry: Regis
     service_manager.is_modified = MagicMock(return_value=True)
     service_manager.save_modified_service = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Save)
     service_manager.decide_save_method = MagicMock()
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
     service_manager.sender = MagicMock(return_value=MagicMock())
 
     # WHEN: on_recent_service_clicked is called
@@ -1625,21 +1625,21 @@ def test_on_recent_service_clicked_modified_saved_with_file_path(registry: Regis
 
     # THEN: The recent service should be loaded
     service_manager.decide_save_method.assert_called_once_with()
-    service_manager.load_file.assert_called_once()
+    service_manager.load_file_in_thread.assert_called_once()
 
 
 def test_on_recent_service_clicked_unmodified(registry: Registry):
     # GIVEN: A modified ServiceManager
     registry.register('main_window', None)
     service_manager = ServiceManager(None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
     service_manager.sender = MagicMock(return_value=MagicMock())
 
     # WHEN: on_recent_service_clicked is called
     service_manager.on_recent_service_clicked(True)
 
     # THEN: The recent service should be loaded
-    service_manager.load_file.assert_called_once()
+    service_manager.load_file_in_thread.assert_called_once()
 
 
 @patch('openlp.core.ui.servicemanager.Path', autospec=True)
@@ -1730,14 +1730,14 @@ def test_service_manager_on_recent_service_clicked_save(registry: Registry):
     service_manager.save_modified_service = lambda: QtWidgets.QMessageBox.StandardButton.Save
     service_manager.decide_save_method = lambda: None
     service_manager.sender = lambda: MagicMock(**{'data.return_value': '/path/to/service'})
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: on_recent_service_clicked() is called
     result = service_manager.on_recent_service_clicked(True)
 
     # THEN: The result should be None
     assert result is None, 'on_recent_service_clicked() should have returned None'
-    service_manager.load_file.assert_called_once_with(Path('/path/to/service'))
+    service_manager.load_file_in_thread.assert_called_once_with(Path('/path/to/service'))
 
 
 def test_service_manager_decide_save_method_save(registry: Registry):
@@ -1779,13 +1779,13 @@ def test_load_last_file(registry: Registry):
     mocked_settings.value.return_value = Path('filename.osz')
     registry.register('settings', mocked_settings)
     service_manager = ServiceManager(None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: load_last_file() is called
     service_manager.load_last_file()
 
     # THEN: The file should have been loaded
-    service_manager.load_file.assert_called_once_with(Path('filename.osz'))
+    service_manager.load_file_in_thread.assert_called_once_with(Path('filename.osz'))
 
 
 @patch('openlp.core.ui.servicemanager.Path')

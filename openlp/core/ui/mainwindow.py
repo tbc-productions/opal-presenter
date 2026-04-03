@@ -127,6 +127,7 @@ class Ui_MainWindow(object):
         main_window.setMenuBar(self.menu_bar)
         self.status_bar = QtWidgets.QStatusBar(main_window)
         self.status_bar.setObjectName('status_bar')
+        self.status_bar.setStyleSheet('QStatusBar { padding-left: 16px; }')
         main_window.setStatusBar(self.status_bar)
         self.load_progress_bar = QtWidgets.QProgressBar(self.status_bar)
         self.load_progress_bar.setObjectName('load_progress_bar')
@@ -1171,11 +1172,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             title = '{title} - {name}'.format(title=UiStrings().OpenLP, name=file_name)
         self.setWindowTitle(title)
 
-    def show_status_message(self, message: str):
+    def show_status_message(self, message: str, timeout: int = 0):
         """
         Show a message in the status bar
+
+        :param message: The message to display.
+        :param timeout: Duration in milliseconds to display the message. 0 keeps it until replaced.
         """
-        self.status_bar.showMessage(message)
+        self.status_bar.showMessage(message, timeout)
 
     def default_theme_changed(self):
         """

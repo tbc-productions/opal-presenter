@@ -46,6 +46,7 @@ from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box, find_and_set_in_combo_box
 from openlp.core.state import State
+from openlp.core.threading import ThreadWorker, run_thread
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.media import get_supported_media_suffix
 from openlp.core.ui.serviceitemeditform import ServiceItemEditForm
@@ -453,6 +454,70 @@ class Ui_ServiceManager(object):
                                               self.expand_collapse_action])
 
 
+class ServiceLoadWorker(ThreadWorker):
+    """Background worker that parses and extracts a service file."""
+    progress_max = QtCore.Signal(int)
+    progress_increment = QtCore.Signal(int)
+    status = QtCore.Signal(str)
+    loaded = QtCore.Signal(object)
+    failed = QtCore.Signal(str)
+
+    def __init__(self, file_path: Path, service_path: Path):
+        super().__init__()
+        self.file_path = file_path
+        self.service_path = service_path
+
+    def start(self):
+        try:
+            with zipfile.ZipFile(str(self.file_path)) as zip_file:
+                zip_infos = zip_file.infolist()
+                compressed_size = sum(zip_info.compress_size for zip_info in zip_infos)
+                self.progress_max.emit(compressed_size // 1024)
+                self.status.emit(
+                    translate('OpenLP.ServiceManager', 'Reading service metadata...'))
+                service_data = None
+                for zip_info in zip_infos:
+                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                        with zip_file.open(zip_info, 'r') as json_file:
+                            service_data = json_file.read()
+                        break
+                if not service_data:
+                    raise ValidationError(msg='No service data found')
+                items = json.loads(service_data, cls=OpenLPJSONDecoder)
+                servicefile_version = 2
+                for item in items:
+                    if 'openlp_core' in item:
+                        item = item['openlp_core']
+                        servicefile_version = item.get('openlp-servicefile-version', 2)
+                        break
+                is_broken_file = False
+                for zip_info in zip_infos:
+                    self.status.emit(
+                        translate('OpenLP.ServiceManager', 'Importing file: {file_name}')
+                        .format(file_name=Path(zip_info.filename).name))
+                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                        self.progress_increment.emit(zip_info.compress_size // 1024)
+                        continue
+                    if servicefile_version < 3:
+                        zip_info.filename = os.path.basename(zip_info.filename.replace('/', os.path.sep))
+                    else:
+                        fname, ext = os.path.splitext(zip_info.filename)
+                        if not ext and os.path.basename(fname).startswith('.'):
+                            zip_info.filename = fname.replace('/', '')
+                            is_broken_file = True
+                    zip_file.extract(zip_info, str(self.service_path))
+                    self.progress_increment.emit(zip_info.compress_size // 1024)
+                self.loaded.emit({
+                    'items': items,
+                    'servicefile_version': servicefile_version,
+                    'is_broken_file': is_broken_file
+                })
+        except (NameError, OSError, ValidationError, zipfile.BadZipFile):
+            self.failed.emit(str(self.file_path))
+        finally:
+            self.quit.emit()
+
+
 class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixin, RegistryProperties):
     """
     Manages the services. This involves taking text strings from plugins and adding them to the service. This service
@@ -491,6 +556,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._internal_drag_child = -1
         self._external_drag_item = None
         self._external_drag_plugin_name = None
+        self._load_service_file_path = None
+        self._pending_loading_status_message = ''
+        self._loading_status_timer = QtCore.QTimer(self)
+        self._loading_status_timer.setSingleShot(True)
+        self._loading_status_timer.setInterval(100)
+        self._loading_status_timer.timeout.connect(self._flush_loading_status)
         # repaint_service_list debouncer
         self.repaint_service_list_timer = QtCore.QTimer(self)
         self.repaint_service_list_timer.setInterval(100)
@@ -691,7 +762,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             if not file_path:
                 return False
         self.settings.setValue('servicemanager/last directory', file_path.parent)
-        self.load_file(file_path)
+        self.load_file_in_thread(file_path)
 
     def save_modified_service(self):
         """
@@ -720,7 +791,91 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             elif result == QtWidgets.QMessageBox.StandardButton.Save:
                 self.decide_save_method()
         sender = self.sender()
-        self.load_file(Path(sender.data()))
+        self.load_file_in_thread(Path(sender.data()))
+
+    def load_file_in_thread(self, file_path):
+        """
+        Load an existing service file in a background worker so the UI remains responsive.
+
+        :param Path | str file_path: The service file to load.
+        """
+        file_path = Path(file_path)
+        try:
+            if not file_path.exists():
+                return False
+        except OSError:
+            return False
+        self._load_service_file_path = file_path
+        self.application.set_busy_cursor()
+        self._show_loading_status(
+            translate('OpenLP.ServiceManager', 'Loading service: {file_name}').format(file_name=file_path.name))
+        worker = ServiceLoadWorker(file_path, self.service_path)
+        worker.progress_max.connect(self.main_window.display_progress_bar)
+        worker.progress_increment.connect(self.main_window.increment_progress_bar)
+        worker.status.connect(self._show_loading_status)
+        worker.loaded.connect(self._on_load_file_worker_loaded)
+        worker.failed.connect(self._on_load_file_worker_failed)
+        thread_name = f'service-load-{datetime.now().timestamp()}'
+        run_thread(worker, thread_name, can_start=True)
+        return True
+
+    def _on_load_file_worker_loaded(self, payload):
+        """
+        Handle the completed load payload on the UI thread.
+
+        :param dict payload: Parsed service content and metadata from the worker.
+        """
+        file_path = self._load_service_file_path
+        self._loading_status_timer.stop()
+        self._pending_loading_status_message = ''
+        try:
+            self.servicefile_version = payload.get('servicefile_version', 2)
+            self.new_file()
+            self.process_service_items(payload.get('items', []))
+            self.set_file_name(file_path)
+            self.main_window.add_recent_file(file_path)
+            self.set_modified(False)
+            if payload.get('is_broken_file', False):
+                self.save_file()
+            self.settings.setValue('servicemanager/last file', file_path)
+            self._loading_status_timer.stop()
+            self._pending_loading_status_message = ''
+            self.main_window.show_status_message(
+                translate('OpenLP.ServiceManager', 'Loaded service: {file_name}').format(file_name=file_path.name),
+                5000)
+        except Exception:
+            self.log_exception('Problem loading service file {name}'.format(name=file_path))
+            critical_error_message_box(
+                message=translate('OpenLP.ServiceManager',
+                                  'The service file {file_path} could not be loaded because it is either corrupt, '
+                                  'inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.'
+                                  ).format(file_path=file_path))
+            self.main_window.show_status_message('')
+        finally:
+            self.main_window.finished_progress_bar()
+            self.application.set_normal_cursor()
+            self.repaint_service_list(-1, -1)
+            self._load_service_file_path = None
+
+    def _on_load_file_worker_failed(self, file_path):
+        """
+        Handle worker load failures on the UI thread.
+
+        :param str file_path: The file path that failed to load.
+        """
+        self._loading_status_timer.stop()
+        self._pending_loading_status_message = ''
+        self.log_exception('Problem loading service file {name}'.format(name=file_path))
+        critical_error_message_box(
+            message=translate('OpenLP.ServiceManager',
+                              'The service file {file_path} could not be loaded because it is either corrupt, '
+                              'inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.'
+                              ).format(file_path=file_path))
+        self.main_window.finished_progress_bar()
+        self.application.set_normal_cursor()
+        self.main_window.show_status_message('')
+        self.repaint_service_list(-1, -1)
+        self._load_service_file_path = None
 
     def new_file(self):
         """
@@ -988,7 +1143,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             return False
         service_data = None
         is_broken_file = False
+        is_loaded = False
         self.application.set_busy_cursor()
+        self._show_loading_status(
+            translate('OpenLP.ServiceManager', 'Loading service: {file_name}').format(file_name=file_path.name))
         try:
             # TODO: figure out a way to use the presentation thumbnails from the service file
             with zipfile.ZipFile(str(file_path)) as zip_file:
@@ -996,6 +1154,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 for zip_info in zip_file.infolist():
                     compressed_size += zip_info.compress_size
                 self.main_window.display_progress_bar(compressed_size // 1024)
+                self._show_loading_status(translate('OpenLP.ServiceManager', 'Reading service metadata...'))
                 # First find the osj-file to find out how to handle the file
                 for zip_info in zip_file.infolist():
                     # The json file has been called 'service_data.osj' since OpenLP 3.0
@@ -1016,6 +1175,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.log_debug('Service format version: %{ver}'.format(ver=self.servicefile_version))
                 for zip_info in zip_file.infolist():
                     self.log_debug('Extract file: {name}'.format(name=zip_info.filename))
+                    self._show_loading_status(
+                        translate('OpenLP.ServiceManager', 'Importing file: {file_name}')
+                        .format(file_name=Path(zip_info.filename).name))
                     # The json file has been called 'service_data.osj' since OpenLP 3.0
                     if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
                         with zip_file.open(zip_info, 'r') as json_file:
@@ -1044,6 +1206,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 if is_broken_file:
                     self.save_file()
                 self.settings.setValue('servicemanager/last file', file_path)
+                is_loaded = True
         except (NameError, OSError, ValidationError, zipfile.BadZipFile):
             self.application.set_normal_cursor()
             self.log_exception('Problem loading service file {name}'.format(name=file_path))
@@ -1052,7 +1215,15 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                   'The service file {file_path} could not be loaded because it is either corrupt, '
                                   'inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.'
                                   ).format(file_path=file_path))
+        self._loading_status_timer.stop()
+        self._pending_loading_status_message = ''
         self.main_window.finished_progress_bar()
+        if is_loaded:
+            self.main_window.show_status_message(
+                translate('OpenLP.ServiceManager', 'Loaded service: {file_name}').format(file_name=file_path.name),
+                5000)
+        else:
+            self.main_window.show_status_message('')
         self.application.set_normal_cursor()
         self.repaint_service_list(-1, -1)
 
@@ -1064,6 +1235,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         for item in service_items:
             self.main_window.increment_progress_bar()
+            if 'serviceitem' in item:
+                header = item['serviceitem'].get('header', {})
+                item_title = header.get('title') or header.get('name') or translate('OpenLP.ServiceManager',
+                                                                                      'Service item')
+                self._show_loading_status(
+                    translate('OpenLP.ServiceManager', 'Importing item: {item_title}')
+                    .format(item_title=item_title))
             service_item = ServiceItem()
             if 'openlp_core' in item:
                 item = item['openlp_core']
@@ -1086,6 +1264,20 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         service_item = new_item
                 self.add_service_item(service_item, repaint=False)
 
+    def _show_loading_status(self, message):
+        """
+        Queue a status message during service loading and only display it after a short delay.
+
+        :param message: The status message to display.
+        """
+        self._pending_loading_status_message = message
+        self._loading_status_timer.start()
+
+    def _flush_loading_status(self):
+        """Display the latest queued loading status message."""
+        with suppress(Exception):
+            self.main_window.show_status_message(self._pending_loading_status_message)
+
     def load_last_file(self):
         """
         Load the last service item from the service manager when the service was last closed. Can be blank if there was
@@ -1093,7 +1285,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         file_path = self.settings.value('servicemanager/last file')
         if file_path:
-            self.load_file(file_path)
+            self.load_file_in_thread(file_path)
 
     def context_menu(self, point):
         """
