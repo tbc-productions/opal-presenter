@@ -613,7 +613,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 self.log_debug('{plugin} Add requested'.format(plugin=self.plugin.name))
                 self.add_to_service(remote=self.remote_triggered)
             else:
-                items = self.list_view.selectedIndexes()
+                items = [i for i in self.list_view.selectedIndexes() if i.column() == 0]
                 drop_position = self.service_manager.get_drop_position()
                 for item in items:
                     self.add_to_service(item, position=drop_position)
