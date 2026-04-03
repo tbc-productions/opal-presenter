@@ -70,18 +70,52 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
         self._drag_start_pos = None
+        self._is_internal_dragging = False
+        self._drag_tooltip_label = None
+        self.setStyleSheet('QTreeWidget::item { padding: 4px 2px; }')
 
     def dragEnterEvent(self, event):
         """
-        React to a drag enter event
+        React to a drag enter event from an external source (e.g. Songs or Media library).
+        Start a live preview of where the dragged item will land.
         """
+        if event.mimeData().hasUrls():
+            event.accept()
+        elif event.mimeData().hasText():
+            plugin_name = event.mimeData().text()
+            raw_title = event.mimeData().data('application/x-openlp-item-title')
+            item_title = bytes(raw_title).decode('utf-8') if raw_title and not raw_title.isEmpty() else None
+            if self.service_manager:
+                self.service_manager.cancel_external_drag_preview()
+                title = self.service_manager.begin_external_drag_preview(plugin_name, item_title=item_title)
+                self.service_manager.update_external_drag_preview(event.pos())
+                self._show_drag_tooltip(title)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """
+        React to the drag leaving the service list — cancel the external preview and tooltip.
+        """
+        if self.service_manager:
+            self.service_manager.cancel_external_drag_preview()
+        self._hide_drag_tooltip()
         event.accept()
 
     def dragMoveEvent(self, event):
         """
-        React to a drage move event
+        React to a drag move event from an external source — update the live preview position.
         """
-        event.accept()
+        if event.mimeData().hasUrls():
+            event.accept()
+        elif event.mimeData().hasText():
+            if self.service_manager:
+                self.service_manager.update_external_drag_preview(event.pos())
+            self._update_drag_tooltip_pos()
+            event.accept()
+        else:
+            event.ignore()
 
     def keyPressEvent(self, event):
         """
@@ -89,6 +123,10 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         :param event:
         """
         if isinstance(event, QtGui.QKeyEvent):
+            if self._is_internal_dragging and event.key() == QtCore.Qt.Key.Key_Escape:
+                self._cancel_internal_drag()
+                event.accept()
+                return
             # here accept the event and do something
             if event.key() == QtCore.Qt.Key.Key_Up:
                 self.service_manager.on_move_selection_up()
@@ -116,13 +154,24 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
 
     def mouseMoveEvent(self, event):
         """
-        Drag and drop event does not care what data is selected as the recipient will use events to request the data
-        move just tell it what plugin to call
-        :param event:
+        Handle internal service item reordering via pure mouse events (no QDrag).
+        This gives full cursor control and avoids macOS native-drag cursor override.
         """
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
+        left_held = bool(event.buttons() & QtCore.Qt.MouseButton.LeftButton)
+        if not left_held:
+            if self._is_internal_dragging:
+                self._cancel_internal_drag()
             event.ignore()
             return
+
+        if self._is_internal_dragging:
+            if self.service_manager:
+                self.service_manager.update_internal_drag_preview(event.pos())
+            self._update_drag_tooltip_pos()
+            event.accept()
+            return
+
+        # Check drag-start conditions
         if not self.itemAt(self.mapFromGlobal(QtGui.QCursor.pos())):
             event.ignore()
             return
@@ -130,11 +179,70 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
                 (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
             event.ignore()
             return
-        drag = QtGui.QDrag(self)
-        mime_data = QtCore.QMimeData()
-        drag.setMimeData(mime_data)
-        mime_data.setText('ServiceManager')
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+        if self.itemAt(event.pos()) is None:
+            event.ignore()
+            return
+
+        # Begin drag
+        if self.service_manager and not self.service_manager.begin_internal_drag():
+            event.ignore()
+            return
+        self._is_internal_dragging = True
+        self._show_drag_tooltip(
+            self.service_manager.get_internal_drag_title() if self.service_manager else '')
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
+        if self.service_manager:
+            self.service_manager.update_internal_drag_preview(event.pos())
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        """
+        Commit the internal drag when the left mouse button is released.
+        """
+        if self._is_internal_dragging and event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._finish_internal_drag(True)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def _finish_internal_drag(self, commit):
+        """Finish the internal drag, committing or cancelling the reorder."""
+        if not self._is_internal_dragging:
+            return
+        self._is_internal_dragging = False
+        self._hide_drag_tooltip()
+        QtWidgets.QApplication.restoreOverrideCursor()
+        if self.service_manager:
+            self.service_manager.finish_internal_drag(commit)
+
+    def _cancel_internal_drag(self):
+        """Cancel the internal drag and restore original order."""
+        self._finish_internal_drag(False)
+
+    def _show_drag_tooltip(self, text):
+        """Show or update the floating drag tooltip near the cursor."""
+        if self._drag_tooltip_label is None:
+            self._drag_tooltip_label = QtWidgets.QLabel(
+                text, None, QtCore.Qt.WindowType.ToolTip)
+            self._drag_tooltip_label.setAttribute(
+                QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        else:
+            self._drag_tooltip_label.setText(text)
+        self._drag_tooltip_label.adjustSize()
+        self._update_drag_tooltip_pos()
+        self._drag_tooltip_label.show()
+
+    def _update_drag_tooltip_pos(self):
+        """Reposition the drag tooltip to follow the cursor."""
+        if self._drag_tooltip_label is not None:
+            self._drag_tooltip_label.move(QtGui.QCursor.pos() + QtCore.QPoint(16, 8))
+
+    def _hide_drag_tooltip(self):
+        """Hide and destroy the drag tooltip."""
+        if self._drag_tooltip_label is not None:
+            self._drag_tooltip_label.hide()
+            self._drag_tooltip_label.deleteLater()
+            self._drag_tooltip_label = None
 
 
 class Ui_ServiceManager(object):
@@ -344,6 +452,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.list_double_clicked = False
         self.servicefile_version = None
         self.tree_widget_items = []
+        self._internal_drag_item = None
+        self._internal_drag_original_index = None
+        self._internal_drag_child = -1
+        self._external_drag_item = None
+        self._external_drag_plugin_name = None
         # repaint_service_list debouncer
         self.repaint_service_list_timer = QtCore.QTimer(self)
         self.repaint_service_list_timer.setInterval(100)
@@ -1365,8 +1478,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if not self.is_running_repaint:
             self.repaint_service_list_timer.stop()
             self._repaint_service_list()
-            if (self.repaint_select_indexes[0] is not None):
+            if self.repaint_select_indexes[0] is not None and not self.is_internal_drag_active():
                 self._select_item_after_repaint(self.repaint_select_indexes[0], self.repaint_select_indexes[1])
+                self.repaint_select_indexes = (None, None)
+            elif self.is_internal_drag_active():
                 self.repaint_select_indexes = (None, None)
         else:
             # Trying again later
@@ -1420,6 +1535,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             service_item_from_item = item['service_item']
             tree_widget_item = QtWidgets.QTreeWidgetItem(self.service_manager_list)
             self.tree_widget_items.append(tree_widget_item)
+            is_dragged_item = item is self._internal_drag_item or item is self._external_drag_item
             if service_item_from_item.is_valid:
                 icon = service_item_from_item.icon.pixmap(80, 80).toImage()
                 icon = icon.scaled(80, 80, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -1465,7 +1581,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     tips.append(meta)
             tree_widget_item.setToolTip(0, '<br>'.join(tips))
             tree_widget_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item['order'])
-            tree_widget_item.setSelected(item['selected'])
+            tree_widget_item.setSelected(item['selected'] and not is_dragged_item)
+            if is_dragged_item:
+                dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                dragged_text_color.setAlpha(140)
+                tree_widget_item.setForeground(0, QtGui.QBrush(dragged_text_color))
             # Add the children to their parent tree_widget_item.
             for slide_index, slide in enumerate(service_item_from_item.get_frames()):
                 try:
@@ -1478,6 +1598,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
                     child.setText(0, text[:40])
                     child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
+                    if is_dragged_item:
+                        child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                        child_text_color.setAlpha(140)
+                        child.setForeground(0, QtGui.QBrush(child_text_color))
                 except RuntimeError:
                     # it's probably a "wrapped C/C++ object of type QTreeWidgetItem has been deleted" due to
                     # consecutive/parallel repaint_service_list execution. We've added some mitigation to avoid this
@@ -1788,6 +1912,183 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             break
         return service_item, service_item_child
 
+    def is_internal_drag_active(self):
+        return self._internal_drag_item is not None
+
+    def is_external_drag_active(self):
+        return self._external_drag_item is not None
+
+    def get_internal_drag_title(self):
+        """Return the display title of the item currently being dragged internally."""
+        if not self.is_internal_drag_active():
+            return ''
+        try:
+            return self._internal_drag_item['service_item'].get_display_title()
+        except Exception:
+            return ''
+
+    # External drag preview constants (plugin name → friendly display title)
+    _PLUGIN_DISPLAY_NAMES = {
+        'songs': 'Song',
+        'bibles': 'Bible Verse',
+        'presentations': 'Presentation',
+        'images': 'Image',
+        'media': 'Media',
+        'custom': 'Custom Slide',
+        'alerts': 'Alert',
+    }
+
+    def begin_external_drag_preview(self, plugin_name, item_title=None):
+        """
+        Create a placeholder service item for an incoming external drag and insert it at the end
+        of the service list to provide a live drop-position preview.
+
+        :param plugin_name: The plugin name from the drag MIME data (e.g. 'songs', 'images').
+        :param item_title: The actual title of the item being dragged, if available.
+        :returns: The display title of the placeholder (for the drag tooltip).
+        """
+        from openlp.core.lib.serviceitem import ServiceItem
+        placeholder = ServiceItem()
+        placeholder.name = plugin_name
+        placeholder.add_icon()
+        placeholder.add_capability(ItemCapabilities.CanEditTitle)
+        placeholder.title = item_title or self._PLUGIN_DISPLAY_NAMES.get(plugin_name, plugin_name.title())
+        insert_idx = len(self.service_items)
+        self._external_drag_item = {
+            'service_item': placeholder,
+            'order': insert_idx + 1,
+            'expanded': False,
+            'selected': False,
+        }
+        self._external_drag_plugin_name = plugin_name
+        self.service_items.append(self._external_drag_item)
+        self.repaint_service_list(insert_idx, -1)
+        return placeholder.get_display_title()
+
+    def update_external_drag_preview(self, pos):
+        """Move the external drag placeholder to the position under the cursor."""
+        if not self.is_external_drag_active():
+            return
+        target_index = self._get_internal_drag_target_index(pos)
+        self._move_external_drag_preview(target_index)
+
+    def _move_external_drag_preview(self, target_index):
+        current_index = self._get_external_drag_item_index()
+        if current_index == -1:
+            return
+        insert_index = max(0, min(target_index, len(self.service_items)))
+        if insert_index > current_index:
+            insert_index -= 1
+        if insert_index == current_index:
+            return
+        dragged_item = self.service_items.pop(current_index)
+        self.service_items.insert(insert_index, dragged_item)
+        self.repaint_service_list(insert_index, -1)
+
+    def _get_external_drag_item_index(self):
+        if not self.is_external_drag_active():
+            return -1
+        for index, item in enumerate(self.service_items):
+            if item is self._external_drag_item:
+                return index
+        return -1
+
+    def cancel_external_drag_preview(self):
+        """Remove the external drag placeholder without committing."""
+        if not self.is_external_drag_active():
+            return
+        idx = self._get_external_drag_item_index()
+        self._external_drag_item = None
+        self._external_drag_plugin_name = None
+        if idx != -1:
+            self.service_items.pop(idx)
+        self.repaint_service_list(-1, -1)
+
+    def finish_external_drag_preview(self):
+        """
+        Commit the external drag: record the placeholder's position as drop_position, then remove
+        the placeholder so the real item can be inserted at that index by add_service_item.
+        """
+        if not self.is_external_drag_active():
+            return
+        idx = self._get_external_drag_item_index()
+        self._external_drag_item = None
+        self._external_drag_plugin_name = None
+        if idx != -1:
+            self.service_items.pop(idx)
+            self.drop_position = idx
+
+    def begin_internal_drag(self):
+        start_pos, child = self.find_service_item()
+        if start_pos == -1 or start_pos >= len(self.service_items):
+            return False
+        self._internal_drag_item = self.service_items[start_pos]
+        self._internal_drag_original_index = start_pos
+        self._internal_drag_child = child
+        self.repaint_service_list(start_pos, child)
+        return True
+
+    def update_internal_drag_preview(self, pos):
+        if not self.is_internal_drag_active():
+            return
+        target_index = self._get_internal_drag_target_index(pos)
+        self._move_internal_drag_preview(target_index)
+
+    def cancel_internal_drag_preview(self):
+        if self.is_internal_drag_active():
+            self.finish_internal_drag(False)
+
+    def finish_internal_drag(self, is_drop_complete):
+        if not self.is_internal_drag_active():
+            return
+        current_index = self._get_internal_drag_item_index()
+        original_index = self._internal_drag_original_index
+        child = self._internal_drag_child
+        if current_index == -1:
+            current_index = original_index
+        if not is_drop_complete and current_index != original_index:
+            dragged_item = self.service_items.pop(current_index)
+            self.service_items.insert(original_index, dragged_item)
+            current_index = original_index
+        has_moved = current_index != original_index
+        self._internal_drag_item = None
+        self._internal_drag_original_index = None
+        self._internal_drag_child = -1
+        self.repaint_service_list(current_index, child)
+        if is_drop_complete and has_moved:
+            self.set_modified()
+
+    def _get_internal_drag_item_index(self):
+        if not self.is_internal_drag_active():
+            return -1
+        for index, item in enumerate(self.service_items):
+            if item is self._internal_drag_item:
+                return index
+        return -1
+
+    def _get_internal_drag_target_index(self, pos):
+        target_item = self.service_manager_list.itemAt(pos)
+        if target_item is None:
+            return len(self.service_items)
+        target_item = target_item if target_item.parent() is None else target_item.parent()
+        target_index = get_parent_item_data(target_item) - 1
+        if pos.y() > self.service_manager_list.visualItemRect(target_item).center().y():
+            target_index += 1
+        return target_index
+
+    def _move_internal_drag_preview(self, target_index):
+        current_index = self._get_internal_drag_item_index()
+        if current_index == -1:
+            return
+        insert_index = max(0, min(target_index, len(self.service_items)))
+        if insert_index > current_index:
+            insert_index -= 1
+        if insert_index == current_index:
+            return
+        dragged_item = self.service_items.pop(current_index)
+        self.service_items.insert(insert_index, dragged_item)
+        self.repaint_service_list(insert_index, self._internal_drag_child)
+
     def drop_event(self, event):
         """
         Receive drop event and trigger an internal event to get the plugins to build and push the correct service item.
@@ -1808,26 +2109,16 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     self.load_service(file_path)
         elif link.hasText():
             plugin = link.text()
-            item = self.service_manager_list.itemAt(event.pos())
-            # ServiceManager started the drag and drop
-            if plugin == 'ServiceManager':
-                start_pos, child = self.find_service_item()
-                # If no items selected
-                if start_pos == -1:
-                    return
-                if item is None:
-                    end_pos = len(self.service_items) - 1
-                else:
-                    end_pos = get_parent_item_data(item) - 1
-                service_item = self.service_items[start_pos]
-                if start_pos != end_pos:
-                    self.service_items.remove(service_item)
-                    self.service_items.insert(end_pos, service_item)
-                    self.repaint_service_list(end_pos, child)
-                    self.set_modified()
+            self.service_manager_list._hide_drag_tooltip()
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+            event.accept()
+            replace = False
+            if self.is_external_drag_active():
+                # Preview was active — use the placeholder's position as drop target
+                self.finish_external_drag_preview()
             else:
-                # we are not over anything so drop
-                replace = False
+                # Fallback: no preview was active, determine position from cursor
+                item = self.service_manager_list.itemAt(event.pos())
                 if item is None:
                     self.drop_position = len(self.service_items)
                 else:
@@ -1847,7 +2138,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                             replace = True
                     else:
                         self.drop_position = get_parent_item_data(item) - 1
-                Registry().execute('{plugin}_add_service_item'.format(plugin=plugin), replace)
+            Registry().execute('{plugin}_add_service_item'.format(plugin=plugin), replace)
         else:
             self.log_warning('Unrecognised item')
 
