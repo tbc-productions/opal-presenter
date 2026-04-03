@@ -130,23 +130,23 @@ class LocalSchemeHelper():
         request.fail(QtWebEngineCore.QWebEngineUrlRequestJob.Error.UrlNotFound)
 
     def exception(self, request: QtWebEngineCore.QWebEngineUrlRequestJob, url: str, exception: Exception):
-        log.exception('{request} failed: {error:d}; {message}'.format(request=url, error=str(type(exception)),
-                                                                      message=str(exception)))
+        log.exception('{request} failed: {error}; {message}'.format(request=url,
+                                                                    error=type(exception).__name__,
+                                                                    message=str(exception)))
         request.fail(QtWebEngineCore.QWebEngineUrlRequestJob.Error.RequestFailed)
 
     def invalid(self, request: QtWebEngineCore.QWebEngineUrlRequestJob, url: str):
         log.exception('{request} is invalid.'.format(request=url))
         request.fail(QtWebEngineCore.QWebEngineUrlRequestJob.Error.UrlInvalid)
 
-    def reply_file(self, request: QtWebEngineCore.QWebEngineUrlRequestJob, path: str) -> Tuple[QtCore.QBuffer, str]:
-        raw_html = open(path, 'rb').read()
-        buffer = QtCore.QBuffer(self)
-        buffer.open(QtCore.QIODevice.OpenModeFlag.WriteOnly)
-        buffer.write(raw_html)
-        buffer.seek(0)
-        buffer.close()
+    def reply_file(self, request: QtWebEngineCore.QWebEngineUrlRequestJob, path: str):
+        file_handle = QtCore.QFile(path)
+        if not file_handle.open(QtCore.QIODevice.OpenModeFlag.ReadOnly):
+            raise OSError(f'Unable to open file: {path}')
+        # Keep the device alive for as long as the request exists.
+        file_handle.setParent(request)
         mime_type = get_mime_type(path)
-        request.reply(bytes(mime_type, 'utf-8'), buffer)
+        request.reply(bytes(mime_type, 'utf-8'), file_handle)
 
     def request_path_to_file(self, base_path: str, url_path: str):
         if is_win() and not base_path:
