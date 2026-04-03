@@ -31,7 +31,7 @@ class Ui_CustomSlideEditDialog(object):
     def setup_ui(self, custom_slide_edit_dialog):
         custom_slide_edit_dialog.setObjectName('custom_slide_edit_dialog')
         custom_slide_edit_dialog.setWindowIcon(UiIcons().main_icon)
-        custom_slide_edit_dialog.resize(350, 300)
+        custom_slide_edit_dialog.resize(550, 550)
         self.dialog_layout = QtWidgets.QVBoxLayout(custom_slide_edit_dialog)
         self.slide_text_edit = SpellTextEdit(self, visual_mode_only=True)
         self.slide_text_edit.setObjectName('slide_text_edit')

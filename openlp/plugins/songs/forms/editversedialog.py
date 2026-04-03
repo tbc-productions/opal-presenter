@@ -32,7 +32,7 @@ class Ui_EditVerseDialog(object):
     def setup_ui(self, edit_verse_dialog):
         edit_verse_dialog.setObjectName('edit_verse_dialog')
         edit_verse_dialog.setWindowIcon(UiIcons().main_icon)
-        edit_verse_dialog.resize(400, 400)
+        edit_verse_dialog.resize(550, 550)
         edit_verse_dialog.setModal(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(edit_verse_dialog)
         self.dialog_layout.setObjectName('dialog_layout')

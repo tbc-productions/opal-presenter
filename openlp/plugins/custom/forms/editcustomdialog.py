@@ -34,7 +34,7 @@ class Ui_CustomEditDialog(object):
         """
         custom_edit_dialog.setObjectName('custom_edit_dialog')
         custom_edit_dialog.setWindowIcon(UiIcons().main_icon)
-        custom_edit_dialog.resize(450, 350)
+        custom_edit_dialog.resize(550, 550)
         self.dialog_layout = QtWidgets.QVBoxLayout(custom_edit_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.title_layout = QtWidgets.QHBoxLayout()
