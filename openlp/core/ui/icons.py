@@ -104,7 +104,7 @@ class UiIcons(metaclass=Singleton):
             'live': {'icon': 'op.live'},
             'live_presentation': {'icon': 'op.live-presentation'},
             'live_theme': {'icon': 'op.live-theme'},
-            'live_logo': {'icon': 'mdi.image-outline'},
+            'live_logo': {'icon': 'op.live-logo'},
             'live_black': {'icon': 'op.live-black'},
             'live_desktop': {'icon': 'op.live-desktop'},
             'loop': {'icon': 'mdi.replay'},
