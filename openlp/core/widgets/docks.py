@@ -211,6 +211,12 @@ class MediaToolBox(QtWidgets.QWidget):
         self._items[index]['enabled'] = enabled
         self._rebuild_tab_bars()
 
+    def setItemIcon(self, index, icon):
+        if index < 0 or index >= len(self._items):
+            return
+        self._items[index]['icon'] = self._as_icon(icon)
+        self._rebuild_tab_bars()
+
     def count(self):
         return len(self._items)
 
@@ -286,7 +292,21 @@ class MediaDockManager(object):
                 match = True
                 break
         if not match:
-            self.media_dock.addItem(media_item, media_item.plugin.icon, visible_title['title'])
+            icon = media_item.get_library_tab_icon() if hasattr(media_item, 'get_library_tab_icon') \
+                else media_item.plugin.icon
+            self.media_dock.addItem(media_item, icon, visible_title['title'])
+
+    def refresh_item_icons(self):
+        """
+        Reapply tinted library icons from current settings to media dock tabs.
+        """
+        for dock_index in range(self.media_dock.count()):
+            media_item = self.media_dock.widget(dock_index)
+            if not media_item:
+                continue
+            icon = media_item.get_library_tab_icon() if hasattr(media_item, 'get_library_tab_icon') \
+                else media_item.plugin.icon
+            self.media_dock.setItemIcon(dock_index, icon)
 
     def remove_dock(self, media_item):
         """

@@ -526,6 +526,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # Simple message boxes
         Registry().register_function('theme_change_global', self.default_theme_changed)
         Registry().register_function('config_screen_changed', self.screen_changed)
+        Registry().register_function('media_dock_refresh_icons', self.refresh_media_dock_icons)
         Registry().register_function('bootstrap_post_set_up', self.bootstrap_post_set_up)
         # Reset the cursor
         self.application.set_normal_cursor()
@@ -586,6 +587,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             except RuntimeError:
                 # Ignore the RuntimeError that is thrown when Qt has already deleted the C++ thread object
                 pass
+
+    def refresh_media_dock_icons(self):
+        """
+        Refresh library tab icons so updated service theme colors are reflected immediately.
+        """
+        self.media_dock_manager.refresh_item_icons()
 
     def bootstrap_post_set_up(self):
         """

@@ -23,7 +23,7 @@ Provides the generic functions for interfacing plugins with the Media Manager.
 """
 import re
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
@@ -73,6 +73,15 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         (treat the filename as an image).
     """
 
+    LIBRARY_ICON_THEME_SETTINGS = {
+        'songs': 'servicemanager/theme color song',
+        'bibles': 'servicemanager/theme color bible',
+        'presentations': 'servicemanager/theme color presentation',
+        'images': 'servicemanager/theme color image',
+        'media': 'servicemanager/theme color media',
+        'custom': 'servicemanager/theme color custom slide'
+    }
+
     def __init__(self, parent=None, plugin=None):
         """
         Constructor to create the media manager item.
@@ -108,8 +117,56 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.page_layout.addWidget(self.panel_widget)
         self.required_icons()
         self.setup_ui()
+        self.library_tab_icon = self.get_library_tab_icon()
         self.retranslate_ui()
         self.auto_select_id = -1
+
+    @staticmethod
+    def _normalise_theme_color(color_text, default):
+        """
+        Normalize a color to #RRGGBB and use default when invalid.
+        """
+        color = QtGui.QColor(str(color_text).strip())
+        if not color.isValid():
+            color = QtGui.QColor(default)
+        return color
+
+    def _resolve_library_icon_color(self):
+        """
+        Resolve the configured icon tint color for this plugin's library icon.
+        """
+        setting_key = self.LIBRARY_ICON_THEME_SETTINGS.get(self.plugin.name)
+        if not setting_key:
+            return None
+        default_color = self.settings.get_default_value(setting_key)
+        color_text = self.settings.value(setting_key)
+        return self._normalise_theme_color(color_text, default_color)
+
+    def _tint_icon(self, icon):
+        """
+        Tint a base icon using plugin theme settings while preserving alpha and DPR.
+        """
+        color = self._resolve_library_icon_color()
+        if color is None:
+            return icon
+        base_pixmap = icon.pixmap(80, 80)
+        if base_pixmap.isNull():
+            return icon
+        tinted_pixmap = QtGui.QPixmap(base_pixmap.size())
+        tinted_pixmap.setDevicePixelRatio(base_pixmap.devicePixelRatio())
+        tinted_pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(tinted_pixmap)
+        painter.drawPixmap(0, 0, base_pixmap)
+        painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(tinted_pixmap.rect(), color)
+        painter.end()
+        return QtGui.QIcon(tinted_pixmap)
+
+    def get_library_tab_icon(self):
+        """
+        Return the plugin library tab icon with optional theme tint.
+        """
+        return self._tint_icon(self.plugin.icon)
 
     def setup_item(self):
         """
