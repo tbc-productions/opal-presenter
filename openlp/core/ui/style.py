@@ -76,6 +76,12 @@ QToolBox#media_tool_box::tab {
     text-align: left;
 }
 
+QWidget#media_tool_box QTabBar::tab:!selected,
+QTabWidget#media_tool_box QTabBar::tab:!selected,
+QToolBox#media_tool_box::tab:!selected {
+    color: palette(button-text);
+}
+
 QWidget#media_tool_box QTabBar::tab:first,
 QTabWidget#media_tool_box QTabBar::tab:first,
 QToolBox#media_tool_box::tab:first {
@@ -89,7 +95,11 @@ QToolBox#media_tool_box::tab:first {
 /* This is here to make the tabs on KDE with the Breeze theme work */
 QWidget#media_tool_box QTabBar::tab:selected,
 QTabWidget#media_tool_box QTabBar::tab:selected,
-QToolBox#media_tool_box::tab:selected {}
+QToolBox#media_tool_box::tab:selected {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 palette(light), stop: 1.0 palette(button));
+    color: palette(window-text);
+}
 """
 
 MEDIA_MANAGER_LIGHT_STYLE = """
@@ -101,6 +111,7 @@ QTabWidget#media_tool_box QTabBar {
 QWidget#media_tool_box QTabBar::tab,
 QTabWidget#media_tool_box QTabBar::tab,
 QToolBox#media_tool_box::tab {
+    background: palette(button);
     border: 1px solid palette(dark);
     border-radius: 0;
     margin-top: 0;
@@ -113,7 +124,9 @@ QToolBox#media_tool_box::tab {
 QWidget#media_tool_box QTabBar::tab:selected,
 QTabWidget#media_tool_box QTabBar::tab:selected,
 QToolBox#media_tool_box::tab:selected {
-    border-color: palette(mid);
+    background: palette(base);
+    border-color: palette(highlight);
+    color: palette(window-text);
 }
 
 QWidget#media_tool_box QTabBar::tab:first,
