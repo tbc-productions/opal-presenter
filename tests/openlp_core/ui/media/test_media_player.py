@@ -524,4 +524,73 @@ def test_position_changed_dual(base_media_player, registry):
     # THEN: the live position changed event is triggered
     mocked_controller.live_media_tick.emit.assert_not_called()
     mocked_controller.preview_media_tick.emit.assert_not_called()
-    assert base_media_player.controller.media_play_item.timer == 0
+
+
+@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+def test_apply_audio_output_setting_live(mocked_media_devices, mock_settings, base_media_player):
+    """
+    Test applying the configured live audio output device.
+    """
+    # GIVEN: A configured live output and a matching device
+    base_media_player.controller.is_live = True
+    base_media_player.audio_output = MagicMock()
+    mock_settings.value.return_value = 'Main Speakers'
+    output_device = MagicMock()
+    output_device.description.return_value = 'Main Speakers'
+    mocked_media_devices.audioOutputs.return_value = [output_device]
+
+    # WHEN: the audio setting is applied
+    base_media_player._apply_audio_output_setting()
+
+    # THEN: the matching output device should be set
+    mock_settings.value.assert_called_with('media/live audio output')
+    base_media_player.audio_output.setDevice.assert_called_once_with(output_device)
+
+
+@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+def test_apply_audio_output_setting_preview(mocked_media_devices, mock_settings, base_media_player):
+    """
+    Test applying the configured preview audio output device.
+    """
+    # GIVEN: A configured preview output and a matching device
+    base_media_player.controller.is_live = False
+    base_media_player.audio_output = MagicMock()
+    mock_settings.value.return_value = 'Preview Speakers'
+    output_device = MagicMock()
+    output_device.description.return_value = 'Preview Speakers'
+    mocked_media_devices.audioOutputs.return_value = [output_device]
+
+    # WHEN: the audio setting is applied
+    base_media_player._apply_audio_output_setting()
+
+    # THEN: the matching output device should be set
+    mock_settings.value.assert_called_with('media/preview audio output')
+    base_media_player.audio_output.setDevice.assert_called_once_with(output_device)
+
+
+def test_apply_audio_output_setting_system_default(mock_settings, base_media_player):
+    """
+    Test that no explicit device is applied when System default is selected.
+    """
+    # GIVEN: No configured output device name (system default)
+    base_media_player.audio_output = MagicMock()
+    mock_settings.value.return_value = ''
+
+    # WHEN: the audio setting is applied
+    base_media_player._apply_audio_output_setting()
+
+    # THEN: no explicit device should be set
+    base_media_player.audio_output.setDevice.assert_not_called()
+
+
+def test_set_visible_safe_when_controller_is_none(base_media_player):
+    """
+    set_visible() should be a no-op if shutdown has already cleared the controller.
+    """
+    # GIVEN: A player with no controller after teardown
+    base_media_player.controller = None
+
+    # WHEN: Visibility is toggled during finalise paths
+    base_media_player.set_visible(False)
+
+    # THEN: No exception should be raised

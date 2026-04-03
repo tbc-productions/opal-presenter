@@ -90,6 +90,8 @@ class MediaPlayer(MediaBase, LogMixin):
         :param display: The display where the media is.
         :return:
         """
+        self.controller = controller
+        self.display = display
         if controller.is_live:
             # Create media widget as a top-level window with tool window flags
             # This ensures it renders on the presentation display and stays visible
@@ -110,13 +112,12 @@ class MediaPlayer(MediaBase, LogMixin):
             controller.media_widget = QtWidgets.QWidget(display)
         self.media_player = QMediaPlayer(None)
         self.audio_output = QAudioOutput()
+        self._apply_audio_output_setting()
         self.media_player.setAudioOutput(self.audio_output)
         self.video_widget = QVideoWidget()
         layout = QtWidgets.QVBoxLayout(controller.media_widget)
         layout.addWidget(self.video_widget)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.controller = controller
-        self.display = display
         self.media_player.positionChanged.connect(self.position_changed_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
         self.media_player.errorOccurred.connect(self.error_occurred_event)
@@ -129,6 +130,28 @@ class MediaPlayer(MediaBase, LogMixin):
         self.device_video_input = None
         self.device_audio_input = None
         self.set_visible(False)  # Hide player till needed
+
+    def _apply_audio_output_setting(self) -> None:
+        """
+        Apply the configured audio output device for this controller, if one is selected.
+        """
+        if not hasattr(self, 'controller') or self.controller is None:
+            return
+        setting_key = 'media/live audio output' if self.controller.is_live else 'media/preview audio output'
+        settings = None
+        try:
+            settings = Registry().get('settings')
+        except Exception:
+            return
+        if not settings:
+            return
+        output_name = settings.value(setting_key)
+        if not output_name:
+            return
+        for output_device in QMediaDevices.audioOutputs():
+            if output_device.description() == output_name:
+                self.audio_output.setDevice(output_device)
+                break
 
     def media_status_changed_event(self, event):
         """
@@ -237,6 +260,7 @@ class MediaPlayer(MediaBase, LogMixin):
         """
         self.log_debug("load external media stream in Media Player")
         if self.controller.media_play_item.media_file:
+            self._apply_audio_output_setting()
             self.media_capture_session.setVideoOutput(None)
             self.media_player.setAudioOutput(self.audio_output)
             self.media_player.setVideoOutput(self.video_widget)
@@ -252,6 +276,7 @@ class MediaPlayer(MediaBase, LogMixin):
         self.log_debug("load stream  in Media Player")
 
         if self.controller.media_play_item.external_stream:
+            self._apply_audio_output_setting()
             mrl = self.controller.media_play_item.external_stream[0]
             if self.controller.media_play_item.media_type == MediaType.DeviceStream:
                 self.media_player.setVideoOutput(None)

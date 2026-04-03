@@ -24,6 +24,7 @@ The :mod:`~openlp.core.ui.media.mediatab` module holds the configuration tab for
 import logging
 
 from PySide6 import QtCore, QtWidgets
+from PySide6.QtMultimedia import QMediaDevices
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.settingstab import SettingsTab
@@ -59,6 +60,23 @@ class MediaTab(SettingsTab):
         self.auto_start_check_box.setObjectName('auto_start_check_box')
         self.media_layout.addWidget(self.auto_start_check_box)
         self.left_layout.addWidget(self.live_media_group_box)
+
+        self.audio_output_group_box = QtWidgets.QGroupBox(self.left_column)
+        self.audio_output_group_box.setObjectName('audio_output_group_box')
+        self.audio_output_form_layout = QtWidgets.QFormLayout(self.audio_output_group_box)
+        self.audio_output_form_layout.setObjectName('audio_output_form_layout')
+        self.preview_audio_output_label = QtWidgets.QLabel(self.audio_output_group_box)
+        self.preview_audio_output_label.setObjectName('preview_audio_output_label')
+        self.preview_audio_output_combo_box = QtWidgets.QComboBox(self.audio_output_group_box)
+        self.preview_audio_output_combo_box.setObjectName('preview_audio_output_combo_box')
+        self.audio_output_form_layout.addRow(self.preview_audio_output_label, self.preview_audio_output_combo_box)
+        self.live_audio_output_label = QtWidgets.QLabel(self.audio_output_group_box)
+        self.live_audio_output_label.setObjectName('live_audio_output_label')
+        self.live_audio_output_combo_box = QtWidgets.QComboBox(self.audio_output_group_box)
+        self.live_audio_output_combo_box.setObjectName('live_audio_output_combo_box')
+        self.audio_output_form_layout.addRow(self.live_audio_output_label, self.live_audio_output_combo_box)
+        self.left_layout.addWidget(self.audio_output_group_box)
+
         self.left_layout.addStretch()
         self.right_layout.addStretch()
 
@@ -68,13 +86,44 @@ class MediaTab(SettingsTab):
         """
         self.live_media_group_box.setTitle(translate('MediaPlugin.MediaTab', 'Live Media'))
         self.auto_start_check_box.setText(translate('MediaPlugin.MediaTab', 'Start Live items automatically'))
+        self.audio_output_group_box.setTitle(translate('MediaPlugin.MediaTab', 'Audio output'))
+        self.preview_audio_output_label.setText(translate('MediaPlugin.MediaTab', 'Preview output'))
+        self.live_audio_output_label.setText(translate('MediaPlugin.MediaTab', 'Live output'))
+
+    def _populate_audio_outputs(self):
+        """
+        Populate the audio output combo boxes with the current system devices.
+        """
+        system_default_text = translate('MediaPlugin.MediaTab', 'System default')
+        combo_boxes = [self.preview_audio_output_combo_box, self.live_audio_output_combo_box]
+        for combo_box in combo_boxes:
+            combo_box.clear()
+            combo_box.addItem(system_default_text, '')
+            for output_device in QMediaDevices.audioOutputs():
+                combo_box.addItem(output_device.description(), output_device.description())
+
+    @staticmethod
+    def _set_combo_for_device(combo_box, device_name):
+        """
+        Select the configured device in the combo box, falling back to System default.
+        """
+        if not device_name:
+            combo_box.setCurrentIndex(0)
+            return
+        device_index = combo_box.findData(device_name)
+        combo_box.setCurrentIndex(device_index if device_index >= 0 else 0)
 
     def load(self):
         """
         Load the settings
         """
+        self._populate_audio_outputs()
         self.auto_start_check_box.setChecked(self.settings.value('media/media auto start') ==
                                              QtCore.Qt.CheckState.Checked)
+        self._set_combo_for_device(self.preview_audio_output_combo_box,
+                                   self.settings.value('media/preview audio output'))
+        self._set_combo_for_device(self.live_audio_output_combo_box,
+                                   self.settings.value('media/live audio output'))
 
     def save(self):
         """
@@ -83,6 +132,8 @@ class MediaTab(SettingsTab):
         setting_key = 'media/media auto start'
         if self.settings.value(setting_key) != self.auto_start_check_box.checkState():
             self.settings.setValue(setting_key, self.auto_start_check_box.checkState())
+        self.settings.setValue('media/preview audio output', self.preview_audio_output_combo_box.currentData())
+        self.settings.setValue('media/live audio output', self.live_audio_output_combo_box.currentData())
 
     def post_set_up(self, post_update=False):
         """
