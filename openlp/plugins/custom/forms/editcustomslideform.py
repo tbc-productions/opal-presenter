@@ -21,7 +21,7 @@
 
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from .editcustomslidedialog import Ui_CustomSlideEditDialog
 
@@ -57,6 +57,9 @@ class EditCustomSlideForm(QtWidgets.QDialog, Ui_CustomSlideEditDialog):
         self.slide_text_edit.clear()
         if text:
             self.slide_text_edit.setPlainText(text)
+        self.slide_text_edit.reset_undo_redo_history()
+        self.slide_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.Start)
+        self.slide_text_edit.verticalScrollBar().setValue(0)
         self.slide_text_edit.setFocus()
 
     def get_text(self):

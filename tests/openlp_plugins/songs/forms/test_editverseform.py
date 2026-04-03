@@ -105,6 +105,19 @@ def test_ui_defaults(edit_verse_form: EditVerseForm):
     assert edit_verse_form.verse_text_edit.toPlainText() == '', 'The verse edit box is empty.'
 
 
+def test_set_verse_scrolls_to_top(edit_verse_form: EditVerseForm):
+    """Loading verse text should leave the editor scrolled to the top."""
+    edit_verse_form.resize(400, 120)
+    edit_verse_form.show()
+    QtWidgets.QApplication.processEvents()
+
+    long_text = '\n'.join('Line {line}'.format(line=line) for line in range(50))
+    edit_verse_form.set_verse(long_text)
+    QtWidgets.QApplication.processEvents()
+
+    assert edit_verse_form.verse_text_edit.verticalScrollBar().value() == 0
+
+
 def test_type_verse_text(edit_verse_form: EditVerseForm):
     """
     Test that typing into the verse text edit box returns the correct text
@@ -369,7 +382,7 @@ def test_set_verse_single(settings: Settings, edit_verse_form: EditVerseForm):
         mocked_verse_text_edit.setPlainText.assert_called_once_with('Amazing grace, how sweet the sound')
         mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
-        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
+        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.Start)
 
 
 def test_set_verse_multiple(settings: Settings, edit_verse_form: EditVerseForm):
@@ -396,7 +409,7 @@ def test_set_verse_multiple(settings: Settings, edit_verse_form: EditVerseForm):
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
         mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
-        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
+        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.Start)
 
 
 def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form: EditVerseForm):
@@ -423,7 +436,7 @@ def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form:
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
         mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
-        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.End)
+        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.Start)
 
 
 def test_add_splitter_to_text(edit_verse_form: EditVerseForm):

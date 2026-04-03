@@ -414,6 +414,9 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
 
     Based on code from http://john.nachtimwald.com/2009/08/22/qplaintextedit-with-in-line-spell-check
     """
+    SECTION_BOUNDARY_LINE_REGEX = re.compile(
+        r'(?m)^\s*(?:\[(?:---|===|--}\{--)\]|---\[(?:.+?)(?::.*)?\]---)\s*$')
+
     def __init__(self, parent=None, formatting_tags_allowed=True, visual_mode_only=False):
         """
         Constructor.
@@ -467,10 +470,32 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         Create a lightweight formatting toolbar docked at the top of the editor.
         """
         self._toolbar = QtWidgets.QToolBar(self)
-        self._toolbar.setIconSize(QtCore.QSize(16, 16))
+        self._toolbar.setIconSize(QtCore.QSize(20, 20))
         self._toolbar.setMovable(False)
         self._toolbar.setFloatable(False)
         self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+
+        self._undo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Undo'))
+        self._undo_action.setIcon(self._mdi_icon_or_fallback('mdi.undo', UiIcons().undo))
+        self._undo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Undo last edit.'))
+        self._undo_action.setEnabled(False)
+        undo_button = self._toolbar.widgetForAction(self._undo_action)
+        if undo_button:
+            undo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._undo_action.triggered.connect(self.undo)
+
+        self._redo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Redo'))
+        self._redo_action.setIcon(self._mdi_icon_or_fallback(
+            'mdi.redo', QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_ArrowForward)))
+        self._redo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Redo last undone edit.'))
+        self._redo_action.setEnabled(False)
+        redo_button = self._toolbar.widgetForAction(self._redo_action)
+        if redo_button:
+            redo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._redo_action.triggered.connect(self.redo)
+
+        self.undoAvailable.connect(lambda available: self._undo_action.setEnabled(available))
+        self.redoAvailable.connect(lambda available: self._redo_action.setEnabled(available))
 
         button_definitions = [
             ('', 'st', translate('OpenLP.SpellTextEdit', 'Bold'),
@@ -500,7 +525,8 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._color_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
         self._color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._color_button.setIcon(self._mdi_icon_or_fallback('mdi.format-color-text', UiIcons().theme))
-        self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Color formatting'))
+        self._color_button.setText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
         self._color_menu = QtWidgets.QMenu(self._color_button)
         self._color_button.setMenu(self._color_menu)
         self._populate_color_menu()
@@ -665,6 +691,14 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         self._visual_line_overrides = overrides if isinstance(overrides, dict) else {}
         self.viewport().update()
+    
+    def reset_undo_redo_history(self):
+        """
+        Clear the document's undo/redo history after loading content programmatically.
+        """
+        self.document().clearUndoRedoStacks()
+        self.undoAvailable.emit(False)
+        self.redoAvailable.emit(False)
 
     @staticmethod
     def _tag_token_pair(start_tag_token):
@@ -672,6 +706,83 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         Build a token pair (start/end) for a start tag name like ``st``.
         """
         return '{{{tag}}}'.format(tag=start_tag_token), '{{/{tag}}}'.format(tag=start_tag_token)
+
+    @staticmethod
+    def _iter_matching_tag_regions(text, start_tag, end_tag):
+        """
+        Yield balanced regions for a specific formatting tag pair.
+
+        This is depth-aware for nested occurrences of the same tag pair so the
+        returned start/end positions always refer to the matching closing tag.
+        """
+        search_start = 0
+        start_len = len(start_tag)
+        end_len = len(end_tag)
+        while True:
+            start_pos = text.find(start_tag, search_start)
+            if start_pos == -1:
+                return
+            depth = 1
+            scan_pos = start_pos + start_len
+            while depth > 0:
+                next_start = text.find(start_tag, scan_pos)
+                next_end = text.find(end_tag, scan_pos)
+                if next_end == -1:
+                    return
+                if next_start != -1 and next_start < next_end:
+                    depth += 1
+                    scan_pos = next_start + start_len
+                else:
+                    depth -= 1
+                    end_pos = next_end
+                    scan_pos = next_end + end_len
+            yield {
+                'start_token_start': start_pos,
+                'start_token_length': start_len,
+                'end_token_start': end_pos,
+                'end_token_length': end_len
+            }
+            search_start = scan_pos
+
+    @staticmethod
+    def _selection_section_ranges(text, selection_start, selection_end):
+        """
+        Split a selected text range into sub-ranges separated by slide markers.
+
+        The separator itself is excluded from the returned ranges so formatting
+        actions can be applied to each slide section independently.
+        """
+        if selection_start >= selection_end:
+            return []
+        selected_text = text[selection_start:selection_end]
+        separator_regex = SpellTextEdit.SECTION_BOUNDARY_LINE_REGEX
+        ranges = []
+        chunk_start = 0
+        for match in separator_regex.finditer(selected_text):
+            chunk_end = match.start()
+            # Do not include the newline directly before a marker line.
+            if chunk_end > chunk_start and selected_text[chunk_end - 1] == '\n':
+                chunk_end -= 1
+                if chunk_end > chunk_start and selected_text[chunk_end - 1] == '\r':
+                    chunk_end -= 1
+            if chunk_end > chunk_start:
+                ranges.append((selection_start + chunk_start, selection_start + chunk_end))
+            chunk_start = match.end()
+            # Do not include the newline directly after a marker line.
+            if chunk_start < len(selected_text) and selected_text[chunk_start] == '\r':
+                chunk_start += 1
+            if chunk_start < len(selected_text) and selected_text[chunk_start] == '\n':
+                chunk_start += 1
+        if chunk_start < len(selected_text):
+            ranges.append((selection_start + chunk_start, selection_start + len(selected_text)))
+        return [(start, end) for start, end in ranges if start < end]
+
+    @staticmethod
+    def _is_section_boundary_line(text):
+        """
+        Return True when *text* is a known section boundary line.
+        """
+        return bool(SpellTextEdit.SECTION_BOUNDARY_LINE_REGEX.match(text.strip()))
 
     def _known_tag_tokens(self):
         """
@@ -691,6 +802,40 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         Toggle a color formatting tag on/off at the current cursor position.
         """
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            sel_start = cursor.selectionStart()
+            sel_end = cursor.selectionEnd()
+            full_text = self.toPlainText()
+            selected_text = cursor.selectedText().replace('\u2029', '\n').replace('\u2028', '\n')
+            selected_normalized = selected_text.rstrip('\n')
+            full_normalized = full_text.rstrip('\n')
+            full_selection = ((sel_start == 0 and sel_end >= max(0, len(full_text) - 1)) or
+                              selected_text == full_text or
+                              selected_normalized == full_normalized)
+            if full_selection:
+                known_tokens = sorted(self._known_tag_tokens(), key=len, reverse=True)
+                if known_tokens:
+                    token_regex = re.compile('|'.join(re.escape(token) for token in known_tokens))
+                    cleaned = token_regex.sub('', full_text)
+                    if cleaned != full_text:
+                        self.setPlainText(cleaned)
+                return
+            # First remove any known tokens that are explicitly inside the selection.
+            # This handles malformed/unbalanced tag sequences robustly.
+            self._remove_known_tokens_in_selection()
+            cursor = self.textCursor()
+            text = self.toPlainText()
+            ranges = self._selection_section_ranges(text, cursor.selectionStart(), cursor.selectionEnd())
+            if len(ranges) > 1:
+                for start, end in reversed(ranges):
+                    section_cursor = QtGui.QTextCursor(self.document())
+                    section_cursor.setPosition(start)
+                    section_cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(section_cursor)
+                    self._toggle_color_tag(start_tag, end_tag)
+                self._collapse_redundant_formatting_boundaries()
+                return
         if self._is_tag_active_at_cursor(start_tag, end_tag):
             self._remove_specific_tag_at_cursor(start_tag, end_tag)
         else:
@@ -705,6 +850,38 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         the tag is applied around the selection or word.
         """
         start_tag, end_tag = self._tag_token_pair(start_tag_token)
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            text = self.toPlainText()
+            selection_start = cursor.selectionStart()
+            selection_end = cursor.selectionEnd()
+            ranges = self._selection_section_ranges(text, selection_start, selection_end)
+            if not ranges:
+                return
+            if len(ranges) > 1 or ranges[0] != (selection_start, selection_end):
+                cumulative_delta = 0
+                section_selections = []
+                for start, end in ranges:
+                    adjusted_start = start + cumulative_delta
+                    adjusted_end = end + cumulative_delta
+                    section_cursor = QtGui.QTextCursor(self.document())
+                    section_cursor.setPosition(adjusted_start)
+                    section_cursor.setPosition(adjusted_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(section_cursor)
+                    before_len = len(self.toPlainText())
+                    self._apply_formatting_by_tag(start_tag_token)
+                    after_len = len(self.toPlainText())
+                    cumulative_delta += after_len - before_len
+                    result_cursor = self.textCursor()
+                    if result_cursor.hasSelection():
+                        section_selections.append((result_cursor.selectionStart(), result_cursor.selectionEnd()))
+                self._collapse_redundant_formatting_boundaries()
+                if section_selections:
+                    final_cursor = QtGui.QTextCursor(self.document())
+                    final_cursor.setPosition(section_selections[0][0])
+                    final_cursor.setPosition(section_selections[-1][1], QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(final_cursor)
+                return
         if self._is_tag_active_at_cursor(start_tag, end_tag):
             self._remove_specific_tag_at_cursor(start_tag, end_tag)
         else:
@@ -722,7 +899,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                 text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
             r_start = region['start_token_start']
             r_end = region['end_token_start'] + region['end_token_length']
-            if r_start <= pos <= r_end:
+            if r_start <= pos < r_end:
                 return True
         return False
 
@@ -736,12 +913,48 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         sel_start = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
         sel_end = cursor.selectionEnd() if cursor.hasSelection() else cursor.position()
 
+        if cursor.hasSelection():
+            matching_regions = [region for region in self._iter_matching_tag_regions(text, start_tag, end_tag)
+                                if region['start_token_start'] < sel_end and
+                                region['end_token_start'] + region['end_token_length'] > sel_start]
+            if not matching_regions:
+                return
+            edit_start = min(region['start_token_start'] for region in matching_regions)
+            edit_end = max(region['end_token_start'] + region['end_token_length'] for region in matching_regions)
+            content_start = edit_start + len(start_tag)
+            content_end = edit_end - len(end_tag)
+            if sel_end <= content_start or sel_start >= content_end:
+                return
+            left = text[content_start:min(sel_start, content_end)]
+            middle = text[max(sel_start, content_start):min(sel_end, content_end)]
+            right = text[min(sel_end, content_end):content_end]
+            replacement = ''
+            if left:
+                replacement += start_tag + left + end_tag
+            replacement += middle.replace(start_tag, '').replace(end_tag, '')
+            if right:
+                replacement += start_tag + right + end_tag
+            edit_cursor = QtGui.QTextCursor(self.document())
+            edit_cursor.setPosition(edit_start)
+            edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.beginEditBlock()
+            edit_cursor.removeSelectedText()
+            edit_cursor.insertText(replacement)
+            edit_cursor.endEditBlock()
+            selection_start = edit_start
+            if left:
+                selection_start += len(start_tag) + len(left) + len(end_tag)
+            selection_end = selection_start + len(middle.replace(start_tag, '').replace(end_tag, ''))
+            edit_cursor.setPosition(selection_start)
+            edit_cursor.setPosition(selection_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            self.setTextCursor(edit_cursor)
+            return
+
         # Collect the widest edit range from all overlapping regions.
         edit_start = sel_start
         edit_end = sel_end
         found = False
-        for region in Highlighter._iter_tag_regions(
-                text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+        for region in self._iter_matching_tag_regions(text, start_tag, end_tag):
             r_start = region['start_token_start']
             r_end = region['end_token_start'] + region['end_token_length']
             if r_start <= sel_end and r_end >= sel_start:
@@ -755,7 +968,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         cleaned = segment.replace(start_tag, '').replace(end_tag, '')
         if cleaned == segment:
             return
-
         # Calculate the new cursor offset within the cleaned segment.
         offset = sel_start - edit_start
         offset_cleaned = len(re.sub(
@@ -793,11 +1005,10 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         for tag_token, action in self._tag_actions.items():
             start_tag, end_tag = self._tag_token_pair(tag_token)
             active = False
-            for region in Highlighter._iter_tag_regions(
-                    text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+            for region in self._iter_matching_tag_regions(text, start_tag, end_tag):
                 r_start = region['start_token_start']
                 r_end = region['end_token_start'] + region['end_token_length']
-                if r_start <= pos <= r_end:
+                if r_start <= pos < r_end:
                     active = True
                     break
             action.blockSignals(True)
@@ -807,11 +1018,10 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             end_tag = self._color_action_ends.get(start_tag, '')
             active = False
             if end_tag:
-                for region in Highlighter._iter_tag_regions(
-                        text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
+                for region in self._iter_matching_tag_regions(text, start_tag, end_tag):
                     r_start = region['start_token_start']
                     r_end = region['end_token_start'] + region['end_token_length']
-                    if r_start <= pos <= r_end:
+                    if r_start <= pos < r_end:
                         active = True
                         break
             action.blockSignals(True)
@@ -829,7 +1039,31 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         cursor.beginEditBlock()
         if cursor.hasSelection():
             sel_start = cursor.selectionStart()
+            sel_end = cursor.selectionEnd()
             selected_text = cursor.selectedText()
+            full_text = self.toPlainText()
+            if not self._selection_section_ranges(full_text, sel_start, sel_end):
+                cursor.endEditBlock()
+                self.setTextCursor(cursor)
+                self.setFocus()
+                return
+            prefix = full_text[:sel_start]
+            suffix = full_text[sel_end:]
+            if prefix.endswith(end_tag) and suffix.startswith(start_tag):
+                selection_start = sel_start - len(end_tag)
+                selection_end = selection_start + len(selected_text)
+                cursor.setPosition(selection_start)
+                cursor.setPosition(sel_start, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                cursor.removeSelectedText()
+                cursor.setPosition(selection_end)
+                cursor.setPosition(selection_end + len(start_tag), QtGui.QTextCursor.MoveMode.KeepAnchor)
+                cursor.removeSelectedText()
+                cursor.setPosition(selection_start)
+                cursor.setPosition(selection_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                cursor.endEditBlock()
+                self.setTextCursor(cursor)
+                self.setFocus()
+                return
             cursor.removeSelectedText()
             cursor.insertText('{start}{text}{end}'.format(start=start_tag, text=selected_text, end=end_tag))
             # Restore selection over the content region (between the tokens).
@@ -837,6 +1071,11 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             cursor.setPosition(sel_start + len(start_tag) + len(selected_text),
                                QtGui.QTextCursor.MoveMode.KeepAnchor)
         else:
+            if self._is_section_boundary_line(cursor.block().text()):
+                cursor.endEditBlock()
+                self.setTextCursor(cursor)
+                self.setFocus()
+                return
             original_pos = cursor.position()
             word_cursor = QtGui.QTextCursor(cursor)
             word_cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
@@ -857,55 +1096,235 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self.setTextCursor(cursor)
         self.setFocus()
 
-    def remove_formatting(self):
+    def _collapse_redundant_formatting_boundaries(self):
         """
-        Remove all inline formatting tags from the selected text.
+        Collapse adjacent closing/opening pairs of the same formatting tag.
 
-        When no text is selected the word under the cursor is used and the
-        selection is expanded outward to absorb any immediately adjacent known
-        tag tokens (so clicking inside ``{st}Hello{/st}`` and pressing Clear
-        removes both the word formatting and its surrounding tokens).
+        This is useful after a slide section is removed and two sections that
+        used to be separated by a marker become adjacent again.
+        """
+        text = self.toPlainText()
+        remove_ranges = []
+        for html in FormattingTags.get_html_tags():
+            start_tag = html.get('start tag')
+            end_tag = html.get('end tag')
+            if not start_tag or not end_tag:
+                continue
+            pair = end_tag + start_tag
+            pair_length = len(pair)
+            search_start = 0
+            while True:
+                pos = text.find(pair, search_start)
+                if pos == -1:
+                    break
+                remove_ranges.append((pos, pos + pair_length))
+                search_start = pos + pair_length
+        if not remove_ranges:
+            return
+
+        remove_ranges = sorted(remove_ranges)
+        merged_ranges = [remove_ranges[0]]
+        for start, end in remove_ranges[1:]:
+            last_start, last_end = merged_ranges[-1]
+            if start <= last_end:
+                merged_ranges[-1] = (last_start, max(last_end, end))
+            else:
+                merged_ranges.append((start, end))
+
+        cursor = self.textCursor()
+        position = cursor.position()
+        anchor = cursor.anchor()
+
+        def shifted_position(original_position):
+            removed_before = 0
+            for start, end in merged_ranges:
+                if end <= original_position:
+                    removed_before += end - start
+                elif start < original_position:
+                    removed_before += original_position - start
+            return original_position - removed_before
+
+        edit_cursor = QtGui.QTextCursor(self.document())
+        edit_cursor.beginEditBlock()
+        for start, end in reversed(merged_ranges):
+            edit_cursor.setPosition(start)
+            edit_cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.removeSelectedText()
+        edit_cursor.endEditBlock()
+
+        new_cursor = self.textCursor()
+        new_cursor.setPosition(max(0, shifted_position(position)))
+        if anchor != position:
+            new_cursor.setPosition(max(0, shifted_position(anchor)), QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(new_cursor)
+
+    def _remove_known_tokens_in_selection(self):
+        """
+        Remove any known formatting tokens that still remain inside the active selection.
+
+        This is a safety net for malformed or unbalanced tag sequences that are not
+        fully removed by pair-aware logic.
         """
         cursor = self.textCursor()
-        expand_to_adjacent = not cursor.hasSelection()
-        if expand_to_adjacent:
+        if not cursor.hasSelection():
+            return
+        sel_start = cursor.selectionStart()
+        sel_end = cursor.selectionEnd()
+        full_text = self.toPlainText()
+        selected_text = full_text[sel_start:sel_end]
+        known_tokens = sorted(self._known_tag_tokens(), key=len, reverse=True)
+        if not known_tokens:
+            return
+        token_regex = re.compile('|'.join(re.escape(token) for token in known_tokens))
+        remove_ranges = [(sel_start + match.start(), sel_start + match.end())
+                         for match in token_regex.finditer(selected_text)]
+        if not remove_ranges:
+            return
+
+        def shifted_position(position):
+            removed_before = 0
+            for start, end in remove_ranges:
+                if end <= position:
+                    removed_before += end - start
+                elif start < position:
+                    removed_before += position - start
+            return position - removed_before
+
+        edit_cursor = QtGui.QTextCursor(self.document())
+        edit_cursor.beginEditBlock()
+        for start, end in reversed(remove_ranges):
+            edit_cursor.setPosition(start)
+            edit_cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.removeSelectedText()
+        edit_cursor.endEditBlock()
+        edit_cursor.setPosition(shifted_position(sel_start))
+        edit_cursor.setPosition(shifted_position(sel_end), QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(edit_cursor)
+
+    def _remove_known_tokens_in_range(self, start, end):
+        """
+        Remove known formatting tokens in an explicit document range.
+        """
+        full_text = self.toPlainText()
+        start = max(0, min(start, len(full_text)))
+        end = max(start, min(end, len(full_text)))
+        if start >= end:
+            return
+        known_tokens = sorted(self._known_tag_tokens(), key=len, reverse=True)
+        if not known_tokens:
+            return
+        token_regex = re.compile('|'.join(re.escape(token) for token in known_tokens))
+        segment = full_text[start:end]
+        remove_ranges = [(start + match.start(), start + match.end())
+                         for match in token_regex.finditer(segment)]
+        if not remove_ranges:
+            return
+        edit_cursor = QtGui.QTextCursor(self.document())
+        edit_cursor.beginEditBlock()
+        for remove_start, remove_end in reversed(remove_ranges):
+            edit_cursor.setPosition(remove_start)
+            edit_cursor.setPosition(remove_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.removeSelectedText()
+        edit_cursor.endEditBlock()
+
+    def _remove_known_tokens_in_ranges(self, ranges):
+        """
+        Remove known formatting tokens across multiple explicit ranges.
+        """
+        for start, end in reversed(ranges):
+            self._remove_known_tokens_in_range(start, end)
+
+    def remove_formatting(self):
+        """
+        Remove inline formatting tags from the selected text or current word.
+
+        Any known formatting region that overlaps the active selection has both
+        its opening and closing tokens removed, leaving the content intact.
+        """
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            text = self.toPlainText()
+            ranges = self._selection_section_ranges(text, cursor.selectionStart(), cursor.selectionEnd())
+            if len(ranges) > 1:
+                union_start = ranges[0][0]
+                union_end = ranges[-1][1]
+                for start, end in reversed(ranges):
+                    section_cursor = QtGui.QTextCursor(self.document())
+                    section_cursor.setPosition(start)
+                    section_cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(section_cursor)
+                    self.remove_formatting()
+                self._collapse_redundant_formatting_boundaries()
+                self._remove_known_tokens_in_ranges(ranges)
+                current_length = len(self.toPlainText())
+                final_cursor = QtGui.QTextCursor(self.document())
+                final_cursor.setPosition(min(union_start, current_length))
+                final_cursor.setPosition(min(union_end, current_length), QtGui.QTextCursor.MoveMode.KeepAnchor)
+                self.setTextCursor(final_cursor)
+                self._remove_known_tokens_in_selection()
+                return
+            try:
+                html_tags = FormattingTags.get_html_tags()
+            except Exception:
+                html_tags = []
+            for html in html_tags:
+                start_tag = html.get('start tag')
+                end_tag = html.get('end tag')
+                if start_tag and end_tag:
+                    self._remove_specific_tag_at_cursor(start_tag, end_tag)
+            self._remove_known_tokens_in_selection()
+            return
+        if not cursor.hasSelection():
             cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
         if not cursor.hasSelection():
             return
-        known_tokens = self._known_tag_tokens()
         full_text = self.toPlainText()
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
-        if expand_to_adjacent:
-            changed = True
-            while changed:
-                changed = False
-                for match in re.finditer(r'\{/?[^\}\s]+\}', full_text):
-                    if match.group(0) not in known_tokens:
-                        continue
-                    if match.end() == sel_start:
-                        sel_start = match.start()
-                        changed = True
-                    elif match.start() == sel_end:
-                        sel_end = match.end()
-                        changed = True
-        selected_text = full_text[sel_start:sel_end]
-        cleaned = re.sub(
-            r'\{/?[^\}\s]+\}',
-            lambda m: '' if m.group(0) in known_tokens else m.group(0),
-            selected_text
-        )
-        if cleaned == selected_text:
+        try:
+            html_tags = FormattingTags.get_html_tags()
+        except Exception:
+            html_tags = []
+        remove_ranges = []
+        for region in Highlighter._iter_tag_regions(full_text, html_tags):
+            region_start = region['start_token_start']
+            region_end = region['end_token_start'] + region['end_token_length']
+            if region_start < sel_end and region_end > sel_start:
+                remove_ranges.append((region['start_token_start'],
+                                      region['start_token_start'] + region['start_token_length']))
+                remove_ranges.append((region['end_token_start'],
+                                      region['end_token_start'] + region['end_token_length']))
+        if not remove_ranges:
             return
-        cursor.setPosition(sel_start)
-        cursor.setPosition(sel_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
-        cursor.beginEditBlock()
-        cursor.removeSelectedText()
-        cursor.insertText(cleaned)
-        cursor.endEditBlock()
-        cursor.setPosition(sel_start)
-        cursor.setPosition(sel_start + len(cleaned), QtGui.QTextCursor.MoveMode.KeepAnchor)
-        self.setTextCursor(cursor)
+
+        remove_ranges = sorted(remove_ranges)
+        merged_ranges = [remove_ranges[0]]
+        for start, end in remove_ranges[1:]:
+            last_start, last_end = merged_ranges[-1]
+            if start <= last_end:
+                merged_ranges[-1] = (last_start, max(last_end, end))
+            else:
+                merged_ranges.append((start, end))
+
+        def shifted_position(position):
+            removed_before = 0
+            for start, end in merged_ranges:
+                if end <= position:
+                    removed_before += end - start
+                elif start < position:
+                    removed_before += position - start
+            return position - removed_before
+
+        edit_cursor = QtGui.QTextCursor(self.document())
+        edit_cursor.beginEditBlock()
+        for start, end in reversed(merged_ranges):
+            edit_cursor.setPosition(start)
+            edit_cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.removeSelectedText()
+        edit_cursor.endEditBlock()
+        edit_cursor.setPosition(shifted_position(sel_start))
+        edit_cursor.setPosition(shifted_position(sel_end), QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(edit_cursor)
 
     def remove_unused_tags(self):
         """
@@ -1121,8 +1540,12 @@ class Highlighter(QtGui.QSyntaxHighlighter):
             text_format.setFontWeight(QtGui.QFont.Weight.Bold)
         if '<em' in lower_html or '<i>' in lower_html:
             text_format.setFontItalic(True)
-        if '<u>' in lower_html or 'text-decoration: underline' in lower_html:
+        if '<u>' in lower_html or re.search(r'text-decoration\s*:\s*[^;]*underline', lower_html):
             text_format.setFontUnderline(True)
+        if re.search(r'font-style\s*:\s*italic', lower_html):
+            text_format.setFontItalic(True)
+        if re.search(r'text-transform\s*:\s*uppercase', lower_html):
+            text_format.setFontCapitalization(QtGui.QFont.Capitalization.AllUppercase)
         if '<sup' in lower_html:
             text_format.setVerticalAlignment(QtGui.QTextCharFormat.VerticalAlignment.AlignSuperScript)
         if '<sub' in lower_html:
@@ -1229,6 +1652,54 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         hidden_token_format.setFontLetterSpacing(0)
         return hidden_token_format
 
+    @staticmethod
+    def _merged_char_format(base_format, overlay_format):
+        """
+        Merge a formatting overlay onto an existing character format.
+
+        This allows nested/stacked tags (for example bold + italic) to be
+        rendered together rather than whichever tag was applied last.
+        """
+        merged = QtGui.QTextCharFormat(base_format)
+        if overlay_format.fontWeight() != QtGui.QFont.Weight.Normal:
+            merged.setFontWeight(overlay_format.fontWeight())
+        if overlay_format.fontItalic():
+            merged.setFontItalic(True)
+        if overlay_format.fontUnderline():
+            merged.setFontUnderline(True)
+        if overlay_format.verticalAlignment() != QtGui.QTextCharFormat.VerticalAlignment.AlignNormal:
+            merged.setVerticalAlignment(overlay_format.verticalAlignment())
+        if overlay_format.fontCapitalization() != QtGui.QFont.Capitalization.MixedCase:
+            merged.setFontCapitalization(overlay_format.fontCapitalization())
+        if overlay_format.fontPointSize() > 0:
+            merged.setFontPointSize(overlay_format.fontPointSize())
+        if overlay_format.foreground().style() != QtCore.Qt.BrushStyle.NoBrush and \
+                overlay_format.foreground().color().isValid():
+            merged.setForeground(overlay_format.foreground())
+        return merged
+
+    def _apply_format_overlay(self, start, length, overlay_format):
+        """
+        Apply an overlay format while preserving existing character properties.
+        """
+        if length <= 0:
+            return
+        # Merge per character so pre-existing styles (e.g. an outer tag) remain
+        # active when an inner tag adds additional formatting.
+        run_start = start
+        run_format = None
+        for pos in range(start, start + length):
+            merged = self._merged_char_format(self.format(pos), overlay_format)
+            if run_format is None:
+                run_format = merged
+                run_start = pos
+            elif merged != run_format:
+                self.setFormat(run_start, pos - run_start, run_format)
+                run_start = pos
+                run_format = merged
+        if run_format is not None:
+            self.setFormat(run_start, start + length - run_start, run_format)
+
     def highlightBlock(self, text):
         """
         Highlight mis spelt words in a block of text.
@@ -1317,94 +1788,69 @@ class Highlighter(QtGui.QSyntaxHighlighter):
 
         hidden_fmt = self._hidden_token_format()
         unknown_fmt = self._unknown_token_format()
-
-        # Assume this block ends clean; continuation logic overrides when needed.
-        self.setCurrentBlockState(0)
-
-        prev_state = self.previousBlockState()
-        block_start = 0  # offset within `text` where "normal" pair scanning begins
-
-        # ------------------------------------------------------------------
-        # Handle continuation: previous block ended inside an open tag span.
-        # ------------------------------------------------------------------
-        if prev_state > 0:
-            tag_idx = prev_state - 1
-            if tag_idx < len(html_tags):
-                active_html = html_tags[tag_idx]
-                start_tag = active_html.get('start tag') or ''
-                end_tag = active_html.get('end tag') or ''
-                tag_fmt = self._format_from_start_html(active_html.get('start html', ''))
-                # Use depth-aware search: nested same-tag pairs inside this block
-                # must not prematurely close the outer span inherited from the
-                # previous block (start_depth=1 because we enter already one level deep).
-                end_pos = self._find_closing_tag_depth_aware(
-                    text, start_tag, end_tag, start_pos=0, start_depth=1) if end_tag else -1
-                if end_pos == -1:
-                    # Entire block is inside this span; propagate state to next block.
-                    self.setFormat(0, len(text), tag_fmt)
-                    self.setCurrentBlockState(prev_state)
-                    # Suppress any stray token markers within this continuation block.
-                    for m in re.finditer(r'\{/?[^\}\s]+\}', text):
-                        tok = m.group(0)
-                        self.setFormat(m.start(), len(tok),
-                                       hidden_fmt if tok in known_tokens else unknown_fmt)
-                    for m in re.finditer(r'&nbsp;', text):
-                        self.setFormat(m.start(), 6, hidden_fmt)
-                    return
-                else:
-                    # End tag found: format the leading content, hide the end token.
-                    self.setFormat(0, end_pos, tag_fmt)
-                    self.setFormat(end_pos, len(end_tag), hidden_fmt)
-                    block_start = end_pos + len(end_tag)
-
-        # ------------------------------------------------------------------
-        # Process complete tag pairs within the remainder of this block.
-        # ------------------------------------------------------------------
-        remaining = text[block_start:]
-        for region in self._iter_tag_regions(remaining, html_tags):
-            abs_st = block_start + region['start_token_start']
-            abs_content = block_start + region['content_start']
-            abs_et = block_start + region['end_token_start']
-            self.setFormat(abs_st, region['start_token_length'], hidden_fmt)
-            if region['content_length'] > 0:
-                tag_fmt = self._format_from_start_html(region['html'].get('start html', ''))
-                self.setFormat(abs_content, region['content_length'], tag_fmt)
-            self.setFormat(abs_et, region['end_token_length'], hidden_fmt)
-
-        # ------------------------------------------------------------------
-        # Detect a tag that opens in this block but closes in a later block.
-        # Only one unclosed tag is tracked (tags do not nest in OpenLP).
-        # ------------------------------------------------------------------
-        for i, html in enumerate(html_tags):
+        start_map = {}
+        end_map = {}
+        token_set = set()
+        for index, html in enumerate(html_tags):
             start_tag = html.get('start tag')
             end_tag = html.get('end tag')
-            if not start_tag or not end_tag:
-                continue
-            search_pos = 0
-            unclosed_rel = -1
-            while True:
-                open_pos = remaining.find(start_tag, search_pos)
-                if open_pos == -1:
-                    break
-                # Depth-aware: find the balanced close for this open, so nested
-                # same-tag pairs (e.g. inner {st}...{/st} inside outer {st}) are
-                # skipped and the outer open is correctly detected as unclosed.
-                close_pos = self._find_closing_tag_depth_aware(
-                    remaining, start_tag, end_tag,
-                    start_pos=open_pos + len(start_tag), start_depth=1)
-                if close_pos == -1:
-                    unclosed_rel = open_pos
-                    break
-                search_pos = close_pos + len(end_tag)
-            if unclosed_rel >= 0:
-                abs_open = block_start + unclosed_rel
-                self.setFormat(abs_open, len(start_tag), hidden_fmt)
-                content_start = abs_open + len(start_tag)
-                if content_start < len(text):
+            if start_tag and end_tag:
+                start_map[start_tag] = index
+                end_map[end_tag] = index
+                token_set.add(start_tag)
+                token_set.add(end_tag)
+
+        token_regex = None
+        if token_set:
+            token_regex = re.compile('|'.join(re.escape(token) for token in sorted(token_set, key=len, reverse=True)))
+
+        active_mask = self.previousBlockState()
+        if active_mask < 0:
+            active_mask = 0
+
+        def apply_active_styles(start, length, mask):
+            if length <= 0 or mask == 0:
+                return
+            for i, html in enumerate(html_tags):
+                if mask & (1 << i):
                     tag_fmt = self._format_from_start_html(html.get('start html', ''))
-                    self.setFormat(content_start, len(text) - content_start, tag_fmt)
-                self.setCurrentBlockState(i + 1)
+                    self._apply_format_overlay(start, length, tag_fmt)
+
+        pos = 0
+        while pos < len(text):
+            next_known = token_regex.search(text, pos) if token_regex else None
+            nbsp_pos = text.find('&nbsp;', pos)
+
+            next_pos = len(text)
+            hit_type = None
+            if next_known:
+                next_pos = next_known.start()
+                hit_type = 'known'
+            if nbsp_pos != -1 and nbsp_pos < next_pos:
+                next_pos = nbsp_pos
+                hit_type = 'nbsp'
+
+            if next_pos > pos:
+                apply_active_styles(pos, next_pos - pos, active_mask)
+                pos = next_pos
+
+            if hit_type == 'known' and next_known:
+                token = next_known.group(0)
+                token_start = next_known.start()
+                token_length = len(token)
+                self.setFormat(token_start, token_length, hidden_fmt)
+                if token in start_map:
+                    active_mask |= (1 << start_map[token])
+                elif token in end_map:
+                    active_mask &= ~(1 << end_map[token])
+                pos = token_start + token_length
+            elif hit_type == 'nbsp':
+                self.setFormat(pos, 6, hidden_fmt)
+                pos += 6
+            else:
                 break
+
+        self.setCurrentBlockState(active_mask)
 
         # ------------------------------------------------------------------
         # Final pass: ensure all inline tokens are hidden or flagged, and

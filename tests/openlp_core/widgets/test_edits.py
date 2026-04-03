@@ -637,6 +637,171 @@ def test_highlighter_span_continues_across_split_marker(mock_settings):
     assert editor.toPlainText() == '{st}Before split\n[---]\nAfter split{/st}'
 
 
+def test_highlighter_combines_nested_tag_styles(mock_settings):
+    """Nested tags should combine visual styles (for example bold + italic)."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}{it}Hello{/it}{/st}')
+
+    block = editor.document().firstBlock()
+    assert block.isValid()
+    index_in_block = len('{st}{it}')
+
+    content_format = None
+    for format_range in block.layout().formats():
+        start = format_range.start
+        end = format_range.start + format_range.length
+        if start <= index_in_block < end:
+            content_format = format_range.format
+            break
+
+    assert content_format is not None
+    assert content_format.fontWeight() == QtGui.QFont.Weight.Bold
+    assert content_format.fontItalic() is True
+
+
+def test_highlighter_combines_three_nested_tag_styles(mock_settings):
+    """Nested tags should render all active styles, including underline."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}{it}{u}Hello{/u}{/it}{/st}')
+
+    block = editor.document().firstBlock()
+    assert block.isValid()
+    index_in_block = len('{st}{it}{u}')
+
+    content_format = None
+    for format_range in block.layout().formats():
+        start = format_range.start
+        end = format_range.start + format_range.length
+        if start <= index_in_block < end:
+            content_format = format_range.format
+            break
+
+    assert content_format is not None
+    assert content_format.fontWeight() == QtGui.QFont.Weight.Bold
+    assert content_format.fontItalic() is True
+    assert content_format.fontUnderline() is True
+
+
+def test_highlighter_applies_uppercase_tag_visual_style(mock_settings):
+    """The uppercase tag should apply uppercase visual capitalization."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{uc}Abide with me{/uc}')
+
+    block = editor.document().firstBlock()
+    assert block.isValid()
+    index_in_block = len('{uc}') + 2
+
+    content_format = None
+    for format_range in block.layout().formats():
+        start = format_range.start
+        end = format_range.start + format_range.length
+        if start <= index_in_block < end:
+            content_format = format_range.format
+            break
+
+    assert content_format is not None
+    assert content_format.fontCapitalization() == QtGui.QFont.Capitalization.AllUppercase
+
+
+def test_highlighter_combines_three_styles_across_multiline_continuation(mock_settings):
+    """Styles active across blocks should keep all active attributes, including underline."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}{it}\n{u}Hello\n{/u}{/it}{/st}')
+
+    block = editor.document().findBlockByNumber(1)
+    assert block.isValid()
+
+    content_format = None
+    for format_range in block.layout().formats():
+        start = format_range.start
+        end = format_range.start + format_range.length
+        if start <= 4 < end:  # inside "Hello"
+            content_format = format_range.format
+            break
+
+    assert content_format is not None
+    assert content_format.fontWeight() == QtGui.QFont.Weight.Bold
+    assert content_format.fontItalic() is True
+    assert content_format.fontUnderline() is True
+
+
+def test_spell_text_edit_does_not_add_tags_on_split_marker_line(mock_settings):
+    """Formatting actions should not insert tokens on section split lines."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('[---]')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(2)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '[---]'
+
+
+def test_spell_text_edit_apply_formatting_selection_skips_split_lines(mock_settings):
+    """Formatting across a selection containing a split line must skip the split marker line."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('foo\n[---]\nbar')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len('foo\n[---]\nbar'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '{st}foo{/st}\n[---]\n{st}bar{/st}'
+
+
+def test_spell_text_edit_apply_formatting_selection_skips_song_section_headers(mock_settings):
+    """Formatting across song section headers should format each section independently."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('foo\n---[Verse:2]---\nbar')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len('foo\n---[Verse:2]---\nbar'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '{st}foo{/st}\n---[Verse:2]---\n{st}bar{/st}'
+
+
+def test_spell_text_edit_apply_formatting_across_sections_preserves_selection(mock_settings):
+    """Applying formatting across sections should preserve selection over both formatted sections."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('foo\n---[Verse:2]---\nbar')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len('foo\n---[Verse:2]---\nbar'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('u')
+
+    result_cursor = editor.textCursor()
+    assert editor.toPlainText() == '{u}foo{/u}\n---[Verse:2]---\n{u}bar{/u}'
+    assert result_cursor.hasSelection() is True
+    assert result_cursor.selectionStart() == 3  # just after '{u}'
+    assert result_cursor.selectionEnd() == len('{u}foo{/u}\n---[Verse:2]---\n{u}bar')
+
+
+def test_spell_text_edit_does_not_add_tags_on_song_section_header_line(mock_settings):
+    """Formatting actions should not insert tokens on song section header lines."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('---[Verse:2]---')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(4)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '---[Verse:2]---'
+
+
 def test_spell_text_edit_toggle_rich_mode(mock_settings):
     """Rich/plain mode toggle should update both editor and highlighter state."""
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
@@ -679,6 +844,8 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
 
     # Only the color tag should appear in the dropdown.
     assert list(editor._color_actions.keys()) == ['{r}']
+    assert editor._color_button.text() == 'Custom formatting'
+    assert editor._color_button.toolTip() == 'Custom formatting'
 
 
 @patch('openlp.core.widgets.edits.FormattingTagForm')
@@ -867,10 +1034,10 @@ def test_spell_text_edit_remove_formatting_strips_tags_from_selection(mock_setti
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
     editor.setPlainText('{st}Bold text{/st} and {it}italic{/it}')
 
-    # Select the first tagged segment including its tokens
+    # Select the first tagged segment content only.
     cursor = editor.textCursor()
-    cursor.setPosition(0)
-    cursor.setPosition(len('{st}Bold text{/st}'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    cursor.setPosition(len('{st}'))
+    cursor.setPosition(len('{st}Bold text'), QtGui.QTextCursor.MoveMode.KeepAnchor)
     editor.setTextCursor(cursor)
 
     editor.remove_formatting()
@@ -892,6 +1059,172 @@ def test_spell_text_edit_remove_formatting_uses_word_when_no_selection(mock_sett
 
     # Both the surrounding {st}/{/st} tokens and the word are now tag-free
     assert editor.toPlainText() == 'Hello'
+
+
+def test_spell_text_edit_undo_redo_actions_track_state(mock_settings):
+    """Undo and redo toolbar buttons should reflect whether edits are available."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    assert editor._undo_action.isEnabled() is False
+    assert editor._redo_action.isEnabled() is False
+
+    QtTest.QTest.keyClicks(editor, 'Hello')
+    QtWidgets.QApplication.processEvents()
+
+    assert editor._undo_action.isEnabled() is True
+    assert editor._redo_action.isEnabled() is False
+
+    editor.undo()
+    QtWidgets.QApplication.processEvents()
+
+    assert editor._undo_action.isEnabled() is False
+    assert editor._redo_action.isEnabled() is True
+
+
+def test_spell_text_edit_undo_action_reverts_text(mock_settings):
+    """Clicking undo should revert the last user edit."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+
+    QtTest.QTest.keyClicks(editor, 'Hello')
+    QtWidgets.QApplication.processEvents()
+
+    assert editor.toPlainText() == 'Hello'
+    editor._undo_action.trigger()
+    QtWidgets.QApplication.processEvents()
+    assert editor.toPlainText() == ''
+
+
+def test_spell_text_edit_toggle_off_formatting_preserves_content(mock_settings):
+    """Toggling off formatting should remove only tokens, never the wrapped text."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Bold{/st}')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}Bo'))
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == 'Bold'
+
+
+def test_spell_text_edit_toggle_off_formatting_keeps_surrounding_text(mock_settings):
+    """Toggling off formatting must not remove text before or after the formatted span."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('pre {st}Bold{/st} post')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('pre {st}Bo'))
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == 'pre Bold post'
+
+
+def test_spell_text_edit_apply_formatting_across_split_marker_applies_each_section(mock_settings):
+    """Applying formatting across a split marker should format each slide section independently."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('foo bar\n[---]\nbaz qux')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('foo '))
+    cursor.setPosition(len('foo bar\n[---]\nbaz'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == 'foo {st}bar{/st}\n[---]\n{st}baz{/st} qux'
+
+
+def test_spell_text_edit_apply_formatting_merges_adjacent_same_tags(mock_settings):
+    """Applying formatting between two identical tagged spans should merge them."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}this is a{/st} test {st}case{/st}')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('{st}this is a{/st}'))
+    cursor.setPosition(len('{st}this is a{/st} test '), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor._apply_formatting_by_tag('st')
+
+    assert editor.toPlainText() == '{st}this is a test case{/st}'
+
+
+def test_spell_text_edit_clear_formatting_across_split_marker_applies_to_each_section(mock_settings):
+    """Clear formatting across a split marker should only affect the selected slide sections."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('foo {st}bar{/st}\n[---]\n{st}baz{/st} qux')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('foo '))
+    cursor.setPosition(len('foo {st}bar{/st}\n[---]\n{st}baz'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    assert editor.toPlainText() == 'foo bar\n[---]\nbaz qux'
+
+
+def test_spell_text_edit_remove_formatting_preserves_surrounding_formatting(mock_settings):
+    """Clear formatting should only affect the highlighted part of a formatted span."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('pre {st}Bold text{/st} post')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('pre {st}'))
+    cursor.setPosition(len('pre {st}Bold'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    assert editor.toPlainText() == 'pre Bold{st} text{/st} post'
+
+
+def test_spell_text_edit_remove_formatting_preserves_selection_range(mock_settings):
+    """Removing formatting from a selection should keep the selection on the same text."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('aa {st}hello{/st} bb')
+
+    cursor = editor.textCursor()
+    cursor.setPosition(len('aa {st}'))
+    cursor.setPosition(len('aa {st}hello'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    result_cursor = editor.textCursor()
+    assert editor.toPlainText() == 'aa hello bb'
+    assert result_cursor.selectedText() == 'hello'
+    assert result_cursor.selectionStart() == len('aa ')
+    assert result_cursor.selectionEnd() == len('aa hello')
+
+
+def test_spell_text_edit_remove_formatting_strips_leftover_malformed_tokens_across_sections(mock_settings):
+    """Clear formatting on a cross-section selection should remove all known tokens, even malformed leftovers."""
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText(
+        '---[Verse:1]---\n'
+        '{st}Abide with me, fast{uc} falls t{it}{u}{/st}{/it}{/u}{st}he eventide;\n'
+        '{r}Help of the helpless, O abide with me.{/r}{/uc}{/st}\n'
+        '---[Verse:2]---\n'
+        '{st}{u}{it}{u}{it}{uc}Swift to its close ebbs out life\'s little day;\n'
+        'Change and decay in all {/st}{/u}{/it}{/st}{/u}{/it}around I see;\n'
+        'O Thou who changest not, abide with me.{/uc}\n'
+    )
+
+    cursor = editor.textCursor()
+    cursor.select(QtGui.QTextCursor.SelectionType.Document)
+    editor.setTextCursor(cursor)
+
+    editor.remove_formatting()
+
+    result = editor.toPlainText()
+    for token in editor._known_tag_tokens():
+        assert token not in result
+    assert '---[Verse:1]---' in result
+    assert '---[Verse:2]---' in result
 
 
 def test_spell_text_edit_toolbar_buttons_are_checkable(mock_settings):
