@@ -100,6 +100,27 @@ class ThumbnailGeneratorWorker(ThreadWorker):
         self.quit.emit()
 
 
+class MediaLengthWorker(ThreadWorker):
+    """
+    Worker thread for obtaining media duration without blocking the UI thread.
+    """
+    media_length_ready = QtCore.Signal(int)
+
+    def __init__(self, media_path: str):
+        super().__init__()
+        self.media_path = media_path
+
+    def start(self):
+        try:
+            media_length = media_info().get_media_duration(self.media_path)
+            self.media_length_ready.emit(media_length)
+        except Exception as e:
+            log.exception(f'Failed to read media length for {self.media_path}: {e}')
+            self.media_length_ready.emit(0)
+        finally:
+            self.quit.emit()
+
+
 class MediaMediaItem(FolderLibraryItem):
     """
     This is the custom media manager item for Media Slides.
@@ -280,7 +301,8 @@ class MediaMediaItem(FolderLibraryItem):
             service_item.processor = 'qt6'
             service_item.add_from_command(path, name, self.clapperboard)
             # Only get start and end times if going to a service
-            service_item.set_media_length(self.media_controller.media_length(filename))
+            if context == ServiceItemContext.Service:
+                self._queue_media_length_probe(service_item, filename)
         service_item.add_capability(ItemCapabilities.CanAutoStartForLive)
         service_item.add_capability(ItemCapabilities.CanEditTitle)
         service_item.add_capability(ItemCapabilities.RequiresMedia)
@@ -289,6 +311,29 @@ class MediaMediaItem(FolderLibraryItem):
         # validate the item after all capabilities has been added
         service_item.validate_item()
         return True
+
+    def _queue_media_length_probe(self, service_item, filename):
+        """
+        Read media length in a worker thread and update the existing service item when finished.
+        """
+        thread_name = f'media_length_{service_item.unique_identifier}_{QtCore.QDateTime.currentMSecsSinceEpoch()}'
+        worker = MediaLengthWorker(filename)
+        worker.media_length_ready.connect(
+            lambda media_length, unique_id=service_item.unique_identifier:
+            self._apply_media_length_probe_result(unique_id, media_length)
+        )
+        run_thread(worker, thread_name, can_start=True)
+
+    def _apply_media_length_probe_result(self, service_item_id, media_length):
+        """
+        Apply async media-length result to the matching item currently in the service.
+        """
+        for index, service_entry in enumerate(self.service_manager.service_items):
+            service_item = service_entry.get('service_item')
+            if service_item and service_item.unique_identifier == service_item_id:
+                service_item.set_media_length(media_length)
+                self.service_manager.repaint_service_list(index, -1)
+                break
 
     def rebuild_players(self):
         """

@@ -28,6 +28,7 @@ from unittest.mock import MagicMock, call, patch
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.registry import Registry
+from openlp.core.lib import ServiceItemContext
 from openlp.core.ui.media import MediaType, get_supported_media_suffix
 from openlp.core.ui.icons import UiIcons
 from openlp.plugins.media.lib.db import Item
@@ -194,6 +195,34 @@ def test_generate_slide_data_blocks_unsupported_media(mocked_error_dialog: Magic
     # THEN: it should reject the media and show a user-facing error
     assert result is False
     mocked_error_dialog.assert_called_once()
+
+
+def test_generate_slide_data_queues_media_length_probe_for_service(media_item, tmp_path):
+    """
+    Test that media duration probing is queued (not run inline) for service items.
+    """
+    # GIVEN: a supported media file and a media item with a probe queue method
+    media_path = tmp_path / 'supported.mp4'
+    media_path.write_bytes(b'test')
+    mocked_db_item = Item(name='supported.mp4', file_path=str(media_path))
+    mocked_tree_item = MagicMock()
+    mocked_tree_item.data.return_value = mocked_db_item
+    mocked_service_item = MagicMock()
+    mocked_media_controller = MagicMock()
+    mocked_media_controller.is_media_supported.return_value = (True, '')
+    Registry().register('media_controller', mocked_media_controller)
+
+    with patch.object(media_item, '_queue_media_length_probe') as mocked_queue:
+        # WHEN: generate_slide_data() is called for Service context
+        result = media_item.generate_slide_data(
+            mocked_service_item,
+            item=mocked_tree_item,
+            context=ServiceItemContext.Service
+        )
+
+    # THEN: media length probing should be queued asynchronously
+    assert result is True
+    mocked_queue.assert_called_once_with(mocked_service_item, str(media_path))
 
 
 @patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem.validate_and_load')
