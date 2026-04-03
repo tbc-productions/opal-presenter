@@ -24,7 +24,7 @@ This module contains tests for the lib submodule of the Songs plugin.
 import pytest
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common.enum import SongFirstSlideMode
 
 from openlp.core.common.registry import Registry
@@ -288,3 +288,36 @@ def test_save_first_slide_settings(form):
 
     # THEN: The correct values should be stored in the settings
     assert form.settings.value('songs/first slide mode') is SongFirstSlideMode.Footer.value
+
+
+def test_section_color_edit_requires_hash_and_six_hex_digits(form):
+    """
+    Test section color edits require a leading # and six hexadecimal digits.
+    """
+    # GIVEN: A section color edit widget
+    edit = form.section_color_edits['intro']
+
+    # WHEN: Querying input constraints and validating sample values
+    state_valid, _, _ = edit.validator().validate('#A1B2C3', 0)
+    state_too_short, _, _ = edit.validator().validate('#ABC12', 0)
+    state_without_hash, _, _ = edit.validator().validate('A1B2C3', 0)
+
+    # THEN: Only # followed by six hex digits is accepted
+    assert edit.maxLength() == 7
+    assert state_valid == QtGui.QValidator.State.Acceptable
+    assert state_too_short != QtGui.QValidator.State.Acceptable
+    assert state_without_hash != QtGui.QValidator.State.Acceptable
+
+
+def test_section_color_load_displays_hex_with_hash(form):
+    """
+    Test loaded section colors are displayed as #RRGGBB in the edit field.
+    """
+    # GIVEN: A stored color value
+    form.settings.setValue('songs/section color intro', '#A1B2C3')
+
+    # WHEN: Loading settings
+    form.load()
+
+    # THEN: The edit box contains #RRGGBB text
+    assert form.section_color_edits['intro'].text() == '#A1B2C3'
