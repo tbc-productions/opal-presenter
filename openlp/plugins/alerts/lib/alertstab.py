@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.settingstab import SettingsTab
@@ -100,8 +100,12 @@ class AlertsTab(SettingsTab):
         self.preview_group_box.setObjectName('preview_group_box')
         self.preview_layout = QtWidgets.QVBoxLayout(self.preview_group_box)
         self.preview_layout.setObjectName('preview_layout')
-        self.font_preview = QtWidgets.QLineEdit(self.preview_group_box)
+        self.font_preview = QtWidgets.QLabel(self.preview_group_box)
         self.font_preview.setObjectName('font_preview')
+        self.font_preview.setAutoFillBackground(True)
+        self.font_preview.setMargin(8)
+        self.font_preview.setMinimumHeight(72)
+        self.font_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft)
         self.preview_layout.addWidget(self.font_preview)
         self.right_layout.addWidget(self.preview_group_box)
         self.right_layout.addStretch()
@@ -239,6 +243,24 @@ class AlertsTab(SettingsTab):
         font.setBold(True)
         font.setPointSize(self.font_size)
         self.font_preview.setFont(font)
-        self.font_preview.setStyleSheet('background-color: {back}; color: {front}'.format(back=self.background_color,
-                                                                                          front=self.font_color))
+        preview_palette = self.font_preview.palette()
+        preview_palette.setColor(QtGui.QPalette.ColorGroup.Active,
+                                 QtGui.QPalette.ColorRole.Window,
+                                 QtGui.QColor(self.background_color))
+        preview_palette.setColor(QtGui.QPalette.ColorGroup.Inactive,
+                                 QtGui.QPalette.ColorRole.Window,
+                                 QtGui.QColor(self.background_color))
+        preview_palette.setColor(QtGui.QPalette.ColorGroup.Active,
+                                 QtGui.QPalette.ColorRole.WindowText,
+                                 QtGui.QColor(self.font_color))
+        preview_palette.setColor(QtGui.QPalette.ColorGroup.Inactive,
+                                 QtGui.QPalette.ColorRole.WindowText,
+                                 QtGui.QColor(self.font_color))
+        self.font_preview.setPalette(preview_palette)
+        self.font_preview.setStyleSheet(
+            'QLabel#font_preview {{ background-color: {back}; color: {front}; border: none; }}'.format(
+                back=self.background_color,
+                front=self.font_color
+            )
+        )
         self.changed = True
