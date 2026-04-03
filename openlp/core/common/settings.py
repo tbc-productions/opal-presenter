@@ -667,6 +667,8 @@ class Settings(QtCore.QSettings):
             'shortcuts/down': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Down)],
             'shortcuts/editSong': [],
             'shortcuts/expand': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus)],
+            'shortcuts/expandCollapse': [],
+            'shortcuts/make_preview': [],
             'shortcuts/exportThemeItem': [],
             'shortcuts/fileNewItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.New)],
             'shortcuts/fileSaveAsItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.SaveAs)],

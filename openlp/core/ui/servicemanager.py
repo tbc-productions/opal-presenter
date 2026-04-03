@@ -270,6 +270,11 @@ class Ui_ServiceManager(object):
                                         icon=UiIcons().save,
                                         tooltip=translate('OpenLP.ServiceManager', 'Save this service.'),
                                         triggers=self.decide_save_method)
+        self.toolbar.add_toolbar_action('saveServiceAs',
+                        text=translate('OpenLP.ServiceManager', 'Save As'),
+                        icon=UiIcons().save_plus,
+                        tooltip=translate('OpenLP.ServiceManager', 'Save Service As'),
+                        triggers=self.save_file_as)
         self.toolbar.addSeparator()
         self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
@@ -279,9 +284,30 @@ class Ui_ServiceManager(object):
         self.theme_combo_box.setToolTip(translate('OpenLP.ServiceManager', 'Select a theme for the service.'))
         self.theme_combo_box.setSizeAdjustPolicy(
             QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.theme_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.theme_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
         self.theme_combo_box.setObjectName('theme_combo_box')
         self.toolbar.add_toolbar_widget(self.theme_combo_box)
+        self.unsaved_changes_container = QtWidgets.QWidget(self.toolbar)
+        self.unsaved_changes_container.setObjectName('unsaved_changes_container')
+        self.unsaved_changes_container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                     QtWidgets.QSizePolicy.Policy.Fixed)
+        self.unsaved_changes_layout = QtWidgets.QHBoxLayout(self.unsaved_changes_container)
+        self.unsaved_changes_layout.setContentsMargins(0, 0, 0, 0)
+        self.unsaved_changes_layout.addStretch()
+        self.unsaved_changes_label = QtWidgets.QLabel(
+            translate('OpenLP.ServiceManager', 'Unsaved changes'), self.unsaved_changes_container)
+        self.unsaved_changes_label.setObjectName('unsaved_changes_label')
+        unsaved_changes_font = self.unsaved_changes_label.font()
+        unsaved_changes_font.setItalic(True)
+        self.unsaved_changes_label.setFont(unsaved_changes_font)
+        self.unsaved_changes_label.setContentsMargins(0, 0, 4, 0)
+        self.unsaved_changes_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight |
+                                                QtCore.Qt.AlignmentFlag.AlignVCenter)
+        unsaved_changes_opacity = QtWidgets.QGraphicsOpacityEffect(self.unsaved_changes_label)
+        unsaved_changes_opacity.setOpacity(0.5)
+        self.unsaved_changes_label.setGraphicsEffect(unsaved_changes_opacity)
+        self.unsaved_changes_layout.addWidget(self.unsaved_changes_label)
+        self.toolbar.add_toolbar_widget(self.unsaved_changes_container)
         self.toolbar.setObjectName('toolbar')
         self.layout.addWidget(self.toolbar)
         # Create the service manager list
@@ -305,39 +331,45 @@ class Ui_ServiceManager(object):
             text=translate('OpenLP.ServiceManager', 'Move to &top'), icon=UiIcons().move_start,
             tooltip=translate('OpenLP.ServiceManager', 'Move item to the top of the service.'),
             can_shortcuts=True, category=UiStrings().Service, triggers=self.on_service_top)
+        self.move_top_action.setEnabled(False)
         self.move_up_action = self.order_toolbar.add_toolbar_action(
             'moveUp',
             text=translate('OpenLP.ServiceManager', 'Move &up'), icon=UiIcons().move_up,
             tooltip=translate('OpenLP.ServiceManager', 'Move item up one position in the service.'),
             can_shortcuts=True, category=UiStrings().Service, triggers=self.on_service_up)
+        self.move_up_action.setEnabled(False)
         self.move_down_action = self.order_toolbar.add_toolbar_action(
             'moveDown',
             text=translate('OpenLP.ServiceManager', 'Move &down'), icon=UiIcons().move_down,
             tooltip=translate('OpenLP.ServiceManager', 'Move item down one position in the service.'),
             can_shortcuts=True, category=UiStrings().Service, triggers=self.on_service_down)
+        self.move_down_action.setEnabled(False)
         self.move_bottom_action = self.order_toolbar.add_toolbar_action(
             'moveBottom',
             text=translate('OpenLP.ServiceManager', 'Move to &bottom'), icon=UiIcons().move_end,
             tooltip=translate('OpenLP.ServiceManager', 'Move item to the end of the service.'),
             can_shortcuts=True, category=UiStrings().Service, triggers=self.on_service_end)
+        self.move_bottom_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.delete_action = self.order_toolbar.add_toolbar_action(
             'delete', can_shortcuts=True,
-            text=translate('OpenLP.ServiceManager', '&Delete From Service'), icon=UiIcons().delete,
+              text=translate('OpenLP.ServiceManager', '&Delete From Service'), icon=UiIcons().minus,
             tooltip=translate('OpenLP.ServiceManager', 'Delete the selected item from the service.'),
             triggers=self.on_delete_from_service)
         self.order_toolbar.addSeparator()
-        self.expand_action = self.order_toolbar.add_toolbar_action(
-            'expand', can_shortcuts=True,
-            text=translate('OpenLP.ServiceManager', '&Expand all'), icon=UiIcons().plus,
-            tooltip=translate('OpenLP.ServiceManager', 'Expand all the service items.'),
-            category=UiStrings().Service, triggers=self.on_expand_all)
-        self.collapse_action = self.order_toolbar.add_toolbar_action(
-            'collapse', can_shortcuts=True,
-            text=translate('OpenLP.ServiceManager', '&Collapse all'), icon=UiIcons().minus,
-            tooltip=translate('OpenLP.ServiceManager', 'Collapse all the service items.'),
-            category=UiStrings().Service, triggers=self.on_collapse_all)
+        self.expand_collapse_action = self.order_toolbar.add_toolbar_action(
+            'expandCollapse', can_shortcuts=True, checked=False,
+            text=translate('OpenLP.ServiceManager', '&Expand all'),
+              icon=UiIcons().arrow_expand_vertical,
+            tooltip=translate('OpenLP.ServiceManager', 'Expand or collapse all the service items.'),
+            category=UiStrings().Service, triggers=self.on_toggle_expand_all)
         self.order_toolbar.addSeparator()
+        self.make_preview_action = self.order_toolbar.add_toolbar_action(
+            'make_preview', can_shortcuts=True,
+            text=translate('OpenLP.ServiceManager', 'Show &Preview'), icon=UiIcons().preview,
+            tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Preview.'),
+            category=UiStrings().Service,
+            triggers=self.make_preview)
         self.make_live_action = self.order_toolbar.add_toolbar_action(
             'make_live', can_shortcuts=True,
             text=translate('OpenLP.ServiceManager', 'Go Live'), icon=UiIcons().live,
@@ -351,9 +383,11 @@ class Ui_ServiceManager(object):
         self.service_manager_list.clicked.connect(self.on_single_click_preview)
         self.service_manager_list.itemCollapsed.connect(self.collapsed)
         self.service_manager_list.itemExpanded.connect(self.expanded)
+        self.service_manager_list.itemSelectionChanged.connect(self.on_selection_changed)
         # Last little bits of setting up
         self.service_theme = self.settings.value('servicemanager/service theme')
         self.service_path = AppLocation.get_section_data_path('servicemanager')
+        self._update_unsaved_changes_indicator()
         # build the drag and drop context menu
         self.dnd_menu = QtWidgets.QMenu()
         self.new_action = self.dnd_menu.addAction(translate('OpenLP.ServiceManager', '&Add New Item'))
@@ -415,8 +449,8 @@ class Ui_ServiceManager(object):
         self.theme_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', '&Change Item Theme'))
         self.menu.addMenu(self.theme_menu)
         self.service_manager_list.addActions([self.move_down_action, self.move_up_action, self.make_live_action,
-                                              self.move_top_action, self.move_bottom_action, self.expand_action,
-                                              self.collapse_action])
+                                              self.move_top_action, self.move_bottom_action,
+                                              self.expand_collapse_action])
 
 
 class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixin, RegistryProperties):
@@ -529,7 +563,19 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         else:
             service_file = translate('OpenLP.ServiceManager', 'Untitled Service')
         self.main_window.set_service_modified(modified, service_file)
+        self._update_unsaved_changes_indicator()
         self.servicemanager_changed.emit()
+
+    def _update_unsaved_changes_indicator(self):
+        """
+        Show the toolbar indicator using the same modified-state logic as the main window title bar.
+        """
+        if not hasattr(self, 'unsaved_changes_container'):
+            return
+        should_show = self._modified
+        self.unsaved_changes_container.setVisible(should_show)
+        if 'unsaved_changes_container' in self.toolbar.actions_map:
+            self.toolbar.actions_map['unsaved_changes_container'].setVisible(should_show)
 
     def is_modified(self):
         """
@@ -1366,13 +1412,24 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.service_manager.collapsed(item.parent())
                 self.service_manager_list.setCurrentItem(item.parent())
 
-    def on_collapse_all(self):
+    def on_toggle_expand_all(self, checked):
         """
-        Collapse all the service items.
+        Expand or collapse all service items depending on the toggle state.
+
+        :param checked: True to expand all, False to collapse all.
         """
-        for item in self.service_items:
-            item['expanded'] = False
-        self.service_manager_list.collapseAll()
+        if checked:
+            self.expand_collapse_action.setText(translate('OpenLP.ServiceManager', '&Collapse all'))
+            self.expand_collapse_action.setIcon(UiIcons().arrow_collapse_vertical)
+            for item in self.service_items:
+                item['expanded'] = True
+            self.service_manager_list.expandAll()
+        else:
+            self.expand_collapse_action.setText(translate('OpenLP.ServiceManager', '&Expand all'))
+            self.expand_collapse_action.setIcon(UiIcons().arrow_expand_vertical)
+            for item in self.service_items:
+                item['expanded'] = False
+            self.service_manager_list.collapseAll()
 
     def collapsed(self, item):
         """
@@ -1385,13 +1442,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if item.childCount():
             self.service_items[pos - 1]['expanded'] = False
 
-    def on_expand_all(self):
-        """
-        Collapse all the service items.
-        """
-        for item in self.service_items:
-            item['expanded'] = True
-        self.service_manager_list.expandAll()
+
 
     def expanded(self, item):
         """
@@ -1611,12 +1662,15 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     return True
             tree_widget_item.setExpanded(item['expanded'])
         self.is_running_repaint = False
+        self._update_move_actions()
         return False
 
     def clean_up(self):
         """
         Empties the service_path of temporary files on system exit.
         """
+        if not hasattr(self, 'service_path'):
+            return
         for file_name in os.listdir(self.service_path):
             file_path = Path(self.service_path, file_name)
             if os.path.isdir(file_path):
@@ -1906,11 +1960,37 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             else:
                 service_item = parent_item.data(0, QtCore.Qt.ItemDataRole.UserRole)
                 service_item_child = item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if service_item is None:
+                break
             # Adjust for zero based arrays.
             service_item -= 1
             # Only process the first item on the list for this method.
             break
         return service_item, service_item_child
+
+    def on_selection_changed(self):
+        """
+        Called whenever the selection in the service manager list changes. Updates the enabled state of the
+        move toolbar buttons.
+        """
+        self._update_move_actions()
+
+    def _update_move_actions(self):
+        """
+        Enable or disable the four move toolbar buttons based on whether a top-level service item is selected
+        and whether movement in each direction is possible.
+        """
+        if not hasattr(self, 'move_top_action'):
+            return
+        item, _ = self.find_service_item()
+        count = len(self.service_items)
+        has_selection = item != -1
+        at_top = item == 0
+        at_bottom = item == count - 1
+        self.move_top_action.setEnabled(has_selection and not at_top)
+        self.move_up_action.setEnabled(has_selection and not at_top)
+        self.move_down_action.setEnabled(has_selection and not at_bottom)
+        self.move_bottom_action.setEnabled(has_selection and not at_bottom)
 
     def is_internal_drag_active(self):
         return self._internal_drag_item is not None
