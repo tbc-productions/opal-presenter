@@ -266,6 +266,21 @@ def test_is_modified(settings: Settings):
     assert result is True, 'is_modified should return True'
 
 
+def test_unsaved_changes_indicator_hidden_when_not_modified(service_manager: ServiceManager):
+    """The toolbar indicator should stay hidden when the service is not modified."""
+    service_manager.set_modified(False)
+
+    assert service_manager.unsaved_changes_container.isHidden() is True
+
+
+def test_unsaved_changes_indicator_visible_when_modified(service_manager: ServiceManager):
+    """The toolbar indicator should be shown whenever the service is modified."""
+
+    service_manager.set_modified(True)
+
+    assert service_manager.unsaved_changes_container.isHidden() is False
+
+
 def test_build_context_menu(settings: Settings):
     """
     Test the creation of a context menu from a null service item.
