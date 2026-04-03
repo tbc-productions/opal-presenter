@@ -67,3 +67,10 @@ def test_media_tool_box_inactive_row_selects_placeholder(qapp):
     media_tool_box.setCurrentIndex(2)
     assert media_tool_box._top_tab_bar.currentIndex() == 0
     assert media_tool_box._bottom_tab_bar.currentIndex() == 1
+
+
+    def test_media_tool_box_tab_bars_do_not_draw_base_line(qapp):
+        media_tool_box = MediaToolBox()
+
+        assert media_tool_box._top_tab_bar.drawBase() is False
+        assert media_tool_box._bottom_tab_bar.drawBase() is False

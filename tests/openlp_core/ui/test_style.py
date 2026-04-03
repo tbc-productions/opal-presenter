@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from openlp.core.ui.style import MEDIA_MANAGER_STYLE, UiThemes, WIN_REPAIR_STYLESHEET, \
+from openlp.core.ui.style import MEDIA_MANAGER_DARK_STYLE, MEDIA_MANAGER_LIGHT_STYLE, UiThemes, WIN_REPAIR_STYLESHEET, \
     get_alternate_rows_repair_stylesheet, get_application_stylesheet, \
     get_library_stylesheet, has_ui_theme, is_ui_theme_dark, set_default_theme
 import openlp.core.ui.style
@@ -98,6 +98,10 @@ def test_get_application_stylesheet_not_alternate_rows(mocked_palette, mocked_is
 
     # THEN: result should match non-alternate-rows
     mock_settings.value.assert_has_calls([call('advanced/ui_theme_name'), call('advanced/alternate rows')])
+    assert 'QCheckBox {' in result
+    assert 'spacing: 8px;' in result
+    assert 'qproperty-cursor: PointingHandCursor;' in result
+    assert 'QPushButton:hover,' in result
     assert get_alternate_rows_repair_stylesheet('color') in result
 
 
@@ -150,16 +154,77 @@ def test_get_application_stylesheet_not_win_repair(mocked_is_macosx, mocked_is_w
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-def test_get_library_stylesheet_automatic_ui_theme(mock_settings):
-    """Test that the media manager stylesheet is returned for Automatic UI theme"""
+@patch('openlp.core.ui.style.is_win')
+@patch('openlp.core.ui.style.is_macosx')
+def test_get_application_stylesheet_macos_non_native_includes_minimal_repairs(mocked_is_macosx, mocked_is_win,
+                                                                               mock_settings):
+    """Test that macOS non-native theme gets minimal control and hover stylesheet repairs."""
+    def settings_values(key):
+        if key == 'advanced/ui_theme_name':
+            return UiThemes.DefaultLight
+        return True
+
+    # GIVEN: We're on macOS with a non-native, non-qdarkstyle theme
+    mocked_is_macosx.return_value = True
+    mocked_is_win.return_value = False
+    mock_settings.value = MagicMock(side_effect=settings_values)
+
+    # WHEN: get_application_stylesheet() is called
+    result = get_application_stylesheet()
+
+    # THEN: the minimal repair styles should be included
+    assert 'QCheckBox {' in result
+    assert 'qproperty-cursor: PointingHandCursor;' in result
+    assert 'QPushButton:hover,' in result
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_win')
+@patch('openlp.core.ui.style.is_macosx')
+def test_get_application_stylesheet_automatic_keeps_checkbox_spacing(mocked_is_macosx, mocked_is_win, mock_settings):
+    """Test that Automatic UI theme keeps checkbox spacing style while otherwise staying native."""
+    def settings_values(key):
+        if key == 'advanced/ui_theme_name':
+            return UiThemes.Automatic
+        return True
+
+    mocked_is_macosx.return_value = True
+    mocked_is_win.return_value = False
+    mock_settings.value = MagicMock(side_effect=settings_values)
+
+    result = get_application_stylesheet()
+
+    assert 'QCheckBox {' in result
+    assert 'spacing: 8px;' in result
+    assert 'QRadioButton {' in result
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_system_darkmode', return_value=False)
+def test_get_library_stylesheet_automatic_ui_theme_light(_mock_system_darkmode, mock_settings):
+    """Test that no library stylesheet is returned for Automatic (system) UI theme."""
     # GIVEN: UI theme is Automatic
     mock_settings.value.return_value = UiThemes.Automatic
 
     # WHEN: get_library_stylesheet() is called
     result = get_library_stylesheet()
 
-    # THEN: the correct stylesheet should be returned
-    assert result == MEDIA_MANAGER_STYLE
+    # THEN: no custom stylesheet should be returned
+    assert result == ''
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_system_darkmode', return_value=True)
+def test_get_library_stylesheet_automatic_ui_theme_dark(_mock_system_darkmode, mock_settings):
+    """Test that no library stylesheet is returned for Automatic (system) UI theme."""
+    # GIVEN: UI theme is Automatic and system is dark
+    mock_settings.value.return_value = UiThemes.Automatic
+
+    # WHEN: get_library_stylesheet() is called
+    result = get_library_stylesheet()
+
+    # THEN: no custom stylesheet should be returned
+    assert result == ''
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
@@ -172,7 +237,7 @@ def test_get_library_stylesheet_defaultlight_ui_theme(mock_settings):
     result = get_library_stylesheet()
 
     # THEN: the correct stylesheet should be returned
-    assert result == MEDIA_MANAGER_STYLE
+    assert result == MEDIA_MANAGER_LIGHT_STYLE
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
@@ -185,7 +250,7 @@ def test_get_library_stylesheet_defaultdark_ui_theme(mock_settings):
     result = get_library_stylesheet()
 
     # THEN: the correct stylesheet should be returned
-    assert result == MEDIA_MANAGER_STYLE
+    assert result == MEDIA_MANAGER_DARK_STYLE
 
 
 @pytest.mark.skipif(not hasattr(openlp.core.ui.style, 'qdarkstyle'), reason='qdarkstyle is not installed')
@@ -326,7 +391,7 @@ def test_set_default_theme_defaultdark_theme_calls_set_default_darkmode(mock_set
 @patch('openlp.core.ui.style.is_system_darkmode')
 def test_set_default_theme_automatic_theme_calls_set_default_darkmode(mock_is_system_darkmode,
                                                                       mock_set_default_darkmode, mock_settings):
-    """Test that the set_default_theme calls set_default_darkmode for Automatic UI theme on system dark theme"""
+    """Test that Automatic UI theme does not force darkmode handler calls."""
     # GIVEN: UI theme is Automatic and System is using Dark Theme
     mock_settings.value.return_value = UiThemes.Automatic
     mock_app = MagicMock()
@@ -335,14 +400,17 @@ def test_set_default_theme_automatic_theme_calls_set_default_darkmode(mock_is_sy
     # WHEN: set_default_theme() is called
     set_default_theme(mock_app)
 
-    # THEN: set_default_darkmode should be changed
-    mock_set_default_darkmode.assert_called_once()
+    # THEN: set_default_darkmode should not be called
+    mock_set_default_darkmode.assert_not_called()
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
 @patch('openlp.core.ui.style.is_system_darkmode')
-def test_set_default_theme_automatic_theme_system_light_not_sets_palette(mocked_is_system_darkmode, mock_settings):
-    """Test that the set_default_theme doesnt't set App Palette for Automatic UI theme on System Light Theme"""
+@patch('openlp.core.ui.style.set_default_lightmode')
+def test_set_default_theme_automatic_theme_system_light_calls_set_default_lightmode(mock_set_default_lightmode,
+                                                                                    mocked_is_system_darkmode,
+                                                                                    mock_settings):
+    """Test that Automatic UI theme does not force lightmode handler calls."""
     # GIVEN: UI theme is Automatic with System Light Theme
     mock_settings.value.return_value = UiThemes.Automatic
     mocked_is_system_darkmode.return_value = False
@@ -351,8 +419,8 @@ def test_set_default_theme_automatic_theme_system_light_not_sets_palette(mocked_
     # WHEN: set_default_theme() is called
     set_default_theme(mock_app)
 
-    # THEN: app palette should not be changed
-    mock_app.setPalette.assert_not_called()
+    # THEN: set_default_lightmode should not be called
+    mock_set_default_lightmode.assert_not_called()
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
@@ -368,6 +436,30 @@ def test_set_default_theme_defaultlight_theme_calls_set_default_lightmode(mock_s
 
     # THEN: set_default_darkmode should be changed
     mock_set_default_lightmode.assert_called_once()
+
+
+@patch('openlp.core.ui.style.is_macosx', return_value=True)
+def test_set_default_lightmode_on_macos_uses_fusion_and_standard_palette(_mock_is_macosx):
+    """Test that explicit light mode uses Fusion styling and sets a palette on macOS."""
+    from openlp.core.ui.style import set_default_lightmode
+
+    mock_app = MagicMock()
+    set_default_lightmode(mock_app)
+
+    mock_app.setStyle.assert_called_once_with('Fusion')
+    mock_app.setPalette.assert_called_once()
+
+
+@patch('openlp.core.ui.style.is_macosx', return_value=True)
+def test_set_default_darkmode_on_macos_uses_fusion_and_sets_palette(_mock_is_macosx):
+    """Test that explicit dark mode uses Fusion and applies dark palette on macOS."""
+    from openlp.core.ui.style import set_default_darkmode
+
+    mock_app = MagicMock()
+    set_default_darkmode(mock_app)
+
+    mock_app.setStyle.assert_called_once_with('Fusion')
+    mock_app.setPalette.assert_called_once()
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)

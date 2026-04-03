@@ -56,16 +56,23 @@ QToolBar
 }
 """
 
-MEDIA_MANAGER_STYLE = """
+MEDIA_MANAGER_DARK_STYLE = """
+QWidget#media_tool_box QTabBar,
+QTabWidget#media_tool_box QTabBar {
+    border: 0;
+}
+
 QWidget#media_tool_box QTabBar::tab,
 QTabWidget#media_tool_box QTabBar::tab,
 QToolBox#media_tool_box::tab {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
         stop: 0 palette(button), stop: 1.0 palette(mid));
     border: 0;
-    border-radius: 2px;
+    border-radius: 0;
     margin-top: 0;
     margin-bottom: 0;
+    min-height: 24px;
+    padding: 4px 10px;
     text-align: left;
 }
 
@@ -85,11 +92,69 @@ QTabWidget#media_tool_box QTabBar::tab:selected,
 QToolBox#media_tool_box::tab:selected {}
 """
 
+MEDIA_MANAGER_LIGHT_STYLE = """
+QWidget#media_tool_box QTabBar,
+QTabWidget#media_tool_box QTabBar {
+    border: 0;
+}
+
+QWidget#media_tool_box QTabBar::tab,
+QTabWidget#media_tool_box QTabBar::tab,
+QToolBox#media_tool_box::tab {
+    border: 1px solid palette(dark);
+    border-radius: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    min-height: 22px;
+    padding: 2px 8px;
+    text-align: left;
+}
+
+QWidget#media_tool_box QTabBar::tab:selected,
+QTabWidget#media_tool_box QTabBar::tab:selected,
+QToolBox#media_tool_box::tab:selected {
+    border-color: palette(mid);
+}
+
+QWidget#media_tool_box QTabBar::tab:first,
+QTabWidget#media_tool_box QTabBar::tab:first,
+QToolBox#media_tool_box::tab:first {
+    min-width: 0px;
+    max-width: 0px;
+    width: 0px;
+    padding: 0px;
+    margin: 0px;
+    border: 0px;
+}
+"""
+
 DOCK_PANEL_HEADER_STYLE = """
 QDockWidget::title {
     padding: 8px 12px;
     min-height: 30px;
     font-weight: 600;
+}
+"""
+
+FORM_CONTROL_STYLE_REPAIR = """
+QCheckBox {
+    spacing: 8px;
+}
+
+QRadioButton {
+    spacing: 8px;
+}
+"""
+
+BUTTON_HOVER_STYLE_REPAIR = """
+QPushButton:enabled,
+QToolButton:enabled {
+    qproperty-cursor: PointingHandCursor;
+}
+
+QPushButton:hover,
+QToolButton:hover {
+    border-color: palette(highlight);
 }
 """
 
@@ -116,6 +181,51 @@ class UiThemes(Enum):
     DefaultDark = 'dark:default'
     Native = 'native'
     QDarkStyle = 'dark:qdarkstyle'
+
+
+class NativeInputPaddingFilter(QtCore.QObject):
+    """
+    Apply content padding to native QLineEdit controls without overriding native painting.
+    """
+
+    def __init__(self, parent=None, padding=4):
+        super().__init__(parent)
+        self.padding = max(0, int(padding))
+
+    def _apply_padding(self, widget):
+        if isinstance(widget, QtWidgets.QLineEdit):
+            margins = widget.textMargins()
+            widget.setTextMargins(max(margins.left(), self.padding),
+                                  max(margins.top(), self.padding),
+                                  max(margins.right(), self.padding),
+                                  max(margins.bottom(), self.padding))
+            return
+        if isinstance(widget, QtWidgets.QAbstractSpinBox):
+            line_edit = widget.findChild(QtWidgets.QLineEdit)
+            if line_edit:
+                self._apply_padding(line_edit)
+
+    def eventFilter(self, watched, event):
+        if isinstance(watched, (QtWidgets.QLineEdit, QtWidgets.QAbstractSpinBox)) and event.type() in (
+                QtCore.QEvent.Type.Polish,
+                QtCore.QEvent.Type.Show):
+            self._apply_padding(watched)
+        return super().eventFilter(watched, event)
+
+
+def apply_native_input_padding(app, padding=4):
+    """
+    Add native-preserving text padding to QLineEdit widgets in the application.
+    """
+    app_key = id(app)
+    existing_filter = _NATIVE_INPUT_PADDING_FILTERS.get(app_key)
+    if existing_filter is not None:
+        return
+    event_filter = NativeInputPaddingFilter(app, padding=padding)
+    app.installEventFilter(event_filter)
+    _NATIVE_INPUT_PADDING_FILTERS[app_key] = event_filter
+    for widget in app.allWidgets():
+        event_filter._apply_padding(widget)
 
 
 def get_macos_native_style_name():
@@ -161,6 +271,7 @@ def has_ui_theme(ui_theme: UiThemes):
 
 
 IS_SYSTEM_DARKMODE = None
+_NATIVE_INPUT_PADDING_FILTERS = {}
 
 
 def is_system_darkmode():
@@ -220,7 +331,7 @@ def set_default_theme(app):
     """
     Setup theme
     """
-    if is_ui_theme(UiThemes.Native):
+    if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.Automatic):
         if is_macosx():
             native = get_macos_native_style_name()
             if native:
@@ -231,7 +342,7 @@ def set_default_theme(app):
         return
     if is_ui_theme(UiThemes.DefaultDark) or (is_ui_theme(UiThemes.Automatic) and is_ui_theme_dark()):
         set_default_darkmode(app)
-    elif is_ui_theme(UiThemes.DefaultLight):
+    elif is_ui_theme(UiThemes.DefaultLight) or is_ui_theme(UiThemes.Automatic):
         set_default_lightmode(app)
 
 
@@ -239,13 +350,29 @@ def set_default_lightmode(app):
     """
     Setup lightmode on the application if Default Light theme is enabled in the OpenLP Settings.
     """
-    if is_macosx():
-        native = get_macos_native_style_name()
-        if native:
-            app.setStyle(native)
-    else:
-        app.setStyle('Fusion')
-    app.setPalette(app.style().standardPalette())
+    app.setStyle('Fusion')
+    light_palette = QtGui.QPalette()
+    disabled_color = QtGui.QColor(127, 127, 127)
+    light_palette.setColor(QtGui.QPalette.ColorRole.Window, QtGui.QColor(245, 245, 245))
+    light_palette.setColor(QtGui.QPalette.ColorRole.WindowText, QtCore.Qt.GlobalColor.black)
+    light_palette.setColor(QtGui.QPalette.ColorGroup.Disabled, QtGui.QPalette.ColorRole.WindowText, disabled_color)
+    light_palette.setColor(QtGui.QPalette.ColorRole.Base, QtCore.Qt.GlobalColor.white)
+    light_palette.setColor(QtGui.QPalette.ColorRole.AlternateBase, QtGui.QColor(245, 245, 245))
+    light_palette.setColor(QtGui.QPalette.ColorRole.ToolTipBase, QtCore.Qt.GlobalColor.white)
+    light_palette.setColor(QtGui.QPalette.ColorRole.ToolTipText, QtCore.Qt.GlobalColor.black)
+    light_palette.setColor(QtGui.QPalette.ColorRole.Text, QtCore.Qt.GlobalColor.black)
+    light_palette.setColor(QtGui.QPalette.ColorGroup.Disabled, QtGui.QPalette.ColorRole.Text, disabled_color)
+    light_palette.setColor(QtGui.QPalette.ColorRole.Button, QtGui.QColor(245, 245, 245))
+    light_palette.setColor(QtGui.QPalette.ColorRole.ButtonText, QtCore.Qt.GlobalColor.black)
+    light_palette.setColor(QtGui.QPalette.ColorGroup.Disabled, QtGui.QPalette.ColorRole.ButtonText, disabled_color)
+    light_palette.setColor(QtGui.QPalette.ColorRole.BrightText, QtCore.Qt.GlobalColor.red)
+    light_palette.setColor(QtGui.QPalette.ColorRole.Link, QtGui.QColor(42, 130, 218))
+    light_palette.setColor(QtGui.QPalette.ColorRole.Highlight, QtGui.QColor(42, 130, 218))
+    light_palette.setColor(QtGui.QPalette.ColorRole.HighlightedText, QtCore.Qt.GlobalColor.white)
+    light_palette.setColor(QtGui.QPalette.ColorGroup.Disabled,
+                           QtGui.QPalette.ColorRole.HighlightedText,
+                           disabled_color)
+    app.setPalette(light_palette)
 
 
 def set_default_darkmode(app):
@@ -260,12 +387,6 @@ def set_default_darkmode(app):
         * Allowed palette to be set on any operating system;
         * Split Windows Dark Mode detection to another function.
     """
-    if is_macosx():
-        native = get_macos_native_style_name()
-        if native:
-            app.setStyle(native)
-        # macOS native style handles dark mode through the system palette; skip the manual palette override.
-        return
     app.setStyle('Fusion')
     dark_palette = QtGui.QPalette()
     dark_color = QtGui.QColor(45, 45, 45)
@@ -311,14 +432,23 @@ def get_application_stylesheet():
     ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
     use_alternate_rows = Registry().get('settings').value('advanced/alternate rows')
     is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
-    is_native_theme = ui_theme_name == UiThemes.Native
+    is_system_theme = ui_theme_name == UiThemes.Automatic
+    if is_system_theme:
+        return FORM_CONTROL_STYLE_REPAIR
     if is_macosx() and not is_qdarkstyle:
-        return stylesheet
-    if is_native_theme:
+        # Keep macOS rendering close to native while applying minimal control/hover repairs.
+        stylesheet += FORM_CONTROL_STYLE_REPAIR
+        stylesheet += BUTTON_HOVER_STYLE_REPAIR
+        stylesheet += 'QWidget#slide_controller_toolbar QToolButton::checked {' \
+            '  background-color: palette(highlight);' \
+            '  color: palette(highlighted-text);' \
+            '}'
         return stylesheet
     if is_qdarkstyle:
         stylesheet = qdarkstyle.load_stylesheet_pyqt()
     else:
+        stylesheet += FORM_CONTROL_STYLE_REPAIR
+        stylesheet += BUTTON_HOVER_STYLE_REPAIR
         if not use_alternate_rows:
             base_color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorGroup.Active,
                                                                 QtGui.QPalette.ColorRole.Base)
@@ -341,6 +471,8 @@ def get_library_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
-    if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.QDarkStyle):
+    if is_ui_theme(UiThemes.Automatic) or is_ui_theme(UiThemes.QDarkStyle):
         return ''
-    return MEDIA_MANAGER_STYLE
+    if is_ui_theme(UiThemes.DefaultDark) or is_ui_theme_dark():
+        return MEDIA_MANAGER_DARK_STYLE
+    return MEDIA_MANAGER_LIGHT_STYLE

@@ -134,8 +134,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         self.main_window.installEventFilter(self.main_window)
         # Correct stylesheet bugs
         application_stylesheet = get_application_stylesheet()
-        if application_stylesheet:
-            self.main_window.setStyleSheet(application_stylesheet)
+        app.setStyleSheet(application_stylesheet or '')
         Registry().execute('bootstrap_initialise')
         State().flush_preconditions()
         Registry().execute('bootstrap_post_set_up')
