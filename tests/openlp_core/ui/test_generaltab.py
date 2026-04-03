@@ -21,10 +21,13 @@
 """
 Package to test the openlp.core.ui.generaltab package.
 """
+from unittest.mock import patch
+
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
+from openlp.core.ui.style import UiThemes
 
-from PySide6 import QtCore, QtTest
+from PySide6 import QtCore, QtTest, QtWidgets
 
 
 def test_creation(settings):
@@ -39,6 +42,23 @@ def test_creation(settings):
 
     # THEN:
     assert "Core" == general_tab.tab_title, 'The tab title should be Core'
+
+
+def test_slide_max_height_combo_is_left_aligned(settings):
+    """
+    Test that max height combo does not expand and remains left-aligned in form layout.
+    """
+    # GIVEN: A new General Tab
+    settings_form = SettingsForm(None)
+    general_tab = GeneralTab(settings_form)
+
+    # WHEN/THEN: The combo should use a fixed horizontal size policy
+    assert general_tab.slide_max_height_combo_box.sizePolicy().horizontalPolicy() == QtWidgets.QSizePolicy.Policy.Fixed
+    assert general_tab.slide_max_height_combo_box.parent() == general_tab.slide_max_height_row_widget
+    assert general_tab.slide_max_height_row_layout.count() == 2
+    assert general_tab.slide_max_height_row_layout.itemAt(1).spacerItem() is not None
+    assert general_tab.slide_max_height_label.wordWrap() is True
+    assert '\n' not in general_tab.slide_max_height_label.text()
 
 
 def test_change_search_as_type(settings):
@@ -92,5 +112,17 @@ def test_new_service_message(settings):
 
     # THEN: the settings should be updated
     assert settings.value('advanced/new service message') is False
+
+
+@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
+def test_get_ui_theme_index_maps_native_to_system_theme(_mock_has_ui_theme):
+    """Test that legacy Native theme maps to the Use system theme combo index."""
+    assert GeneralTab.get_ui_theme_index(UiThemes.Native) == 0
+
+
+@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
+def test_get_ui_theme_name_index_3_falls_back_to_automatic_without_qdarkstyle(_mock_has_ui_theme):
+    """Test that index 3 maps to Automatic when QDarkStyle is unavailable."""
+    assert GeneralTab.get_ui_theme_name(3) == UiThemes.Automatic
 
 

@@ -33,6 +33,7 @@ from openlp.core.lib import build_icon
 from openlp.core.projectors.tab import ProjectorTab
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.generaltab import GeneralTab
+from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
@@ -47,6 +48,15 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
     """
     Provide the form to manipulate the settings for OpenLP
     """
+    SERVICE_COLOR_ICON_MAP = {
+        'songs': ('music', ServiceTab.ICON_THEME_COLOR_SETTINGS['song']),
+        'bibles': ('bible', ServiceTab.ICON_THEME_COLOR_SETTINGS['bible']),
+        'presentations': ('presentation', ServiceTab.ICON_THEME_COLOR_SETTINGS['presentation']),
+        'images': ('picture', ServiceTab.ICON_THEME_COLOR_SETTINGS['image']),
+        'media': ('video', ServiceTab.ICON_THEME_COLOR_SETTINGS['media']),
+        'custom': ('custom', ServiceTab.ICON_THEME_COLOR_SETTINGS['custom_slide'])
+    }
+
     def __init__(self, parent=None):
         """
         Initialise the settings form
@@ -78,17 +88,10 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         while self.stacked_layout.count():
             # take at 0 and the rest shuffle up.
             self.stacked_layout.takeAt(0)
-        self.insert_tab(self.general_tab)
-        self.insert_tab(self.service_tab)
-        self.insert_tab(self.advanced_tab)
-        self.insert_tab(self.screens_tab)
-        self.insert_tab(self.themes_tab)
-        self.insert_tab(self.player_tab)
-        self.insert_tab(self.projector_tab)
-        self.insert_tab(self.api_tab)
-        for plugin in State().list_plugins():
-            if plugin.settings_tab:
-                self.insert_tab(plugin.settings_tab, plugin.is_active())
+
+        for tab_widget, is_visible in self._get_ordered_tabs():
+            self.insert_tab(tab_widget, is_visible)
+
         self.setting_list_widget.blockSignals(False)
         starting_tab_row = 0
         for index in range(self.setting_list_widget.count()):
@@ -99,6 +102,35 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self._set_minimum_dialog_size()
         self.setting_list_widget.setCurrentRow(starting_tab_row)
         return QtWidgets.QDialog.exec(self)
+
+    def _get_ordered_tabs(self):
+        """
+        Return all settings tabs in display order:
+        General first, all other tabs alphabetically, Advanced last.
+        """
+        tabs = [
+            (self.general_tab, True),
+            (self.service_tab, True),
+            (self.advanced_tab, True),
+            (self.screens_tab, True),
+            (self.themes_tab, True),
+            (self.player_tab, True),
+            (self.projector_tab, True),
+            (self.api_tab, True)
+        ]
+        for plugin in State().list_plugins():
+            if plugin.settings_tab:
+                tabs.append((plugin.settings_tab, plugin.is_active()))
+
+        def sort_key(tab_entry):
+            tab_widget, _ = tab_entry
+            if tab_widget is self.general_tab:
+                return 0, ''
+            if tab_widget is self.advanced_tab:
+                return 2, ''
+            return 1, tab_widget.tab_title_visible.casefold()
+
+        return sorted(tabs, key=sort_key)
 
     def _set_minimum_dialog_size(self):
         """
@@ -128,10 +160,27 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.stacked_layout.addWidget(tab_widget)
         self._normalise_settings_tab_layout(tab_widget)
         if is_visible:
-            list_item = QtWidgets.QListWidgetItem(build_icon(tab_widget.icon_path), tab_widget.tab_title_visible)
+            list_item = QtWidgets.QListWidgetItem(self._build_settings_tab_icon(tab_widget),
+                                                 tab_widget.tab_title_visible)
             list_item.setData(QtCore.Qt.ItemDataRole.UserRole, tab_widget.tab_title)
             self.setting_list_widget.addItem(list_item)
             tab_widget.load()
+
+    def _build_settings_tab_icon(self, tab_widget):
+        """
+        Build a settings tab list icon.
+
+        Service item tabs use the user-configured Service theme colors. All other tabs keep their
+        existing icons unchanged.
+        """
+        tab_key = str(tab_widget.tab_title).strip().lower()
+        service_color_icon = self.SERVICE_COLOR_ICON_MAP.get(tab_key)
+        if service_color_icon:
+            icon_name, color_setting = service_color_icon
+            color_value = self.settings.value(color_setting)
+            if color_value:
+                return UiIcons().get_icon_variant(icon_name, color=color_value)
+        return build_icon(tab_widget.icon_path)
 
     @staticmethod
     def _normalise_settings_tab_layout(tab_widget):
@@ -173,6 +222,20 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 grid_layout.setHorizontalSpacing(14)
             if grid_layout.verticalSpacing() < 14:
                 grid_layout.setVerticalSpacing(14)
+
+        minimum_input_height = 32
+
+        for line_edit in tab_widget.findChildren(QtWidgets.QLineEdit):
+            if line_edit.minimumHeight() < minimum_input_height:
+                line_edit.setMinimumHeight(minimum_input_height)
+
+        for combo_box in tab_widget.findChildren(QtWidgets.QComboBox):
+            if combo_box.minimumHeight() < minimum_input_height:
+                combo_box.setMinimumHeight(minimum_input_height)
+
+        for abstract_spin_box in tab_widget.findChildren(QtWidgets.QAbstractSpinBox):
+            if abstract_spin_box.minimumHeight() < minimum_input_height:
+                abstract_spin_box.setMinimumHeight(minimum_input_height)
 
         for check_box in tab_widget.findChildren(QtWidgets.QCheckBox):
             if check_box.minimumHeight() < 24:

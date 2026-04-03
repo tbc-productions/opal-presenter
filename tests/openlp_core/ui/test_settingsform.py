@@ -23,9 +23,11 @@ Package to test the openlp.core.ui.settingsform package.
 """
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtWidgets, QtTest
+from PySide6 import QtCore, QtGui, QtWidgets, QtTest
 
 from openlp.core.common.registry import Registry
+from openlp.core.common.settings import Settings
+from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.settingsform import SettingsForm
 
 
@@ -51,15 +53,38 @@ def test_insert_tab_visible(registry: Registry, mock_settings: MagicMock):
     general_tab.tab_title = 'mock'
     general_tab.tab_title_visible = 'Mock'
     general_tab.icon_path = ':/icon/openlp-logo.svg'
+    expected_icon = QtGui.QIcon(QtGui.QPixmap(16, 16))
 
     # WHEN: We insert the general tab
     with patch.object(settings_form.stacked_layout, 'addWidget') as mocked_add_widget, \
-            patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item:
+            patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item, \
+            patch.object(settings_form, '_build_settings_tab_icon', return_value=expected_icon) as mocked_build_icon:
         settings_form.insert_tab(general_tab, is_visible=True)
 
         # THEN: The general tab should have been inserted into the stacked layout and an item inserted into the list
         mocked_add_widget.assert_called_with(general_tab)
+        mocked_build_icon.assert_called_once_with(general_tab)
         assert 1 == mocked_add_item.call_count, 'addItem should have been called'
+
+
+def test_build_settings_tab_icon_uses_service_theme_color_for_song_tabs(registry: Registry, settings: Settings):
+    """
+    Test that the songs settings icon uses the configured service theme color.
+    """
+    settings_form = SettingsForm(None)
+    settings.setValue('servicemanager/theme color song', '#123456')
+    song_tab = MagicMock()
+    song_tab.tab_title = 'songs'
+    song_tab.icon_path = ':/icon/openlp-logo.svg'
+    expected_icon = QtGui.QIcon(QtGui.QPixmap(16, 16))
+
+    with patch('openlp.core.ui.settingsform.UiIcons') as mocked_ui_icons:
+        mocked_ui_icons.return_value.get_icon_variant.return_value = expected_icon
+
+        icon = settings_form._build_settings_tab_icon(song_tab)
+
+    mocked_ui_icons.return_value.get_icon_variant.assert_called_once_with('music', color='#123456')
+    assert icon.cacheKey() == expected_icon.cacheKey()
 
 
 def test_insert_tab_not_visible(registry: Registry, mock_settings: MagicMock):
@@ -166,3 +191,56 @@ def test_help(mock_settings: MagicMock):
 
     # THEN: The Help function should be called
     mocked_help.assert_called_once()
+
+
+def test_insert_tab_normalises_input_control_heights(registry: Registry, settings: Settings):
+    """
+    Test that settings input widgets get a consistent minimum height when a tab is inserted.
+    """
+    # GIVEN: A service tab with line edit, combo box, and time edit controls
+    settings_form = SettingsForm(None)
+    service_tab = ServiceTab(settings_form)
+
+    # WHEN: The service tab is inserted into the settings form
+    settings_form.insert_tab(service_tab, is_visible=False)
+
+    # THEN: The input controls should share the normalized minimum height
+    assert service_tab.service_name_edit.minimumHeight() == 32
+    assert service_tab.service_name_day.minimumHeight() == 32
+    assert service_tab.service_name_time.minimumHeight() == 32
+
+
+def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry, mock_settings: MagicMock):
+    """
+    Test that tab ordering is General first, alphabetical middle, Advanced last.
+    """
+    # GIVEN: A settings form with unordered core tabs and plugin tabs
+    settings_form = SettingsForm(None)
+    settings_form.general_tab = MockTab(None, 'general', 'General', ':/icon/openlp-logo.svg')
+    settings_form.advanced_tab = MockTab(None, 'advanced', 'Advanced', ':/icon/openlp-logo.svg')
+    settings_form.service_tab = MockTab(None, 'service', 'Service', ':/icon/openlp-logo.svg')
+    settings_form.screens_tab = MockTab(None, 'screens', 'Screens', ':/icon/openlp-logo.svg')
+    settings_form.themes_tab = MockTab(None, 'themes', 'Themes', ':/icon/openlp-logo.svg')
+    settings_form.player_tab = MockTab(None, 'media', 'Media', ':/icon/openlp-logo.svg')
+    settings_form.projector_tab = MockTab(None, 'projector', 'Projectors', ':/icon/openlp-logo.svg')
+    settings_form.api_tab = MockTab(None, 'api', 'API', ':/icon/openlp-logo.svg')
+
+    active_plugin = MagicMock()
+    active_plugin.settings_tab = MockTab(None, 'alerts', 'Alerts', ':/icon/openlp-logo.svg')
+    active_plugin.is_active.return_value = True
+    inactive_plugin = MagicMock()
+    inactive_plugin.settings_tab = MockTab(None, 'songs', 'Songs', ':/icon/openlp-logo.svg')
+    inactive_plugin.is_active.return_value = False
+
+    with patch('openlp.core.ui.settingsform.State') as mocked_state:
+        mocked_state.return_value.list_plugins.return_value = [inactive_plugin, active_plugin]
+
+        # WHEN: Getting ordered tabs
+        ordered_tabs = settings_form._get_ordered_tabs()
+
+    # THEN: General should be first, Advanced last, and middle sorted A-Z by visible title
+    ordered_titles = [tab.tab_title_visible for tab, _ in ordered_tabs]
+    assert ordered_titles == ['General', 'Alerts', 'API', 'Media', 'Projectors', 'Screens', 'Service', 'Songs', 'Themes',
+                              'Advanced']
+    assert ordered_tabs[0][1] is True
+    assert ordered_tabs[-1][1] is True
