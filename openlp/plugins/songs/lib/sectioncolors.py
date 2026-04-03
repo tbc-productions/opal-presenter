@@ -30,7 +30,7 @@ DEFAULT_SECTION_COLORS = {
     'pre_chorus': '#FBBF24',
     'chorus': '#F87171',
     'bridge': '#C084FC',
-    'ending': '#94A3B8',
+    'ending': '#C7879F',
     'other': '#E2E8F0'
 }
 
