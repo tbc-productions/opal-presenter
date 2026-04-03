@@ -228,9 +228,11 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
             if Registry().get('settings').value('songs/enable chords'):
                 self.transpose_widget.setVisible(True)
         self.verse_text_edit.setPlainText(text)
+        self.verse_text_edit.reset_undo_redo_history()
+        self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.Start)
+        self.verse_text_edit.verticalScrollBar().setValue(0)
         self.update_section_tag_highlighting()
         self.verse_text_edit.setFocus()
-        self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
     def update_section_tag_highlighting(self):
         """
@@ -254,8 +256,6 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         block = self.verse_text_edit.document().firstBlock()
         try:
             while block.isValid():
-                block_cursor = QtGui.QTextCursor(block)
-                block_format = block_cursor.blockFormat()
                 match = VERSE_LINE_REGEX.match(block.text())
                 if match:
                     verse_name = match.group(1)
@@ -274,12 +274,6 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
                                                             number=verse_number),
                         'background': color
                     }
-                    block_format.setTopMargin(10.0)
-                    block_format.setBottomMargin(10.0)
-                else:
-                    block_format.setTopMargin(0.0)
-                    block_format.setBottomMargin(0.0)
-                block_cursor.setBlockFormat(block_format)
                 block = block.next()
             self.verse_text_edit.setExtraSelections(selections)
             self.verse_text_edit.set_visual_line_overrides(visual_overrides)

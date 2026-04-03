@@ -25,6 +25,7 @@ used to edit songs.
 import logging
 import re
 from shutil import copyfile
+from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
@@ -50,10 +51,12 @@ from openlp.plugins.songs.forms.editverseform import EditVerseForm
 from openlp.plugins.songs.forms.mediafilesform import MediaFilesForm
 from openlp.plugins.songs.lib import VerseType, clean_song
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
-from openlp.plugins.songs.lib.mediaitem import MediaManagerItem
 from openlp.plugins.songs.lib.openlyricsxml import SongXML
 from openlp.plugins.songs.lib.sectioncolors import color_from_settings, verse_number_from_text
 from openlp.plugins.songs.lib.ui import SongStrings, show_key_warning
+
+if TYPE_CHECKING:
+    from openlp.plugins.songs.lib.mediaitem import MediaManagerItem
 
 
 log = logging.getLogger(__name__)
@@ -64,8 +67,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
     Class to manage the editing of a song
     """
     log.info('{name} EditSongForm loaded'.format(name=__name__))
+    AUTHOR_DELIMITER_RE = re.compile(r'[|;,]')
+    COPYRIGHT_NEWLINE_RE = re.compile(r'[ \t]*(?:\r\n|\r|\n)+[ \t]*')
 
-    def __init__(self, media_item: MediaManagerItem, parent: QtWidgets.QWidget, manager: DBManager):
+    def __init__(self, media_item: 'MediaManagerItem', parent: QtWidgets.QWidget, manager: DBManager):
         """
         Constructor
         """
@@ -102,6 +107,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.audio_remove_button.clicked.connect(self.on_audio_remove_button_clicked)
         self.audio_remove_all_button.clicked.connect(self.on_audio_remove_all_button_clicked)
         Registry().register_function('theme_update_list', self.load_themes)
+        if self.authors_combo_box.lineEdit():
+            self.authors_combo_box.lineEdit().installEventFilter(self)
+        self.copyright_edit.installEventFilter(self)
+        self.copyright_edit.textChanged.connect(self._on_copyright_edit_text_changed)
         self.preview_button = QtWidgets.QPushButton()
         self.preview_button.setObjectName('preview_button')
         self.preview_button.setText(UiStrings().SaveAndPreview)
@@ -112,6 +121,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_form = EditVerseForm(self)
         self.media_form = MediaFilesForm(self)
         self.initialise()
+        line_spacing = QtGui.QFontMetrics(self.copyright_edit.font()).lineSpacing()
+        margins = self.copyright_edit.contentsMargins()
+        chrome = self.copyright_edit.frameWidth() * 2 + margins.top() + margins.bottom()
+        self.copyright_edit.setFixedHeight(line_spacing * 3 + chrome)
         self.authors_list_view.setSortingEnabled(False)
         self.authors_list_view.setAlternatingRowColors(True)
         self.topics_list_view.setSortingEnabled(False)
@@ -313,12 +326,17 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.rights_layout.setObjectName('rights_layout')
         self.copyright_layout = QtWidgets.QHBoxLayout()
         self.copyright_layout.setObjectName('copyright_layout')
-        self.copyright_edit = QtWidgets.QLineEdit(self.rights_group_box)
+        self.copyright_edit = QtWidgets.QTextEdit(self.rights_group_box)
         self.copyright_edit.setObjectName('copyright_edit')
+        self.copyright_edit.setAcceptRichText(False)
+        self.copyright_edit.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.WidgetWidth)
+        self.copyright_edit.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.copyright_edit.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.copyright_edit.setTabChangesFocus(True)
         self.copyright_layout.addWidget(self.copyright_edit)
         self.copyright_insert_button = QtWidgets.QToolButton(self.rights_group_box)
         self.copyright_insert_button.setObjectName('copyright_insert_button')
-        self.copyright_layout.addWidget(self.copyright_insert_button)
+        self.copyright_layout.addWidget(self.copyright_insert_button, 0, QtCore.Qt.AlignmentFlag.AlignTop)
         self.rights_layout.addLayout(self.copyright_layout)
         self.ccli_layout = QtWidgets.QHBoxLayout()
         self.ccli_layout.setObjectName('ccli_layout')
@@ -460,6 +478,32 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         combo.setCurrentIndex(-1)
         combo.setCurrentText('')
 
+    @classmethod
+    def _sanitize_copyright_text(cls, text: str) -> str:
+        """
+        Remove newline characters from copyright text while keeping word spacing readable.
+        """
+        return cls.COPYRIGHT_NEWLINE_RE.sub(' ', text)
+
+    def _on_copyright_edit_text_changed(self):
+        """
+        Keep copyright text as a single logical line while allowing visual wrapping.
+        """
+        text = self.copyright_edit.toPlainText()
+        sanitized_text = self._sanitize_copyright_text(text)
+        if sanitized_text != text:
+            cursor = self.copyright_edit.textCursor()
+            cursor_position = len(self._sanitize_copyright_text(text[:cursor.position()]))
+            anchor_position = len(self._sanitize_copyright_text(text[:cursor.anchor()]))
+            self.copyright_edit.blockSignals(True)
+            self.copyright_edit.setPlainText(sanitized_text)
+            self.copyright_edit.blockSignals(False)
+            new_cursor = self.copyright_edit.textCursor()
+            new_cursor.setPosition(min(len(sanitized_text), anchor_position))
+            new_cursor.setPosition(min(len(sanitized_text), cursor_position),
+                                   QtGui.QTextCursor.MoveMode.KeepAnchor)
+            self.copyright_edit.setTextCursor(new_cursor)
+
     def _add_author_to_list(self, author: Author, author_type: AuthorType):
         """
         Add an author to the author list.
@@ -467,6 +511,158 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         author_item = QtWidgets.QListWidgetItem(author.get_display_name(author_type))
         author_item.setData(QtCore.Qt.ItemDataRole.UserRole, (author.id, author_type))
         self.authors_list_view.addItem(author_item)
+
+    @staticmethod
+    def _create_author_from_text(text: str) -> Author:
+        """
+        Build an Author object from the supplied display text.
+        """
+        text = text.strip()
+        if text.find(' ') == -1:
+            return Author(first_name='', last_name='', display_name=text)
+        return Author(first_name=text.rsplit(' ', 1)[0], last_name=text.rsplit(' ', 1)[1], display_name=text)
+
+    def _reset_authors_combo_box(self):
+        """
+        Clear the author combo box selection and text.
+        """
+        self.authors_combo_box.setCurrentIndex(-1)
+        self.authors_combo_box.setCurrentText('')
+
+    def _song_has_author(self, author_id: int) -> bool:
+        """
+        Return True if the song author list already contains the author.
+        """
+        for row in range(self.authors_list_view.count()):
+            item = self.authors_list_view.item(row)
+            existing_author_id, _existing_author_type = item.data(QtCore.Qt.ItemDataRole.UserRole)
+            if existing_author_id == author_id:
+                return True
+        return False
+
+    def _add_author_if_missing(self, author: Author, author_type: AuthorType):
+        """
+        Add an author to the song list when it is not already present.
+        """
+        if self._song_has_author(author.id):
+            return False
+        self._add_author_to_list(author, author_type)
+        return True
+
+    def _get_all_authors_by_name(self) -> dict:
+        """
+        Return a case-insensitive mapping of display names to Author objects.
+        """
+        authors = {}
+        for author in self.manager.get_all_objects(Author):
+            authors[author.display_name.casefold()] = author
+        return authors
+
+    def _find_author_by_name(self, text: str, author_lookup: dict | None = None):
+        """
+        Look up an author by display name using a case-insensitive match.
+        """
+        text = text.strip()
+        if not text:
+            return None
+        author_lookup = author_lookup or self._get_all_authors_by_name()
+        return author_lookup.get(text.casefold())
+
+    def _parse_author_names(self, text: str) -> list[str]:
+        """
+        Split delimited author text into unique trimmed author names.
+        """
+        authors = []
+        seen = set()
+        for part in self.AUTHOR_DELIMITER_RE.split(text):
+            author_name = part.strip()
+            if not author_name:
+                continue
+            author_key = author_name.casefold()
+            if author_key in seen:
+                continue
+            seen.add(author_key)
+            authors.append(author_name)
+        return authors
+
+    def _prompt_and_add_multiple_authors(self, text: str, author_type: AuthorType) -> bool:
+        """
+        Prompt to add multiple authors from delimited text and, if accepted, add them.
+        """
+        author_names = self._parse_author_names(text)
+        if len(author_names) <= 1:
+            return False
+        author_lookup = self._get_all_authors_by_name()
+        prompt_lines = []
+        for author_name in author_names:
+            if author_name.casefold() in author_lookup:
+                prompt_lines.append(author_name)
+            else:
+                prompt_lines.append('{name} ({new})'.format(
+                    name=author_name,
+                    new=translate('SongsPlugin.EditSongForm', 'New')))
+        message = translate(
+            'SongsPlugin.EditSongForm',
+            'Do you wish to add multiple authors?\n\n{authors}'
+        ).format(authors='\n'.join(prompt_lines))
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            translate('SongsPlugin.EditSongForm', 'Add Multiple Authors'),
+            message,
+            defaultButton=QtWidgets.QMessageBox.StandardButton.Yes)
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return False
+
+        created_any = False
+        for author_name in author_names:
+            author = author_lookup.get(author_name.casefold())
+            if author is None:
+                author = self._create_author_from_text(author_name)
+                self.manager.save_object(author)
+                author_lookup[author_name.casefold()] = author
+                created_any = True
+            self._add_author_if_missing(author, author_type)
+        if created_any:
+            self.load_authors()
+        self._reset_authors_combo_box()
+        return True
+
+    def _add_single_author(self, item: int, text: str, author_type: AuthorType):
+        """
+        Add a single author from the current combo box state.
+        """
+        if item == -1 and text:
+            author = self._find_author_by_name(text)
+            if author is not None:
+                if self._add_author_if_missing(author, author_type) is False:
+                    critical_error_message_box(
+                        message=translate('SongsPlugin.EditSongForm', 'This author is already in the list.'))
+                self._reset_authors_combo_box()
+                return
+            if QtWidgets.QMessageBox.question(
+                    self,
+                    translate('SongsPlugin.EditSongForm', 'Add Author'),
+                    translate('SongsPlugin.EditSongForm', 'This author does not exist, do you want to add them?'),
+                    defaultButton=QtWidgets.QMessageBox.StandardButton.Yes) == QtWidgets.QMessageBox.StandardButton.Yes:
+                author = self._create_author_from_text(text)
+                self.manager.save_object(author)
+                self._add_author_if_missing(author, author_type)
+                self.load_authors()
+                self._reset_authors_combo_box()
+            return
+        if item >= 0:
+            item_id = self.authors_combo_box.itemData(item)
+            author = self.manager.get_object(Author, item_id)
+            if not self._add_author_if_missing(author, author_type):
+                critical_error_message_box(
+                    message=translate('SongsPlugin.EditSongForm', 'This author is already in the list.'))
+            self._reset_authors_combo_box()
+            return
+        QtWidgets.QMessageBox.warning(
+            self, UiStrings().NISs,
+            translate('SongsPlugin.EditSongForm', 'You have not selected a valid author. Either select an author '
+                      'from the list, or type in a new author and click the "Add Author to Song" button to add '
+                      'the new author.'))
 
     def add_songbook_entry_to_list(self, songbook_id: int, songbook_name: str, entry: SongBookEntry):
         songbook_entry_item = QtWidgets.QListWidgetItem(SongBookEntry.get_display_name(songbook_name, entry))
@@ -689,6 +885,28 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                 return
         QtWidgets.QDialog.keyPressEvent(self, event)
 
+    def eventFilter(self, watched, event):
+        """
+        Prompt for multi-author paste in the author combo box line edit and keep copyright input single-line.
+        """
+        if watched == self.authors_combo_box.lineEdit() and event.type() == QtCore.QEvent.Type.KeyPress:
+            if event.matches(QtGui.QKeySequence.StandardKey.Paste):
+                QtCore.QTimer.singleShot(0, self._handle_author_combo_box_paste)
+        elif watched == self.copyright_edit and event.type() == QtCore.QEvent.Type.KeyPress:
+            if event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter):
+                return True
+        return super().eventFilter(watched, event)
+
+    def _handle_author_combo_box_paste(self):
+        """
+        Handle pasted author text in the combo box.
+        """
+        text = self.authors_combo_box.currentText().strip(' \r\n\t')
+        author_type = self.author_types_combo_box.itemData(self.author_types_combo_box.currentIndex())
+        if self.AUTHOR_DELIMITER_RE.search(text) and self._prompt_and_add_multiple_authors(text, author_type):
+            return
+        self._add_single_author(self.authors_combo_box.currentIndex(), text, author_type)
+
     def initialise(self):
         """
         Set up the form for when it is displayed.
@@ -823,7 +1041,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             # Clear the theme combo box in case it was previously set (bug #1212801)
             self.theme_combo_box.setCurrentIndex(-1)
             self.theme_combo_box.setCurrentText('')
-        self.copyright_edit.setText(self.song.copyright if self.song.copyright else '')
+        self.copyright_edit.setPlainText(self.song.copyright if self.song.copyright else '')
         self.comments_edit.setPlainText(self.song.comments if self.song.comments else '')
         self.ccli_number_edit.setText(self.song.ccli_number if self.song.ccli_number else '')
         # Using this weird if for a bool field until we're 100% sure the database is migrated
@@ -933,40 +1151,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         item = int(self.authors_combo_box.currentIndex())
         text = self.authors_combo_box.currentText().strip(' \r\n\t')
         author_type = self.author_types_combo_box.itemData(self.author_types_combo_box.currentIndex())
-        if item == -1 and text:
-            if QtWidgets.QMessageBox.question(
-                    self,
-                    translate('SongsPlugin.EditSongForm', 'Add Author'),
-                    translate('SongsPlugin.EditSongForm', 'This author does not exist, do you want to add them?'),
-                    defaultButton=QtWidgets.QMessageBox.StandardButton.Yes) == QtWidgets.QMessageBox.StandardButton.Yes:
-                if text.find(' ') == -1:
-                    author = Author(first_name='', last_name='', display_name=text)
-                else:
-                    author = Author(first_name=text.rsplit(' ', 1)[0], last_name=text.rsplit(' ', 1)[1],
-                                    display_name=text)
-                self.manager.save_object(author)
-                self._add_author_to_list(author, author_type)
-                self.load_authors()
-                self.authors_combo_box.setCurrentIndex(-1)
-                self.authors_combo_box.setCurrentText('')
-            else:
+        if text and self.AUTHOR_DELIMITER_RE.search(text):
+            if self._prompt_and_add_multiple_authors(text, author_type):
                 return
-        elif item >= 0:
-            item_id = (self.authors_combo_box.itemData(item))
-            author = self.manager.get_object(Author, item_id)
-            if self.authors_list_view.findItems(author.get_display_name(author_type), QtCore.Qt.MatchFlag.MatchExactly):
-                critical_error_message_box(
-                    message=translate('SongsPlugin.EditSongForm', 'This author is already in the list.'))
-            else:
-                self._add_author_to_list(author, author_type)
-            self.authors_combo_box.setCurrentIndex(-1)
-            self.authors_combo_box.setCurrentText('')
-        else:
-            QtWidgets.QMessageBox.warning(
-                self, UiStrings().NISs,
-                translate('SongsPlugin.EditSongForm', 'You have not selected a valid author. Either select an author '
-                          'from the list, or type in a new author and click the "Add Author to Song" button to add '
-                          'the new author.'))
+        self._add_single_author(item, text, author_type)
 
     def on_authors_list_view_clicked(self):
         """
@@ -1251,13 +1439,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         Copyright insert button pressed
         """
-        text = self.copyright_edit.text()
-        pos = self.copyright_edit.cursorPosition()
-        sign = SongStrings().CopyrightSymbol
-        text = text[:pos] + sign + text[pos:]
-        self.copyright_edit.setText(text)
+        cursor = self.copyright_edit.textCursor()
+        cursor.insertText(SongStrings().CopyrightSymbol)
+        self.copyright_edit.setTextCursor(cursor)
         self.copyright_edit.setFocus()
-        self.copyright_edit.setCursorPosition(pos + len(sign))
 
     def on_maintenance_button_clicked(self):
         """
@@ -1390,7 +1575,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             self.song = Song()
         self.song.title = self.title_edit.text()
         self.song.alternate_title = self.alternative_edit.text()
-        self.song.copyright = self.copyright_edit.text()
+        self.song.copyright = self._sanitize_copyright_text(self.copyright_edit.toPlainText())
         # Values will be set when cleaning the song.
         self.song.search_title = ''
         self.song.search_lyrics = ''

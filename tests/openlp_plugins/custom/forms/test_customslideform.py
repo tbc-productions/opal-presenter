@@ -73,3 +73,16 @@ def test_set_text(form):
 
         # THEN: The dialog should have focus.
         mocked_set_focus.assert_called_with()
+
+
+def test_set_text_scrolls_to_top(form):
+    """Loading text should leave the editor scrolled to the top."""
+    form.resize(400, 120)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+
+    long_text = '\n'.join('Line {line}'.format(line=line) for line in range(50))
+    form.set_text(long_text)
+    QtWidgets.QApplication.processEvents()
+
+    assert form.slide_text_edit.verticalScrollBar().value() == 0

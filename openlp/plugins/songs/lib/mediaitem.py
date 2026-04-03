@@ -42,6 +42,7 @@ from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.confirmationform import ConfirmationForm
+from openlp.core.widgets.views import TreeWidgetWithDnD
 from openlp.plugins.songs.forms.editsongform import EditSongForm
 from openlp.plugins.songs.forms.songexportform import SongExportForm
 from openlp.plugins.songs.forms.songimportform import SongImportForm
@@ -53,6 +54,93 @@ from openlp.plugins.songs.lib.ui import SongStrings
 
 
 log = logging.getLogger(__name__)
+
+
+class SongListWidgetItem(QtWidgets.QTreeWidgetItem):
+    """
+    A QTreeWidgetItem with a QListWidgetItem-compatible API so the base-class
+    MediaManagerItem code (which calls item.data(role) / item.text() without a
+    column argument) continues to work unchanged.
+    """
+
+    def data(self, role_or_column, role=None):
+        """Support both item.data(role) and item.data(column, role) call forms."""
+        if role is None:
+            return super().data(0, role_or_column)
+        return super().data(role_or_column, role)
+
+    def text(self, column=0):
+        """Support item.text() as well as item.text(column)."""
+        return super().text(column)
+
+    def __lt__(self, other):
+        """Case-insensitive alphabetic sort for clickable column headers."""
+        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
+        return self.text(col).casefold() < other.text(col).casefold()
+
+
+class SongListWidget(TreeWidgetWithDnD):
+    """
+    A two-column, sortable song list widget.
+
+    Column 0: Song title (with a ♪ suffix when the song has an attached audio file).
+    Column 1: Secondary detail whose meaning changes with the active search mode
+              (author, topic, theme, CCLI number, or book).
+    """
+
+    AUDIO_MARKER = ' ♪'
+
+    def __init__(self, parent=None, name=''):
+        super().__init__(parent, name)
+        self._initial_columns_set = False
+        self.setup_columns([
+            translate('SongsPlugin.MediaItem', 'Title'),
+            translate('SongsPlugin.MediaItem', 'Author'),
+        ])
+        # Keep the secondary column filling any remaining width.
+        self.header().setStretchLastSection(True)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setAlternatingRowColors(True)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+
+    def showEvent(self, event):
+        """Set a 65/35 column split on first show."""
+        super().showEvent(event)
+        if not self._initial_columns_set:
+            self._initial_columns_set = True
+            available = self.viewport().width()
+            if available > 0:
+                first_column = int(available * 0.65)
+                self.header().resizeSection(0, first_column)
+
+    def _ensure_first_column_width(self):
+        """When narrow (<300px), enforce a 65% minimum width for column 0."""
+        if self.columnCount() < 2 or self._resizing_columns:
+            return
+        available_width = self.viewport().width()
+        minimum_width = int(available_width * 0.65) if available_width < 300 else 0
+        if self.columnWidth(0) >= minimum_width:
+            return
+        self._resizing_columns = True
+        try:
+            self.header().resizeSection(0, minimum_width)
+        finally:
+            self._resizing_columns = False
+
+    def set_secondary_header(self, label: str):
+        """Update the secondary column header label for the current search mode."""
+        self.headerItem().setText(1, label)
+
+    @staticmethod
+    def make_item(title: str, secondary: str, song_id: int,
+                  has_audio: bool = False) -> SongListWidgetItem:
+        """Create a two-column SongListWidgetItem."""
+        col0 = title + SongListWidget.AUDIO_MARKER if has_audio else title
+        item = SongListWidgetItem([col0, secondary])
+        item.setData(0, QtCore.Qt.ItemDataRole.UserRole, song_id)
+        item.setToolTip(0, col0)
+        item.setToolTip(1, secondary)
+        return item
 
 
 class SongMediaItem(MediaManagerItem):
@@ -122,6 +210,39 @@ class SongMediaItem(MediaManagerItem):
             icon=UiIcons().favourite,
             triggers=self.on_favourite_click
         )
+
+    def add_list_view_to_toolbar(self):
+        """
+        Override the base-class list view with a two-column SongListWidget so
+        the songs panel shows title and secondary detail as sortable columns.
+        """
+        super().add_list_view_to_toolbar()
+        old_list = self.list_view
+        self.list_view = SongListWidget(self, self.plugin.name)
+        self.list_view.setObjectName('{name}ListView'.format(name=self.plugin.name))
+        # Move context-menu actions to the new widget
+        for action in list(old_list.actions()):
+            old_list.removeAction(action)
+            self.list_view.addAction(action)
+        # Reconnect signals
+        old_list.doubleClicked.disconnect(self.on_double_clicked)
+        old_list.itemSelectionChanged.disconnect(self.on_selection_change)
+        old_list.customContextMenuRequested.disconnect(self.context_menu)
+        self.list_view.doubleClicked.connect(self.on_double_clicked)
+        self.list_view.itemSelectionChanged.connect(self.on_selection_change)
+        self.list_view.customContextMenuRequested.connect(self.context_menu)
+        # Swap the widget in the layout
+        self.page_layout.replaceWidget(old_list, self.list_view)
+        old_list.deleteLater()
+        # Re-populate the context menu from the new widget's actions
+        self.menu.clear()
+        self.menu.addActions(self.list_view.actions())
+
+    def create_item_from_id(self, item_id):
+        """Return a SongListWidgetItem pre-loaded with *item_id* as UserRole data."""
+        item = SongListWidgetItem()
+        item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item_id)
+        return item
 
     def on_focus(self):
         self.search_text_edit.setFocus()
@@ -248,7 +369,7 @@ class SongMediaItem(MediaManagerItem):
                 Song.copyright != ''
             ])
             search_results = self.plugin.manager.get_all_objects(Song, *filter_clauses)
-            self.display_results_song(search_results)
+            self.display_results_copyright(search_results)
         elif search_type == SongSearch.CCLInumber:
             log.debug('CCLI number Search')
             search_string = '%{text}%'.format(text=search_keywords)
@@ -303,18 +424,20 @@ class SongMediaItem(MediaManagerItem):
 
         log.debug('display results Song')
         self.save_auto_select_id()
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Author'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_song_key)
         for song in search_results:
             # Do not display temporary songs
             if song.temporary:
                 continue
-            song_name = QtWidgets.QListWidgetItem(song.song_detail)
-            song_name.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+            song_name = SongListWidget.make_item(song.title, song.song_author_display, song.id, song.song_has_audio)
             self.list_view.addItem(song_name)
             # Auto-select the item if name has been set
             if song.id == self.auto_select_id:
                 self.list_view.setCurrentItem(song_name)
+        self.list_view.setSortingEnabled(True)
         self.auto_select_id = -1
 
     def display_results_author(self, search_results: list[Author], is_fav: bool = False):
@@ -333,6 +456,8 @@ class SongMediaItem(MediaManagerItem):
             return song.sort_key
 
         log.debug('display results Author')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Author'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_author_key)
         for author in search_results:
@@ -345,10 +470,9 @@ class SongMediaItem(MediaManagerItem):
                 # Do not display temporary songs
                 if song.temporary:
                     continue
-                song_detail = '{author} ({title})'.format(author=author.display_name, title=song.title)
-                song_name = QtWidgets.QListWidgetItem(song_detail)
-                song_name.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+                song_name = SongListWidget.make_item(song.title, author.display_name, song.id, song.song_has_audio)
                 self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
 
     def display_results_book(self, search_results):
         """
@@ -365,14 +489,18 @@ class SongMediaItem(MediaManagerItem):
             return get_natural_key('{0} {1} {2}'.format(text[1], text[0], text[2]))
 
         log.debug('display results Book')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Book'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_songbook_key)
         for result in search_results:
-            song_detail = '{result1} #{result0}: {result2}'.format(result1=result[1], result0=result[0],
-                                                                   result2=result[2])
-            song_name = QtWidgets.QListWidgetItem(song_detail)
-            song_name.setData(QtCore.Qt.ItemDataRole.UserRole, result[3])
+            secondary = '{result1} #{result0}'.format(result1=result[1], result0=result[0])
+            song_name = SongListWidgetItem([result[2], secondary])
+            song_name.setData(0, QtCore.Qt.ItemDataRole.UserRole, result[3])
+            song_name.setToolTip(0, result[2])
+            song_name.setToolTip(1, secondary)
             self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
 
     def display_results_topic(self, search_results, is_fav: bool = False):
         """
@@ -390,6 +518,8 @@ class SongMediaItem(MediaManagerItem):
             return song.sort_key
 
         log.debug('display results Topic')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Topic'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_topic_key)
         for topic in search_results:
@@ -398,10 +528,9 @@ class SongMediaItem(MediaManagerItem):
                 # Do not display temporary songs
                 if (is_fav and not song.is_favourite) or song.temporary:
                     continue
-                song_detail = '{topic} ({title})'.format(topic=topic.name, title=song.title)
-                song_name = QtWidgets.QListWidgetItem(song_detail)
-                song_name.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+                song_name = SongListWidget.make_item(song.title, topic.name, song.id, song.song_has_audio)
                 self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
 
     def display_results_themes(self, search_results):
         """
@@ -415,16 +544,41 @@ class SongMediaItem(MediaManagerItem):
             return get_natural_key(song.theme_name), song.sort_key
 
         log.debug('display results Themes')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Theme'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_theme_key)
         for song in search_results:
             # Do not display temporary songs
             if song.temporary:
                 continue
-            song_detail = '{theme} ({song})'.format(theme=song.theme_name, song=song.title)
-            song_name = QtWidgets.QListWidgetItem(song_detail)
-            song_name.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+            song_name = SongListWidget.make_item(song.title, song.theme_name or '', song.id, song.song_has_audio)
             self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
+
+    def display_results_copyright(self, search_results):
+        """
+        Display the song search results in the media manager list, sorted by copyright
+
+        :param search_results: A list of db Song objects
+        :return: None
+        """
+        def get_copyright_key(song):
+            """Get the key to sort by"""
+            return get_natural_key(song.copyright), song.sort_key
+
+        log.debug('display results Copyright')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Copyright'))
+        self.list_view.setSortingEnabled(False)
+        self.list_view.clear()
+        search_results.sort(key=get_copyright_key)
+        for song in search_results:
+            # Do not display temporary songs
+            if song.temporary:
+                continue
+            song_name = SongListWidget.make_item(song.title, song.copyright or '', song.id, song.song_has_audio)
+            self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
 
     def display_results_cclinumber(self, search_results):
         """
@@ -438,16 +592,17 @@ class SongMediaItem(MediaManagerItem):
             return get_natural_key(song.ccli_number), song.sort_key
 
         log.debug('display results CCLI number')
+        self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'CCLI Number'))
+        self.list_view.setSortingEnabled(False)
         self.list_view.clear()
         search_results.sort(key=get_cclinumber_key)
         for song in search_results:
             # Do not display temporary songs
             if song.temporary:
                 continue
-            song_detail = '{ccli} ({song})'.format(ccli=song.ccli_number, song=song.title)
-            song_name = QtWidgets.QListWidgetItem(song_detail)
-            song_name.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+            song_name = SongListWidget.make_item(song.title, song.ccli_number or '', song.id, song.song_has_audio)
             self.list_view.addItem(song_name)
+        self.list_view.setSortingEnabled(True)
 
     def on_clear_text_button_click(self):
         """
