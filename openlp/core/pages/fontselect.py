@@ -66,24 +66,42 @@ class FontSelectPage(GridLayoutPage):
         }
 
     def setup_ui(self):
+        row = 0
+        self.text_groupbox = QtWidgets.QGroupBox(self)
+        self.text_groupbox.setObjectName('text_groupbox')
+        self.text_layout = QtWidgets.QGridLayout(self.text_groupbox)
+        self.layout.addWidget(self.text_groupbox, row, 0, 1, 4)
+        row += 1
+        self.spacing_groupbox = QtWidgets.QGroupBox(self)
+        self.spacing_groupbox.setObjectName('spacing_groupbox')
+        self.spacing_layout = QtWidgets.QGridLayout(self.spacing_groupbox)
+        self.layout.addWidget(self.spacing_groupbox, row, 0, 1, 4)
+        row += 1
+        text_row = 0
+        spacing_row = 0
         # Font name
         self.font_name_label = FormLabel(self)
         self.font_name_label.setObjectName('font_name_label')
-        self.layout.addWidget(self.font_name_label, 0, 0)
+        self.text_layout.addWidget(self.font_name_label, text_row, 0)
+        text_row += 1
         self.font_name_combobox = QtWidgets.QFontComboBox(self)
         self.font_name_combobox.setObjectName('font_name_combobox')
-        self.layout.addWidget(self.font_name_combobox, 0, 1, 1, 3)
+        self.text_layout.addWidget(self.font_name_combobox, text_row, 0, 1, 4)
+        text_row += 1
         # Font color
         self.font_color_label = FormLabel(self)
         self.font_color_label.setObjectName('font_color_label')
-        self.layout.addWidget(self.font_color_label, 1, 0)
+        self.text_layout.addWidget(self.font_color_label, text_row, 0)
+        text_row += 1
         self.font_color_button = ColorButton(self)
         self.font_color_button.setObjectName('font_color_button')
-        self.layout.addWidget(self.font_color_button, 1, 1)
+        self.text_layout.addWidget(self.font_color_button, text_row, 0)
+        text_row += 1
         # Font style
         self.font_style_label = FormLabel(self)
         self.font_style_label.setObjectName('font_style_label')
-        self.layout.addWidget(self.font_style_label, 1, 2)
+        self.text_layout.addWidget(self.font_style_label, text_row, 0)
+        text_row += 1
         self.style_layout = QtWidgets.QHBoxLayout()
         self.style_bold_button = QtWidgets.QToolButton(self)
         self.style_bold_button.setCheckable(True)
@@ -98,45 +116,54 @@ class FontSelectPage(GridLayoutPage):
         self.style_italic_button.setObjectName('style_italic_button')
         self.style_layout.addWidget(self.style_italic_button)
         self.style_layout.addStretch(1)
-        self.layout.addLayout(self.style_layout, 1, 3)
+        self.text_layout.addLayout(self.style_layout, text_row, 0, 1, 4)
+        text_row += 1
         # Font size
         self.font_size_label = FormLabel(self)
         self.font_size_label.setObjectName('font_size_label')
-        self.layout.addWidget(self.font_size_label, 2, 0)
+        self.text_layout.addWidget(self.font_size_label, text_row, 0)
+        text_row += 1
         self.font_size_spinbox = QtWidgets.QSpinBox(self)
         self.font_size_spinbox.setMaximum(999)
         self.font_size_spinbox.setValue(16)
         self.font_size_spinbox.setObjectName('font_size_spinbox')
-        self.layout.addWidget(self.font_size_spinbox, 2, 1)
+        self.text_layout.addWidget(self.font_size_spinbox, text_row, 0)
+        text_row += 1
         # Word wrap
         self.wrap_check_box = QtWidgets.QCheckBox(self)
         self.wrap_check_box.setObjectName('wrap_check_box')
-        self.layout.addWidget(self.wrap_check_box, 3, 1)
+        self.spacing_layout.addWidget(self.wrap_check_box, spacing_row, 0, 1, 4)
+        spacing_row += 1
         # Line spacing
         self.line_spacing_label = FormLabel(self)
         self.line_spacing_label.setObjectName('line_spacing_label')
-        self.layout.addWidget(self.line_spacing_label, 2, 2)
+        self.spacing_layout.addWidget(self.line_spacing_label, spacing_row, 0)
+        spacing_row += 1
         self.line_spacing_spinbox = QtWidgets.QSpinBox(self)
         self.line_spacing_spinbox.setMinimum(-250)
         self.line_spacing_spinbox.setMaximum(250)
         self.line_spacing_spinbox.setObjectName('line_spacing_spinbox')
-        self.layout.addWidget(self.line_spacing_spinbox, 2, 3)
+        self.spacing_layout.addWidget(self.line_spacing_spinbox, spacing_row, 0)
+        spacing_row += 1
         # Letter spacing
         self.letter_spacing_label = FormLabel(self)
         self.letter_spacing_label.setObjectName('letter_spacing_label')
-        self.layout.addWidget(self.letter_spacing_label, 3, 2)
+        self.spacing_layout.addWidget(self.letter_spacing_label, spacing_row, 0)
+        spacing_row += 1
         self.letter_spacing_spinbox = QtWidgets.QDoubleSpinBox(self)
         self.letter_spacing_spinbox.setMinimum(-250)
         self.letter_spacing_spinbox.setMaximum(250)
         self.letter_spacing_spinbox.setObjectName('letter_spacing_spinbox')
-        self.layout.addWidget(self.letter_spacing_spinbox, 3, 3)
+        self.spacing_layout.addWidget(self.letter_spacing_spinbox, spacing_row, 0)
+        spacing_row += 1
         # Outline
         self.outline_groupbox = QtWidgets.QGroupBox(self)
         self.outline_groupbox.setCheckable(True)
         self.outline_groupbox.setChecked(False)
         self.outline_groupbox.setObjectName('outline_groupbox')
         self.outline_layout = QtWidgets.QGridLayout(self.outline_groupbox)
-        self.layout.addWidget(self.outline_groupbox, 4, 0, 1, 2)
+        self.layout.addWidget(self.outline_groupbox, row, 0, 1, 4)
+        row += 1
         # Outline colour
         self.outline_color_label = FormLabel(self.outline_groupbox)
         self.outline_color_label.setObjectName('outline_color_label')
@@ -158,7 +185,7 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_groupbox.setChecked(False)
         self.shadow_groupbox.setObjectName('shadow_groupbox')
         self.shadow_layout = QtWidgets.QGridLayout(self.shadow_groupbox)
-        self.layout.addWidget(self.shadow_groupbox, 4, 2, 1, 2)
+        self.layout.addWidget(self.shadow_groupbox, row, 0, 1, 4)
         # Shadow color
         self.shadow_color_label = FormLabel(self.shadow_groupbox)
         self.shadow_color_label.setObjectName('shadow_color_label')
@@ -175,7 +202,7 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_size_spinbox.setObjectName('shadow_size_spinbox')
         self.shadow_layout.addWidget(self.shadow_size_spinbox, 1, 1)
         # Connect all the signals
-        self.font_name_combobox.activated.connect(self._on_font_name_changed)
+        self.font_name_combobox.currentFontChanged.connect(self._on_font_name_changed)
         self.font_color_button.colorChanged.connect(self._on_font_color_changed)
         self.style_bold_button.toggled.connect(self._on_style_bold_toggled)
         self.style_italic_button.toggled.connect(self._on_style_italic_toggled)
@@ -191,6 +218,8 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_size_spinbox.valueChanged.connect(self._on_shadow_size_changed)
 
     def retranslate_ui(self):
+        self.text_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Text'))
+        self.spacing_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Spacing'))
         self.font_name_label.setText(translate('OpenLP.FontSelectWidget', 'Font:'))
         self.font_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
         self.font_style_label.setText(translate('OpenLP.FontSelectWidget', 'Style:'))
@@ -214,9 +243,11 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
         self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size:'))
 
-    def _on_font_name_changed(self, name):
-        if isinstance(name, str):
-            self.font_name_changed.emit(name)
+    def _on_font_name_changed(self, font):
+        if isinstance(font, QtGui.QFont):
+            self.font_name_changed.emit(font.family())
+        elif isinstance(font, str):
+            self.font_name_changed.emit(font)
 
     def _on_font_color_changed(self, color):
         self.font_color_changed.emit(color)

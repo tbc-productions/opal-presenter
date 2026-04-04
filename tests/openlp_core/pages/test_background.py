@@ -48,6 +48,8 @@ def test_on_background_type_index_changed(settings):
     page = BackgroundPage()
     page.color_widgets = [MagicMock()]
     page.gradient_widgets = [MagicMock()]
+    page.background_style_group_box.setVisible = MagicMock()
+    page.background_media_group_box.setVisible = MagicMock()
 
     # WHEN: _on_background_type_index_changed
     page._on_background_type_index_changed(1)
@@ -56,6 +58,53 @@ def test_on_background_type_index_changed(settings):
     page.color_widgets[0].hide.assert_called_once()
     page.gradient_widgets[0].hide.assert_called_once()
     page.gradient_widgets[0].show.assert_called_once()
+    page.background_style_group_box.setVisible.assert_called_once_with(True)
+    page.background_media_group_box.setVisible.assert_called_once_with(False)
+
+
+@pytest.mark.parametrize('index, style_visible, media_visible', [
+    (BackgroundType.Solid, True, False),
+    (BackgroundType.Gradient, True, False),
+    (BackgroundType.Image, False, True),
+    (BackgroundType.Transparent, False, False),
+    (BackgroundType.Video, False, True),
+    (BackgroundType.Stream, False, True),
+])
+def test_on_background_type_index_changed_groupbox_visibility(settings, index, style_visible, media_visible):
+    """
+    Test group box visibility for each background type.
+    """
+    # GIVEN: A BackgroundPage instance with mocked group box visibility handlers
+    page = BackgroundPage()
+    page.background_style_group_box.setVisible = MagicMock()
+    page.background_media_group_box.setVisible = MagicMock()
+
+    # WHEN: The background type changes
+    page._on_background_type_index_changed(index)
+
+    # THEN: The group boxes should be shown or hidden appropriately
+    page.background_style_group_box.setVisible.assert_called_once_with(style_visible)
+    page.background_media_group_box.setVisible.assert_called_once_with(media_visible)
+
+
+@pytest.mark.parametrize('index, expected_items', [
+    (BackgroundType.Image, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)', 'Stretch', 'Tile (Repeat)']),
+    (BackgroundType.Video, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)']),
+    (BackgroundType.Stream, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)']),
+])
+def test_on_background_type_index_changed_fit_options(settings, index, expected_items):
+    """
+    Test fit options for each background type.
+    """
+    # GIVEN: A BackgroundPage instance
+    page = BackgroundPage()
+
+    # WHEN: The background type changes
+    page._on_background_type_index_changed(index)
+
+    # THEN: The fit combo box should only show the supported options
+    assert page.background_fit_combo_box.count() == len(expected_items)
+    assert [page.background_fit_combo_box.itemText(i) for i in range(page.background_fit_combo_box.count())] == expected_items
 
 
 def test_get_background_type(settings):

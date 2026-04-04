@@ -22,6 +22,7 @@
 The Theme Manager manages adding, deleteing and modifying of themes.
 """
 import os
+import threading
 import shutil
 import zipfile
 from pathlib import Path
@@ -42,12 +43,42 @@ from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.theme import Theme
 from openlp.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, create_widget_action, \
     critical_error_message_box, set_list_view_mode_toolbar_state
+from openlp.core.display.screens import ScreenList
+from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.themeform import ThemeForm
-from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
+
+
+class ThemeThumbnailRefreshWorker(ThreadWorker):
+    """
+    Background worker that walks the theme list and requests thumbnail refreshes.
+    """
+    thumbnail_requested = QtCore.Signal(str)
+    status_changed = QtCore.Signal(str)
+    finished = QtCore.Signal()
+
+    def __init__(self, theme_names):
+        super().__init__()
+        self._theme_names = list(theme_names)
+        self._thumbnail_completed = threading.Event()
+
+    def mark_thumbnail_complete(self):
+        self._thumbnail_completed.set()
+
+    def start(self):
+        if not self._theme_names:
+            self.finished.emit()
+            return
+        for theme_name in self._theme_names:
+            self._thumbnail_completed.clear()
+            self.status_changed.emit(translate('OpenLP.ThemeManager', 'Updating thumbnail ({theme})')
+                                     .format(theme=theme_name))
+            self.thumbnail_requested.emit(theme_name)
+            self._thumbnail_completed.wait()
+        self.finished.emit()
 
 
 class Ui_ThemeManager(object):
@@ -108,6 +139,15 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.theme_list_widget.setObjectName('theme_list_widget')
         self.layout.addWidget(self.theme_list_widget)
+        self.footer_status_bar = QtWidgets.QStatusBar(widget)
+        self.footer_status_bar.setObjectName('footer_status_bar')
+        self.footer_status_bar.setSizeGripEnabled(False)
+        self.footer_status_bar.setStyleSheet('QStatusBar { padding-left: 8px; }')
+        self.footer_status_label = QtWidgets.QLabel(self.footer_status_bar)
+        self.footer_status_label.setObjectName('footer_status_label')
+        self.footer_status_bar.addWidget(self.footer_status_label, 1)
+        self.footer_status_label.setText('')
+        self.layout.addWidget(self.footer_status_bar)
         self.theme_list_widget.customContextMenuRequested.connect(self.context_menu)
         # build the context menu
         self.menu = QtWidgets.QMenu()
@@ -154,6 +194,9 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         # Variables
         self._theme_list = {}
         self.old_background_image_path = None
+        self._thumbnail_dimensions = None
+        self._thumbnail_refresh_worker = None
+        self._thumbnail_refresh_pending = False
         Registry().register_function('config_screen_changed', self.screen_changed)
 
     def get_global_theme(self):
@@ -187,12 +230,14 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         process the bootstrap post setup request
         """
         self.load_settings()
-        self.progress_form = ThemeProgressForm(self)
+        self._thumbnail_dimensions = self._get_screen_dimensions()
         self.theme_form = ThemeForm(self)
         self.theme_form.path = self.theme_path
         self.file_rename_form = FileRenameForm()
         self.upgrade_themes()  # TODO: Can be removed when upgrade path from OpenLP 2.4 no longer needed
         self.load_themes()
+        self._update_renderer_from_current_screen()
+        self.update_preview_images()
 
     def load_settings(self):
         view_mode_value = None
@@ -212,9 +257,87 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         Update the default theme location and size for when screen size changed
         """
+        current_screen = self._get_current_screen()
+        self._update_renderer_from_current_screen(current_screen)
         for theme_name in self._theme_list:
             theme_object = self._theme_list[theme_name]
             theme_object.set_default_header_footer()
+        current_dimensions = self._get_screen_dimensions()
+        if current_dimensions and current_dimensions != self._thumbnail_dimensions:
+            self._thumbnail_dimensions = current_dimensions
+            if self._theme_list:
+                if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+                    self._thumbnail_refresh_pending = True
+                else:
+                    self.update_preview_images()
+        if hasattr(self, 'theme_form') and self.theme_form is not None and self.theme_form.isVisible() and \
+                hasattr(self.theme_form, 'theme'):
+            self.theme_form.update_theme()
+            self.theme_form.refresh_preview()
+
+    def _get_current_screen(self):
+        """
+        Get the current primary screen object.
+        """
+        try:
+            return ScreenList().current
+        except (AttributeError, IndexError):
+            return None
+
+    def _update_renderer_from_current_screen(self, current_screen=None):
+        """
+        Update the renderer and edit preview widget to match the current screen geometry.
+        """
+        current_screen = current_screen or self._get_current_screen()
+        if current_screen is None:
+            return
+        renderer = getattr(self, 'renderer', None)
+        if renderer is not None:
+            renderer.update_from_screen(current_screen)
+        if hasattr(self, 'theme_form') and self.theme_form is not None and hasattr(self.theme_form, 'preview_box'):
+            self.theme_form.preview_box.update_from_screen(current_screen)
+
+    def _get_screen_dimensions(self):
+        """
+        Get the current primary screen dimensions.
+        """
+        try:
+            return ScreenList().current.display_geometry.size()
+        except (AttributeError, IndexError):
+            return None
+
+    def _set_thumbnail_status(self, status_text):
+        """
+        Update the footer status bar with the current thumbnail refresh state.
+        """
+        if hasattr(self, 'footer_status_bar'):
+            self.footer_status_label.setText(status_text)
+
+    def _refresh_thumbnail_for_theme(self, theme_name):
+        """
+        Generate and save a preview image for a single theme.
+        """
+        try:
+            theme_data = self._get_theme_data(theme_name)
+            preview_pixmap = self.generate_image(theme_data, True)
+            if preview_pixmap is not None:
+                self.save_preview(theme_name, preview_pixmap)
+        finally:
+            if self._thumbnail_refresh_worker is not None:
+                self._thumbnail_refresh_worker.mark_thumbnail_complete()
+
+    def _thumbnail_refresh_finished(self):
+        """
+        Clear the footer status once thumbnail refresh completes.
+        """
+        self._set_thumbnail_status('')
+        self._thumbnail_refresh_worker = None
+        if self._thumbnail_refresh_pending:
+            self._thumbnail_refresh_pending = False
+            if self._theme_list:
+                self.update_preview_images()
+            return
+        self.load_themes()
 
     def upgrade_themes(self):
         """
@@ -766,21 +889,23 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
 
     def update_preview_images(self, theme_name_list=None):
         """
-        Called to update the themes' preview images.
+        Called to update the themes' preview images in the background.
 
         :param theme_name_list: A list of theme names in the theme data folder
         """
         theme_name_list = theme_name_list or self.get_theme_names()
-        self.progress_form.theme_list = theme_name_list
-        self.progress_form.show()
-        for theme_name in theme_name_list:
-            theme_data = self._get_theme_data(theme_name)
-            preview_pixmap = self.progress_form.get_preview(theme_name, theme_data)
-            if preview_pixmap is None:
-                break
-            self.save_preview(theme_name, preview_pixmap)
-        self.progress_form.close()
-        self.load_themes()
+        if not theme_name_list:
+            return
+        self._thumbnail_refresh_pending = False
+        if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+            return
+        worker = ThemeThumbnailRefreshWorker(theme_name_list)
+        worker.thumbnail_requested.connect(self._refresh_thumbnail_for_theme)
+        worker.status_changed.connect(self._set_thumbnail_status)
+        worker.finished.connect(self._thumbnail_refresh_finished)
+        worker.finished.connect(worker.quit.emit)
+        self._thumbnail_refresh_worker = worker
+        run_thread(worker, 'theme_thumbnail_refresh')
 
     def generate_image(self, theme_data, force_page=False):
         """

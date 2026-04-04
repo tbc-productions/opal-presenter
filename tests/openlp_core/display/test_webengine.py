@@ -21,3 +21,22 @@
 """
 Package to test the openlp.core.display.webengine package.
 """
+import os
+
+from unittest.mock import patch
+
+from openlp.core.display.webengine import LocalSchemeHelper
+
+
+def test_request_path_to_file_decodes_encoded_path_segments():
+	"""
+	Test that encoded URL path segments are decoded before filesystem lookup.
+	"""
+	helper = LocalSchemeHelper()
+	with patch('openlp.core.display.webengine.is_win', return_value=True), \
+		 patch('openlp.core.display.webengine.os.path.realpath', side_effect=lambda path: path) as mocked_realpath:
+		result = helper.request_path_to_file('', '/C:/Users/tyler/AppData/Roaming/openlp/data/themes/Geo%20Purple/geo5.jpg')
+
+	expected_path = os.path.normpath('C:/Users/tyler/AppData/Roaming/openlp/data/themes/Geo Purple/geo5.jpg')
+	assert mocked_realpath.call_args[0][0] == expected_path
+	assert result == expected_path

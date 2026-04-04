@@ -62,6 +62,12 @@ VERSE = 'The Lord said to {r}Noah{/r}: \n' \
     'Get those children out of the muddy, muddy \n' \
     '{r}C{/r}{b}h{/b}{bl}i{/bl}{y}l{/y}{g}d{/g}{pk}' \
     'r{/pk}{o}e{/o}{pp}n{/pp} of the Lord\n'
+VERSE2 = 'So {b}rise{/b} and {it}shine{/it}\n' \
+    'And give God the glory, glory\n' \
+    '{r}Rise{/r} and {g}shine{/g} and\n' \
+    'Give God the {b}glory{/b}, {it}glory{/it}\n' \
+    '{r}C{/r}{b}h{/b}{bl}i{/bl}{y}l{/y}{g}d{/g}{pk}' \
+    'r{/pk}{o}e{/o}{pp}n{/pp} of the Lord\n'
 VERSE_FOR_LINE_COUNT = '\n'.join(map(str, range(100)))
 TITLE = 'Arky Arky'
 AUTHOR = 'John Doe'
@@ -552,6 +558,7 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         """
         super().__init__(*args, **kwargs)
         self.force_page = False
+        self.allow_theme_transitions = True
 
     def calculate_line_count(self):
         """
@@ -588,6 +595,26 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             footer_html = 'Dummy footer text'
         return footer_html
 
+    def generate_preview_two_slides(self, theme_data):
+        """
+        Generate a preview with two slides so transitions between them can be demonstrated.
+
+        :param theme_data: The theme to generate a preview for.
+        """
+        self.force_page = False
+        self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+        slides_text = [VERSE, VERSE2]
+        verses = []
+        for idx, verse_text in enumerate(slides_text):
+            formatted = self.format_slide(verse_text, None)
+            verse = dict()
+            verse['title'] = TITLE
+            verse['text'] = render_tags(formatted[0])
+            verse['verse'] = 'V{}'.format(idx + 1)
+            verse['footer'] = self.generate_footer()
+            verses.append(verse)
+        self.load_verses(verses, is_sync=True)
+
     def generate_preview(self, theme_data, force_page=False, generate_screenshot=True):
         """
         Generate a preview of a theme.
@@ -608,8 +635,6 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             verses['verse'] = 'V1'
             verses['footer'] = self.generate_footer()
             self.load_verses([verses], is_sync=True)
-            # Wait for a second
-            wait_for(lambda: False, timeout=1)
             self.force_page = False
             if generate_screenshot:
                 return self.grab()

@@ -958,7 +958,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.songbooks = []
         self._load_objects(SongBook, self.songbooks_combo_box, self.songbooks)
 
-    def load_themes(self, theme_list: list):
+    def load_themes(self, theme_list: list = None):
         """
         Load the themes into a combobox.
         """
@@ -966,7 +966,12 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             """Get the key to sort by"""
             return get_natural_key(theme)
 
+        if theme_list is None:
+            theme_manager = Registry().get('theme_manager')
+            theme_list = theme_manager.get_theme_names() if theme_manager else []
+
         self.theme_combo_box.clear()
+        theme_list = list(theme_list)
         theme_list.insert(0, f"<{UiStrings().Default}>")
         self.themes = theme_list
         self.themes.sort(key=get_theme_key)
