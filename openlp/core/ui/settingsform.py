@@ -266,7 +266,13 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                     tab_widget.save()
         # Now lets process all the post save handlers
         while self.processes:
-            Registry().execute(self.processes.pop(0))
+            process = self.processes.pop(0)
+            if process == 'theme_update_list':
+                theme_manager = Registry().get('theme_manager')
+                theme_names = theme_manager.get_theme_names() if theme_manager else []
+                Registry().execute(process, theme_names)
+            else:
+                Registry().execute(process)
         return QtWidgets.QDialog.accept(self)
 
     def reject(self):
