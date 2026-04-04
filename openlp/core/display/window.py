@@ -326,10 +326,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         if path_to_str(image).startswith(':'):
             image_uri = self.openlp_splash_screen_path
         else:
-            try:
-                image_uri = _path_to_file_uri(image).replace('file://', 'openlp-library://local-file/')
-            except Exception:
+            image_path = path_to_str(image).replace('\\', '/')
+            if not image_path:
                 image_uri = ''
+            else:
+                if ':' in image_path[:3] and not image_path.startswith('/'):
+                    image_path = '/' + image_path
+                image_uri = 'openlp-library://local-file/{path}'.format(path=image_path)
         if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):
             image_uri = ''
         return bg_color, image_uri

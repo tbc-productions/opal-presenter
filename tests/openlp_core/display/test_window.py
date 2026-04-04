@@ -388,6 +388,7 @@ def test_after_loaded(display_window_env, mock_settings, registry):
 
     # THEN: The following functions should have been called
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': True,
+                                                                   'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',
@@ -417,6 +418,7 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
 
     # THEN: Display.init should be called where is_display=false, do_item_transitions=true, show_mouse=false
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': False,
+                                                                   'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',

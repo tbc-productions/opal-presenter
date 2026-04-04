@@ -170,10 +170,7 @@ body.transition .reveal .slide-background {
   padding: 0 !important;
   margin: 0 !important;
   max-height: none;
-  top: var(--theme-main-top, 0px) !important;
-  left: var(--theme-main-left, 0px) !important;
-  width: var(--theme-main-width, 100%) !important;
-  height: var(--theme-main-height, auto) !important;
+  transform: none !important;
 }
 
 .reveal .slides > section p {

@@ -844,9 +844,11 @@ var Display = {
    * Checks if the present slide content fits within the slide
   */
   doesContentFit: function () {
-    var currSlide = Reveal.getCurrentSlide();
-    if (!currSlide) {
+    var currSlide = $("section.text-slides");
+    if (currSlide.length === 0) {
       currSlide = Display._footerContainer;
+    } else {
+      currSlide = currSlide[0];
     }
     return currSlide.clientHeight >= currSlide.scrollHeight;
   },
@@ -2075,10 +2077,10 @@ var Display = {
       "box-sizing": "border-box",
       margin: "0",
       padding: "0",
-      "--theme-main-width": `${Display._theme.font_main_width}px`,
-      "--theme-main-height": `${Display._theme.font_main_height}px`,
-      "--theme-main-top": `${Display._theme.font_main_y}px`,
-      "--theme-main-left": `${Display._theme.font_main_x}px`,
+      width: `${Display._theme.font_main_width}px`,
+      height: `${Display._theme.font_main_height}px`,
+      top: `${Display._theme.font_main_y}px`,
+      left: `${Display._theme.font_main_x}px`,
       color: Display._theme.font_main_color,
       "font-family": Display._theme.font_main_name,
       "font-size": mainFontSizeCss,
