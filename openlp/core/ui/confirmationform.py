@@ -38,14 +38,14 @@ class ConfirmationForm(QtWidgets.QDialog, Ui_ConfirmationDialog):
     The Confirmation form
     """
 
-    def __init__(self, parent, title, items, message, width=400, height=600):
+    def __init__(self, parent, title, items, message, width=400, height=None):
         """
         :param parent:   The parent QWidget
         :param title:    The title to be applied to the QDialog window
         :param items:    A list (or other iterable) of Strings for the items
         :param message:  The confirmation message to display
         :param width:    Width of the dialog window
-        :param height:   Height of the dialog window
+        :param height:   Height of the dialog window (None to auto-size to contents)
         """
         super(ConfirmationForm, self).__init__(parent,
                                                QtCore.Qt.WindowType.WindowSystemMenuHint |
