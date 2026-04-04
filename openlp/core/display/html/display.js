@@ -410,6 +410,8 @@ var Display = {
   _isInitialised: false,
   _initialisedSlidesContainer: null,
   _themeApplied: true,
+  _textSlideDirection: TransitionDirection.Vertical,
+  _textSlideReverse: false,
   _revealConfig: {
     margin: 0.0,
     minScale: 1.0,
@@ -468,7 +470,7 @@ var Display = {
     Display._backgroundsContainer = $(".backgrounds")[0];
     Display._logoScreen = $("#logo-screen")[0];
     Display._logoScreenImage = $("#logo-screen-image")[0];
-    Display._doTransitions = isDisplay;
+    Display._doTransitions = isDisplay || !!(options.allowThemeTransitions);
     Display._itemTransitionSpeedSeconds = itemTransitionSpeed;
     Display._itemTransitionType = itemTransitionType;
     // Prevent duplicate Reveal wiring on repeated init calls in the same document lifecycle.
@@ -492,6 +494,98 @@ var Display = {
     Reveal.sync();
     // Python expects to be on first page after reinit
     Reveal.slide(0);
+  },
+  /**
+   * Update whether theme transitions are allowed and reapply the theme
+   * @param {boolean} allowed - Whether to allow theme transitions
+   */
+  setAllowThemeTransitions: function (allowed) {
+    Display._doTransitions = allowed;
+    // Determine transition settings based on the new flag
+    var reveal_transition_type = "none";
+    var new_transition_speed = "default";
+    
+    if (!!Display._theme && !!Display._theme.display_slide_transition && Display._doTransitions) {
+      var themeTransitionType = Display._normaliseThemeTransitionType(Display._theme.display_slide_transition_type);
+      switch (themeTransitionType) {
+        case TransitionType.Fade:
+          reveal_transition_type = "fade";
+          break;
+        case TransitionType.Slide:
+          reveal_transition_type = "slide";
+          break;
+        case TransitionType.Convex:
+          reveal_transition_type = "convex";
+          break;
+        case TransitionType.Concave:
+          reveal_transition_type = "concave";
+          break;
+        case TransitionType.Zoom:
+          reveal_transition_type = "zoom";
+          break;
+        default:
+          reveal_transition_type = "fade";
+      }
+      
+      var themeTransitionSpeed = Display._normaliseThemeTransitionSpeed(Display._theme.display_slide_transition_speed);
+      switch (themeTransitionSpeed) {
+        case TransitionSpeed.Normal:
+          new_transition_speed = "default";
+          break;
+        case TransitionSpeed.Fast:
+          new_transition_speed = "fast";
+          break;
+        case TransitionSpeed.Slow:
+          new_transition_speed = "slow";
+          break;
+        default:
+          new_transition_speed = "default";
+      }
+    }
+    
+    // Update Reveal's global transition configuration
+    Reveal.configure({"transition": reveal_transition_type, "transitionSpeed": new_transition_speed});
+    
+    // Update all slides in the container with the new transition settings
+    var allSlides = document.querySelectorAll(".slides > section, .slides > section > section");
+    for (var i = 0; i < allSlides.length; i++) {
+      if (!allSlides[i].classList.contains("use-background-image")) {
+        allSlides[i].setAttribute("data-transition", reveal_transition_type);
+        allSlides[i].setAttribute("data-transition-speed", new_transition_speed);
+      }
+    }
+    
+    // Resync Reveal to apply changes
+    Reveal.sync();
+  },
+  /**
+   * Preview the theme slide transition by navigating to the second slide, then back.
+   * @param {number} initialDelayMs - milliseconds before the transition starts
+   * @param {number} totalDurationMs - milliseconds after which we return to the first slide
+   */
+  previewTransition: function (initialDelayMs, totalDurationMs) {
+    if (!Display._theme) {
+      return;
+    }
+    var speedName;
+    switch (Display._theme.display_slide_transition_speed) {
+      case TransitionSpeed.Fast:
+        speedName = "fast";
+        break;
+      case TransitionSpeed.Slow:
+        speedName = "slow";
+        break;
+      default:
+        speedName = "default";
+    }
+    Reveal.configure({transitionSpeed: speedName});
+    if (Display._textSlideDirection === TransitionDirection.Horizontal) {
+      setTimeout(function () { Reveal.slide(1, 0); }, initialDelayMs);
+      setTimeout(function () { Reveal.slide(0, 0); }, totalDurationMs);
+    } else {
+      setTimeout(function () { Reveal.slide(0, 1); }, initialDelayMs);
+      setTimeout(function () { Reveal.slide(0, 0); }, totalDurationMs);
+    }
   },
   /**
    * Enable/Disable item transitions
@@ -581,6 +675,81 @@ var Display = {
   _getPresentationTransitionName: function (effect) {
     return Display._getPresentationTransitionEffect(effect) + "-horizontal";
   },
+
+  _normaliseThemeTransitionType: function (transitionType) {
+    if (typeof transitionType === "number") {
+      return transitionType;
+    }
+    if (typeof transitionType === "string") {
+      var lowered = transitionType.toLowerCase();
+      switch (lowered) {
+        case "fade":
+          return TransitionType.Fade;
+        case "slide":
+          return TransitionType.Slide;
+        case "convex":
+          return TransitionType.Convex;
+        case "concave":
+          return TransitionType.Concave;
+        case "zoom":
+          return TransitionType.Zoom;
+      }
+      var asNumber = Number(transitionType);
+      if (Number.isFinite(asNumber)) {
+        return asNumber;
+      }
+    }
+    return TransitionType.Fade;
+  },
+
+  _normaliseThemeTransitionSpeed: function (transitionSpeed) {
+    if (typeof transitionSpeed === "number") {
+      return transitionSpeed;
+    }
+    if (typeof transitionSpeed === "string") {
+      var lowered = transitionSpeed.toLowerCase();
+      switch (lowered) {
+        case "normal":
+          return TransitionSpeed.Normal;
+        case "fast":
+          return TransitionSpeed.Fast;
+        case "slow":
+          return TransitionSpeed.Slow;
+      }
+      var asNumber = Number(transitionSpeed);
+      if (Number.isFinite(asNumber)) {
+        return asNumber;
+      }
+    }
+    return TransitionSpeed.Normal;
+  },
+
+  _normaliseThemeTransitionDirection: function (transitionDirection) {
+    if (typeof transitionDirection === "number") {
+      return transitionDirection;
+    }
+    if (typeof transitionDirection === "string") {
+      var lowered = transitionDirection.toLowerCase();
+      switch (lowered) {
+        case "horizontal":
+          return TransitionDirection.Horizontal;
+        case "vertical":
+          return TransitionDirection.Vertical;
+      }
+      var asNumber = Number(transitionDirection);
+      if (Number.isFinite(asNumber)) {
+        return asNumber;
+      }
+    }
+    return TransitionDirection.Horizontal;
+  },
+
+  _normaliseThemeTransitionReverse: function (isReverse) {
+    if (typeof isReverse === "string") {
+      return isReverse.toLowerCase() === "true";
+    }
+    return !!isReverse;
+  },
   /**
    * Clear the current list of slides
   */
@@ -603,6 +772,21 @@ var Display = {
    * @param {element} is_text - Used to decide if the theme main area constraints should apply
   */
   replaceSlides: function (new_slides, is_text=false) {
+    if (Array.isArray(new_slides)) {
+      Display._slidesContainer.innerHTML = "";
+      new_slides.forEach(function (slide) {
+        if (Display._doItemTransitions) {
+          slide.setAttribute('data-transition', "fade");
+          slide.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
+        }
+        slide.classList.add("future");
+        Display.applyTheme(slide, is_text);
+        Display._slidesContainer.appendChild(slide);
+      });
+      Display.reinit();
+      Display._skipNextTransition = false;
+      return;
+    }
     if (Display._doItemTransitions) {
       new_slides.setAttribute('data-transition', "fade");
       new_slides.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
@@ -632,15 +816,37 @@ var Display = {
       Display._slidesContainer.lastChild.remove();
     }
   },
+
+  _resolveTextSlideLayout: function () {
+    var transitionDirection = TransitionDirection.Vertical;
+    if (Display._theme && Display._theme.display_slide_transition_direction !== undefined &&
+      Display._theme.display_slide_transition_direction !== null) {
+      transitionDirection = Display._normaliseThemeTransitionDirection(Display._theme.display_slide_transition_direction);
+    }
+    var isReverse = Display._theme ?
+      Display._normaliseThemeTransitionReverse(Display._theme.display_slide_transition_reverse) : false;
+    return {
+      direction: transitionDirection,
+      isHorizontal: transitionDirection === TransitionDirection.Horizontal,
+      isVertical: transitionDirection === TransitionDirection.Vertical,
+      isReverse: isReverse
+    };
+  },
+
+  _getCurrentTextSlideIndex: function () {
+    var currentSlide = Reveal.getIndices();
+    if (!currentSlide) {
+      return 0;
+    }
+    return Display._textSlideDirection === TransitionDirection.Horizontal ? (currentSlide.h || 0) : (currentSlide.v || 0);
+  },
   /**
    * Checks if the present slide content fits within the slide
   */
   doesContentFit: function () {
-    var currSlide = $("section.text-slides");
-    if (currSlide.length === 0) {
+    var currSlide = Reveal.getCurrentSlide();
+    if (!currSlide) {
       currSlide = Display._footerContainer;
-    } else {
-      currSlide = currSlide[0];
     }
     return currSlide.clientHeight >= currSlide.scrollHeight;
   },
@@ -890,6 +1096,54 @@ var Display = {
     }
   },
 
+  _logTransitionDebug: function (reason) {
+    try {
+      var revealConfig = (typeof Reveal !== "undefined" && Reveal.getConfig) ? Reveal.getConfig() : {};
+      var indices = (typeof Reveal !== "undefined" && Reveal.getIndices) ? Reveal.getIndices() : {};
+      var currentSlide = (typeof Reveal !== "undefined" && Reveal.getCurrentSlide) ? Reveal.getCurrentSlide() : null;
+      var wrapper = document.querySelector('.reveal');
+      var currentTransition = currentSlide ? currentSlide.getAttribute("data-transition") : "";
+      var currentTransitionSpeed = currentSlide ? currentSlide.getAttribute("data-transition-speed") : "";
+      var pastSlide = document.querySelector('.reveal .slides > section > section.past, .reveal .slides > section.past');
+      var futureSlide = document.querySelector('.reveal .slides > section > section.future, .reveal .slides > section.future');
+      var currentStyle = currentSlide ? window.getComputedStyle(currentSlide) : null;
+      var pastStyle = pastSlide ? window.getComputedStyle(pastSlide) : null;
+      var futureStyle = futureSlide ? window.getComputedStyle(futureSlide) : null;
+      var payload = {
+        reason: reason || "unknown",
+        revealTransition: revealConfig.transition || "",
+        revealTransitionSpeed: revealConfig.transitionSpeed || "",
+        revealClassList: wrapper ? wrapper.className : "",
+        indexH: (indices && indices.h !== undefined ? indices.h : null),
+        indexV: (indices && indices.v !== undefined ? indices.v : null),
+        slideTransition: currentTransition || "",
+        slideTransitionSpeed: currentTransitionSpeed || "",
+        currentClassList: currentSlide ? currentSlide.className : "",
+        currentComputedTransform: currentStyle ? currentStyle.transform : "",
+        currentComputedOpacity: currentStyle ? currentStyle.opacity : "",
+        pastTransition: pastSlide ? (pastSlide.getAttribute('data-transition') || "") : "",
+        pastClassList: pastSlide ? pastSlide.className : "",
+        pastComputedTransform: pastStyle ? pastStyle.transform : "",
+        pastComputedOpacity: pastStyle ? pastStyle.opacity : "",
+        futureTransition: futureSlide ? (futureSlide.getAttribute('data-transition') || "") : "",
+        futureClassList: futureSlide ? futureSlide.className : "",
+        futureComputedTransform: futureStyle ? futureStyle.transform : "",
+        futureComputedOpacity: futureStyle ? futureStyle.opacity : ""
+      };
+      if (window.displayWatcher && window.displayWatcher.dispatchEvent) {
+        window.displayWatcher.dispatchEvent('transition_debug', payload);
+      } else {
+        console.warn("transition-debug", payload);
+      }
+    } catch (error) {
+      if (window.displayWatcher && window.displayWatcher.dispatchEvent) {
+        window.displayWatcher.dispatchEvent('transition_debug', {reason: 'error', message: String(error)});
+      } else {
+        console.warn("transition-debug error=" + error);
+      }
+    }
+  },
+
   /**
    * Set text slides.
    * @param {Object[]} slides - A list of slides to add as JS objects: {"verse": "v1", "text": "line 1\nline2"}
@@ -897,24 +1151,35 @@ var Display = {
   setTextSlides: function (slides) {
     Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
+    var layout = Display._resolveTextSlideLayout();
+    Display._textSlideDirection = layout.direction;
+    Display._textSlideReverse = layout.isReverse;
     var slide_html;
-    var parentSection = document.createElement("section");
-    parentSection.classList = "text-slides";
-    slides.forEach(function (slide, index) {
+    var renderedSlides = slides.slice();
+    if (layout.isVertical && layout.isReverse) {
+      renderedSlides.reverse();
+    }
+    var parentSection = null;
+    var topLevelSlides = [];
+    if (layout.isVertical) {
+      parentSection = document.createElement("section");
+      parentSection.classList = "text-slides";
+    }
+    renderedSlides.forEach(function (slide, index) {
       slide_html = Display._createTextSlide(slide.verse, slide.text);
       slide_html.setAttribute('data-slide', index);
-      parentSection.appendChild(slide_html);
-      Display._slides[slide.verse] = parentSection.children.length - 1;
+      if (layout.isVertical) {
+        parentSection.appendChild(slide_html);
+        Display._slides[slide.verse] = index;
+      } else {
+        topLevelSlides.push(slide_html);
+        Display._slides[slide.verse] = {h: index, v: 0};
+      }
       if (slide.footer) {
         var footerSlide = document.createElement('div');
         footerSlide.classList.add('footer-item');
         footerSlide.setAttribute('data-slide', index);
-        var currentSlide = Reveal.getIndices();
-        if (currentSlide) {
-          currentSlide = currentSlide.v;
-        } else {
-          currentSlide = 0;
-        }
+        var currentSlide = Display._getCurrentTextSlideIndex();
         if (index == currentSlide) {
           footerSlide.classList.add('active');
         }
@@ -922,7 +1187,11 @@ var Display = {
         Display._footerContainer.append(footerSlide);
       }
     });
-    Display.replaceSlides(parentSection, true);
+    if (layout.isVertical) {
+      Display.replaceSlides(parentSection, true);
+    } else {
+      Display.replaceSlides(topLevelSlides, true);
+    }
   },
   /**
    * Set a single text slide. This changes the slide with no transition.
@@ -931,6 +1200,9 @@ var Display = {
    */
   setTextSlide: function (text) {
     Display._setPresentationSlideTransition(false);
+    var layout = Display._resolveTextSlideLayout();
+    Display._textSlideDirection = layout.direction;
+    Display._textSlideReverse = layout.isReverse;
     if (Display._slides.hasOwnProperty("test-slide") && Object.keys(Display._slides).length === 1) {
       var slide = $("#" + "test-slide")[0];
       var html = _prepareText(text);
@@ -938,20 +1210,29 @@ var Display = {
         slide.innerHTML = html;
       }
       if (!Display._themeApplied) {
-        Display.applyTheme(slide.parent);
+        if (layout.isVertical && slide.parentElement) {
+          Display.applyTheme(slide.parentElement);
+        } else {
+          Display.applyTheme(slide);
+        }
       }
     } else {
       Display._clearSlidesList();
       var slide_html;
-      var parentSection = document.createElement("section");
-      parentSection.classList = "text-slides";
       slide_html = Display._createTextSlide("test-slide", text);
       slide_html.setAttribute('data-slide', 0);
-      parentSection.appendChild(slide_html);
-      Display._slides["test-slide"] = 0;
-      Display.applyTheme(parentSection);
+      Display._slides["test-slide"] = layout.isHorizontal ? {h: 0, v: 0} : 0;
       Display._slidesContainer.innerHTML = "";
-      Display._slidesContainer.prepend(parentSection);
+      if (layout.isVertical) {
+        var parentSection = document.createElement("section");
+        parentSection.classList = "text-slides";
+        parentSection.appendChild(slide_html);
+        Display.applyTheme(parentSection);
+        Display._slidesContainer.prepend(parentSection);
+      } else {
+        Display.applyTheme(slide_html);
+        Display._slidesContainer.prepend(slide_html);
+      }
       Display.reinit();
     }
   },
@@ -1155,10 +1436,19 @@ var Display = {
    */
   goToSlide: function (slide) {
     if (Display._slides.hasOwnProperty(slide)) {
-      Reveal.slide(0, Display._slides[slide]);
+      var target = Display._slides[slide];
+      if (typeof target === "object" && target !== null) {
+        Reveal.slide(target.h || 0, target.v || 0);
+      } else {
+        Reveal.slide(0, target);
+      }
     }
     else {
-      Reveal.slide(0, slide);
+      if (Display._textSlideDirection === TransitionDirection.Horizontal) {
+        Reveal.slide(slide, 0);
+      } else {
+        Reveal.slide(0, slide);
+      }
     }
   },
   /**
@@ -1545,14 +1835,14 @@ var Display = {
    * @param fontSize The font size in pts
    */
   calculateLineCount: function (fontSize) {
-    var p = $(".slides > section > section > p");
+    var p = $(".slides > section > section > p, .slides > section > p");
     if (p.length == 0) {
       Display.addSlide("v1", "Arky arky");
-      p = $(".slides > section > section > p");
+      p = $(".slides > section > section > p, .slides > section > p");
     }
     p = p[0];
     p.style.fontSize = "" + fontSize + "pt";
-    var d = $(".slides > section")[0];
+    var d = Reveal.getCurrentSlide() || $(".slides > section")[0];
     var lh = parseFloat(_getStyle(p, "line-height"));
     var dh = parseFloat(_getStyle(d, "height"));
     return Math.floor(dh / lh);
@@ -1639,29 +1929,36 @@ var Display = {
       return;
     }
     // Set slide transitions
-    var new_transition_type = "none",
-        new_transition_speed = "default";
+    var reveal_transition_type = "none",
+      slide_transition_type = "none",
+      new_transition_speed = "default";
     if (!!Display._theme.display_slide_transition && Display._doTransitions) {
-      switch (Display._theme.display_slide_transition_type) {
+      var themeTransitionType = Display._normaliseThemeTransitionType(Display._theme.display_slide_transition_type);
+      var themeTransitionSpeed = Display._normaliseThemeTransitionSpeed(Display._theme.display_slide_transition_speed);
+      var themeTransitionDirection = Display._normaliseThemeTransitionDirection(
+        Display._theme.display_slide_transition_direction);
+      var themeTransitionReverse = Display._normaliseThemeTransitionReverse(Display._theme.display_slide_transition_reverse);
+      switch (themeTransitionType) {
         case TransitionType.Fade:
-          new_transition_type = "fade";
+          reveal_transition_type = "fade";
           break;
         case TransitionType.Slide:
-          new_transition_type = "slide";
+          reveal_transition_type = "slide";
           break;
         case TransitionType.Convex:
-          new_transition_type = "convex";
+          reveal_transition_type = "convex";
           break;
         case TransitionType.Concave:
-          new_transition_type = "concave";
+          reveal_transition_type = "concave";
           break;
         case TransitionType.Zoom:
-          new_transition_type = "zoom";
+          reveal_transition_type = "zoom";
           break;
         default:
-          new_transition_type = "fade";
+          reveal_transition_type = "fade";
       }
-      switch (Display._theme.display_slide_transition_speed) {
+      slide_transition_type = reveal_transition_type;
+      switch (themeTransitionSpeed) {
         case TransitionSpeed.Normal:
           new_transition_speed = "default";
           break;
@@ -1674,24 +1971,22 @@ var Display = {
         default:
           new_transition_speed = "default";
       }
-      switch (Display._theme.display_slide_transition_direction) {
-        case TransitionDirection.Vertical:
-          new_transition_type += "-vertical";
-          break;
-        case TransitionDirection.Horizontal:
-        default:
-          new_transition_type += "-horizontal";
-      }
-      if (Display._theme.display_slide_transition_reverse) {
-        new_transition_type += "-reverse";
-      }
+      var revealRtl = themeTransitionDirection === TransitionDirection.Horizontal && themeTransitionReverse;
+      // Reveal's global transition setting must be one of: none/fade/slide/convex/concave/zoom.
+      Reveal.configure({"transition": reveal_transition_type, "transitionSpeed": new_transition_speed, "rtl": revealRtl});
+    } else {
+      Reveal.configure({"transition": "none", "transitionSpeed": "default", "rtl": false});
     }
-    var slides = targetElement.children;
+    if (targetElement && targetElement.tagName === "SECTION" && !targetElement.classList.contains("use-background-image")) {
+      targetElement.setAttribute("data-transition", reveal_transition_type);
+      targetElement.setAttribute("data-transition-speed", new_transition_speed);
+    }
+    var slides = targetElement.querySelectorAll("section");
     for (var i = 0; i < slides.length; i++) {
       if (slides[i].classList.contains("use-background-image")) {
         continue;
       }
-      slides[i].setAttribute("data-transition", new_transition_type);
+      slides[i].setAttribute("data-transition", slide_transition_type);
       slides[i].setAttribute("data-transition-speed", new_transition_speed);
     }
     // Set the background
@@ -1780,7 +2075,6 @@ var Display = {
       "box-sizing": "border-box",
       margin: "0",
       padding: "0",
-      transform: "none",
       "--theme-main-width": `${Display._theme.font_main_width}px`,
       "--theme-main-height": `${Display._theme.font_main_height}px`,
       "--theme-main-top": `${Display._theme.font_main_y}px`,
@@ -1822,7 +2116,8 @@ var Display = {
       ].join(", ")
     };
 
-    Array.from(targetElement.children).forEach(function (slideElement) {
+    var textTargets = targetElement.matches("section.text-slides") ? Array.from(targetElement.children) : [targetElement];
+    Array.from(textTargets).forEach(function (slideElement) {
       slideElement.style.cssText = "";
       for (var mainKey in mainStyle) {
         if (mainStyle.hasOwnProperty(mainKey)) {
@@ -1839,7 +2134,6 @@ var Display = {
       "box-sizing": "border-box",
       margin: "0",
       padding: "0",
-      transform: "none",
       width: `${Display._theme.font_footer_width}px`,
       height: `${Display._theme.font_footer_height}px`,
       top: `${Display._theme.font_footer_y}px`,
