@@ -147,8 +147,10 @@ def test_download_and_install(mocked_download_version_info, mocked_download_file
     mocked_callback = MagicMock()
     mocked_download_version_info.return_value = CONFIG_DICT
     mocked_download_file.return_value = True
-    mocked_remote_path = Path('/') / 'tmp' / 'remotes'
-    mocked_remote_zip = mocked_remote_path / 'remote.zip'
+    mocked_remote_path = MagicMock()
+    mocked_remote_zip = MagicMock()
+    mocked_remote_zip.exists.return_value = True
+    mocked_remote_path.__truediv__.return_value = mocked_remote_zip
     mocked_get_section_data_path.return_value = mocked_remote_path
 
     # WHEN: download_and_install() is called
