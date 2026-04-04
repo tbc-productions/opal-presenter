@@ -222,10 +222,7 @@ class BackgroundPage(GridLayoutPage):
         self.background_combo_box.setItemText(BackgroundType.Stream,
                                               translate('OpenLP.ThemeWizard', 'Live stream'))
         self.background_fit_label.setText(translate('OpenLP.ThemeWizard', 'Background fit:'))
-        self.background_fit_combo_box.setItemText(0, translate('OpenLP.ThemeWizard', 'Fill (Cover)'))
-        self.background_fit_combo_box.setItemText(1, translate('OpenLP.ThemeWizard', 'Fit (Contain)'))
-        self.background_fit_combo_box.setItemText(2, translate('OpenLP.ThemeWizard', 'Stretch'))
-        self.background_fit_combo_box.setItemText(3, translate('OpenLP.ThemeWizard', 'Repeat'))
+        self._set_background_fit_options(self.background_combo_box.currentIndex())
         self.color_label.setText(translate('OpenLP.ThemeWizard', 'Color:'))
         self.gradient_start_label.setText(translate('OpenLP.ThemeWizard', 'Starting color:'))
         self.gradient_end_label.setText(translate('OpenLP.ThemeWizard', 'Ending color:'))
@@ -256,6 +253,7 @@ class BackgroundPage(GridLayoutPage):
         """
         Hide and show widgets based on index
         """
+        self._set_background_fit_options(index)
         widget_sets = [self.color_widgets, self.gradient_widgets, self.image_widgets, [], self.video_widgets,
                        self.stream_widgets]
         for widgets in widget_sets:
@@ -271,6 +269,35 @@ class BackgroundPage(GridLayoutPage):
         is_fit_visible = index in [BackgroundType.Image, BackgroundType.Video, BackgroundType.Stream]
         self.background_fit_label.setVisible(is_fit_visible)
         self.background_fit_combo_box.setVisible(is_fit_visible)
+
+    def _set_background_fit_options(self, index):
+        """
+        Update the fit combo box to match the selected background type.
+        """
+        option_labels = {
+            BackgroundPage.Fill: translate('OpenLP.ThemeWizard', 'Zoom to fill (Cover)'),
+            BackgroundPage.Fit: translate('OpenLP.ThemeWizard', 'Zoom to fit (Contain)'),
+            BackgroundPage.Stretch: translate('OpenLP.ThemeWizard', 'Stretch'),
+            BackgroundPage.Repeat: translate('OpenLP.ThemeWizard', 'Tile (Repeat)')
+        }
+        if index in [BackgroundType.Video, BackgroundType.Stream]:
+            fit_options = [BackgroundPage.Fill, BackgroundPage.Fit]
+        elif index == BackgroundType.Image:
+            fit_options = [BackgroundPage.Fill, BackgroundPage.Fit, BackgroundPage.Stretch, BackgroundPage.Repeat]
+        else:
+            fit_options = []
+
+        current_fit = self.background_fit if self.background_fit_combo_box.count() else BackgroundPage.Fill
+        self.background_fit_combo_box.blockSignals(True)
+        self.background_fit_combo_box.clear()
+        if fit_options:
+            self.background_fit_combo_box.addItems([''] * len(fit_options))
+            for combo_index, fit_option in enumerate(fit_options):
+                self.background_fit_combo_box.setItemText(combo_index, option_labels[fit_option])
+            if current_fit not in fit_options:
+                current_fit = fit_options[0]
+            self.background_fit_combo_box.setCurrentIndex(fit_options.index(current_fit))
+        self.background_fit_combo_box.blockSignals(False)
 
     def _on_device_stream_select_button_triggered(self):
         """

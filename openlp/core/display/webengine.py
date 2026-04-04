@@ -24,6 +24,7 @@ Heavily inspired by https://stackoverflow.com/questions/33467776/qt-qwebengine-r
 """
 import logging
 import os.path
+from urllib.parse import unquote
 
 from PySide6 import QtCore, QtWebEngineCore, QtWebEngineWidgets, QtWidgets
 from typing import Tuple
@@ -149,6 +150,7 @@ class LocalSchemeHelper():
         request.reply(bytes(mime_type, 'utf-8'), file_handle)
 
     def request_path_to_file(self, base_path: str, url_path: str):
+        url_path = unquote(url_path)
         if is_win() and not base_path:
             while len(url_path) > 0 and url_path[0] == '/':
                 url_path = url_path[1:]

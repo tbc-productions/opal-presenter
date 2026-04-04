@@ -267,20 +267,39 @@ function _fromCamelCase(text) {
  * Convert theme background fit to reveal.js background attributes
  * @private
  * @param {string} fit - cover, contain, stretch, repeat
- * @returns {{size: string, repeat: string}} background attributes
+ * @returns {{size: string, repeat: string, position: string}} background attributes
  */
 function _resolveBackgroundFit(fit) {
   switch (fit) {
     case "contain":
-      return { size: "contain", repeat: "no-repeat" };
+      return { size: "contain", repeat: "no-repeat", position: "50% 50%", objectFit: "contain" };
     case "stretch":
-      return { size: "100% 100%", repeat: "no-repeat" };
+      return { size: "100% 100%", repeat: "no-repeat", position: "0% 0%", objectFit: "fill" };
     case "repeat":
-      return { size: "auto", repeat: "repeat" };
+      return { size: "auto", repeat: "repeat", position: "0% 0%", objectFit: "cover" };
     case "cover":
     default:
-      return { size: "cover", repeat: "no-repeat" };
+      return { size: "cover", repeat: "no-repeat", position: "50% 50%", objectFit: "cover" };
   }
+}
+
+/**
+ * Apply an image as a full-slide background with the requested fit.
+ * @private
+ * @param {HTMLElement} section - The slide section to style
+ * @param {string} backgroundColor - The background color to use behind the image
+ * @param {string} imageUrl - The image URL to apply
+ * @param {{size: string, repeat: string, position: string}} fit - Resolved fit settings
+ */
+function _applyFullscreenBackgroundImage(section, backgroundColor, imageUrl, fit) {
+  section.innerHTML = "";
+  section.removeAttribute("style");
+  section.setAttribute("data-background-image", imageUrl);
+  section.setAttribute("data-background-color", backgroundColor || "#000");
+  section.setAttribute("data-background-size", fit.size);
+  section.setAttribute("data-background-repeat", fit.repeat);
+  section.setAttribute("data-background-position", fit.position);
+  section.removeAttribute("data-background");
 }
 
 /**
@@ -311,10 +330,9 @@ function _applyBackgroundFitToRenderedSlides(fit) {
     if (!backgroundContent) {
       return;
     }
-    background.style.backgroundColor = fit.size === "contain" ? "#000" : "transparent";
     backgroundContent.style.backgroundSize = fit.size;
     backgroundContent.style.backgroundRepeat = fit.repeat;
-    backgroundContent.style.backgroundPosition = "50% 50%";
+    backgroundContent.style.backgroundPosition = fit.position;
   });
 }
 
@@ -652,23 +670,18 @@ var Display = {
    */
   setFullscreenImage: function(bg_color, image) {
     Display._setPresentationSlideTransition(false);
+    var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
     var existingSection = Display._getReusableFullscreenSection();
     if (existingSection) {
       existingSection.setAttribute("data-background", bg_color);
-      var existingImage = existingSection.querySelector("img");
-      existingImage.src = image;
-      existingImage.setAttribute("style", "height: 100%; width: 100%; margin: 0; object-fit: contain;");
+      _applyFullscreenBackgroundImage(existingSection, bg_color, image, fit);
       return;
     }
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
     section.setAttribute("data-background", bg_color);
-    section.setAttribute("style", "height: 100%; width: 100%;");
-    var img = document.createElement('img');
-    img.src = image;
-    img.setAttribute("style", "height: 100%; width: 100%; margin: 0; object-fit: contain;");
-    section.appendChild(img);
+    _applyFullscreenBackgroundImage(section, bg_color, image, fit);
     Display._slides['0'] = 0;
     Display.replaceSlides(section);
   },
@@ -680,23 +693,18 @@ var Display = {
   setFullscreenImageFromData: function(bg_color, image_data) {
     Display._setPresentationSlideTransition(false);
     var dataUri = 'data:image/jpeg;base64,' + image_data;
+    var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
     var existingSection = Display._getReusableFullscreenSection();
     if (existingSection) {
       existingSection.setAttribute("data-background", bg_color);
-      var existingImage = existingSection.querySelector("img");
-      existingImage.src = dataUri;
-      existingImage.setAttribute("style", "height: 100%; width: 100%");
+      _applyFullscreenBackgroundImage(existingSection, bg_color, dataUri, fit);
       return;
     }
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
     section.setAttribute("data-background", bg_color);
-    section.setAttribute("style", "height: 100%; width: 100%;");
-    var img = document.createElement('img');
-    img.src = dataUri;
-    img.setAttribute("style", "height: 100%; width: 100%");
-    section.appendChild(img);
+    _applyFullscreenBackgroundImage(section, bg_color, dataUri, fit);
     Display._slides['0'] = 0;
     Display.replaceSlides(section);
   },
@@ -712,9 +720,6 @@ var Display = {
     }
     var section = Display._slidesContainer.children[0];
     if (!section || section.tagName !== 'SECTION') {
-      return null;
-    }
-    if (!section.querySelector('img')) {
       return null;
     }
     return section;
@@ -979,12 +984,12 @@ var Display = {
       section.setAttribute('data-slide', index);
       if (slide.use_background_image) {
         section.classList.add("use-background-image");
+        var pdfFit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
         section.style.backgroundColor = "#000";
-        var pdfImg = document.createElement('img');
-        pdfImg.src = Display._getFileUrl(slide.path);
-        pdfImg.classList.add('pdf-slide-image');
-        pdfImg.setAttribute('data-slide', index);
-        section.appendChild(pdfImg);
+        section.style.backgroundImage = "url('" + Display._getFileUrl(slide.path) + "')";
+        section.style.backgroundPosition = pdfFit.position;
+        section.style.backgroundSize = pdfFit.size;
+        section.style.backgroundRepeat = pdfFit.repeat;
         if (slide.pdf_transition_enabled) {
           section.setAttribute("data-transition", Display._getPresentationTransitionName(slide.pdf_transition_effect));
           section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
@@ -1032,10 +1037,11 @@ var Display = {
     var section = document.createElement("section");
     section.setAttribute("data-background", "#000");
     var videoElement = document.createElement("video");
+    var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
     videoElement.src = video.path;
     videoElement.preload = "auto";
     videoElement.setAttribute("id", "video");
-    videoElement.setAttribute("style", "height: 100%; width: 100%;");
+    videoElement.setAttribute("style", "height: 100%; width: 100%; object-fit: " + fit.objectFit + ";");
     videoElement.setAttribute('data-slide', 0);
     videoElement.autoplay = false;
     // All the update methods below are Python functions, hence not camelCase
@@ -1410,11 +1416,16 @@ var Display = {
     if (!Display._logoBackgroundOverrideActive) {
       Display._savedBackgroundAttributes = {
         background: rootSlide.getAttribute("data-background"),
-        size: rootSlide.getAttribute("data-background-size")
+        image: rootSlide.getAttribute("data-background-image"),
+        color: rootSlide.getAttribute("data-background-color"),
+        size: rootSlide.getAttribute("data-background-size"),
+        repeat: rootSlide.getAttribute("data-background-repeat"),
+        position: rootSlide.getAttribute("data-background-position")
       };
     }
     if (image) {
-      rootSlide.setAttribute("data-background", "url('" + image + "')");
+      rootSlide.setAttribute("data-background-image", image);
+      rootSlide.removeAttribute("data-background");
     }
     else {
       rootSlide.setAttribute("data-background", bg_color || "#000");
@@ -1441,11 +1452,35 @@ var Display = {
     else {
       rootSlide.removeAttribute("data-background");
     }
+    if (saved.image) {
+      rootSlide.setAttribute("data-background-image", saved.image);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-image");
+    }
+    if (saved.color) {
+      rootSlide.setAttribute("data-background-color", saved.color);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-color");
+    }
     if (saved.size) {
       rootSlide.setAttribute("data-background-size", saved.size);
     }
     else {
       rootSlide.removeAttribute("data-background-size");
+    }
+    if (saved.repeat) {
+      rootSlide.setAttribute("data-background-repeat", saved.repeat);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-repeat");
+    }
+    if (saved.position) {
+      rootSlide.setAttribute("data-background-position", saved.position);
+    }
+    else {
+      rootSlide.removeAttribute("data-background-position");
     }
     Display._logoBackgroundOverrideActive = false;
     Display._savedBackgroundAttributes = null;
@@ -1538,10 +1573,13 @@ var Display = {
    */
   setBackgroundImage: function (image_path) {
     var targetElement = $(".slides > section")[0];
-    targetElement.setAttribute("data-background", "url('" + image_path + "')");
+    targetElement.setAttribute("data-background-image", image_path);
+    targetElement.removeAttribute("data-background");
     var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
+    targetElement.setAttribute("data-background-color", "#000");
     targetElement.setAttribute("data-background-size", fit.size);
     targetElement.setAttribute("data-background-repeat", fit.repeat);
+    targetElement.setAttribute("data-background-position", fit.position);
     Reveal.sync();
     _applyBackgroundFitToRenderedSlides(fit);
   },
@@ -1698,7 +1736,10 @@ var Display = {
         }
         break;
       case BackgroundType.Image:
-        backgroundContent = "url('" + Display._getFileUrl(Display._theme.background_filename) + "')";
+        backgroundContent = Display._getFileUrl(Display._theme.background_filename);
+        targetElement.setAttribute("data-background-image", backgroundContent);
+        targetElement.setAttribute("data-background-color", Display._theme.background_border_color || "#000");
+        targetElement.removeAttribute("data-background");
         break;
       case BackgroundType.Stream:
       case BackgroundType.Video:
@@ -1710,9 +1751,12 @@ var Display = {
         backgroundContent = "#000";
     }
     targetElement.style.cssText = "";
-    targetElement.setAttribute("data-background", backgroundContent);
+    if (Display._theme.background_type !== BackgroundType.Image) {
+      targetElement.setAttribute("data-background", backgroundContent);
+    }
     targetElement.setAttribute("data-background-size", fit.size);
     targetElement.setAttribute("data-background-repeat", fit.repeat);
+    targetElement.setAttribute("data-background-position", fit.position);
     requestAnimationFrame(function () {
       _applyBackgroundFitToRenderedSlides(fit);
     });
@@ -1723,6 +1767,12 @@ var Display = {
       return;
     }
 
+    var mainFontSizePt = Number(Display._theme.font_main_size) || 0;
+    var footerFontSizePt = Number(Display._theme.font_footer_size) || 0;
+    var mainFontSizeCss = `${mainFontSizePt}pt`;
+    var footerFontSizeCss = `${footerFontSizePt}pt`;
+    var mainPaddingBottomCss = `${mainFontSizePt / 8}px`;
+
     var mainStyle = {
       position: "absolute",
       display: "flex",
@@ -1731,13 +1781,13 @@ var Display = {
       margin: "0",
       padding: "0",
       transform: "none",
-      width: `${Display._theme.font_main_width}px`,
-      height: `${Display._theme.font_main_height}px`,
-      top: `${Display._theme.font_main_y}px`,
-      left: `${Display._theme.font_main_x}px`,
+      "--theme-main-width": `${Display._theme.font_main_width}px`,
+      "--theme-main-height": `${Display._theme.font_main_height}px`,
+      "--theme-main-top": `${Display._theme.font_main_y}px`,
+      "--theme-main-left": `${Display._theme.font_main_x}px`,
       color: Display._theme.font_main_color,
       "font-family": Display._theme.font_main_name,
-      "font-size": `${Display._theme.font_main_size}pt`,
+      "font-size": mainFontSizeCss,
       "font-style": Display._theme.font_main_italics ? "italic" : "",
       "font-weight": Display._theme.font_main_bold ? "bold" : "",
       "line-height": `${100 + Display._theme.font_main_line_adjustment}%`,
@@ -1753,7 +1803,7 @@ var Display = {
 
       "padding-bottom":
         Display._theme.display_vertical_align === VerticalAlign.Bottom ?
-        `${Display._theme.font_main_size / 8}px` : "",
+        mainPaddingBottomCss : "",
 
       // This section draws the font outline. Previously we used the proprietary -webkit-text-stroke property
       // but it draws the outline INSIDE the text, instead of OUTSIDE, so we had to go back to the old way
@@ -1796,7 +1846,7 @@ var Display = {
       left: `${Display._theme.font_footer_x}px`,
       color: Display._theme.font_footer_color,
       "font-family": Display._theme.font_footer_name,
-      "font-size": `${Display._theme.font_footer_size}pt`,
+      "font-size": footerFontSizeCss,
       "font-style": Display._theme.font_footer_italics ? "italic" : "",
       "font-weight": Display._theme.font_footer_bold ? "bold" : "",
       "line-height": `${100 + Display._theme.font_footer_line_adjustment}%`,
@@ -1813,7 +1863,21 @@ var Display = {
 
       "padding-bottom":
         Display._theme.display_vertical_align_footer === VerticalAlign.Bottom ?
-        `${Display._theme.font_main_size / 8}px` : ""
+        mainPaddingBottomCss : "",
+
+      "text-shadow": [
+        ...(
+          Display._theme.font_footer_outline ?
+          _buildTextOutline(Display._theme.font_footer_outline_size, Display._theme.font_footer_outline_color) :
+          []
+        ),
+        ...(
+          Display._theme.font_footer_shadow ?
+          _buildTextShadow(Display._theme.font_footer_shadow_size, Display._theme.font_footer_outline_size || 0,
+            Display._theme.font_footer_shadow_color) :
+          []
+        )
+      ].join(", ")
     };
 
     for (var footerKey in footerStyle) {

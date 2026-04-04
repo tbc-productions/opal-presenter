@@ -348,6 +348,27 @@ describe("Transitions", function () {
     expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("slow");
   });
 
+  it("should apply background fit attributes to an image background slide", function () {
+    Display._doTransitions = false;
+    var theme = {
+      "background_type": BackgroundType.Image,
+      "background_filename": "/file/path",
+      "background_fit": "stretch"
+    };
+    Display.setTheme(theme);
+    var slidesDiv = _createDiv({"class": "slides"});
+    slidesDiv.innerHTML = "<section></section>";
+    Display._slidesContainer = slidesDiv;
+
+    Display.applyTheme(Display._slidesContainer.children[0], false);
+
+    expect(Display._slidesContainer.children[0].getAttribute("data-background-image")).toEqual("/file/path");
+    expect(Display._slidesContainer.children[0].getAttribute("data-background-color")).toEqual("#000");
+    expect(Display._slidesContainer.children[0].getAttribute("data-background-size")).toEqual("100% 100%");
+    expect(Display._slidesContainer.children[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
+    expect(Display._slidesContainer.children[0].getAttribute("data-background-position")).toEqual("0% 0%");
+  });
+
   it("should use item transition speed for item replacement transition timing", function () {
     spyOn(Display, "reinit");
     spyOn(Display, "applyTheme");
@@ -965,10 +986,12 @@ describe("Display.setImageSlides", function () {
 
     Display.setImageSlides(slides);
 
-    expect($(".slides > section > section > img").length).toEqual(1);
-    expect($(".slides > section > section > img")[0].getAttribute("src")).toEqual("openlp-library://local-file//openlp1.jpg");
-    expect($(".slides > section > section > img")[0].classList.contains("pdf-slide-image")).toBeTrue();
+    expect($(".slides > section > section > img").length).toEqual(0);
     expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBeTrue();
+    expect($(".slides > section > section")[0].style.backgroundImage).toContain("openlp-library://local-file//openlp1.jpg");
+    expect($(".slides > section > section")[0].style.backgroundSize).toEqual("cover");
+    expect($(".slides > section > section")[0].style.backgroundRepeat).toEqual("no-repeat");
+    expect($(".slides > section > section")[0].style.backgroundPosition).toEqual("50% 50%");
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("fade-horizontal");
     expect($(".slides > section > section")[0].getAttribute("data-transition-speed")).toEqual("default");
     expect($("body")[0].classList.contains("presentation-slide-transition")).toBeTrue();
@@ -996,6 +1019,15 @@ describe("Display.setImageSlides", function () {
   });
 });
 
+describe("Display background fit mapping", function () {
+  it("should map background fit modes to the expected CSS properties", function () {
+    expect(_resolveBackgroundFit("cover")).toEqual({size: "cover", repeat: "no-repeat", position: "50% 50%", objectFit: "cover"});
+    expect(_resolveBackgroundFit("contain")).toEqual({size: "contain", repeat: "no-repeat", position: "50% 50%", objectFit: "contain"});
+    expect(_resolveBackgroundFit("stretch")).toEqual({size: "100% 100%", repeat: "no-repeat", position: "0% 0%", objectFit: "fill"});
+    expect(_resolveBackgroundFit("repeat")).toEqual({size: "auto", repeat: "repeat", position: "0% 0%", objectFit: "cover"});
+  });
+});
+
 describe("Display.setFullscreenImage", function () {
   beforeEach(function() {
     document.body.innerHTML = "";
@@ -1014,8 +1046,12 @@ describe("Display.setFullscreenImage", function () {
 
     Display.setFullscreenImage(bg_color, image);
 
-    expect($(".slides > section > img")[0].getAttribute("src")).toEqual("file:///openlp1.jpg");
-    expect($(".slides > section > img")[0].getAttribute("style")).toEqual("height: 100%; width: 100%; margin: 0; object-fit: contain;");
+    expect($(".slides > section > img").length).toEqual(0);
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("file:///openlp1.jpg");
+    expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#000");
+    expect($(".slides > section")[0].getAttribute("data-background-size")).toEqual("cover");
+    expect($(".slides > section")[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
+    expect($(".slides > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
@@ -1036,8 +1072,9 @@ describe("Display.setFullscreenImage", function () {
 
     Display.setFullscreenImage(bg_color, image);
 
-    expect($(".slides > section > img")[0].getAttribute("src")).toEqual("file:///openlp2.jpg");
-    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("#111");
+    expect($(".slides > section > img").length).toEqual(0);
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("file:///openlp2.jpg");
+    expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#111");
     expect(Reveal.sync).not.toHaveBeenCalled();
     expect(Reveal.slide).not.toHaveBeenCalled();
   });
@@ -1077,8 +1114,10 @@ describe("Display.setFullscreenImageFromData", function () {
     Display.setFullscreenImageFromData("#222", "new-data");
 
     expect(Display.replaceSlides).not.toHaveBeenCalled();
-    expect($(".slides > section > img")[0].getAttribute("src")).toEqual("data:image/jpeg;base64,new-data");
-    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("#222");
+    expect($(".slides > section > img").length).toEqual(0);
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("data:image/jpeg;base64,new-data");
+    expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#222");
+    expect($(".slides > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
   });
 });
 
@@ -1097,7 +1136,11 @@ describe("Display.setBackgroundImage and Display.resetTheme", function () {
 
     Display.setBackgroundImage("/file/path");
 
-    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("url('/file/path')");
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("/file/path");
+    expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#000");
+    expect($(".slides > section")[0].getAttribute("data-background-size")).toEqual("cover");
+    expect($(".slides > section")[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
+    expect($(".slides > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
@@ -1112,7 +1155,9 @@ describe("Display.setBackgroundImage and Display.resetTheme", function () {
 
     Display.resetTheme();
 
-    expect($(".slides > section")[0].getAttribute("data-background")).toEqual("url('/another/path')");
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("/another/path");
+    expect($(".slides > section")[0].getAttribute("data-background-size")).toEqual("cover");
+    expect($(".slides > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 });

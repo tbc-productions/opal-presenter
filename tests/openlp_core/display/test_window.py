@@ -226,6 +226,26 @@ def test_set_scale_initialised(display_window_env, mock_settings):
     display_window.run_in_display.assert_called_once_with('setScale', 50.0)
 
 
+def test_set_single_image_normalizes_percent_encoded_paths(display_window_env, mock_settings):
+    """
+    Test that already percent-encoded path fragments are not double-encoded when sent to the web view.
+    """
+    # GIVEN: A display window and a path that already contains %20
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    image_path = Path(r'C:\Users\tyler\AppData\Roaming\openlp\data\themes\Blue%20Burst\BlueBurst.jpg')
+
+    # WHEN: A fullscreen image is set
+    display_window.set_single_image('#000', image_path)
+
+    # THEN: The URI should be encoded only once
+    display_window.run_in_display.assert_called_once_with(
+        'setFullscreenImage',
+        '#000',
+        'file:///C:/Users/tyler/AppData/Roaming/openlp/data/themes/Blue%20Burst/BlueBurst.jpg'
+    )
+
+
 @pytest.mark.skip(reason="Currently broken due to migration to Hatch")
 def test_set_display_custom_url_works_http(registry, display_window_env, mock_settings):
     """

@@ -87,6 +87,26 @@ def test_on_background_type_index_changed_groupbox_visibility(settings, index, s
     page.background_media_group_box.setVisible.assert_called_once_with(media_visible)
 
 
+@pytest.mark.parametrize('index, expected_items', [
+    (BackgroundType.Image, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)', 'Stretch', 'Tile (Repeat)']),
+    (BackgroundType.Video, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)']),
+    (BackgroundType.Stream, ['Zoom to fill (Cover)', 'Zoom to fit (Contain)']),
+])
+def test_on_background_type_index_changed_fit_options(settings, index, expected_items):
+    """
+    Test fit options for each background type.
+    """
+    # GIVEN: A BackgroundPage instance
+    page = BackgroundPage()
+
+    # WHEN: The background type changes
+    page._on_background_type_index_changed(index)
+
+    # THEN: The fit combo box should only show the supported options
+    assert page.background_fit_combo_box.count() == len(expected_items)
+    assert [page.background_fit_combo_box.itemText(i) for i in range(page.background_fit_combo_box.count())] == expected_items
+
+
 def test_get_background_type(settings):
     """
     Test the background_type getter

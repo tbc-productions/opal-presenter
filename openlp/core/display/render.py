@@ -608,8 +608,6 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             verses['verse'] = 'V1'
             verses['footer'] = self.generate_footer()
             self.load_verses([verses], is_sync=True)
-            # Wait for a second
-            wait_for(lambda: False, timeout=1)
             self.force_page = False
             if generate_screenshot:
                 return self.grab()

@@ -26,6 +26,8 @@ import logging
 import os
 import copy
 import re
+from pathlib import Path
+from urllib.parse import unquote
 
 from PySide6 import QtCore, QtWebChannel, QtWidgets
 
@@ -43,6 +45,14 @@ from openlp.core.ui import HideMode
 FONT_FOUNDRY = re.compile(r'(.*?) \[(.*?)\]')
 TRANSITION_END_EVENT_NAME = 'transparent_transition_end'
 log = logging.getLogger(__name__)
+
+
+def _path_to_file_uri(image_path):
+    """
+    Convert a path-like object to a file URI, normalizing any percent-encoded path fragments first.
+    """
+    normalized_path = Path(unquote(path_to_str(image_path)))
+    return normalized_path.as_uri()
 
 
 class DisplayWatcher(QtCore.QObject):
@@ -282,7 +292,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.showFullScreen()
 
     def set_background_image(self, image_path):
-        image_uri = image_path.as_uri()
+        image_uri = _path_to_file_uri(image_path)
         self.run_in_display('setBackgroundImage', image_uri)
 
     def set_single_image(self, bg_color, image_path):
@@ -290,7 +300,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         :param str bg_color: Background color
         :param Path image_path: Path to the image
         """
-        image_uri = image_path.as_uri()
+        image_uri = _path_to_file_uri(image_path)
         self.run_in_display('setFullscreenImage', bg_color, image_uri)
 
     def set_single_image_data(self, bg_color, image_data):
@@ -309,7 +319,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             image_uri = self.openlp_splash_screen_path
         else:
             try:
-                image_uri = image.as_uri().replace('file://', 'openlp-library://local-file/')
+                image_uri = _path_to_file_uri(image).replace('file://', 'openlp-library://local-file/')
             except Exception:
                 image_uri = ''
         if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):

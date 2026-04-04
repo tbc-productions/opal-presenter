@@ -116,16 +116,6 @@ body.transition #logo-screen {
   opacity: 0;
 }
 
-.reveal .slide-background[data-background-size="contain"] {
-  background-color: #000 !important;
-}
-
-.reveal .slide-background[data-background-size="contain"] .slide-background-content {
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: 50% 50% !important;
-}
-
 #layout-guide-overlay {
   position: absolute;
   inset: 0;
@@ -181,6 +171,10 @@ body.transition .reveal .slide-background {
   margin: 0 !important;
   max-height: none;
   transform: none !important;
+  top: var(--theme-main-top, 0px) !important;
+  left: var(--theme-main-left, 0px) !important;
+  width: var(--theme-main-width, 100%) !important;
+  height: var(--theme-main-height, auto) !important;
 }
 
 .reveal .slides > section p {
