@@ -127,6 +127,26 @@ class ThemeListWidget(QtWidgets.QListWidget):
         self.setGridSize(QtCore.QSize(col_size, 140))
 
 
+class ThemesLoadingWidget(QtWidgets.QWidget):
+    """
+    A compact loading indicator shown while theme thumbnails are being downloaded.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        self.loading_label = QtWidgets.QLabel(self)
+        self.loading_label.setObjectName('themes_loading_label')
+        self.loading_bar = QtWidgets.QProgressBar(self)
+        self.loading_bar.setObjectName('themes_loading_bar')
+        self.loading_bar.setRange(0, 0)
+        self.loading_bar.setTextVisible(False)
+        self.loading_bar.setMinimumWidth(140)
+        layout.addWidget(self.loading_label)
+        layout.addWidget(self.loading_bar, stretch=1)
+
+
 class UiFirstTimeWizard(object):
     """
     The UI widgets for the first time wizard.
@@ -151,7 +171,7 @@ class UiFirstTimeWizard(object):
             first_time_wizard.resize(634, 386)
         else:
             first_time_wizard.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
-        add_welcome_page(first_time_wizard, ':/wizards/wizard_firsttime.bmp')
+        add_welcome_page(first_time_wizard, ':/wizards/openlp-osx-wizard.png')
         # The screen config page
         self.screen_page = QtWidgets.QWizardPage()
         self.screen_page.setObjectName('defaults_page')
@@ -181,7 +201,15 @@ class UiFirstTimeWizard(object):
         self.download_layout.setObjectName('download_layout')
         self.download_label = QtWidgets.QLabel(self.download_page)
         self.download_label.setObjectName('download_label')
+        self.download_label.setWordWrap(True)
         self.download_layout.addWidget(self.download_label)
+        self.download_status_label = QtWidgets.QLabel(self.download_page)
+        self.download_status_label.setObjectName('download_status_label')
+        self.download_status_label.setWordWrap(True)
+        self.download_layout.addWidget(self.download_status_label)
+        self.download_progress_bar = QtWidgets.QProgressBar(self.download_page)
+        self.download_progress_bar.setObjectName('download_progress_bar')
+        self.download_layout.addWidget(self.download_progress_bar)
         first_time_wizard.setPage(FirstTimePage.Download, self.download_page)
         # The "you don't have an internet connection" page.
         self.no_internet_page = QtWidgets.QWizardPage()
@@ -271,6 +299,9 @@ class UiFirstTimeWizard(object):
         self.themes_layout.setObjectName('themes_layout')
         self.themes_list_widget = ThemeListWidget(self.themes_page)
         self.themes_layout.addWidget(self.themes_list_widget)
+        self.themes_loading_widget = ThemesLoadingWidget(self.themes_page)
+        self.themes_loading_widget.setVisible(False)
+        self.themes_layout.addWidget(self.themes_loading_widget)
         self.theme_options_layout = QtWidgets.QHBoxLayout()
         self.default_theme_layout = QtWidgets.QHBoxLayout()
         self.theme_label = QtWidgets.QLabel(self.themes_page)
@@ -328,7 +359,8 @@ class UiFirstTimeWizard(object):
         self.download_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
                                                  'Please wait while the resource index is downloaded.'))
         self.download_label.setText(translate('OpenLP.FirstTimeWizard',
-                                              'Please wait while OpenLP downloads the resource index file...'))
+                                              'Please wait while OpenLP retrieves available resources...'))
+        self.download_status_label.setText(translate('OpenLP.FirstTimeWizard', 'Preparing to retrieve resources...'))
         self.plugin_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Select parts of the program you wish to use'))
         self.plugin_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
                                                'You can also change these settings after the Wizard.'))
@@ -377,6 +409,8 @@ class UiFirstTimeWizard(object):
         # Themes Page
         self.themes_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Sample Themes'))
         self.themes_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Select and download sample themes.'))
+        self.themes_loading_widget.loading_label.setText(
+            translate('OpenLP.FirstTimeWizard', 'Loading theme thumbnails...'))
         self.theme_label.setText(translate('OpenLP.FirstTimeWizard', 'Default theme:'))
         self.themes_select_all_button.setToolTip(translate('OpenLP.FirstTimeWizard', 'Select all'))
         self.themes_deselect_all_button.setToolTip(translate('OpenLP.FirstTimeWizard', 'Deselect all'))

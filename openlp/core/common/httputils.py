@@ -120,7 +120,7 @@ def get_openlp_user_agent():
     return 'OpenLP/' + Registry().get('application-qt').applicationVersion()
 
 
-def get_web_page(url, headers=None, update_openlp=False, proxy=None):
+def get_web_page(url, headers=None, update_openlp=False, proxy=None, timeout=None, retries=None):
     """
     Attempts to download the webpage at url and returns that page or None.
 
@@ -139,19 +139,21 @@ def get_web_page(url, headers=None, update_openlp=False, proxy=None):
     if not isinstance(proxy, dict):
         proxy = get_proxy_settings(mode=proxy)
     log.debug('Downloading URL = %s' % url)
-    retries = 0
-    while retries < CONNECTION_RETRIES:
+    retry_limit = CONNECTION_RETRIES if retries is None else retries
+    attempts = 0
+    while attempts <= retry_limit:
         try:
-            response = requests.get(url, headers=headers, proxies=proxy, timeout=float(CONNECTION_TIMEOUT))
+            request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
+            response = requests.get(url, headers=headers, proxies=proxy, timeout=float(request_timeout))
             log.debug('Downloaded page {url}'.format(url=response.url))
             break
         except OSError:
             # For now, catch OSError. All requests errors inherit from OSError
             log.exception('Unable to connect to {url}'.format(url=url))
             response = None
-            if retries >= CONNECTION_RETRIES:
+            if attempts >= retry_limit:
                 raise ConnectionError('Unable to connect to {url}, see log for details'.format(url=url))
-            retries += 1
+            attempts += 1
         except:                                                                # noqa
             # Don't know what's happening, so reraise the original
             log.exception('Unknown error when trying to connect to {url}'.format(url=url))
@@ -188,7 +190,7 @@ def get_url_file_size(url, proxy=None):
                 continue
 
 
-def download_file(update_object, url, file_path, sha256=None, proxy=None):
+def download_file(update_object, url, file_path, sha256=None, proxy=None, timeout=None, retries=None):
     """"
     Download a file given a URL.  The file is retrieved in chunks, giving the ability to cancel the download at any
     point. Returns False on download error.
@@ -202,14 +204,16 @@ def download_file(update_object, url, file_path, sha256=None, proxy=None):
     """
     block_count = 0
     block_size = 4096
-    retries = 0
     if not isinstance(proxy, dict):
         proxy = get_proxy_settings(mode=proxy)
     log.debug('url_get_file: %s', url)
-    while retries < CONNECTION_RETRIES:
+    retry_limit = CONNECTION_RETRIES if retries is None else retries
+    attempts = 0
+    while attempts <= retry_limit:
         try:
             with file_path.open('wb') as saved_file:
-                response = requests.get(url, proxies=proxy, timeout=float(CONNECTION_TIMEOUT), stream=True)
+                request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
+                response = requests.get(url, proxies=proxy, timeout=float(request_timeout), stream=True)
                 if sha256:
                     hasher = hashlib.sha256()
                 # Download until finished or canceled.
@@ -224,22 +228,24 @@ def download_file(update_object, url, file_path, sha256=None, proxy=None):
                         update_object.update_progress(block_count, block_size)
                 response.close()
             if sha256 and hasher.hexdigest() != sha256:
-                log.error('sha256 sums did not match for file %s, got %s, expected %s', file_path, hasher.hexdigest(),
-                          sha256)
+                log.error('sha256 sums did not match for file %s, got %s, expected %s', file_path,
+                          hasher.hexdigest(), sha256)
                 if file_path.exists():
                     file_path.unlink()
                 return False
             break
         except OSError:
             trace_error_handler(log)
-            if retries > CONNECTION_RETRIES:
-                if file_path.exists():
-                    file_path.unlink()
+            if file_path.exists():
+                file_path.unlink()
+            if hasattr(update_object, 'is_cancelled') and update_object.is_cancelled:
                 return False
-            else:
-                retries += 1
-                time.sleep(0.1)
-                continue
+            if attempts >= retry_limit:
+                return False
+            attempts += 1
+            block_count = 0
+            if hasattr(update_object, 'previous_size'):
+                update_object.previous_size = 0
     if hasattr(update_object, 'is_cancelled') and update_object.is_cancelled and file_path.exists():
         file_path.unlink()
     return True
@@ -250,14 +256,16 @@ class DownloadWorker(ThreadWorker):
     This worker allows a file to be downloaded in a thread
     """
     download_failed = QtCore.Signal()
-    download_succeeded = QtCore.Signal(Path)
+    download_succeeded = QtCore.Signal(object)
 
-    def __init__(self, base_url, file_name):
+    def __init__(self, base_url, file_name, timeout=None, retries=None):
         """
         Set up the worker object
         """
         self._base_url = base_url
         self._file_name = file_name
+        self._timeout = timeout
+        self._retries = retries
         self.is_cancelled = False
         super().__init__()
 
@@ -270,8 +278,9 @@ class DownloadWorker(ThreadWorker):
             return
         try:
             dest_path = Path(gettempdir()) / 'openlp' / self._file_name
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
             url = '{url}{name}'.format(url=self._base_url, name=self._file_name)
-            is_success = download_file(self, url, dest_path)
+            is_success = download_file(self, url, dest_path, timeout=self._timeout, retries=self._retries)
             if is_success and not self.is_cancelled:
                 self.download_succeeded.emit(dest_path)
             else:
@@ -280,7 +289,6 @@ class DownloadWorker(ThreadWorker):
             log.exception('Unable to download %s', url)
             self.download_failed.emit()
         finally:
-            time.sleep(1)
             self.quit.emit()
 
     @QtCore.Slot()

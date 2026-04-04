@@ -21,6 +21,7 @@
 """
 Package to test the openlp.core.ui.firsttimeform package.
 """
+import json
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch, DEFAULT
@@ -30,8 +31,8 @@ from PySide6 import QtCore, QtWidgets, QtTest
 from openlp.core.app import OpenLP
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
-from openlp.core.ui.firsttimeform import FirstTimeForm, ThemeListWidgetItem
-from openlp.core.ui.firsttimewizard import RemotePage, ThemeListWidget
+from openlp.core.ui.firsttimeform import FirstTimeForm, ResourceIndexDownloadWorker, ThemeListWidgetItem
+from openlp.core.ui.firsttimewizard import FirstTimePage, RemotePage, ThemeListWidget
 from openlp.core.ui.icons import UiIcons
 
 
@@ -41,6 +42,42 @@ INVALID_CONFIG = """
   "_meta": {
 }
 """
+
+VALID_CONFIG = json.dumps({
+    '_meta': {
+        'base_url': 'https://get.openlp.org/ftw/',
+        'songs_dir': 'songs',
+        'bibles_dir': 'bibles',
+        'themes_dir': 'themes'
+    },
+    'songs': {
+        'song_1': {
+            'title': 'Song 1',
+            'file_name': 'song_1.xml',
+            'sha256': 'song_sha'
+        }
+    },
+    'bibles': {
+        'english': {
+            'title': 'English',
+            'translations': {
+                'kjv': {
+                    'title': 'King James Version',
+                    'file_name': 'kjv.sqlite',
+                    'sha256': 'bible_sha'
+                }
+            }
+        }
+    },
+    'themes': {
+        'theme_1': {
+            'title': 'Theme 1',
+            'file_name': 'theme_1.otz',
+            'thumbnail': 'theme_1.png',
+            'sha256': 'theme_sha'
+        }
+    }
+})
 
 sample_theme_data = {'file_name': 'BlueBurst.otz', 'sha256': 'sha_256_hash',
                      'thumbnail': 'BlueBurst.png', 'title': 'Blue Burst'}
@@ -84,35 +121,39 @@ def test_init_sample_data(download_env, mock_settings):
     Test that the theme data is loaded correctly in to a ThemeListWidgetItem object when instantiated
     """
     # GIVEN: A sample theme dictionary object
-    # WHEN: Creating an instance of `ThemeListWidgetItem`
     mocked_download_worker = download_env[0]
-    instance = ThemeListWidgetItem('url', sample_theme_data, MagicMock())
 
-    # THEN: The data should have been set correctly
+    # WHEN: Creating an instance of `ThemeListWidgetItem`
+    instance = ThemeListWidgetItem('url', sample_theme_data)
+
+    # THEN: The data should have been set correctly, and no download should have started yet
     assert instance.file_name == 'BlueBurst.otz'
     assert instance.sha256 == 'sha_256_hash'
     assert instance.text() == 'Blue Burst'
     assert instance.toolTip() == 'Blue Burst'
-    mocked_download_worker.assert_called_once_with('url', 'BlueBurst.png')
+    mocked_download_worker.assert_not_called()
 
 
 def test_init_download_worker(download_env, mock_settings):
     """
-    Test that the `DownloadWorker` worker is set up correctly and that the thread is started.
+    Test that the `DownloadWorker` worker is set up correctly when start_download() is called.
     """
-    # GIVEN: A sample theme dictionary object
+    # GIVEN: A sample theme dictionary object and an instance of ThemeListWidgetItem
     mocked_download_worker = download_env[0]
     mocked_run_thread = download_env[1]
     mocked_ftw = MagicMock(spec=FirstTimeForm)
     mocked_ftw.thumbnail_download_threads = []
+    mocked_ftw.ftw_download_timeout = 5
+    mocked_ftw.ftw_download_retries = 0
+    instance = ThemeListWidgetItem('url', sample_theme_data)
 
-    # WHEN: Creating an instance of `ThemeListWidgetItem`
-    instance = ThemeListWidgetItem('url', sample_theme_data, mocked_ftw)
+    # WHEN: start_download() is called
+    instance.start_download(mocked_ftw)
 
     # THEN: The `DownloadWorker` should have been set up with the appropriate data
-    mocked_download_worker.assert_called_once_with('url', 'BlueBurst.png')
-    mocked_download_worker().download_failed.connect.assert_called_once_with(instance._on_download_failed)
-    mocked_download_worker().download_succeeded.connect.assert_called_once_with(instance._on_thumbnail_downloaded)
+    mocked_download_worker.assert_called_once_with('url', 'BlueBurst.png', timeout=5, retries=0)
+    mocked_download_worker().download_failed.connect.assert_called_once_with(instance._relay.on_failed)
+    mocked_download_worker().download_succeeded.connect.assert_called_once_with(instance._relay.on_downloaded)
     mocked_run_thread.assert_called_once_with(mocked_download_worker(), 'thumbnail_download_BlueBurst.png')
     assert mocked_ftw.thumbnail_download_threads == ['thumbnail_download_BlueBurst.png']
 
@@ -277,7 +318,7 @@ def test_on_custom_button_clicked(mocked_proxy_dialog):
     frw = FirstTimeForm(None)
 
     # WHEN: Calling _on_custom_button_clicked with a different button to the 'internet settings button.
-    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton2)
+    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton2.value)
 
     # THEN: The ProxyDialog should not be shown.
     mocked_proxy_dialog.assert_not_called()
@@ -292,10 +333,11 @@ def test_on_custom_button_clicked_internet_settings(mocked_proxy_dialog):
     frw = FirstTimeForm(None)
 
     # WHEN: Calling _on_custom_button_clicked with the constant for the 'internet settings' button (CustomButton1)
-    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton1)
+    mocked_proxy_dialog().exec.return_value = True
+    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton1.value)
 
     # THEN: The ProxyDialog should be shown.
-    mocked_proxy_dialog.assert_called_with(frw)
+    mocked_proxy_dialog.assert_called_with(frw, show_ftw_options=True, timeout=5, retries=0)
     mocked_proxy_dialog().retranslate_ui.assert_called_once()
     mocked_proxy_dialog().exec.assert_called_once()
 
@@ -318,16 +360,18 @@ def test__parse_config_invalid_config(mocked_message_box):
         'OpenLP was unable to read the resource index file. Please try again later.')
 
 
-@patch('openlp.core.ui.firsttimeform.get_web_page')
+@patch('openlp.core.ui.firsttimeform.run_thread')
+@patch('openlp.core.ui.firsttimeform.is_thread_finished')
 @patch('openlp.core.ui.firsttimeform.QtWidgets.QMessageBox')
-def test_network_error(mocked_message_box, mocked_get_web_page, mock_settings):
+def test_network_error(mocked_message_box, mocked_is_thread_finished, mocked_run_thread, mock_settings):
     """
     Test we catch a network error in First Time Wizard - bug 1409627
     """
     # GIVEN: Initial setup and mocks
     first_time_form = FirstTimeForm(None)
     first_time_form.initialize(MagicMock())
-    mocked_get_web_page.side_effect = ConnectionError('')
+    mocked_is_thread_finished.return_value = True
+    mocked_run_thread.side_effect = lambda worker, thread_name: worker.download_failed.emit()
 
     # WHEN: the First Time Wizard calls to get the initial configuration
     first_time_form._download_index()
@@ -337,6 +381,166 @@ def test_network_error(mocked_message_box, mocked_get_web_page, mock_settings):
         first_time_form, 'Network Error',
         'There was a network error attempting to connect to retrieve initial configuration information',
         mocked_message_box.StandardButton.Ok)
+
+
+@patch('openlp.core.ui.firsttimeform.requests.get')
+def test_download_index_worker_updates_byte_progress(mocked_requests_get, mock_settings):
+    """
+    Test that the resource index download reports byte progress while streaming the file.
+    """
+    # GIVEN: A streamed HTTP response and a resource index worker
+    worker = ResourceIndexDownloadWorker('https://get.openlp.org/ftw/', 'OpenLP/test')
+    mocked_response = MagicMock()
+    mocked_response.headers = {'Content-Length': '8'}
+    mocked_response.encoding = 'utf-8'
+    mocked_response.iter_content.return_value = [b'{"a":', b' 1}']
+    mocked_requests_get.return_value = mocked_response
+
+    mocked_progress_updated = MagicMock()
+    mocked_download_succeeded = MagicMock()
+    worker.progress_updated.connect(mocked_progress_updated)
+    worker.download_succeeded.connect(mocked_download_succeeded)
+
+    # WHEN: the resource index file is downloaded
+    worker.start()
+
+    # THEN: the content should be returned and progress updates should include byte counts
+    mocked_requests_get.assert_called_once()
+    mocked_response.raise_for_status.assert_called_once()
+    mocked_response.close.assert_called_once()
+    mocked_progress_updated.assert_has_calls([
+        call('Connecting to resource server...', None, None, True),
+        call('Downloading resource index: 0 bytes of 8 bytes (0%)', 0, 8, False),
+        call('Downloading resource index: 5 bytes of 8 bytes (62%)', 5, 8, False),
+        call('Downloading resource index: 8 bytes of 8 bytes (100%)', 8, 8, False)
+    ])
+    mocked_download_succeeded.assert_called_once_with('{"a": 1}')
+
+
+def test_update_navigation_buttons_welcome_page(mock_settings):
+    """
+    Test that the welcome page hides or disables navigation buttons that cannot act.
+    """
+    # GIVEN: A first-time wizard with mocked buttons
+    first_time_form = FirstTimeForm(None)
+    back_button = MagicMock()
+    cancel_button = MagicMock()
+    custom_button = MagicMock()
+    next_button = MagicMock()
+    button_map = {
+        QtWidgets.QWizard.WizardButton.BackButton: back_button,
+        QtWidgets.QWizard.WizardButton.CancelButton: cancel_button,
+        QtWidgets.QWizard.WizardButton.CustomButton1: custom_button,
+        QtWidgets.QWizard.WizardButton.NextButton: next_button
+    }
+
+    with patch.object(first_time_form, 'button', side_effect=lambda button_id: button_map[button_id]):
+
+        # WHEN: The welcome page buttons are updated
+        first_time_form._update_navigation_buttons(FirstTimePage.Welcome)
+
+    # THEN: Back should be unavailable, while Next and Cancel remain available
+    back_button.setVisible.assert_called_once_with(False)
+    back_button.setEnabled.assert_called_once_with(False)
+    cancel_button.setVisible.assert_called_once_with(True)
+    cancel_button.setEnabled.assert_called_once_with(True)
+    next_button.setVisible.assert_called_once_with(True)
+    next_button.setEnabled.assert_called_once_with(True)
+    custom_button.setVisible.assert_called_once_with(False)
+    custom_button.setEnabled.assert_called_once_with(False)
+
+
+def test_update_navigation_buttons_processing_page(mock_settings):
+    """
+    Test that processing pages disable navigation buttons when actions are not supported.
+    """
+    # GIVEN: A first-time wizard with mocked buttons
+    first_time_form = FirstTimeForm(None)
+    back_button = MagicMock()
+    cancel_button = MagicMock()
+    custom_button = MagicMock()
+    next_button = MagicMock()
+    button_map = {
+        QtWidgets.QWizard.WizardButton.BackButton: back_button,
+        QtWidgets.QWizard.WizardButton.CancelButton: cancel_button,
+        QtWidgets.QWizard.WizardButton.CustomButton1: custom_button,
+        QtWidgets.QWizard.WizardButton.NextButton: next_button
+    }
+
+    with patch.object(first_time_form, 'button', side_effect=lambda button_id: button_map[button_id]):
+
+        # WHEN: The download page buttons are updated
+        first_time_form._update_navigation_buttons(FirstTimePage.Download)
+
+    # THEN: Back, Next and Cancel should all be unavailable during processing
+    back_button.setVisible.assert_called_once_with(True)
+    back_button.setEnabled.assert_called_once_with(False)
+    cancel_button.setVisible.assert_called_once_with(True)
+    cancel_button.setEnabled.assert_called_once_with(False)
+    next_button.setVisible.assert_called_once_with(False)
+    next_button.setEnabled.assert_called_once_with(False)
+    custom_button.setVisible.assert_called_once_with(False)
+    custom_button.setEnabled.assert_called_once_with(False)
+
+
+@patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem')
+def test_parse_config_updates_download_progress(mocked_theme_list_widget_item, mock_settings):
+    """
+    Test that resource retrieval progress is updated as the available items are loaded.
+    """
+    # GIVEN: An instance of the first time wizard with the progress widgets mocked out
+    first_time_form = FirstTimeForm(None)
+    first_time_form.download_progress_bar = MagicMock()
+    first_time_form.download_status_label = MagicMock()
+    first_time_form.download_page = MagicMock()
+    first_time_form.application.process_events = MagicMock()
+
+    # WHEN: The configuration is parsed successfully
+    result = first_time_form._parse_config(VALID_CONFIG)
+
+    # THEN: The progress bar and status label should be updated for each retrieval stage
+    assert result is True
+    first_time_form.download_progress_bar.setRange.assert_any_call(0, 3)
+    first_time_form.download_progress_bar.setValue.assert_any_call(0)
+    first_time_form.download_progress_bar.setValue.assert_any_call(1)
+    first_time_form.download_progress_bar.setValue.assert_any_call(2)
+    first_time_form.download_progress_bar.setValue.assert_any_call(3)
+    first_time_form.download_status_label.setText.assert_has_calls([
+        call('Reading available resources...'),
+        call('Loading song: Song 1'),
+        call('Loading Bible: King James Version'),
+        call('Loading theme: Theme 1'),
+        call('Available resources loaded.')
+    ])
+    mocked_theme_list_widget_item.assert_called_once_with(
+        'https://get.openlp.org/ftw/themes/',
+        {
+            'title': 'Theme 1',
+            'file_name': 'theme_1.otz',
+            'thumbnail': 'theme_1.png',
+            'sha256': 'theme_sha'
+        },
+        first_time_form.themes_list_widget)
+
+
+def test_reset_download_progress(mock_settings):
+    """
+    Test that the resource retrieval progress widgets are reset before the download page is shown.
+    """
+    # GIVEN: An instance of the first time wizard with mocked progress widgets
+    first_time_form = FirstTimeForm(None)
+    first_time_form.download_status_label = MagicMock()
+    first_time_form.download_progress_bar = MagicMock()
+
+    # WHEN: The retrieval progress is reset
+    first_time_form._reset_download_progress()
+
+    # THEN: The progress widgets should be returned to their initial state
+    first_time_form.download_status_label.clear.assert_called_once()
+    first_time_form.download_status_label.setVisible.assert_called_once_with(False)
+    first_time_form.download_progress_bar.setVisible.assert_called_once_with(True)
+    first_time_form.download_progress_bar.setRange.assert_called_once_with(0, 1)
+    first_time_form.download_progress_bar.setValue.assert_called_once_with(0)
 
 
 def test_accept_method_theme_selected(mock_settings):
@@ -460,7 +664,8 @@ def test_failed_download(mocked_set_icon):
     Test that icon get set to indicate a failure when `DownloadWorker` emits the download_failed signal
     """
     # GIVEN: An instance of `DownloadWorker`
-    instance = ThemeListWidgetItem('url', sample_theme_data, MagicMock())       # noqa Overcome GC issue
+    instance = ThemeListWidgetItem('url', sample_theme_data)       # noqa Overcome GC issue
+    instance.start_download(MagicMock(thumbnail_download_threads=[]))
     worker_threads = Registry().get('application').worker_threads               # type: ignore[union-attr]
     worker = worker_threads['thumbnail_download_BlueBurst.png']['worker']
 
@@ -479,7 +684,8 @@ def test_successful_download(mocked_build_icon, mocked_set_icon):
     signal
     """
     # GIVEN: An instance of `DownloadWorker`
-    instance = ThemeListWidgetItem('url', sample_theme_data, MagicMock())       # noqa Overcome GC issue
+    instance = ThemeListWidgetItem('url', sample_theme_data)       # noqa Overcome GC issue
+    instance.start_download(MagicMock(thumbnail_download_threads=[]))
     worker_threads = Registry().get('application').worker_threads               # type: ignore[union-attr]
     worker = worker_threads['thumbnail_download_BlueBurst.png']['worker']
     test_path = Path('downlaoded', 'file')

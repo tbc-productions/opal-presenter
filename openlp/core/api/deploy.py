@@ -95,12 +95,17 @@ def deploy_zipfile(app_root_path, zip_name):
     web_zip.extractall(app_root_path)
 
 
-def download_version_info():
+def download_version_info(timeout=None, retries=None):
     """
     Download the version information file
     """
     try:
-        file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()})
+        if timeout is None:
+            file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
+                                         retries=retries)
+        else:
+            file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
+                                         timeout=timeout, retries=retries)
     except ConnectionError:
         return False
     if not file_contents:
@@ -119,11 +124,14 @@ def get_latest_size():
     return version_info['latest']['size']
 
 
-def download_and_install(callback=None, can_update_range=True):
+def download_and_install(callback=None, can_update_range=True, timeout=None, retries=None):
     """
     Download the web site and deploy it.
     """
-    version_info = download_version_info()
+    if timeout is not None or retries is not None:
+        version_info = download_version_info(timeout=timeout, retries=retries)
+    else:
+        version_info = download_version_info()
     if not version_info:
         log.warning('Unable to access the version information, abandoning download')
         # Show the user an error message
@@ -131,8 +139,17 @@ def download_and_install(callback=None, can_update_range=True):
     file_size = version_info['latest']['size']
     if can_update_range:
         callback.setRange(0, file_size)
-    if download_file(callback, REMOTE_URL + '{version}/{filename}'.format(**version_info['latest']),
-                     AppLocation.get_section_data_path('remotes') / 'remote.zip'):
+    zip_path = AppLocation.get_section_data_path('remotes') / 'remote.zip'
+    download_kwargs = {}
+    if timeout is not None:
+        download_kwargs['timeout'] = timeout
+    if retries is not None:
+        download_kwargs['retries'] = retries
+    if download_file(callback, REMOTE_URL + '{version}/{filename}'.format(**version_info['latest']), zip_path,
+                     **download_kwargs):
+        if not zip_path.exists():
+            # File was deleted because the download was cancelled
+            return None
         deploy_zipfile(AppLocation.get_section_data_path('remotes'), 'remote.zip')
         return version_info['latest']['version']
     return None
