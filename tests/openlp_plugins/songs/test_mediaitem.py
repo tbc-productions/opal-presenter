@@ -151,7 +151,7 @@ def test_add_custom_context_actions(mocked_create_action: MagicMock, media_item:
     # THEN: Custom actions are added to the context menu
     assert mocked_create_action.call_args_list == [
         call(media_item.list_view, separator=True),
-        call(media_item.list_view, text='&Clone', icon=UiIcons().clone, triggers=media_item.on_clone_click)
+        call(media_item.list_view, text='&Clone (Copy)', icon=UiIcons().clone, triggers=media_item.on_clone_click)
     ]
 
 
@@ -1010,6 +1010,36 @@ def test_build_song_footer_one_author_show_written_by(media_item: SongMediaItem)
                 'authors_words_all': [], 'first_slide': False}
         MockedRenderer.assert_called_once_with(**args)
         assert author_list == ['my author'], 'The author list should be returned correctly with one author'
+
+
+@patch.object(Registry, 'execute')
+@patch('openlp.plugins.songs.lib.mediaitem.check_item_selected')
+def test_on_clone_click_appends_copy_suffix(mocked_check_item_selected: MagicMock,
+                                            mocked_execute: MagicMock,
+                                            media_item: SongMediaItem):
+    """
+    Test that cloning a song appends "(Copy)" to the new song title.
+    """
+    # GIVEN: A selected song, and OpenLyrics clone conversion returning a new song object
+    mocked_check_item_selected.return_value = True
+    mocked_list_item = MagicMock()
+    mocked_list_item.data.return_value = 7
+    media_item.list_view.currentItem.return_value = mocked_list_item
+    old_song = MagicMock(media_files=[])
+    new_song = MagicMock(title='Amazing Grace', media_files=[])
+    media_item.plugin.manager.get_object.return_value = old_song
+    media_item.open_lyrics = MagicMock()
+    media_item.open_lyrics.song_to_xml.return_value = '<xml />'
+    media_item.open_lyrics.xml_to_song.return_value = new_song
+    media_item.on_song_list_load = MagicMock()
+
+    # WHEN: Clone is requested
+    media_item.on_clone_click()
+
+    # THEN: The cloned title should end with "(Copy)" and be saved
+    assert new_song.title == 'Amazing Grace (Copy)'
+    media_item.plugin.manager.save_object.assert_called_once_with(new_song)
+    mocked_execute.assert_called_once_with('song_changed', new_song.id)
 
 
 @patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')

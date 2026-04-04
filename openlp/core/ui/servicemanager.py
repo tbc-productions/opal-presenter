@@ -268,15 +268,19 @@ class Ui_ServiceManager(object):
                                         icon=UiIcons().open,
                                         tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
                                         triggers=self.on_load_service_clicked)
-        self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
-                                        icon=UiIcons().save,
-                                        tooltip=translate('OpenLP.ServiceManager', 'Save this service.'),
-                                        triggers=self.decide_save_method)
-        self.toolbar.add_toolbar_action('saveServiceAs',
-                        text=translate('OpenLP.ServiceManager', 'Save As'),
-                        icon=UiIcons().save_plus,
-                        tooltip=translate('OpenLP.ServiceManager', 'Save Service As'),
-                        triggers=self.save_file_as)
+        self.save_service_action = self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
+                                                                   icon=UiIcons().save,
+                                                                   tooltip=translate('OpenLP.ServiceManager',
+                                                                                     'Save this service.'),
+                                                                   triggers=self.decide_save_method)
+        self.save_service_as_action = self.toolbar.add_toolbar_action(
+            'saveServiceAs',
+            text=translate('OpenLP.ServiceManager', 'Save As'),
+            icon=UiIcons().save_plus,
+            tooltip=translate('OpenLP.ServiceManager', 'Save Service As'),
+            triggers=self.save_file_as)
+        self.save_service_action.setEnabled(False)
+        self.save_service_as_action.setEnabled(False)
         self.toolbar.addSeparator()
         self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
@@ -287,7 +291,7 @@ class Ui_ServiceManager(object):
         self.theme_combo_box.setSizeAdjustPolicy(
             QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.theme_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
-        self.theme_combo_box.setMinimumWidth(80)
+        self.theme_combo_box.setMinimumWidth(100)
         self.theme_combo_box.setObjectName('theme_combo_box')
         self.toolbar.add_toolbar_widget(self.theme_combo_box)
         self.unsaved_changes_container = QtWidgets.QWidget(self.toolbar)
@@ -356,16 +360,19 @@ class Ui_ServiceManager(object):
         self.order_toolbar.addSeparator()
         self.delete_action = self.order_toolbar.add_toolbar_action(
             'delete', can_shortcuts=True,
-              text=translate('OpenLP.ServiceManager', '&Delete From Service'), icon=UiIcons().minus,
+                        text=translate('OpenLP.ServiceManager', '&Delete From Service'),
+                        icon=UiIcons().minus,
             tooltip=translate('OpenLP.ServiceManager', 'Delete the selected item from the service.'),
             triggers=self.on_delete_from_service)
+        self.delete_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.expand_collapse_action = self.order_toolbar.add_toolbar_action(
             'expandCollapse', can_shortcuts=True, checked=False,
             text=translate('OpenLP.ServiceManager', '&Expand all'),
-              icon=UiIcons().arrow_expand_vertical,
+                        icon=UiIcons().arrow_expand_vertical,
             tooltip=translate('OpenLP.ServiceManager', 'Expand or collapse all the service items.'),
             category=UiStrings().Service, triggers=self.on_toggle_expand_all)
+        self.expand_collapse_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.make_preview_action = self.order_toolbar.add_toolbar_action(
             'make_preview', can_shortcuts=True,
@@ -373,12 +380,14 @@ class Ui_ServiceManager(object):
             tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Preview.'),
             category=UiStrings().Service,
             triggers=self.make_preview)
+        self.make_preview_action.setEnabled(False)
         self.make_live_action = self.order_toolbar.add_toolbar_action(
             'make_live', can_shortcuts=True,
             text=translate('OpenLP.ServiceManager', 'Go Live'), icon=UiIcons().live,
             tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Live.'),
             category=UiStrings().Service,
             triggers=self.on_make_live_action_triggered)
+        self.make_live_action.setEnabled(False)
         self.layout.addWidget(self.order_toolbar)
         # Connect up our signals and slots
         self.theme_combo_box.activated.connect(self.on_theme_combo_box_selected)
@@ -391,6 +400,7 @@ class Ui_ServiceManager(object):
         self.service_theme = self.settings.value('servicemanager/service theme')
         self.service_path = AppLocation.get_section_data_path('servicemanager')
         self._update_unsaved_changes_indicator()
+        self._update_move_actions()
         # build the drag and drop context menu
         self.dnd_menu = QtWidgets.QMenu()
         self.new_action = self.dnd_menu.addAction(translate('OpenLP.ServiceManager', '&Add New Item'))
@@ -2234,16 +2244,37 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
     def _update_move_actions(self):
         """
-        Enable or disable the four move toolbar buttons based on whether a top-level service item is selected
-        and whether movement in each direction is possible.
+        Enable or disable selection-based toolbar actions based on whether a top-level service item is selected.
+        Move actions are also constrained by top/bottom boundaries.
         """
         if not hasattr(self, 'move_top_action'):
             return
         item, _ = self.find_service_item()
+        if item == -1 and hasattr(self, 'service_manager_list'):
+            current_item = self.service_manager_list.currentItem()
+            if current_item is not None:
+                parent_item = current_item.parent()
+                top_item = parent_item if parent_item is not None else current_item
+                row = top_item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+                if row is not None:
+                    item = row - 1
         count = len(self.service_items)
-        has_selection = item != -1
+        has_items = count > 0
+        has_selection = item != -1 or any(service_item.get('selected', False) for service_item in self.service_items)
         at_top = item == 0
         at_bottom = item == count - 1
+        if hasattr(self, 'delete_action'):
+            self.delete_action.setEnabled(has_items)
+        if hasattr(self, 'expand_collapse_action'):
+            self.expand_collapse_action.setEnabled(has_items)
+        if hasattr(self, 'save_service_action'):
+            self.save_service_action.setEnabled(has_items)
+        if hasattr(self, 'save_service_as_action'):
+            self.save_service_as_action.setEnabled(has_items)
+        if hasattr(self, 'make_preview_action'):
+            self.make_preview_action.setEnabled(has_selection)
+        if hasattr(self, 'make_live_action'):
+            self.make_live_action.setEnabled(has_selection)
         self.move_top_action.setEnabled(has_selection and not at_top)
         self.move_up_action.setEnabled(has_selection and not at_top)
         self.move_down_action.setEnabled(has_selection and not at_bottom)

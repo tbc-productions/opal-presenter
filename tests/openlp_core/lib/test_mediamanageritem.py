@@ -146,3 +146,101 @@ def test_set_search_option(media_env):
 
     # THEN: should return false
     assert result is False
+
+
+def test_on_selection_change_updates_preview_live_service_action_state(media_env, registry):
+    """
+    Test that Preview/Live/Add actions are disabled with no selection and enabled with selection.
+    """
+    # GIVEN: A media manager item with mocked actions and list view
+    mocked_settings = MagicMock()
+    mocked_settings.value.return_value = False
+    Registry().register('settings', mocked_settings)
+    mmi = MediaManagerItem(None)
+    mmi.list_view = MagicMock()
+    mmi.preview_action = MagicMock()
+    mmi.live_action = MagicMock()
+    mmi.add_to_service_action = MagicMock()
+    mmi.quick_preview_allowed = False
+    mmi.auto_select_id = -1
+
+    # WHEN: Nothing is selected
+    mmi.list_view.selectedIndexes.return_value = []
+    mmi.on_selection_change()
+
+    # THEN: Actions should be disabled
+    mmi.preview_action.setEnabled.assert_called_with(False)
+    mmi.live_action.setEnabled.assert_called_with(False)
+    mmi.add_to_service_action.setEnabled.assert_called_with(False)
+
+    # WHEN: Something is selected
+    mmi.list_view.selectedIndexes.return_value = [MagicMock()]
+    mmi.on_selection_change()
+
+    # THEN: Actions should be enabled
+    mmi.preview_action.setEnabled.assert_called_with(True)
+    mmi.live_action.setEnabled.assert_called_with(True)
+    mmi.add_to_service_action.setEnabled.assert_called_with(True)
+
+
+def test_on_selection_change_updates_edit_delete_action_state(media_env, registry):
+    """
+    Test that Edit/Delete actions are disabled with no selection and enabled with selection.
+    """
+    # GIVEN: A media manager item with mocked actions and list view
+    mocked_settings = MagicMock()
+    mocked_settings.value.return_value = False
+    Registry().register('settings', mocked_settings)
+    mmi = MediaManagerItem(None)
+    mmi.list_view = MagicMock()
+    mmi.edit_action = MagicMock()
+    mmi.delete_action = MagicMock()
+    mmi.edit_context_action = MagicMock()
+    mmi.delete_context_action = MagicMock()
+
+    # WHEN: Nothing is selected
+    mmi.list_view.selectedIndexes.return_value = []
+    mmi.on_selection_change()
+
+    # THEN: Edit/Delete actions should be disabled
+    mmi.edit_action.setEnabled.assert_called_with(False)
+    mmi.delete_action.setEnabled.assert_called_with(False)
+    mmi.edit_context_action.setEnabled.assert_called_with(False)
+    mmi.delete_context_action.setEnabled.assert_called_with(False)
+
+    # WHEN: Something is selected
+    mmi.list_view.selectedIndexes.return_value = [MagicMock()]
+    mmi.on_selection_change()
+
+    # THEN: Edit/Delete actions should be enabled
+    mmi.edit_action.setEnabled.assert_called_with(True)
+    mmi.delete_action.setEnabled.assert_called_with(True)
+    mmi.edit_context_action.setEnabled.assert_called_with(True)
+    mmi.delete_context_action.setEnabled.assert_called_with(True)
+
+
+def test_on_selection_change_does_not_override_edit_delete_when_selection_rule_disabled(media_env, registry):
+    """
+    Test that edit/delete selection gating can be explicitly disabled by plugins.
+    """
+    # GIVEN: A media manager item where selection-based edit/delete disabling is turned off
+    mocked_settings = MagicMock()
+    mocked_settings.value.return_value = False
+    Registry().register('settings', mocked_settings)
+    mmi = MediaManagerItem(None)
+    mmi.disable_edit_delete_by_selection = False
+    mmi.list_view = MagicMock()
+    mmi.list_view.selectedIndexes.return_value = []
+    mmi.edit_action = MagicMock()
+    mmi.delete_action = MagicMock()
+    mmi.edit_context_action = MagicMock()
+    mmi.delete_context_action = MagicMock()
+
+    # WHEN: Selection changes
+    mmi.on_selection_change()
+
+    # THEN: edit/delete actions should not be modified by the base selection updater
+    mmi.edit_action.setEnabled.assert_not_called()
+    mmi.delete_action.setEnabled.assert_not_called()
+    mmi.edit_context_action.setEnabled.assert_not_called()
+    mmi.delete_context_action.setEnabled.assert_not_called()

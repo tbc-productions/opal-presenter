@@ -203,7 +203,7 @@ class SongMediaItem(MediaManagerItem):
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
         create_widget_action(
-            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
+            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
     def add_list_view_to_toolbar(self):
@@ -720,9 +720,9 @@ class SongMediaItem(MediaManagerItem):
             old_song = self.plugin.manager.get_object(Song, item_id)
             song_xml = self.open_lyrics.song_to_xml(old_song)
             new_song = self.open_lyrics.xml_to_song(song_xml)
-            new_song.title = '{title} <{text}>'.format(title=new_song.title,
-                                                       text=translate('SongsPlugin.MediaItem',
-                                                                      'copy', 'For song cloning'))
+            new_song.title = '{title} {text}'.format(title=new_song.title,
+                                                     text=translate('SongsPlugin.MediaItem',
+                                                                    '(Copy)', 'For song cloning'))
             # Copy audio files from the old to the new song
             if len(old_song.media_files) > 0:
                 save_path = AppLocation.get_section_data_path(self.plugin.name) / 'audio' / str(new_song.id)

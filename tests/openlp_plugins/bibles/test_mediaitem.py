@@ -180,6 +180,61 @@ def test_required_icons(media_item: BibleMediaItem):
     assert media_item.add_to_service_item is False, 'Check that the icon is called as False'
 
 
+def test_setup_item_disables_selection_rule_for_edit_delete(media_item: BibleMediaItem):
+    """
+    Test that BibleMediaItem does not use selection-based edit/delete gating.
+    """
+    # WHEN: setup_item is called
+    media_item.setup_item()
+
+    # THEN: edit/delete selection gating should be disabled for this plugin
+    assert media_item.disable_edit_delete_by_selection is False
+
+
+def test_update_bible_manage_actions_enabled_state_without_installed_bibles(media_item: BibleMediaItem):
+    """
+    Test that edit/delete actions are disabled when there are no installed Bibles.
+    """
+    # GIVEN: no installed Bibles in the version combobox
+    media_item.version_combo_box = MagicMock()
+    media_item.version_combo_box.count.return_value = 0
+    media_item.edit_action = MagicMock()
+    media_item.delete_action = MagicMock()
+    media_item.edit_context_action = MagicMock()
+    media_item.delete_context_action = MagicMock()
+
+    # WHEN: action state is refreshed
+    media_item._update_bible_manage_actions_enabled_state()
+
+    # THEN: actions should be disabled
+    media_item.edit_action.setEnabled.assert_called_once_with(False)
+    media_item.delete_action.setEnabled.assert_called_once_with(False)
+    media_item.edit_context_action.setEnabled.assert_called_once_with(False)
+    media_item.delete_context_action.setEnabled.assert_called_once_with(False)
+
+
+def test_update_bible_manage_actions_enabled_state_with_installed_bibles(media_item: BibleMediaItem):
+    """
+    Test that edit/delete actions are enabled when one or more Bibles are installed.
+    """
+    # GIVEN: at least one installed Bible in the version combobox
+    media_item.version_combo_box = MagicMock()
+    media_item.version_combo_box.count.return_value = 1
+    media_item.edit_action = MagicMock()
+    media_item.delete_action = MagicMock()
+    media_item.edit_context_action = MagicMock()
+    media_item.delete_context_action = MagicMock()
+
+    # WHEN: action state is refreshed
+    media_item._update_bible_manage_actions_enabled_state()
+
+    # THEN: actions should be enabled
+    media_item.edit_action.setEnabled.assert_called_once_with(True)
+    media_item.delete_action.setEnabled.assert_called_once_with(True)
+    media_item.edit_context_action.setEnabled.assert_called_once_with(True)
+    media_item.delete_context_action.setEnabled.assert_called_once_with(True)
+
+
 def test_add_middle_header_bar(media_item: BibleMediaItem):
     """Test that the add_middle_header_bar method adds the correct objects"""
     # GIVEN: An instance of the class BibleMediaItem with some mocked objects

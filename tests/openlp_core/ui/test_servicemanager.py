@@ -2201,6 +2201,62 @@ def test_basic_service_manager(service_manager: ServiceManager):
         'The service manager list should be empty '
 
 
+def test_save_actions_disabled_when_service_empty(service_manager: ServiceManager):
+    """Save and Save As should be disabled when there are no service items."""
+    # GIVEN: an empty service
+    service_manager.service_items = []
+
+    # WHEN: action state is refreshed
+    service_manager._update_move_actions()
+
+    # THEN: save actions should be disabled
+    assert service_manager.save_service_action.isEnabled() is False
+    assert service_manager.save_service_as_action.isEnabled() is False
+    assert service_manager.delete_action.isEnabled() is False
+    assert service_manager.expand_collapse_action.isEnabled() is False
+
+
+def test_save_actions_enabled_when_service_has_items(service_manager: ServiceManager):
+    """Save and Save As should be enabled when service contains items."""
+    # GIVEN: a service with one item
+    _add_song_service_item(service_manager)
+
+    # WHEN: action state is refreshed
+    service_manager._update_move_actions()
+
+    # THEN: save actions should be enabled
+    assert service_manager.save_service_action.isEnabled() is True
+    assert service_manager.save_service_as_action.isEnabled() is True
+    assert service_manager.delete_action.isEnabled() is True
+    assert service_manager.expand_collapse_action.isEnabled() is True
+
+
+def test_preview_and_live_actions_disabled_without_selection(service_manager: ServiceManager):
+    """Preview/Live actions should be disabled when no service item is selected."""
+    # GIVEN: No selected service item
+    service_manager.service_manager_list.clearSelection()
+
+    # WHEN: Selection state is refreshed
+    service_manager.on_selection_changed()
+
+    # THEN: Both actions should be disabled
+    assert service_manager.make_preview_action.isEnabled() is False
+    assert service_manager.make_live_action.isEnabled() is False
+
+
+def test_preview_and_live_actions_enabled_with_selection(service_manager: ServiceManager):
+    """Preview/Live actions should be enabled when a service item is selected."""
+    # GIVEN: A selected service item in the list
+    _add_song_service_item(service_manager)
+
+    # WHEN: Selection state is refreshed
+    service_manager.on_selection_changed()
+
+    # THEN: Both actions should be enabled
+    assert service_manager.make_preview_action.isEnabled() is True
+    assert service_manager.make_live_action.isEnabled() is True
+
+
 @patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt')
 @patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal')
 def test_default_context_menu(mocked_mapToGlobal, mocked_item_at_method, service_manager: ServiceManager):

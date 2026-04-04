@@ -375,12 +375,14 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.receive_spin_delay()
             self.toolbar.add_toolbar_widget(self.delay_spin_box)
         else:
-            self.toolbar.add_toolbar_action('goLive', icon=UiIcons().live,
-                                            tooltip=translate('OpenLP.SlideController', 'Move to live.'),
-                                            triggers=self.on_go_live)
-            self.toolbar.add_toolbar_action('addToService', icon=UiIcons().add,
-                                            tooltip=translate('OpenLP.SlideController', 'Add to Service.'),
-                                            triggers=self.on_preview_add_to_service)
+            self.go_live_action = self.toolbar.add_toolbar_action('goLive', icon=UiIcons().live,
+                                                                  tooltip=translate('OpenLP.SlideController',
+                                                                                    'Move to live.'),
+                                                                  triggers=self.on_go_live)
+            self.add_to_service_action = self.toolbar.add_toolbar_action('addToService', icon=UiIcons().add,
+                                                                          tooltip=translate('OpenLP.SlideController',
+                                                                                            'Add to Service.'),
+                                                                          triggers=self.on_preview_add_to_service)
             self.toolbar.addSeparator()
             self.toolbar.add_toolbar_action('editSong', icon=UiIcons().edit,
                                             tooltip=translate('OpenLP.SlideController',
@@ -496,6 +498,26 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.mediacontroller_live_stop.connect(self.media_controller.on_media_stop)
         else:
             getattr(self, 'slidecontroller_preview_clear').connect(self.on_clear)
+        self._update_slide_action_enabled_state()
+
+    def _update_slide_action_enabled_state(self):
+        """
+        Enable/disable slide-controller actions based on whether there are slides in this controller.
+        """
+        has_slides = False
+        if getattr(self, 'preview_widget', None):
+            slide_count = self.preview_widget.slide_count()
+            if isinstance(slide_count, (int, float)):
+                has_slides = slide_count > 0
+        if hasattr(self, 'previous_item'):
+            self.previous_item.setEnabled(has_slides)
+        if hasattr(self, 'next_item'):
+            self.next_item.setEnabled(has_slides)
+        if not self.is_live:
+            if hasattr(self, 'go_live_action'):
+                self.go_live_action.setEnabled(has_slides)
+            if hasattr(self, 'add_to_service_action'):
+                self.add_to_service_action.setEnabled(has_slides)
 
     def new_song_menu(self):
         """
@@ -1124,6 +1146,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 row += 1
                 self.slide_list[str(row)] = row - 1
         self.preview_widget.replace_service_item(self.service_item, width, slide_no)
+        self._update_slide_action_enabled_state()
         # Tidy up aspects associated with the old item
         if old_item:
             new_item_has_background_video = self.service_item.is_capable(ItemCapabilities.HasBackgroundVideo) or \
@@ -1831,6 +1854,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.preview_widget.clear_list()
         self.service_item = None
+        self._update_slide_action_enabled_state()
         if self.is_live:
             self.mediabar.setVisible(False)
         else:
