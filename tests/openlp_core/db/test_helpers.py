@@ -21,7 +21,7 @@
 """
 Package to test the :mod:`~openlp.core.db.helpers` package.
 """
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from unittest.mock import MagicMock, patch
 
 from sqlalchemy import MetaData, __version__ as sqla_version
@@ -29,7 +29,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.pool import StaticPool
 
-from openlp.core.db.helpers import init_db, delete_database
+from openlp.core.db.helpers import get_db_path, init_db, delete_database
 
 
 def test_init_db_calls_correct_functions():
@@ -123,3 +123,18 @@ def test_delete_database_with_db_file_name():
         MockedAppLocation.get_section_data_path.assert_called_with(test_plugin)
         mocked_delete_file.assert_called_with(test_location)
         assert result is False, 'The result of delete_file should be False (was rigged that way)'
+
+
+@patch('openlp.core.db.helpers.AppLocation.get_section_data_path')
+def test_get_db_path_uses_posix_form(mocked_get_section_data_path):
+    """
+    Test that SQLite URLs are always returned with forward slashes.
+    """
+    # GIVEN: A Windows-style data path
+    mocked_get_section_data_path.return_value = PureWindowsPath('C:/Users/tyler/AppData/Roaming/openlp/data/projectc')
+
+    # WHEN: Building the database URL
+    db_path = get_db_path('projectc', 'project.sqlite')
+
+    # THEN: The URL should use POSIX separators so SQLAlchemy can parse it reliably on Windows
+    assert db_path == 'sqlite:///C:/Users/tyler/AppData/Roaming/openlp/data/projectc/project.sqlite'

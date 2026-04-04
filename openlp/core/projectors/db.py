@@ -246,9 +246,11 @@ class ProjectorDB(DBManager):
     """
     def __init__(self, *args, **kwargs):
         log.debug('ProjectorDB().__init__(args="{arg}", kwargs="{kwarg}")'.format(arg=args, kwarg=kwargs))
+        db_url = kwargs.pop('db_url', None)
         super().__init__(plugin_name='projector',
                          init_schema=self.init_schema,
-                         upgrade_mod=upgrade)
+                         upgrade_mod=upgrade,
+                         db_url=db_url if db_url is not None else init_url('projector'))
         log.debug('ProjectorDB() Initialized using db url {db}'.format(db=self.db_url))
         log.debug('Session: {session}'.format(session=self.session))
 
@@ -258,7 +260,6 @@ class ProjectorDB(DBManager):
 
         Declarative uses table classes to define schema.
         """
-        self.db_url = init_url('projector')
         session, metadata = init_db(self.db_url, base=Base)
         metadata.create_all(bind=metadata.bind, checkfirst=True)
         return session

@@ -47,7 +47,8 @@ class DBManager(object):
     """
     def __init__(self, plugin_name: str, init_schema: FunctionType,
                  db_file_path: Union[Path, str, None] = None,
-                 upgrade_mod: Optional[ModuleType] = None, session: Optional[Session] = None):
+                 upgrade_mod: Optional[ModuleType] = None, session: Optional[Session] = None,
+                 db_url: Optional[str] = None):
         """
         Runs the initialisation process that includes creating the connection to the database and the tables if they do
         not exist.
@@ -63,7 +64,7 @@ class DBManager(object):
         self.session = None
         self.db_url = None
         log.debug('Manager: Creating new DB url')
-        self.db_url = init_url(plugin_name, db_file_path)
+        self.db_url = db_url if db_url is not None else init_url(plugin_name, db_file_path)
         if not session:
             try:
                 self.session = init_schema(self.db_url)
