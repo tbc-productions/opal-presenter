@@ -391,7 +391,7 @@ def test_set_default_theme_defaultdark_theme_calls_set_default_darkmode(mock_set
 @patch('openlp.core.ui.style.is_system_darkmode')
 def test_set_default_theme_automatic_theme_calls_set_default_darkmode(mock_is_system_darkmode,
                                                                       mock_set_default_darkmode, mock_settings):
-    """Test that Automatic UI theme does not force darkmode handler calls."""
+    """Test that Automatic UI theme uses dark mode when the system is dark."""
     # GIVEN: UI theme is Automatic and System is using Dark Theme
     mock_settings.value.return_value = UiThemes.Automatic
     mock_app = MagicMock()
@@ -400,8 +400,8 @@ def test_set_default_theme_automatic_theme_calls_set_default_darkmode(mock_is_sy
     # WHEN: set_default_theme() is called
     set_default_theme(mock_app)
 
-    # THEN: set_default_darkmode should not be called
-    mock_set_default_darkmode.assert_not_called()
+    # THEN: set_default_darkmode should be called
+    mock_set_default_darkmode.assert_called_once_with(mock_app)
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
@@ -410,7 +410,7 @@ def test_set_default_theme_automatic_theme_calls_set_default_darkmode(mock_is_sy
 def test_set_default_theme_automatic_theme_system_light_calls_set_default_lightmode(mock_set_default_lightmode,
                                                                                     mocked_is_system_darkmode,
                                                                                     mock_settings):
-    """Test that Automatic UI theme does not force lightmode handler calls."""
+    """Test that Automatic UI theme uses light mode when the system is light."""
     # GIVEN: UI theme is Automatic with System Light Theme
     mock_settings.value.return_value = UiThemes.Automatic
     mocked_is_system_darkmode.return_value = False
@@ -419,8 +419,8 @@ def test_set_default_theme_automatic_theme_system_light_calls_set_default_lightm
     # WHEN: set_default_theme() is called
     set_default_theme(mock_app)
 
-    # THEN: set_default_lightmode should not be called
-    mock_set_default_lightmode.assert_not_called()
+    # THEN: set_default_lightmode should be called
+    mock_set_default_lightmode.assert_called_once_with(mock_app)
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)

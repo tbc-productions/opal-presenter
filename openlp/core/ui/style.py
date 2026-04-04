@@ -344,7 +344,7 @@ def set_default_theme(app):
     """
     Setup theme
     """
-    if is_ui_theme(UiThemes.Native) or is_ui_theme(UiThemes.Automatic):
+    if is_ui_theme(UiThemes.Native):
         if is_macosx():
             native = get_macos_native_style_name()
             if native:
