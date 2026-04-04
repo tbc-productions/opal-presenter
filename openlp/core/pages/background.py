@@ -264,6 +264,10 @@ class BackgroundPage(GridLayoutPage):
         if index < len(widget_sets):
             for widget in widget_sets[index]:
                 widget.show()
+        is_style_visible = index in [BackgroundType.Solid, BackgroundType.Gradient]
+        is_media_visible = index in [BackgroundType.Image, BackgroundType.Video, BackgroundType.Stream]
+        self.background_style_group_box.setVisible(is_style_visible)
+        self.background_media_group_box.setVisible(is_media_visible)
         is_fit_visible = index in [BackgroundType.Image, BackgroundType.Video, BackgroundType.Stream]
         self.background_fit_label.setVisible(is_fit_visible)
         self.background_fit_combo_box.setVisible(is_fit_visible)

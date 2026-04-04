@@ -146,6 +146,38 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_preview_page_values.assert_called_once()
 
 
+@patch('openlp.core.ui.themeform.QtWidgets.QDialog.exec')
+@patch('openlp.core.ui.themeform.ScreenList')
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, mocked_dialog_exec, settings):
+    """
+    Test that opening the edit dialog syncs the preview widget to the current screen.
+    """
+    # GIVEN: A ThemeForm instance with the pieces needed by exec()
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock(theme_name='Theme Name')
+    theme_form.set_defaults = MagicMock()
+    theme_form.refresh_preview = MagicMock()
+    theme_form.preview_area_layout = MagicMock()
+    theme_form.preview_box = MagicMock()
+    theme_form.theme_name_label = MagicMock()
+    theme_form.theme_name_edit = MagicMock()
+    theme_form.setWindowTitle = MagicMock()
+    current_screen = MagicMock()
+    current_screen.display_geometry.width.return_value = 1920
+    current_screen.display_geometry.height.return_value = 1080
+    mocked_screen_list.return_value.current = current_screen
+    mocked_dialog_exec.return_value = 0
+
+    # WHEN: The dialog is opened in edit mode
+    theme_form.exec(True)
+
+    # THEN: The preview should be resized to the current screen before rendering
+    theme_form.preview_area_layout.set_aspect_ratio.assert_called_once_with(1920 / 1080)
+    theme_form.preview_box.update_from_screen.assert_called_once_with(current_screen)
+    theme_form.refresh_preview.assert_called_once()
+
+
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_calculate_lines(mocked_setup, settings):
     """
@@ -235,6 +267,30 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     theme_form.preview_box.set_scale.assert_not_called()
 
 
+@patch('openlp.core.ui.themeform.QtWidgets.QDialog.exec', return_value=0)
+@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_shot, mocked_dialog_exec, settings):
+    """
+    Test that opening the dialog schedules a refresh after the dialog is shown.
+    """
+    # GIVEN: A ThemeForm instance with the minimum pieces needed for exec()
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock(theme_name='Theme Name')
+    theme_form.set_defaults = MagicMock()
+    theme_form.refresh_preview = MagicMock()
+    theme_form.theme_name_label = MagicMock()
+    theme_form.theme_name_edit = MagicMock()
+    theme_form.setWindowTitle = MagicMock()
+    theme_form.layout_guide_button = MagicMock()
+
+    # WHEN: The dialog is opened
+    theme_form.exec(True)
+
+    # THEN: A deferred refresh should be scheduled after the immediate render
+    mocked_single_shot.assert_called_once_with(0, theme_form.refresh_preview)
+
+
 @patch('openlp.core.ui.themeform.QtWidgets.QMessageBox.critical')
 @patch('openlp.core.ui.themeform.is_not_image_file')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -292,7 +348,7 @@ def test_on_current_id_changed_preview(mocked_setup, settings):
 
     # THEN: The right options should have been set
     theme_form.page_stack.setCurrentIndex.assert_called_once_with(1)
-    theme_form.refresh_preview.assert_called_once()
+    theme_form.refresh_preview.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')

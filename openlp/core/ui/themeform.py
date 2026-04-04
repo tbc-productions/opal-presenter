@@ -30,6 +30,7 @@ from openlp.core.common.enum import ServiceItemType
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
+from openlp.core.display.screens import ScreenList
 from openlp.core.lib.theme import BackgroundType
 from openlp.core.lib.ui import critical_error_message_box
 from openlp.core.ui.themewizard import Ui_ThemeWizard
@@ -190,9 +191,6 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if page_id < 0 or page_id >= self.page_stack.count():
             return
         self.page_stack.setCurrentIndex(page_id)
-        # Let the list selection paint before preview rendering work starts.
-        self.application.process_events()
-        self.refresh_preview()
 
     def on_toggle_layout_guide_clicked(self):
         """
@@ -233,6 +231,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme_name_edit.setVisible(not edit)
         self.edit_mode = edit
         self.layout_guides_visible = False
+        self._sync_preview_to_current_screen()
         self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Show layout guide'))
         if edit:
             self.setWindowTitle(translate('OpenLP.ThemeWizard', 'Edit Theme - {name}'
@@ -240,7 +239,25 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         else:
             self.setWindowTitle(UiStrings().NewTheme)
         self.refresh_preview()
+        QtCore.QTimer.singleShot(0, self.refresh_preview)
         return QtWidgets.QDialog.exec(self)
+
+    def _sync_preview_to_current_screen(self):
+        """
+        Make the preview widget match the current screen geometry before rendering.
+        """
+        try:
+            current_screen = ScreenList().current
+            screen_geometry = current_screen.display_geometry
+        except (AttributeError, IndexError):
+            return
+        if hasattr(self, 'preview_area_layout'):
+            try:
+                self.preview_area_layout.set_aspect_ratio(screen_geometry.width() / screen_geometry.height())
+            except ZeroDivisionError:
+                self.preview_area_layout.set_aspect_ratio(1)
+        if hasattr(self, 'preview_box'):
+            self.preview_box.update_from_screen(current_screen)
 
     def initializePage(self, page_id):
         """
