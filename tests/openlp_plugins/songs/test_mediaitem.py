@@ -151,10 +151,44 @@ def test_add_custom_context_actions(mocked_create_action: MagicMock, media_item:
     # THEN: Custom actions are added to the context menu
     assert mocked_create_action.call_args_list == [
         call(media_item.list_view, separator=True),
-        call(media_item.list_view, text='&Clone', icon=UiIcons().clone, triggers=media_item.on_clone_click),
-        call(media_item.list_view, text='Toggle Favourite', icon=UiIcons().favourite,
-             triggers=media_item.on_favourite_click)
+        call(media_item.list_view, text='&Clone', icon=UiIcons().clone, triggers=media_item.on_clone_click)
     ]
+
+
+@patch('openlp.plugins.songs.lib.mediaitem.SongListWidget')
+@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar')
+def test_add_list_view_to_toolbar_keeps_context_actions(mocked_base_add_list_view: MagicMock,
+                                                        mocked_song_list_widget: MagicMock,
+                                                        media_item: SongMediaItem):
+    """Test that the replacement song list keeps the context menu actions."""
+    # GIVEN: A source list widget with an action and a replacement list widget
+    old_list = MagicMock()
+    old_action = MagicMock()
+    old_list.actions.return_value = [old_action]
+    old_list.doubleClicked = MagicMock()
+    old_list.itemSelectionChanged = MagicMock()
+    old_list.customContextMenuRequested = MagicMock()
+    media_item.list_view = old_list
+    media_item.page_layout = MagicMock()
+    media_item.menu = MagicMock()
+    replacement_list = MagicMock()
+    replacement_list.actions.return_value = [old_action]
+    mocked_song_list_widget.return_value = replacement_list
+
+    def base_add_list_view_side_effect():
+        media_item.list_view = old_list
+
+    mocked_base_add_list_view.side_effect = base_add_list_view_side_effect
+
+    # WHEN: The Song list view is replaced
+    media_item.add_list_view_to_toolbar()
+
+    # THEN: The action should be moved to the new widget and repopulate the menu
+    old_list.removeAction.assert_called_once_with(old_action)
+    old_action.setParent.assert_called_once_with(replacement_list)
+    replacement_list.addAction.assert_called_once_with(old_action)
+    media_item.menu.clear.assert_called_once_with()
+    media_item.menu.addActions.assert_called_once_with(replacement_list.actions())
 
 
 def test_on_focus(media_item: SongMediaItem):
