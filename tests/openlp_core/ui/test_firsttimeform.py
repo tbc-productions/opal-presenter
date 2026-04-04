@@ -230,7 +230,7 @@ def test_set_defaults(mock_settings):
 
 
 @patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept')
-def test_accept_method(mocked_qwizard_accept):
+def test_accept_method(mocked_qwizard_accept, mock_settings):
     """
     Test the FirstTimeForm.accept method
     """
@@ -310,7 +310,7 @@ def test_reject_method(mocked_is_thread_finished, mocked_get_thread_worker,
 
 
 @patch('openlp.core.ui.firsttimeform.ProxyDialog')
-def test_on_custom_button_clicked(mocked_proxy_dialog):
+def test_on_custom_button_clicked(mocked_proxy_dialog, mock_settings):
     """
     Test _on_custom_button when it is called whe the 'internet settings' (CustomButton1) button is not clicked.
     """
@@ -325,7 +325,7 @@ def test_on_custom_button_clicked(mocked_proxy_dialog):
 
 
 @patch('openlp.core.ui.firsttimeform.ProxyDialog')
-def test_on_custom_button_clicked_internet_settings(mocked_proxy_dialog):
+def test_on_custom_button_clicked_internet_settings(mocked_proxy_dialog, mock_settings):
     """
     Test _on_custom_button when it is called when the 'internet settings' (CustomButton1) button is clicked.
     """
@@ -343,7 +343,7 @@ def test_on_custom_button_clicked_internet_settings(mocked_proxy_dialog):
 
 
 @patch('openlp.core.ui.firsttimeform.QtWidgets.QMessageBox')
-def test__parse_config_invalid_config(mocked_message_box):
+def test__parse_config_invalid_config(mocked_message_box, mock_settings):
     """
     Test `FirstTimeForm._parse_config` when called with invalid data
     """
@@ -573,6 +573,8 @@ def test_on_projectors_check_box_checked(mock_settings):
     # GIVEN: A First Time Wizard and a mocked settings object
     frw = FirstTimeForm(None)
     mock_settings.value.return_value = True
+    mock_settings.reset_mock()
+    mock_settings.value.return_value = True
 
     # WHEN: on_projectors_check_box_clicked() is called
     frw.on_projectors_check_box_clicked()
@@ -588,6 +590,8 @@ def test_on_projectors_check_box_unchecked(mock_settings):
     """
     # GIVEN: A First Time Wizard and a mocked settings object
     frw = FirstTimeForm(None)
+    mock_settings.value.return_value = False
+    mock_settings.reset_mock()
     mock_settings.value.return_value = False
 
     # WHEN: on_projectors_check_box_clicked() is called

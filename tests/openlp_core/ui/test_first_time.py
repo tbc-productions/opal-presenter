@@ -41,6 +41,6 @@ def test_webpage_connection_retry(mocked_requests, mock_settings):
         assert isinstance(e, ConnectionError)
 
     # THEN: urlopen should have been called CONNECTION_RETRIES + 1 count
-    assert mocked_requests.get.call_count == CONNECTION_RETRIES, \
+    assert mocked_requests.get.call_count == CONNECTION_RETRIES + 1, \
         'get should have been called {} times, but was only called {} times'.format(
-            CONNECTION_RETRIES, mocked_requests.get.call_count)
+            CONNECTION_RETRIES + 1, mocked_requests.get.call_count)

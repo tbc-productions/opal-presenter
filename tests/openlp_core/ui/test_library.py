@@ -49,6 +49,26 @@ class MockFolder:
             setattr(self, key, value)
 
 
+class MockTreeParent:
+    def removeChild(self, child):
+        self.child = child
+
+
+class MockTreeItem:
+    def __init__(self, item, parent=None):
+        self._item = item
+        self._parent = parent
+
+    def data(self, column, role):
+        return self._item
+
+    def text(self):
+        return ''
+
+    def parent(self):
+        return self._parent
+
+
 @pytest.fixture
 def folder_library_item(registry, settings):
     registry.register('main_window', MagicMock())
@@ -296,10 +316,7 @@ def test_on_delete_click_as_folder(mocked_question, mocked_sha256_file_hash, fol
     mocked_folder = MockFolder()
     mocked_folder.id = 1
     folder_library_item.service_path = Path()
-    mocked_row_item = MagicMock()
-    mocked_row_item.data.return_value = mocked_folder
-    mocked_row_item.text.return_value = ''
-    folder_library_item.list_view.selectedItems.return_value = [mocked_row_item]
+    folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder)]
     mocked_sha256_file_hash.return_value = 'abcd'
     mocked_question.return_value = QtWidgets.QMessageBox.Yes
 
@@ -325,10 +342,7 @@ def test_on_delete_click_as_folder_with_parent(mocked_question, mocked_sha256_fi
     mocked_folder.id = 1
     mocked_folder.parent_id = 1
     folder_library_item.service_path = Path()
-    mocked_row_item = MagicMock()
-    mocked_row_item.data.return_value = mocked_folder
-    mocked_row_item.text.return_value = ''
-    folder_library_item.list_view.selectedItems.return_value = [mocked_row_item]
+    folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder, MockTreeParent())]
     mocked_sha256_file_hash.return_value = 'abcd'
     mocked_question.return_value = QtWidgets.QMessageBox.Yes
 
