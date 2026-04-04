@@ -115,6 +115,12 @@ def test_setup(settings):
     theme_form.footer_area_page.wrap_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.line_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.letter_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.is_outline_enabled_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.outline_color_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.outline_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.is_shadow_enabled_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.shadow_color_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.shadow_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form._connect_live_preview_signals.assert_called_once_with()
 
 
@@ -162,6 +168,7 @@ def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, 
     theme_form.preview_box = MagicMock()
     theme_form.theme_name_label = MagicMock()
     theme_form.theme_name_edit = MagicMock()
+    theme_form.layout_guide_button = MagicMock()
     theme_form.setWindowTitle = MagicMock()
     current_screen = MagicMock()
     current_screen.display_geometry.width.return_value = 1920
@@ -172,10 +179,10 @@ def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, 
     # WHEN: The dialog is opened in edit mode
     theme_form.exec(True)
 
-    # THEN: The preview should be resized to the current screen before rendering
+    # THEN: The preview should be resized to the current screen and rendering should be deferred
     theme_form.preview_area_layout.set_aspect_ratio.assert_called_once_with(1920 / 1080)
     theme_form.preview_box.update_from_screen.assert_called_once_with(current_screen)
-    theme_form.refresh_preview.assert_called_once()
+    theme_form.refresh_preview.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -287,8 +294,31 @@ def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_sho
     # WHEN: The dialog is opened
     theme_form.exec(True)
 
-    # THEN: A deferred refresh should be scheduled after the immediate render
-    mocked_single_shot.assert_called_once_with(0, theme_form.refresh_preview)
+    # THEN: A deferred refresh should be scheduled after the dialog becomes visible
+    mocked_single_shot.assert_called_once_with(0, theme_form._refresh_preview_when_ready)
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_calculate_lines_is_suppressed_while_populating_page(mocked_setup, settings):
+    """
+    Test that calculate_lines() does not refresh the preview while page values are being populated.
+    """
+    # GIVEN: A ThemeForm instance that is currently filling in a page
+    theme_form = ThemeForm(None)
+    theme_form.can_update_theme = True
+    theme_form._updating_page_values = True
+    theme_form.update_theme = MagicMock()
+    theme_form.refresh_preview = MagicMock()
+    mocked_theme_manager = MagicMock()
+    Registry().register('theme_manager', mocked_theme_manager)
+
+    # WHEN: calculate_lines() is called
+    theme_form.calculate_lines()
+
+    # THEN: No preview work should be triggered
+    theme_form.update_theme.assert_not_called()
+    mocked_theme_manager.generate_image.assert_not_called()
+    theme_form.refresh_preview.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.QtWidgets.QMessageBox.critical')
@@ -504,7 +534,9 @@ def test_update_theme_static(mocked_setup, settings):
                                           is_shadow_enabled=True, shadow_color='#111', shadow_size=5, is_bold=True,
                                           is_italic=False, letter_spacing=2)
     theme_form.footer_area_page = MagicMock(font_name='Oxygen', font_color='#fff', font_size=20, wrap=False,
-                                            is_bold=False, is_italic=True, line_spacing=2, letter_spacing=-1)
+                                            is_bold=False, is_italic=True, line_spacing=2, letter_spacing=-1,
+                                            is_outline_enabled=True, outline_color='#0f0', outline_size=2,
+                                            is_shadow_enabled=True, shadow_color='#222', shadow_size=4)
     theme_form.alignment_page = MagicMock(horizontal_align='left', vertical_align='top', is_transition_enabled=True,
                                           transition_type='fade', transition_speed='normal',
                                           transition_direction='horizontal', is_transition_reverse_enabled=False)
@@ -540,6 +572,12 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.font_footer_override is False
     assert theme_form.theme.font_footer_line_adjustment == 2
     assert theme_form.theme.font_footer_letter_adjustment == -1
+    assert theme_form.theme.font_footer_outline is True
+    assert theme_form.theme.font_footer_outline_color == '#0f0'
+    assert theme_form.theme.font_footer_outline_size == 2
+    assert theme_form.theme.font_footer_shadow is True
+    assert theme_form.theme.font_footer_shadow_color == '#222'
+    assert theme_form.theme.font_footer_shadow_size == 4
     theme_form.theme.set_default_footer.assert_called_once_with()
     # Alignment
     assert theme_form.theme.display_horizontal_align == 'left'

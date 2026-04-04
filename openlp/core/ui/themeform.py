@@ -22,6 +22,7 @@
 The Theme wizard
 """
 import logging
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -34,6 +35,7 @@ from openlp.core.display.screens import ScreenList
 from openlp.core.lib.theme import BackgroundType
 from openlp.core.lib.ui import critical_error_message_box
 from openlp.core.ui.themewizard import Ui_ThemeWizard
+from openlp.core.widgets.dialogs import FileDialog
 
 
 log = logging.getLogger(__name__)
@@ -63,7 +65,11 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Set up the class. This method is mocked out by the tests.
         """
         self.setup_ui(self)
+        self.setMinimumSize(1100, 820)
         self.can_update_theme = True
+        self._updating_page_values = False
+        self._initial_preview_refresh_pending = False
+        self._applying_preview_layout_geometry = False
         self.temp_background_filename = None
         self._last_preview_scale = None
         self.layout_guides_visible = False
@@ -74,6 +80,16 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
                 self.preview_area_layout.set_aspect_ratio(1)
             self.preview_area_layout.resize.connect(self._on_preview_area_resized)
         self.layout_guide_button.clicked.connect(self.on_toggle_layout_guide_clicked)
+        self._update_layout_guide_button_tooltip(False)
+        if hasattr(self, 'refresh_preview_button'):
+            self.refresh_preview_button.clicked.connect(self.on_refresh_preview_clicked)
+        if hasattr(self, 'help_button'):
+            self.help_button.clicked.connect(self.provide_help)
+        if hasattr(self, 'export_theme_button'):
+            self.export_theme_button.clicked.connect(self.on_export_theme_clicked)
+            self.export_theme_button.setEnabled(False)
+        if hasattr(self, 'theme_name_edit'):
+            self.theme_name_edit.textChanged.connect(self.on_theme_name_changed)
         self.page_list_widget.currentRowChanged.connect(self.on_current_id_changed)
         Registry().register_function('theme_line_count', self.update_lines_text)
         self.main_area_page.font_name_changed.connect(self.calculate_lines)
@@ -97,6 +113,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.wrap_changed.connect(self.calculate_lines)
         self.footer_area_page.line_spacing_changed.connect(self.calculate_lines)
         self.footer_area_page.letter_spacing_changed.connect(self.calculate_lines)
+        self.footer_area_page.is_outline_enabled_changed.connect(self.calculate_lines)
+        self.footer_area_page.outline_color_changed.connect(self.calculate_lines)
+        self.footer_area_page.outline_size_changed.connect(self.calculate_lines)
+        self.footer_area_page.is_shadow_enabled_changed.connect(self.calculate_lines)
+        self.footer_area_page.shadow_color_changed.connect(self.calculate_lines)
+        self.footer_area_page.shadow_size_changed.connect(self.calculate_lines)
         self._connect_live_preview_signals()
 
     def provide_help(self):
@@ -121,7 +143,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         Calculate the number of lines on a page by rendering text
         """
-        if not self.can_update_theme:
+        if not self.can_update_theme or getattr(self, '_updating_page_values', False):
             return
         self.update_theme()
         self.theme_manager.generate_image(self.theme, True)
@@ -142,6 +164,17 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if not event:
             event = QtGui.QResizeEvent(self.size(), self.size())
         QtWidgets.QDialog.resizeEvent(self, event)
+
+    def showEvent(self, event):
+        """
+        Ensure preview layout and scaling are recomputed whenever the dialog is shown.
+        """
+        QtWidgets.QDialog.showEvent(self, event)
+        self._apply_preview_layout_geometry()
+        if getattr(self, '_initial_preview_refresh_pending', False):
+            QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
+        else:
+            QtCore.QTimer.singleShot(0, self._set_preview_scale)
 
     def validateCurrentPage(self):
         """
@@ -192,15 +225,67 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             return
         self.page_stack.setCurrentIndex(page_id)
 
-    def on_toggle_layout_guide_clicked(self):
+    def on_toggle_layout_guide_clicked(self, is_checked=False):
         """
         Toggle the layout guide overlay in the preview.
         """
-        self.layout_guides_visible = not self.layout_guides_visible
-        button_text = translate('OpenLP.ThemeWizard', 'Hide layout guide') if self.layout_guides_visible else \
-            translate('OpenLP.ThemeWizard', 'Show layout guide')
-        self.layout_guide_button.setText(button_text)
+        self.layout_guides_visible = bool(is_checked)
+        self._update_layout_guide_button_tooltip(self.layout_guides_visible)
         self.update_layout_guide_overlay()
+
+    def on_refresh_preview_clicked(self):
+        """
+        Manually refresh the preview slide rendering.
+        """
+        self.refresh_preview()
+
+    def _update_layout_guide_button_tooltip(self, is_enabled):
+        """
+        Update tooltip text for the layout guide toggle button.
+        """
+        tooltip = translate('OpenLP.ThemeWizard', 'Hide layout guide') if is_enabled else \
+            translate('OpenLP.ThemeWizard', 'Show layout guide')
+        self.layout_guide_button.setToolTip(tooltip)
+
+    def on_export_theme_clicked(self):
+        """
+        Export the currently named theme using the same flow as Theme Manager export.
+        """
+        theme_name = self.theme_name_edit.text().strip()
+        if not theme_name:
+            critical_error_message_box(
+                translate('OpenLP.ThemeWizard', 'Theme Name Missing'),
+                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'))
+            return
+        last_export_directory = self.settings.value('themes/last directory export')
+        if not last_export_directory:
+            default_export_path = Path('{name}.otz'.format(name=theme_name))
+        else:
+            last_export_directory = Path(last_export_directory)
+            default_export_path = last_export_directory / '{name}.otz'.format(name=theme_name)
+        export_path, filter_used = FileDialog.getSaveFileName(
+            self,
+            translate('OpenLP.ThemeManager', 'Save Theme - ({name})').format(name=theme_name),
+            default_export_path,
+            translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'),
+            translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+        self.application.set_busy_cursor()
+        if export_path:
+            self.settings.setValue('themes/last directory export', export_path.parent)
+            if self.theme_manager._export_theme(export_path.with_suffix('.otz'), theme_name):
+                QtWidgets.QMessageBox.information(
+                    self,
+                    translate('OpenLP.ThemeManager', 'Theme Exported'),
+                    translate('OpenLP.ThemeManager', '{name} theme has been successfully exported.')
+                    .format(name=theme_name))
+        self.application.set_normal_cursor()
+
+    def on_theme_name_changed(self, theme_name):
+        """
+        Enable export only when a non-empty theme name is entered.
+        """
+        if hasattr(self, 'export_theme_button'):
+            self.export_theme_button.setEnabled(bool(str(theme_name).strip()))
 
     def on_outline_toggled(self, is_enabled):
         """
@@ -225,21 +310,24 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         log.debug('Editing theme {name}'.format(name=self.theme.theme_name))
         self.temp_background_filename = self.theme.background_source
         self.can_update_theme = False
+        if hasattr(self, 'preview_box'):
+            self.preview_box.set_scale(1)
         self.set_defaults()
         self.can_update_theme = True
-        self.theme_name_label.setVisible(not edit)
-        self.theme_name_edit.setVisible(not edit)
         self.edit_mode = edit
         self.layout_guides_visible = False
+        self._last_preview_scale = None
         self._sync_preview_to_current_screen()
-        self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Show layout guide'))
+        self._apply_preview_layout_geometry()
+        self.layout_guide_button.setChecked(False)
+        self._update_layout_guide_button_tooltip(False)
         if edit:
             self.setWindowTitle(translate('OpenLP.ThemeWizard', 'Edit Theme - {name}'
                                           ).format(name=self.theme.theme_name))
         else:
             self.setWindowTitle(UiStrings().NewTheme)
-        self.refresh_preview()
-        QtCore.QTimer.singleShot(0, self.refresh_preview)
+        self._initial_preview_refresh_pending = True
+        QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
         return QtWidgets.QDialog.exec(self)
 
     def _sync_preview_to_current_screen(self):
@@ -264,17 +352,21 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Set up values for the selected page.
         """
         log.debug('initializePage {page}'.format(page=page_id))
+        self._updating_page_values = True
         wizard_page = self.page_stack.widget(page_id)
-        if wizard_page == self.background_page:
-            self.set_background_page_values()
-        elif wizard_page == self.main_area_page:
-            self.set_main_area_page_values()
-        elif wizard_page == self.footer_area_page:
-            self.set_footer_area_page_values()
-        elif wizard_page == self.alignment_page:
-            self.set_alignment_page_values()
-        elif wizard_page == self.area_position_page:
-            self.set_position_page_values()
+        try:
+            if wizard_page == self.background_page:
+                self.set_background_page_values()
+            elif wizard_page == self.main_area_page:
+                self.set_main_area_page_values()
+            elif wizard_page == self.footer_area_page:
+                self.set_footer_area_page_values()
+            elif wizard_page == self.alignment_page:
+                self.set_alignment_page_values()
+            elif wizard_page == self.area_position_page:
+                self.set_position_page_values()
+        finally:
+            self._updating_page_values = False
 
     def _connect_live_preview_signals(self):
         """
@@ -318,27 +410,86 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         if not hasattr(self, 'preview_box'):
             return
-        self._set_preview_scale()
+        self._initial_preview_refresh_pending = False
         self.preview_box.clear_slides()
         self.preview_box.show()
         self.preview_box.generate_preview(self.theme, False, False)
+        QtCore.QTimer.singleShot(0, self._set_preview_scale)
         self.update_layout_guide_overlay()
 
-    def _on_preview_area_resized(self, _size):
+    def _refresh_preview_when_ready(self):
+        """
+        Refresh the preview once the preview widget has a usable size.
+        """
+        if not getattr(self, '_initial_preview_refresh_pending', False) or not hasattr(self, 'preview_box'):
+            return
+        self._apply_preview_layout_geometry()
+        renderer = getattr(self, 'renderer', None)
+        if renderer is None:
+            QtCore.QTimer.singleShot(25, self._refresh_preview_when_ready)
+            return
+        try:
+            preview_width = self._get_preview_viewport_width()
+            renderer_width = int(renderer.width())
+        except (TypeError, ValueError):
+            QtCore.QTimer.singleShot(25, self._refresh_preview_when_ready)
+            return
+        if preview_width <= 0 or renderer_width <= 0:
+            QtCore.QTimer.singleShot(25, self._refresh_preview_when_ready)
+            return
+        self.refresh_preview()
+
+    def _on_preview_area_resized(self, size):
         """
         Keep preview content scaled to the preview viewport.
         """
-        self._set_preview_scale()
+        if self._applying_preview_layout_geometry:
+            return
+        if self._initial_preview_refresh_pending:
+            self._refresh_preview_when_ready()
+            return
+        self._set_preview_scale(size.width())
         self.update_layout_guide_overlay()
 
-    def _set_preview_scale(self):
+    def _apply_preview_layout_geometry(self):
+        """
+        Force the aspect-ratio layout to place the preview widget using the current dialog geometry.
+        """
+        if not hasattr(self, 'preview_area_layout') or not hasattr(self, 'preview_area'):
+            return
+        if self._applying_preview_layout_geometry:
+            return
+        self._applying_preview_layout_geometry = True
+        try:
+            self.preview_area_layout.setGeometry(self.preview_area.contentsRect())
+        finally:
+            self._applying_preview_layout_geometry = False
+
+    def _get_preview_viewport_width(self):
+        """
+        Get the width allocated by the preview aspect-ratio layout.
+        """
+        if hasattr(self, 'preview_area_layout'):
+            item = self.preview_area_layout.itemAt(0)
+            if item is not None:
+                width = int(item.geometry().width())
+                if width > 0:
+                    return width
+        if hasattr(self, 'preview_box'):
+            return int(self.preview_box.width())
+        return 0
+
+    def _set_preview_scale(self, preview_width=None):
         """
         Compute and apply a stable preview scale from the current preview width.
         """
         renderer_width = self.renderer.width()
         if renderer_width <= 0:
             return
-        scale = float(self.preview_box.width()) / float(renderer_width)
+        if preview_width is None:
+            self._apply_preview_layout_geometry()
+            preview_width = self._get_preview_viewport_width()
+        scale = float(preview_width) / float(renderer_width)
         if scale <= 0:
             return
         if self._last_preview_scale is None or abs(scale - self._last_preview_scale) > 0.01:
@@ -429,6 +580,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.wrap = self.theme.font_footer_wrap
         self.footer_area_page.line_spacing = self.theme.font_footer_line_adjustment
         self.footer_area_page.letter_spacing = self.theme.font_footer_letter_adjustment
+        self.footer_area_page.is_outline_enabled = self.theme.font_footer_outline
+        self.footer_area_page.outline_color = self.theme.font_footer_outline_color
+        self.footer_area_page.outline_size = self.theme.font_footer_outline_size
+        self.footer_area_page.is_shadow_enabled = self.theme.font_footer_shadow
+        self.footer_area_page.shadow_color = self.theme.font_footer_shadow_color
+        self.footer_area_page.shadow_size = self.theme.font_footer_shadow_size
 
     def set_position_page_values(self):
         """
@@ -466,6 +623,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Handle the display and state of the Preview page.
         """
         self.theme_name_edit.setText(self.theme.theme_name)
+        self.on_theme_name_changed(self.theme.theme_name)
         self.preview_box.set_theme(self.theme, service_item_type=ServiceItemType.Text)
 
     def update_theme(self):
@@ -520,6 +678,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.font_footer_wrap = self.footer_area_page.wrap
         self.theme.font_footer_line_adjustment = self.footer_area_page.line_spacing
         self.theme.font_footer_letter_adjustment = self.footer_area_page.letter_spacing
+        self.theme.font_footer_outline = self.footer_area_page.is_outline_enabled
+        self.theme.font_footer_outline_color = self.footer_area_page.outline_color
+        self.theme.font_footer_outline_size = self.footer_area_page.outline_size
+        self.theme.font_footer_shadow = self.footer_area_page.is_shadow_enabled
+        self.theme.font_footer_shadow_size = self.footer_area_page.shadow_size
+        self.theme.font_footer_shadow_color = self.footer_area_page.shadow_color
         # position page (main)
         self.theme.font_main_override = not self.area_position_page.use_main_default_location
         if self.theme.font_main_override:
@@ -561,12 +725,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if not self.theme.theme_name:
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Missing'),
-                translate('OpenLP.ThemeWizard', 'There is no name for this theme. Please enter one.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'))
             return
         if self.theme.theme_name == '-1' or self.theme.theme_name == 'None':
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Invalid'),
-                translate('OpenLP.ThemeWizard', 'Invalid theme name. Please enter one.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a valid theme name.'))
             return
         destination_path = None
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Image) or \
