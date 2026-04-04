@@ -102,6 +102,13 @@ class DisplayWatcher(QtCore.QObject):
         if event_name in permanent_dispatch_events:
             permanent_dispatch_events[event_name](event_data)
 
+    @QtCore.Slot(str)
+    def debugLog(self, message):
+        """
+        Called from the JS in the webengine view to write diagnostics to the OpenLP log.
+        """
+        log.info('Display JS: {message}'.format(message=message))
+
     def register_event_listener(self, event_name, callback, transient=True):
         """
         Register an event listener from webengine view
@@ -187,6 +194,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.webview.page().setWebChannel(self.channel)
         self.display_watcher.initialised.connect(self.on_initialised)
         self.display_watcher.register_event_listener("runJavascriptCallback", self.handle_javascript_result, False)
+        self.display_watcher.register_event_listener('transition_debug', self.handle_transition_debug, False)
         self.openlp_splash_screen_path = 'openlp://display/openlp-splash-screen.png'
         # Using custom display if provided
         if Registry().has('display_custom_url') and Registry().get('display_custom_url') is not None:
@@ -368,6 +376,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
+                            'allowThemeTransitions': getattr(self, 'allow_theme_transitions', False),
                             'doItemTransitions': item_transitions,
                             'itemTransitionSpeed': item_transition_speed,
                             'itemTransitionType': item_transition_type,
@@ -439,6 +448,20 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         self.__script_result = result
         self.__script_done = True
+
+    def handle_transition_debug(self, event_data):
+        """
+        Handle transition diagnostics dispatched from display.js.
+        """
+        if hasattr(event_data, 'toVariant'):
+            payload = event_data.toVariant()
+        else:
+            payload = event_data
+        try:
+            payload_text = json.dumps(payload, sort_keys=True)
+        except TypeError:
+            payload_text = str(payload)
+        log.warning('Display transition debug: {data}'.format(data=payload_text))
 
     def go_to_slide(self, verse):
         """

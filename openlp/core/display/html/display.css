@@ -170,7 +170,6 @@ body.transition .reveal .slide-background {
   padding: 0 !important;
   margin: 0 !important;
   max-height: none;
-  transform: none !important;
   top: var(--theme-main-top, 0px) !important;
   left: var(--theme-main-left, 0px) !important;
   width: var(--theme-main-width, 100%) !important;
@@ -524,3 +523,39 @@ section.text-slides.stack.present {
 
 .reveal[class*=fade].overview .slides section {
   transition: none; }
+
+/*
+ * Fallback enforcement for QtWebEngine cases where transform can resolve to "none"
+ * even when Reveal has applied transition classes.
+ */
+.reveal.slide .slides > section > section.past {
+  transform: translate(0, -150%) !important;
+}
+
+.reveal.slide .slides > section > section.future {
+  transform: translate(0, 150%) !important;
+}
+
+.reveal.convex .slides > section > section.past {
+  transform: translate3d(0, -300px, 0) rotateX(70deg) translate3d(0, -300px, 0) !important;
+}
+
+.reveal.convex .slides > section > section.future {
+  transform: translate3d(0, 300px, 0) rotateX(-70deg) translate3d(0, 300px, 0) !important;
+}
+
+.reveal.concave .slides > section > section.past {
+  transform: translate3d(0, -80%, 0) rotateX(-70deg) translate3d(0, -80%, 0) !important;
+}
+
+.reveal.concave .slides > section > section.future {
+  transform: translate3d(0, 80%, 0) rotateX(70deg) translate3d(0, 80%, 0) !important;
+}
+
+.reveal.zoom .slides > section > section.past {
+  transform: scale(16) !important;
+}
+
+.reveal.zoom .slides > section > section.future {
+  transform: scale(0.2) !important;
+}
