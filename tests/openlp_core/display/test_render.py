@@ -339,3 +339,33 @@ def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi
         preview_renderer.webview.render.assert_called_once_with(mocked_pixmap)
         preview_renderer.grab.assert_not_called()
         assert result == mocked_pixmap
+
+
+@patch('openlp.core.display.render.wait_for')
+@patch('openlp.core.display.render.ThemePreviewRenderer.grab')
+@patch('openlp.core.display.render.ThemePreviewRenderer.load_verses')
+@patch('openlp.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
+@patch('openlp.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
+@patch('openlp.core.display.render.ThemePreviewRenderer.set_theme')
+def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mocked_format_slide,
+                                                          mocked_generate_footer, mocked_load_verses,
+                                                          mocked_grab, mocked_wait_for, settings):
+    """
+    Test that generate_preview() does not add an artificial timeout wait.
+    """
+    # GIVEN: A preview renderer with the pieces needed to render a preview
+    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    preview_renderer.force_page = False
+
+    # WHEN: The preview is generated
+    preview_renderer.generate_preview(MagicMock(), generate_screenshot=True)
+
+    # THEN: Only the real rendering work should occur
+    mocked_set_theme.assert_called_once()
+    mocked_format_slide.assert_called_once()
+    mocked_generate_footer.assert_called_once()
+    mocked_load_verses.assert_called_once()
+    mocked_grab.assert_called_once()
+    mocked_wait_for.assert_not_called()

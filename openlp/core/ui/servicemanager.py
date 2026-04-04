@@ -2077,14 +2077,19 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Send the current item to the Preview slide controller
         """
         self.application.set_busy_cursor()
-        item, child = self.find_service_item()
-        if self.service_items[item]['service_item'].is_valid:
-            self.preview_controller.add_service_manager_item(self.service_items[item]['service_item'], child)
-        else:
-            critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),
-                                       translate('OpenLP.ServiceManager',
-                                                 'Your item cannot be displayed as there is no handler to display it'))
-        self.application.set_normal_cursor()
+        try:
+            item, child = self.find_service_item()
+            if item < 0 or item >= len(self.service_items):
+                return
+            if self.service_items[item]['service_item'].is_valid:
+                self.preview_controller.add_service_manager_item(self.service_items[item]['service_item'], child)
+            else:
+                critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),
+                                           translate('OpenLP.ServiceManager',
+                                                     'Your item cannot be displayed as there is no handler to display '
+                                                     'it'))
+        finally:
+            self.application.set_normal_cursor()
 
     def get_service_item(self):
         """
@@ -2133,7 +2138,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         item, child = self.find_service_item()
         # No items in service
-        if item == -1:
+        if item == -1 or item >= len(self.service_items):
             return
         if row != -1:
             child = row

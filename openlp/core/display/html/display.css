@@ -43,6 +43,10 @@ body,
   z-index: 2;
 }
 
+.reveal {
+  position: relative;
+}
+
 body.transition,
 body.transition .reveal .slides,
 body.transition .reveal .footer {
@@ -112,16 +116,23 @@ body.transition #logo-screen {
   opacity: 0;
 }
 
-.reveal .slide-background.use-background-image,
-.reveal .slide-background[data-background-size="contain"] {
-  background-color: #000 !important;
+#layout-guide-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  display: none;
 }
 
-.reveal .slide-background.use-background-image .slide-background-content,
-.reveal .slide-background[data-background-size="contain"] .slide-background-content {
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: 50% 50% !important;
+#layout-guide-overlay.show-guides {
+  display: block;
+}
+
+#layout-guide-main,
+#layout-guide-footer {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid transparent;
 }
 
 body.presentation-slide-transition .reveal .slides section[data-transition=fade],
@@ -146,6 +157,23 @@ body.transition .reveal .slide-background {
   display: flex !important;
   flex-direction: column;
   word-wrap: break-word;
+}
+
+.reveal .slides > section.text-slides {
+  position: relative;
+  padding: 0 !important;
+}
+
+.reveal .slides > section.text-slides > section {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 0 !important;
+  margin: 0 !important;
+  max-height: none;
+  top: var(--theme-main-top, 0px) !important;
+  left: var(--theme-main-left, 0px) !important;
+  width: var(--theme-main-width, 100%) !important;
+  height: var(--theme-main-height, auto) !important;
 }
 
 .reveal .slides > section p {
@@ -495,3 +523,39 @@ section.text-slides.stack.present {
 
 .reveal[class*=fade].overview .slides section {
   transition: none; }
+
+/*
+ * Fallback enforcement for QtWebEngine cases where transform can resolve to "none"
+ * even when Reveal has applied transition classes.
+ */
+.reveal.slide .slides > section > section.past {
+  transform: translate(0, -150%) !important;
+}
+
+.reveal.slide .slides > section > section.future {
+  transform: translate(0, 150%) !important;
+}
+
+.reveal.convex .slides > section > section.past {
+  transform: translate3d(0, -300px, 0) rotateX(70deg) translate3d(0, -300px, 0) !important;
+}
+
+.reveal.convex .slides > section > section.future {
+  transform: translate3d(0, 300px, 0) rotateX(-70deg) translate3d(0, 300px, 0) !important;
+}
+
+.reveal.concave .slides > section > section.past {
+  transform: translate3d(0, -80%, 0) rotateX(-70deg) translate3d(0, -80%, 0) !important;
+}
+
+.reveal.concave .slides > section > section.future {
+  transform: translate3d(0, 80%, 0) rotateX(70deg) translate3d(0, 80%, 0) !important;
+}
+
+.reveal.zoom .slides > section > section.past {
+  transform: scale(16) !important;
+}
+
+.reveal.zoom .slides > section > section.future {
+  transform: scale(0.2) !important;
+}

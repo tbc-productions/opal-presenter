@@ -26,6 +26,8 @@ import logging
 import os
 import copy
 import re
+from pathlib import Path
+from urllib.parse import unquote
 
 from PySide6 import QtCore, QtWebChannel, QtWidgets
 
@@ -43,6 +45,14 @@ from openlp.core.ui import HideMode
 FONT_FOUNDRY = re.compile(r'(.*?) \[(.*?)\]')
 TRANSITION_END_EVENT_NAME = 'transparent_transition_end'
 log = logging.getLogger(__name__)
+
+
+def _path_to_file_uri(image_path):
+    """
+    Convert a path-like object to a file URI, normalizing any percent-encoded path fragments first.
+    """
+    normalized_path = Path(unquote(path_to_str(image_path)))
+    return normalized_path.as_uri()
 
 
 class DisplayWatcher(QtCore.QObject):
@@ -91,6 +101,13 @@ class DisplayWatcher(QtCore.QObject):
             event(event_data)
         if event_name in permanent_dispatch_events:
             permanent_dispatch_events[event_name](event_data)
+
+    @QtCore.Slot(str)
+    def debugLog(self, message):
+        """
+        Called from the JS in the webengine view to write diagnostics to the OpenLP log.
+        """
+        log.info('Display JS: {message}'.format(message=message))
 
     def register_event_listener(self, event_name, callback, transient=True):
         """
@@ -177,6 +194,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.webview.page().setWebChannel(self.channel)
         self.display_watcher.initialised.connect(self.on_initialised)
         self.display_watcher.register_event_listener("runJavascriptCallback", self.handle_javascript_result, False)
+        self.display_watcher.register_event_listener('transition_debug', self.handle_transition_debug, False)
         self.openlp_splash_screen_path = 'openlp://display/openlp-splash-screen.png'
         # Using custom display if provided
         if Registry().has('display_custom_url') and Registry().get('display_custom_url') is not None:
@@ -282,7 +300,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.showFullScreen()
 
     def set_background_image(self, image_path):
-        image_uri = image_path.as_uri()
+        image_uri = _path_to_file_uri(image_path)
         self.run_in_display('setBackgroundImage', image_uri)
 
     def set_single_image(self, bg_color, image_path):
@@ -290,7 +308,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         :param str bg_color: Background color
         :param Path image_path: Path to the image
         """
-        image_uri = image_path.as_uri()
+        image_uri = _path_to_file_uri(image_path)
         self.run_in_display('setFullscreenImage', bg_color, image_uri)
 
     def set_single_image_data(self, bg_color, image_data):
@@ -309,7 +327,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             image_uri = self.openlp_splash_screen_path
         else:
             try:
-                image_uri = image.as_uri().replace('file://', 'openlp-library://local-file/')
+                image_uri = _path_to_file_uri(image).replace('file://', 'openlp-library://local-file/')
             except Exception:
                 image_uri = ''
         if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):
@@ -358,6 +376,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
+                            'allowThemeTransitions': getattr(self, 'allow_theme_transitions', False),
                             'doItemTransitions': item_transitions,
                             'itemTransitionSpeed': item_transition_speed,
                             'itemTransitionType': item_transition_type,
@@ -429,6 +448,20 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         self.__script_result = result
         self.__script_done = True
+
+    def handle_transition_debug(self, event_data):
+        """
+        Handle transition diagnostics dispatched from display.js.
+        """
+        if hasattr(event_data, 'toVariant'):
+            payload = event_data.toVariant()
+        else:
+            payload = event_data
+        try:
+            payload_text = json.dumps(payload, sort_keys=True)
+        except TypeError:
+            payload_text = str(payload)
+        log.warning('Display transition debug: {data}'.format(data=payload_text))
 
     def go_to_slide(self, verse):
         """

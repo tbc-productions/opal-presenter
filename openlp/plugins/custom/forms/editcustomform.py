@@ -62,12 +62,15 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         self.slide_list_view.doubleClicked.connect(self.on_edit_button_clicked)
         Registry().register_function('theme_update_list', self.load_themes)
 
-    def load_themes(self, theme_list):
+    def load_themes(self, theme_list=None):
         """
         Load a list of themes into the themes combo box.
 
         :param theme_list: The list of themes to load.
         """
+        if theme_list is None:
+            theme_manager = Registry().get('theme_manager')
+            theme_list = theme_manager.get_theme_names() if theme_manager else []
         self.theme_combo_box.clear()
         self.theme_combo_box.addItem('')
         self.theme_combo_box.addItems(theme_list)

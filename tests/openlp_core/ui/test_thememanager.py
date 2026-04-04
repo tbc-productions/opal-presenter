@@ -73,6 +73,52 @@ def test_initial_theme_manager(theme_manager: ThemeManager):
     assert Registry().get('theme_manager') is not None, 'The base theme manager should be registered'
 
 
+def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManager):
+    """
+    Test that screen changes refresh theme thumbnails and the open edit preview.
+    """
+    # GIVEN: A theme manager with cached themes and mock refresh hooks
+    theme_one = MagicMock()
+    theme_two = MagicMock()
+    theme_manager._theme_list = {'theme1': theme_one, 'theme2': theme_two}
+    theme_manager._thumbnail_dimensions = MagicMock()
+    theme_manager._get_current_screen = MagicMock(return_value=None)
+    theme_manager._get_screen_dimensions = MagicMock(return_value='different-size')
+    theme_manager.update_preview_images = MagicMock()
+    theme_manager.theme_form = MagicMock()
+
+    # WHEN: The screen changes
+    theme_manager.screen_changed()
+
+    # THEN: Cached theme defaults should be recalculated and previews refreshed
+    theme_one.set_default_header_footer.assert_called_once_with()
+    theme_two.set_default_header_footer.assert_called_once_with()
+    theme_manager.update_preview_images.assert_called_once_with()
+    theme_manager.theme_form.refresh_preview.assert_called_once_with()
+
+
+def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_manager: ThemeManager):
+    """
+    Test that screen changes do not refresh thumbnails when the screen dimensions are unchanged.
+    """
+    # GIVEN: A theme manager with cached themes and matching dimensions
+    theme_one = MagicMock()
+    theme_manager._theme_list = {'theme1': theme_one}
+    theme_manager._thumbnail_dimensions = 'same-size'
+    theme_manager._get_current_screen = MagicMock(return_value=None)
+    theme_manager._get_screen_dimensions = MagicMock(return_value='same-size')
+    theme_manager.update_preview_images = MagicMock()
+    theme_manager.theme_form = MagicMock()
+
+    # WHEN: The screen changes
+    theme_manager.screen_changed()
+
+    # THEN: The theme defaults should still be updated, but thumbnails should not be rebuilt
+    theme_one.set_default_header_footer.assert_called_once_with()
+    theme_manager.update_preview_images.assert_not_called()
+    theme_manager.theme_form.refresh_preview.assert_called_once_with()
+
+
 @patch('openlp.core.ui.thememanager.Theme')
 def test_get_global_theme(mocked_theme: MagicMock, theme_manager: ThemeManager):
     """
@@ -395,28 +441,33 @@ def test_unzip_theme_invalid_version(theme_manager: ThemeManager):
 
 def test_update_preview_images(theme_manager: ThemeManager):
     """
-    Test that the update_preview_images() method works correctly
+    Test that the update_preview_images() method starts the thumbnail worker.
     """
-    # GIVEN: A ThemeManager
-    def get_theme_data(value):
-        return '{}_theme_data'.format(value)
-    theme_manager.save_preview = MagicMock()
-    theme_manager._get_theme_data = Mock(side_effect=get_theme_data)
-    theme_manager.progress_form = MagicMock(**{'get_preview.return_value': 'preview'})
-    theme_manager.load_themes = MagicMock()
-    theme_list = {'Default': get_theme_data('Default'), 'Test': get_theme_data('Test')}
+    # GIVEN: A ThemeManager and a fake worker
+    theme_manager.get_theme_names = MagicMock(return_value=['Default', 'Test'])
+    worker = MagicMock()
+    worker.thumbnail_requested = MagicMock()
+    worker.thumbnail_requested.connect = MagicMock()
+    worker.status_changed = MagicMock()
+    worker.status_changed.connect = MagicMock()
+    worker.finished = MagicMock()
+    worker.finished.connect = MagicMock()
+    worker.quit = MagicMock()
+    worker.quit.emit = MagicMock()
 
-    # WHEN: ThemeManager.update_preview_images() is called
-    theme_manager.update_preview_images(theme_list)
+    with patch('openlp.core.ui.thememanager.ThemeThumbnailRefreshWorker', return_value=worker) as mocked_worker, \
+            patch('openlp.core.ui.thememanager.run_thread') as mocked_run_thread:
 
-    # THEN: Things should work right
-    assert theme_manager.progress_form.theme_list == theme_list
-    theme_manager.progress_form.show.assert_called_once_with()
-    assert theme_manager.progress_form.get_preview.call_args_list == [call('Default', get_theme_data('Default')),
-                                                                      call('Test', get_theme_data('Test'))]
-    assert theme_manager.save_preview.call_args_list == [call('Default', 'preview'), call('Test', 'preview')]
-    theme_manager.progress_form.close.assert_called_once_with()
-    theme_manager.load_themes.assert_called_once_with()
+        # WHEN: ThemeManager.update_preview_images() is called
+        theme_manager.update_preview_images()
+
+    # THEN: The worker should be started and connected correctly
+    mocked_worker.assert_called_once_with(['Default', 'Test'])
+    worker.thumbnail_requested.connect.assert_called_once_with(theme_manager._refresh_thumbnail_for_theme)
+    worker.status_changed.connect.assert_called_once_with(theme_manager._set_thumbnail_status)
+    assert worker.finished.connect.call_args_list == [call(theme_manager._thumbnail_refresh_finished),
+                                                      call(worker.quit.emit)]
+    mocked_run_thread.assert_called_once_with(worker, 'theme_thumbnail_refresh')
 
 
 def test_theme_manager_initialise(theme_manager):
@@ -483,17 +534,20 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     theme_manager.theme_path = MagicMock()
     theme_manager.load_themes = MagicMock()
     theme_manager.upgrade_themes = MagicMock()
+    theme_manager._get_screen_dimensions = MagicMock(return_value='screen-size')
+    theme_manager._get_current_screen = MagicMock(return_value=None)
+    theme_manager.update_preview_images = MagicMock()
 
     # WHEN:
-    with patch('openlp.core.ui.thememanager.ThemeProgressForm'):
-        theme_manager.bootstrap_post_set_up()
+    theme_manager.bootstrap_post_set_up()
 
     # THEN:
-    assert theme_manager.progress_form is not None
     assert theme_manager.theme_form is not None
     assert theme_manager.file_rename_form is not None
+    assert theme_manager._thumbnail_dimensions == 'screen-size'
     theme_manager.upgrade_themes.assert_called_once()
     theme_manager.load_themes.assert_called_once()
+    theme_manager.update_preview_images.assert_called_once_with()
 
 
 @patch('openlp.core.lib.theme.Theme.set_default_header')

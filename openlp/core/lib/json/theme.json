@@ -5,6 +5,7 @@
         "direction": "vertical",
         "end_color": "#000000",
         "filename": null,
+        "fit": "cover",
         "start_color": "#000000",
         "type": "solid"
     },

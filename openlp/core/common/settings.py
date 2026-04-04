@@ -365,6 +365,7 @@ class Settings(QtCore.QSettings):
         'core/last version test': '',
         'core/live preview shows blank screen': False,
         'core/live preview shows presentation screen': False,
+        'core/live preview shows slide transitions': False,
         'core/loop delay': 5,
         'core/recent files': [],
         'core/screens': '{}',

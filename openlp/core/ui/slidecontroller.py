@@ -417,6 +417,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.slide_layout.setObjectName('SlideLayout')
         # Set up the preview display
         self.preview_display = DisplayWindow(self, window_title='Live' if self.is_live else 'Preview')
+        # Live preview always shows transitions; service preview shows transitions based on setting
+        # Check window_title since is_live might not be finalized yet for subclasses
+        if self.preview_display.window_title == 'Live':
+            self.preview_display.allow_theme_transitions = True
+        else:
+            self.preview_display.allow_theme_transitions = self.settings.value('core/live preview shows slide transitions')
         self.slide_layout.addWidget(self.preview_display)
         self.slide_layout.resize.connect(self.on_preview_resize)
         # Actual preview screen
@@ -477,6 +483,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                      self.on_slide_unblank)
         Registry().register_function('slidecontroller_update_slide_limits', self.update_slide_limits)
         Registry().register_function('slidecontroller_preview_display_show_display', self.preview_display.show_display)
+        Registry().register_function('slidecontroller_update_preview_transitions', self._update_preview_transitions)
         getattr(self, 'slidecontroller_{text}_set'.format(text=self.type_prefix)).connect(self.on_slide_selected_index)
         getattr(self, 'slidecontroller_{text}_next'.format(text=self.type_prefix)).connect(self.on_slide_selected_next)
         # NOTE: {} used to keep line length < maxline
@@ -723,6 +730,17 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Updates the Slide Limits variable from the settings.
         """
         self.slide_limits = self.settings.value('advanced/slide limits')
+
+    def _update_preview_transitions(self):
+        """
+        Updates the preview display transitions setting when settings change.
+        Only applies to service (non-live) preview displays.
+        """
+        if not self.is_live and self.preview_display and self.preview_display._is_initialised:
+            new_value = self.settings.value('core/live preview shows slide transitions')
+            self.preview_display.allow_theme_transitions = new_value
+            # Update JavaScript side to reapply the theme with new transition setting
+            self.preview_display.run_in_display('setAllowThemeTransitions', new_value)
 
     def enable_tool_bar(self, item):
         """

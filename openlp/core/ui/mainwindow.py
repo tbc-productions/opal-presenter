@@ -1559,4 +1559,4 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.log_info("File name found")
             self.service_manager_contents.load_file(file_path)
         else:
-            self.log_error(f"File {file_path} not found for arg {args}")
+            self.log_debug(f"File {file_path} not found for arg {args}")
