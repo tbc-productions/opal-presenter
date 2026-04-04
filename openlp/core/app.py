@@ -523,12 +523,6 @@ def main():
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     # Doing HiDPI adjustments that need to be done after QCoreApplication instantiation.
     apply_dpi_adjustments_stage_application(hidpi_mode, application)
-    if is_win() and application.devicePixelRatio() > 1.0:
-        # Increasing font size to match pixel ratio (Windows only)
-        font = application.font()
-        # font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
-        font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
-        application.setFont(font)
     verbose = getattr(args, 'verbose', False)
     cache_path = portable_path / 'Other' if args.portable else AppLocation.get_directory(AppLocation.CacheDir)
     set_up_logging(cache_path, verbose)
