@@ -167,11 +167,13 @@ def test_cmd_line_arg_not_service_file(main_window):
     args = ['run_openlp.py']
 
     # WHEN the argument is processed
-    with patch.object(main_window.service_manager, 'load_file') as mocked_load_file:
+    with patch.object(main_window.service_manager, 'load_file') as mocked_load_file, \
+            patch.object(main_window, 'log_error') as mocked_log_error:
         main_window.open_cmd_line_files(args)
 
         # THEN the file should not be opened
         assert mocked_load_file.called is False, 'load_file should not have been called'
+        mocked_log_error.assert_not_called()
 
 
 def test_cmd_line_arg_service_file_does_not_exist(main_window):

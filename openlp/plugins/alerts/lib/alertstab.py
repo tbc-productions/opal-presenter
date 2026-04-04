@@ -242,6 +242,7 @@ class AlertsTab(SettingsTab):
         font.setFamily(self.font_combo_box.currentFont().family())
         font.setBold(True)
         font.setPointSize(self.font_size)
+        font.setStyleStrategy(QtGui.QFont.StyleStrategy.PreferAntialias)
         self.font_preview.setFont(font)
         preview_palette = self.font_preview.palette()
         preview_palette.setColor(QtGui.QPalette.ColorGroup.Active,
