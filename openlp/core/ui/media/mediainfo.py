@@ -130,7 +130,7 @@ class media_info(QObject):
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
         self.media_player.setSource(QUrl.fromLocalFile(str(media_file)))
         loops = 0
-        while not self.got_duration and not self.loaded_media and not self.error_occurred and loops < 100:
+        while not self.got_duration and not self.error_occurred and loops < 100:
             loops += 1
             sleep(0.01)
             QtWidgets.QApplication.instance().processEvents()

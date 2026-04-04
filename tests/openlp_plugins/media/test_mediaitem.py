@@ -225,6 +225,27 @@ def test_generate_slide_data_queues_media_length_probe_for_service(media_item, t
     mocked_queue.assert_called_once_with(mocked_service_item, str(media_path))
 
 
+def test_apply_media_length_probe_result_retries_when_worker_returns_zero(media_item):
+    """When worker probe returns 0, media length should be retried once on the main thread."""
+    # GIVEN: A matching service item and a media controller that can provide a fallback length
+    mocked_service_item = MagicMock(unique_identifier='item-1')
+    mocked_service_manager = MagicMock(service_items=[{'service_item': mocked_service_item}])
+    mocked_media_controller = MagicMock()
+    mocked_media_controller.media_length.return_value = 3210
+    Registry().remove('service_manager')
+    Registry().remove('media_controller')
+    Registry().register('service_manager', mocked_service_manager)
+    Registry().register('media_controller', mocked_media_controller)
+
+    # WHEN: Applying a zero worker result
+    media_item._apply_media_length_probe_result('item-1', 0, 'C:/video.mp4')
+
+    # THEN: Fallback media_length should be used and applied to the service item
+    mocked_media_controller.media_length.assert_called_once_with('C:/video.mp4')
+    mocked_service_item.set_media_length.assert_called_once_with(3210)
+    mocked_service_manager.repaint_service_list.assert_called_once_with(0, -1)
+
+
 @patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem.validate_and_load')
 @patch('openlp.plugins.media.lib.mediaitem.critical_error_message_box')
 def test_validate_and_load_filters_unsupported_files(mocked_error_dialog: MagicMock,

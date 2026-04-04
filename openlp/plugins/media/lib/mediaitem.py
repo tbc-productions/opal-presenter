@@ -25,7 +25,6 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6 import QtCore, QtGui, QtWidgets
 from sqlalchemy.sql.expression import or_
 
 from openlp.core.common import delete_file
@@ -42,7 +41,6 @@ from openlp.core.threading import ThreadWorker, run_thread
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
 from openlp.core.ui.media import get_supported_media_suffix, parse_stream_path, MediaType
-from openlp.core.widgets.views import FileTreeWidgetItem
 from openlp.core.ui.media.mediainfo import media_info
 from openlp.core.widgets.views import FileTreeWidgetItem
 
@@ -319,15 +317,19 @@ class MediaMediaItem(FolderLibraryItem):
         thread_name = f'media_length_{service_item.unique_identifier}_{QtCore.QDateTime.currentMSecsSinceEpoch()}'
         worker = MediaLengthWorker(filename)
         worker.media_length_ready.connect(
-            lambda media_length, unique_id=service_item.unique_identifier:
-            self._apply_media_length_probe_result(unique_id, media_length)
+            lambda media_length, unique_id=service_item.unique_identifier, media_path=filename:
+            self._apply_media_length_probe_result(unique_id, media_length, media_path)
         )
         run_thread(worker, thread_name, can_start=True)
 
-    def _apply_media_length_probe_result(self, service_item_id, media_length):
+    def _apply_media_length_probe_result(self, service_item_id, media_length, media_path=None):
         """
         Apply async media-length result to the matching item currently in the service.
         """
+        if media_length <= 0 and media_path:
+            # Some Windows backends can report LoadedMedia before durationChanged in threaded probes.
+            # Retry once on the main thread for a reliable duration before updating the service item.
+            media_length = self.media_controller.media_length(media_path)
         for index, service_entry in enumerate(self.service_manager.service_items):
             service_item = service_entry.get('service_item')
             if service_item and service_item.unique_identifier == service_item_id:
