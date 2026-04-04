@@ -47,6 +47,23 @@ SCREENS_LAYOUT_STYLE = """
 """
 
 
+def _coerce_bounded_int(value, default, minimum=None, maximum=None):
+    """
+    Convert a value to an int, applying optional bounds and fallback defaults.
+    """
+    if isinstance(value, int):
+        int_value = value
+    elif isinstance(value, str) and value.strip().lstrip('-').isdigit():
+        int_value = int(value)
+    else:
+        int_value = default
+    if minimum is not None:
+        int_value = max(minimum, int_value)
+    if maximum is not None:
+        int_value = min(maximum, int_value)
+    return int_value
+
+
 class ProxyWidget(QtWidgets.QGroupBox):
     """
     A proxy settings widget that implements loading and saving its settings.
@@ -154,11 +171,29 @@ class ProxyDialog(QtWidgets.QDialog):
     """
     A basic dialog to show proxy settingd
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, show_ftw_options=False, timeout=5, retries=0, **kwargs):
         super().__init__(*args, **kwargs)
+        self.show_ftw_options = show_ftw_options
+        self.timeout = timeout
+        self.retries = retries
         self.layout = QtWidgets.QVBoxLayout(self)
         self.proxy_widget = ProxyWidget(self)
         self.layout.addWidget(self.proxy_widget)
+        self.ftw_options_group_box = None
+        self.timeout_spin_box = None
+        self.retries_spin_box = None
+        if self.show_ftw_options:
+            self.ftw_options_group_box = QtWidgets.QGroupBox(self)
+            self.ftw_options_layout = QtWidgets.QFormLayout(self.ftw_options_group_box)
+            self.timeout_spin_box = QtWidgets.QSpinBox(self.ftw_options_group_box)
+            self.timeout_spin_box.setRange(1, 120)
+            self.timeout_spin_box.setValue(_coerce_bounded_int(timeout, 5, minimum=1, maximum=120))
+            self.ftw_options_layout.addRow('Timeout:', self.timeout_spin_box)
+            self.retries_spin_box = QtWidgets.QSpinBox(self.ftw_options_group_box)
+            self.retries_spin_box.setRange(0, 10)
+            self.retries_spin_box.setValue(_coerce_bounded_int(retries, 0, minimum=0, maximum=10))
+            self.ftw_options_layout.addRow('Number of retry attempts:', self.retries_spin_box)
+            self.layout.addWidget(self.ftw_options_group_box)
         self.button_box = \
             QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
                                        QtWidgets.QDialogButtonBox.StandardButton.Cancel, self)
@@ -173,11 +208,22 @@ class ProxyDialog(QtWidgets.QDialog):
         :rtype: None
         """
         self.proxy_widget.save()
+        if self.show_ftw_options:
+            self.timeout = self.timeout_spin_box.value()
+            self.retries = self.retries_spin_box.value()
         super().accept()
 
     def retranslate_ui(self):
         self.proxy_widget.retranslate_ui()
-        self.setWindowTitle(translate('OpenLP.ProxyDialog', 'Proxy Server Settings'))
+        if self.show_ftw_options:
+            self.ftw_options_group_box.setTitle(translate('OpenLP.ProxyDialog', 'Download Settings'))
+            self.ftw_options_layout.labelForField(self.timeout_spin_box).setText(
+                translate('OpenLP.ProxyDialog', 'Timeout (seconds):'))
+            self.ftw_options_layout.labelForField(self.retries_spin_box).setText(
+                translate('OpenLP.ProxyDialog', 'Number of retry attempts:'))
+            self.setWindowTitle(translate('OpenLP.ProxyDialog', 'Internet Settings'))
+        else:
+            self.setWindowTitle(translate('OpenLP.ProxyDialog', 'Proxy Server Settings'))
 
 
 class ScreenButton(QtWidgets.QPushButton):
