@@ -114,6 +114,24 @@ def test_new_service_message(settings):
     assert settings.value('advanced/new service message') is False
 
 
+def test_logo_fit_setting_is_saved(settings):
+    """
+    Test that changing the logo fit option updates the setting value.
+    """
+    # GIVEN: Settings, a settings form and a general tab
+    settings.setValue('core/logo fit', 'contain')
+    settings_form = SettingsForm(None)
+    general_tab = GeneralTab(settings_form)
+    settings_form.insert_tab(general_tab, is_visible=True)
+
+    # WHEN: I select a new fit mode and save
+    general_tab.logo_fit_combo_box.setCurrentIndex(0)
+    settings_form.accept()
+
+    # THEN: the settings should be updated
+    assert settings.value('core/logo fit') == 'cover'
+
+
 @patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
 def test_get_ui_theme_index_maps_native_to_system_theme(_mock_has_ui_theme):
     """Test that legacy Native theme maps to the Use system theme combo index."""

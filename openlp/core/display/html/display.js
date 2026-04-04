@@ -496,98 +496,6 @@ var Display = {
     Reveal.slide(0);
   },
   /**
-   * Update whether theme transitions are allowed and reapply the theme
-   * @param {boolean} allowed - Whether to allow theme transitions
-   */
-  setAllowThemeTransitions: function (allowed) {
-    Display._doTransitions = allowed;
-    // Determine transition settings based on the new flag
-    var reveal_transition_type = "none";
-    var new_transition_speed = "default";
-    
-    if (!!Display._theme && !!Display._theme.display_slide_transition && Display._doTransitions) {
-      var themeTransitionType = Display._normaliseThemeTransitionType(Display._theme.display_slide_transition_type);
-      switch (themeTransitionType) {
-        case TransitionType.Fade:
-          reveal_transition_type = "fade";
-          break;
-        case TransitionType.Slide:
-          reveal_transition_type = "slide";
-          break;
-        case TransitionType.Convex:
-          reveal_transition_type = "convex";
-          break;
-        case TransitionType.Concave:
-          reveal_transition_type = "concave";
-          break;
-        case TransitionType.Zoom:
-          reveal_transition_type = "zoom";
-          break;
-        default:
-          reveal_transition_type = "fade";
-      }
-      
-      var themeTransitionSpeed = Display._normaliseThemeTransitionSpeed(Display._theme.display_slide_transition_speed);
-      switch (themeTransitionSpeed) {
-        case TransitionSpeed.Normal:
-          new_transition_speed = "default";
-          break;
-        case TransitionSpeed.Fast:
-          new_transition_speed = "fast";
-          break;
-        case TransitionSpeed.Slow:
-          new_transition_speed = "slow";
-          break;
-        default:
-          new_transition_speed = "default";
-      }
-    }
-    
-    // Update Reveal's global transition configuration
-    Reveal.configure({"transition": reveal_transition_type, "transitionSpeed": new_transition_speed});
-    
-    // Update all slides in the container with the new transition settings
-    var allSlides = document.querySelectorAll(".slides > section, .slides > section > section");
-    for (var i = 0; i < allSlides.length; i++) {
-      if (!allSlides[i].classList.contains("use-background-image")) {
-        allSlides[i].setAttribute("data-transition", reveal_transition_type);
-        allSlides[i].setAttribute("data-transition-speed", new_transition_speed);
-      }
-    }
-    
-    // Resync Reveal to apply changes
-    Reveal.sync();
-  },
-  /**
-   * Preview the theme slide transition by navigating to the second slide, then back.
-   * @param {number} initialDelayMs - milliseconds before the transition starts
-   * @param {number} totalDurationMs - milliseconds after which we return to the first slide
-   */
-  previewTransition: function (initialDelayMs, totalDurationMs) {
-    if (!Display._theme) {
-      return;
-    }
-    var speedName;
-    switch (Display._theme.display_slide_transition_speed) {
-      case TransitionSpeed.Fast:
-        speedName = "fast";
-        break;
-      case TransitionSpeed.Slow:
-        speedName = "slow";
-        break;
-      default:
-        speedName = "default";
-    }
-    Reveal.configure({transitionSpeed: speedName});
-    if (Display._textSlideDirection === TransitionDirection.Horizontal) {
-      setTimeout(function () { Reveal.slide(1, 0); }, initialDelayMs);
-      setTimeout(function () { Reveal.slide(0, 0); }, totalDurationMs);
-    } else {
-      setTimeout(function () { Reveal.slide(0, 1); }, initialDelayMs);
-      setTimeout(function () { Reveal.slide(0, 0); }, totalDurationMs);
-    }
-  },
-  /**
    * Enable/Disable item transitions
    */
   setItemTransition: function (enable, speedSeconds, transitionType) {
@@ -784,6 +692,9 @@ var Display = {
         Display._slidesContainer.appendChild(slide);
       });
       Display.reinit();
+      if (is_text) {
+        Display._reapplyTextThemeAfterLayout(new_slides);
+      }
       Display._skipNextTransition = false;
       return;
     }
@@ -799,11 +710,17 @@ var Display = {
       // Set the slide one section ahead so we'll stay on the old slide after reinit
       Reveal.slide(1, currentSlide.v);
       Display.reinit();
+      if (is_text) {
+        Display._reapplyTextThemeAfterLayout(new_slides);
+      }
       // Timeout to allow time to transition before deleting the old slides
       setTimeout(Display._removeLastSection, Math.round(Display._itemTransitionSpeedSeconds * 1000) + 100);
     } else {
       Reveal.slide(0, currentSlide.v);
       Reveal.sync();
+      if (is_text) {
+        Display._reapplyTextThemeAfterLayout(new_slides);
+      }
       Display._removeLastSection();
       Display._skipNextTransition = false;
     }
@@ -815,6 +732,66 @@ var Display = {
     if (Display._slidesContainer.children.length > 1) {
       Display._slidesContainer.lastChild.remove();
     }
+  },
+
+  /**
+   * Re-apply text theme styles after Reveal completes its layout pass.
+   * A double requestAnimationFrame ensures we run after Reveal's own frame work.
+   * @param {HTMLElement|HTMLElement[]} target - Text slide element(s) to style
+   */
+  _reapplyTextThemeAfterLayout: function (target) {
+    var targets = target;
+    if (!targets) {
+      targets = Display._collectTextThemeTargets();
+    }
+    if (!targets || (Array.isArray(targets) && !targets.length)) {
+      return;
+    }
+
+    // Apply once immediately to avoid a first-frame flash at 0,0.
+    if (Array.isArray(targets)) {
+      targets.forEach(function (element) {
+        Display.applyTheme(element, true);
+      });
+    } else {
+      Display.applyTheme(targets, true);
+    }
+
+    // Apply again after Reveal finishes layout/reflow frames.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (Array.isArray(targets)) {
+          targets.forEach(function (element) {
+            Display.applyTheme(element, true);
+          });
+        } else {
+          Display.applyTheme(targets, true);
+        }
+      });
+    });
+  },
+
+  /**
+   * Find all text slide theme targets currently in the deck.
+   * For vertical text transitions this is the stack root (`section.text-slides`),
+   * while horizontal text transitions use top-level sections.
+   * @returns {HTMLElement[]} Theme targets for text slides
+   */
+  _collectTextThemeTargets: function () {
+    var stackRoots = $("section.text-slides");
+    if (stackRoots.length) {
+      return stackRoots;
+    }
+    return $(".reveal .slides > section")
+      .filter(function (section) {
+        if (section.classList.contains("stack")) {
+          return false;
+        }
+        if (section.classList.contains("use-background-image")) {
+          return false;
+        }
+        return !!section.querySelector("p");
+      });
   },
 
   _resolveTextSlideLayout: function () {
@@ -856,18 +833,19 @@ var Display = {
    * Generate the OpenLP startup splashscreen
    * @param {string} bg_color - The background color
    * @param {string} image - Path to the splash image
+   * @param {string} logo_fit - cover, contain, stretch, repeat
    */
-  setStartupSplashScreen: function(bg_color, image) {
+  setStartupSplashScreen: function(bg_color, image, logo_fit) {
     Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
-    section.setAttribute("data-background", bg_color);
+    section.setAttribute("data-background", bg_color || "#000");
     section.setAttribute("style", "height: 100%; width: 100%;");
-    var img = document.createElement('img');
-    img.src = Display._getFileUrl(image);
-    img.setAttribute("style", "position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto; max-height: 100%; max-width: 100%");
-    section.appendChild(img);
+    if (image) {
+      var fit = _resolveBackgroundFit(logo_fit || "cover");
+      _applyFullscreenBackgroundImage(section, bg_color, Display._getFileUrl(image), fit);
+    }
     Display._slides['0'] = 0;
     Display.replaceSlides(section);
   },
@@ -1083,7 +1061,10 @@ var Display = {
     slide.setAttribute("id", verse);
     // The "future" class is used internally by reveal, it's used here to hide newly added slides
     slide.classList.add("future");
-    slide.innerHTML = html;
+    var content = document.createElement("div");
+    content.classList.add("slide-text-content");
+    content.innerHTML = html;
+    slide.appendChild(content);
     return slide;
   },
 
@@ -1096,6 +1077,9 @@ var Display = {
     if (newActiveFooter) {
       newActiveFooter.classList.add('active');
     }
+
+    // Reveal updates section positioning during slide changes; keep themed text positions stable.
+    Display._reapplyTextThemeAfterLayout();
   },
 
   _logTransitionDebug: function (reason) {
@@ -1213,9 +1197,9 @@ var Display = {
       }
       if (!Display._themeApplied) {
         if (layout.isVertical && slide.parentElement) {
-          Display.applyTheme(slide.parentElement);
+          Display.applyTheme(slide.parentElement, true);
         } else {
-          Display.applyTheme(slide);
+          Display.applyTheme(slide, true);
         }
       }
     } else {
@@ -1229,10 +1213,10 @@ var Display = {
         var parentSection = document.createElement("section");
         parentSection.classList = "text-slides";
         parentSection.appendChild(slide_html);
-        Display.applyTheme(parentSection);
+        Display.applyTheme(parentSection, true);
         Display._slidesContainer.prepend(parentSection);
       } else {
-        Display.applyTheme(slide_html);
+        Display.applyTheme(slide_html, true);
         Display._slidesContainer.prepend(slide_html);
       }
       Display.reinit();
@@ -1566,8 +1550,9 @@ var Display = {
    * Hide all but the configured logo background.
    * @param {string} bg_color - The logo screen background color
    * @param {string} image - Path to the logo image
+   * @param {string} logo_fit - cover, contain, stretch, repeat
   */
-  toLogo: function (bg_color, image) {
+  toLogo: function (bg_color, image, logo_fit) {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
       Display._restorePauseBehavior();
@@ -1582,14 +1567,12 @@ var Display = {
       if (Reveal.isPaused()) {
         Reveal.togglePause();
       }
-      if (Display._logoScreen) {
-        Display._logoScreen.style.backgroundColor = bg_color || "#000";
-      }
+      Display._setLogoScreenBackground(bg_color, null, logo_fit);
 
       function hideSlideLayerAndResolve() {
         Display._slidesContainer.style.opacity = 0;
         Display._footerContainer.style.opacity = 0;
-        Display._setThemeBackgroundToLogo(bg_color, image);
+        Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
         resolve();
       }
 
@@ -1629,36 +1612,20 @@ var Display = {
       }
 
       Display._reenableGlobalTransitions(function() {
-        if (Display._logoScreenImage && image) {
-          Display._logoScreenImage.onload = function() {
-            Display._logoScreenImage.onload = null;
-            Display._logoScreenImage.onerror = null;
-            fadeLogoOverSlide();
-          };
-          Display._logoScreenImage.onerror = function() {
-            Display._logoScreenImage.onload = null;
-            Display._logoScreenImage.onerror = null;
-            Display._logoScreenImage.removeAttribute("src");
-            Display._logoScreenImage.style.display = "none";
-            fadeLogoOverSlide();
-          };
-          Display._logoScreenImage.style.display = "block";
-          Display._logoScreenImage.src = image;
-          if (Display._logoScreenImage.complete && Display._logoScreenImage.naturalWidth > 0) {
-            Display._logoScreenImage.onload = null;
-            Display._logoScreenImage.onerror = null;
-            fadeLogoOverSlide();
-          }
-        }
-        else {
-          if (Display._logoScreenImage) {
-            Display._logoScreenImage.onload = null;
-            Display._logoScreenImage.onerror = null;
-            Display._logoScreenImage.removeAttribute("src");
-            Display._logoScreenImage.style.display = "none";
-          }
+        if (!image) {
           fadeLogoOverSlide();
+          return;
         }
+        var preloader = new Image();
+        preloader.onload = function() {
+          Display._setLogoScreenBackground(bg_color, image, logo_fit);
+          fadeLogoOverSlide();
+        };
+        preloader.onerror = function() {
+          Display._setLogoScreenBackground(bg_color, null, logo_fit);
+          fadeLogoOverSlide();
+        };
+        preloader.src = image;
       });
     });
   },
@@ -1696,11 +1663,34 @@ var Display = {
     }
   },
 
+  _setLogoScreenBackground: function(bg_color, image, logo_fit) {
+    if (!Display._logoScreen) {
+      return;
+    }
+    var fit = _resolveBackgroundFit(logo_fit || "cover");
+    Display._logoScreen.style.backgroundColor = bg_color || "#000";
+    Display._logoScreen.style.backgroundSize = fit.size;
+    Display._logoScreen.style.backgroundRepeat = fit.repeat;
+    Display._logoScreen.style.backgroundPosition = fit.position;
+    if (image) {
+      Display._logoScreen.style.backgroundImage = 'url("' + image.replace(/"/g, '\\"') + '")';
+    }
+    else {
+      Display._logoScreen.style.backgroundImage = "none";
+    }
+    if (Display._logoScreenImage) {
+      Display._logoScreenImage.onload = null;
+      Display._logoScreenImage.onerror = null;
+      Display._logoScreenImage.removeAttribute("src");
+      Display._logoScreenImage.style.display = "none";
+    }
+  },
+
   _getRootSlideSection: function() {
     return $(".slides > section")[0];
   },
 
-  _setThemeBackgroundToLogo: function(bg_color, image) {
+  _setThemeBackgroundToLogo: function(bg_color, image, logo_fit) {
     var rootSlide = Display._getRootSlideSection();
     if (!rootSlide) {
       return;
@@ -1715,14 +1705,22 @@ var Display = {
         position: rootSlide.getAttribute("data-background-position")
       };
     }
+    var fit = _resolveBackgroundFit(logo_fit || "cover");
+    rootSlide.setAttribute("data-background-color", bg_color || "#000");
     if (image) {
       rootSlide.setAttribute("data-background-image", image);
       rootSlide.removeAttribute("data-background");
+      rootSlide.setAttribute("data-background-size", fit.size);
+      rootSlide.setAttribute("data-background-repeat", fit.repeat);
+      rootSlide.setAttribute("data-background-position", fit.position);
     }
     else {
       rootSlide.setAttribute("data-background", bg_color || "#000");
+      rootSlide.removeAttribute("data-background-image");
+      rootSlide.removeAttribute("data-background-size");
+      rootSlide.removeAttribute("data-background-repeat");
+      rootSlide.removeAttribute("data-background-position");
     }
-    rootSlide.setAttribute("data-background-size", "cover");
     Display._logoBackgroundOverrideActive = true;
     Reveal.sync();
   },
@@ -2120,10 +2118,12 @@ var Display = {
 
     var textTargets = targetElement.matches("section.text-slides") ? Array.from(targetElement.children) : [targetElement];
     Array.from(textTargets).forEach(function (slideElement) {
-      slideElement.style.cssText = "";
+      var contentElement = slideElement.querySelector(".slide-text-content") || slideElement;
+      contentElement.style.cssText = "";
       for (var mainKey in mainStyle) {
         if (mainStyle.hasOwnProperty(mainKey)) {
-          slideElement.style.setProperty(mainKey, mainStyle[mainKey]);
+          var priority = (mainKey === "top" || mainKey === "left") ? "important" : "";
+          contentElement.style.setProperty(mainKey, mainStyle[mainKey], priority);
         }
       }
     });

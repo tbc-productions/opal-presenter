@@ -373,6 +373,7 @@ class Settings(QtCore.QSettings):
         'core/show splash': True,
         'core/logo background color': '#ffffff',
         'core/logo file': Path(':/graphics/openlp-splash-screen.png'),
+        'core/logo fit': 'contain',
         'core/logo hide on startup': False,
         'core/songselect password': '',
         'core/songselect username': '',
