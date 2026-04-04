@@ -405,6 +405,8 @@ class UiStrings(metaclass=Singleton):
         self.LivePreviewShowsBlankScreen = translate('OpenLP.ServiceTab', 'Live preview shows blank screen')
         self.LivePreviewShowsPresentationScreen = translate('OpenLP.ServiceTab',
                                     'Live preview always shows presentation screen')
+        self.LivePreviewShowsSlideTransitions = translate('OpenLP.ServiceTab',
+                                    'Live preview shows slide transitions')
         self.LiveStream = translate('OpenLP.Ui', 'Live Stream')
         self.LiveBGError = translate('OpenLP.Ui', 'Live Background Error')
         self.LiveToolbar = translate('OpenLP.Ui', 'Live Toolbar')
