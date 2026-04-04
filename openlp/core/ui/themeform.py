@@ -83,6 +83,9 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self._update_layout_guide_button_tooltip(False)
         if hasattr(self, 'refresh_preview_button'):
             self.refresh_preview_button.clicked.connect(self.on_refresh_preview_clicked)
+        if hasattr(self, 'play_transition_button'):
+            self.play_transition_button.clicked.connect(self.preview_transition)
+            self._set_play_transition_button_visible(False)
         if hasattr(self, 'help_button'):
             self.help_button.clicked.connect(self.provide_help)
         if hasattr(self, 'export_theme_button'):
@@ -148,6 +151,34 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.update_theme()
         self.theme_manager.generate_image(self.theme, True)
         self.refresh_preview()
+
+    def preview_transition(self, *args):
+        """
+        Preview the current transition settings by loading two demo slides,
+        transitioning to the second, then back to the first after a short delay.
+        """
+        if not self.can_update_theme or getattr(self, '_updating_page_values', False):
+            return
+        if not hasattr(self, 'preview_box'):
+            return
+        self.update_theme()
+        self.theme_manager.generate_image(self.theme, True)
+        self.preview_box.clear_slides()
+        self.preview_box.show()
+        self.preview_box.generate_preview_two_slides(self.theme)
+        QtCore.QTimer.singleShot(0, self._set_preview_scale)
+        self.update_layout_guide_overlay()
+        # Tell the JS side to handle the timed transition demo
+        self.preview_box.run_in_display('previewTransition', 300, 3500)
+
+    def _set_play_transition_button_visible(self, visible):
+        """
+        Show or hide the play transition toolbar button.
+        """
+        if hasattr(self, 'play_transition_action'):
+            self.play_transition_action.setVisible(bool(visible))
+        if hasattr(self, 'play_transition_button'):
+            self.play_transition_button.setVisible(bool(visible))
 
     def update_lines_text(self, lines):
         """
@@ -388,11 +419,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.alignment_page.vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
         self.alignment_page.footer_horizontal_combo_box.currentIndexChanged.connect(self.calculate_lines)
         self.alignment_page.footer_vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
-        self.alignment_page.transitions_enabled_check_box.toggled.connect(self.calculate_lines)
-        self.alignment_page.transition_effect_combo_box.currentIndexChanged.connect(self.calculate_lines)
-        self.alignment_page.transition_speed_combo_box.currentIndexChanged.connect(self.calculate_lines)
-        self.alignment_page.transition_direction_combo_box.currentIndexChanged.connect(self.calculate_lines)
-        self.alignment_page.transition_reverse_check_box.toggled.connect(self.calculate_lines)
+        self.alignment_page.transitions_enabled_check_box.toggled.connect(self._set_play_transition_button_visible)
+        self.alignment_page.transitions_enabled_check_box.toggled.connect(self.preview_transition)
+        self.alignment_page.transition_effect_combo_box.currentIndexChanged.connect(self.preview_transition)
+        self.alignment_page.transition_speed_combo_box.currentIndexChanged.connect(self.preview_transition)
+        self.alignment_page.transition_direction_combo_box.currentIndexChanged.connect(self.preview_transition)
+        self.alignment_page.transition_reverse_check_box.toggled.connect(self.preview_transition)
         self.area_position_page.main_position_check_box.toggled.connect(self.calculate_lines)
         self.area_position_page.main_x_spin_box.valueChanged.connect(self.calculate_lines)
         self.area_position_page.main_y_spin_box.valueChanged.connect(self.calculate_lines)
@@ -617,6 +649,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.alignment_page.transition_speed = self.theme.display_slide_transition_speed
         self.alignment_page.transition_direction = self.theme.display_slide_transition_direction
         self.alignment_page.is_transition_reverse_enabled = self.theme.display_slide_transition_reverse
+        self._set_play_transition_button_visible(self.theme.display_slide_transition)
 
     def set_preview_page_values(self):
         """

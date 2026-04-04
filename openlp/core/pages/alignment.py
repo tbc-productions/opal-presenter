@@ -104,6 +104,8 @@ class AlignmentTransitionsPage(GridLayoutPage):
         self.transitions_layout.addWidget(self.transition_reverse_check_box, 7, 0)
         # Connect slots
         self.transitions_enabled_check_box.toggled.connect(self._on_transition_enabled_changed)
+        self.transition_effect_combo_box.currentIndexChanged.connect(self._update_transition_direction_visibility)
+        self._update_transition_direction_visibility()
 
     def retranslate_ui(self):
         """
@@ -124,11 +126,12 @@ class AlignmentTransitionsPage(GridLayoutPage):
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Fast, translate('OpenLP.ThemeWizard', 'Fast'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Slow, translate('OpenLP.ThemeWizard', 'Slow'))
         self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction:'))
-        self.transition_direction_combo_box.setItemText(TransitionDirection.Horizontal, translate('OpenLP.ThemeWizard',
-                                                                                                  'Horizontal'))
-        self.transition_direction_combo_box.setItemText(TransitionDirection.Vertical, translate('OpenLP.ThemeWizard',
-                                                                                                'Vertical'))
-        self.transition_reverse_check_box.setText(translate('OpenLP.ThemeWizard', 'Reverse'))
+        self.transition_direction_combo_box.setItemText(TransitionDirection.Horizontal,
+                                translate('OpenLP.ThemeWizard', 'Horizontal'))
+        self.transition_direction_combo_box.setItemText(TransitionDirection.Vertical,
+                                translate('OpenLP.ThemeWizard', 'Vertical'))
+        self.transition_reverse_check_box.setText(
+            translate('OpenLP.ThemeWizard', 'Right-to-left language support'))
 
     def _on_transition_enabled_changed(self, value):
         """
@@ -138,9 +141,17 @@ class AlignmentTransitionsPage(GridLayoutPage):
         self.transition_effect_combo_box.setEnabled(value)
         self.transition_speed_label.setEnabled(value)
         self.transition_speed_combo_box.setEnabled(value)
-        self.transition_direction_combo_box.setEnabled(value)
         self.transition_direction_label.setEnabled(value)
+        self.transition_direction_combo_box.setEnabled(value)
         self.transition_reverse_check_box.setEnabled(value)
+
+    def _update_transition_direction_visibility(self):
+        """
+        Hide the direction controls for effects where direction has no meaning.
+        """
+        show_direction = self.transition_effect_combo_box.currentIndex() not in (TransitionType.Fade, TransitionType.Zoom)
+        self.transition_direction_label.setVisible(show_direction)
+        self.transition_direction_combo_box.setVisible(show_direction)
 
     @property
     def horizontal_align(self):
@@ -247,4 +258,4 @@ class AlignmentTransitionsPage(GridLayoutPage):
 
     @is_transition_reverse_enabled.setter
     def is_transition_reverse_enabled(self, value):
-        self.transition_reverse_check_box.setChecked(value)
+        self.transition_reverse_check_box.setChecked(bool(value))
