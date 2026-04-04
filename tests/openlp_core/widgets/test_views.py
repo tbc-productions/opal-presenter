@@ -179,6 +179,23 @@ def test_replace_service_item_thumbs(mocked_parent: QtWidgets.QWidget, mock_sett
         list_preview_widget.replace_service_item(mocked_cmd_service_item, 200, 0)
 
 
+def test_replace_service_item_text_uses_single_line_verse_header(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
+    """
+    Test that text slide row headers use single-line verse tags (e.g. V1) for readability.
+    """
+    # GIVEN: A text service item with one verse
+    service_item = MagicMock()
+    service_item.is_text.return_value = True
+    service_item.display_slides = [{'verse': 'V1', 'text': 'Verse text'}]
+    list_preview_widget = ListPreviewWidget(mocked_parent, 1)
+
+    # WHEN: The service item is loaded into the preview widget
+    list_preview_widget.replace_service_item(service_item, 200, 0)
+
+    # THEN: The row header should be the one-line verse tag
+    assert list_preview_widget.verticalHeaderItem(0).text() == 'V1'
+
+
 def test_replace_recalculate_layout_text(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
     """
     Test if "Max height for non-text slides..." enabled, txt slides unchanged in replace_service_item & __recalc...

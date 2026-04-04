@@ -121,6 +121,11 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         """
         self.setColumnCount(1)
         self.horizontalHeader().setVisible(False)
+        vertical_header = self.verticalHeader()
+        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
+        target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
+        vertical_header.setMinimumWidth(max(20, target_width))
         self.setColumnWidth(0, self.parent().width())
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
@@ -254,8 +259,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     # These tags are already translated.
                     verse_def = slide['verse']
                     verse_def = '%s%s' % (verse_def[0], verse_def[1:])
-                    two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
-                    row = two_line_def
+                    row = verse_def
                     color = self._resolve_song_section_color(verse_def[0])
                     color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
                     header_colors.append(color)
