@@ -11,7 +11,8 @@ var BackgroundType = {
   Solid: "solid",
   Gradient: "gradient",
   Video: "video",
-  Image: "image"
+  Image: "image",
+  Stream: "stream"
 };
 
 /**
@@ -259,6 +260,61 @@ function _prepareText(text) {
 function _fromCamelCase(text) {
   return text.replace(/([A-Z])/g, function (match, submatch) {
     return '-' + submatch.toLowerCase();
+  });
+}
+
+/**
+ * Convert theme background fit to reveal.js background attributes
+ * @private
+ * @param {string} fit - cover, contain, stretch, repeat
+ * @returns {{size: string, repeat: string}} background attributes
+ */
+function _resolveBackgroundFit(fit) {
+  switch (fit) {
+    case "contain":
+      return { size: "contain", repeat: "no-repeat" };
+    case "stretch":
+      return { size: "100% 100%", repeat: "no-repeat" };
+    case "repeat":
+      return { size: "auto", repeat: "repeat" };
+    case "cover":
+    default:
+      return { size: "cover", repeat: "no-repeat" };
+  }
+}
+
+/**
+ * Ensure the layout guide overlay exists.
+ * @private
+ * @returns {HTMLElement} Overlay element
+ */
+function _ensureLayoutGuideOverlay() {
+  var overlay = $("#layout-guide-overlay")[0];
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "layout-guide-overlay";
+    overlay.innerHTML = '<div id="layout-guide-main"></div><div id="layout-guide-footer"></div>';
+    var reveal = $(".reveal")[0] || document.body;
+    reveal.appendChild(overlay);
+  }
+  return overlay;
+}
+
+/**
+ * Apply fit styling to reveal background elements after sync.
+ * @private
+ * @param {{size: string, repeat: string}} fit - Resolved fit settings
+ */
+function _applyBackgroundFitToRenderedSlides(fit) {
+  $(".reveal .slide-background").forEach(function (background) {
+    var backgroundContent = background.querySelector(".slide-background-content");
+    if (!backgroundContent) {
+      return;
+    }
+    background.style.backgroundColor = fit.size === "contain" ? "#000" : "transparent";
+    backgroundContent.style.backgroundSize = fit.size;
+    backgroundContent.style.backgroundRepeat = fit.repeat;
+    backgroundContent.style.backgroundPosition = "50% 50%";
   });
 }
 
@@ -1483,8 +1539,44 @@ var Display = {
   setBackgroundImage: function (image_path) {
     var targetElement = $(".slides > section")[0];
     targetElement.setAttribute("data-background", "url('" + image_path + "')");
-    targetElement.setAttribute("data-background-size", "cover");
+    var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
+    targetElement.setAttribute("data-background-size", fit.size);
+    targetElement.setAttribute("data-background-repeat", fit.repeat);
     Reveal.sync();
+    _applyBackgroundFitToRenderedSlides(fit);
+  },
+  /**
+   * Show layout guide rectangles on the current preview.
+   * @param {{main: Object, footer: Object}} guideRects - Main and footer rectangles in theme pixels
+   */
+  setLayoutGuide: function (guideRects) {
+    var overlay = _ensureLayoutGuideOverlay();
+    var main = $("#layout-guide-main")[0];
+    var footer = $("#layout-guide-footer")[0];
+    if (!main || !footer) {
+      return;
+    }
+    [
+      { element: main, rect: guideRects.main, color: "#1f78ff" },
+      { element: footer, rect: guideRects.footer, color: "#ff4d4f" }
+    ].forEach(function (entry) {
+      var rect = entry.rect || {};
+      entry.element.style.left = (rect.x || 0) + "px";
+      entry.element.style.top = (rect.y || 0) + "px";
+      entry.element.style.width = Math.max(rect.width || 0, 0) + "px";
+      entry.element.style.height = Math.max(rect.height || 0, 0) + "px";
+      entry.element.style.borderColor = entry.color;
+    });
+    overlay.classList.add("show-guides");
+  },
+  /**
+   * Hide layout guide rectangles.
+   */
+  clearLayoutGuide: function () {
+    var overlay = $("#layout-guide-overlay")[0];
+    if (overlay) {
+      overlay.classList.remove("show-guides");
+    }
   },
   /**
    * Reset/reapply the theme
@@ -1567,6 +1659,7 @@ var Display = {
     // Set the background
     var backgroundContent = "";
     var backgroundHtml = "";
+    var fit = _resolveBackgroundFit(Display._theme.background_fit || "cover");
     switch (Display._theme.background_type) {
       case BackgroundType.Transparent:
         backgroundContent = "transparent";
@@ -1607,6 +1700,7 @@ var Display = {
       case BackgroundType.Image:
         backgroundContent = "url('" + Display._getFileUrl(Display._theme.background_filename) + "')";
         break;
+      case BackgroundType.Stream:
       case BackgroundType.Video:
         // never actually used since background type is overridden from video to transparent in window.py
         backgroundContent = Display._theme.background_border_color;
@@ -1617,7 +1711,11 @@ var Display = {
     }
     targetElement.style.cssText = "";
     targetElement.setAttribute("data-background", backgroundContent);
-    targetElement.setAttribute("data-background-size", "cover");
+    targetElement.setAttribute("data-background-size", fit.size);
+    targetElement.setAttribute("data-background-repeat", fit.repeat);
+    requestAnimationFrame(function () {
+      _applyBackgroundFitToRenderedSlides(fit);
+    });
 
     // set up the main area
     if (!is_text) {
@@ -1626,6 +1724,13 @@ var Display = {
     }
 
     var mainStyle = {
+      position: "absolute",
+      display: "flex",
+      "flex-direction": "column",
+      "box-sizing": "border-box",
+      margin: "0",
+      padding: "0",
+      transform: "none",
       width: `${Display._theme.font_main_width}px`,
       height: `${Display._theme.font_main_height}px`,
       top: `${Display._theme.font_main_y}px`,
@@ -1667,15 +1772,24 @@ var Display = {
       ].join(", ")
     };
 
-    targetElement.style.cssText = "";
-    for (var mainKey in mainStyle) {
-      if (mainStyle.hasOwnProperty(mainKey)) {
-        targetElement.style.setProperty(mainKey, mainStyle[mainKey]);
+    Array.from(targetElement.children).forEach(function (slideElement) {
+      slideElement.style.cssText = "";
+      for (var mainKey in mainStyle) {
+        if (mainStyle.hasOwnProperty(mainKey)) {
+          slideElement.style.setProperty(mainKey, mainStyle[mainKey]);
+        }
       }
-    }
+    });
 
     // Set up the footer
     var footerStyle = {
+      position: "absolute",
+      display: "flex",
+      "flex-direction": "column",
+      "box-sizing": "border-box",
+      margin: "0",
+      padding: "0",
+      transform: "none",
       width: `${Display._theme.font_footer_width}px`,
       height: `${Display._theme.font_footer_height}px`,
       top: `${Display._theme.font_footer_y}px`,

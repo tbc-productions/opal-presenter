@@ -26,8 +26,8 @@ from PySide6 import QtCore, QtWidgets
 
 class FormLabel(QtWidgets.QLabel):
     """
-    A label that is prepped for forms, right aligned and vertically centered
+    A label that is prepped for forms, left aligned and vertically centered
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)

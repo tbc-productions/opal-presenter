@@ -43,83 +43,130 @@ class BackgroundPage(GridLayoutPage):
     Image = 'image'
     Video = 'video'
     Stream = 'stream'
+    Fill = 'cover'
+    Fit = 'contain'
+    Stretch = 'stretch'
+    Repeat = 'repeat'
 
     def setup_ui(self):
         """
         Set up the ui
         """
+        row = 0
+        self.background_type_group_box = QtWidgets.QGroupBox(self)
+        self.background_type_group_box.setObjectName('background_type_group_box')
+        self.background_type_layout = QtWidgets.QGridLayout(self.background_type_group_box)
+        self.layout.addWidget(self.background_type_group_box, row, 0, 1, 2)
+        row += 1
+        self.background_style_group_box = QtWidgets.QGroupBox(self)
+        self.background_style_group_box.setObjectName('background_style_group_box')
+        self.background_style_layout = QtWidgets.QGridLayout(self.background_style_group_box)
+        self.layout.addWidget(self.background_style_group_box, row, 0, 1, 2)
+        row += 1
+        self.background_media_group_box = QtWidgets.QGroupBox(self)
+        self.background_media_group_box.setObjectName('background_media_group_box')
+        self.background_media_layout = QtWidgets.QGridLayout(self.background_media_group_box)
+        self.layout.addWidget(self.background_media_group_box, row, 0, 1, 2)
+        row += 1
+        media_row = 0
+        style_row = 0
         # background type
         self.background_label = FormLabel(self)
         self.background_label.setObjectName('background_label')
-        self.layout.addWidget(self.background_label, 0, 0)
+        self.background_type_layout.addWidget(self.background_label, 0, 0)
         self.background_combo_box = QtWidgets.QComboBox(self)
         self.background_combo_box.addItems(['', '', '', '', '', ''])
         self.background_combo_box.setObjectName('background_combo_box')
-        self.layout.addWidget(self.background_combo_box, 0, 1, 1, 3)
+        self.background_type_layout.addWidget(self.background_combo_box, 1, 0, 1, 2)
+        self.background_fit_label = FormLabel(self)
+        self.background_fit_label.setObjectName('background_fit_label')
+        self.background_type_layout.addWidget(self.background_fit_label, 2, 0)
+        self.background_fit_combo_box = QtWidgets.QComboBox(self)
+        self.background_fit_combo_box.setObjectName('background_fit_combo_box')
+        self.background_fit_combo_box.addItems(['', '', '', ''])
+        self.background_type_layout.addWidget(self.background_fit_combo_box, 3, 0, 1, 2)
+        self.background_fit_combo_box.setCurrentIndex(0)
         # color
         self.color_label = FormLabel(self)
         self.color_label.setObjectName('color_label')
-        self.layout.addWidget(self.color_label, 1, 0)
+        self.background_style_layout.addWidget(self.color_label, style_row, 0)
+        style_row += 1
         self.color_button = ColorButton(self)
         self.color_button.setObjectName('color_button')
-        self.layout.addWidget(self.color_button, 1, 1)
+        self.background_style_layout.addWidget(self.color_button, style_row, 0)
+        style_row += 1
         self.color_widgets = [self.color_label, self.color_button]
         # gradient
         self.gradient_type_label = FormLabel(self)
         self.gradient_type_label.setObjectName('gradient_type_label')
-        self.layout.addWidget(self.gradient_type_label, 2, 0)
+        self.background_style_layout.addWidget(self.gradient_type_label, style_row, 0)
+        style_row += 1
         self.gradient_combo_box = QtWidgets.QComboBox(self)
         self.gradient_combo_box.setObjectName('gradient_combo_box')
         self.gradient_combo_box.addItems(['', '', '', '', ''])
-        self.layout.addWidget(self.gradient_combo_box, 2, 1, 1, 3)
+        self.background_style_layout.addWidget(self.gradient_combo_box, style_row, 0, 1, 2)
+        style_row += 1
         self.gradient_start_label = FormLabel(self)
         self.gradient_start_label.setObjectName('gradient_start_label')
-        self.layout.addWidget(self.gradient_start_label, 3, 0)
+        self.background_style_layout.addWidget(self.gradient_start_label, style_row, 0)
+        style_row += 1
         self.gradient_start_button = ColorButton(self)
         self.gradient_start_button.setObjectName('gradient_start_button')
-        self.layout.addWidget(self.gradient_start_button, 3, 1)
+        self.background_style_layout.addWidget(self.gradient_start_button, style_row, 0)
+        style_row += 1
         self.gradient_end_label = FormLabel(self)
         self.gradient_end_label.setObjectName('gradient_end_label')
-        self.layout.addWidget(self.gradient_end_label, 3, 2)
+        self.background_style_layout.addWidget(self.gradient_end_label, style_row, 0)
+        style_row += 1
         self.gradient_end_button = ColorButton(self)
         self.gradient_end_button.setObjectName('gradient_end_button')
-        self.layout.addWidget(self.gradient_end_button, 3, 3)
+        self.background_style_layout.addWidget(self.gradient_end_button, style_row, 0)
+        style_row += 1
         self.gradient_widgets = [self.gradient_type_label, self.gradient_combo_box, self.gradient_start_label,
                                  self.gradient_start_button, self.gradient_end_label, self.gradient_end_button]
         # image
         self.image_label = FormLabel(self)
         self.image_label.setObjectName('image_label')
-        self.layout.addWidget(self.image_label, 4, 0)
+        self.background_media_layout.addWidget(self.image_label, media_row, 0)
+        media_row += 1
         self.image_path_edit = PathEdit(self, dialog_caption=translate('OpenLP.ThemeWizard', 'Select Image'),
                                         show_revert=False)
-        self.layout.addWidget(self.image_path_edit, 4, 1, 1, 3)
+        self.background_media_layout.addWidget(self.image_path_edit, media_row, 0, 1, 2)
+        media_row += 1
         self.image_color_label = FormLabel(self)
         self.image_color_label.setObjectName('image_color_label')
-        self.layout.addWidget(self.image_color_label, 5, 0)
+        self.background_media_layout.addWidget(self.image_color_label, media_row, 0)
+        media_row += 1
         self.image_color_button = ColorButton(self)
         self.image_color_button.color = '#000000'
         self.image_color_button.setObjectName('image_color_button')
-        self.layout.addWidget(self.image_color_button, 5, 1)
+        self.background_media_layout.addWidget(self.image_color_button, media_row, 0)
+        media_row += 1
         self.image_widgets = [self.image_label, self.image_path_edit, self.image_color_label, self.image_color_button]
         # video
         self.video_label = FormLabel(self)
         self.video_label.setObjectName('video_label')
-        self.layout.addWidget(self.video_label, 6, 0)
+        self.background_media_layout.addWidget(self.video_label, media_row, 0)
+        media_row += 1
         self.video_path_edit = PathEdit(self, dialog_caption=translate('OpenLP.ThemeWizard', 'Select Video'),
                                         show_revert=False)
-        self.layout.addWidget(self.video_path_edit, 6, 1, 1, 3)
+        self.background_media_layout.addWidget(self.video_path_edit, media_row, 0, 1, 2)
+        media_row += 1
         self.video_color_label = FormLabel(self)
         self.video_color_label.setObjectName('video_color_label')
-        self.layout.addWidget(self.video_color_label, 7, 0)
+        self.background_media_layout.addWidget(self.video_color_label, media_row, 0)
+        media_row += 1
         self.video_color_button = ColorButton(self)
         self.video_color_button.color = '#000000'
         self.video_color_button.setObjectName('video_color_button')
-        self.layout.addWidget(self.video_color_button, 7, 1)
+        self.background_media_layout.addWidget(self.video_color_button, media_row, 0)
+        media_row += 1
         self.video_widgets = [self.video_label, self.video_path_edit, self.video_color_label, self.video_color_button]
         # streams
         self.stream_label = FormLabel(self)
         self.stream_label.setObjectName('stream_label')
-        self.layout.addWidget(self.stream_label, 6, 0)
+        self.background_media_layout.addWidget(self.stream_label, media_row, 0)
+        media_row += 1
         self.stream_layout = QtWidgets.QHBoxLayout()
         self.stream_lineedit = QtWidgets.QLineEdit(self)
         self.stream_lineedit.setObjectName('stream_lineedit')
@@ -135,19 +182,22 @@ class BackgroundPage(GridLayoutPage):
         self.network_stream_select_button.setObjectName('network_stream_select_button')
         self.network_stream_select_button.setIcon(UiIcons().network_stream)
         self.stream_layout.addWidget(self.network_stream_select_button)
-        self.layout.addLayout(self.stream_layout, 6, 1, 1, 3)
+        self.background_media_layout.addLayout(self.stream_layout, media_row, 0, 1, 2)
+        media_row += 1
         self.stream_color_label = FormLabel(self)
         self.stream_color_label.setObjectName('stream_color_label')
-        self.layout.addWidget(self.stream_color_label, 7, 0)
+        self.background_media_layout.addWidget(self.stream_color_label, media_row, 0)
+        media_row += 1
         self.stream_color_button = ColorButton(self)
         self.stream_color_button.color = '#000000'
         self.stream_color_button.setObjectName('stream_color_button')
-        self.layout.addWidget(self.stream_color_button, 7, 1)
+        self.background_media_layout.addWidget(self.stream_color_button, media_row, 0)
+        media_row += 1
         self.stream_widgets = [self.stream_label, self.stream_lineedit, self.device_stream_select_button,
                                self.network_stream_select_button, self.stream_color_label, self.stream_color_button]
         # Force everything up
         self.layout_spacer = QtWidgets.QSpacerItem(1, 1)
-        self.layout.addItem(self.layout_spacer, 8, 0, 1, 4)
+        self.layout.addItem(self.layout_spacer, row, 0, 1, 2)
         # Connect slots
         self.background_combo_box.currentIndexChanged.connect(self._on_background_type_index_changed)
         self.device_stream_select_button.clicked.connect(self._on_device_stream_select_button_triggered)
@@ -159,6 +209,9 @@ class BackgroundPage(GridLayoutPage):
         """
         Translate the text elements of the widget
         """
+        self.background_type_group_box.setTitle(translate('OpenLP.ThemeWizard', 'Background Type'))
+        self.background_style_group_box.setTitle(translate('OpenLP.ThemeWizard', 'Background Style'))
+        self.background_media_group_box.setTitle(translate('OpenLP.ThemeWizard', 'Background Media'))
         self.background_label.setText(translate('OpenLP.ThemeWizard', 'Background type:'))
         self.background_combo_box.setItemText(BackgroundType.Solid, translate('OpenLP.ThemeWizard', 'Solid color'))
         self.background_combo_box.setItemText(BackgroundType.Gradient, translate('OpenLP.ThemeWizard', 'Gradient'))
@@ -168,6 +221,11 @@ class BackgroundPage(GridLayoutPage):
                                               translate('OpenLP.ThemeWizard', 'Transparent'))
         self.background_combo_box.setItemText(BackgroundType.Stream,
                                               translate('OpenLP.ThemeWizard', 'Live stream'))
+        self.background_fit_label.setText(translate('OpenLP.ThemeWizard', 'Background fit:'))
+        self.background_fit_combo_box.setItemText(0, translate('OpenLP.ThemeWizard', 'Fill (Cover)'))
+        self.background_fit_combo_box.setItemText(1, translate('OpenLP.ThemeWizard', 'Fit (Contain)'))
+        self.background_fit_combo_box.setItemText(2, translate('OpenLP.ThemeWizard', 'Stretch'))
+        self.background_fit_combo_box.setItemText(3, translate('OpenLP.ThemeWizard', 'Repeat'))
         self.color_label.setText(translate('OpenLP.ThemeWizard', 'Color:'))
         self.gradient_start_label.setText(translate('OpenLP.ThemeWizard', 'Starting color:'))
         self.gradient_end_label.setText(translate('OpenLP.ThemeWizard', 'Ending color:'))
@@ -206,6 +264,9 @@ class BackgroundPage(GridLayoutPage):
         if index < len(widget_sets):
             for widget in widget_sets[index]:
                 widget.show()
+        is_fit_visible = index in [BackgroundType.Image, BackgroundType.Video, BackgroundType.Stream]
+        self.background_fit_label.setVisible(is_fit_visible)
+        self.background_fit_combo_box.setVisible(is_fit_visible)
 
     def _on_device_stream_select_button_triggered(self):
         """
@@ -335,3 +396,23 @@ class BackgroundPage(GridLayoutPage):
     @stream_mrl.setter
     def stream_mrl(self, value):
         self.stream_lineedit.setText(value)
+
+    @property
+    def background_fit(self):
+        fit_map = {
+            0: BackgroundPage.Fill,
+            1: BackgroundPage.Fit,
+            2: BackgroundPage.Stretch,
+            3: BackgroundPage.Repeat
+        }
+        return fit_map.get(self.background_fit_combo_box.currentIndex(), BackgroundPage.Fill)
+
+    @background_fit.setter
+    def background_fit(self, value):
+        index_map = {
+            BackgroundPage.Fill: 0,
+            BackgroundPage.Fit: 1,
+            BackgroundPage.Stretch: 2,
+            BackgroundPage.Repeat: 3
+        }
+        self.background_fit_combo_box.setCurrentIndex(index_map.get(value, 0))

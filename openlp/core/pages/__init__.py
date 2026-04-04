@@ -21,7 +21,7 @@
 """
 The :mod:`~openlp.core.pages` module contains wizard pages used in OpenLP
 """
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 
 class GridLayoutPage(QtWidgets.QWizardPage):
@@ -32,6 +32,7 @@ class GridLayoutPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self._column_width = 0
         self.layout = QtWidgets.QGridLayout(self)
+        self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.setup_ui()
         self.retranslate_ui()
         self.resize_columns()
@@ -45,14 +46,19 @@ class GridLayoutPage(QtWidgets.QWizardPage):
 
     def resize_columns(self):
         """
-        Resize all the column widths
+        Keep all columns at equal relative width.
+
+        Using dynamic minimum widths here causes parent dialogs to grow over time
+        when pages are hosted in resizable containers (for example, a QStackedWidget
+        inside a QDialog). Stretch factors provide equal-width columns without
+        feeding a minimum-size growth loop back into the parent layout.
         """
-        width = self.layout.contentsRect().width()
-        spacing = self.layout.horizontalSpacing()
         column_count = self.layout.columnCount()
-        self._column_width = (width - (spacing * (column_count - 1))) // column_count
+        if column_count <= 0:
+            return
+        self._column_width = self.layout.contentsRect().width() // column_count
         for column_number in range(column_count):
-            self.layout.setColumnMinimumWidth(column_number, self._column_width)
+            self.layout.setColumnStretch(column_number, 1)
 
     def setup_ui(self):
         raise NotImplementedError('Descendant pages need to implement setup_ui')

@@ -29,7 +29,6 @@ import pytest
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import BackgroundType
 from openlp.core.ui.themeform import ThemeForm
-from openlp.core.ui.themelayoutform import ThemeLayoutForm
 
 
 def _make_path(s):
@@ -82,8 +81,14 @@ def test_setup(settings):
     with patch('openlp.core.ui.themeform.ThemeForm._setup'):
         theme_form = ThemeForm(None)
     theme_form.setup_ui = MagicMock()
+    theme_form.layout_guide_button = MagicMock()
+    theme_form.layout_guide_button.clicked = MagicMock()
+    theme_form.page_list_widget = MagicMock()
+    theme_form.page_list_widget.currentRowChanged = MagicMock()
+    theme_form.area_position_page = MagicMock()
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
+    theme_form._connect_live_preview_signals = MagicMock()
 
     # WHEN: _setup() is called
     theme_form._setup()
@@ -92,7 +97,9 @@ def test_setup(settings):
     theme_form.setup_ui.assert_called_once_with(theme_form)
     assert theme_form.can_update_theme is True
     assert theme_form.temp_background_filename is None
-    assert isinstance(theme_form.theme_layout_form, ThemeLayoutForm)
+    theme_form.layout_guide_button.clicked.connect.assert_called_once_with(
+        theme_form.on_toggle_layout_guide_clicked)
+    theme_form.page_list_widget.currentRowChanged.connect.assert_called_once_with(theme_form.on_current_id_changed)
     theme_form.main_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.line_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
@@ -108,6 +115,7 @@ def test_setup(settings):
     theme_form.footer_area_page.wrap_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.line_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.letter_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form._connect_live_preview_signals.assert_called_once_with()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -117,7 +125,7 @@ def test_set_defaults(mocked_setup, settings):
     """
     # GIVEN: A ThemeForm instance with mocked methods
     theme_form = ThemeForm(None)
-    theme_form.restart = MagicMock()
+    theme_form.page_list_widget = MagicMock()
     theme_form.set_background_page_values = MagicMock()
     theme_form.set_main_area_page_values = MagicMock()
     theme_form.set_footer_area_page_values = MagicMock()
@@ -129,7 +137,7 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_defaults()
 
     # THEN: all the mocks are called
-    theme_form.restart.assert_called_once()
+    theme_form.page_list_widget.setCurrentRow.assert_called_once_with(0)
     theme_form.set_background_page_values.assert_called_once()
     theme_form.set_main_area_page_values.assert_called_once()
     theme_form.set_footer_area_page_values.assert_called_once()
@@ -146,9 +154,9 @@ def test_calculate_lines(mocked_setup, settings):
     # GIVEN: A ThemeForm instance with some mocked methods
     theme_form = ThemeForm(None)
     theme_form.theme = None
-    theme_form.welcome_page = None
-    theme_form.currentPage = MagicMock()
+    theme_form.can_update_theme = True
     theme_form.update_theme = MagicMock()
+    theme_form.refresh_preview = MagicMock()
     mocked_theme_manager = MagicMock()
     Registry().register('theme_manager', mocked_theme_manager)
 
@@ -156,9 +164,9 @@ def test_calculate_lines(mocked_setup, settings):
     theme_form.calculate_lines()
 
     # THEN: The mocks should have been called correctly
-    theme_form.currentPage.assert_called_once()
     theme_form.update_theme.assert_called_once()
     mocked_theme_manager.generate_image.assert_called_once_with(None, True)
+    theme_form.refresh_preview.assert_called_once()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -177,7 +185,7 @@ def test_update_lines_text(mocked_setup, settings):
     theme_form.main_line_count_label.setText.assert_called_once_with('(approximately 10 lines per slide)')
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QWizard.resizeEvent')
+@patch('openlp.core.ui.themeform.QtWidgets.QDialog.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -191,9 +199,6 @@ def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, setting
     theme_form.size = MagicMock(return_value=1920)
     theme_form.preview_area_layout = MagicMock()
     theme_form.preview_box = MagicMock(**{'width.return_value': 300})
-    mocked_renderer = MagicMock(**{'width.return_value': 1920, 'height.return_value': 1080})
-    Registry().remove('renderer')
-    Registry().register('renderer', mocked_renderer)
 
     # WHEN: resizeEvent() is called
     theme_form.resizeEvent()
@@ -201,13 +206,11 @@ def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, setting
     # THEN: The correct calls should have been made
     MockResizeEvent.assert_called_once_with(1920, 1920)
     mocked_resizeEvent.assert_called_once_with(theme_form, mocked_event)
-    assert mocked_renderer.width.call_count == 2
-    mocked_renderer.height.assert_called_once()
-    theme_form.preview_area_layout.set_aspect_ratio.assert_called_once_with(16 / 9)
-    theme_form.preview_box.set_scale.assert_called_once_with(float(300 / 1920))
+    theme_form.preview_area_layout.set_aspect_ratio.assert_not_called()
+    theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QWizard.resizeEvent')
+@patch('openlp.core.ui.themeform.QtWidgets.QDialog.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -221,9 +224,6 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     theme_form.size = MagicMock(return_value=1920)
     theme_form.preview_area_layout = MagicMock()
     theme_form.preview_box = MagicMock(**{'width.return_value': 300})
-    mocked_renderer = MagicMock(**{'width.return_value': 1920, 'height.return_value': 0})
-    Registry().remove('renderer')
-    Registry().register('renderer', mocked_renderer)
 
     # WHEN: resizeEvent() is called
     theme_form.resizeEvent()
@@ -231,10 +231,8 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     # THEN: The correct calls should have been made
     MockResizeEvent.assert_called_once_with(1920, 1920)
     mocked_resizeEvent.assert_called_once_with(theme_form, mocked_event)
-    assert mocked_renderer.width.call_count == 2
-    mocked_renderer.height.assert_called_once()
-    theme_form.preview_area_layout.set_aspect_ratio.assert_called_once_with(1)
-    theme_form.preview_box.set_scale.assert_called_once_with(float(300 / 1920))
+    theme_form.preview_area_layout.set_aspect_ratio.assert_not_called()
+    theme_form.preview_box.set_scale.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.QtWidgets.QMessageBox.critical')
@@ -248,7 +246,7 @@ def test_validate_current_page_with_image(mocked_setup, mocked_is_not_image_file
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock(background_type=BackgroundType.to_string(BackgroundType.Image),
                                            image_path=Path('picture.jpg'))
-    theme_form.page = MagicMock(return_value=theme_form.background_page)
+    theme_form.page_stack = MagicMock(**{'currentWidget.return_value': theme_form.background_page})
     mocked_is_not_image_file.return_value = True
 
     # WHEN: validateCurrentPage() is called
@@ -269,7 +267,7 @@ def test_validate_current_page(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock()
-    theme_form.page = MagicMock()
+    theme_form.page_stack = MagicMock(**{'currentWidget.return_value': MagicMock()})
 
     # WHEN: validateCurrentPage() is called
     result = theme_form.validateCurrentPage()
@@ -285,27 +283,16 @@ def test_on_current_id_changed_preview(mocked_setup, settings):
     """
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
-    theme_form.theme = 'my fake theme'
     theme_form.area_position_page = MagicMock()
-    theme_form.preview_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.preview_page)
-    theme_form.update_theme = MagicMock()
-    theme_form.preview_box = MagicMock(**{'width.return_value': 300})
-    theme_form.preview_area_layout = MagicMock()
-    theme_form.resizeEvent = MagicMock()
-    mocked_renderer = MagicMock(**{'width.return_value': 1920, 'height.return_value': 0})
-    Registry().remove('renderer')
-    Registry().register('renderer', mocked_renderer)
+    theme_form.page_stack = MagicMock(**{'count.return_value': 5, 'currentWidget.return_value': theme_form.area_position_page})
+    theme_form.refresh_preview = MagicMock()
 
     # WHEN: on_current_id_changed() is called
     theme_form.on_current_id_changed(1)
 
     # THEN: The right options should have been set
-    theme_form.update_theme.assert_called_once()
-    theme_form.resizeEvent.assert_called_once()
-    theme_form.preview_box.clear_slides.assert_called_once()
-    theme_form.preview_box.show.assert_called_once()
-    theme_form.preview_box.generate_preview.assert_called_once_with('my fake theme', False, False)
+    theme_form.page_stack.setCurrentIndex.assert_called_once_with(1)
+    theme_form.refresh_preview.assert_called_once()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -354,7 +341,7 @@ def test_initialise_page_background(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.background_page)
+    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.background_page})
     theme_form.set_background_page_values = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -373,7 +360,7 @@ def test_initialise_page_main_area(mocked_setup, settings):
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.main_area_page)
+    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.main_area_page})
     theme_form.set_main_area_page_values = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -393,7 +380,7 @@ def test_initialise_page_footer_area(mocked_setup, settings):
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.footer_area_page)
+    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.footer_area_page})
     theme_form.set_footer_area_page_values = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -414,7 +401,7 @@ def test_initialise_page_alignment(mocked_setup, settings):
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
     theme_form.alignment_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.alignment_page)
+    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.alignment_page})
     theme_form.set_alignment_page_values = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -436,7 +423,7 @@ def test_initialise_page_area_position(mocked_setup, settings):
     theme_form.footer_area_page = MagicMock()
     theme_form.alignment_page = MagicMock()
     theme_form.area_position_page = MagicMock()
-    theme_form.page = MagicMock(return_value=theme_form.area_position_page)
+    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.area_position_page})
     theme_form.set_position_page_values = MagicMock()
 
     # WHEN: on_shadow_toggled is called

@@ -72,7 +72,7 @@ class AreaPositionPage(GridLayoutPage):
         self.main_height_spin_box.setObjectName('main_height_spin_box')
         self.main_position_layout.addWidget(self.main_height_label, 4, 0)
         self.main_position_layout.addWidget(self.main_height_spin_box, 4, 1)
-        self.layout.addWidget(self.main_position_group_box, 0, 0)
+        self.layout.addWidget(self.main_position_group_box, 0, 0, 1, 2)
         # Footer area position
         self.footer_position_group_box = QtWidgets.QGroupBox(self)
         self.footer_position_group_box.setObjectName('footer_position_group_box')
@@ -109,7 +109,7 @@ class AreaPositionPage(GridLayoutPage):
         self.footer_height_spin_box.setObjectName('footer_height_spin_box')
         self.footer_position_layout.addWidget(self.footer_height_label, 4, 0)
         self.footer_position_layout.addWidget(self.footer_height_spin_box, 4, 1)
-        self.layout.addWidget(self.footer_position_group_box, 0, 1)
+        self.layout.addWidget(self.footer_position_group_box, 1, 0, 1, 2)
         # Connect signals to slots
         self.main_position_check_box.toggled.connect(self.main_x_spin_box.setDisabled)
         self.main_position_check_box.toggled.connect(self.main_y_spin_box.setDisabled)

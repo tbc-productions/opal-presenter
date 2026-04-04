@@ -32,23 +32,22 @@ from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import BackgroundType
 from openlp.core.lib.ui import critical_error_message_box
-from openlp.core.ui.themelayoutform import ThemeLayoutForm
 from openlp.core.ui.themewizard import Ui_ThemeWizard
 
 
 log = logging.getLogger(__name__)
 
 
-class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
+class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
     """
-    This is the Theme Import Wizard, which allows easy creation and editing of
+    This is the Theme dialog, which allows easy creation and editing of
     OpenLP themes.
     """
     log.info('ThemeWizardForm loaded')
 
     def __init__(self, parent):
         """
-        Instantiate the wizard, and run any extra setup we need to.
+        Instantiate the dialog, and run any extra setup we need to.
 
         :param parent: The QWidget-derived parent of the wizard.
         """
@@ -65,25 +64,39 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         self.setup_ui(self)
         self.can_update_theme = True
         self.temp_background_filename = None
-        self.theme_layout_form = ThemeLayoutForm(self)
-        self.customButtonClicked.connect(self.on_custom_1_button_clicked)
-        self.currentIdChanged.connect(self.on_current_id_changed)
+        self._last_preview_scale = None
+        self.layout_guides_visible = False
+        if hasattr(self, 'preview_area_layout'):
+            try:
+                self.preview_area_layout.set_aspect_ratio(self.renderer.width() / self.renderer.height())
+            except ZeroDivisionError:
+                self.preview_area_layout.set_aspect_ratio(1)
+            self.preview_area_layout.resize.connect(self._on_preview_area_resized)
+        self.layout_guide_button.clicked.connect(self.on_toggle_layout_guide_clicked)
+        self.page_list_widget.currentRowChanged.connect(self.on_current_id_changed)
         Registry().register_function('theme_line_count', self.update_lines_text)
         self.main_area_page.font_name_changed.connect(self.calculate_lines)
+        self.main_area_page.font_color_changed.connect(self.calculate_lines)
+        self.main_area_page.is_bold_changed.connect(self.calculate_lines)
+        self.main_area_page.is_italic_changed.connect(self.calculate_lines)
         self.main_area_page.font_size_changed.connect(self.calculate_lines)
         self.main_area_page.line_spacing_changed.connect(self.calculate_lines)
         self.main_area_page.letter_spacing_changed.connect(self.calculate_lines)
         self.main_area_page.is_outline_enabled_changed.connect(self.on_outline_toggled)
+        self.main_area_page.outline_color_changed.connect(self.calculate_lines)
         self.main_area_page.outline_size_changed.connect(self.calculate_lines)
         self.main_area_page.is_shadow_enabled_changed.connect(self.on_shadow_toggled)
+        self.main_area_page.shadow_color_changed.connect(self.calculate_lines)
         self.main_area_page.shadow_size_changed.connect(self.calculate_lines)
         self.footer_area_page.font_name_changed.connect(self.calculate_lines)
+        self.footer_area_page.font_color_changed.connect(self.calculate_lines)
+        self.footer_area_page.is_bold_changed.connect(self.calculate_lines)
+        self.footer_area_page.is_italic_changed.connect(self.calculate_lines)
         self.footer_area_page.font_size_changed.connect(self.calculate_lines)
         self.footer_area_page.wrap_changed.connect(self.calculate_lines)
         self.footer_area_page.line_spacing_changed.connect(self.calculate_lines)
         self.footer_area_page.letter_spacing_changed.connect(self.calculate_lines)
-        self.setOption(QtWidgets.QWizard.WizardOption.HaveHelpButton, True)
-        self.helpRequested.connect(self.provide_help)
+        self._connect_live_preview_signals()
 
     def provide_help(self):
         """
@@ -95,7 +108,7 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         """
         Set up display at start of theme edit.
         """
-        self.restart()
+        self.page_list_widget.setCurrentRow(0)
         self.set_background_page_values()
         self.set_main_area_page_values()
         self.set_footer_area_page_values()
@@ -107,10 +120,11 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         """
         Calculate the number of lines on a page by rendering text
         """
-        # Do not trigger on start up
-        if self.currentPage() != self.welcome_page:
-            self.update_theme()
-            self.theme_manager.generate_image(self.theme, True)
+        if not self.can_update_theme:
+            return
+        self.update_theme()
+        self.theme_manager.generate_image(self.theme, True)
+        self.refresh_preview()
 
     def update_lines_text(self, lines):
         """
@@ -122,26 +136,17 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
 
     def resizeEvent(self, event=None):
         """
-        Rescale the theme preview thumbnail on resize events.
+        Handle resize events.
         """
         if not event:
             event = QtGui.QResizeEvent(self.size(), self.size())
-        QtWidgets.QWizard.resizeEvent(self, event)
-        try:
-            self.display_aspect_ratio = self.renderer.width() / self.renderer.height()
-        except ZeroDivisionError:
-            self.display_aspect_ratio = 1
-        # Make sure we don't resize before the widgets are actually created
-        if hasattr(self, 'preview_area_layout'):
-            self.preview_area_layout.set_aspect_ratio(self.display_aspect_ratio)
-            self.application.process_events()
-            self.preview_box.set_scale(float(self.preview_box.width()) / self.renderer.width())
+        QtWidgets.QDialog.resizeEvent(self, event)
 
     def validateCurrentPage(self):
         """
-        Validate the current page
+        Validate the currently selected page
         """
-        if self.page(self.currentId()) == self.background_page:
+        if self.page_stack.currentWidget() == self.background_page:
             background_image = BackgroundType.to_string(BackgroundType.Image)
             background_video = BackgroundType.to_string(BackgroundType.Video)
             background_stream = BackgroundType.to_string(BackgroundType.Stream)
@@ -167,40 +172,37 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
                 return True
         return True
 
+    def validate_background_page(self):
+        """
+        Validate background settings regardless of the selected tab.
+        """
+        current_widget = self.page_stack.currentWidget()
+        self.page_stack.setCurrentWidget(self.background_page)
+        is_valid = self.validateCurrentPage()
+        self.page_stack.setCurrentWidget(current_widget)
+        return is_valid
+
     def on_current_id_changed(self, page_id):
         """
         Detects Page changes and updates as appropriate.
         :param page_id: current page number
         """
-        enabled = self.page(page_id) == self.area_position_page
-        self.setOption(QtWidgets.QWizard.WizardOption.HaveCustomButton1, enabled)
-        if self.page(page_id) == self.preview_page:
-            self.update_theme()
-            self.resizeEvent()
-            self.preview_box.clear_slides()
-            self.preview_box.show()
-            self.preview_box.generate_preview(self.theme, False, False)
+        if page_id < 0 or page_id >= self.page_stack.count():
+            return
+        self.page_stack.setCurrentIndex(page_id)
+        # Let the list selection paint before preview rendering work starts.
+        self.application.process_events()
+        self.refresh_preview()
 
-    def on_custom_1_button_clicked(self, number):
+    def on_toggle_layout_guide_clicked(self):
         """
-        Generate layout preview and display the form.
+        Toggle the layout guide overlay in the preview.
         """
-        self.update_theme()
-        width = self.renderer.width()
-        height = self.renderer.height()
-        pixmap = QtGui.QPixmap(width, height)
-        pixmap.fill(QtCore.Qt.GlobalColor.white)
-        paint = QtGui.QPainter(pixmap)
-        paint.setPen(QtGui.QPen(QtCore.Qt.GlobalColor.blue, 2))
-        main_rect = QtCore.QRect(int(self.theme.font_main_x), int(self.theme.font_main_y),
-                                 int(self.theme.font_main_width - 1), int(self.theme.font_main_height - 1))
-        paint.drawRect(main_rect)
-        paint.setPen(QtGui.QPen(QtCore.Qt.GlobalColor.red, 2))
-        footer_rect = QtCore.QRect(int(self.theme.font_footer_x), int(self.theme.font_footer_y),
-                                   int(self.theme.font_footer_width - 1), int(self.theme.font_footer_height - 1))
-        paint.drawRect(footer_rect)
-        paint.end()
-        self.theme_layout_form.exec(pixmap)
+        self.layout_guides_visible = not self.layout_guides_visible
+        button_text = translate('OpenLP.ThemeWizard', 'Hide layout guide') if self.layout_guides_visible else \
+            translate('OpenLP.ThemeWizard', 'Show layout guide')
+        self.layout_guide_button.setText(button_text)
+        self.update_layout_guide_overlay()
 
     def on_outline_toggled(self, is_enabled):
         """
@@ -220,7 +222,7 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
 
     def exec(self, edit=False):
         """
-        Run the wizard.
+        Run the dialog.
         """
         log.debug('Editing theme {name}'.format(name=self.theme.theme_name))
         self.temp_background_filename = self.theme.background_source
@@ -230,20 +232,22 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         self.theme_name_label.setVisible(not edit)
         self.theme_name_edit.setVisible(not edit)
         self.edit_mode = edit
+        self.layout_guides_visible = False
+        self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Show layout guide'))
         if edit:
             self.setWindowTitle(translate('OpenLP.ThemeWizard', 'Edit Theme - {name}'
                                           ).format(name=self.theme.theme_name))
-            self.next()
         else:
             self.setWindowTitle(UiStrings().NewTheme)
-        return QtWidgets.QWizard.exec(self)
+        self.refresh_preview()
+        return QtWidgets.QDialog.exec(self)
 
     def initializePage(self, page_id):
         """
-        Set up the pages for Initial run through dialog
+        Set up values for the selected page.
         """
         log.debug('initializePage {page}'.format(page=page_id))
-        wizard_page = self.page(page_id)
+        wizard_page = self.page_stack.widget(page_id)
         if wizard_page == self.background_page:
             self.set_background_page_values()
         elif wizard_page == self.main_area_page:
@@ -255,10 +259,106 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         elif wizard_page == self.area_position_page:
             self.set_position_page_values()
 
+    def _connect_live_preview_signals(self):
+        """
+        Connect controls that do not emit the page-level signals used by font pages.
+        """
+        self.background_page.background_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.background_page.background_fit_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.background_page.color_button.colorChanged.connect(self.calculate_lines)
+        self.background_page.gradient_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.background_page.gradient_start_button.colorChanged.connect(self.calculate_lines)
+        self.background_page.gradient_end_button.colorChanged.connect(self.calculate_lines)
+        self.background_page.image_path_edit.pathChanged.connect(self.calculate_lines)
+        self.background_page.image_color_button.colorChanged.connect(self.calculate_lines)
+        self.background_page.video_path_edit.pathChanged.connect(self.calculate_lines)
+        self.background_page.video_color_button.colorChanged.connect(self.calculate_lines)
+        self.background_page.stream_lineedit.textChanged.connect(self.calculate_lines)
+        self.background_page.stream_color_button.colorChanged.connect(self.calculate_lines)
+        self.alignment_page.horizontal_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.footer_horizontal_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.footer_vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.transitions_enabled_check_box.toggled.connect(self.calculate_lines)
+        self.alignment_page.transition_effect_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.transition_speed_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.transition_direction_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.alignment_page.transition_reverse_check_box.toggled.connect(self.calculate_lines)
+        self.area_position_page.main_position_check_box.toggled.connect(self.calculate_lines)
+        self.area_position_page.main_x_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.main_y_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.main_width_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.main_height_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.footer_position_check_box.toggled.connect(self.calculate_lines)
+        self.area_position_page.footer_x_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.footer_y_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.footer_width_spin_box.valueChanged.connect(self.calculate_lines)
+        self.area_position_page.footer_height_spin_box.valueChanged.connect(self.calculate_lines)
+
+    def refresh_preview(self):
+        """
+        Re-render the preview with the current theme values.
+        """
+        if not hasattr(self, 'preview_box'):
+            return
+        self._set_preview_scale()
+        self.preview_box.clear_slides()
+        self.preview_box.show()
+        self.preview_box.generate_preview(self.theme, False, False)
+        self.update_layout_guide_overlay()
+
+    def _on_preview_area_resized(self, _size):
+        """
+        Keep preview content scaled to the preview viewport.
+        """
+        self._set_preview_scale()
+        self.update_layout_guide_overlay()
+
+    def _set_preview_scale(self):
+        """
+        Compute and apply a stable preview scale from the current preview width.
+        """
+        renderer_width = self.renderer.width()
+        if renderer_width <= 0:
+            return
+        scale = float(self.preview_box.width()) / float(renderer_width)
+        if scale <= 0:
+            return
+        if self._last_preview_scale is None or abs(scale - self._last_preview_scale) > 0.01:
+            self._last_preview_scale = scale
+            self.preview_box.set_scale(scale)
+
+    def update_layout_guide_overlay(self):
+        """
+        Update and paint layout guide rectangles over the preview.
+        """
+        if not hasattr(self, 'preview_box') or self.preview_box is None:
+            return
+        if not self.layout_guides_visible:
+            self.preview_box.run_in_display('clearLayoutGuide')
+            return
+        if not hasattr(self, 'theme'):
+            return
+        self.preview_box.run_in_display('setLayoutGuide', {
+            'main': {
+                'x': int(self.theme.font_main_x),
+                'y': int(self.theme.font_main_y),
+                'width': int(self.theme.font_main_width),
+                'height': int(self.theme.font_main_height)
+            },
+            'footer': {
+                'x': int(self.theme.font_footer_x),
+                'y': int(self.theme.font_footer_y),
+                'width': int(self.theme.font_footer_width),
+                'height': int(self.theme.font_footer_height)
+            }
+        })
+
     def set_background_page_values(self):
         """
         Handle the display and state of the Background page.
         """
+        self.background_page.background_fit = getattr(self.theme, 'background_fit', 'cover')
         self.background_page.background_type = self.theme.background_type
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Solid):
             self.background_page.color = self.theme.background_color
@@ -361,6 +461,7 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         log.debug('update_theme')
         # background page
         self.theme.background_type = self.background_page.background_type
+        self.theme.background_fit = self.background_page.background_fit
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Solid):
             self.theme.background_color = self.background_page.color
         elif self.theme.background_type == BackgroundType.to_string(BackgroundType.Gradient):
@@ -435,6 +536,9 @@ class ThemeForm(QtWidgets.QWizard, Ui_ThemeWizard, RegistryProperties):
         """
         Lets save the theme as Finish has been triggered
         """
+        if not self.validate_background_page():
+            return
+        self.update_theme()
         # Save the theme name
         self.theme.theme_name = self.theme_name_edit.text()
         if not self.theme.theme_name:
