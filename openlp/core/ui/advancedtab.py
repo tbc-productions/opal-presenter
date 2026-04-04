@@ -133,7 +133,6 @@ class AdvancedTab(SettingsTab):
         self.left_layout.addStretch()
         self.right_layout.addStretch()
         # Set up all the connections and things
-        self.alternate_rows_check_box.toggled.connect(self.on_restart_needed)
         self.data_directory_path_edit.pathChanged.connect(self.on_data_directory_path_edit_path_changed)
         self.data_directory_cancel_button.clicked.connect(self.on_data_directory_cancel_button_clicked)
         self.data_directory_copy_check_box.toggled.connect(self.on_data_directory_copy_check_box_toggled)
@@ -206,6 +205,7 @@ class AdvancedTab(SettingsTab):
         """
         Save settings to disk.
         """
+        alternate_rows = self.settings.value('advanced/alternate rows')
         self.settings.setValue('advanced/disable transparent display',
                                self.allow_transparent_display_check_box.isChecked())
         self.settings.setValue('advanced/prefer windowed screen capture',
@@ -215,6 +215,8 @@ class AdvancedTab(SettingsTab):
             self.settings.setValue('advanced/x11 bypass wm', self.x11_bypass_check_box.isChecked())
             self.settings_form.register_post_process('config_screen_changed')
         self.settings.setValue('advanced/alternate rows', self.alternate_rows_check_box.isChecked())
+        if alternate_rows != self.alternate_rows_check_box.isChecked():
+            self.settings_form.register_post_process('alternate_rows_changed')
         self.settings.setValue('advanced/protect data directory', self.data_directory_protect_check_box.isChecked())
         self.settings.setValue('advanced/hidpi mode', self.hidpi_mode_combobox.currentIndex())
         self.proxy_widget.save()

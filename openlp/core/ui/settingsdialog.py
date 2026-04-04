@@ -26,6 +26,32 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
+
+
+class SettingsContentWidget(QtWidgets.QWidget):
+    """
+    Container widget for the settings pages inside the scroll area.
+
+    The size hint is based on the currently visible stacked page so the scroll area only shows
+    scrollbars when the active page actually exceeds the available space.
+    """
+
+    def sizeHint(self):
+        layout = self.layout()
+        if isinstance(layout, QtWidgets.QStackedLayout):
+            current_widget = layout.currentWidget()
+            if current_widget is not None:
+                return current_widget.sizeHint()
+        return super().sizeHint()
+
+    def minimumSizeHint(self):
+        layout = self.layout()
+        if isinstance(layout, QtWidgets.QStackedLayout):
+            current_widget = layout.currentWidget()
+            if current_widget is not None:
+                return current_widget.minimumSizeHint()
+        return super().minimumSizeHint()
 
 
 class Ui_SettingsDialog(object):
@@ -53,20 +79,21 @@ class Ui_SettingsDialog(object):
             sidebar_font.setPointSizeF(sidebar_font.pointSizeF() + 0.5)
             self.setting_list_widget.setFont(sidebar_font)
         self.setting_list_widget.setSpacing(2)
-        self.setting_list_widget.setAlternatingRowColors(True)
+        self.setting_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.setting_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setting_list_widget.setStyleSheet('QListWidget::item { padding: 9px 11px; }')
         self.setting_list_widget.setObjectName('setting_list_widget')
         self.dialog_layout.addWidget(self.setting_list_widget, 0, 0, 1, 1)
         self.dialog_layout.setColumnStretch(0, 0)
         self.dialog_layout.setColumnStretch(1, 1)
-        self.content_widget = QtWidgets.QWidget(settings_dialog)
+        self.content_widget = SettingsContentWidget(settings_dialog)
         self.content_widget.setObjectName('content_widget')
         self.stacked_layout = QtWidgets.QStackedLayout(self.content_widget)
         self.stacked_layout.setObjectName('stacked_layout')
         self.scroll_area = QtWidgets.QScrollArea(settings_dialog)
         self.scroll_area.setObjectName('scroll_area')
         self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.scroll_area.setWidget(self.content_widget)
         self.dialog_layout.addWidget(self.scroll_area, 0, 1, 1, 1)

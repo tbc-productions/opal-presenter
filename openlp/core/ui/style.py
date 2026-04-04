@@ -435,6 +435,15 @@ def get_alternate_rows_repair_stylesheet(base_color_name):
     return 'QTableWidget, QListWidget, QTreeWidget {alternate-background-color: ' + base_color_name + ';}\n'
 
 
+def use_alternate_rows():
+    registry = Registry()
+    service_list = getattr(registry, 'service_list', None)
+    if not service_list:
+        return False
+    settings = registry.get('settings')
+    return False if settings is None else bool(settings.value('advanced/alternate rows'))
+
+
 def get_application_stylesheet():
     """
     Return the correct application stylesheet based on the current style and operating system
@@ -443,7 +452,7 @@ def get_application_stylesheet():
     """
     stylesheet = ''
     ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
-    use_alternate_rows = Registry().get('settings').value('advanced/alternate rows')
+    use_alternate_rows_enabled = use_alternate_rows()
     is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
     is_system_theme = ui_theme_name == UiThemes.Automatic
     if is_system_theme:
@@ -462,7 +471,7 @@ def get_application_stylesheet():
     else:
         stylesheet += FORM_CONTROL_STYLE_REPAIR
         stylesheet += BUTTON_HOVER_STYLE_REPAIR
-        if not use_alternate_rows:
+        if not use_alternate_rows_enabled:
             base_color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorGroup.Active,
                                                                 QtGui.QPalette.ColorRole.Base)
             alternate_rows_repair_stylesheet = get_alternate_rows_repair_stylesheet(base_color.name())

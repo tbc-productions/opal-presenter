@@ -32,6 +32,7 @@ from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
@@ -125,7 +126,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
         self.screen_ratio = screen_ratio
@@ -371,7 +372,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.setSpacing(1)
         self.setStyleSheet('QListWidget::item { padding: 4px 2px; }')
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self._drag_start_pos = None
 

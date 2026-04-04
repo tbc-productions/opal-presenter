@@ -31,6 +31,7 @@ from openlp.core.pages.areaposition import AreaPositionPage
 from openlp.core.pages.background import BackgroundPage
 from openlp.core.pages.fontselect import FontSelectPage
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
@@ -85,7 +86,7 @@ class Ui_ThemeWizard(object):
         self.page_list_widget = QtWidgets.QListWidget(theme_dialog)
         self.page_list_widget.setObjectName('page_list_widget')
         self.page_list_widget.setUniformItemSizes(True)
-        self.page_list_widget.setAlternatingRowColors(True)
+        self.page_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.page_list_widget.setMinimumSize(QtCore.QSize(210, 0))
         self.page_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.page_list_widget.setStyleSheet('QListWidget::item { padding: 9px 11px; }')

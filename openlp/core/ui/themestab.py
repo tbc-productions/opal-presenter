@@ -136,7 +136,7 @@ class ThemesTab(SettingsTab):
             rect.setTop(rect.top() + label_top_margin)
             label.setFrameRect(rect)
             label.setWordWrap(True)
-        self.left_layout.addWidget(self.level_group_box)
+        self.right_layout.addWidget(self.level_group_box)
         self.left_layout.addStretch()
         self.right_layout.addStretch()
         self.song_level_radio_button.clicked.connect(self.on_song_level_button_clicked)

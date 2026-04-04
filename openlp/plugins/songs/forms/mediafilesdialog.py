@@ -24,6 +24,7 @@ from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 
 class Ui_MediaFilesDialog(object):
@@ -48,7 +49,7 @@ class Ui_MediaFilesDialog(object):
         self.select_label.setObjectName('select_label')
         self.files_vertical_layout.addWidget(self.select_label)
         self.file_list_widget = QtWidgets.QListWidget(media_files_dialog)
-        self.file_list_widget.setAlternatingRowColors(True)
+        self.file_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.file_list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.file_list_widget.setObjectName('file_list_widget')
         self.files_vertical_layout.addWidget(self.file_list_widget)

@@ -52,6 +52,7 @@ from openlp.core.ui.media import get_supported_media_suffix
 from openlp.core.ui.serviceitemeditform import ServiceItemEditForm
 from openlp.core.ui.servicenoteform import ServiceNoteForm
 from openlp.core.ui.starttimeform import StartTimeForm
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
@@ -66,7 +67,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         """
         super(ServiceManagerList, self).__init__(parent)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         self.setHeaderHidden(True)
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
@@ -286,6 +287,7 @@ class Ui_ServiceManager(object):
         self.theme_combo_box.setSizeAdjustPolicy(
             QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.theme_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.theme_combo_box.setMinimumWidth(80)
         self.theme_combo_box.setObjectName('theme_combo_box')
         self.toolbar.add_toolbar_widget(self.theme_combo_box)
         self.unsaved_changes_container = QtWidgets.QWidget(self.toolbar)

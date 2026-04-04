@@ -26,6 +26,7 @@ from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 
 class CaptureShortcutButton(QtWidgets.QPushButton):
@@ -81,7 +82,7 @@ class Ui_ShortcutListDialog(object):
         self.shortcut_list_layout.addWidget(self.description_label)
         self.tree_widget = ShortcutTreeWidget(shortcutListDialog)
         self.tree_widget.setObjectName('tree_widget')
-        self.tree_widget.setAlternatingRowColors(True)
+        self.tree_widget.setAlternatingRowColors(use_alternate_rows())
         self.tree_widget.setColumnCount(3)
         self.tree_widget.setColumnWidth(0, 250)
         self.shortcut_list_layout.addWidget(self.tree_widget)

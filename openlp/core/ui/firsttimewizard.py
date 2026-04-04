@@ -28,6 +28,7 @@ from openlp.core.common.platform import is_macosx
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import add_welcome_page
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.pages import GridLayoutPage
@@ -276,7 +277,7 @@ class UiFirstTimeWizard(object):
         self.songs_layout.setContentsMargins(50, 20, 50, 20)
         self.songs_layout.setObjectName('songs_layout')
         self.songs_list_widget = QtWidgets.QListWidget(self.songs_page)
-        self.songs_list_widget.setAlternatingRowColors(True)
+        self.songs_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.songs_list_widget.setObjectName('songs_list_widget')
         self.songs_layout.addWidget(self.songs_list_widget)
         first_time_wizard.setPage(FirstTimePage.Songs, self.songs_page)
@@ -287,7 +288,7 @@ class UiFirstTimeWizard(object):
         self.bibles_layout.setContentsMargins(50, 20, 50, 20)
         self.bibles_layout.setObjectName('bibles_layout')
         self.bibles_tree_widget = QtWidgets.QTreeWidget(self.bibles_page)
-        self.bibles_tree_widget.setAlternatingRowColors(True)
+        self.bibles_tree_widget.setAlternatingRowColors(use_alternate_rows())
         self.bibles_tree_widget.header().setVisible(False)
         self.bibles_tree_widget.setObjectName('bibles_tree_widget')
         self.bibles_layout.addWidget(self.bibles_tree_widget)
