@@ -261,6 +261,17 @@ describe("The Display object", function () {
     expect(Reveal.slide).toHaveBeenCalledWith(0, 0);
   });
 
+  it("should navigate horizontal text slides using Reveal's horizontal axis", function () {
+    spyOn(Reveal, "slide");
+    spyOn(Display, "_slides");
+    Display._textSlideDirection = TransitionDirection.Horizontal;
+    Display._slides["v1"] = {h: 1, v: 0};
+
+    Display.goToSlide("v1");
+
+    expect(Reveal.slide).toHaveBeenCalledWith(1, 0);
+  });
+
   it("should have an alert() method", function () {
     expect(Display.alert).toBeDefined();
   });
@@ -344,8 +355,68 @@ describe("Transitions", function () {
 
     Display.applyTheme(Display._slidesContainer.children[0])
 
-    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("convex-vertical-reverse");
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("convex");
     expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("slow");
+  });
+
+  it("should keep fade transitions Reveal.js-compatible", function () {
+    Display._doTransitions = true;
+    var theme = {
+      "display_slide_transition": true,
+      "display_slide_transition_type": TransitionType.Fade,
+      "display_slide_transition_speed": TransitionSpeed.Normal,
+      "display_slide_transition_direction": TransitionDirection.Vertical,
+      "display_slide_transition_reverse": true,
+    }
+    Display.setTheme(theme);
+    var slidesDiv = _createDiv({"class": "slides"});
+    slidesDiv.innerHTML = "<section><section><p></p></section></section>";
+    Display._slidesContainer = slidesDiv;
+
+    Display.applyTheme(Display._slidesContainer.children[0])
+
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("fade");
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("default");
+  });
+
+  it("should support string-encoded non-fade transition values", function () {
+    Display._doTransitions = true;
+    var theme = {
+      "display_slide_transition": true,
+      "display_slide_transition_type": "convex",
+      "display_slide_transition_speed": "slow",
+      "display_slide_transition_direction": "vertical",
+      "display_slide_transition_reverse": "true",
+    }
+    Display.setTheme(theme);
+    var slidesDiv = _createDiv({"class": "slides"});
+    slidesDiv.innerHTML = "<section><section><p></p></section></section>";
+    Display._slidesContainer = slidesDiv;
+
+    Display.applyTheme(Display._slidesContainer.children[0])
+
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("convex");
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("slow");
+  });
+
+  it("should configure Reveal rtl for reversed horizontal theme transitions", function () {
+    Display._doTransitions = true;
+    spyOn(Reveal, "configure");
+    var theme = {
+      "display_slide_transition": true,
+      "display_slide_transition_type": TransitionType.Slide,
+      "display_slide_transition_speed": TransitionSpeed.Fast,
+      "display_slide_transition_direction": TransitionDirection.Horizontal,
+      "display_slide_transition_reverse": true,
+    }
+    Display.setTheme(theme);
+    var slidesDiv = _createDiv({"class": "slides"});
+    slidesDiv.innerHTML = "<section><p></p></section>";
+    Display._slidesContainer = slidesDiv;
+
+    Display.applyTheme(Display._slidesContainer.children[0], true)
+
+    expect(Reveal.configure).toHaveBeenCalledWith({"transition": "slide", "transitionSpeed": "fast", "rtl": true});
   });
 
   it("should apply background fit attributes to an image background slide", function () {
@@ -941,6 +1012,23 @@ describe("Display.setTextSlides", function () {
     Display.setTextSlides(slides);
 
     expect(document.querySelectorAll(".footer > .footer-item")[1].classList.contains('active')).toBeTruthy();
+  });
+
+  it("should build horizontal theme text slides as sibling sections", function () {
+    var slides = textSlides;
+    var theme = {
+      'display_slide_transition_direction': TransitionDirection.Horizontal
+    };
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setTheme(theme);
+    Display.setTextSlides(slides);
+
+    expect($(".slides > section").length).toEqual(2);
+    expect($(".slides > section > section").length).toEqual(0);
+    expect(Display._slides["v1"]).toEqual({h: 0, v: 0});
+    expect(Display._slides["v2"]).toEqual({h: 1, v: 0});
   });
 });
 

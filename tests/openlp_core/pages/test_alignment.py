@@ -54,8 +54,68 @@ def test_on_transition_enabled_changed(settings):
     assert page.transition_effect_combo_box.isEnabled()
     assert page.transition_speed_label.isEnabled()
     assert page.transition_speed_combo_box.isEnabled()
+    assert page.transition_direction_label.isEnabled()
     assert page.transition_direction_combo_box.isEnabled()
     assert page.transition_reverse_check_box.isEnabled()
+
+
+def test_transition_reverse_checkbox_label(settings):
+    """
+    Test the transition reverse checkbox uses the RTL support wording.
+    """
+    # GIVEN: An instance of AlignmentTransitionsPage
+    page = AlignmentTransitionsPage()
+
+    # WHEN: Reading the checkbox label
+    result = page.transition_reverse_check_box.text()
+
+    # THEN: The user-facing label should describe Reveal's rtl behavior
+    assert result == 'Right-to-left language support'
+
+
+def test_transition_direction_hidden_for_fade(settings):
+    """
+    Test the transition direction controls are hidden for Fade.
+    """
+    # GIVEN: An instance of AlignmentTransitionsPage
+    page = AlignmentTransitionsPage()
+
+    # WHEN: Fade is selected
+    page.transition_type = TransitionType.Fade
+
+    # THEN: The direction controls should be hidden
+    assert page.transition_direction_label.isHidden() is True
+    assert page.transition_direction_combo_box.isHidden() is True
+
+
+def test_transition_direction_hidden_for_zoom(settings):
+    """
+    Test the transition direction controls are hidden for Zoom.
+    """
+    # GIVEN: An instance of AlignmentTransitionsPage
+    page = AlignmentTransitionsPage()
+
+    # WHEN: Zoom is selected
+    page.transition_type = TransitionType.Zoom
+
+    # THEN: The direction controls should be hidden
+    assert page.transition_direction_label.isHidden() is True
+    assert page.transition_direction_combo_box.isHidden() is True
+
+
+def test_transition_direction_shown_for_slide(settings):
+    """
+    Test the transition direction controls are shown for directional effects.
+    """
+    # GIVEN: An instance of AlignmentTransitionsPage
+    page = AlignmentTransitionsPage()
+
+    # WHEN: Slide is selected
+    page.transition_type = TransitionType.Slide
+
+    # THEN: The direction controls should be visible
+    assert page.transition_direction_label.isHidden() is False
+    assert page.transition_direction_combo_box.isHidden() is False
 
 
 def test_get_horizontal_align(settings):

@@ -83,6 +83,8 @@ def test_setup(settings):
     theme_form.setup_ui = MagicMock()
     theme_form.layout_guide_button = MagicMock()
     theme_form.layout_guide_button.clicked = MagicMock()
+    theme_form.play_transition_button = MagicMock()
+    theme_form.play_transition_button.clicked = MagicMock()
     theme_form.page_list_widget = MagicMock()
     theme_form.page_list_widget.currentRowChanged = MagicMock()
     theme_form.area_position_page = MagicMock()
@@ -99,6 +101,7 @@ def test_setup(settings):
     assert theme_form.temp_background_filename is None
     theme_form.layout_guide_button.clicked.connect.assert_called_once_with(
         theme_form.on_toggle_layout_guide_clicked)
+    theme_form.play_transition_button.clicked.connect.assert_called_once_with(theme_form.preview_transition)
     theme_form.page_list_widget.currentRowChanged.connect.assert_called_once_with(theme_form.on_current_id_changed)
     theme_form.main_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
@@ -122,6 +125,24 @@ def test_setup(settings):
     theme_form.footer_area_page.shadow_color_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.shadow_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form._connect_live_preview_signals.assert_called_once_with()
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_set_play_transition_button_visible(mocked_setup, settings):
+    """
+    Test the helper that shows or hides the play transition button.
+    """
+    # GIVEN: A ThemeForm with toolbar controls
+    theme_form = ThemeForm(None)
+    theme_form.play_transition_action = MagicMock()
+    theme_form.play_transition_button = MagicMock()
+
+    # WHEN: The play button is shown
+    theme_form._set_play_transition_button_visible(True)
+
+    # THEN: Both action and button should be shown
+    theme_form.play_transition_action.setVisible.assert_called_once_with(True)
+    theme_form.play_transition_button.setVisible.assert_called_once_with(True)
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -588,6 +609,28 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.display_slide_transition_direction == 'horizontal'
     assert theme_form.theme.display_slide_transition_speed == 'normal'
     assert theme_form.theme.display_slide_transition_reverse is False
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_set_alignment_page_values_updates_play_button_visibility(mocked_setup, settings):
+    """
+    Test that the play transition button visibility follows the transition enabled state.
+    """
+    # GIVEN: A ThemeForm with a theme that has transitions enabled
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock(display_horizontal_align='left', display_vertical_align='top',
+                                 display_horizontal_align_footer='left', display_vertical_align_footer='top',
+                                 display_slide_transition=True, display_slide_transition_type='slide',
+                                 display_slide_transition_speed='normal', display_slide_transition_direction='horizontal',
+                                 display_slide_transition_reverse=False)
+    theme_form.alignment_page = MagicMock()
+    theme_form._set_play_transition_button_visible = MagicMock()
+
+    # WHEN: The alignment page values are populated
+    theme_form.set_alignment_page_values()
+
+    # THEN: The toolbar play button should be shown
+    theme_form._set_play_transition_button_visible.assert_called_once_with(True)
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
