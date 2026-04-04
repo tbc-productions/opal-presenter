@@ -145,6 +145,7 @@ class GeneralTab(SettingsTab):
         self.ui_layout.addRow(self.expand_service_item_check_box)
         self.slide_max_height_label = QtWidgets.QLabel(self.ui_group_box)
         self.slide_max_height_label.setObjectName('slide_max_height_label')
+        self.slide_max_height_label.setWordWrap(True)
         self.slide_max_height_combo_box = QtWidgets.QComboBox(self.ui_group_box)
         self.slide_max_height_combo_box.addItem('', userData=0)
         self.slide_max_height_combo_box.addItem('', userData=-4)
@@ -152,7 +153,18 @@ class GeneralTab(SettingsTab):
         for px in range(60, 801, 5):
             self.slide_max_height_combo_box.addItem(str(px) + 'px', userData=px)
         self.slide_max_height_combo_box.setObjectName('slide_max_height_combo_box')
-        self.ui_layout.addRow(self.slide_max_height_label, self.slide_max_height_combo_box)
+        self.slide_max_height_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
+                                                      QtWidgets.QSizePolicy.Policy.Fixed)
+        self.slide_max_height_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.ui_layout.addRow(self.slide_max_height_label)
+        self.slide_max_height_row_widget = QtWidgets.QWidget(self.ui_group_box)
+        self.slide_max_height_row_widget.setObjectName('slide_max_height_row_widget')
+        self.slide_max_height_row_layout = QtWidgets.QHBoxLayout(self.slide_max_height_row_widget)
+        self.slide_max_height_row_layout.setContentsMargins(0, 0, 0, 0)
+        self.slide_max_height_row_layout.setSpacing(0)
+        self.slide_max_height_row_layout.addWidget(self.slide_max_height_combo_box)
+        self.slide_max_height_row_layout.addStretch()
+        self.ui_layout.addRow(self.slide_max_height_row_widget)
         self.autoscroll_label = QtWidgets.QLabel(self.ui_group_box)
         self.autoscroll_label.setObjectName('autoscroll_label')
         self.autoscroll_combo_box = QtWidgets.QComboBox(self.ui_group_box)
@@ -176,9 +188,9 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_label.setObjectName('theme_style_label')
         self.ui_theme_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
         if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.addItems(['', '', '', '', ''])
-        else:
             self.ui_theme_style_combo_box.addItems(['', '', '', ''])
+        else:
+            self.ui_theme_style_combo_box.addItems(['', '', ''])
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
@@ -228,7 +240,7 @@ class GeneralTab(SettingsTab):
         self.expand_service_item_check_box.setText(translate('OpenLP.AdvancedTab',
                                                              'Expand new service items on creation'))
         self.slide_max_height_label.setText(translate('OpenLP.AdvancedTab',
-                                                      'Max height for non-text slides\nin slide controller:'))
+                                  'Max height for non-text slides in slide controller:'))
         self.slide_max_height_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Disabled'))
         self.slide_max_height_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Automatic'))
         self.autoscroll_label.setText(translate('OpenLP.AdvancedTab', 'When changing slides:'))
@@ -265,9 +277,8 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
         self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
         self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
-        self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'Native OS'))
         if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.setItemText(4, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
+            self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
 
     def load(self):
@@ -328,9 +339,9 @@ class GeneralTab(SettingsTab):
         if ui_theme == UiThemes.DefaultDark:
             return 2
         if ui_theme == UiThemes.Native:
-            return 3
+            return 0
         if ui_theme == UiThemes.QDarkStyle:
-            return 4 if has_ui_theme(UiThemes.QDarkStyle) else 3
+            return 3 if has_ui_theme(UiThemes.QDarkStyle) else 0
 
         return 0
 
@@ -349,9 +360,7 @@ class GeneralTab(SettingsTab):
         if index == 2:
             return UiThemes.DefaultDark
         if index == 3:
-            return UiThemes.Native
-        if index == 4:
-            return UiThemes.QDarkStyle if has_ui_theme(UiThemes.QDarkStyle) else UiThemes.Native
+            return UiThemes.QDarkStyle if has_ui_theme(UiThemes.QDarkStyle) else UiThemes.Automatic
 
         return UiThemes.Automatic
 

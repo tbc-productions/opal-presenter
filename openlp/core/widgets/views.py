@@ -369,6 +369,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.mime_data_text = name
         self.no_results_text = UiStrings().NoResults
         self.setSpacing(1)
+        self.setStyleSheet('QListWidget::item { padding: 4px 2px; }')
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(True)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
@@ -419,6 +420,10 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         mime_data = QtCore.QMimeData()
         drag.setMimeData(mime_data)
         mime_data.setText(self.mime_data_text)
+        selected = self.selectedItems()
+        if selected:
+            mime_data.setData('application/x-openlp-item-title',
+                              selected[0].text().encode('utf-8'))
         drag.exec(QtCore.Qt.DropAction.CopyAction)
 
     def dragEnterEvent(self, event):
@@ -548,6 +553,7 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self._drag_start_pos = None
         self._branch_line_style = TreeBranchLineStyle()
         self.setStyle(self._branch_line_style)
+        self.setStyleSheet('QTreeWidget::item { padding: 4px 2px; }')
 
     def setup_columns(self, labels: list):
         """
@@ -630,6 +636,10 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         mime_data = QtCore.QMimeData()
         drag.setMimeData(mime_data)
         mime_data.setText(self.mime_data_text)
+        selected = self.selectedItems()
+        if selected:
+            mime_data.setData('application/x-openlp-item-title',
+                              selected[0].text(0).encode('utf-8'))
         drag.exec(QtCore.Qt.DropAction.CopyAction)
 
     def dragEnterEvent(self, event):

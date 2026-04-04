@@ -41,8 +41,8 @@ class LibraryTabBar(QtWidgets.QTabBar):
     """
 
     def __init__(self, parent=None):
-        super(LibraryTabBar, self).__init__(parent)
         self._placeholder_indices = set()
+        super(LibraryTabBar, self).__init__(parent)
 
     def set_placeholder(self, index, enabled=True):
         if enabled:
@@ -72,6 +72,7 @@ class MediaToolBox(QtWidgets.QWidget):
         self._items = []
         self._current_index = -1
         self._syncing = False
+        self._top_count = 0
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -80,21 +81,33 @@ class MediaToolBox(QtWidgets.QWidget):
         self._top_tab_bar = LibraryTabBar(self)
         self._top_tab_bar.setDocumentMode(True)
         self._top_tab_bar.setExpanding(False)
+        self._top_tab_bar.setDrawBase(False)
         self._top_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
         self._top_tab_bar.setUsesScrollButtons(False)
+        self._top_tab_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored,
+                        QtWidgets.QSizePolicy.Policy.Fixed)
+        self._top_tab_bar.setMinimumWidth(0)
         self._top_tab_bar.currentChanged.connect(self._on_top_tab_changed)
         layout.addWidget(self._top_tab_bar)
 
         self._bottom_tab_bar = LibraryTabBar(self)
         self._bottom_tab_bar.setDocumentMode(True)
         self._bottom_tab_bar.setExpanding(False)
+        self._bottom_tab_bar.setDrawBase(False)
         self._bottom_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
         self._bottom_tab_bar.setUsesScrollButtons(False)
+        self._bottom_tab_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored,
+                           QtWidgets.QSizePolicy.Policy.Fixed)
+        self._bottom_tab_bar.setMinimumWidth(0)
         self._bottom_tab_bar.currentChanged.connect(self._on_bottom_tab_changed)
         layout.addWidget(self._bottom_tab_bar)
 
         self._stack = QtWidgets.QStackedWidget(self)
         layout.addWidget(self._stack)
+
+    def minimumSizeHint(self):
+        hint = super(MediaToolBox, self).minimumSizeHint()
+        return QtCore.QSize(0, hint.height())
 
     @staticmethod
     def _clear_tab_bar(tab_bar):
@@ -110,7 +123,60 @@ class MediaToolBox(QtWidgets.QWidget):
             tab_bar.set_placeholder(placeholder_index, True)
 
     def _split_index(self):
-        return int(math.ceil(len(self._items) / 2.0))
+        item_count = len(self._items)
+        if item_count <= 1:
+            return item_count
+
+        available_width = self._available_width()
+        tab_widths = [self._tab_width(item) for item in self._items]
+        return self._split_index_for_widths(tab_widths, available_width)
+
+    def _available_width(self):
+        return max(self.contentsRect().width(), self.width(), 1)
+
+    @staticmethod
+    def _split_index_for_widths(tab_widths, available_width):
+        item_count = len(tab_widths)
+        if item_count <= 1:
+            return item_count
+
+        total_width = sum(tab_widths)
+        if total_width <= available_width:
+            return len(tab_widths)
+
+        running_width = 0
+        for split_index, tab_width in enumerate(tab_widths, start=1):
+            running_width += tab_width
+            bottom_width = total_width - running_width
+            if running_width <= available_width and bottom_width <= available_width:
+                return split_index
+
+        best_split = int(math.ceil(len(tab_widths) / 2.0))
+        best_overflow = None
+        running_width = 0
+        for split_index, tab_width in enumerate(tab_widths, start=1):
+            running_width += tab_width
+            bottom_width = total_width - running_width
+            overflow = max(0, running_width - available_width) + max(0, bottom_width - available_width)
+            if best_overflow is None or overflow < best_overflow:
+                best_overflow = overflow
+                best_split = split_index
+        return best_split
+
+    def _tab_width(self, item):
+        option = QtWidgets.QStyleOptionTab()
+        option.initFrom(self._top_tab_bar)
+        option.shape = self._top_tab_bar.shape()
+        option.text = item['label']
+        option.icon = item['icon']
+        option.iconSize = self._top_tab_bar.iconSize()
+        tab_size = self._top_tab_bar.style().sizeFromContents(
+            QtWidgets.QStyle.ContentsType.CT_TabBarTab,
+            option,
+            QtCore.QSize(),
+            self._top_tab_bar
+        )
+        return tab_size.width()
 
     def _as_icon(self, icon):
         if isinstance(icon, QtGui.QIcon):
@@ -127,7 +193,7 @@ class MediaToolBox(QtWidgets.QWidget):
 
     def _sync_tab_selection(self):
         self._syncing = True
-        top_count = self._split_index()
+        top_count = self._top_count
         if 0 <= self._current_index < len(self._items):
             if self._current_index < top_count:
                 self._top_tab_bar.setCurrentIndex(self._current_index + 1)
@@ -140,8 +206,10 @@ class MediaToolBox(QtWidgets.QWidget):
             self._bottom_tab_bar.setCurrentIndex(0)
         self._syncing = False
 
-    def _rebuild_tab_bars(self):
-        top_count = self._split_index()
+    def _rebuild_tab_bars(self, top_count=None):
+        if top_count is None:
+            top_count = self._split_index()
+        self._top_count = top_count
         self._top_tab_bar.clear_placeholders()
         self._bottom_tab_bar.clear_placeholders()
         self._clear_tab_bar(self._top_tab_bar)
@@ -155,6 +223,15 @@ class MediaToolBox(QtWidgets.QWidget):
             row_index = tab_bar.addTab(item['icon'], item['label'])
             tab_bar.setTabData(row_index, index)
             tab_bar.setTabEnabled(row_index, item['enabled'])
+
+        # If one-row mode was chosen but the rendered tab widths still overflow,
+        # recalculate with actual tabSizeHint widths and rebuild once.
+        if top_count == len(self._items) and len(self._items) > 1:
+            actual_widths = [self._top_tab_bar.tabSizeHint(i).width() for i in range(1, self._top_tab_bar.count())]
+            actual_top_count = self._split_index_for_widths(actual_widths, self._available_width())
+            if actual_top_count < len(self._items):
+                self._rebuild_tab_bars(top_count=actual_top_count)
+                return
 
         self._bottom_tab_bar.setVisible(len(self._items) > top_count)
         self._update_tab_row_heights()
@@ -211,6 +288,12 @@ class MediaToolBox(QtWidgets.QWidget):
         self._items[index]['enabled'] = enabled
         self._rebuild_tab_bars()
 
+    def setItemIcon(self, index, icon):
+        if index < 0 or index >= len(self._items):
+            return
+        self._items[index]['icon'] = self._as_icon(icon)
+        self._rebuild_tab_bars()
+
     def count(self):
         return len(self._items)
 
@@ -235,6 +318,16 @@ class MediaToolBox(QtWidgets.QWidget):
         self._stack.setCurrentIndex(index)
         self._sync_tab_selection()
         self.currentChanged.emit(index)
+
+    def resizeEvent(self, event):
+        super(MediaToolBox, self).resizeEvent(event)
+        if event.oldSize().width() != event.size().width() and self._items:
+            self._rebuild_tab_bars()
+
+    def showEvent(self, event):
+        super(MediaToolBox, self).showEvent(event)
+        if self._items:
+            self._rebuild_tab_bars()
 
 
 class OpenLPDockWidget(QtWidgets.QDockWidget):
@@ -286,7 +379,21 @@ class MediaDockManager(object):
                 match = True
                 break
         if not match:
-            self.media_dock.addItem(media_item, media_item.plugin.icon, visible_title['title'])
+            icon = media_item.get_library_tab_icon() if hasattr(media_item, 'get_library_tab_icon') \
+                else media_item.plugin.icon
+            self.media_dock.addItem(media_item, icon, visible_title['title'])
+
+    def refresh_item_icons(self):
+        """
+        Reapply tinted library icons from current settings to media dock tabs.
+        """
+        for dock_index in range(self.media_dock.count()):
+            media_item = self.media_dock.widget(dock_index)
+            if not media_item:
+                continue
+            icon = media_item.get_library_tab_icon() if hasattr(media_item, 'get_library_tab_icon') \
+                else media_item.plugin.icon
+            self.media_dock.setItemIcon(dock_index, icon)
 
     def remove_dock(self, media_item):
         """

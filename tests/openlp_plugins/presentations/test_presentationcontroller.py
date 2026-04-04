@@ -161,6 +161,26 @@ def test_get_titles_and_notes_with_file_not_found(document):
         assert len(result_notes) == 0, 'but the list should be empty'
 
 
+def test_get_titles_and_notes_with_missing_notes_files(document):
+    """
+    Test PresentationDocument.get_titles_and_notes method when note files are missing.
+    """
+    # GIVEN: Titles exist, but individual slide notes files do not
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
+            patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder, \
+            patch('openlp.plugins.presentations.lib.presentationcontroller.log.exception') as mocked_log_exception:
+        mocked_read_text.side_effect = ['uno\ndos\n', FileNotFoundError(), FileNotFoundError()]
+        mocked_get_thumbnail_folder.return_value = Path('test')
+
+        # WHEN: calling get_titles_and_notes
+        result_titles, result_notes = document.get_titles_and_notes()
+
+        # THEN: it should keep the titles, fill missing notes with empty strings, and not log an exception
+        assert result_titles == ['uno', 'dos']
+        assert result_notes == ['', '']
+        mocked_log_exception.assert_not_called()
+
+
 def test_get_titles_and_notes_with_file_error(document):
     """
     Test PresentationDocument.get_titles_and_notes method with file errors

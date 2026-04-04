@@ -119,6 +119,8 @@ class MediaBase(RegistryProperties):
 
         :param status: The visibility status
         """
+        if not self.controller or not getattr(self.controller, 'media_widget', None):
+            return
         self.controller.media_widget.setVisible(status)
 
     def update_ui(self) -> None:

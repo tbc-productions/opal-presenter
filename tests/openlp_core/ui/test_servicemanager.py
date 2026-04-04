@@ -26,7 +26,7 @@ import threading
 from functools import partial
 from pathlib import Path
 from time import sleep
-from unittest.mock import Mock, MagicMock, call, patch
+from unittest.mock import ANY, Mock, MagicMock, call, patch
 from zipfile import BadZipFile
 
 import pytest
@@ -264,6 +264,21 @@ def test_is_modified(settings: Settings):
 
     # THEN: The result should be True
     assert result is True, 'is_modified should return True'
+
+
+def test_unsaved_changes_indicator_hidden_when_not_modified(service_manager: ServiceManager):
+    """The toolbar indicator should stay hidden when the service is not modified."""
+    service_manager.set_modified(False)
+
+    assert service_manager.unsaved_changes_container.isHidden() is True
+
+
+def test_unsaved_changes_indicator_visible_when_modified(service_manager: ServiceManager):
+    """The toolbar indicator should be shown whenever the service is modified."""
+
+    service_manager.set_modified(True)
+
+    assert service_manager.unsaved_changes_container.isHidden() is False
 
 
 def test_build_context_menu(settings: Settings):
@@ -1074,7 +1089,7 @@ def test_service_manager_list_key_press_event():
     mocked_event.ignore.assert_called_once_with()
 
 
-def test_service_manager_list_mouse_move_event_not_left_button():
+def test_service_manager_list_mouse_move_event_not_left_button(qapp):
     """
     Test that the ServiceManagerList.mouseMoveEvent slot ignores the event if it's not a left-click
     """
@@ -1091,7 +1106,7 @@ def test_service_manager_list_mouse_move_event_not_left_button():
 
 
 @patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-def test_service_manager_list_mouse_move_event_no_item(MockQCursor: MagicMock):
+def test_service_manager_list_mouse_move_event_no_item(MockQCursor: MagicMock, qapp):
     """
     Test that the ServiceManagerList.mouseMoveEvent slot ignores the event if it's not over an item
     """
@@ -1109,32 +1124,252 @@ def test_service_manager_list_mouse_move_event_no_item(MockQCursor: MagicMock):
     mocked_event.ignore.assert_called_once_with()
 
 
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
 @patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-@patch('openlp.core.ui.servicemanager.QtGui.QDrag')
-@patch('openlp.core.ui.servicemanager.QtCore.QMimeData')
-def test_service_manager_list_mouse_move_event(MockQMimeData: MagicMock, MockQDrag: MagicMock,
-                                               MockQCursor: MagicMock):
+def test_service_manager_list_mouse_move_event(MockQCursor: MagicMock, mocked_set_override_cursor: MagicMock,
+                                               mocked_restore_override_cursor: MagicMock, qapp):
     """
-    Test that the ServiceManagerList.mouseMoveEvent slot ignores the event if it's not over an item
+    Test that mouseMoveEvent starts an internal drag using pure mouse tracking (no QDrag).
+    The cursor is set to ClosedHandCursor and begin_internal_drag / update_internal_drag_preview are called.
     """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    service_manager_list.itemAt = MagicMock(return_value=True)
+    # GIVEN: A service manager list with a mocked service manager
+    mocked_service_manager = MagicMock(
+        begin_internal_drag=MagicMock(return_value=True),
+        get_internal_drag_title=MagicMock(return_value='Test Song'),
+        finish_internal_drag=MagicMock())
+    service_manager_list = ServiceManagerList(mocked_service_manager)
+    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
+    service_manager_list._show_drag_tooltip = MagicMock()
+    mocked_item = MagicMock()
+    service_manager_list.itemAt = MagicMock(return_value=mocked_item)
     service_manager_list.mapFromGlobal = MagicMock()
     mocked_event = MagicMock()
     mocked_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
-    mocked_drag = MagicMock()
-    MockQDrag.return_value = mocked_drag
-    mocked_mime_data = MagicMock()
-    MockQMimeData.return_value = mocked_mime_data
+    mocked_event.pos.return_value = QtCore.QPoint(5, 5)
 
-    # WHEN: The mouseMoveEvent method is called
+    # WHEN: mouseMoveEvent is called past the drag threshold
     service_manager_list.mouseMoveEvent(mocked_event)
 
-    # THEN: The ignore() method on the event is called
-    mocked_drag.setMimeData.assert_called_once_with(mocked_mime_data)
-    mocked_mime_data.setText.assert_called_once_with('ServiceManager')
-    mocked_drag.exec.assert_called_once_with(QtCore.Qt.DropAction.CopyAction)
+    # THEN: the drag started, cursor was set, and preview was updated
+    assert service_manager_list._is_internal_dragging is True
+    mocked_service_manager.begin_internal_drag.assert_called_once_with()
+    mocked_set_override_cursor.assert_called_once_with(QtCore.Qt.CursorShape.ClosedHandCursor)
+    mocked_service_manager.update_internal_drag_preview.assert_called_once()
+    # finish_internal_drag is NOT called until mouseReleaseEvent
+    mocked_service_manager.finish_internal_drag.assert_not_called()
+
+
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
+@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
+def test_service_manager_list_mouse_move_event_begin_drag_fails(MockQCursor: MagicMock,
+                                                                mocked_set_cursor: MagicMock,
+                                                                mocked_restore_cursor: MagicMock, qapp):
+    """
+    Test that mouseMoveEvent does NOT start a drag if begin_internal_drag() returns False
+    (e.g. no service item is selected).
+    """
+    # GIVEN: A service manager list whose service_manager refuses to start the drag
+    mocked_service_manager = MagicMock(begin_internal_drag=MagicMock(return_value=False))
+    service_manager_list = ServiceManagerList(mocked_service_manager)
+    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
+    service_manager_list.itemAt = MagicMock(return_value=MagicMock())
+    service_manager_list.mapFromGlobal = MagicMock()
+    mocked_event = MagicMock()
+    mocked_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
+    mocked_event.pos.return_value = QtCore.QPoint(5, 5)
+
+    # WHEN: mouseMoveEvent fires past threshold
+    service_manager_list.mouseMoveEvent(mocked_event)
+
+    # THEN: No drag started, cursor NOT changed
+    assert service_manager_list._is_internal_dragging is False
+    mocked_set_cursor.assert_not_called()
+    mocked_event.ignore.assert_called_once_with()
+
+
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
+@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
+def test_service_manager_list_mouse_release_event_commits_drag(
+        MockQCursor: MagicMock, mocked_set_cursor: MagicMock, mocked_restore_cursor: MagicMock, qapp):
+    """
+    Test that mouseReleaseEvent commits the internal drag (finish_internal_drag(True) called)
+    and restores the cursor.
+    """
+    # GIVEN: A service manager list in the middle of an internal drag
+    mocked_service_manager = MagicMock(
+        begin_internal_drag=MagicMock(return_value=True),
+        get_internal_drag_title=MagicMock(return_value='Test Song'),
+        finish_internal_drag=MagicMock())
+    service_manager_list = ServiceManagerList(mocked_service_manager)
+    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
+    service_manager_list._show_drag_tooltip = MagicMock()
+    service_manager_list.itemAt = MagicMock(return_value=MagicMock())
+    service_manager_list.mapFromGlobal = MagicMock()
+
+    # Start the drag via mouseMoveEvent
+    move_event = MagicMock()
+    move_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
+    move_event.pos.return_value = QtCore.QPoint(5, 5)
+    service_manager_list.mouseMoveEvent(move_event)
+    assert service_manager_list._is_internal_dragging is True
+
+    # WHEN: The left button is released
+    release_event = MagicMock()
+    release_event.button.return_value = QtCore.Qt.MouseButton.LeftButton
+    service_manager_list.mouseReleaseEvent(release_event)
+
+    # THEN: drag is committed and cursor is restored
+    mocked_service_manager.finish_internal_drag.assert_called_once_with(True)
+    mocked_restore_cursor.assert_called_once_with()
+    assert service_manager_list._is_internal_dragging is False
+    release_event.accept.assert_called_once_with()
+
+
+def test_move_internal_drag_preview(service_manager: ServiceManager):
+    """
+    Test that the internal drag preview temporarily reorders service items.
+    """
+    # GIVEN: A service manager with three items and an active internal drag
+    first_item = _add_song_service_item(service_manager)
+    second_item = _add_bible_service_item(service_manager)
+    third_item = _add_image_service_item(service_manager)
+    service_manager.find_service_item = MagicMock(return_value=(0, -1))
+
+    # WHEN: The drag starts and previews a move to the end of the list
+    service_manager.begin_internal_drag()
+    service_manager._move_internal_drag_preview(len(service_manager.service_items))
+
+    # THEN: The dragged item should be shown at the preview position
+    assert [item['service_item'] for item in service_manager.service_items] == [second_item, third_item, first_item]
+
+
+def test_finish_internal_drag_restore_on_cancel(service_manager: ServiceManager):
+    """
+    Test that canceling an internal drag restores the original service order.
+    """
+    # GIVEN: A service manager with three items and an active internal drag preview
+    first_item = _add_song_service_item(service_manager)
+    second_item = _add_bible_service_item(service_manager)
+    third_item = _add_image_service_item(service_manager)
+    service_manager.find_service_item = MagicMock(return_value=(0, -1))
+    service_manager.begin_internal_drag()
+    service_manager._move_internal_drag_preview(len(service_manager.service_items))
+
+    # WHEN: The drag is canceled
+    service_manager.finish_internal_drag(False)
+
+    # THEN: The original order should be restored and no drag should remain active
+    assert [item['service_item'] for item in service_manager.service_items] == [first_item, second_item, third_item]
+    assert service_manager.is_internal_drag_active() is False
+
+
+def test_drop_event_external_plugin_uses_preview_position(service_manager: ServiceManager):
+    """
+    Test that when an external plugin item is dropped while the drag preview is active,
+    the drop_position is set to the placeholder's current index.
+    """
+    # GIVEN: A service manager with two items and an active external drag preview at index 1
+    first_item = _add_song_service_item(service_manager)
+    second_item = _add_bible_service_item(service_manager)
+    service_manager.begin_external_drag_preview('images')
+    # Move placeholder between the two existing items
+    service_manager._move_external_drag_preview(1)
+    assert service_manager.is_external_drag_active()
+    assert service_manager.drop_position == -1  # not set yet
+
+    mocked_event = MagicMock()
+    mocked_event.mimeData.return_value = MagicMock(
+        hasUrls=MagicMock(return_value=False),
+        hasText=MagicMock(return_value=True),
+        text=MagicMock(return_value='images')
+    )
+    service_manager.service_manager_list._hide_drag_tooltip = MagicMock()
+
+    # WHEN: The drop event fires
+    with patch('openlp.core.ui.servicemanager.Registry') as MockRegistry:
+        service_manager.drop_event(mocked_event)
+
+    # THEN: Preview is gone, drop_position reflects placeholder index, plugin add is called
+    assert not service_manager.is_external_drag_active()
+    assert service_manager.drop_position == 1
+    MockRegistry.return_value.execute.assert_called_once_with('images_add_service_item', False)
+
+
+def test_begin_external_drag_preview(service_manager: ServiceManager):
+    """
+    Test that begin_external_drag_preview creates a translucent placeholder at the end of the list.
+    Without an item_title, falls back to the friendly plugin name.
+    """
+    # GIVEN: A service manager with one item
+    first_item = _add_song_service_item(service_manager)
+    assert len(service_manager.service_items) == 1
+
+    # WHEN: An external drag preview starts for 'images' without a title
+    title = service_manager.begin_external_drag_preview('images')
+
+    # THEN: A placeholder is appended and the title is the friendly name
+    assert title == 'Image'
+    assert len(service_manager.service_items) == 2
+    assert service_manager.is_external_drag_active()
+    placeholder = service_manager.service_items[-1]['service_item']
+    assert placeholder.title == 'Image'
+    assert placeholder.name == 'images'
+
+
+def test_begin_external_drag_preview_with_item_title(service_manager: ServiceManager):
+    """
+    Test that begin_external_drag_preview uses the actual item title when provided.
+    """
+    # GIVEN: A service manager with one item
+    _add_song_service_item(service_manager)
+
+    # WHEN: An external drag preview starts with the actual song title
+    title = service_manager.begin_external_drag_preview('songs', item_title='Amazing Grace')
+
+    # THEN: The placeholder shows the actual item title
+    assert title == 'Amazing Grace'
+    placeholder = service_manager.service_items[-1]['service_item']
+    assert placeholder.title == 'Amazing Grace'
+
+
+def test_cancel_external_drag_preview(service_manager: ServiceManager):
+    """
+    Test that cancelling an external drag preview removes the placeholder from the list.
+    """
+    # GIVEN: A service manager with an active external drag preview
+    _add_song_service_item(service_manager)
+    service_manager.begin_external_drag_preview('songs')
+    assert len(service_manager.service_items) == 2
+
+    # WHEN: The preview is cancelled
+    service_manager.cancel_external_drag_preview()
+
+    # THEN: The placeholder is removed and drag state is cleared
+    assert len(service_manager.service_items) == 1
+    assert not service_manager.is_external_drag_active()
+
+
+def test_finish_external_drag_preview_sets_drop_position(service_manager: ServiceManager):
+    """
+    Test that finish_external_drag_preview removes the placeholder and sets drop_position.
+    """
+    # GIVEN: Three items with the external drag placeholder at index 1
+    _add_song_service_item(service_manager)
+    _add_bible_service_item(service_manager)
+    service_manager.begin_external_drag_preview('images')
+    service_manager._move_external_drag_preview(1)
+    assert len(service_manager.service_items) == 3
+
+    # WHEN: The external drag is finished (committed)
+    service_manager.finish_external_drag_preview()
+
+    # THEN: Placeholder removed, drop_position = 1 (where placeholder was)
+    assert len(service_manager.service_items) == 2
+    assert service_manager.drop_position == 1
+    assert not service_manager.is_external_drag_active()
 
 
 def test_on_new_service_clicked_not_saved_cancel(registry: Registry):
@@ -1312,7 +1547,7 @@ def test_load_service_modified_saved_with_file_path(registry: Registry):
     service_manager.is_modified = MagicMock(return_value=True)
     service_manager.save_modified_service = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Save)
     service_manager.decide_save_method = MagicMock()
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: A service is loaded
     service_manager.load_service(Path.home() / 'service.osz')
@@ -1320,7 +1555,7 @@ def test_load_service_modified_saved_with_file_path(registry: Registry):
     # THEN: The service should be loaded
     service_manager.decide_save_method.assert_called_once_with()
     mocked_settings.setValue.assert_called_once_with('servicemanager/last directory', Path.home())
-    service_manager.load_file.assert_called_once_with(Path.home() / 'service.osz')
+    service_manager.load_file_in_thread.assert_called_once_with(Path.home() / 'service.osz')
 
 
 @patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName')
@@ -1347,13 +1582,13 @@ def test_load_service_no_file_path_passed_file_selected(mocked_get_open_file_nam
     registry.register('main_window', None)
     service_manager = ServiceManager(None)
     mocked_get_open_file_name.return_value = (Path.home() / 'service.osz', None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: A service is loaded
     service_manager.load_service()
 
     # THEN: The service should be loaded
-    service_manager.load_file.assert_called_once_with(Path.home() / 'service.osz')
+    service_manager.load_file_in_thread.assert_called_once_with(Path.home() / 'service.osz')
 
 
 def test_on_recent_service_clicked_modified_cancel_save(registry: Registry):
@@ -1382,7 +1617,7 @@ def test_on_recent_service_clicked_modified_saved_with_file_path(registry: Regis
     service_manager.is_modified = MagicMock(return_value=True)
     service_manager.save_modified_service = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Save)
     service_manager.decide_save_method = MagicMock()
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
     service_manager.sender = MagicMock(return_value=MagicMock())
 
     # WHEN: on_recent_service_clicked is called
@@ -1390,21 +1625,21 @@ def test_on_recent_service_clicked_modified_saved_with_file_path(registry: Regis
 
     # THEN: The recent service should be loaded
     service_manager.decide_save_method.assert_called_once_with()
-    service_manager.load_file.assert_called_once()
+    service_manager.load_file_in_thread.assert_called_once()
 
 
 def test_on_recent_service_clicked_unmodified(registry: Registry):
     # GIVEN: A modified ServiceManager
     registry.register('main_window', None)
     service_manager = ServiceManager(None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
     service_manager.sender = MagicMock(return_value=MagicMock())
 
     # WHEN: on_recent_service_clicked is called
     service_manager.on_recent_service_clicked(True)
 
     # THEN: The recent service should be loaded
-    service_manager.load_file.assert_called_once()
+    service_manager.load_file_in_thread.assert_called_once()
 
 
 @patch('openlp.core.ui.servicemanager.Path', autospec=True)
@@ -1495,14 +1730,14 @@ def test_service_manager_on_recent_service_clicked_save(registry: Registry):
     service_manager.save_modified_service = lambda: QtWidgets.QMessageBox.StandardButton.Save
     service_manager.decide_save_method = lambda: None
     service_manager.sender = lambda: MagicMock(**{'data.return_value': '/path/to/service'})
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: on_recent_service_clicked() is called
     result = service_manager.on_recent_service_clicked(True)
 
     # THEN: The result should be None
     assert result is None, 'on_recent_service_clicked() should have returned None'
-    service_manager.load_file.assert_called_once_with(Path('/path/to/service'))
+    service_manager.load_file_in_thread.assert_called_once_with(Path('/path/to/service'))
 
 
 def test_service_manager_decide_save_method_save(registry: Registry):
@@ -1544,13 +1779,13 @@ def test_load_last_file(registry: Registry):
     mocked_settings.value.return_value = Path('filename.osz')
     registry.register('settings', mocked_settings)
     service_manager = ServiceManager(None)
-    service_manager.load_file = MagicMock()
+    service_manager.load_file_in_thread = MagicMock()
 
     # WHEN: load_last_file() is called
     service_manager.load_last_file()
 
     # THEN: The file should have been loaded
-    service_manager.load_file.assert_called_once_with(Path('filename.osz'))
+    service_manager.load_file_in_thread.assert_called_once_with(Path('filename.osz'))
 
 
 @patch('openlp.core.ui.servicemanager.Path')

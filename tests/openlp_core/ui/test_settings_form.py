@@ -24,7 +24,7 @@ Package to test the openlp.core.lib.settingsform package.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest
+from PySide6 import QtCore, QtTest, QtWidgets
 
 from openlp.core.ui.settingsform import SettingsForm
 
@@ -110,3 +110,11 @@ def test_register_multiple_functions(form):
     # WHEN testing the processing stack
     # THEN the processing stack should still have two items
     assert len(form.processes) == 2, 'No new processes should have been added to the stack'
+
+
+def test_settings_sidebar_uses_larger_icon_and_font(form):
+    """
+    Test that the Settings sidebar uses larger icons and alternating rows.
+    """
+    assert form.setting_list_widget.iconSize() == QtCore.QSize(22, 22)
+    assert form.setting_list_widget.alternatingRowColors() is True

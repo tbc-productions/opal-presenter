@@ -22,6 +22,7 @@
 The services tab of the configuration dialog.
 """
 import logging
+import re
 from datetime import datetime, timedelta
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -38,6 +39,25 @@ class ServiceTab(SettingsTab):
     """
     ServiceTab is the service settings tab in the settings dialog.
     """
+    ICON_THEME_COLOR_SETTINGS = {
+        'song': 'servicemanager/theme color song',
+        'bible': 'servicemanager/theme color bible',
+        'presentation': 'servicemanager/theme color presentation',
+        'image': 'servicemanager/theme color image',
+        'media': 'servicemanager/theme color media',
+        'custom_slide': 'servicemanager/theme color custom slide'
+    }
+
+    ICON_THEME_COLOR_DEFAULTS = {
+        'song': '#FBBF24',
+        'bible': '#4ADE80',
+        'presentation': '#C084FC',
+        'image': '#60A5FA',
+        'media': '#F87171',
+        'custom_slide': '#14B8A6'
+    }
+    HEX_COLOR_REGEX = re.compile(r'^[0-9A-F]{6}$')
+
     def __init__(self, parent):
         """
         Initialise the service settings tab
@@ -151,6 +171,42 @@ class ServiceTab(SettingsTab):
         self.service_editing_check_box.setObjectName('service_editing_check_box')
         self.service_editing_layout.addRow(self.service_editing_check_box)
         self.right_layout.addWidget(self.service_editing_groupbox)
+        # Theme
+        self.theme_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.theme_group_box.setObjectName('theme_group_box')
+        self.theme_layout = QtWidgets.QFormLayout(self.theme_group_box)
+        self.theme_layout.setObjectName('theme_layout')
+        self.icon_theme_colors = self.ICON_THEME_COLOR_DEFAULTS.copy()
+        self.icon_theme_color_edits = {}
+        self.icon_theme_color_buttons = {}
+        self.theme_song_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_song_label.setObjectName('theme_song_label')
+        self.theme_bible_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_bible_label.setObjectName('theme_bible_label')
+        self.theme_presentation_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_presentation_label.setObjectName('theme_presentation_label')
+        self.theme_image_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_image_label.setObjectName('theme_image_label')
+        self.theme_media_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_media_label.setObjectName('theme_media_label')
+        self.theme_custom_slide_label = QtWidgets.QLabel(self.theme_group_box)
+        self.theme_custom_slide_label.setObjectName('theme_custom_slide_label')
+        self._add_theme_color_row('song', self.theme_song_label)
+        self._add_theme_color_row('bible', self.theme_bible_label)
+        self._add_theme_color_row('presentation', self.theme_presentation_label)
+        self._add_theme_color_row('image', self.theme_image_label)
+        self._add_theme_color_row('media', self.theme_media_label)
+        self._add_theme_color_row('custom_slide', self.theme_custom_slide_label)
+        self.theme_defaults_row_widget = QtWidgets.QWidget(self.theme_group_box)
+        self.theme_defaults_row_layout = QtWidgets.QHBoxLayout(self.theme_defaults_row_widget)
+        self.theme_defaults_row_layout.setContentsMargins(0, 0, 0, 0)
+        self.theme_defaults_button = QtWidgets.QPushButton(self.theme_group_box)
+        self.theme_defaults_button.setObjectName('theme_defaults_button')
+        self.theme_defaults_row_layout.addWidget(self.theme_defaults_button)
+        self.theme_defaults_row_layout.addStretch()
+        self.theme_layout.addRow(self.theme_defaults_row_widget)
+        self.theme_defaults_button.clicked.connect(self.on_restore_theme_defaults_clicked)
+        self.right_layout.addWidget(self.theme_group_box)
         # Push everything in both columns to the top
         self.left_layout.addStretch()
         self.right_layout.addStretch()
@@ -215,6 +271,15 @@ class ServiceTab(SettingsTab):
         self.service_editing_groupbox.setTitle(translate('OpenLP.ServiceTab', 'Service Editing'))
         self.service_editing_check_box.setText(translate('OpenLP.ServiceTab', 'Show confirmation box when deleting '
                                                                               'item from service'))
+        # Theme
+        self.theme_group_box.setTitle(translate('OpenLP.ServiceTab', 'Theme'))
+        self.theme_song_label.setText(translate('OpenLP.ServiceTab', 'Song:'))
+        self.theme_bible_label.setText(translate('OpenLP.ServiceTab', 'Bible:'))
+        self.theme_presentation_label.setText(translate('OpenLP.ServiceTab', 'Presentation:'))
+        self.theme_image_label.setText(translate('OpenLP.ServiceTab', 'Image:'))
+        self.theme_media_label.setText(translate('OpenLP.ServiceTab', 'Media:'))
+        self.theme_custom_slide_label.setText(translate('OpenLP.ServiceTab', 'Custom Slide:'))
+        self.theme_defaults_button.setText(translate('OpenLP.ServiceTab', 'Restore Defaults'))
 
     def load(self):
         """
@@ -250,6 +315,13 @@ class ServiceTab(SettingsTab):
             self.next_item_radio_button.setChecked(True)
         # Service Editing
         self.service_editing_check_box.setChecked(self.settings.value('advanced/delete service item confirmation'))
+        # Theme colors
+        for key, setting_key in self.ICON_THEME_COLOR_SETTINGS.items():
+            default = self.ICON_THEME_COLOR_DEFAULTS[key]
+            color_value = self._normalise_color(self.settings.value(setting_key), default)
+            self.icon_theme_colors[key] = color_value
+            self.icon_theme_color_edits[key].setText(color_value)
+            self._update_theme_color_picker_preview(key)
 
     def save(self):
         """
@@ -286,7 +358,97 @@ class ServiceTab(SettingsTab):
         self.settings_form.register_post_process('slidecontroller_update_slide_limits')
         # Service Editing
         self.settings.setValue('advanced/delete service item confirmation', self.service_editing_check_box.isChecked())
+        # Theme colors
+        self._normalise_theme_color_edits()
+        for key, setting_key in self.ICON_THEME_COLOR_SETTINGS.items():
+            self.settings.setValue(setting_key, self.icon_theme_colors[key])
+        self.settings_form.register_post_process('service_manager_repaint_list_icons')
+        self.settings_form.register_post_process('media_dock_refresh_icons')
         self.post_set_up()
+
+    def _add_theme_color_row(self, color_key, label):
+        """
+        Add a theme color row consisting of a hex text box and color picker button.
+        """
+        edit = QtWidgets.QLineEdit(self.theme_group_box)
+        edit.setObjectName('theme_{key}_color_edit'.format(key=color_key))
+        edit.setPlaceholderText('#RRGGBB')
+        edit.setMaxLength(7)
+        picker_button = QtWidgets.QToolButton(self.theme_group_box)
+        picker_button.setObjectName('theme_{key}_color_button'.format(key=color_key))
+        picker_button.setText('...')
+        row_widget = QtWidgets.QWidget(self.theme_group_box)
+        row_layout = QtWidgets.QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(edit)
+        row_layout.addWidget(picker_button)
+        self.theme_layout.addRow(label, row_widget)
+        self.icon_theme_color_edits[color_key] = edit
+        self.icon_theme_color_buttons[color_key] = picker_button
+        picker_button.clicked.connect(lambda checked=False, key=color_key: self.on_theme_color_pick_clicked(key))
+        edit.editingFinished.connect(lambda key=color_key: self.on_theme_color_edit_finished(key))
+
+    def _normalise_theme_color_edits(self):
+        """
+        Normalize all hex text edits and update button previews.
+        """
+        for key in self.icon_theme_color_edits:
+            color_text = self._normalise_color(self.icon_theme_color_edits[key].text(), self.icon_theme_colors[key])
+            self.icon_theme_colors[key] = color_text
+            self.icon_theme_color_edits[key].setText(color_text)
+            self._update_theme_color_picker_preview(key)
+
+    def _update_theme_color_picker_preview(self, color_key):
+        """
+        Update picker button color preview for a theme row.
+        """
+        color_text = self.icon_theme_colors[color_key]
+        self.icon_theme_color_buttons[color_key].setStyleSheet(
+            'background-color: {color};'.format(color=color_text)
+        )
+
+    def on_theme_color_edit_finished(self, color_key):
+        """
+        Validate and normalize a theme color when typing finishes.
+        """
+        color_text = self._normalise_color(self.icon_theme_color_edits[color_key].text(), self.icon_theme_colors[color_key])
+        self.icon_theme_colors[color_key] = color_text
+        self.icon_theme_color_edits[color_key].setText(color_text)
+        self._update_theme_color_picker_preview(color_key)
+
+    def on_theme_color_pick_clicked(self, color_key):
+        """
+        Open the color picker and apply the selected theme color.
+        """
+        current_color = self._normalise_color(self.icon_theme_color_edits[color_key].text(), self.icon_theme_colors[color_key])
+        picked_color = QtWidgets.QColorDialog.getColor(QtGui.QColor(current_color), self)
+        if not picked_color.isValid():
+            return
+        color_text = self._normalise_color(picked_color.name().upper(), self.icon_theme_colors[color_key])
+        self.icon_theme_colors[color_key] = color_text
+        self.icon_theme_color_edits[color_key].setText(color_text)
+        self._update_theme_color_picker_preview(color_key)
+
+    def on_restore_theme_defaults_clicked(self):
+        """
+        Restore all service icon theme colors to defaults.
+        """
+        for key, default in self.ICON_THEME_COLOR_DEFAULTS.items():
+            self.icon_theme_colors[key] = default
+            self.icon_theme_color_edits[key].setText(default)
+            self._update_theme_color_picker_preview(key)
+
+    @staticmethod
+    def _normalise_color(color_text, default):
+        """
+        Normalize text to #RRGGBB and fall back to the provided default when invalid.
+        """
+        color_text = str(color_text).strip().upper()
+        if color_text.startswith('#'):
+            color_text = color_text[1:]
+        if not ServiceTab.HEX_COLOR_REGEX.match(color_text):
+            return default
+        return '#{text}'.format(text=color_text)
 
     def post_set_up(self):
         """
