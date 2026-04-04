@@ -103,6 +103,9 @@ def is_thread_finished(thread_name):
     try:
         app = Registry().get('application')
         return thread_name not in app.worker_threads or app.worker_threads[thread_name]['thread'].isFinished()
+    except RuntimeError:
+        # The QThread object may already have been deleted by Qt's queued cleanup.
+        return True
     except KeyError:
         log.exception(f'Thread {thread_name} not found when checking for finished threads')
         return True
