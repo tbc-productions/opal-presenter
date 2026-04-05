@@ -1,6 +1,7 @@
 *.*~
 *.dll
 *.e4*
+*.env
 *.kate-swp
 *.kdev4
 *.komodoproject
