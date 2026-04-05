@@ -57,7 +57,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="../images/openlp-2.qrc">:/wizards/wizard_importbible.bmp</pixmap>
+       <pixmap resource="../images/openlp-2.qrc">:/wizards/wizard_importbible.png</pixmap>
       </property>
       <property name="indent">
        <number>0</number>

@@ -41,7 +41,7 @@ def test_add_welcome_page():
     wizard = QtWidgets.QWizard()
 
     # WHEN: A welcome page has been added to the wizard
-    add_welcome_page(wizard, ':/wizards/wizard_firsttime.bmp')
+    add_welcome_page(wizard, ':/wizards/openlp-osx-wizard.png')
 
     # THEN: The wizard should have one page with a pixmap.
     assert 1 == len(wizard.pageIds()), 'The wizard should have one page.'
@@ -186,7 +186,7 @@ def test_create_action(mocked_log):
     dialog = QtWidgets.QDialog()
 
     # WHEN: We create an action with some properties
-    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/wizard_firsttime.bmp',
+    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/openlp-osx-wizard.png',
                            tooltip='my tooltip', statustip='my statustip', test=1)
 
     # THEN: These properties should be set
