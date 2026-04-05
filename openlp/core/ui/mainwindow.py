@@ -392,14 +392,14 @@ class Ui_MainWindow(object):
         self.print_service_order_item.setText(UiStrings().PrintService)
         self.print_service_order_item.setStatusTip(translate('OpenLP.MainWindow', 'Print the current service.'))
         self.file_exit_item.setText(translate('OpenLP.MainWindow', 'E&xit'))
-        self.file_exit_item.setStatusTip(translate('OpenLP.MainWindow', 'Close OpenLP - Shut down the program.'))
+        self.file_exit_item.setStatusTip(translate('OpenLP.MainWindow', 'Close OpenLP+ - Shut down the program.'))
         self.import_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.import_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.export_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.export_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', 'Configure &Shortcuts...'))
         self.formatting_tag_item.setText(translate('OpenLP.MainWindow', 'Configure &Formatting Tags...'))
-        self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP...'))
+        self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP+...'))
         self.settings_export_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
         self.settings_export_item.setText(translate('OpenLP.MainWindow', 'Settings'))
@@ -436,7 +436,8 @@ class Ui_MainWindow(object):
         self.settings_plugin_list_item.setStatusTip(translate('OpenLP.MainWindow', 'You can enable and disable plugins '
                                                                                    'from here.'))
         self.about_item.setText(translate('OpenLP.MainWindow', '&About'))
-        self.about_item.setStatusTip(translate('OpenLP.MainWindow', 'More information about OpenLP.'))
+        self.about_item.setStatusTip(
+            translate('OpenLP.MainWindow', 'More information about OpenLP+ (a fork of OpenLP).'))
         self.user_manual_item.setText(translate('OpenLP.MainWindow', '&User Manual'))
         self.search_shortcut_action.setText(UiStrings().Search)
         self.search_shortcut_action.setToolTip(
@@ -638,10 +639,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
         :param version: The Version to be displayed.
         """
-        version_text = translate('OpenLP.MainWindow', 'Version {new} of OpenLP is now available for download (you are '
+        version_text = translate('OpenLP.MainWindow', 'Version {new} of OpenLP+ is now available for download (you are '
                                  'currently running version {current}). \n\nYou can download the latest version from '
                                  'https://openlp.org/.').format(new=version, current=get_version()[u'full'])
-        QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP Version Updated'), version_text)
+        QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP+ Version Updated'), version_text)
 
     def on_new_remote_version(self, version: str):
         """
@@ -868,9 +869,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to import '
                                                                                'settings?\n\n Importing settings will '
                                                                                'make permanent changes to your current '
-                                                                               'OpenLP configuration.\n\n Importing '
+                                                                               'OpenLP+ configuration.\n\n Importing '
                                                                                'incorrect settings may cause erratic '
-                                                                               'behaviour or OpenLP to terminate '
+                                                                               'behaviour or OpenLP+ to terminate '
                                                                                'abnormally.'),
                                                 QtWidgets.QMessageBox.StandardButton(
                                                     QtWidgets.QMessageBox.StandardButton.Yes |
@@ -882,7 +883,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self,
             translate('OpenLP.MainWindow', 'Import settings'),
             None,
-            translate('OpenLP.MainWindow', 'OpenLP Settings (*.conf)'))
+            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf)'))
         if import_file_path is None:
             return
         setting_sections = []
@@ -912,8 +913,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # If settings are from the future, we can't import.
         if import_settings.from_future():
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings'),
-                                           translate('OpenLP.MainWindow', 'OpenLP cannot import settings '
-                                                                          'from a newer version of OpenLP.\n\n'
+                                           translate('OpenLP.MainWindow', 'OpenLP+ cannot import settings '
+                                                                          'from a newer version of OpenLP+.\n\n'
                                                                           'Processing has terminated and '
                                                                           'no changes have been made.'),
                                            QtWidgets.QMessageBox.StandardButton(
@@ -927,7 +928,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings'),
                                            translate('OpenLP.MainWindow', 'The file you have selected does not appear '
-                                                                          'to be a valid OpenLP settings file.\n\n'
+                                                                          'to be a valid OpenLP+ settings file.\n\n'
                                                                           'Processing has terminated and '
                                                                           'no changes have been made.'),
                                            QtWidgets.QMessageBox.StandardButton(
@@ -968,8 +969,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # application terminates normally.   We need to exit without saving configuration.
         QtWidgets.QMessageBox.information(self, translate('OpenLP.MainWindow', 'Import settings'),
                                           translate('OpenLP.MainWindow',
-                                                    'OpenLP will now close.  Imported settings will '
-                                                    'be applied the next time you start OpenLP.'))
+                                                    'OpenLP+ will now close. Imported settings will '
+                                                    'be applied the next time you start OpenLP+.'))
         self.settings_imported = True
         self.clean_up()
         QtCore.QCoreApplication.exit()
@@ -982,7 +983,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self,
             translate('OpenLP.MainWindow', 'Export Settings File'),
             None,
-            translate('OpenLP.MainWindow', 'OpenLP Settings (*.conf)'))
+            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf)'))
         if not export_file_path:
             return
         # Make sure it's a .conf file.
@@ -1093,14 +1094,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         else:
             if self.settings.value('advanced/enable exit confirmation'):
                 msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
-                                                translate('OpenLP.MainWindow', 'Exit OpenLP'),
-                                                translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP?'),
+                                                translate('OpenLP.MainWindow', 'Exit OpenLP+'),
+                                                translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP+?'),
                                                 QtWidgets.QMessageBox.StandardButton(
                                                     QtWidgets.QMessageBox.StandardButton.Close |
                                                     QtWidgets.QMessageBox.StandardButton.Cancel),
                                                 self)
                 close_button = msg_box.button(QtWidgets.QMessageBox.StandardButton.Close)
-                close_button.setText(translate('OpenLP.MainWindow', '&Exit OpenLP'))
+                close_button.setText(translate('OpenLP.MainWindow', '&Exit OpenLP+'))
                 msg_box.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Close)
                 if msg_box.exec() == QtWidgets.QMessageBox.StandardButton.Close:
                     event.accept()
@@ -1481,7 +1482,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.log_info('Copying data to new path')
             try:
                 self.show_status_message(
-                    translate('OpenLP.MainWindow', 'Copying OpenLP data to new data directory location - {path} '
+                    translate('OpenLP.MainWindow', 'Copying OpenLP+ data to new data directory location - {path} '
                               '- Please wait for copy to finish').format(path=self.new_data_path))
                 shutil.copytree(str(old_data_path), str(self.new_data_path), dirs_exist_ok=True)
                 self.log_info('Copy successful')
@@ -1489,7 +1490,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.application.set_normal_cursor()
                 self.log_exception('Data copy failed {err}'.format(err=str(why)))
                 err_text = translate('OpenLP.MainWindow',
-                                     'OpenLP Data directory copy failed\n\n{err}').format(err=str(why))
+                                     'OpenLP+ data directory copy failed\n\n{err}').format(err=str(why))
                 QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'New Data Directory Error'),
                                                err_text,
                                                QtWidgets.QMessageBox.StandardButton(

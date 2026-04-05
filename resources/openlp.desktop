@@ -2,10 +2,10 @@
 Categories=AudioVideo;
 Exec=openlp %F
 GenericName=Church lyrics projection
-Comment=Project lyrics, bible verses, media and more.
+Comment=OpenLP+ (fork of OpenLP): project lyrics, Bible verses, media and more.
 Icon=openlp
 MimeType=application/x-openlp-service;
-Name=OpenLP
+Name=OpenLP+
 StartupNotify=true
 Terminal=false
 Type=Application

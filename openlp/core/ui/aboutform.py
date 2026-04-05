@@ -115,12 +115,14 @@ class AboutForm(QtWidgets.QDialog):
 
         :param self: The QDialog object to translate
         """
-        self.setWindowTitle('{about} OpenLP'.format(about=UiStrings().About))
+        self.setWindowTitle('{about} OpenLP+'.format(about=UiStrings().About))
         self.about_text_edit.setHtml(
             translate('OpenLP.AboutForm',
-                      '<p>OpenLP {{version}}{{revision}} - Open Source Lyrics Projection<br>'
-                      'Copyright {crs} 2004-{yr} OpenLP Developers</p>'
-                      '<p>Find out more about OpenLP: <a href="https://openlp.org/">https://openlp.org/</a></p>'
+                      '<p>OpenLP+ {{version}}{{revision}} - Open Source Lyrics Projection<br>'
+                      'OpenLP+ is a fork of OpenLP.<br>'
+                      'Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP+ contributors</p>'
+                      '<p>Upstream OpenLP project: '
+                      '<a href="https://openlp.org/">https://openlp.org/</a></p>'
                       '<p>This program is free software: you can redistribute it and/or modify it under the terms of '
                       'the GNU General Public License as published by the Free Software Foundation, either version 3 '
                       'of the License, or (at your option) any later version.</p>'
@@ -132,10 +134,11 @@ class AboutForm(QtWidgets.QDialog):
                       'https://www.gnu.org/licenses/</a>.</p>').format(crs='\xa9', yr=datetime.date.today().year))
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.about_tab), UiStrings().About)
         developers = translate('OpenLP.AboutForm',
-                               'OpenLP is written and maintained by volunteers all over the world in their spare '
-                               'time. If you would like to see this project succeed, please consider contributing to '
-                               'it by clicking the "contribute" button below.')
-        built_with = translate('OpenLP.AboutForm', 'OpenLP would not be possible without the following software '
+                       'OpenLP+ is a fork of OpenLP and is maintained by volunteers all over the world in '
+                       'their spare time. If you would like to see this project succeed, please consider '
+                       'contributing to it by clicking the "contribute" button below.')
+        built_with = translate('OpenLP.AboutForm', 'OpenLP+ (and upstream OpenLP) would not be possible without '
+                       'the following software '
                                'libraries:')
         build_tech = ('<ul>'
                       '<li><a href="https://www.python.org/">Python</a> (PSFL)</li>'

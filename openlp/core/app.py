@@ -175,12 +175,12 @@ class OpenLP(QtCore.QObject, LogMixin):
             log.critical('Database was not found in: %s', data_folder_path)
             status = QtWidgets.QMessageBox.critical(
                 None, translate('OpenLP', 'Data Directory Error'),
-                translate('OpenLP', 'OpenLP data folder was not found in:\n\n{path}\n\nThe location of the data folder '
-                                    'was previously changed from the OpenLP\'s default location. If the data was '
+                translate('OpenLP', 'OpenLP+ data folder was not found in:\n\n{path}\n\nThe location of the data folder '
+                                    'was previously changed from the OpenLP+ default location. If the data was '
                                     'stored on removable device, that device needs to be made available.\n\nYou may '
                                     'reset the data location back to the default location, or you can try to make the '
                                     'current location available.\n\nDo you want to reset to the default data location? '
-                                    'If not, OpenLP will be closed so you can try to fix the problem.')
+                                    'If not, OpenLP+ will be closed so you can try to fix the problem.')
                 .format(path=data_folder_path),
                 QtWidgets.QMessageBox.StandardButton(QtWidgets.QMessageBox.StandardButton.Yes |
                                                      QtWidgets.QMessageBox.StandardButton.No),
@@ -234,7 +234,7 @@ class OpenLP(QtCore.QObject, LogMixin):
             if can_show_splash and self.splash.isVisible():
                 self.splash.hide()
             if (QtWidgets.QMessageBox.question(None, translate('OpenLP', 'Backup'),
-                                               translate('OpenLP', 'OpenLP has been upgraded, do you want to create\n'
+                                               translate('OpenLP', 'OpenLP+ has been upgraded, do you want to create\n'
                                                                    'a backup of the old data folder?'),
                                                defaultButton=QtWidgets.QMessageBox.StandardButton.Yes) ==
                     QtWidgets.QMessageBox.StandardButton.Yes):
@@ -367,8 +367,9 @@ def backup_if_version_changed(settings):
     if is_downgrade:
         close_result = QtWidgets.QMessageBox.warning(
             None, translate('OpenLP', 'Downgrade'),
-            translate('OpenLP', 'OpenLP has found a configuration file created by a newer version of OpenLP. '
-                      'OpenLP will start with a fresh install as downgrading data is not supported. Any existing data '
+            translate('OpenLP', 'OpenLP+ has found a configuration file created by a newer version of OpenLP+. '
+                      'OpenLP+ will start with a fresh install as downgrading data is not supported. Any existing '
+                      'data '
                       'will be backed up to:\n\n{data_folder_backup_path}\n\n'
                       'Do you want to continue?').format(data_folder_backup_path=data_folder_backup_path),
             QtWidgets.QMessageBox.StandardButton(QtWidgets.QMessageBox.StandardButton.Yes |
@@ -393,7 +394,7 @@ def backup_if_version_changed(settings):
         except OSError:
             QtWidgets.QMessageBox.warning(
                 None, translate('OpenLP', 'Settings Backup'),
-                translate('OpenLP', 'Settings back up failed.\n\nOpenLP will attempt to continue.'))
+                translate('OpenLP', 'Settings back up failed.\n\nOpenLP+ will attempt to continue.'))
     # Backup and remove data folder if downgrading
     if is_downgrade:
         log.info(f'Data folder being backed up to {data_folder_backup_path}')
