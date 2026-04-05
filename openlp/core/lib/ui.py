@@ -384,8 +384,15 @@ class MultipleViewModeList(QtWidgets.QListWidget):
         super().__init__(parent)
         self._view_mode_icon_size_list = None
         self._view_mode_icon_size_grid = None
+        self.mime_data_text = None
+        self._drag_start_pos = None
         if mode == QtWidgets.QListWidget.ViewMode.IconMode:
             self.setViewMode(QtWidgets.QListWidget.ViewMode.IconMode)
+
+    def activate_drag(self, mime_data_text):
+        self.mime_data_text = mime_data_text
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setDragEnabled(True)
 
     def set_icon_size_by_view_mode(self, mode, size):
         """
@@ -425,6 +432,34 @@ class MultipleViewModeList(QtWidgets.QListWidget):
     def resizeEvent(self, event: QtGui.QResizeEvent):
         super().resizeEvent(event)
         self._on_resize_icon_mode()
+
+    def mousePressEvent(self, event):
+        if self.mime_data_text and event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not self.mime_data_text:
+            super().mouseMoveEvent(event)
+            return
+        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
+            event.ignore()
+            return
+        if not self.selectedItems():
+            event.ignore()
+            return
+        if self._drag_start_pos is None or \
+                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
+            event.ignore()
+            return
+        drag = QtGui.QDrag(self)
+        mime_data = QtCore.QMimeData()
+        mime_data.setText(self.mime_data_text)
+        selected = self.selectedItems()
+        if selected:
+            mime_data.setData('application/x-openlp-item-title', selected[0].text().encode('utf-8'))
+        drag.setMimeData(mime_data)
+        drag.exec(QtCore.Qt.DropAction.CopyAction)
 
     def _on_resize_icon_mode(self):
         if self.viewMode() == QtWidgets.QListWidget.ViewMode.IconMode:

@@ -137,6 +137,7 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.IconMode,
                                                           QtCore.QSize(176, 100))
         self.theme_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.theme_list_widget.activate_drag('themes')
         self.theme_list_widget.setObjectName('theme_list_widget')
         self.layout.addWidget(self.theme_list_widget)
         self.footer_status_bar = QtWidgets.QStatusBar(widget)

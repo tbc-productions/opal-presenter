@@ -1044,34 +1044,93 @@ def test_regenerate_service_items_set_modified(mocked_tree: MagicMock, settings:
     service_manager.repaint_service_list.assert_called_once()
 
 
-def test_service_manager_list_drag_enter_event():
+def test_service_manager_list_drag_enter_event_accepts_supported_plugin(registry: Registry):
     """
-    Test that the ServiceManagerList.dragEnterEvent slot accepts the event
+    Test that ServiceManagerList.dragEnterEvent accepts supported plugin drags.
     """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    mocked_event = MagicMock()
+    # GIVEN: A service manager list and a supported plugin drop payload
+    service_manager = MagicMock()
+    service_manager.can_accept_external_plugin = MagicMock(return_value=True)
+    service_manager.begin_external_drag_preview = MagicMock(return_value='Test Song')
+    service_manager.update_external_drag_preview = MagicMock()
+    service_manager.cancel_external_drag_preview = MagicMock()
+    service_manager_list = ServiceManagerList(service_manager)
+    mime_data = MagicMock(
+        hasUrls=MagicMock(return_value=False),
+        hasText=MagicMock(return_value=True),
+        text=MagicMock(return_value='songs'))
+    mime_data.data.return_value = QtCore.QByteArray(b'Test Song')
+    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data), pos=MagicMock(return_value=QtCore.QPoint(0, 0)))
+    service_manager_list._show_drag_tooltip = MagicMock()
 
     # WHEN: The dragEnterEvent method is called
     service_manager_list.dragEnterEvent(mocked_event)
 
-    # THEN: The accept() method on the event is called
+    # THEN: The drag is accepted and preview is started
     mocked_event.accept.assert_called_once_with()
+    service_manager.can_accept_external_plugin.assert_called_once_with('songs')
+    service_manager.begin_external_drag_preview.assert_called_once_with('songs', item_title='Test Song')
 
 
-def test_service_manager_list_drag_move_event():
+def test_service_manager_list_drag_enter_event_rejects_unsupported_plugin():
     """
-    Test that the ServiceManagerList.dragMoveEvent slot accepts the event
+    Test that ServiceManagerList.dragEnterEvent rejects unsupported plugin drags.
     """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    mocked_event = MagicMock()
+    # GIVEN: A service manager list and an unsupported plugin drop payload
+    service_manager = MagicMock()
+    service_manager.can_accept_external_plugin = MagicMock(return_value=False)
+    service_manager_list = ServiceManagerList(service_manager)
+    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
+                          text=MagicMock(return_value='themes'))
+    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data))
+
+    # WHEN: The dragEnterEvent method is called
+    service_manager_list.dragEnterEvent(mocked_event)
+
+    # THEN: The drag is rejected
+    mocked_event.ignore.assert_called_once_with()
+    service_manager.begin_external_drag_preview.assert_not_called()
+
+
+def test_service_manager_list_drag_move_event_accepts_supported_plugin():
+    """
+    Test that ServiceManagerList.dragMoveEvent accepts supported plugin drags.
+    """
+    # GIVEN: A service manager list with a supported plugin drag payload
+    service_manager = MagicMock()
+    service_manager.can_accept_external_plugin = MagicMock(return_value=True)
+    service_manager_list = ServiceManagerList(service_manager)
+    service_manager_list._update_drag_tooltip_pos = MagicMock()
+    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
+                          text=MagicMock(return_value='songs'))
+    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data), pos=MagicMock(return_value=QtCore.QPoint(0, 0)))
 
     # WHEN: The dragMoveEvent method is called
     service_manager_list.dragMoveEvent(mocked_event)
 
-    # THEN: The accept() method on the event is called
+    # THEN: The drag is accepted and preview position updated
     mocked_event.accept.assert_called_once_with()
+    service_manager.update_external_drag_preview.assert_called_once()
+
+
+def test_service_manager_list_drag_move_event_rejects_unsupported_plugin():
+    """
+    Test that ServiceManagerList.dragMoveEvent rejects unsupported plugin drags.
+    """
+    # GIVEN: A service manager list with an unsupported plugin drag payload
+    service_manager = MagicMock()
+    service_manager.can_accept_external_plugin = MagicMock(return_value=False)
+    service_manager_list = ServiceManagerList(service_manager)
+    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
+                          text=MagicMock(return_value='themes'))
+    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data))
+
+    # WHEN: The dragMoveEvent method is called
+    service_manager_list.dragMoveEvent(mocked_event)
+
+    # THEN: The drag is rejected
+    mocked_event.ignore.assert_called_once_with()
+    service_manager.update_external_drag_preview.assert_not_called()
 
 
 def test_service_manager_list_key_press_event():
@@ -1296,6 +1355,34 @@ def test_drop_event_external_plugin_uses_preview_position(service_manager: Servi
     assert not service_manager.is_external_drag_active()
     assert service_manager.drop_position == 1
     MockRegistry.return_value.execute.assert_called_once_with('images_add_service_item', False)
+
+
+def test_drop_event_external_plugin_rejects_unsupported_type(service_manager: ServiceManager):
+    """
+    Test that drop_event ignores unsupported plugin drops and does not dispatch add_service_item.
+    """
+    # GIVEN: A service manager with an active external drag preview and unsupported plugin payload
+    _add_song_service_item(service_manager)
+    service_manager.begin_external_drag_preview('images')
+    assert service_manager.is_external_drag_active()
+    mocked_event = MagicMock()
+    mocked_event.mimeData.return_value = MagicMock(
+        hasUrls=MagicMock(return_value=False),
+        hasText=MagicMock(return_value=True),
+        text=MagicMock(return_value='themes')
+    )
+    service_manager.service_manager_list._hide_drag_tooltip = MagicMock()
+
+    # WHEN: The drop event fires for an unsupported plugin
+    with patch('openlp.core.ui.servicemanager.Registry') as MockRegistry:
+        MockRegistry.return_value.has_function.return_value = False
+        service_manager.drop_event(mocked_event)
+
+    # THEN: The drag is ignored, preview removed, and no add action executed
+    assert not service_manager.is_external_drag_active()
+    mocked_event.ignore.assert_called_once_with()
+    service_manager.service_manager_list._hide_drag_tooltip.assert_called_once_with()
+    MockRegistry.return_value.execute.assert_not_called()
 
 
 def test_begin_external_drag_preview(service_manager: ServiceManager):
