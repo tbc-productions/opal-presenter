@@ -54,26 +54,28 @@ class AboutForm(QtWidgets.QDialog):
         """
         self.setObjectName('AboutForm')
         self.setWindowIcon(UiIcons().main_icon)
-        self.base_layout = QtWidgets.QVBoxLayout(self)
+        self.base_layout = QtWidgets.QHBoxLayout(self)
         self.base_layout.setContentsMargins(0, 0, 0, 0)
-        self.base_layout.setSpacing(0)
+        self.base_layout.setSpacing(8)
         self.base_layout.setObjectName('base_layout')
-        self.logo_label = QtWidgets.QLabel(self)
-        self.logo_label.setPixmap(QtGui.QPixmap(':/graphics/openlp-about-logo.png'))
-        self.logo_label.setStyleSheet('background-color: #fff')
-        self.logo_label.setMargin(8)
-        self.logo_label.setObjectName('logo_label')
-        self.base_layout.addWidget(self.logo_label)
-        self.line = QtWidgets.QFrame(self)
-        self.line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        self.line.setObjectName('line')
-        self.base_layout.addWidget(self.line)
+
+        # Mirror the first-time wizard visual style: image on the left, content on the right.
+        self.side_image_label = QtWidgets.QLabel(self)
+        self.side_image_label.setPixmap(QtGui.QPixmap(':/wizards/openlp-osx-wizard.png'))
+        self.side_image_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+        self.side_image_label.setMargin(8)
+        self.side_image_label.setObjectName('side_image_label')
+        self.base_layout.addWidget(self.side_image_label)
+
+        self.content_widget = QtWidgets.QWidget(self)
+        self.content_widget.setObjectName('content_widget')
         self.self_layout = QtWidgets.QVBoxLayout()
         self.self_layout.setContentsMargins(8, 8, 8, 8)
         self.self_layout.setSpacing(8)
         self.self_layout.setObjectName('self_layout')
-        self.base_layout.addLayout(self.self_layout)
+        self.content_widget.setLayout(self.self_layout)
+        self.base_layout.addWidget(self.content_widget, 1)
+
         self.about_notebook = QtWidgets.QTabWidget(self)
         self.about_notebook.setObjectName('about_notebook')
         self.about_tab = QtWidgets.QWidget()
@@ -81,6 +83,8 @@ class AboutForm(QtWidgets.QDialog):
         self.about_tab_layout = QtWidgets.QVBoxLayout(self.about_tab)
         self.about_tab_layout.setObjectName('about_tab_layout')
         self.about_text_edit = QtWidgets.QTextBrowser(self.about_tab)
+        self.about_text_edit.setMinimumSize(QtCore.QSize(650, 350))
+        self.about_text_edit.setOpenExternalLinks(True)
         self.about_text_edit.setObjectName('about_text_edit')
         self.about_tab_layout.addWidget(self.about_text_edit)
         self.about_notebook.addTab(self.about_tab, '')
@@ -89,6 +93,7 @@ class AboutForm(QtWidgets.QDialog):
         self.credits_tab_layout = QtWidgets.QVBoxLayout(self.credits_tab)
         self.credits_tab_layout.setObjectName('credits_tab_layout')
         self.credits_text_edit = QtWidgets.QTextBrowser(self.credits_tab)
+        self.credits_text_edit.setOpenExternalLinks(True)
         self.credits_text_edit.setObjectName('credits_text_edit')
         self.credits_tab_layout.addWidget(self.credits_text_edit)
         self.about_notebook.addTab(self.credits_tab, '')
@@ -97,6 +102,7 @@ class AboutForm(QtWidgets.QDialog):
         self.license_tab_layout = QtWidgets.QVBoxLayout(self.license_tab)
         self.license_tab_layout.setObjectName('license_tab_layout')
         self.license_text_edit = QtWidgets.QTextBrowser(self.license_tab)
+        self.license_text_edit.setOpenExternalLinks(True)
         self.license_text_edit.setObjectName('license_text_edit')
         self.license_tab_layout.addWidget(self.license_text_edit)
         self.about_notebook.addTab(self.license_tab, '')
@@ -118,10 +124,12 @@ class AboutForm(QtWidgets.QDialog):
         self.setWindowTitle('{about} OpenLP+'.format(about=UiStrings().About))
         self.about_text_edit.setHtml(
             translate('OpenLP.AboutForm',
-                      '<p>OpenLP+ {{version}}{{revision}} - Open Source Lyrics Projection<br>'
-                      'OpenLP+ is a fork of OpenLP.<br>'
-                      'Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP+ contributors</p>'
-                      '<p>Upstream OpenLP project: '
+                      '<p>OpenLP+ {{version}}{{revision}} - Open Source Lyrics Projection</p>'
+                      '<p>OpenLP+ is a fork of OpenLP.</p>'
+                      '<p>OpenLP+ project: <a href="https://git.tbcproductions.net/tbcproductions/openlp-plus">https://git.tbcproductions.net/tbcproductions/openlp-plus</a></p>'
+                      '<hr>'
+                      '<p>Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors</p>'
+                      '<p>OpenLP project: '
                       '<a href="https://openlp.org/">https://openlp.org/</a></p>'
                       '<p>This program is free software: you can redistribute it and/or modify it under the terms of '
                       'the GNU General Public License as published by the Free Software Foundation, either version 3 '
@@ -134,10 +142,10 @@ class AboutForm(QtWidgets.QDialog):
                       'https://www.gnu.org/licenses/</a>.</p>').format(crs='\xa9', yr=datetime.date.today().year))
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.about_tab), UiStrings().About)
         developers = translate('OpenLP.AboutForm',
-                       'OpenLP+ is a fork of OpenLP and is maintained by volunteers all over the world in '
+                       'OpenLP is maintained by volunteers all over the world in '
                        'their spare time. If you would like to see this project succeed, please consider '
                        'contributing to it by clicking the "contribute" button below.')
-        built_with = translate('OpenLP.AboutForm', 'OpenLP+ (and upstream OpenLP) would not be possible without '
+        built_with = translate('OpenLP.AboutForm', 'OpenLP would not be possible without '
                        'the following software '
                                'libraries:')
         build_tech = ('<ul>'
