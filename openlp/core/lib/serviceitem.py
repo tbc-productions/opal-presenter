@@ -122,7 +122,7 @@ class ServiceItem(RegistryProperties):
             theme_level = self.settings.value('themes/theme level')
         theme_manager = Registry().get('theme_manager')
         # Just assume we use the global theme.
-        theme = theme_manager.global_theme
+        theme = getattr(theme_manager, 'global_theme', self.settings.value('themes/global theme'))
         if theme_level != ThemeLevel.Global:
             service_theme = self.settings.value('servicemanager/service theme')
             # Service or Song level, so assume service theme (if it exists and item in service)

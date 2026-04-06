@@ -32,6 +32,7 @@ from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
@@ -120,12 +121,17 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         """
         self.setColumnCount(1)
         self.horizontalHeader().setVisible(False)
+        vertical_header = self.verticalHeader()
+        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
+        target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
+        vertical_header.setMinimumWidth(max(20, target_width))
         self.setColumnWidth(0, self.parent().width())
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
         self.screen_ratio = screen_ratio
@@ -253,8 +259,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     # These tags are already translated.
                     verse_def = slide['verse']
                     verse_def = '%s%s' % (verse_def[0], verse_def[1:])
-                    two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
-                    row = two_line_def
+                    row = verse_def
                     color = self._resolve_song_section_color(verse_def[0])
                     color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
                     header_colors.append(color)
@@ -371,7 +376,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.setSpacing(1)
         self.setStyleSheet('QListWidget::item { padding: 4px 2px; }')
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self._drag_start_pos = None
 

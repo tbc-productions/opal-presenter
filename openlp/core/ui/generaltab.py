@@ -97,6 +97,15 @@ class GeneralTab(SettingsTab):
         self.logo_color_button = ColorButton(self.logo_group_box)
         self.logo_color_button.setObjectName('logo_color_button')
         self.logo_layout.addRow(self.logo_color_label, self.logo_color_button)
+        self.logo_fit_label = QtWidgets.QLabel(self.logo_group_box)
+        self.logo_fit_label.setObjectName('logo_fit_label')
+        self.logo_fit_combo_box = QtWidgets.QComboBox(self.logo_group_box)
+        self.logo_fit_combo_box.setObjectName('logo_fit_combo_box')
+        self.logo_fit_combo_box.addItem('', userData='cover')
+        self.logo_fit_combo_box.addItem('', userData='contain')
+        self.logo_fit_combo_box.addItem('', userData='stretch')
+        self.logo_fit_combo_box.addItem('', userData='repeat')
+        self.logo_layout.addRow(self.logo_fit_label, self.logo_fit_combo_box)
         self.logo_hide_on_startup_check_box = QtWidgets.QCheckBox(self.logo_group_box)
         self.logo_hide_on_startup_check_box.setObjectName('logo_hide_on_startup_check_box')
         self.logo_layout.addRow(self.logo_hide_on_startup_check_box)
@@ -215,6 +224,11 @@ class GeneralTab(SettingsTab):
         self.logo_group_box.setTitle(translate('OpenLP.GeneralTab', 'Logo'))
         self.logo_color_label.setText(UiStrings().BackgroundColorColon)
         self.logo_file_label.setText(translate('OpenLP.GeneralTab', 'Logo file:'))
+        self.logo_fit_label.setText(translate('OpenLP.GeneralTab', 'Logo fit:'))
+        self.logo_fit_combo_box.setItemText(0, translate('OpenLP.GeneralTab', 'Zoom to fill (Cover)'))
+        self.logo_fit_combo_box.setItemText(1, translate('OpenLP.GeneralTab', 'Zoom to fit (Contain)'))
+        self.logo_fit_combo_box.setItemText(2, translate('OpenLP.GeneralTab', 'Stretch'))
+        self.logo_fit_combo_box.setItemText(3, translate('OpenLP.GeneralTab', 'Tile'))
         self.logo_hide_on_startup_check_box.setText(translate('OpenLP.GeneralTab', 'Don\'t show logo on startup'))
         self.check_for_updates_check_box.setText(translate('OpenLP.GeneralTab', 'Check for updates to OpenLP'))
         self.check_for_remote_updates_check_box.setText(translate('OpenLP.GeneralTab',
@@ -292,6 +306,11 @@ class GeneralTab(SettingsTab):
         self.logo_background_color = self.settings.value('core/logo background color')
         self.logo_file_path_edit.path = self.settings.value('core/logo file')
         self.logo_hide_on_startup_check_box.setChecked(self.settings.value('core/logo hide on startup'))
+        logo_fit = self.settings.value('core/logo fit')
+        for i in range(self.logo_fit_combo_box.count()):
+            if self.logo_fit_combo_box.itemData(i) == logo_fit:
+                self.logo_fit_combo_box.setCurrentIndex(i)
+                break
         self.logo_color_button.color = self.logo_background_color
         self.check_for_updates_check_box.setChecked(self.settings.value('core/update check'))
         self.check_for_remote_updates_check_box.setChecked(self.settings.value('api/update check'))
@@ -374,6 +393,7 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('core/logo background color', self.logo_background_color)
         self.settings.setValue('core/logo file', self.logo_file_path_edit.path)
         self.settings.setValue('core/logo hide on startup', self.logo_hide_on_startup_check_box.isChecked())
+        self.settings.setValue('core/logo fit', self.logo_fit_combo_box.currentData())
         self.settings.setValue('core/update check', self.check_for_updates_check_box.isChecked())
         self.settings.setValue('api/update check', self.check_for_remote_updates_check_box.isChecked())
         self.settings.setValue('core/ccli number', self.number_edit.displayText())

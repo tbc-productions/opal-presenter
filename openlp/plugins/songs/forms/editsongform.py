@@ -38,6 +38,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.db.manager import DBManager
 from openlp.core.ui import SingleColumnTableWidget
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.lib import create_separated_list
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.lib.plugin import PluginStatus
@@ -126,10 +127,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         chrome = self.copyright_edit.frameWidth() * 2 + margins.top() + margins.bottom()
         self.copyright_edit.setFixedHeight(line_spacing * 3 + chrome)
         self.authors_list_view.setSortingEnabled(False)
-        self.authors_list_view.setAlternatingRowColors(True)
+        self.authors_list_view.setAlternatingRowColors(use_alternate_rows())
         self.topics_list_view.setSortingEnabled(False)
-        self.topics_list_view.setAlternatingRowColors(True)
-        self.audio_list_widget.setAlternatingRowColors(True)
+        self.topics_list_view.setAlternatingRowColors(use_alternate_rows())
+        self.audio_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.find_verse_split = re.compile(r'---\[\]---\n')
         self.whitespace = re.compile(r'\W+')
         self.find_tags = re.compile(r'\{/?\w+\}')
@@ -169,7 +170,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.lyrics_label.setObjectName('lyrics_label')
         self.lyrics_tab_layout.addWidget(self.lyrics_label, 2, 0, QtCore.Qt.AlignmentFlag.AlignTop)
         self.verse_list_widget = SingleColumnTableWidget(self.lyrics_tab)
-        self.verse_list_widget.setAlternatingRowColors(True)
+        self.verse_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.verse_list_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.verse_list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.verse_list_widget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -226,7 +227,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.author_add_layout.addLayout(self.author_type_layout)
         self.authors_layout.addLayout(self.author_add_layout)
         self.authors_list_view = QtWidgets.QListWidget(self.authors_group_box)
-        self.authors_list_view.setAlternatingRowColors(True)
+        self.authors_list_view.setAlternatingRowColors(use_alternate_rows())
         self.authors_list_view.setObjectName('authors_list_view')
         self.authors_layout.addWidget(self.authors_list_view)
         self.author_remove_layout = QtWidgets.QHBoxLayout()
@@ -263,7 +264,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.topic_add_layout.addWidget(self.topic_add_button)
         self.topics_layout.addLayout(self.topic_add_layout)
         self.topics_list_view = QtWidgets.QListWidget(self.topics_group_box)
-        self.topics_list_view.setAlternatingRowColors(True)
+        self.topics_list_view.setAlternatingRowColors(use_alternate_rows())
         self.topics_list_view.setObjectName('topics_list_view')
         self.topics_layout.addWidget(self.topics_list_view)
         self.topic_remove_layout = QtWidgets.QHBoxLayout()
@@ -290,7 +291,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.songbook_add_layout.addWidget(self.songbook_add_button)
         self.songbooks_layout.addLayout(self.songbook_add_layout)
         self.songbooks_list_view = QtWidgets.QListWidget(self.songbook_group_box)
-        self.songbooks_list_view.setAlternatingRowColors(True)
+        self.songbooks_list_view.setAlternatingRowColors(use_alternate_rows())
         self.songbooks_list_view.setObjectName('songbooks_list_view')
         self.songbooks_layout.addWidget(self.songbooks_list_view)
         self.songbook_remove_layout = QtWidgets.QHBoxLayout()

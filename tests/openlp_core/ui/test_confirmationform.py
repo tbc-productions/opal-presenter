@@ -45,6 +45,42 @@ def test_confirmation_form_ui_setup(settings):
     assert form.findChild(QtWidgets.QLabel, "message").text() == "confirm?"
 
 
+def test_confirmation_form_auto_sizes_height_to_contents(settings):
+    """
+    Test that ConfirmationForm auto-sizes to content and does not use a tall fixed default height.
+    """
+    # WHEN: A ConfirmationForm object is created with default height behavior
+    form = ConfirmationForm(None, "title", ["item1", "item2", "item3"], "confirm?")
+
+    # THEN: The dialog should be significantly smaller than the previous fixed 600px height
+    assert form.height() < 600
+
+
+def test_confirmation_form_explicit_height_is_respected(settings):
+    """
+    Test that a provided explicit height still applies.
+    """
+    # WHEN: A ConfirmationForm object is created with an explicit height
+    form = ConfirmationForm(None, "title", ["item1"], "confirm?", height=420)
+
+    # THEN: The explicit height should be used
+    assert form.height() == 420
+
+
+def test_confirmation_form_message_is_above_list(settings):
+    """
+    Test that the confirmation message label is placed above the list of item names.
+    """
+    # GIVEN: A ConfirmationForm
+    form = ConfirmationForm(None, "title", ["item1", "item2"], "confirm?")
+    message_widget = form.findChild(QtWidgets.QLabel, "message")
+    list_widget = form.findChild(QtWidgets.QListView, "confirmation listview")
+
+    # WHEN: Comparing vertical positions
+    # THEN: message should be above list
+    assert message_widget.y() < list_widget.y()
+
+
 @patch('openlp.core.ui.confirmationform.ConfirmationForm.accept')
 @patch('openlp.core.ui.confirmationform.ConfirmationForm.reject')
 def test_confirmation_form_yes_button(mocked_reject, mocked_accept, settings):

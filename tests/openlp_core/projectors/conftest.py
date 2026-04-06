@@ -48,14 +48,13 @@ def test_function(mock_registry):
 
 
 @pytest.fixture()
-def projector_manager(settings):
-    with patch('openlp.core.projectors.db.init_url') as mocked_init_url:
-        mocked_init_url.return_value = 'sqlite:///%s' % TEST_DB
-        projectordb = ProjectorDB()
-        proj_manager = ProjectorManager(projectordb=projectordb)
-        yield proj_manager
-        projectordb.session.close()
-        del proj_manager
+def projector_manager(temp_folder, settings):
+    tmpdb_url = f'sqlite:///{PurePath(temp_folder, TEST_DB)}'
+    projectordb = ProjectorDB(db_url=tmpdb_url)
+    proj_manager = ProjectorManager(projectordb=projectordb)
+    yield proj_manager
+    projectordb.session.close()
+    del proj_manager
 
 
 @pytest.fixture()
@@ -66,20 +65,19 @@ def projector_manager_nodb(settings):
 
 
 @pytest.fixture()
-def projector_manager_mtdb(settings):
-    with patch('openlp.core.projectors.db.init_url') as mock_url:
-        mock_url.return_value = 'sqlite:///%s' % TEST_DB
-        t_db = ProjectorDB()
-        # Ensure we have an empty DB at the beginning of the test
-        for itm in t_db.get_projector_all():
-            t_db.delete_projector(itm)
-        t_db.session.commit()
+def projector_manager_mtdb(temp_folder, settings):
+    tmpdb_url = f'sqlite:///{PurePath(temp_folder, TEST_DB)}'
+    t_db = ProjectorDB(db_url=tmpdb_url)
+    # Ensure we have an empty DB at the beginning of the test
+    for itm in t_db.get_projector_all():
+        t_db.delete_projector(itm)
+    t_db.session.commit()
 
-        t_manager = ProjectorManager(projectordb=t_db)
-        yield t_manager
-        t_db.session.close()
-        del t_db
-        del t_manager
+    t_manager = ProjectorManager(projectordb=t_db)
+    yield t_manager
+    t_db.session.close()
+    del t_db
+    del t_manager
 
 
 @pytest.fixture
@@ -95,9 +93,7 @@ def projectordb_mtdb(temp_folder, settings):
     Set up anything necessary for all tests
     """
     tmpdb_url = f'sqlite:///{PurePath(temp_folder, TEST_DB)}'
-    with patch('openlp.core.projectors.db.init_url') as mocked_init_url:
-        mocked_init_url.return_value = tmpdb_url
-        proj = ProjectorDB()
+    proj = ProjectorDB(db_url=tmpdb_url)
     yield proj
     proj.session.close()
     del proj
@@ -109,9 +105,7 @@ def projectordb(temp_folder, settings):
     Set up anything necessary for all tests
     """
     tmpdb_url = f'sqlite:///{PurePath(temp_folder, TEST_DB)}'
-    with patch('openlp.core.projectors.db.init_url') as mocked_init_url:
-        mocked_init_url.return_value = tmpdb_url
-        proj = ProjectorDB()
+    proj = ProjectorDB(db_url=tmpdb_url)
     proj.add_projector(Projector(**TEST1_DATA))
     proj.add_projector(Projector(**TEST2_DATA))
     proj.add_projector(Projector(**TEST3_DATA))

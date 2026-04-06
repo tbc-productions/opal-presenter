@@ -284,6 +284,7 @@ def test_set_startup_screen(display_window_env, mock_settings):
     settings = {
         'core/logo background color': 'red',
         'core/logo file': Path(image_path),
+        'core/logo fit': 'contain',
         'core/logo hide on startup': False
     }
     mock_settings.value.side_effect = lambda key: settings[key]
@@ -294,7 +295,8 @@ def test_set_startup_screen(display_window_env, mock_settings):
     # THEN: javascript should be run
     display_window.run_in_display.assert_called_once_with('setStartupSplashScreen', "red",
                                                           "openlp-library://local-file/{path}"
-                                                          .format(path=expect_image_path))
+                                                          .format(path=expect_image_path),
+                                                          'contain')
 
 
 def test_set_startup_screen_default_image(display_window_env, mock_settings):
@@ -311,6 +313,7 @@ def test_set_startup_screen_default_image(display_window_env, mock_settings):
     settings = {
         'core/logo background color': 'blue',
         'core/logo file': Path(':/graphics/openlp-splash-screen.png'),
+        'core/logo fit': 'contain',
         'core/logo hide on startup': False
     }
     mock_settings.value.side_effect = lambda key: settings[key]
@@ -320,7 +323,8 @@ def test_set_startup_screen_default_image(display_window_env, mock_settings):
 
     # THEN: javascript should be run
     display_window.run_in_display.assert_called_with('setStartupSplashScreen', 'blue',
-                                                     "{path}".format(path=expect_splash_screen_path))
+                                                     "{path}".format(path=expect_splash_screen_path),
+                                                     'contain')
 
 
 def test_set_startup_screen_missing(display_window_env, mock_settings):
@@ -335,6 +339,7 @@ def test_set_startup_screen_missing(display_window_env, mock_settings):
     settings = {
         'core/logo background color': 'green',
         'core/logo file': None,
+        'core/logo fit': 'contain',
         'core/logo hide on startup': False
     }
     mock_settings.value.side_effect = lambda key: settings[key]
@@ -343,7 +348,7 @@ def test_set_startup_screen_missing(display_window_env, mock_settings):
     display_window.set_startup_screen()
 
     # THEN: javascript should be run
-    display_window.run_in_display.assert_called_with('setStartupSplashScreen', 'green', '')
+    display_window.run_in_display.assert_called_with('setStartupSplashScreen', 'green', '', 'contain')
 
 
 def test_set_startup_screen_hide(display_window_env, mock_settings):
@@ -358,6 +363,7 @@ def test_set_startup_screen_hide(display_window_env, mock_settings):
     settings = {
         'core/logo background color': 'orange',
         'core/logo file': Path('/my/image.png'),
+        'core/logo fit': 'cover',
         'core/logo hide on startup': True
     }
     mock_settings.value.side_effect = lambda key: settings[key]
@@ -366,7 +372,35 @@ def test_set_startup_screen_hide(display_window_env, mock_settings):
     display_window.set_startup_screen()
 
     # THEN: javascript should be run
-    display_window.run_in_display.assert_called_once_with('setStartupSplashScreen', 'orange', '')
+    display_window.run_in_display.assert_called_once_with('setStartupSplashScreen', 'orange', '', 'cover')
+
+
+def test_set_startup_screen_invalid_logo_fit_falls_back_to_cover(display_window_env, mock_settings):
+    """
+    Test that invalid persisted logo fit values fallback to cover.
+    """
+    # GIVEN: A display window and mocked settings with invalid logo fit
+    display_window = DisplayWindow()
+    display_window._is_initialised = True
+    display_window.run_in_display = MagicMock()
+    settings = {
+        'core/logo background color': 'purple',
+        'core/logo file': Path('/my/image.png'),
+        'core/logo fit': 'legacy-value',
+        'core/logo hide on startup': False
+    }
+    mock_settings.value.side_effect = lambda key: settings[key]
+
+    # WHEN: set_startup_screen is run
+    display_window.set_startup_screen()
+
+    # THEN: javascript should be run with cover fallback
+    display_window.run_in_display.assert_called_once_with(
+        'setStartupSplashScreen',
+        'purple',
+        'openlp-library://local-file//my/image.png',
+        'cover'
+    )
 
 
 def test_after_loaded(display_window_env, mock_settings, registry):
@@ -388,6 +422,7 @@ def test_after_loaded(display_window_env, mock_settings, registry):
 
     # THEN: The following functions should have been called
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': True,
+                                                                   'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',
@@ -417,6 +452,7 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
 
     # THEN: Display.init should be called where is_display=false, do_item_transitions=true, show_mouse=false
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': False,
+                                                                   'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',
@@ -726,6 +762,7 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
         values = {
             'core/logo background color': '#001122',
             'core/logo file': logo_path,
+            'core/logo fit': 'repeat',
             'advanced/disable transparent display': False
         }
         return values.get(key, False)
@@ -739,7 +776,8 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
     display_window.run_in_display.assert_called_once_with(
         'toLogo',
         '#001122',
-        'openlp-library://local-file//tmp/openlp-logo.png'
+        'openlp-library://local-file//tmp/openlp-logo.png',
+        'repeat'
     )
 
 

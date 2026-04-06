@@ -37,6 +37,7 @@ def test_single_col_widget_create():
     # THEN: The object should have 1 column and no visible header
     assert widget.columnCount() == 1, 'There should be only 1 column'
     assert widget.horizontalHeader().isVisible() is False, 'The horizontal header should not be visible'
+    assert widget.verticalHeader().minimumWidth() > 0, 'The vertical header should reserve enough width for labels'
 
 
 @patch('openlp.core.ui.QtWidgets.QTableWidget')

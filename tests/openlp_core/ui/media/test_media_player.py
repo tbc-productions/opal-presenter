@@ -120,6 +120,7 @@ def test_load_media(base_media_player):
     result = base_media_player.load()
     # THEN: The video should be loaded
     base_media_player.media_player.setAudioOutput.assert_called_once()
+    base_media_player.media_player.setPlaybackRate.assert_called_once_with(1.0)
     assert result is True
 
 
@@ -151,6 +152,7 @@ def test_load_network_stream(base_media_player):
     base_media_player.media_capture_session.setVideoOutput.assert_called_once()
     base_media_player.media_player.setAudioInput.assert_not_called()
     base_media_player.media_player.setVideoOutput.assert_called_with(base_media_player.video_widget)
+    base_media_player.media_player.setPlaybackRate.assert_called_once_with(1.0)
     base_media_player.media_player.setSource.assert_called_with(mrl)
     assert result is True
 
@@ -507,6 +509,26 @@ def test_position_changed_preview(base_media_player, registry):
     mocked_controller.live_media_tick.emit.assert_not_called()
     mocked_controller.preview_media_tick.emit.assert_called_once()
     assert base_media_player.controller.media_play_item.timer == 400
+
+
+def test_duration_changed_updates_length_and_seek_ui(base_media_player, registry):
+    """
+    Test that durationChanged updates media length and seek slider UI.
+    """
+    # GIVEN: a normal video item and a registered media controller
+    base_media_player.controller.media_play_item.media_type = MediaType.Video
+    base_media_player.controller.media_play_item.length = 0
+    mocked_controller = MagicMock()
+    Registry().register("media_controller", mocked_controller)
+
+    # WHEN: backend reports a duration
+    base_media_player.duration_changed_event(5000)
+
+    # THEN: controller state and seek UI should be updated
+    assert base_media_player.controller.media_play_item.length == 5000
+    base_media_player.controller.mediabar.seek_slider.setTickInterval.assert_called_once_with(500)
+    base_media_player.controller.mediabar.seek_slider.setMaximum.assert_called_once_with(5000)
+    mocked_controller._update_seek_ui.assert_called_once_with(base_media_player.controller)
 
 
 def test_position_changed_dual(base_media_player, registry):

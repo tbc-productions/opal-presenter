@@ -134,7 +134,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
 
     def _set_minimum_dialog_size(self):
         """
-        Set a minimum dialog size using the original dialog baseline, capped to the available viewport.
+        Set a minimum dialog size using the dialog baseline, capped to the available viewport.
         """
         original_size = QtCore.QSize(1200, 700)
         required_width = original_size.width()
@@ -339,7 +339,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 tab_widget.tab_visited = True
                 self.stacked_layout.setCurrentIndex(tab_index)
                 current_widget = self.stacked_layout.currentWidget()
-                self.content_widget.resize(current_widget.sizeHint())
+                self.content_widget.updateGeometry()
                 current_widget.tab_visible()
 
     def register_post_process(self, function):

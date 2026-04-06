@@ -66,6 +66,19 @@ class CustomMediaItem(MediaManagerItem):
         # Holds information about whether the edit is remotely triggered and
         # which Custom is required.
         self.remote_custom = -1
+        edit_action_name = '{name}EditAction'.format(name=self.plugin.name)
+        if edit_action_name in self.toolbar.actions_map:
+            self.toolbar.actions_map[edit_action_name].setEnabled(False)
+
+    def on_selection_change(self):
+        """
+        Update common toolbar action states and enable Edit only when an item is selected.
+        """
+        super().on_selection_change()
+        has_selection = bool(self.list_view.selectedIndexes())
+        edit_action_name = '{name}EditAction'.format(name=self.plugin.name)
+        if edit_action_name in self.toolbar.actions_map:
+            self.toolbar.actions_map[edit_action_name].setEnabled(has_selection)
 
     def add_end_header_bar(self):
         """

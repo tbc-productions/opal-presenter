@@ -202,7 +202,12 @@ def test_old_service_item_load_image_from_service(state_media, settings):
     image_name = 'image_1.jpg'
     fake_hash = 'abcd'
     extracted_file = Path(TEST_PATH) / '{base}{ext}'.format(base=fake_hash, ext=os.path.splitext(image_name)[1])
-    frame_array = {'path': extracted_file, 'title': image_name, 'file_hash': fake_hash}
+    frame_array = {
+        'path': extracted_file,
+        'title': image_name,
+        'file_hash': fake_hash,
+        'thumbnail': Path('/path/thumbnails/abcd.jpg')
+    }
     service_item = ServiceItem(None)
     service_item.add_icon = MagicMock()
 
@@ -555,6 +560,28 @@ def test_service_item_get_theme_data_global_level(settings):
 
     # THEN: theme should be the global theme
     assert theme == mocked_theme_manager.global_theme
+
+
+def test_service_item_get_theme_data_global_level_without_theme_manager_attribute(settings):
+    """
+    Test the service item - get theme data when ThemeManager has not populated global_theme yet.
+    """
+    # GIVEN: A service item with a theme and theme level set to global
+    service_item = ServiceItem(None)
+
+    class ThemeManagerStub:
+        def get_theme_data(self, value):
+            return value
+
+    Registry().register('theme_manager', ThemeManagerStub())
+    settings.setValue('themes/global theme', 'global_theme_from_settings')
+    settings.setValue('themes/theme level', ThemeLevel.Global)
+
+    # WHEN: Get theme data is run
+    theme = service_item.get_theme_data()
+
+    # THEN: theme should come from settings instead of crashing
+    assert theme == 'global_theme_from_settings'
 
 
 def test_service_item_get_theme_data_service_level_service_undefined(settings):

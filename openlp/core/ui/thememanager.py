@@ -47,6 +47,7 @@ from openlp.core.display.screens import ScreenList
 from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.ui.themeform import ThemeForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
@@ -131,7 +132,7 @@ class Ui_ThemeManager(object):
         self.theme_widget.setObjectName('theme_widget')
         # create theme manager list
         self.theme_list_widget = MultipleViewModeList(widget)
-        self.theme_list_widget.setAlternatingRowColors(True)
+        self.theme_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.theme_list_widget.setIconSize(QtCore.QSize(88, 50))
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.ListMode, QtCore.QSize(88, 50))
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.IconMode,
@@ -193,6 +194,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         super(ThemeManager, self).__init__(parent)
         # Variables
         self._theme_list = {}
+        self.global_theme = None
         self.old_background_image_path = None
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
@@ -200,7 +202,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Registry().register_function('config_screen_changed', self.screen_changed)
 
     def get_global_theme(self):
-        return self.get_theme_data(self.global_theme)
+        return self.get_theme_data(getattr(self, 'global_theme', self.settings.value('themes/global theme')))
 
     def get_theme_data(self, theme_name):
         """
@@ -688,6 +690,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         self._theme_list.clear()
         self.theme_list_widget.clear()
+        current_global_theme = getattr(self, 'global_theme', self.settings.value('themes/global theme'))
         files = AppLocation.get_files('themes', '/*.json')
         # Sort the themes by its name considering language specific
         files.sort(key=lambda file_name: get_locale_key(str(file_name)))
@@ -697,7 +700,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             theme_path = self.theme_path / file
             if theme_path.exists():
                 text_name = theme_path.stem
-                if text_name == self.global_theme:
+                if text_name == current_global_theme:
                     name = translate('OpenLP.ThemeManager', '{name} (default)').format(name=text_name)
                 else:
                     name = text_name

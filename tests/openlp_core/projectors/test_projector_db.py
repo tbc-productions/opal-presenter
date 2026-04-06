@@ -93,9 +93,7 @@ def projector(temp_folder: str, settings: Settings):
     """
     # tmpdb_url = 'sqlite:///{db}'.format(db=os.path.join(temp_folder, TEST_DB))
     tmpdb_url = 'sqlite://'
-    with patch('openlp.core.projectors.db.init_url') as mocked_init_url:
-        mocked_init_url.return_value = tmpdb_url
-        proj = ProjectorDB()
+    proj = ProjectorDB(db_url=tmpdb_url)
     yield proj
     proj.session.close()
     del proj

@@ -140,9 +140,22 @@ class ImageMediaItem(FolderLibraryItem):
         self.replace_action = self.toolbar.add_toolbar_action('replace_action',
                                                               icon=UiIcons().theme,
                                                               triggers=self.on_replace_click)
+        self.replace_action.setEnabled(False)
         self.reset_action = self.toolbar.add_toolbar_action('reset_action',
                                                             icon=UiIcons().close,
                                                             visible=False, triggers=self.on_reset_click)
+
+    def on_selection_change(self):
+        """
+        Update shared library actions and image-specific replace background action.
+        """
+        super().on_selection_change()
+        has_image_selected = False
+        for selected_item in self.list_view.selectedItems():
+            if isinstance(selected_item.data(0, QtCore.Qt.ItemDataRole.UserRole), Item):
+                has_image_selected = True
+                break
+        self.replace_action.setEnabled(has_image_selected)
 
     def generate_thumbnail_path(self, item: Item) -> Path:
         """

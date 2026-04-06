@@ -245,7 +245,7 @@ def test_image_to_byte():
         MockedQtCore.QByteArray.assert_called_with()
         MockedQtCore.QBuffer.assert_called_with(mocked_byte_array)
         mocked_buffer.open.assert_called_with('writeonly')
-        mocked_image.save.assert_called_with(mocked_buffer, "JPEG")
+        mocked_image.save.assert_called_with(mocked_buffer, "JPEG", -1)
         assert mocked_byte_array.toBase64.called is False
         assert mocked_byte_array == result, 'The mocked out byte array should be returned'
 
@@ -272,12 +272,12 @@ def test_image_to_byte_base_64():
         MockedQtCore.QByteArray.assert_called_with()
         MockedQtCore.QBuffer.assert_called_with(mocked_byte_array)
         mocked_buffer.open.assert_called_with('writeonly')
-        mocked_image.save.assert_called_with(mocked_buffer, "JPEG")
+        mocked_image.save.assert_called_with(mocked_buffer, "JPEG", -1)
         mocked_b64encode.assert_called_with(mocked_byte_array)
         assert 'byte_array base64ified' == result, 'The result should be the return value of the mocked base64 method'
 
 
-def test_create_thumb_with_size(registry: Registry):
+def test_create_thumb_with_size(qapp, registry: Registry):
     """
     Test the create_thumb() function with a given size.
     """
@@ -312,7 +312,7 @@ def test_create_thumb_with_size(registry: Registry):
         pass
 
 
-def test_create_thumb_no_size(registry: Registry):
+def test_create_thumb_no_size(qapp, registry: Registry):
     """
     Test the create_thumb() function with no size specified.
     """
@@ -347,7 +347,7 @@ def test_create_thumb_no_size(registry: Registry):
         pass
 
 
-def test_create_thumb_invalid_size(registry: Registry):
+def test_create_thumb_invalid_size(qapp, registry: Registry):
     """
     Test the create_thumb() function with invalid size specified.
     """
@@ -383,7 +383,7 @@ def test_create_thumb_invalid_size(registry: Registry):
         pass
 
 
-def test_create_thumb_width_only(registry: Registry):
+def test_create_thumb_width_only(qapp, registry: Registry):
     """
     Test the create_thumb() function with a size of only width specified.
     """
@@ -419,7 +419,7 @@ def test_create_thumb_width_only(registry: Registry):
         pass
 
 
-def test_create_thumb_height_only(registry: Registry):
+def test_create_thumb_height_only(qapp, registry: Registry):
     """
     Test the create_thumb() function with a size of only height specified.
     """
@@ -455,7 +455,7 @@ def test_create_thumb_height_only(registry: Registry):
         pass
 
 
-def test_create_thumb_empty_img(registry: Registry):
+def test_create_thumb_empty_img(qapp, registry: Registry):
     """
     Test the create_thumb() function with a size of only height specified.
     """
@@ -506,7 +506,8 @@ def test_create_thumb_empty_img(registry: Registry):
 
 @patch('openlp.core.lib.QtGui.QImageReader')
 @patch('openlp.core.lib.build_icon')
-def test_create_thumb_path_fails(mocked_build_icon: MagicMock, MockQImageReader: MagicMock, registry: Registry):
+def test_create_thumb_path_fails(mocked_build_icon: MagicMock, MockQImageReader: MagicMock, qapp,
+                                 registry: Registry):
     """
     Test that build_icon() is run against the image_path when the thumbnail fails to be created
     """

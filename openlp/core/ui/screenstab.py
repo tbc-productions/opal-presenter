@@ -52,14 +52,19 @@ class ScreensTab(SettingsTab):
         self.tab_layout = QtWidgets.QVBoxLayout(self)
         self.tab_layout.setObjectName('tab_layout')
         self.screen_selection_widget = ScreenSelectionWidget(self, ScreenList())
+        self.screen_selection_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                               QtWidgets.QSizePolicy.Policy.Maximum)
         self.tab_layout.addWidget(self.screen_selection_widget)
         self.generic_group_box = QtWidgets.QGroupBox(self)
         self.generic_group_box.setObjectName('generic_group_box')
+        self.generic_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                             QtWidgets.QSizePolicy.Policy.Maximum)
         self.generic_group_layout = QtWidgets.QVBoxLayout(self.generic_group_box)
         self.display_on_monitor_check = QtWidgets.QCheckBox(self.generic_group_box)
         self.display_on_monitor_check.setObjectName('monitor_combo_box')
         self.generic_group_layout.addWidget(self.display_on_monitor_check)
         self.tab_layout.addWidget(self.generic_group_box)
+        self.tab_layout.addStretch()
         Registry().register_function('config_screen_changed', self.screen_selection_widget.load)
 
         self.retranslate_ui()

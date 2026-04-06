@@ -24,6 +24,7 @@ from PySide6 import QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button, create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 
 class AlertDialog(object):
@@ -57,7 +58,7 @@ class AlertDialog(object):
         self.alert_text_layout.addRow(self.alert_parameter, self.parameter_edit)
         self.alert_dialog_layout.addLayout(self.alert_text_layout, 0, 0, 1, 2)
         self.alert_list_widget = QtWidgets.QListWidget(alert_dialog)
-        self.alert_list_widget.setAlternatingRowColors(True)
+        self.alert_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.alert_list_widget.setObjectName('alert_list_widget')
         self.alert_dialog_layout.addWidget(self.alert_list_widget, 1, 0)
         self.manage_button_layout = QtWidgets.QVBoxLayout()

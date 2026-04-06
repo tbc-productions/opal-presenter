@@ -38,6 +38,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, check_item_selected, create_separated_list
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 from openlp.core.lib.plugin import PluginStatus
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
@@ -100,7 +101,7 @@ class SongListWidget(TreeWidgetWithDnD):
         # Keep the secondary column filling any remaining width.
         self.header().setStretchLastSection(True)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
 
     def showEvent(self, event):
@@ -202,14 +203,8 @@ class SongMediaItem(MediaManagerItem):
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
         create_widget_action(
-            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
+            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
-        create_widget_action(
-            self.list_view,
-            text=translate('OpenLP.SongsPlugin', 'Toggle Favourite'),
-            icon=UiIcons().favourite,
-            triggers=self.on_favourite_click
-        )
 
     def add_list_view_to_toolbar(self):
         """
@@ -223,6 +218,7 @@ class SongMediaItem(MediaManagerItem):
         # Move context-menu actions to the new widget
         for action in list(old_list.actions()):
             old_list.removeAction(action)
+            action.setParent(self.list_view)
             self.list_view.addAction(action)
         # Reconnect signals
         old_list.doubleClicked.disconnect(self.on_double_clicked)
@@ -724,9 +720,9 @@ class SongMediaItem(MediaManagerItem):
             old_song = self.plugin.manager.get_object(Song, item_id)
             song_xml = self.open_lyrics.song_to_xml(old_song)
             new_song = self.open_lyrics.xml_to_song(song_xml)
-            new_song.title = '{title} <{text}>'.format(title=new_song.title,
-                                                       text=translate('SongsPlugin.MediaItem',
-                                                                      'copy', 'For song cloning'))
+            new_song.title = '{title} {text}'.format(title=new_song.title,
+                                                     text=translate('SongsPlugin.MediaItem',
+                                                                    '(Copy)', 'For song cloning'))
             # Copy audio files from the old to the new song
             if len(old_song.media_files) > 0:
                 save_path = AppLocation.get_section_data_path(self.plugin.name) / 'audio' / str(new_song.id)

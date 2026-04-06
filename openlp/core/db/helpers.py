@@ -86,12 +86,12 @@ def get_db_path(plugin_name: str, db_file_name: Union[Path, str, None] = None) -
     :rtype: str
     """
     if db_file_name is None:
-        return 'sqlite:///{path}/{plugin}.sqlite'.format(path=AppLocation.get_section_data_path(plugin_name),
-                                                         plugin=plugin_name)
+        db_path = AppLocation.get_section_data_path(plugin_name) / f'{plugin_name}.sqlite'
     elif os.path.isabs(db_file_name):
-        return 'sqlite:///{db_file_name}'.format(db_file_name=db_file_name)
+        db_path = Path(db_file_name)
     else:
-        return 'sqlite:///{path}/{name}'.format(path=AppLocation.get_section_data_path(plugin_name), name=db_file_name)
+        db_path = AppLocation.get_section_data_path(plugin_name) / db_file_name
+    return f'sqlite:///{db_path.as_posix()}'
 
 
 def handle_db_error(plugin_name: str, db_file_path: Union[Path, str]):

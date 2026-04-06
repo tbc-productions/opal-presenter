@@ -108,3 +108,38 @@ def test_service_load_basic_custom_true(media_item):
         # THEN: the item should not be added to the database.
         assert media_item.create_from_service_item.call_count == 1, \
             'The item should have been added to the database'
+
+
+def test_on_selection_change_toggles_edit_action(mock_settings):
+    """
+    Test that the Edit selected item action is disabled without selection and enabled with selection.
+    """
+    # GIVEN: A custom media item with a mocked list and toolbar action map
+    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+            patch('openlp.plugins.custom.forms.editcustomform.EditCustomForm.__init__'), \
+            patch('openlp.plugins.custom.lib.mediaitem.CustomMediaItem.setup_item'):
+        m_item = CustomMediaItem(None, MagicMock(name='plugin'))
+    m_item.plugin = MagicMock()
+    m_item.plugin.name = 'custom'
+    m_item.list_view = MagicMock()
+    edit_action = MagicMock()
+    m_item.toolbar = MagicMock(actions_map={'customEditAction': edit_action})
+    m_item.preview_action = None
+    m_item.live_action = None
+    m_item.add_to_service_action = None
+    m_item.quick_preview_allowed = False
+    m_item.auto_select_id = -1
+
+    # WHEN: no list items are selected
+    m_item.list_view.selectedIndexes.return_value = []
+    m_item.on_selection_change()
+
+    # THEN: Edit action should be disabled
+    edit_action.setEnabled.assert_called_with(False)
+
+    # WHEN: a list item is selected
+    m_item.list_view.selectedIndexes.return_value = [MagicMock()]
+    m_item.on_selection_change()
+
+    # THEN: Edit action should be enabled
+    edit_action.setEnabled.assert_called_with(True)

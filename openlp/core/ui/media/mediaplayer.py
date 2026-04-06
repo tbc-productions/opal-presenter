@@ -119,6 +119,7 @@ class MediaPlayer(MediaBase, LogMixin):
         layout.addWidget(self.video_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         self.media_player.positionChanged.connect(self.position_changed_event)
+        self.media_player.durationChanged.connect(self.duration_changed_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
         self.media_player.errorOccurred.connect(self.error_occurred_event)
         self._install_qt_message_handler()
@@ -206,6 +207,20 @@ class MediaPlayer(MediaBase, LogMixin):
         else:
             Registry().get("media_controller").preview_media_tick.emit()
 
+    def duration_changed_event(self, duration: int) -> None:
+        """
+        Update controller media length when backend reports duration at runtime.
+        """
+        if self.controller.media_play_item.media_type == MediaType.Dual:
+            return
+        if duration is None or duration <= 0:
+            return
+        self.controller.media_play_item.length = int(duration)
+        if hasattr(self.controller, 'mediabar') and self.controller.mediabar:
+            self.controller.mediabar.seek_slider.setTickInterval(max(self.controller.media_play_item.length // 10, 1))
+            self.controller.mediabar.seek_slider.setMaximum(self.controller.media_play_item.length)
+        Registry().get('media_controller')._update_seek_ui(self.controller)
+
     def error_occurred_event(self, error, error_text='') -> None:
         """
         Handle media backend errors and pass to media controller for user feedback.
@@ -264,6 +279,7 @@ class MediaPlayer(MediaBase, LogMixin):
             self.media_capture_session.setVideoOutput(None)
             self.media_player.setAudioOutput(self.audio_output)
             self.media_player.setVideoOutput(self.video_widget)
+            self.media_player.setPlaybackRate(1.0)
             self.media_player.setSource(QUrl.fromLocalFile(str(self.controller.media_play_item.media_file)))
             return True
         return False
@@ -303,6 +319,7 @@ class MediaPlayer(MediaBase, LogMixin):
             elif self.controller.media_play_item.media_type == MediaType.NetworkStream:
                 self.media_capture_session.setVideoOutput(None)
                 self.media_player.setVideoOutput(self.video_widget)
+                self.media_player.setPlaybackRate(1.0)
                 self.media_player.setSource(QUrl(mrl))
                 return True
         return False

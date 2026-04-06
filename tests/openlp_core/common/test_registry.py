@@ -110,7 +110,8 @@ def test_registry_function_type_error(mocked_trace_error: MagicMock, mocked_log:
     assert result == []
     mock_function.assert_called_with('arg', kwarg='kwarg')
     mocked_trace_error.assert_called_once_with(mocked_log)
-    mocked_log.exception.assert_called_once_with(f'Exception for function {mock_function}')
+    mocked_log.exception.assert_called_once_with(
+        'Exception while executing listener %r for event %s', mock_function, 'mock')
 
 
 @patch('openlp.core.common.registry.log')

@@ -567,6 +567,68 @@ def test_on_go_live_service_manager(registry: Registry):
     mocked_live_controller.preview_widget.setFocus.assert_called_once_with()
 
 
+def test_update_slide_action_enabled_state_preview(settings: Settings):
+    """
+    Preview controller actions should be disabled with no slides and enabled when slides exist.
+    """
+    # GIVEN: A preview controller with mocked actions and preview widget
+    slide_controller = SlideController(None)
+    slide_controller.is_live = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.previous_item = MagicMock()
+    slide_controller.next_item = MagicMock()
+    slide_controller.go_live_action = MagicMock()
+    slide_controller.add_to_service_action = MagicMock()
+
+    # WHEN: There are no slides
+    slide_controller.preview_widget.slide_count.return_value = 0
+    slide_controller._update_slide_action_enabled_state()
+
+    # THEN: Move/Preview actions should all be disabled
+    slide_controller.previous_item.setEnabled.assert_called_with(False)
+    slide_controller.next_item.setEnabled.assert_called_with(False)
+    slide_controller.go_live_action.setEnabled.assert_called_with(False)
+    slide_controller.add_to_service_action.setEnabled.assert_called_with(False)
+
+    # WHEN: Slides exist
+    slide_controller.preview_widget.slide_count.return_value = 2
+    slide_controller._update_slide_action_enabled_state()
+
+    # THEN: Move/Preview actions should all be enabled
+    slide_controller.previous_item.setEnabled.assert_called_with(True)
+    slide_controller.next_item.setEnabled.assert_called_with(True)
+    slide_controller.go_live_action.setEnabled.assert_called_with(True)
+    slide_controller.add_to_service_action.setEnabled.assert_called_with(True)
+
+
+def test_update_slide_action_enabled_state_live(settings: Settings):
+    """
+    Live controller previous/next actions should be disabled with no slides and enabled when slides exist.
+    """
+    # GIVEN: A live controller with mocked actions and preview widget
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.previous_item = MagicMock()
+    slide_controller.next_item = MagicMock()
+
+    # WHEN: There are no slides
+    slide_controller.preview_widget.slide_count.return_value = 0
+    slide_controller._update_slide_action_enabled_state()
+
+    # THEN: Move actions should be disabled
+    slide_controller.previous_item.setEnabled.assert_called_with(False)
+    slide_controller.next_item.setEnabled.assert_called_with(False)
+
+    # WHEN: Slides exist
+    slide_controller.preview_widget.slide_count.return_value = 3
+    slide_controller._update_slide_action_enabled_state()
+
+    # THEN: Move actions should be enabled
+    slide_controller.previous_item.setEnabled.assert_called_with(True)
+    slide_controller.next_item.setEnabled.assert_called_with(True)
+
+
 def test_service_previous(settings: Settings):
     """
     Check that calling the service_previous() method adds the previous key to the queue and processes the queue

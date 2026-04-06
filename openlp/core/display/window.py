@@ -45,6 +45,7 @@ from openlp.core.ui import HideMode
 FONT_FOUNDRY = re.compile(r'(.*?) \[(.*?)\]')
 TRANSITION_END_EVENT_NAME = 'transparent_transition_end'
 log = logging.getLogger(__name__)
+VALID_LOGO_FITS = {'cover', 'contain', 'stretch', 'repeat'}
 
 
 def _path_to_file_uri(image_path):
@@ -53,6 +54,16 @@ def _path_to_file_uri(image_path):
     """
     normalized_path = Path(unquote(path_to_str(image_path)))
     return normalized_path.as_uri()
+
+
+def _normalise_logo_fit(logo_fit):
+    """
+    Normalise persisted logo fit values and fallback to cover for unknown values.
+    """
+    logo_fit = path_to_str(logo_fit).lower()
+    if logo_fit in VALID_LOGO_FITS:
+        return logo_fit
+    return 'cover'
 
 
 class DisplayWatcher(QtCore.QObject):
@@ -316,27 +327,31 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
 
     def _get_logo_settings(self, respect_hide_on_startup=False):
         """
-        Resolve the configured logo colors and image URI.
+        Resolve the configured logo colors, fit and image URI.
 
         :param bool respect_hide_on_startup: Honor the startup hide-logo setting.
-        :return: Tuple of background color and image URI.
+        :return: Tuple of background color, image URI and fit.
         """
         bg_color = self.settings.value('core/logo background color')
         image = self.settings.value('core/logo file')
+        logo_fit = _normalise_logo_fit(self.settings.value('core/logo fit'))
         if path_to_str(image).startswith(':'):
             image_uri = self.openlp_splash_screen_path
         else:
-            try:
-                image_uri = _path_to_file_uri(image).replace('file://', 'openlp-library://local-file/')
-            except Exception:
+            image_path = path_to_str(image).replace('\\', '/')
+            if not image_path:
                 image_uri = ''
+            else:
+                if ':' in image_path[:3] and not image_path.startswith('/'):
+                    image_path = '/' + image_path
+                image_uri = 'openlp-library://local-file/{path}'.format(path=image_path)
         if respect_hide_on_startup and self.settings.value('core/logo hide on startup'):
             image_uri = ''
-        return bg_color, image_uri
+        return bg_color, image_uri, logo_fit
 
     def set_startup_screen(self):
-        bg_color, image_uri = self._get_logo_settings(respect_hide_on_startup=True)
-        self.run_in_display('setStartupSplashScreen', bg_color, image_uri)
+        bg_color, image_uri, logo_fit = self._get_logo_settings(respect_hide_on_startup=True)
+        self.run_in_display('setStartupSplashScreen', bg_color, image_uri, logo_fit)
 
     def set_url(self, url):
         """
@@ -593,8 +608,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         elif mode == HideMode.Theme:
             self.run_in_display('toTheme')
         elif mode == HideMode.Logo:
-            bg_color, image_uri = self._get_logo_settings()
-            self.run_in_display('toLogo', bg_color, image_uri)
+            bg_color, image_uri, logo_fit = self._get_logo_settings()
+            self.run_in_display('toLogo', bg_color, image_uri, logo_fit)
         self.hide_mode = mode
 
     def disable_display(self):

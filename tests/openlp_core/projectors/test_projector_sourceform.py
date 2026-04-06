@@ -23,8 +23,10 @@
 
 Tests for the Projector Source Select form.
 """
-import pytest
+from pathlib import PurePath
 from unittest.mock import patch
+
+import pytest
 
 from PySide6.QtWidgets import QDialog
 
@@ -35,10 +37,9 @@ from tests.resources.projector.data import TEST1_DATA, TEST_DB
 
 
 @pytest.fixture()
-def projector_env(settings):
-    with patch('openlp.core.projectors.db.init_url') as mocked_init_url:
-        mocked_init_url.return_value = 'sqlite:///{}'.format(TEST_DB)
-        projectordb = ProjectorDB()
+def projector_env(temp_folder, settings):
+    tmpdb_url = f'sqlite:///{PurePath(temp_folder, TEST_DB)}'
+    projectordb = ProjectorDB(db_url=tmpdb_url)
     # Retrieve/create a database record
     projector = projectordb.get_projector_by_ip(TEST1_DATA['ip'])
     if not projector:

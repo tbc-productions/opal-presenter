@@ -129,9 +129,19 @@ class BibleMediaItem(MediaManagerItem):
         self.settings_tab = self.plugin.settings_tab
         self.quick_preview_allowed = True
         self.has_search = True
+        self.disable_edit_delete_by_selection = False
         self.search_results = []
         self.second_search_results = []
         Registry().register_function('bibles_load_list', self.reload_bibles)
+
+    def _update_bible_manage_actions_enabled_state(self):
+        """
+        Enable/disable edit/delete actions based on whether any Bible versions are installed.
+        """
+        has_bibles = bool(getattr(self, 'version_combo_box', None) and self.version_combo_box.count() > 0)
+        for action in (self.edit_action, self.delete_action, self.edit_context_action, self.delete_context_action):
+            if action is not None:
+                action.setEnabled(has_bibles)
 
     def required_icons(self):
         """
@@ -389,6 +399,7 @@ class BibleMediaItem(MediaManagerItem):
         find_and_set_in_combo_box(self.second_combo_box, second_bible)
         # make sure the selected bible ripples down to other gui elements
         self.on_version_combo_box_index_changed()
+        self._update_bible_manage_actions_enabled_state()
 
     def reload_bibles(self):
         """

@@ -23,6 +23,7 @@ from PySide6 import QtWidgets
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button, create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.edits import FormattingTagDelegate
 
 
@@ -50,7 +51,7 @@ class Ui_CustomEditDialog(object):
         self.central_layout = QtWidgets.QHBoxLayout()
         self.central_layout.setObjectName('central_layout')
         self.slide_list_view = QtWidgets.QListWidget(custom_edit_dialog)
-        self.slide_list_view.setAlternatingRowColors(True)
+        self.slide_list_view.setAlternatingRowColors(use_alternate_rows())
         self.slide_list_view.setObjectName('slide_list_view')
         self.slide_list_view.setItemDelegate(FormattingTagDelegate(self.slide_list_view))
         self.central_layout.addWidget(self.slide_list_view)

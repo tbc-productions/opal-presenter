@@ -24,6 +24,7 @@ A widget representing a song in the duplicate song removal wizard review page.
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.plugins.songs.lib import VerseType
 from openlp.plugins.songs.lib.openlyricsxml import SongXML
 
@@ -166,7 +167,7 @@ class SongReviewWidget(QtWidgets.QWidget):
         self.song_info_verse_list_widget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.song_info_verse_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.song_info_verse_list_widget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.song_info_verse_list_widget.setAlternatingRowColors(True)
+        self.song_info_verse_list_widget.setAlternatingRowColors(use_alternate_rows())
         song_xml = SongXML()
         verses = song_xml.get_verses(self.song.lyrics)
         self.song_info_verse_list_widget.setRowCount(len(verses))

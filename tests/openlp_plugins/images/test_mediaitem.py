@@ -176,6 +176,48 @@ def test_on_display_changed(media_item):
     media_item.reset_action_context.setVisible.assert_called_with(False)
 
 
+@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
+@patch('openlp.plugins.images.lib.mediaitem.isinstance')
+def test_on_selection_change_replace_action_disabled_without_image_selection(mocked_isinstance,
+                                                                             mocked_super_selection_change,
+                                                                             media_item):
+    """Replace Background should be disabled when no image item is selected."""
+    # GIVEN: A selected non-image entry
+    media_item.replace_action = MagicMock()
+    selected_item = MagicMock()
+    selected_item.data.return_value = object()
+    media_item.list_view.selectedItems.return_value = [selected_item]
+    mocked_isinstance.return_value = False
+
+    # WHEN: selection changes
+    media_item.on_selection_change()
+
+    # THEN: replace action should be disabled
+    mocked_super_selection_change.assert_called_once_with()
+    media_item.replace_action.setEnabled.assert_called_once_with(False)
+
+
+@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
+@patch('openlp.plugins.images.lib.mediaitem.isinstance')
+def test_on_selection_change_replace_action_enabled_with_image_selection(mocked_isinstance,
+                                                                         mocked_super_selection_change,
+                                                                         media_item):
+    """Replace Background should be enabled when an image item is selected."""
+    # GIVEN: A selected image entry
+    media_item.replace_action = MagicMock()
+    selected_item = MagicMock()
+    selected_item.data.return_value = object()
+    media_item.list_view.selectedItems.return_value = [selected_item]
+    mocked_isinstance.return_value = True
+
+    # WHEN: selection changes
+    media_item.on_selection_change()
+
+    # THEN: replace action should be enabled
+    mocked_super_selection_change.assert_called_once_with()
+    media_item.replace_action.setEnabled.assert_called_once_with(True)
+
+
 def test_generate_slide_data_default_theme(media_item):
     """
     Test that the generated service item provides the corect theme
@@ -297,7 +339,7 @@ def test_load_item_valid_thumbnail(mocked_build_icon: MagicMock, mocked_create_t
     # THEN: A QTreeWidgetItem with a "delete" icon should be returned
     assert isinstance(result, QtWidgets.QTreeWidgetItem)
     assert result.text(0) == 'tractor.jpg'
-    assert result.toolTip(0) == str(image_path)
+    assert result.toolTip(0).splitlines()[0] == str(image_path)
     mocked_create_thumb.assert_not_called()
     mocked_build_icon.assert_called_once_with(image_path)
 
@@ -321,7 +363,7 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
         # THEN: A QTreeWidgetItem with a "delete" icon should be returned
         assert isinstance(result, QtWidgets.QTreeWidgetItem)
         assert result.text(0) == 'tractor.jpg'
-        assert result.toolTip(0) == str(image_path)
+        assert result.toolTip(0).splitlines()[0] == str(image_path)
         mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'), size=QtCore.QSize(-1, 400))
 
 

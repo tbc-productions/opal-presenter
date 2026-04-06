@@ -31,6 +31,7 @@ from openlp.core.pages.areaposition import AreaPositionPage
 from openlp.core.pages.background import BackgroundPage
 from openlp.core.pages.fontselect import FontSelectPage
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
@@ -85,7 +86,7 @@ class Ui_ThemeWizard(object):
         self.page_list_widget = QtWidgets.QListWidget(theme_dialog)
         self.page_list_widget.setObjectName('page_list_widget')
         self.page_list_widget.setUniformItemSizes(True)
-        self.page_list_widget.setAlternatingRowColors(True)
+        self.page_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.page_list_widget.setMinimumSize(QtCore.QSize(210, 0))
         self.page_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.page_list_widget.setStyleSheet('QListWidget::item { padding: 9px 11px; }')
@@ -147,6 +148,32 @@ class Ui_ThemeWizard(object):
             self.preview_toolbar.addWidget(self.layout_guide_button)
         self.layout_guide_button.setObjectName('layout_guide_button')
         self.layout_guide_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.previous_slide_action = QtGui.QAction(UiIcons().back, '', self.preview_toolbar)
+        self.preview_toolbar.addAction(self.previous_slide_action)
+        self.previous_slide_button = self.preview_toolbar.widgetForAction(self.previous_slide_action)
+        if self.previous_slide_button is None:
+            self.previous_slide_button = QtWidgets.QToolButton(self.preview_panel)
+            self.previous_slide_button.setDefaultAction(self.previous_slide_action)
+            self.preview_toolbar.addWidget(self.previous_slide_button)
+        self.previous_slide_button.setObjectName('previous_slide_button')
+        self.previous_slide_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+        self.slide_nav_label = QtWidgets.QLabel(self.preview_panel)
+        self.slide_nav_label.setObjectName('slide_nav_label')
+        self.slide_nav_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.preview_toolbar.addWidget(self.slide_nav_label)
+
+        self.next_slide_action = QtGui.QAction(UiIcons().skip_next, '', self.preview_toolbar)
+        self.preview_toolbar.addAction(self.next_slide_action)
+        self.next_slide_button = self.preview_toolbar.widgetForAction(self.next_slide_action)
+        if self.next_slide_button is None:
+            self.next_slide_button = QtWidgets.QToolButton(self.preview_panel)
+            self.next_slide_button.setDefaultAction(self.next_slide_action)
+            self.preview_toolbar.addWidget(self.next_slide_button)
+        self.next_slide_button.setObjectName('next_slide_button')
+        self.next_slide_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+
         self.refresh_preview_action = QtGui.QAction(UiIcons().refresh, '', self.preview_toolbar)
         self.preview_toolbar.addAction(self.refresh_preview_action)
         self.refresh_preview_button = self.preview_toolbar.widgetForAction(self.refresh_preview_action)
@@ -155,18 +182,7 @@ class Ui_ThemeWizard(object):
             self.refresh_preview_button.setDefaultAction(self.refresh_preview_action)
             self.preview_toolbar.addWidget(self.refresh_preview_button)
         self.refresh_preview_button.setObjectName('refresh_preview_button')
-        self.refresh_preview_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.play_transition_action = QtGui.QAction(UiIcons().play, '', self.preview_toolbar)
-        self.play_transition_action.setVisible(False)
-        self.preview_toolbar.addAction(self.play_transition_action)
-        self.play_transition_button = self.preview_toolbar.widgetForAction(self.play_transition_action)
-        if self.play_transition_button is None:
-            self.play_transition_button = QtWidgets.QToolButton(self.preview_panel)
-            self.play_transition_button.setDefaultAction(self.play_transition_action)
-            self.preview_toolbar.addWidget(self.play_transition_button)
-        self.play_transition_button.setObjectName('play_transition_button')
-        self.play_transition_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.play_transition_button.setVisible(False)
+        self.refresh_preview_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.preview_panel_layout.addStretch(1)
         self.dialog_layout.addWidget(self.preview_panel, 1, 2, 1, 1)
 
@@ -230,11 +246,12 @@ class Ui_ThemeWizard(object):
         self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
         self.layout_guide_button.setToolTip(translate('OpenLP.ThemeWizard', 'Show layout guide'))
         self.refresh_preview_action.setText(translate('OpenLP.ThemeWizard', 'Refresh'))
-        self.refresh_preview_button.setText(translate('OpenLP.ThemeWizard', 'Refresh'))
         self.refresh_preview_button.setToolTip(translate('OpenLP.ThemeWizard', 'Reload preview'))
-        self.play_transition_action.setText(translate('OpenLP.ThemeWizard', 'Play'))
-        self.play_transition_button.setText(translate('OpenLP.ThemeWizard', 'Play'))
-        self.play_transition_button.setToolTip(translate('OpenLP.ThemeWizard', 'Preview transition'))
+        self.previous_slide_action.setText(translate('OpenLP.ThemeWizard', 'Previous'))
+        self.previous_slide_button.setToolTip(translate('OpenLP.ThemeWizard', 'Prevous slide'))
+        self.slide_nav_label.setText(translate('OpenLP.ThemeWizard', 'Slide'))
+        self.next_slide_action.setText(translate('OpenLP.ThemeWizard', 'Next'))
+        self.next_slide_button.setToolTip(translate('OpenLP.ThemeWizard', 'Next slide'))
         self.theme_name_label.setText(translate('OpenLP.ThemeWizard', 'Theme name:'))
         self.help_button.setText(translate('OpenLP.ThemeWizard', 'Help'))
         self.export_theme_button.setText(translate('OpenLP.ThemeWizard', 'Export Theme'))

@@ -26,6 +26,7 @@ from PySide6 import QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button, create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 
 class Ui_ServiceItemEditDialog(object):
@@ -43,7 +44,7 @@ class Ui_ServiceItemEditDialog(object):
         self.dialog_layout.setSpacing(8)
         self.dialog_layout.setObjectName('dialog_layout')
         self.list_widget = QtWidgets.QListWidget(serviceItemEditDialog)
-        self.list_widget.setAlternatingRowColors(True)
+        self.list_widget.setAlternatingRowColors(use_alternate_rows())
         self.list_widget.setObjectName('list_widget')
         self.dialog_layout.addWidget(self.list_widget, 0, 0)
         self.button_layout = QtWidgets.QVBoxLayout()

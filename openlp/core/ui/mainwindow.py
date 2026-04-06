@@ -527,6 +527,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Registry().register_function('theme_change_global', self.default_theme_changed)
         Registry().register_function('config_screen_changed', self.screen_changed)
         Registry().register_function('media_dock_refresh_icons', self.refresh_media_dock_icons)
+        Registry().register_function('alternate_rows_changed', self.alternate_rows_changed)
         Registry().register_function('bootstrap_post_set_up', self.bootstrap_post_set_up)
         # Reset the cursor
         self.application.set_normal_cursor()
@@ -593,6 +594,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Refresh library tab icons so updated service theme colors are reflected immediately.
         """
         self.media_dock_manager.refresh_item_icons()
+
+    def alternate_rows_changed(self):
+        """
+        Update alternating row colors on all open item views.
+        """
+        use_alternate_rows = self.settings.value('advanced/alternate rows')
+        for widget in QtWidgets.QApplication.allWidgets():
+            if isinstance(widget, QtWidgets.QAbstractItemView):
+                widget.setAlternatingRowColors(use_alternate_rows)
 
     def bootstrap_post_set_up(self):
         """

@@ -43,13 +43,101 @@ JSON_RECENT_FILES = ('[{"parts": ["/", "path", "to", "service-1.osz"], "json_met
                      '{"parts": ["/", "path", "to", "service-2.osz"], "json_meta": {"class": "Path", "version": 1}}]')
 
 QT_QPA_PLATFORM = os.environ.get("QT_QPA_PLATFORM", "")
+_MAIN_WINDOWS = []
+
+
+class _DummyRenderer:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class _DummyPluginForm:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class _DummyAction:
+    def __init__(self, name=''):
+        self._name = name
+        self.triggered = MagicMock()
+
+    def setObjectName(self, name):
+        self._name = name
+
+    def objectName(self):
+        return self._name
+
+    def setMenuRole(self, role):
+        self.menu_role = role
+
+    def setChecked(self, checked):
+        self.checked = checked
+
+    def setEnabled(self, enabled):
+        self.enabled = enabled
+
+
+class _DummyActionGroup:
+    def __init__(self, *args, **kwargs):
+        self._actions = []
+        self.triggered = _DummySignal()
+
+    def addAction(self, action):
+        self._actions.append(action)
+
+    def actions(self):
+        return list(self._actions)
+
+    def setExclusive(self, exclusive):
+        self.exclusive = exclusive
+
+    def setObjectName(self, name):
+        self.object_name = name
+
+
+class _DummySplitter:
+    def restoreState(self, state):
+        self.state = state
+
+    def setChildrenCollapsible(self, collapsible):
+        self.collapsible = collapsible
+
+
+class _DummyPanel:
+    def setVisible(self, visible):
+        self.visible = visible
+
+
+class _DummySignal:
+    def connect(self, slot):
+        self.slot = slot
+
+
+class _DummyScreenApplication:
+    def __init__(self, screen):
+        self._screen = screen
+        self.primaryScreenChanged = _DummySignal()
+        self.screenAdded = _DummySignal()
+        self.screenRemoved = _DummySignal()
+
+    def screens(self):
+        return [self._screen]
+
+    def primaryScreen(self):
+        return self._screen
+
+
+class _DummyController:
+    def __init__(self):
+        self.splitter = _DummySplitter()
+        self.panel = _DummyPanel()
 
 
 def _create_mock_action(parent, name, **kwargs):
     """
     Create a fake action with some "real" attributes
     """
-    action = QtGui.QAction(parent)
+    action = _DummyAction(name)
     action.setObjectName(name)
     if kwargs.get('triggers'):
         action.triggered.connect(kwargs.pop('triggers'))
@@ -57,30 +145,31 @@ def _create_mock_action(parent, name, **kwargs):
 
 
 @pytest.fixture()
-def main_window(state, settings, mocked_qapp):
+def main_window(state, settings):
     app = Registry().get('application')
-    app.set_busy_cursor = MagicMock()
-    app.set_normal_cursor = MagicMock()
-    app.process_events = MagicMock()
+    app.set_busy_cursor = lambda: None
+    app.set_normal_cursor = lambda: None
+    app.process_events = lambda: None
     app.args = []
     Registry().set_flag('no_web_server', True)
-    add_toolbar_action_patcher = patch('openlp.core.ui.mainwindow.create_action')
-    mocked_add_toolbar_action = add_toolbar_action_patcher.start()
-    mocked_add_toolbar_action.side_effect = _create_mock_action
-    renderer_patcher = patch('openlp.core.display.render.Renderer')
+    add_toolbar_action_patcher = patch('openlp.core.ui.mainwindow.create_action', new=_create_mock_action)
+    add_toolbar_action_patcher.start()
+    plugin_form_patcher = patch('openlp.core.ui.mainwindow.PluginForm', new=_DummyPluginForm)
+    plugin_form_patcher.start()
+    renderer_patcher = patch('openlp.core.display.render.Renderer', new=_DummyRenderer)
     renderer_patcher.start()
+    action_group_patcher = patch('openlp.core.ui.mainwindow.QtGui.QActionGroup', new=_DummyActionGroup)
+    action_group_patcher.start()
     mocked_screen = MagicMock()
     mocked_screen.geometry.return_value = QtCore.QRect(0, 0, 1024, 768)
-    mocked_qapp.screens = MagicMock()
-    mocked_qapp.screens.return_value = [mocked_screen]
-    mocked_qapp.primaryScreen = MagicMock()
-    mocked_qapp.primaryScreen.return_value = mocked_screen
-    ScreenList.create(mocked_qapp)
+    ScreenList.create(_DummyScreenApplication(mocked_screen))
     mainwindow = MainWindow()
-    mainwindow.activateWindow = MagicMock()
+    mainwindow.activateWindow = lambda: None
+    _MAIN_WINDOWS.append(mainwindow)
     yield mainwindow
-    del mainwindow
     renderer_patcher.stop()
+    plugin_form_patcher.stop()
+    action_group_patcher.stop()
     add_toolbar_action_patcher.stop()
 
 
@@ -295,9 +384,9 @@ def test_load_settings_position_valid(main_window, settings):
     """
     # GIVEN a newly opened OpenLP instance, mocked screens and settings for a valid window position
     # mock out some other calls in load_settings()
-    main_window.control_splitter = MagicMock()
-    main_window._live_controller = MagicMock()
-    main_window._preview_controller = MagicMock()
+    main_window.control_splitter = _DummySplitter()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller = _DummyController()
     # set up a window position and geometry to use in the settings
     main_window.move(QtCore.QPoint(10, 10))
     main_window.resize(1000, 500)
@@ -328,9 +417,9 @@ def test_load_settings_position_invalid(main_window, settings):
     """
     # GIVEN a newly opened OpenLP instance, mocked screens and settings for a valid window position
     # mock out some other calls in load_settings()
-    main_window.control_splitter = MagicMock()
-    main_window._live_controller = MagicMock()
-    main_window._preview_controller = MagicMock()
+    main_window.control_splitter = _DummySplitter()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller = _DummyController()
     # set up a window position outside the parameters of the main_window fixture
     # this can represent a monitor positioned above the primary display, but which has been unplugged
     main_window.move(QtCore.QPoint(-100, -800))
@@ -369,7 +458,8 @@ def test_mainwindow_configuration(main_window):
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
                              'authentication_token', 'web_socket_server']
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
-                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons']
+                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons',
+                               'alternate_rows_changed']
     assert list(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \

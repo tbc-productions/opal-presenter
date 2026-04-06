@@ -33,6 +33,7 @@ from openlp.core.common.mixins import LogMixin, RegistryProperties
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.lib.ui import create_widget_action
 from openlp.core.projectors import DialogSourceStyle
+from openlp.core.ui.style import use_alternate_rows
 from openlp.core.projectors.constants import E_AUTHENTICATION, E_ERROR, E_NETWORK, E_NOT_CONNECTED, E_SOCKET_TIMEOUT, \
     E_UNKNOWN_SOCKET_ERROR, PJLINK_PORT, QSOCKET_STATE, S_CONNECTED, S_CONNECTING, S_COOLDOWN, S_INITIALIZE, \
     S_NOT_CONNECTED, S_OFF, S_ON, S_STANDBY, S_WARMUP, STATUS_CODE, STATUS_MSG
@@ -186,7 +187,7 @@ class UiProjectorManager(object):
         # Create projector manager list
         self.projector_list_widget = QtWidgets.QListWidget(widget)
         self.projector_list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.projector_list_widget.setAlternatingRowColors(True)
+        self.projector_list_widget.setAlternatingRowColors(use_alternate_rows())
         self.projector_list_widget.setIconSize(QtCore.QSize(90, 50))
         self.projector_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.projector_list_widget.setObjectName('projector_list_widget')

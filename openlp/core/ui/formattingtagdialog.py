@@ -26,6 +26,7 @@ from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.style import use_alternate_rows
 
 
 class Ui_FormattingTagDialog(object):
@@ -48,7 +49,7 @@ class Ui_FormattingTagDialog(object):
         self.tag_table_widget_read = QtWidgets.QTableWidget(formatting_tag_dialog)
         self.tag_table_widget_read.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tag_table_widget_read.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.tag_table_widget_read.setAlternatingRowColors(True)
+        self.tag_table_widget_read.setAlternatingRowColors(use_alternate_rows())
         self.tag_table_widget_read.setCornerButtonEnabled(False)
         self.tag_table_widget_read.setObjectName('tag_table_widget_read')
         self.tag_table_widget_read.setColumnCount(5)
@@ -70,7 +71,7 @@ class Ui_FormattingTagDialog(object):
         self.tag_table_widget = QtWidgets.QTableWidget(formatting_tag_dialog)
         self.tag_table_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tag_table_widget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.AllEditTriggers)
-        self.tag_table_widget.setAlternatingRowColors(True)
+        self.tag_table_widget.setAlternatingRowColors(use_alternate_rows())
         self.tag_table_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.tag_table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.tag_table_widget.setCornerButtonEnabled(False)

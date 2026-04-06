@@ -73,15 +73,13 @@ def test_resize_columns(mocked_retranslate_ui, mocked_setup_ui, settings):
     instance.layout.contentsRect = MagicMock(return_value=MagicMock(**{'width.return_value': 100}))
     instance.layout.horizontalSpacing = MagicMock(return_value=6)
     instance.layout.columnCount = MagicMock(return_value=4)
-    instance.layout.setColumnMinimumWidth = MagicMock()
+    instance.layout.setColumnStretch = MagicMock()
 
     # WHEN: `resize_columns()` is called
     instance.resize_columns()
 
     # THEN: The column widths should be set to 16
     instance.layout.contentsRect.assert_called_once()
-    instance.layout.horizontalSpacing.assert_called_once()
     instance.layout.columnCount.assert_called_once()
-    assert instance._column_width == 20
-    assert instance.layout.setColumnMinimumWidth.call_args_list == [call(0, 20), call(1, 20),
-                                                                    call(2, 20), call(3, 20)]
+    assert instance._column_width == 25
+    assert instance.layout.setColumnStretch.call_args_list == [call(0, 1), call(1, 1), call(2, 1), call(3, 1)]

@@ -67,6 +67,12 @@ class SingleColumnTableWidget(QtWidgets.QTableWidget):
         super(SingleColumnTableWidget, self).__init__(parent)
         self.horizontalHeader().setVisible(False)
         self.setColumnCount(1)
+        vertical_header = self.verticalHeader()
+        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
+        # Keep verse tags readable while avoiding an oversized row header.
+        target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
+        vertical_header.setMinimumWidth(max(20, target_width))
 
     def resizeEvent(self, event):
         """

@@ -106,6 +106,14 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.single_service_item = True
         self.quick_preview_allowed = False
         self.has_search = False
+        self.disable_edit_delete_by_selection = True
+        self.edit_action = None
+        self.delete_action = None
+        self.edit_context_action = None
+        self.delete_context_action = None
+        self.preview_action = None
+        self.live_action = None
+        self.add_to_service_action = None
         self.page_layout = QtWidgets.QVBoxLayout(self)
         self.page_layout.setSpacing(0)
         self.page_layout.setContentsMargins(0, 0, 0, 0)
@@ -254,7 +262,13 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Delete Button
         if self.has_delete_icon:
             toolbar_actions.append(['Delete', StringContent.Delete, UiIcons().delete, self.on_delete_click])
-        self.add_actionlist_to_toolbar(toolbar_actions)
+        added_actions = self.add_actionlist_to_toolbar(toolbar_actions)
+        for action_data, added_action in zip(toolbar_actions, added_actions):
+            action_name = action_data[0]
+            if action_name == 'Edit':
+                self.edit_action = added_action
+            elif action_name == 'Delete':
+                self.delete_action = added_action
 
     def add_common_end_header_bar(self):
         """
@@ -270,7 +284,44 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Add to service Button
         if self.can_add_to_service:
             toolbar_actions.append(['Service', StringContent.Service, UiIcons().add, self.on_add_click])
-        self.add_actionlist_to_toolbar(toolbar_actions)
+        added_actions = self.add_actionlist_to_toolbar(toolbar_actions)
+        action_index = 0
+        if self.can_preview:
+            self.preview_action = added_actions[action_index]
+            action_index += 1
+        if self.can_make_live:
+            self.live_action = added_actions[action_index]
+            action_index += 1
+        if self.can_add_to_service:
+            self.add_to_service_action = added_actions[action_index]
+        self._update_common_end_actions_enabled_state()
+
+    def _update_common_end_actions_enabled_state(self):
+        """
+        Enable/disable Preview/Live/Add toolbar actions based on whether anything is selected in the list.
+        """
+        has_selection = bool(getattr(self, 'list_view', None) and self.list_view.selectedIndexes())
+        if self.preview_action is not None:
+            self.preview_action.setEnabled(has_selection)
+        if self.live_action is not None:
+            self.live_action.setEnabled(has_selection)
+        if self.add_to_service_action is not None:
+            self.add_to_service_action.setEnabled(has_selection)
+
+    def _update_common_header_actions_enabled_state(self):
+        """
+        Enable/disable Edit/Delete actions based on selection when this behavior is enabled.
+        """
+        if not getattr(self, 'disable_edit_delete_by_selection', True):
+            return
+        has_selection = bool(getattr(self, 'list_view', None) and self.list_view.selectedIndexes())
+        for action in (
+                getattr(self, 'edit_action', None),
+                getattr(self, 'delete_action', None),
+                getattr(self, 'edit_context_action', None),
+                getattr(self, 'delete_context_action', None)):
+            if action is not None:
+                action.setEnabled(has_selection)
 
     def add_actionlist_to_toolbar(self, toolbar_actions):
         added_actions = []
@@ -294,10 +345,10 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Add to page_layout
         self.page_layout.addWidget(self.list_view)
         if self.has_edit_icon:
-            create_widget_action(self.list_view,
-                                 text=self.plugin.get_string(StringContent.Edit)['title'],
-                                 icon=UiIcons().edit,
-                                 triggers=self.on_edit_click)
+            self.edit_context_action = create_widget_action(self.list_view,
+                                                            text=self.plugin.get_string(StringContent.Edit)['title'],
+                                                            icon=UiIcons().edit,
+                                                            triggers=self.on_edit_click)
             create_widget_action(self.list_view, separator=True)
         if self.can_preview:
             create_widget_action(self.list_view,
@@ -325,12 +376,14 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                                  triggers=self.on_add_click)
         if self.has_delete_icon:
             create_widget_action(self.list_view, separator=True)
-            create_widget_action(self.list_view,
-                                 'listView{plugin}{delete}Item'.format(plugin=self.plugin.name.title(),
-                                                                       delete=StringContent.Delete.title()),
-                                 text=self.plugin.get_string(StringContent.Delete)['title'],
-                                 icon=UiIcons().delete,
-                                 can_shortcuts=True, triggers=self.on_delete_click)
+            self.delete_context_action = create_widget_action(
+                self.list_view,
+                'listView{plugin}{delete}Item'.format(plugin=self.plugin.name.title(),
+                                                      delete=StringContent.Delete.title()),
+                text=self.plugin.get_string(StringContent.Delete)['title'],
+                icon=UiIcons().delete,
+                can_shortcuts=True,
+                triggers=self.on_delete_click)
         if self.add_to_service_item:
             create_widget_action(self.list_view, separator=True)
             create_widget_action(self.list_view,
@@ -344,6 +397,8 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)
+        self._update_common_header_actions_enabled_state()
+        self._update_common_end_actions_enabled_state()
 
     def add_search_to_toolbar(self):
         """
@@ -584,6 +639,8 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         Allows the change of current item in the list to be actioned
         """
+        self._update_common_header_actions_enabled_state()
+        self._update_common_end_actions_enabled_state()
         if self.settings.value('advanced/single click preview') and self.quick_preview_allowed \
                 and self.list_view.selectedIndexes() and self.auto_select_id == -1:
             self.on_preview_click(True)

@@ -29,7 +29,7 @@ class Ui_ConfirmationDialog():
     The UI for the Confirmation dialog.
     """
 
-    def setup_ui(self, confirmation_dialog, title, items, message, width=400, height=600):
+    def setup_ui(self, confirmation_dialog, title, items, message, width=400, height=None):
         """
         Set up the UI for the confirmation dialog.
 
@@ -37,18 +37,27 @@ class Ui_ConfirmationDialog():
         :param items:               A list (or other iterable) containing the items
         :param message:             The confirmation message to display
         :param width:               Width of the dialog window
-        :param height:              Height of the dialog window
+        :param height:              Height of the dialog window (None to auto-size to contents)
 
         :return:                    None
         """
         # overall aspects for confirmation dialog
         confirmation_dialog.setObjectName('confirmation_dialog')
         confirmation_dialog.setWindowIcon(UiIcons().main_icon)
-        confirmation_dialog.resize(width, height)
+        if height is not None:
+            confirmation_dialog.resize(width, height)
+        else:
+            confirmation_dialog.resize(width, 200)
         confirmation_dialog.setWindowTitle(title)
 
         self.confirmation_layout = QtWidgets.QVBoxLayout(confirmation_dialog)
         self.confirmation_layout.setObjectName('confirmation_layout')
+
+        # confirmation message
+        self.message_label = QtWidgets.QLabel(message)
+        self.message_label.setObjectName('message')
+        self.message_label.setWordWrap(True)
+        self.confirmation_layout.addWidget(self.message_label)
 
         # listview to display the items
         self.listview = QtWidgets.QListView(self)
@@ -62,25 +71,25 @@ class Ui_ConfirmationDialog():
         self.listview.setModel(model)
         for item in items:
             model.appendRow(QtGui.QStandardItem(item))
+        row_count = model.rowCount()
+        row_height = self.listview.sizeHintForRow(0)
+        if row_height <= 0:
+            row_height = self.listview.fontMetrics().height() + 8
+        visible_rows = min(max(row_count, 1), 8)
+        frame_height = self.listview.frameWidth() * 2
+        list_height = (row_height * visible_rows) + frame_height + 4
+        self.listview.setMinimumHeight(list_height)
+        self.listview.setMaximumHeight(list_height)
 
-        # confirmation message and Yes/No buttons
-        self.message_and_buttons = QtWidgets.QWidget(confirmation_dialog)
-        self.message_and_buttons.setObjectName('message and buttons')
-        self.message_and_buttons_layout = QtWidgets.QHBoxLayout(self.message_and_buttons)
-        self.message_and_buttons_layout.setObjectName('message and buttons layout')
-
-        self.message_label = QtWidgets.QLabel(message)
-        self.message_label.setObjectName('message')
-        self.message_label.setWordWrap(True)
-        self.message_and_buttons_layout.addWidget(self.message_label)
-
+        # Yes/No buttons
         button_types = QtWidgets.QDialogButtonBox.StandardButton.Yes | QtWidgets.QDialogButtonBox.StandardButton.No
         self.buttonBox = QtWidgets.QDialogButtonBox(button_types)
         self.buttonBox.setObjectName('buttons')
-        self.message_and_buttons_layout.addWidget(self.buttonBox)
-
-        self.confirmation_layout.addWidget(self.message_and_buttons)
+        self.confirmation_layout.addWidget(self.buttonBox)
 
         # slot connections
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
+
+        if height is None:
+            confirmation_dialog.adjustSize()

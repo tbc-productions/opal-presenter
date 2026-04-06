@@ -21,6 +21,7 @@
 """Tests for media_info thumbnail utilities."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 from PySide6 import QtCore, QtGui
 
@@ -55,3 +56,42 @@ def test_save_thumb_writes_fixed_size_png(qapp, tmp_path):
     loaded = QtGui.QPixmap(str(thumb_path))
     assert loaded.width() == 88
     assert loaded.height() == 50
+
+
+def test_get_media_duration_waits_for_duration_after_loaded_status(qapp):
+    """Duration probing should continue until durationChanged even when LoadedMedia happens first."""
+
+    class _Signal:
+        def __init__(self):
+            self._callbacks = []
+
+        def connect(self, callback):
+            self._callbacks.append(callback)
+
+    class _FakePlayer:
+        def __init__(self, _parent):
+            self.errorOccurred = _Signal()
+            self.durationChanged = _Signal()
+            self.mediaStatusChanged = _Signal()
+
+        def setSource(self, _source):
+            return
+
+    probe = media_info()
+    event_step = {'count': 0}
+
+    def _process_events_side_effect():
+        event_step['count'] += 1
+        if event_step['count'] == 1:
+            probe.loaded_media = True
+        elif event_step['count'] == 2:
+            probe.duration_changed_event(5000)
+
+    with patch('openlp.core.ui.media.mediainfo.QMediaPlayer', _FakePlayer), \
+            patch('openlp.core.ui.media.mediainfo.sleep', lambda _x: None), \
+            patch('openlp.core.ui.media.mediainfo.QtWidgets.QApplication.instance') as mocked_instance:
+        mocked_instance.return_value.processEvents.side_effect = _process_events_side_effect
+
+        duration = probe.get_media_duration('C:/video.mp4')
+
+    assert duration == 5000
