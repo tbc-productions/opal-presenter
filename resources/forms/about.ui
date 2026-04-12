@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>About OpenLP</string>
+    <string>About OpenLP+</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../images/openlp-2.qrc">
@@ -36,7 +36,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap resource="../images/openlp-2.qrc">:/graphics/openlp-about-logo.png</pixmap>
+      <pixmap resource="../images/openlp-2.qrc">:/graphics/openlp-splash-screen.png</pixmap>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -68,13 +68,15 @@
           <bool>true</bool>
          </property>
          <property name="plainText">
-          <string>OpenLP &lt;version&gt; - Open Source Lyrics Projection
+          <string>OpenLP+ &lt;version&gt; - Open Source Lyrics Projection
+
+OpenLP+ is a fork of OpenLP.
 
 OpenLP is free church presentation software, or lyrics projection software, used to display slides of songs, Bible verses, videos, images, and even presentations (if OpenOffice.org, PowerPoint or PowerPoint Viewer is installed) for church worship using a computer and a data projector.
 
-Find out more about OpenLP: http://openlp.org/
+Find out more about upstream OpenLP: http://openlp.org/
 
-OpenLP is written and maintained by volunteers. If you would like to see more free Christian software being written, please consider contributing by using the button below.</string>
+OpenLP and OpenLP+ are written and maintained by volunteers. If you would like to see more free Christian software being written, please consider contributing by using the button below.</string>
          </property>
         </widget>
        </item>

@@ -160,7 +160,7 @@ class UiFirstTimeWizard(object):
         """
         first_time_wizard.setObjectName('first_time_wizard')
         first_time_wizard.setWindowIcon(UiIcons().main_icon)
-        first_time_wizard.resize(640, 400)
+        first_time_wizard.resize(640, 500)
         first_time_wizard.setModal(True)
         first_time_wizard.setOptions(QtWidgets.QWizard.WizardOption.IndependentPages |
                                      QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage |
@@ -169,7 +169,7 @@ class UiFirstTimeWizard(object):
         if is_macosx():                                                                             # pragma: nocover
             first_time_wizard.setPixmap(QtWidgets.QWizard.WizardPixmap.BackgroundPixmap,
                                         QtGui.QPixmap(':/wizards/openlp-osx-wizard.png'))
-            first_time_wizard.resize(634, 386)
+            first_time_wizard.resize(634, 486)
         else:
             first_time_wizard.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
         add_welcome_page(first_time_wizard, ':/wizards/openlp-osx-wizard.png')

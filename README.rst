@@ -1,5 +1,7 @@
-OpenLP
+OpenLP+
 ======
+
+OpenLP+ is a forked version of OpenLP.
 
 You're probably reading this because you've just downloaded the source code for
 OpenLP. If you are looking for the installer file, please go to the download

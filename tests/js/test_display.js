@@ -901,8 +901,8 @@ describe("Display.setTextSlides", function () {
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const slidesDiv = $(".text-slides")[0];
-    expect(slidesDiv.style['text-shadow']).toEqual(_buildTextOutline(42, 'red').join(', '));
+    const mainSection = document.querySelector('.slides section.text-slide');
+    expect(mainSection.style['text-shadow']).toEqual(_buildTextOutline(42, 'red').join(', '));
   })
 
   it("should correctly set text alignment,\
@@ -921,9 +921,9 @@ describe("Display.setTextSlides", function () {
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const slidesDiv = $(".text-slides")[0];
-    expect(slidesDiv.style['text-align']).toEqual('justify');
-    expect(slidesDiv.style['justify-content']).toEqual('center');
+    const mainSection = document.querySelector('.slides section.text-slide');
+    expect(mainSection.style['text-align']).toEqual('justify');
+    expect(mainSection.style['justify-content']).toEqual('center');
     const footerDiv = $(".footer")[0];
     expect(footerDiv.style['text-align']).toEqual('center');
     expect(footerDiv.style['justify-content']).toEqual('flex-start');
@@ -943,8 +943,8 @@ describe("Display.setTextSlides", function () {
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const slidesDiv = $(".text-slides")[0];
-    expect(slidesDiv.style['text-shadow']).not.toEqual('');
+    const mainSection = document.querySelector('.slides section.text-slide');
+    expect(mainSection.style['text-shadow']).not.toEqual('');
   })
 
   it("should not enable shadows", function () {
@@ -961,8 +961,8 @@ describe("Display.setTextSlides", function () {
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const slidesDiv = $(".text-slides")[0];
-    expect(slidesDiv.style['text-shadow']).toEqual('');
+    const mainSection = document.querySelector('.slides section.text-slide');
+    expect(mainSection.style['text-shadow']).toEqual('');
   })
 
   it("should correctly set slide size position to theme size when adding a text slide", function () {
@@ -980,11 +980,15 @@ describe("Display.setTextSlides", function () {
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const slidesDiv = $(".text-slides")[0];
-    expect(slidesDiv.style['top']).toEqual('789px');
-    expect(slidesDiv.style['left']).toEqual('1000px');
-    expect(slidesDiv.style['width']).toEqual('1230px');
-    expect(slidesDiv.style['height']).toEqual('4560px');
+    const mainSection = document.querySelector('.slides section.text-slide');
+    expect(mainSection.style.getPropertyValue('--theme-main-top')).toEqual('789px');
+    expect(mainSection.style.getPropertyValue('--theme-main-left')).toEqual('1000px');
+    expect(mainSection.style.getPropertyValue('--theme-main-width')).toEqual('1230px');
+    expect(mainSection.style.getPropertyValue('--theme-main-height')).toEqual('4560px');
+    expect(window.getComputedStyle(mainSection).top).toEqual('789px');
+    expect(window.getComputedStyle(mainSection).left).toEqual('1000px');
+    expect(window.getComputedStyle(mainSection).width).toEqual('1230px');
+    expect(window.getComputedStyle(mainSection).height).toEqual('4560px');
   })
 
   it("should work correctly with different footer contents per slide", function () {

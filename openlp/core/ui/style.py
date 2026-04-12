@@ -456,7 +456,14 @@ def get_application_stylesheet():
     is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
     is_system_theme = ui_theme_name == UiThemes.Automatic
     if is_system_theme:
-        return FORM_CONTROL_STYLE_REPAIR
+        # Fusion + system palette (Automatic dark/light) still needs toolbar checked-state contrast
+        # and the same hover affordances as the macOS minimal-repair path.
+        stylesheet = FORM_CONTROL_STYLE_REPAIR + BUTTON_HOVER_STYLE_REPAIR + \
+            'QWidget#slide_controller_toolbar QToolButton::checked {' \
+            '  background-color: palette(highlight);' \
+            '  color: palette(highlighted-text);' \
+            '}'
+        return stylesheet
     if is_macosx() and not is_qdarkstyle:
         # Keep macOS rendering close to native while applying minimal control/hover repairs.
         stylesheet += FORM_CONTROL_STYLE_REPAIR

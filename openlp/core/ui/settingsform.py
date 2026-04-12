@@ -23,7 +23,7 @@ The :mod:`settingsform` provides a user interface for the OpenLP settings
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.state import State
 from openlp.core.api.tab import ApiTab
@@ -69,6 +69,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                                            QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.processes = []
         self.setup_ui(self)
+        self._settings_tabs_ordered = []
         self.setting_list_widget.currentRowChanged.connect(self.list_item_changed)
         self.general_tab = None
         self.service_tab = None
@@ -85,9 +86,11 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # load all the widgets
         self.setting_list_widget.blockSignals(True)
         self.setting_list_widget.clear()
-        while self.stacked_layout.count():
-            # take at 0 and the rest shuffle up.
-            self.stacked_layout.takeAt(0)
+        while self.content_tabs_layout.count():
+            item = self.content_tabs_layout.takeAt(0)
+            if item.widget():
+                item.widget().hide()
+        self._settings_tabs_ordered.clear()
 
         for tab_widget, is_visible in self._get_ordered_tabs():
             self.insert_tab(tab_widget, is_visible)
@@ -156,8 +159,9 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         :param is_visible: If this tab should be visible
         """
         log.debug('Inserting {text} tab'.format(text=tab_widget.tab_title))
-        # add the tab to get it to display in the correct part of the screen
-        self.stacked_layout.addWidget(tab_widget)
+        self._settings_tabs_ordered.append(tab_widget)
+        tab_widget.setParent(self.content_widget)
+        tab_widget.hide()
         self._normalise_settings_tab_layout(tab_widget)
         if is_visible:
             list_item = QtWidgets.QListWidgetItem(self._build_settings_tab_icon(tab_widget),
@@ -250,7 +254,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         Process the form saving the settings
         """
         log.debug('Processing settings exit')
-        # We add all the forms into the stacked layout, even if the plugin is inactive,
+        # All tab widgets are registered even if the plugin is inactive,
         # but we don't add the item to the list on the side if the plugin is inactive,
         # so loop through the list items, and then find the tab for that item.
         for item_index in range(self.setting_list_widget.count()):
@@ -260,8 +264,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 continue
             # Now figure out if there's a tab for it, and save the tab.
             plugin_name = list_item.data(QtCore.Qt.ItemDataRole.UserRole)
-            for tab_index in range(self.stacked_layout.count()):
-                tab_widget = self.stacked_layout.widget(tab_index)
+            for tab_widget in self._settings_tabs_ordered:
                 if tab_widget.tab_title == plugin_name:
                     tab_widget.save()
         # Now lets process all the post save handlers
@@ -288,8 +291,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 continue
             # Now figure out if there's a tab for it, and save the tab.
             plugin_name = list_item.data(QtCore.Qt.ItemDataRole.UserRole)
-            for tab_index in range(self.stacked_layout.count()):
-                tab_widget = self.stacked_layout.widget(tab_index)
+            for tab_widget in self._settings_tabs_ordered:
                 if tab_widget.tab_title == plugin_name:
                     tab_widget.cancel()
         return QtWidgets.QDialog.reject(self)
@@ -329,18 +331,18 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # Quick exit to the left if the item doesn't exist (maybe -1?)
         if not list_item:
             return
-        # Loop through the list of tabs in the stacked layout
-        for tab_index in range(self.stacked_layout.count()):
-            # Get the widget
-            tab_widget = self.stacked_layout.itemAt(tab_index).widget()
+        for tab_widget in self._settings_tabs_ordered:
             # Check that the title of the tab (i.e. plugin name) is the same as the data in the list item
             if tab_widget.tab_title == list_item.data(QtCore.Qt.ItemDataRole.UserRole):
-                # Make the matching tab visible
+                # Make the matching tab visible (only one tab in the layout so size hint matches content)
+                while self.content_tabs_layout.count():
+                    item = self.content_tabs_layout.takeAt(0)
+                    if item.widget():
+                        item.widget().hide()
                 tab_widget.tab_visited = True
-                self.stacked_layout.setCurrentIndex(tab_index)
-                current_widget = self.stacked_layout.currentWidget()
-                self.content_widget.updateGeometry()
-                current_widget.tab_visible()
+                self.content_tabs_layout.addWidget(tab_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+                tab_widget.show()
+                tab_widget.tab_visible()
 
     def register_post_process(self, function):
         """

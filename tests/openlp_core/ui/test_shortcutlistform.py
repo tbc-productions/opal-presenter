@@ -26,7 +26,7 @@ from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.shortcutlistform import ShortcutListForm
+from openlp.core.ui.shortcutlistform import ShortcutListForm, _qobject_is_alive
 
 
 @pytest.fixture()
@@ -194,6 +194,20 @@ def test_on_custom_radio_button_not_toggled(form):
 
         # THEN: The method should exit early (i.e. the rest of the methods are not called)
         assert 0 == mocked_current_item_action.call_count
+
+
+def test_action_shortcuts_returns_empty_when_shortcuts_raises_runtime_error(form):
+    """
+    A destroyed QAction must not crash _action_shortcuts (regression: shiboken deleted object).
+    """
+    action = MagicMock()
+    action.shortcuts.side_effect = RuntimeError('Internal C++ object already deleted.')
+    with patch('openlp.core.ui.shortcutlistform._qobject_is_alive', return_value=True):
+        assert form._action_shortcuts(action) == []
+
+
+def test_qobject_is_alive_none():
+    assert _qobject_is_alive(None) is False
 
 
 def test_on_custom_radio_button_clicked(form):

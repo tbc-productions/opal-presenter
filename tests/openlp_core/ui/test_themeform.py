@@ -28,6 +28,7 @@ import pytest
 
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import BackgroundType
+from openlp.core.pages.alignment import AlignmentPage, AlignmentTransitionsPage
 from openlp.core.ui.themeform import ThemeForm
 
 
@@ -157,6 +158,7 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_main_area_page_values = MagicMock()
     theme_form.set_footer_area_page_values = MagicMock()
     theme_form.set_alignment_page_values = MagicMock()
+    theme_form.set_transition_page_values = MagicMock()
     theme_form.set_position_page_values = MagicMock()
     theme_form.set_preview_page_values = MagicMock()
 
@@ -169,6 +171,7 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_main_area_page_values.assert_called_once()
     theme_form.set_footer_area_page_values.assert_called_once()
     theme_form.set_alignment_page_values.assert_called_once()
+    theme_form.set_transition_page_values.assert_called_once()
     theme_form.set_position_page_values.assert_called_once()
     theme_form.set_preview_page_values.assert_called_once()
 
@@ -340,6 +343,49 @@ def test_calculate_lines_is_suppressed_while_populating_page(mocked_setup, setti
     theme_form.update_theme.assert_not_called()
     mocked_theme_manager.generate_image.assert_not_called()
     theme_form.refresh_preview.assert_not_called()
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+def test_refresh_preview_disables_theme_transitions(mocked_single_shot, mocked_setup, settings):
+    """
+    Test that normal preview refresh keeps theme transitions disabled.
+    """
+    # GIVEN: A ThemeForm with a preview box
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock()
+    theme_form.preview_box = MagicMock()
+    theme_form.update_layout_guide_overlay = MagicMock()
+
+    # WHEN: refresh_preview() is called
+    theme_form.refresh_preview()
+
+    # THEN: Theme transitions should remain disabled for normal refresh updates
+    assert theme_form.preview_box.allow_theme_transitions is False
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked_setup, settings):
+    """
+    Test that the Play action enables theme transitions for the transition demo.
+    """
+    # GIVEN: A ThemeForm that can preview transitions
+    theme_form = ThemeForm(None)
+    theme_form.can_update_theme = True
+    theme_form._updating_page_values = False
+    theme_form.theme = MagicMock()
+    theme_form.preview_box = MagicMock()
+    mocked_theme_manager = MagicMock()
+    Registry().register('theme_manager', mocked_theme_manager)
+    theme_form.update_theme = MagicMock()
+    theme_form.update_layout_guide_overlay = MagicMock()
+
+    # WHEN: preview_transition() is called
+    theme_form.preview_transition()
+
+    # THEN: Theme transitions should be enabled only for explicit play preview
+    assert theme_form.preview_box.allow_theme_transitions is True
 
 
 @patch('openlp.core.ui.themeform.QtWidgets.QMessageBox.critical')
@@ -612,7 +658,57 @@ def test_update_theme_static(mocked_setup, settings):
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_set_alignment_page_values_updates_play_button_visibility(mocked_setup, settings):
+def test_transition_settings_widget_prefers_standalone_transitions_page(mocked_setup, settings):
+    """
+    When both exist, the dedicated Transitions page owns transition settings.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = MagicMock()
+    theme_form.alignment_page = AlignmentPage()
+    assert theme_form._transition_settings_widget() is theme_form.transitions_page
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_transition_settings_widget_none_for_alignment_page_only(mocked_setup, settings):
+    """
+    Split wizard: AlignmentPage must not be used as the transition settings widget
+    (it has no transition_type / is_transition_enabled, etc.).
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentPage()
+    assert theme_form._transition_settings_widget() is None
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_transition_settings_widget_combined_alignment_transitions_page(mocked_setup, settings):
+    """
+    Legacy combined page embeds transition controls on the alignment widget.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentTransitionsPage()
+    assert theme_form._transition_settings_widget() is theme_form.alignment_page
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_set_transition_page_values_without_transition_widget(mocked_setup, settings):
+    """
+    Opening a form with only AlignmentPage (no transition UI) must not touch missing properties.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock(display_slide_transition=False)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentPage()
+    theme_form._set_play_transition_button_visible = MagicMock()
+    theme_form._sync_transition_reverse_enabled_state = MagicMock()
+    theme_form.set_transition_page_values()
+    theme_form._sync_transition_reverse_enabled_state.assert_called_once_with(False)
+    theme_form._set_play_transition_button_visible.assert_called_once_with(False)
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_set_transition_page_values_updates_play_button_visibility(mocked_setup, settings):
     """
     Test that the play transition button visibility follows the transition enabled state.
     """
@@ -624,12 +720,15 @@ def test_set_alignment_page_values_updates_play_button_visibility(mocked_setup, 
                                  display_slide_transition_speed='normal', display_slide_transition_direction='horizontal',
                                  display_slide_transition_reverse=False)
     theme_form.alignment_page = MagicMock()
+    theme_form.transitions_page = MagicMock()
     theme_form._set_play_transition_button_visible = MagicMock()
+    theme_form._sync_transition_reverse_enabled_state = MagicMock()
 
-    # WHEN: The alignment page values are populated
-    theme_form.set_alignment_page_values()
+    # WHEN: The transitions page values are populated
+    theme_form.set_transition_page_values()
 
     # THEN: The toolbar play button should be shown
+    theme_form._sync_transition_reverse_enabled_state.assert_called_once_with(True)
     theme_form._set_play_transition_button_visible.assert_called_once_with(True)
 
 

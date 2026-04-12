@@ -16,7 +16,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle" >
-   <string>openlp.org 2.0</string>
+   <string>OpenLP+ (fork of OpenLP)</string>
   </property>
   <widget class="QWidget" name="MainContent" >
    <property name="sizePolicy" >
@@ -1983,7 +1983,7 @@
     <string>E&amp;xit</string>
    </property>
    <property name="statusTip" >
-    <string>Quit OpenLP 2.0</string>
+    <string>Quit OpenLP+</string>
    </property>
    <property name="shortcut" >
     <string>Alt+F4</string>
@@ -2130,7 +2130,7 @@
     <string>&amp;About</string>
    </property>
    <property name="statusTip" >
-    <string>More information about OpenLP</string>
+    <string>More information about OpenLP+ (forked from OpenLP)</string>
    </property>
    <property name="shortcut" >
     <string>Ctrl+F1</string>
@@ -2164,13 +2164,13 @@
   </action>
   <action name="ImportOpenlp2Item" >
    <property name="text" >
-    <string>OpenLP 2.0</string>
+    <string>OpenLP+ (OpenLP 2.0 format)</string>
    </property>
    <property name="toolTip" >
-    <string>Export songs in OpenLP 2.0 format</string>
+    <string>Import songs in OpenLP 2.0 format (OpenLP compatible)</string>
    </property>
    <property name="statusTip" >
-    <string>Export songs in OpenLP 2.0 format</string>
+    <string>Import songs in OpenLP 2.0 format (OpenLP compatible)</string>
    </property>
   </action>
   <action name="ExportOpenSongItem" >
@@ -2185,7 +2185,7 @@
   </action>
   <action name="ExportOpenlp2Item" >
    <property name="text" >
-    <string>OpenLP 2.0</string>
+    <string>OpenLP+ (OpenLP 2.0 format)</string>
    </property>
   </action>
   <action name="LanguageTranslateItem" >

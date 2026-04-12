@@ -10,14 +10,12 @@
   <qresource prefix="general">
     </qresource>
   <qresource prefix="slides">
-    <file>slide_theme.png</file>
     </qresource>
   <qresource prefix="icon">
     <file>openlp-logo.svg</file>
   </qresource>
   <qresource prefix="graphics">
     <file>openlp-splash-screen.png</file>
-    <file>openlp-about-logo.png</file>
   </qresource>
   <qresource prefix="imports">
     </qresource>
@@ -25,11 +23,9 @@
     </qresource>
   <qresource prefix="wizards">
     <file>openlp-osx-wizard.png</file>
-    <file>wizard_song.bmp</file>
-    <file>wizard_importbible.bmp</file>
-    <file>wizard_firsttime.bmp</file>
-    <file>wizard_createtheme.bmp</file>
-    <file>wizard_duplicateremoval.bmp</file>
+    <file>wizard_song.png</file>
+    <file>wizard_importbible.png</file>
+    <file>wizard_duplicateremoval.png</file>
     </qresource>
   <qresource prefix="services">
     </qresource>

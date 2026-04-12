@@ -85,6 +85,9 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
             event.accept()
         elif event.mimeData().hasText():
             plugin_name = event.mimeData().text()
+            if self.service_manager and not self.service_manager.can_accept_external_plugin(plugin_name):
+                event.ignore()
+                return
             raw_title = event.mimeData().data('application/x-openlp-item-title')
             item_title = bytes(raw_title).decode('utf-8') if raw_title and not raw_title.isEmpty() else None
             if self.service_manager:
@@ -112,6 +115,9 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         if event.mimeData().hasUrls():
             event.accept()
         elif event.mimeData().hasText():
+            if self.service_manager and not self.service_manager.can_accept_external_plugin(event.mimeData().text()):
+                event.ignore()
+                return
             if self.service_manager:
                 self.service_manager.update_external_drag_preview(event.pos())
             self._update_drag_tooltip_pos()
@@ -2306,6 +2312,17 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         'alerts': 'Alert',
     }
 
+    @staticmethod
+    def can_accept_external_plugin(plugin_name):
+        """
+        Return whether this plugin can add items to the service manager via drag and drop.
+
+        :param plugin_name: The plugin name from drag MIME text.
+        """
+        if not plugin_name:
+            return False
+        return Registry().has_function('{plugin}_add_service_item'.format(plugin=plugin_name))
+
     def begin_external_drag_preview(self, plugin_name, item_title=None):
         """
         Create a placeholder service item for an incoming external drag and insert it at the end
@@ -2477,6 +2494,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     self.load_service(file_path)
         elif link.hasText():
             plugin = link.text()
+            if not self.can_accept_external_plugin(plugin):
+                self.cancel_external_drag_preview()
+                self.service_manager_list._hide_drag_tooltip()
+                event.ignore()
+                return
             self.service_manager_list._hide_drag_tooltip()
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()

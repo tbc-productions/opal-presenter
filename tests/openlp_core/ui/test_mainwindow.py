@@ -35,7 +35,12 @@ from openlp.core.common.registry import Registry
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.state import State
-from openlp.core.ui.mainwindow import MainWindow
+from openlp.core.ui.mainwindow import (
+    MainWindow,
+    _PRESET_LAYOUT_MODES,
+    _PRESET_VISIBILITY_SNAPSHOT_KEY,
+    _preset_layout_storage_key,
+)
 from tests.utils.constants import TEST_RESOURCES_PATH, RESOURCE_PATH
 
 
@@ -190,6 +195,8 @@ def main_window_reduced(settings, state):
             patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot'), \
         patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \
             patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.addDockWidget'), \
+            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.splitDockWidget'), \
+            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.tabifyDockWidget'), \
             patch('openlp.core.ui.mainwindow.QtGui.QActionGroup'), \
             patch('openlp.core.ui.mainwindow.ServiceManager'), \
             patch('openlp.core.ui.mainwindow.ThemeManager'), \
@@ -454,13 +461,13 @@ def test_mainwindow_configuration(main_window):
     # WHEN: you check the started functions
 
     # THEN: the following registry functions should have been registered
-    expected_service_list = ['settings', 'settings_thread', 'application', 'main_window', 'settings_form',
+    expected_service_list = {'settings', 'settings_thread', 'application', 'main_window', 'settings_form',
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
-                             'authentication_token', 'web_socket_server']
+                             'authentication_token', 'web_socket_server'}
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
                                'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons',
                                'alternate_rows_changed']
-    assert list(Registry().service_list.keys()) == expected_service_list, \
+    assert set(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \
         'The function list should have been {}'.format(Registry().functions_list.keys())
@@ -767,7 +774,7 @@ def test_load_settings_view_mode_default_mode(mocked_view_mode, mocked_show, mai
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, True, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, True, False, 'default')
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -792,7 +799,7 @@ def test_load_settings_view_mode_setup_mode(mocked_view_mode, mocked_show, main_
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, False, True, False, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, False, False, 'setup')
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -817,7 +824,7 @@ def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_w
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(False, True, False, False, True, True)
+    mocked_view_mode.assert_called_with(False, True, False, True, True, False, 'live')
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -840,7 +847,7 @@ def test_load_settings_view_mode_preview(mocked_view_mode, main_window, settings
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, False, True, True)
+    mocked_view_mode.assert_called_with(True, True, True, False, True, False)
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -863,7 +870,99 @@ def test_load_settings_view_mode_live(mocked_view_mode, main_window, settings):
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, False, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, False, False)
+
+
+def test_left_dock_visibility_recover_themes_only_corruption(main_window, settings):
+    """
+    Tabified docks used to persist only ``show themes``; recover to all three panes intended for the layout.
+    """
+    settings.setValue('user interface/show library', False)
+    settings.setValue('user interface/show service', False)
+    settings.setValue('user interface/show themes', True)
+    settings.setValue('user interface/is preset layout', False)
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
+
+
+def test_set_view_mode_named_preset_keeps_is_preset_layout_flag(main_window, settings):
+    """
+    Preview/Live visibility updates must not clear the layout-preset flag when applying a named preset.
+    """
+    main_window._preview_controller = MagicMock()
+    main_window._preview_controller.panel = MagicMock()
+    main_window._live_controller = MagicMock()
+    main_window._live_controller.panel = MagicMock()
+    settings.setValue('user interface/is preset layout', False)
+    main_window.set_view_mode(True, True, True, True, True, False, 'default')
+    assert settings.value('user interface/is preset layout') is True
+
+
+def test_left_dock_visibility_named_live_preset_without_saved_uses_factory(main_window, settings):
+    """
+    Live preset without a saved window state still forces the built-in Library/Service/Themes visibility.
+    """
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'live')
+    settings.setValue('user interface/preset layout/live/main window state', QtCore.QByteArray())
+    settings.setValue('user interface/show library', True)
+    assert main_window._left_dock_visibility_from_settings() == (False, True, False)
+
+
+def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window, settings):
+    """
+    Once a preset has saved layout state, left-pane visibility follows stored settings (user customisation).
+    """
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'live')
+    settings.setValue('user interface/preset layout/live/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('user interface/show library', True)
+    settings.setValue('user interface/show service', False)
+    settings.setValue('user interface/show themes', True)
+    assert main_window._left_dock_visibility_from_settings() == (True, False, True)
+
+
+@patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
+@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+def test_show_skips_factory_set_view_mode_when_saved_preset_layout(mocked_view_mode, mocked_show, main_window, settings):
+    """
+    Startup should not re-apply factory preset visibility when that preset already has saved layout.
+    """
+    main_window.control_splitter = MagicMock()
+    main_window._live_controller = MagicMock()
+    main_window._preview_controller = MagicMock()
+    main_window.activateWindow = MagicMock()
+    settings.setValue('core/view mode', 'default')
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray(b'x'))
+
+    main_window.show()
+
+    mocked_view_mode.assert_not_called()
+
+
+@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
+def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_window, settings):
+    """
+    Reset clears per-preset saved window state and visibility snapshots.
+    """
+    main_window._preview_controller = MagicMock()
+    main_window._preview_controller.panel = MagicMock()
+    main_window._live_controller = MagicMock()
+    main_window._live_controller.panel = MagicMock()
+    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
+    for mode in _PRESET_LAYOUT_MODES:
+        settings.setValue(_preset_layout_storage_key(mode, 'main window state'), QtCore.QByteArray(b'1'))
+        settings.setValue(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '{"show_library": true}')
+    settings.setValue('core/view mode', 'default')
+    settings.setValue('user interface/is preset layout', True)
+
+    main_window.on_mode_reset_layout_presets_clicked()
+
+    for mode in _PRESET_LAYOUT_MODES:
+        st = settings.value(_preset_layout_storage_key(mode, 'main window state'))
+        assert len(st) == 0
+        assert settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) in ('', None)
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')

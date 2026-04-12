@@ -57,7 +57,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap resource="../images/openlp-2.qrc">:/wizards/wizard_importbible.bmp</pixmap>
+       <pixmap resource="../images/openlp-2.qrc">:/wizards/wizard_importbible.png</pixmap>
       </property>
       <property name="indent">
        <number>0</number>
@@ -99,7 +99,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QLabel" name="informationLabel">
         <property name="text">
-         <string>This wizard will help you to configure OpenLP for initial use . Click the next button below to start the process of selection your initial options. </string>
+         <string>This wizard will help you to configure OpenLP+ for initial use. OpenLP+ is a fork of OpenLP. Click the Next button below to start selecting your initial options.</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -239,7 +239,7 @@ p, li { white-space: pre-wrap; }
   </widget>
   <widget class="QWizardPage" name="downloadDefaultsPage">
    <property name="title">
-    <string>Download Samples from OpenLP.org</string>
+        <string>Download Samples from OpenLP.org (upstream)</string>
    </property>
    <property name="subTitle">
     <string>Select samples to downlaod and install for use.</string>
@@ -302,7 +302,7 @@ p, li { white-space: pre-wrap; }
     <string>Default Settings</string>
    </property>
    <property name="subTitle">
-    <string>Set up default values to be used by OpenLP</string>
+        <string>Set up default values to be used by OpenLP+</string>
    </property>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
@@ -360,7 +360,7 @@ p, li { white-space: pre-wrap; }
      </rect>
     </property>
     <property name="text">
-     <string>Press Finish to apply all you changes and start OpenLP</string>
+        <string>Press Finish to apply your changes and start OpenLP+</string>
     </property>
    </widget>
    <widget class="QLabel" name="updateLabel">

@@ -300,7 +300,7 @@ class LanguageManager(object):
             QtWidgets.QMessageBox.information(None,
                                               translate('OpenLP.LanguageManager', 'Language'),
                                               translate('OpenLP.LanguageManager',
-                                                        'Please restart OpenLP to use your new language setting.'))
+                                                        'Please restart OpenLP+ to use your new language setting.'))
 
     @staticmethod
     def init_qm_list():
@@ -427,9 +427,9 @@ class UiStrings(metaclass=Singleton):
         self.NISs = translate('OpenLP.Ui', 'No Item Selected', 'Singular')
         self.NISp = translate('OpenLP.Ui', 'No Items Selected', 'Plural')
         self.NoResults = translate('OpenLP.Ui', 'No Search Results')
-        self.OpenLP = translate('OpenLP.Ui', 'OpenLP')
+        self.OpenLP = translate('OpenLP.Ui', 'OpenLP+')
         self.OpenLPv2AndUp = translate('OpenLP.Ui', 'OpenLP Song Database')
-        self.OpenLPStart = translate('OpenLP.Ui', 'OpenLP is already running on this machine. \nClosing this instance')
+        self.OpenLPStart = translate('OpenLP.Ui', 'OpenLP+ is already running on this machine. \nClosing this instance')
         self.OpenService = translate('OpenLP.Ui', 'Open service.')
         self.OptionalShowInFooter = translate('OpenLP.Ui', 'Optional, this will be displayed in footer.')
         self.OptionalHideInFooter = translate('OpenLP.Ui', 'Optional, this won\'t be displayed in footer.')

@@ -138,6 +138,7 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.IconMode,
                                                           QtCore.QSize(176, 100))
         self.theme_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.theme_list_widget.activate_drag('themes')
         self.theme_list_widget.setObjectName('theme_list_widget')
         self.layout.addWidget(self.theme_list_widget)
         self.footer_status_bar = QtWidgets.QStatusBar(widget)
@@ -705,15 +706,26 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 else:
                     name = text_name
                 thumb_path = self.thumb_path / '{name}.png'.format(name=text_name)
+                preview_png = self.theme_path / '{name}.png'.format(name=text_name)
+                theme_obj = self._get_theme_data(text_name)
                 item_name = QtWidgets.QListWidgetItem(name)
                 if validate_thumb(theme_path, thumb_path):
                     icon = build_icon(thumb_path)
                 else:
-                    icon = create_thumb(theme_path, thumb_path)
+                    # Ensure thumbnails are generated from a rendered preview so text/layout/fonts are visible.
+                    preview_pixmap = self.generate_image(theme_obj, True)
+                    if preview_pixmap is not None:
+                        self.save_preview(text_name, preview_pixmap)
+                    if thumb_path.exists():
+                        icon = build_icon(thumb_path)
+                    elif preview_png.exists():
+                        icon = create_thumb(preview_png, thumb_path)
+                    else:
+                        icon = UiIcons().get_icon_variant('picture')
                 item_name.setIcon(icon)
                 item_name.setData(QtCore.Qt.ItemDataRole.UserRole, text_name)
                 self.theme_list_widget.addItem(item_name)
-                self._theme_list[text_name] = self._get_theme_data(text_name)
+                self._theme_list[text_name] = theme_obj
         self._push_themes()
 
     def _push_themes(self):

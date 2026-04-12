@@ -1061,6 +1061,8 @@ var Display = {
     slide.setAttribute("id", verse);
     // The "future" class is used internally by reveal, it's used here to hide newly added slides
     slide.classList.add("future");
+    // Marks lyric text sections so theme main-area CSS (position/size) applies for horizontal slides too
+    slide.classList.add("text-slide");
     var content = document.createElement("div");
     content.classList.add("slide-text-content");
     content.innerHTML = html;

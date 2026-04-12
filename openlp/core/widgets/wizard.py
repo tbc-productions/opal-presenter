@@ -35,6 +35,10 @@ from openlp.core.ui.icons import UiIcons
 
 log = logging.getLogger(__name__)
 
+# Fixed outer size for all OpenLP wizards (non-resizable, consistent layout).
+WIZARD_FIXED_WIDTH = 640
+WIZARD_FIXED_HEIGHT = 440
+
 
 class WizardStrings(object):
     """
@@ -73,7 +77,8 @@ class WizardStrings(object):
 class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
     """
     Generic OpenLP wizard to provide generic functionality and a unified look
-    and feel.
+    and feel. The window uses a fixed size (see ``WIZARD_FIXED_WIDTH`` and
+    ``WIZARD_FIXED_HEIGHT``) and is not user-resizable.
 
     ``parent``
         The QWidget-derived parent of the wizard.
@@ -86,7 +91,8 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
         The object name this wizard should have.
 
     ``image``
-        The image to display on the "welcome" page of the wizard. Should be 163x350.
+        The image to display on the "welcome" page of the wizard. It fills the left
+        column while preserving aspect ratio (163×350 is a reasonable source size).
 
     ``add_progress_page``
         Whether to add a progress page with a progressbar at the end of the wizard.
@@ -104,7 +110,7 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
                                            QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.plugin = plugin
         self.with_progress_page = add_progress_page
-        self.setFixedWidth(640)
+        self.setFixedSize(WIZARD_FIXED_WIDTH, WIZARD_FIXED_HEIGHT)
         self.setObjectName(name)
         self.open_icon = UiIcons().open
         self.delete_icon = UiIcons().delete

@@ -513,11 +513,27 @@ class Settings(QtCore.QSettings):
         'user interface/main window position': QtCore.QPoint(0, 0),
         'user interface/main window splitter geometry': QtCore.QByteArray(),
         'user interface/main window state': QtCore.QByteArray(),
+        # Per layout-preset window geometry (Show all / Setup / Live); empty until user customises.
+        'user interface/preset layout/default/main window state': QtCore.QByteArray(),
+        'user interface/preset layout/default/main window splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/default/live splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/default/preview splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/default/visibility snapshot': '',
+        'user interface/preset layout/setup/main window state': QtCore.QByteArray(),
+        'user interface/preset layout/setup/main window splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/setup/live splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/setup/preview splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/setup/visibility snapshot': '',
+        'user interface/preset layout/live/main window state': QtCore.QByteArray(),
+        'user interface/preset layout/live/main window splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/live/live splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/live/preview splitter geometry': QtCore.QByteArray(),
+        'user interface/preset layout/live/visibility snapshot': '',
         'user interface/preview panel': True,
         'user interface/preview splitter geometry': QtCore.QByteArray(),
         'user interface/theme manager view mode': 0,
         'user interface/show library': True,
-        'user interface/show projectors': True,
+        'user interface/show projectors': False,
         'user interface/show service': True,
         'user interface/show themes': True,
         'projector/show after wizard': False,
@@ -663,6 +679,12 @@ class Settings(QtCore.QSettings):
 
     def init_default_shortcuts(self):
         # Add shortcuts here so QKeySequence has a QApplication instance to use.
+        # On macOS, Qt maps ControlModifier to the Command (⌘) key; MetaModifier is the physical Control key.
+        _display_output_shortcut = (
+            [QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.MetaModifier | QtCore.Qt.Key.Key_Space)]
+            if is_macosx() else
+            [QtGui.QKeySequence(QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Space)]
+        )
         Settings.__default_settings__.update({
             'shortcuts/aboutItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Control + QtCore.Qt.Key.Key_F1)],
             'shortcuts/addToService': [],
@@ -807,6 +829,7 @@ class Settings(QtCore.QSettings):
             'shortcuts/viewMediaManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F8)],
             'shortcuts/viewPreviewPanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F11)],
             'shortcuts/viewLivePanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F12)],
+            'shortcuts/viewDisplayOutputItem': _display_output_shortcut,
             'shortcuts/viewServiceManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F9)],
             'shortcuts/webSiteItem': []
         })

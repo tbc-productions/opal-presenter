@@ -41,8 +41,16 @@
 # Debian: qt6-base-dev-tools
 # Fedora: pyside6-tools
 
+# Resolve paths relative to this script so it works from any cwd.
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+
 # Find the "rcc" binary
-COMMANDS="pyside6-rcc rcc /usr/lib/qt6/libexec/rcc /usr/lib/qt6/rcc"
+COMMANDS=""
+if [ -n "$VIRTUAL_ENV" ]; then
+    COMMANDS="$COMMANDS $VIRTUAL_ENV/bin/pyside6-rcc"
+fi
+COMMANDS="$COMMANDS $PROJECT_ROOT/.venv/bin/pyside6-rcc pyside6-rcc rcc /usr/lib/qt6/libexec/rcc /usr/lib/qt6/rcc"
 RCC_CMD=""
 for RCC_CMD in $COMMANDS; do
     echo $RCC_CMD
@@ -65,31 +73,60 @@ if [ "$RCC_CMD" = "" ]; then
 fi
 
 # Backup the existing resources
-if [ -f "openlp/core/resources.py" ]; then
+if [ -f "$PROJECT_ROOT/openlp/core/resources.py" ]; then
     echo "Backup old resources file"
-    mv openlp/core/resources.py openlp/core/resources.py.old
+    mv "$PROJECT_ROOT/openlp/core/resources.py" "$PROJECT_ROOT/openlp/core/resources.py.old"
 fi
 
 # Create the new data from the updated qrc
 echo "Generate new resources file"
-$RCC_CMD -g python -o openlp/core/resources.py.new resources/images/openlp-2.qrc
+if ! $RCC_CMD -g python -o "$PROJECT_ROOT/openlp/core/resources.py.new" "$PROJECT_ROOT/resources/images/openlp-2.qrc"; then
+    echo "ERROR: Failed to generate resources from openlp-2.qrc"
+    if [ -f "$PROJECT_ROOT/openlp/core/resources.py.old" ]; then
+        mv "$PROJECT_ROOT/openlp/core/resources.py.old" "$PROJECT_ROOT/openlp/core/resources.py"
+    fi
+    exit 1
+fi
 
 # Remove patch breaking lines
 echo "Remove comments at top of file"
-cat openlp/core/resources.py.new | sed '1,5d' > openlp/core/resources.py
+if [ ! -f "$PROJECT_ROOT/openlp/core/resources.py.new" ]; then
+    echo "ERROR: Generated resources file not found"
+    if [ -f "$PROJECT_ROOT/openlp/core/resources.py.old" ]; then
+        mv "$PROJECT_ROOT/openlp/core/resources.py.old" "$PROJECT_ROOT/openlp/core/resources.py"
+    fi
+    exit 1
+fi
+cat "$PROJECT_ROOT/openlp/core/resources.py.new" | sed '1,5d' > "$PROJECT_ROOT/openlp/core/resources.py"
 
 # Patch resources.py to OpenLP coding style
 ARCH=`uname -m`
 echo "Architecture is: $ARCH"
+PATCH_STATUS=0
 if [ "$ARCH" = "arm64" ]; then
     echo "Running ARM64 patch"
-    patch --posix -s openlp/core/resources.py scripts/resources.arm64.patch
+    patch --posix -s "$PROJECT_ROOT/openlp/core/resources.py" "$SCRIPT_DIR/resources.arm64.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
 else
     echo "Running x86 patch"
-    patch --posix -s openlp/core/resources.py scripts/resources.patch
+    patch --posix -s "$PROJECT_ROOT/openlp/core/resources.py" "$SCRIPT_DIR/resources.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
+fi
+
+if [ "$PATCH_STATUS" -ne 0 ]; then
+    echo "Patch did not apply cleanly (exit code: $PATCH_STATUS). Applying fallback normalisation."
+    # Keep behaviour consistent even if legacy patch hunks drift.
+    sed '/^qInitResources()$/d' "$PROJECT_ROOT/openlp/core/resources.py" > "$PROJECT_ROOT/openlp/core/resources.py.tmp"
+    mv "$PROJECT_ROOT/openlp/core/resources.py.tmp" "$PROJECT_ROOT/openlp/core/resources.py"
+    PATCH_STATUS=0
+fi
+
+if [ "$PATCH_STATUS" -eq 0 ]; then
+    # Ensure import-time registration does not happen twice.
+    sed '/^qInitResources()$/d' "$PROJECT_ROOT/openlp/core/resources.py" > "$PROJECT_ROOT/openlp/core/resources.py.tmp"
+    mv "$PROJECT_ROOT/openlp/core/resources.py.tmp" "$PROJECT_ROOT/openlp/core/resources.py"
 fi
 
 # Remove temporary file
-rm -f openlp/core/resources.py.new 2>/dev/null
-rm -f openlp/core/resources.py.old 2>/dev/null
-rm -f openlp/core/resources.py.orig 2>/dev/null
+rm -f "$PROJECT_ROOT/openlp/core/resources.py.new" 2>/dev/null
+rm -f "$PROJECT_ROOT/openlp/core/resources.py.old" 2>/dev/null
+rm -f "$PROJECT_ROOT/openlp/core/resources.py.orig" 2>/dev/null
+rm -f "$PROJECT_ROOT/openlp/core/resources.py.rej" 2>/dev/null

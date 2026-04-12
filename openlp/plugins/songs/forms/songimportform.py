@@ -54,7 +54,7 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
         :param parent: The QWidget-derived parent of the wizard.
         :param plugin: The songs plugin.
         """
-        super(SongImportForm, self).__init__(parent, plugin, 'songImportWizard', ':/wizards/wizard_song.bmp')
+        super(SongImportForm, self).__init__(parent, plugin, 'songImportWizard', ':/wizards/wizard_song.png')
         self.clipboard = self.main_window.clipboard
 
     def setup_ui(self, image):
