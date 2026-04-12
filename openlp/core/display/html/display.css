@@ -47,6 +47,10 @@ body,
   position: relative;
 }
 
+.reveal .slides {
+  position: relative;
+}
+
 body.transition,
 body.transition .reveal .slides,
 body.transition .reveal .footer {
@@ -164,7 +168,9 @@ body.transition .reveal .slide-background {
   padding: 0 !important;
 }
 
-.reveal .slides > section.text-slides > section {
+/* Vertical stack: .text-slides wrapper; horizontal: each lyric slide is a top-level section.text-slide */
+.reveal .slides > section.text-slides > section,
+.reveal .slides > section.text-slide {
   position: absolute;
   box-sizing: border-box;
   padding: 0 !important;
