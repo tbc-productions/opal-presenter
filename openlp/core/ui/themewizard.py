@@ -34,6 +34,60 @@ from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
+class _ThemePageStackHost(QtWidgets.QWidget):
+    """
+    Holds theme editor pages like QStackedWidget, but only the current page is in the
+    layout so height follows the visible page (QStackedWidget uses max of all pages).
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pages = []
+        self._current_index = -1
+        self._layout = QtWidgets.QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+    def addWidget(self, widget):
+        self._pages.append(widget)
+        widget.setParent(self)
+        widget.hide()
+        if len(self._pages) == 1:
+            self.setCurrentIndex(0)
+
+    def count(self):
+        return len(self._pages)
+
+    def widget(self, index):
+        if 0 <= index < len(self._pages):
+            return self._pages[index]
+        return None
+
+    def currentWidget(self):
+        if 0 <= self._current_index < len(self._pages):
+            return self._pages[self._current_index]
+        return None
+
+    def setCurrentIndex(self, index):
+        if index < 0 or index >= len(self._pages):
+            return
+        while self._layout.count():
+            item = self._layout.takeAt(0)
+            old = item.widget()
+            if old is not None:
+                old.hide()
+        self._current_index = index
+        page = self._pages[index]
+        self._layout.addWidget(page, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+        page.show()
+
+    def setCurrentWidget(self, widget):
+        try:
+            index = self._pages.index(widget)
+        except ValueError:
+            return
+        self.setCurrentIndex(index)
+
+
 class Ui_ThemeWizard(object):
     """
     The Create/Edit theme dialog
@@ -91,7 +145,7 @@ class Ui_ThemeWizard(object):
         self.editor_layout.setObjectName('editor_layout')
         self.editor_layout.setContentsMargins(0, 0, 0, 0)
         self.editor_layout.setSpacing(10)
-        self.page_stack = QtWidgets.QStackedWidget(self.editor_widget)
+        self.page_stack = _ThemePageStackHost(self.editor_widget)
         self.page_stack.setObjectName('page_stack')
         self.page_stack_scroll_area = QtWidgets.QScrollArea(self.editor_widget)
         self.page_stack_scroll_area.setObjectName('page_stack_scroll_area')

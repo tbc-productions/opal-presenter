@@ -56,13 +56,12 @@ def test_insert_tab_visible(registry: Registry, mock_settings: MagicMock):
     expected_icon = QtGui.QIcon(QtGui.QPixmap(16, 16))
 
     # WHEN: We insert the general tab
-    with patch.object(settings_form.stacked_layout, 'addWidget') as mocked_add_widget, \
-            patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item, \
+    with patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item, \
             patch.object(settings_form, '_build_settings_tab_icon', return_value=expected_icon) as mocked_build_icon:
         settings_form.insert_tab(general_tab, is_visible=True)
 
-        # THEN: The general tab should have been inserted into the stacked layout and an item inserted into the list
-        mocked_add_widget.assert_called_with(general_tab)
+        # THEN: The tab is registered for the content area and an item is added to the sidebar list
+        assert general_tab in settings_form._settings_tabs_ordered
         mocked_build_icon.assert_called_once_with(general_tab)
         assert 1 == mocked_add_item.call_count, 'addItem should have been called'
 
@@ -97,12 +96,11 @@ def test_insert_tab_not_visible(registry: Registry, mock_settings: MagicMock):
     general_tab.tab_title = 'mock'
 
     # WHEN: We insert the general tab
-    with patch.object(settings_form.stacked_layout, 'addWidget') as mocked_add_widget, \
-            patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item:
+    with patch.object(settings_form.setting_list_widget, 'addItem') as mocked_add_item:
         settings_form.insert_tab(general_tab, is_visible=False)
 
-        # THEN: The general tab should have been inserted, but no list item should have been inserted into the list
-        mocked_add_widget.assert_called_with(general_tab)
+        # THEN: The tab is registered but no sidebar list item is added
+        assert general_tab in settings_form._settings_tabs_ordered
         assert 0 == mocked_add_item.call_count, 'addItem should not have been called'
 
 
@@ -135,12 +133,11 @@ def test_list_item_changed_invalid_item(registry: Registry, mock_settings: Magic
     general_tab = MockTab(None, 'mock', 'Mock', ':/icon/openlp-logo.svg')
     settings_form.insert_tab(general_tab, is_visible=True)
 
-    with patch.object(settings_form.stacked_layout, 'count') as mocked_count:
-        # WHEN: The list_item_changed() slot is called with an invalid item index
-        settings_form.list_item_changed(100)
+    # WHEN: The list_item_changed() slot is called with an invalid item index
+    settings_form.list_item_changed(100)
 
-        # THEN: The rest of the method should not have been called
-        assert 0 == mocked_count.call_count, 'The count method of the stacked layout should not be called'
+    # THEN: No tab is placed in the content layout (early return before iterating tabs)
+    assert settings_form.content_tabs_layout.count() == 0
 
 
 def test_reject_with_inactive_items(registry: Registry, mock_settings: MagicMock):
