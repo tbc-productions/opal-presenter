@@ -64,6 +64,19 @@ from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.docks import MediaDockManager, MediaToolBox, OpenLPDockWidget
 
+# Layout preset ids (match ``core/view mode`` values) for per-preset saved window layout.
+_PRESET_LAYOUT_MODES = ('default', 'setup', 'live')
+_PRESET_VISIBILITY_SNAPSHOT_KEY = 'visibility snapshot'
+
+
+def _preset_layout_storage_key(mode: str, fragment: str) -> str:
+    return 'user interface/preset layout/{}/{}'.format(mode, fragment)
+
+
+def _preset_layout_has_saved_state(settings: Settings, mode: str) -> bool:
+    st = settings.value(_preset_layout_storage_key(mode, 'main window state'))
+    return bool(st and len(st) > 0)
+
 
 class Ui_MainWindow(object):
     """
@@ -246,6 +259,9 @@ class Ui_MainWindow(object):
         self.mode_group.addAction(self.mode_setup_item)
         self.mode_group.addAction(self.mode_live_item)
         self.mode_default_item.setChecked(True)
+        self.mode_reset_layout_presets_item = create_action(
+            main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode, can_shortcuts=False,
+            triggers=self.on_mode_reset_layout_presets_clicked)
         action_list.add_category(UiStrings().Tools, CategoryOrder.standard_menu)
         self.tools_add_tool_item = create_action(main_window,
                                                  'toolsAddToolItem', icon=UiIcons().add,
@@ -324,7 +340,8 @@ class Ui_MainWindow(object):
                     self.file_save_item, self.file_save_as_item, self.recent_files_menu.menuAction(), None,
                     self.file_import_menu.menuAction(), self.file_export_menu.menuAction(), None,
                     self.print_service_order_item, self.file_exit_item))
-        add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item))
+        add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item,
+                                          None, self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
                     self.view_projector_manager_item, self.view_service_manager_item, self.view_theme_manager_item,
                     None, self.view_preview_panel, self.view_live_panel, None, self.lock_panel))
@@ -476,6 +493,10 @@ class Ui_MainWindow(object):
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
+        self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
+        self.mode_reset_layout_presets_item.setStatusTip(translate(
+            'OpenLP.MainWindow',
+            'Discard saved custom layouts for Show all, Setup, and Live. Built-in preset behaviour is restored.'))
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
@@ -695,18 +716,32 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         view_mode = self.settings.value('core/view mode')
         # If we are using a default mode set accordingly
         if self.settings.value('user interface/is preset layout'):
+            if view_mode not in _PRESET_LAYOUT_MODES:
+                view_mode = 'default'
+                self.settings.setValue('core/view mode', 'default')
             if view_mode == 'default':
-                self.set_view_mode(True, True, True, True, True, False, 'default')
                 self.mode_default_item.setChecked(True)
+                self.mode_setup_item.setChecked(False)
+                self.mode_live_item.setChecked(False)
             elif view_mode == 'setup':
-                self.set_view_mode(True, True, True, True, False, False, 'setup')
                 self.mode_setup_item.setChecked(True)
+                self.mode_default_item.setChecked(False)
+                self.mode_live_item.setChecked(False)
             elif view_mode == 'live':
-                self.set_view_mode(False, True, False, True, True, False, 'live')
                 self.mode_live_item.setChecked(True)
+                self.mode_default_item.setChecked(False)
+                self.mode_setup_item.setChecked(False)
             # Applying a preset toggles panel visibility, which emits visibility signals that would
             # otherwise clear the preset flag during startup.
             self.settings.setValue('user interface/is preset layout', True)
+            if not _preset_layout_has_saved_state(self.settings, view_mode):
+                if view_mode == 'default':
+                    self.set_view_mode(True, True, True, True, True, False, 'default')
+                elif view_mode == 'setup':
+                    self.set_view_mode(True, True, True, True, False, False, 'setup')
+                elif view_mode == 'live':
+                    self.set_view_mode(False, True, False, True, True, False, 'live')
+                self.settings.setValue('user interface/is preset layout', True)
         else:
             self.set_view_mode(
                 self.settings.value('user interface/show library'),
@@ -1027,28 +1062,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Put OpenLP into "Default" view mode.
         """
-        self.set_view_mode(True, True, True, True, True, False, 'default')
-        self.settings.setValue('user interface/is preset layout', True)
-        self.settings.setValue('projector/show after wizard', True)
-        self._schedule_left_column_dock_layout()
+        self._activate_layout_preset('default')
 
     def on_mode_setup_item_clicked(self):
         """
         Put OpenLP into "Setup" view mode.
         """
-        self.set_view_mode(True, True, True, True, False, False, 'setup')
-        self.settings.setValue('user interface/is preset layout', True)
-        self.settings.setValue('projector/show after wizard', True)
-        self._schedule_left_column_dock_layout()
+        self._activate_layout_preset('setup')
 
     def on_mode_live_item_clicked(self):
         """
         Put OpenLP into "Live" view mode (Preview and Live slide controllers; Library hidden).
         """
-        self.set_view_mode(False, True, False, True, True, False, 'live')
-        self.settings.setValue('user interface/is preset layout', True)
-        self.settings.setValue('projector/show after wizard', True)
-        self._schedule_left_column_dock_layout()
+        self._activate_layout_preset('live')
 
     def set_view_mode(self, media: bool = True, service: bool = True, theme: bool = True, preview: bool = True,
                       live: bool = True, projector: bool = True, mode: str = '') -> None:
@@ -1250,6 +1276,155 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.view_service_manager_item.setChecked(self.settings.value('user interface/show service'))
         self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
 
+    def _leave_named_preset_layout_if_unpinned(self) -> None:
+        """
+        Named presets (Show all / Setup / Live) may be customised in place; only leave preset mode when the active
+        view mode is not one of those.
+        """
+        if self.settings.value('core/view mode') not in _PRESET_LAYOUT_MODES:
+            self.settings.setValue('user interface/is preset layout', False)
+
+    def _preset_visibility_snapshot_json(self) -> str:
+        blob = {
+            'show_library': bool(self.settings.value('user interface/show library')),
+            'show_service': bool(self.settings.value('user interface/show service')),
+            'show_themes': bool(self.settings.value('user interface/show themes')),
+            'preview_panel': bool(self.settings.value('user interface/preview panel')),
+            'live_panel': bool(self.settings.value('user interface/live panel')),
+            'show_projectors': bool(self.settings.value('user interface/show projectors')),
+        }
+        return json.dumps(blob)
+
+    def _apply_preset_visibility_snapshot(self, raw: str) -> None:
+        if not raw or not str(raw).strip():
+            return
+        try:
+            blob = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return
+        show_library = bool(blob.get('show_library', True))
+        show_service = bool(blob.get('show_service', True))
+        show_themes = bool(blob.get('show_themes', True))
+        preview_panel = bool(blob.get('preview_panel', True))
+        live_panel = bool(blob.get('live_panel', True))
+        show_projectors = bool(blob.get('show_projectors', False))
+        self.settings.setValue('user interface/show library', show_library)
+        self.settings.setValue('user interface/show service', show_service)
+        self.settings.setValue('user interface/show themes', show_themes)
+        self.settings.setValue('user interface/preview panel', preview_panel)
+        self.settings.setValue('user interface/live panel', live_panel)
+        self.settings.setValue('user interface/show projectors', show_projectors)
+        with self._mute_left_dock_visibility_signals():
+            self.media_manager_dock.setVisible(show_library)
+            self.service_manager_dock.setVisible(show_service)
+            self.theme_manager_dock.setVisible(show_themes)
+        self.view_media_manager_item.setChecked(show_library)
+        self.view_service_manager_item.setChecked(show_service)
+        self.view_theme_manager_item.setChecked(show_themes)
+        self.preview_controller.panel.setVisible(preview_panel)
+        self.view_preview_panel.setChecked(preview_panel)
+        self.live_controller.panel.setVisible(live_panel)
+        self.view_live_panel.setChecked(live_panel)
+        self.projector_manager_dock.setVisible(show_projectors)
+        self.view_projector_manager_item.setChecked(show_projectors)
+
+    def _save_current_layout_to_preset(self, mode: str) -> None:
+        self.settings.setValue(_preset_layout_storage_key(mode, 'main window state'), self.saveState())
+        self.settings.setValue(
+            _preset_layout_storage_key(mode, 'main window splitter geometry'), self.control_splitter.saveState())
+        self.settings.setValue(
+            _preset_layout_storage_key(mode, 'live splitter geometry'), self.live_controller.splitter.saveState())
+        self.settings.setValue(
+            _preset_layout_storage_key(mode, 'preview splitter geometry'), self.preview_controller.splitter.saveState())
+        self.settings.setValue(
+            _preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), self._preset_visibility_snapshot_json())
+
+    def _restore_layout_from_preset(self, mode: str) -> None:
+        state = self.settings.value(_preset_layout_storage_key(mode, 'main window state'))
+        if state and len(state) > 0:
+            self.restoreState(state)
+        self.live_controller.splitter.restoreState(
+            self.settings.value(_preset_layout_storage_key(mode, 'live splitter geometry')))
+        self.preview_controller.splitter.restoreState(
+            self.settings.value(_preset_layout_storage_key(mode, 'preview splitter geometry')))
+        self.control_splitter.restoreState(
+            self.settings.value(_preset_layout_storage_key(mode, 'main window splitter geometry')))
+        self.control_splitter.setChildrenCollapsible(False)
+
+    def _activate_layout_preset(self, mode: str) -> None:
+        prev = self.settings.value('core/view mode')
+        if (self.settings.value('user interface/is preset layout') and prev in _PRESET_LAYOUT_MODES and prev != mode):
+            self._save_current_layout_to_preset(prev)
+        if mode == 'default':
+            self.set_view_mode(True, True, True, True, True, False, 'default')
+            self.mode_default_item.setChecked(True)
+        elif mode == 'setup':
+            self.set_view_mode(True, True, True, True, False, False, 'setup')
+            self.mode_setup_item.setChecked(True)
+        elif mode == 'live':
+            self.set_view_mode(False, True, False, True, True, False, 'live')
+            self.mode_live_item.setChecked(True)
+        self.settings.setValue('user interface/is preset layout', True)
+        self.settings.setValue('projector/show after wizard', True)
+        if mode == 'default':
+            self.mode_setup_item.setChecked(False)
+            self.mode_live_item.setChecked(False)
+        elif mode == 'setup':
+            self.mode_default_item.setChecked(False)
+            self.mode_live_item.setChecked(False)
+        elif mode == 'live':
+            self.mode_default_item.setChecked(False)
+            self.mode_setup_item.setChecked(False)
+        if _preset_layout_has_saved_state(self.settings, mode):
+            self._restore_layout_from_preset(mode)
+            snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
+            self._apply_preset_visibility_snapshot(snap)
+        self._schedule_left_column_dock_layout()
+
+    def on_mode_reset_layout_presets_clicked(self) -> None:
+        answer = QtWidgets.QMessageBox.warning(
+            self,
+            translate('OpenLP.MainWindow', 'Reset layout presets?'),
+            translate('OpenLP.MainWindow', 'This will revert customisations for all layout presets.\n\n'
+                      'Do you want to continue?'),
+            QtWidgets.QMessageBox.StandardButton(
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No),
+            QtWidgets.QMessageBox.StandardButton.No)
+        # QMessageBox may return StandardButton or int depending on platform / Qt build.
+        yes = QtWidgets.QMessageBox.StandardButton.Yes
+        if int(answer) != int(yes):
+            return
+        empty = QtCore.QByteArray()
+        for preset_mode in _PRESET_LAYOUT_MODES:
+            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'main window state'), empty)
+            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'main window splitter geometry'), empty)
+            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'live splitter geometry'), empty)
+            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'preview splitter geometry'), empty)
+            self.settings.setValue(_preset_layout_storage_key(preset_mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '')
+        view_mode = self.settings.value('core/view mode')
+        if view_mode not in _PRESET_LAYOUT_MODES:
+            return
+        # Drop in-memory window/dock/splitter state so the factory preset can take effect visually; clearing preset
+        # keys alone leaves QMainWindow.restoreState() layout and global splitter bytes unchanged.
+        self.restoreState(empty)
+        self.settings.setValue('user interface/main window state', empty)
+        self.control_splitter.restoreState(empty)
+        self.settings.setValue('user interface/main window splitter geometry', empty)
+        self.live_controller.splitter.restoreState(empty)
+        self.settings.setValue('user interface/live splitter geometry', empty)
+        self.preview_controller.splitter.restoreState(empty)
+        self.settings.setValue('user interface/preview splitter geometry', empty)
+        self.control_splitter.setChildrenCollapsible(False)
+        self.settings.setValue('user interface/is preset layout', True)
+        if view_mode == 'default':
+            self.set_view_mode(True, True, True, True, True, False, 'default')
+        elif view_mode == 'setup':
+            self.set_view_mode(True, True, True, True, False, False, 'setup')
+        else:
+            self.set_view_mode(False, True, False, True, True, False, 'live')
+        self.settings.setValue('user interface/is preset layout', True)
+        self._deferred_apply_left_column_dock_layout()
+
     def toggle_media_manager(self):
         """
         Toggle the visibility of the media manager
@@ -1260,13 +1435,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.settings.setValue('user interface/show library', want_visible)
             self.media_manager_dock.setVisible(want_visible)
             self.view_media_manager_item.setChecked(want_visible)
-            self.settings.setValue('user interface/is preset layout', False)
+            self._leave_named_preset_layout_if_unpinned()
             return
         if self.sender() is self.media_manager_dock and self._dock_hidden_only_as_inactive_tab(self.media_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
         self.settings.setValue('user interface/show library', self.media_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+        self._leave_named_preset_layout_if_unpinned()
         self.view_media_manager_item.setChecked(self.settings.value('user interface/show library'))
 
     def toggle_projector_manager(self):
@@ -1276,7 +1451,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         if self.sender() is self.view_projector_manager_item:
             self.projector_manager_dock.setVisible(not self.projector_manager_dock.isVisible())
         self.view_projector_manager_item.setChecked(self.projector_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+        self._leave_named_preset_layout_if_unpinned()
         self.settings.setValue('user interface/show projectors', self.projector_manager_dock.isVisible())
         # Check/uncheck checkbox on First time wizard based on visibility of this panel.
         if not self.settings.value('projector/show after wizard'):
@@ -1293,14 +1468,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.settings.setValue('user interface/show service', want_visible)
             self.service_manager_dock.setVisible(want_visible)
             self.view_service_manager_item.setChecked(want_visible)
-            self.settings.setValue('user interface/is preset layout', False)
+            self._leave_named_preset_layout_if_unpinned()
             return
         if self.sender() is self.service_manager_dock and self._dock_hidden_only_as_inactive_tab(
                 self.service_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
         self.settings.setValue('user interface/show service', self.service_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+        self._leave_named_preset_layout_if_unpinned()
         self.view_service_manager_item.setChecked(self.settings.value('user interface/show service'))
 
     def toggle_theme_manager(self):
@@ -1312,13 +1487,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.settings.setValue('user interface/show themes', want_visible)
             self.theme_manager_dock.setVisible(want_visible)
             self.view_theme_manager_item.setChecked(want_visible)
-            self.settings.setValue('user interface/is preset layout', False)
+            self._leave_named_preset_layout_if_unpinned()
             return
         if self.sender() is self.theme_manager_dock and self._dock_hidden_only_as_inactive_tab(self.theme_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
         self.settings.setValue('user interface/show themes', self.theme_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+        self._leave_named_preset_layout_if_unpinned()
         self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
 
     def set_preview_panel_visibility(self, is_visible: bool, *, update_preset_layout_flag: bool = True):
@@ -1334,7 +1509,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.setValue('user interface/preview panel', is_visible)
         self.view_preview_panel.setChecked(is_visible)
         if update_preset_layout_flag:
-            self.settings.setValue('user interface/is preset layout', False)
+            self._leave_named_preset_layout_if_unpinned()
 
     def set_lock_panel(self, is_locked: bool):
         """
@@ -1382,6 +1557,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         thm = self.settings.value('user interface/show themes')
 
         if self.settings.value('user interface/is preset layout'):
+            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
+                return (lib, svc, thm)
             if mode == 'live':
                 return False, True, False
             if mode in ('default', 'setup'):
@@ -1434,8 +1611,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         QMainWindow layout and restoreState have settled (avoids splitDockWidget crashes during bootstrap).
         """
         try:
+            mode = self.settings.value('core/view mode')
+            skip_for_saved_preset = (
+                self.settings.value('user interface/is preset layout')
+                and mode in _PRESET_LAYOUT_MODES
+                and _preset_layout_has_saved_state(self.settings, mode))
             with self._mute_left_dock_visibility_signals():
-                self._reapply_left_column_dock_layout()
+                if not skip_for_saved_preset:
+                    self._reapply_left_column_dock_layout()
                 show_lib, show_svc, show_thm = self._left_dock_visibility_from_settings()
                 self.settings.setValue('user interface/show library', show_lib)
                 self.settings.setValue('user interface/show service', show_svc)
@@ -1463,7 +1646,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.setValue('user interface/live panel', is_visible)
         self.view_live_panel.setChecked(is_visible)
         if update_preset_layout_flag:
-            self.settings.setValue('user interface/is preset layout', False)
+            self._leave_named_preset_layout_if_unpinned()
 
     def load_settings(self):
         """
@@ -1488,6 +1671,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.media_manager_dock.setVisible(self.settings.value('user interface/show library'))
         self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
         self._sync_left_dock_menu_checks_from_settings()
+        if self.settings.value('user interface/is preset layout'):
+            mode = self.settings.value('core/view mode')
+            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
+                self._restore_layout_from_preset(mode)
+                snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
+                self._apply_preset_visibility_snapshot(snap)
+                self._sync_left_dock_menu_checks_from_settings()
 
     def _window_position_is_valid(self, position: QtCore.QPoint, geometry: QtCore.QRect):
         """
@@ -1527,6 +1717,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.setValue('user interface/preview splitter geometry', self.preview_controller.splitter.saveState())
         self.settings.setValue('user interface/main window splitter geometry', self.control_splitter.saveState())
         self.theme_manager.save_settings()
+        if self.settings.value('user interface/is preset layout'):
+            mode = self.settings.value('core/view mode')
+            if mode in _PRESET_LAYOUT_MODES:
+                self._save_current_layout_to_preset(mode)
 
     def update_recent_files_menu(self):
         """
