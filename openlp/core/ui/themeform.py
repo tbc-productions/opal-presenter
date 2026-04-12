@@ -65,7 +65,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Set up the class. This method is mocked out by the tests.
         """
         self.setup_ui(self)
-        self.setMinimumSize(1100, 820)
+        self.setMinimumSize(900, 400)
+        self.setMaximumHeight(640)
         self.can_update_theme = True
         self._updating_page_values = False
         self._initial_preview_refresh_pending = False
@@ -86,6 +87,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if hasattr(self, 'play_transition_button'):
             self.play_transition_button.clicked.connect(self.preview_transition)
             self._set_play_transition_button_visible(False)
+        if hasattr(self, 'preview_box'):
+            self.preview_box.allow_theme_transitions = False
         if hasattr(self, 'help_button'):
             self.help_button.clicked.connect(self.provide_help)
         if hasattr(self, 'export_theme_button'):
@@ -139,6 +142,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.set_main_area_page_values()
         self.set_footer_area_page_values()
         self.set_alignment_page_values()
+        self.set_transition_page_values()
         self.set_position_page_values()
         self.set_preview_page_values()
 
@@ -163,6 +167,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             return
         self.update_theme()
         self.theme_manager.generate_image(self.theme, True)
+        self.preview_box.allow_theme_transitions = True
         self.preview_box.clear_slides()
         self.preview_box.show()
         self.preview_box.generate_preview_two_slides(self.theme)
@@ -394,6 +399,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
                 self.set_footer_area_page_values()
             elif wizard_page == self.alignment_page:
                 self.set_alignment_page_values()
+            elif hasattr(self, 'transitions_page') and wizard_page == self.transitions_page:
+                self.set_transition_page_values()
             elif wizard_page == self.area_position_page:
                 self.set_position_page_values()
         finally:
@@ -419,12 +426,13 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.alignment_page.vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
         self.alignment_page.footer_horizontal_combo_box.currentIndexChanged.connect(self.calculate_lines)
         self.alignment_page.footer_vertical_combo_box.currentIndexChanged.connect(self.calculate_lines)
-        self.alignment_page.transitions_enabled_check_box.toggled.connect(self._set_play_transition_button_visible)
-        self.alignment_page.transitions_enabled_check_box.toggled.connect(self.preview_transition)
-        self.alignment_page.transition_effect_combo_box.currentIndexChanged.connect(self.preview_transition)
-        self.alignment_page.transition_speed_combo_box.currentIndexChanged.connect(self.preview_transition)
-        self.alignment_page.transition_direction_combo_box.currentIndexChanged.connect(self.preview_transition)
-        self.alignment_page.transition_reverse_check_box.toggled.connect(self.preview_transition)
+        self.alignment_page.transition_reverse_check_box.toggled.connect(self.calculate_lines)
+        self.transitions_page.transitions_enabled_check_box.toggled.connect(self._set_play_transition_button_visible)
+        self.transitions_page.transitions_enabled_check_box.toggled.connect(self._sync_transition_reverse_enabled_state)
+        self.transitions_page.transitions_enabled_check_box.toggled.connect(self.calculate_lines)
+        self.transitions_page.transition_effect_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.transitions_page.transition_speed_combo_box.currentIndexChanged.connect(self.calculate_lines)
+        self.transitions_page.transition_direction_combo_box.currentIndexChanged.connect(self.calculate_lines)
         self.area_position_page.main_position_check_box.toggled.connect(self.calculate_lines)
         self.area_position_page.main_x_spin_box.valueChanged.connect(self.calculate_lines)
         self.area_position_page.main_y_spin_box.valueChanged.connect(self.calculate_lines)
@@ -442,6 +450,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         if not hasattr(self, 'preview_box'):
             return
+        self.preview_box.allow_theme_transitions = False
         self._initial_preview_refresh_pending = False
         self.preview_box.clear_slides()
         self.preview_box.show()
@@ -644,12 +653,28 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.alignment_page.vertical_align = self.theme.display_vertical_align
         self.alignment_page.horizontal_align_footer = self.theme.display_horizontal_align_footer
         self.alignment_page.vertical_align_footer = self.theme.display_vertical_align_footer
-        self.alignment_page.is_transition_enabled = self.theme.display_slide_transition
-        self.alignment_page.transition_type = self.theme.display_slide_transition_type
-        self.alignment_page.transition_speed = self.theme.display_slide_transition_speed
-        self.alignment_page.transition_direction = self.theme.display_slide_transition_direction
         self.alignment_page.is_transition_reverse_enabled = self.theme.display_slide_transition_reverse
+
+    def set_transition_page_values(self):
+        """
+        Handle the display and state of the Transitions page.
+        """
+        transitions_page = getattr(self, 'transitions_page', None)
+        if transitions_page is None:
+            transitions_page = self.alignment_page
+        transitions_page.is_transition_enabled = self.theme.display_slide_transition
+        transitions_page.transition_type = self.theme.display_slide_transition_type
+        transitions_page.transition_speed = self.theme.display_slide_transition_speed
+        transitions_page.transition_direction = self.theme.display_slide_transition_direction
+        self._sync_transition_reverse_enabled_state(self.theme.display_slide_transition)
         self._set_play_transition_button_visible(self.theme.display_slide_transition)
+
+    def _sync_transition_reverse_enabled_state(self, is_enabled):
+        """
+        Keep the formatting page RTL option always enabled.
+        """
+        if hasattr(self, 'alignment_page') and hasattr(self.alignment_page, 'transition_reverse_check_box'):
+            self.alignment_page.transition_reverse_check_box.setEnabled(True)
 
     def set_preview_page_values(self):
         """
@@ -740,10 +765,13 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.display_vertical_align = self.alignment_page.vertical_align
         self.theme.display_horizontal_align_footer = self.alignment_page.horizontal_align_footer
         self.theme.display_vertical_align_footer = self.alignment_page.vertical_align_footer
-        self.theme.display_slide_transition = self.alignment_page.is_transition_enabled
-        self.theme.display_slide_transition_type = self.alignment_page.transition_type
-        self.theme.display_slide_transition_speed = self.alignment_page.transition_speed
-        self.theme.display_slide_transition_direction = self.alignment_page.transition_direction
+        transitions_page = getattr(self, 'transitions_page', None)
+        if transitions_page is None:
+            transitions_page = self.alignment_page
+        self.theme.display_slide_transition = transitions_page.is_transition_enabled
+        self.theme.display_slide_transition_type = transitions_page.transition_type
+        self.theme.display_slide_transition_speed = transitions_page.transition_speed
+        self.theme.display_slide_transition_direction = transitions_page.transition_direction
         self.theme.display_slide_transition_reverse = self.alignment_page.is_transition_reverse_enabled
 
     def accept(self):

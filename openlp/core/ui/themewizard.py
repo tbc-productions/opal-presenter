@@ -26,7 +26,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.display.render import ThemePreviewRenderer
 from openlp.core.lib.ui import create_button_box
-from openlp.core.pages.alignment import AlignmentTransitionsPage
+from openlp.core.pages.alignment import AlignmentPage, TransitionsPage
 from openlp.core.pages.areaposition import AreaPositionPage
 from openlp.core.pages.background import BackgroundPage
 from openlp.core.pages.fontselect import FontSelectPage
@@ -45,25 +45,19 @@ class Ui_ThemeWizard(object):
         theme_dialog.setObjectName('OpenLP.ThemeWizard')
         theme_dialog.setWindowIcon(UiIcons().main_icon)
         theme_dialog.setModal(True)
-        theme_dialog.resize(1100, 820)
+        theme_dialog.resize(1100, 640)
         self.dialog_main_layout = QtWidgets.QVBoxLayout(theme_dialog)
         self.dialog_main_layout.setObjectName('dialog_main_layout')
         self.dialog_main_layout.setContentsMargins(0, 0, 0, 0)
         self.dialog_main_layout.setSpacing(0)
-        self.scroll_area = QtWidgets.QScrollArea(theme_dialog)
-        self.scroll_area.setObjectName('theme_wizard_scroll_area')
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scroll_content = QtWidgets.QWidget()
-        self.scroll_content.setObjectName('theme_wizard_scroll_content')
-        self.dialog_layout = QtWidgets.QGridLayout(self.scroll_content)
+        self.dialog_layout_widget = QtWidgets.QWidget(theme_dialog)
+        self.dialog_layout_widget.setObjectName('theme_wizard_content')
+        self.dialog_layout = QtWidgets.QGridLayout(self.dialog_layout_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.dialog_layout.setContentsMargins(14, 14, 14, 12)
         self.dialog_layout.setHorizontalSpacing(12)
         self.dialog_layout.setVerticalSpacing(10)
-        self.scroll_area.setWidget(self.scroll_content)
-        self.dialog_main_layout.addWidget(self.scroll_area)
+        self.dialog_main_layout.addWidget(self.dialog_layout_widget)
 
         self.theme_name_layout = QtWidgets.QFormLayout()
         self.theme_name_layout.setObjectName('theme_name_layout')
@@ -99,7 +93,14 @@ class Ui_ThemeWizard(object):
         self.editor_layout.setSpacing(10)
         self.page_stack = QtWidgets.QStackedWidget(self.editor_widget)
         self.page_stack.setObjectName('page_stack')
-        self.editor_layout.addWidget(self.page_stack)
+        self.page_stack_scroll_area = QtWidgets.QScrollArea(self.editor_widget)
+        self.page_stack_scroll_area.setObjectName('page_stack_scroll_area')
+        self.page_stack_scroll_area.setWidgetResizable(True)
+        self.page_stack_scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.page_stack_scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.page_stack_scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.page_stack_scroll_area.setWidget(self.page_stack)
+        self.editor_layout.addWidget(self.page_stack_scroll_area)
         self.dialog_layout.addWidget(self.editor_widget, 1, 1, 1, 1)
 
         self.preview_panel = QtWidgets.QWidget(theme_dialog)
@@ -188,15 +189,19 @@ class Ui_ThemeWizard(object):
         self.footer_area_page.setObjectName('footer_area_page')
         self.page_stack.addWidget(self.footer_area_page)
         # Alignment Page
-        self.alignment_page = AlignmentTransitionsPage()
+        self.alignment_page = AlignmentPage()
         self.alignment_page.setObjectName('alignment_page')
         self.page_stack.addWidget(self.alignment_page)
+        # Transitions Page
+        self.transitions_page = TransitionsPage()
+        self.transitions_page.setObjectName('transitions_page')
+        self.page_stack.addWidget(self.transitions_page)
         # Area Position Page
         self.area_position_page = AreaPositionPage()
         self.area_position_page.setObjectName('area_position_page')
         self.page_stack.addWidget(self.area_position_page)
 
-        self.page_list_widget.addItems(['', '', '', '', ''])
+        self.page_list_widget.addItems(['', '', '', '', '', ''])
         self.page_list_widget.setCurrentRow(0)
 
         self.button_box = create_button_box(theme_dialog, 'button_box', ['cancel', 'save'])
@@ -224,7 +229,8 @@ class Ui_ThemeWizard(object):
         self.page_list_widget.item(1).setText(translate('OpenLP.ThemeWizard', 'Main Text'))
         self.page_list_widget.item(2).setText(translate('OpenLP.ThemeWizard', 'Footer Text'))
         self.page_list_widget.item(3).setText(translate('OpenLP.ThemeWizard', 'Formatting'))
-        self.page_list_widget.item(4).setText(translate('OpenLP.ThemeWizard', 'Positions'))
+        self.page_list_widget.item(4).setText(translate('OpenLP.ThemeWizard', 'Transitions'))
+        self.page_list_widget.item(5).setText(translate('OpenLP.ThemeWizard', 'Positions'))
         self.preview_label.setText(translate('OpenLP.ThemeWizard', 'Preview'))
         self.layout_guide_action.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
         self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
