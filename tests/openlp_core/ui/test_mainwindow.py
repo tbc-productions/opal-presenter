@@ -101,6 +101,8 @@ def main_window_reduced(settings, state):
             patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot'), \
         patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \
             patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.addDockWidget'), \
+            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.splitDockWidget'), \
+            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.tabifyDockWidget'), \
             patch('openlp.core.ui.mainwindow.QtGui.QActionGroup'), \
             patch('openlp.core.ui.mainwindow.ServiceManager'), \
             patch('openlp.core.ui.mainwindow.ThemeManager'), \
@@ -677,7 +679,7 @@ def test_load_settings_view_mode_default_mode(mocked_view_mode, mocked_show, mai
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, True, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, True, False)
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -702,7 +704,7 @@ def test_load_settings_view_mode_setup_mode(mocked_view_mode, mocked_show, main_
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, False, True, False, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, False, False)
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -727,7 +729,7 @@ def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_w
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(False, True, False, False, True, True)
+    mocked_view_mode.assert_called_with(False, True, False, True, True, False)
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -750,7 +752,7 @@ def test_load_settings_view_mode_preview(mocked_view_mode, main_window, settings
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, False, True, True)
+    mocked_view_mode.assert_called_with(True, True, True, False, True, False)
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -773,7 +775,7 @@ def test_load_settings_view_mode_live(mocked_view_mode, main_window, settings):
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, False, True)
+    mocked_view_mode.assert_called_with(True, True, True, True, False, False)
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')

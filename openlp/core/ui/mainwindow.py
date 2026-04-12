@@ -139,28 +139,30 @@ class Ui_MainWindow(object):
         self.default_theme_label.setObjectName('default_theme_label')
         self.default_theme_label.setContentsMargins(8, 0, 12, 0)
         self.status_bar.addPermanentWidget(self.default_theme_label)
-        # Create the MediaManager
+        # Library and Themes are separate dock widgets; Qt tabifies them in the same dock area.
         self.media_manager_dock = OpenLPDockWidget(main_window, 'media_manager_dock',
                                                    UiIcons().box)
-        # Create the media manager tabs.
         self.media_tool_box = MediaToolBox()
         self.media_tool_box.setObjectName('media_tool_box')
         self.media_tool_box.setStyleSheet(get_library_stylesheet())
         self.media_manager_dock.setWidget(self.media_tool_box)
-        main_window.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)
-        # Create the service manager
-        self.service_manager_dock = OpenLPDockWidget(main_window, 'service_manager_dock',
-                                                     UiIcons().live)
-        self.service_manager_contents = ServiceManager(self.service_manager_dock)
-        self.service_manager_dock.setWidget(self.service_manager_contents)
-        main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.service_manager_dock)
-        # Create the theme manager
         self.theme_manager_dock = OpenLPDockWidget(main_window, 'theme_manager_dock',
                                                    UiIcons().theme)
         self.theme_manager_contents = ThemeManager(self.theme_manager_dock)
         self.theme_manager_contents.setObjectName('theme_manager_contents')
         self.theme_manager_dock.setWidget(self.theme_manager_contents)
-        main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.theme_manager_dock)
+        # Create the service manager
+        self.service_manager_dock = OpenLPDockWidget(main_window, 'service_manager_dock',
+                                                     UiIcons().live)
+        self.service_manager_contents = ServiceManager(self.service_manager_dock)
+        self.service_manager_dock.setWidget(self.service_manager_contents)
+        main_window.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
+        main_window.splitDockWidget(self.service_manager_dock, self.media_manager_dock,
+                                    QtCore.Qt.Orientation.Vertical)
+        # Do not addDockWidget(theme) on the left: Qt would tabify it with another left dock (often Service).
+        # tabifyDockWidget attaches Themes only to Library, below Service.
+        main_window.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
+        self.media_manager_dock.raise_()
         # Create the projector manager
         self.projector_manager_dock = OpenLPDockWidget(parent=main_window,
                                                        name='projector_manager_dock',
@@ -348,6 +350,8 @@ class Ui_MainWindow(object):
         # Initialise the translation
         self.retranslate_ui(main_window)
         self.media_tool_box.setCurrentIndex(0)
+        self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
+        self.view_theme_manager_item.setChecked(self.theme_manager_dock.isVisible())
         # Connect up some signals and slots
         self.file_menu.aboutToShow.connect(self.update_recent_files_menu)
         # Hide the entry, as it does not have any functionality yet.
@@ -372,8 +376,8 @@ class Ui_MainWindow(object):
         self.settings_menu.setTitle(translate('OpenLP.MainWindow', '&Settings'))
         self.settings_language_menu.setTitle(translate('OpenLP.MainWindow', '&Language'))
         self.help_menu.setTitle(translate('OpenLP.MainWindow', '&Help'))
-        self.media_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Library'))
         self.service_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Service'))
+        self.media_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Library'))
         self.theme_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Themes'))
         self.projector_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Projector Controller'))
         self.file_new_item.setText(translate('OpenLP.MainWindow', '&New Service'))
@@ -468,7 +472,9 @@ class Ui_MainWindow(object):
         self.mode_setup_item.setStatusTip(translate('OpenLP.MainWindow', 'Use layout that focuses on setting'
                                                                          ' up the Service.'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
-        self.mode_live_item.setStatusTip(translate('OpenLP.MainWindow', 'Use layout that focuses on Live.'))
+        self.mode_live_item.setStatusTip(translate(
+            'OpenLP.MainWindow',
+            'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
@@ -678,13 +684,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # If we are using a default mode set accordingly
         if self.settings.value('user interface/is preset layout'):
             if view_mode == 'default':
-                self.set_view_mode(True, True, True, True, True, True)
+                self.set_view_mode(True, True, True, True, True, False)
                 self.mode_default_item.setChecked(True)
             elif view_mode == 'setup':
-                self.set_view_mode(True, True, False, True, False, True)
+                self.set_view_mode(True, True, True, True, False, False)
                 self.mode_setup_item.setChecked(True)
             elif view_mode == 'live':
-                self.set_view_mode(False, True, False, False, True, True)
+                self.set_view_mode(False, True, False, True, True, False)
                 self.mode_live_item.setChecked(True)
         else:
             self.set_view_mode(
@@ -1003,7 +1009,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Put OpenLP into "Default" view mode.
         """
-        self.set_view_mode(True, True, True, True, True, True, 'default')
+        self.set_view_mode(True, True, True, True, True, False, 'default')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
@@ -1011,15 +1017,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Put OpenLP into "Setup" view mode.
         """
-        self.set_view_mode(True, True, False, True, False, True, 'setup')
+        self.set_view_mode(True, True, True, True, False, False, 'setup')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
     def on_mode_live_item_clicked(self):
         """
-        Put OpenLP into "Live" view mode.
+        Put OpenLP into "Live" view mode (Preview and Live slide controllers; Library hidden).
         """
-        self.set_view_mode(False, True, False, False, True, True, 'live')
+        self.set_view_mode(False, True, False, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
@@ -1289,6 +1295,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.view_live_panel.setEnabled(True)
         self.settings.setValue('user interface/lock panel', is_locked)
 
+    def _reapply_left_column_dock_layout(self) -> None:
+        """
+        Saved QMainWindow state often tabifies Service with Library. Enforce: Service on top,
+        Library + Themes tabified together in the row below (same dock cell as each other only).
+        """
+        no_area = QtCore.Qt.DockWidgetArea.NoDockWidgetArea
+        for dock in (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock):
+            if self.dockWidgetArea(dock) != no_area:
+                self.removeDockWidget(dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
+        self.splitDockWidget(self.service_manager_dock, self.media_manager_dock,
+                             QtCore.Qt.Orientation.Vertical)
+        self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
+        self.media_manager_dock.raise_()
+
     def set_live_panel_visibility(self, is_visible: bool):
         """
         Sets the visibility of the live panel including saving the setting and updating the menu.
@@ -1321,6 +1342,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # This needs to be called after restoreState(), because saveState() also saves the "Collapsible" property
         # which was True (by default) < OpenLP 2.1.
         self.control_splitter.setChildrenCollapsible(False)
+        self._reapply_left_column_dock_layout()
+        self.service_manager_dock.setVisible(self.settings.value('user interface/show service'))
+        self.media_manager_dock.setVisible(self.settings.value('user interface/show library'))
+        self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
+        self.view_service_manager_item.setChecked(self.service_manager_dock.isVisible())
+        self.view_media_manager_item.setChecked(self.media_manager_dock.isVisible())
+        self.view_theme_manager_item.setChecked(self.theme_manager_dock.isVisible())
 
     def _window_position_is_valid(self, position: QtCore.QPoint, geometry: QtCore.QRect):
         """

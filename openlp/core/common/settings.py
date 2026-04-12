@@ -516,7 +516,7 @@ class Settings(QtCore.QSettings):
         'user interface/preview splitter geometry': QtCore.QByteArray(),
         'user interface/theme manager view mode': 0,
         'user interface/show library': True,
-        'user interface/show projectors': True,
+        'user interface/show projectors': False,
         'user interface/show service': True,
         'user interface/show themes': True,
         'projector/show after wizard': False,
