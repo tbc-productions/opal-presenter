@@ -51,6 +51,22 @@ DEFAULT_BIBLE_REFERENCE_FORMAT = '${bible_reference} (${copyright})'
 VALID_TEXT_SEARCH = re.compile(r'\w\w\w')
 
 
+def _bible_slide_row_label(first_data, last_data, seps):
+    """
+    Short label for the slide controller: chapter+verse_sep+verse, with range or list sep when needed.
+    """
+    vsep, rsep, lsep = seps['verse'], seps['range'], seps['list']
+    if first_data['chapter'] == last_data['chapter']:
+        ch = first_data['chapter']
+        if first_data['verse'] == last_data['verse']:
+            return '{ch}{v}{verse}'.format(ch=ch, v=vsep, verse=first_data['verse'])
+        return '{ch}{v}{start}{r}{end}'.format(
+            ch=ch, v=vsep, start=first_data['verse'], r=rsep, end=last_data['verse'])
+    a = '{ch}{v}{verse}'.format(ch=first_data['chapter'], v=vsep, verse=first_data['verse'])
+    b = '{ch}{v}{verse}'.format(ch=last_data['chapter'], v=vsep, verse=last_data['verse'])
+    return '{a}{l}{b}'.format(a=a, l=lsep, b=b)
+
+
 def get_reference_separators():
     return {'verse': get_reference_separator('sep_v_display'),
             'range': get_reference_separator('sep_r_display'),
@@ -993,24 +1009,26 @@ class BibleMediaItem(MediaManagerItem):
             return False
         bible_text = ''
         old_chapter = -1
-        raw_slides = []
+        raw_slide_entries = []
+        ref_seps = get_reference_separators()
         verses = VerseReferenceList()
         for bitem in items:
             data = bitem.data(QtCore.Qt.ItemDataRole.UserRole)
             verses.add(
                 data['book'], data['chapter'], data['verse'], data['version'], data['copyright'], data['permissions'])
             verse_text = self.format_verse(old_chapter, data['chapter'], data['verse'])
+            row_lbl = '{ch}{v}{verse}'.format(ch=data['chapter'], v=ref_seps['verse'], verse=data['verse'])
             # We only support 'Verse Per Slide' when using a scond bible
             if data['second_bible']:
                 second_text = self.format_verse(old_chapter, data['chapter'], data['verse'])
                 bible_text = '{first_version}{data[text]}\n\n{second_version}{data[second_text]}'\
                     .format(first_version=verse_text, second_version=second_text, data=data)
-                raw_slides.append(bible_text.rstrip())
+                raw_slide_entries.append((bible_text.rstrip(), row_lbl))
                 bible_text = ''
             # If we are 'Verse Per Slide' then create a new slide.
             elif self.settings_tab.layout_style == LayoutStyle.VersePerSlide:
                 bible_text = '{first_version}{data[text]}'.format(first_version=verse_text, data=data)
-                raw_slides.append(bible_text.rstrip())
+                raw_slide_entries.append((bible_text.rstrip(), row_lbl))
                 bible_text = ''
             # If we are 'Verse Per Line' then force a new line.
             elif self.settings_tab.layout_style == LayoutStyle.VersePerLine:
@@ -1057,7 +1075,9 @@ class BibleMediaItem(MediaManagerItem):
             service_item.raw_footer.append(permission_text)
         # If there are no more items we check whether we have to add bible_text.
         if bible_text:
-            raw_slides.append(bible_text.lstrip())
+            _first = items[0].data(QtCore.Qt.ItemDataRole.UserRole)
+            _last = items[-1].data(QtCore.Qt.ItemDataRole.UserRole)
+            raw_slide_entries.append((bible_text.lstrip(), _bible_slide_row_label(_first, _last, ref_seps)))
         # Service Item: Capabilities
         if self.settings_tab.layout_style == LayoutStyle.Continuous and not data['second_bible']:
             # Split the line but do not replace line breaks in renderer.
@@ -1078,8 +1098,8 @@ class BibleMediaItem(MediaManagerItem):
         # Service Item: Theme
         if self.settings_tab.bible_theme:
             service_item.theme = self.settings_tab.bible_theme
-        for slide in raw_slides:
-            service_item.add_from_text(slide)
+        for slide_text, verse_row in raw_slide_entries:
+            service_item.add_from_text(slide_text, verse_row)
         return True
 
     def _render_bible_reference(self, bible_reference, version, copyright, permission):

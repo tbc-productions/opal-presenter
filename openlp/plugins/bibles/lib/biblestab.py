@@ -276,24 +276,23 @@ class BiblesTab(SettingsTab):
     def on_language_selection_combo_box_changed(self):
         self.language_selection = self.language_selection_combo_box.currentIndex()
 
+    @staticmethod
+    def _check_state_is_checked(check_state):
+        # PySide6 stateChanged passes int (0/1/2); direct enum compare fails (2 != CheckState.Checked).
+        return QtCore.Qt.CheckState(check_state) == QtCore.Qt.CheckState.Checked
+
     def on_is_verse_number_visible_check_box_changed(self, check_state):
         """
         Event handler for the 'verse number visible' check box
         """
-        self.is_verse_number_visible = (check_state == QtCore.Qt.CheckState.Checked)
+        self.is_verse_number_visible = self._check_state_is_checked(check_state)
         self.check_is_verse_number_visible()
 
     def on_new_chapters_check_box_changed(self, check_state):
-        self.show_new_chapters = False
-        # We have a set value convert to True/False.
-        if check_state == QtCore.Qt.CheckState.Checked:
-            self.show_new_chapters = True
+        self.show_new_chapters = self._check_state_is_checked(check_state)
 
     def on_bible_second_check_box(self, check_state):
-        self.second_bibles = False
-        # We have a set value convert to True/False.
-        if check_state == QtCore.Qt.CheckState.Checked:
-            self.second_bibles = True
+        self.second_bibles = self._check_state_is_checked(check_state)
 
     def on_verse_separator_check_box_clicked(self, checked):
         if checked:
@@ -375,19 +374,19 @@ class BiblesTab(SettingsTab):
         """
         Event handler for the 'hide_combined_quick_error' check box
         """
-        self.reset_to_combined_quick_search = (check_state == QtCore.Qt.CheckState.Checked)
+        self.reset_to_combined_quick_search = self._check_state_is_checked(check_state)
 
     def on_hide_combined_quick_error_check_box_changed(self, check_state):
         """
         Event handler for the 'hide_combined_quick_error' check box
         """
-        self.hide_combined_quick_error = (check_state == QtCore.Qt.CheckState.Checked)
+        self.hide_combined_quick_error = self._check_state_is_checked(check_state)
 
     def on_bible_search_while_typing_check_box_changed(self, check_state):
         """
         Event handler for the 'hide_combined_quick_error' check box
         """
-        self.bible_search_while_typing = (check_state == QtCore.Qt.CheckState.Checked)
+        self.bible_search_while_typing = self._check_state_is_checked(check_state)
 
     def load(self):
         self.is_verse_number_visible = self.settings.value('bibles/is verse number visible')

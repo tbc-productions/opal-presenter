@@ -213,6 +213,14 @@ class ServiceItem(RegistryProperties):
         index = 0
         if not self.footer_html:
             self.footer_html = '<br>'.join([_f for _f in self.raw_footer if _f])
+        if self.name == 'bibles':
+            from openlp.plugins.bibles.lib.slidelabel import (
+                bible_chapter_hint_from_row_tag,
+                row_label_from_raw_page_text,
+            )
+        else:
+            bible_chapter_hint_from_row_tag = None
+            row_label_from_raw_page_text = None
         for raw_slide in self.slides:
             verse_tag = raw_slide['verse']
             if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
@@ -220,6 +228,11 @@ class ServiceItem(RegistryProperties):
             else:
                 pages = self.renderer.format_slide(raw_slide['text'], self)
                 previous_pages[verse_tag] = (raw_slide, pages)
+            chapter_hint = (
+                bible_chapter_hint_from_row_tag(verse_tag)
+                if self.name == 'bibles' and bible_chapter_hint_from_row_tag
+                else None
+            )
             for page in pages:
                 footer_html = None
                 has_footer_html = 'footer_html' in raw_slide
@@ -235,10 +248,15 @@ class ServiceItem(RegistryProperties):
                     'footer': footer_html
                 }
                 self._rendered_slides.append(rendered_slide)
+                display_verse = verse_tag
+                if self.name == 'bibles' and row_label_from_raw_page_text:
+                    computed = row_label_from_raw_page_text(page, default_chapter=chapter_hint)
+                    if computed:
+                        display_verse = computed
                 display_slide = {
                     'title': raw_slide['title'],
                     'text': remove_html_and_strip(remove_tags(page, can_remove_chords=True)),
-                    'verse': verse_tag,
+                    'verse': display_verse,
                 }
                 self._display_slides.append(display_slide)
                 index += 1

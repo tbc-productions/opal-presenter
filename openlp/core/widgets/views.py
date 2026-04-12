@@ -163,6 +163,23 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         opacity_percent = min(maximum, minimum + ((verse_number - 1) * 10))
         return opacity_percent / 100.0
 
+    def _sync_vertical_header_width_from_labels(self, labels):
+        """
+        Widen the row header column when labels are long (e.g. Bible ``1:22-23``).
+        """
+        vh = self.verticalHeader()
+        if not labels:
+            vh.setMinimumWidth(0)
+            return
+        fm = vh.fontMetrics()
+        margin = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_HeaderMargin, None, vh)
+        margin = max(16, margin * 2 + 8)
+        max_line = 0
+        for lab in labels:
+            for line in str(lab).split('\n'):
+                max_line = max(max_line, fm.horizontalAdvance(line))
+        vh.setMinimumWidth(max_line + margin)
+
     def resizeEvent(self, event):
         """
         Overloaded method from QTableWidget. Will recalculate the layout.
@@ -228,6 +245,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         """
         self.setRowCount(0)
         self.clear()
+        self.verticalHeader().setMinimumWidth(0)
 
     def replace_service_item(self, service_item, width, slide_number):
         """
@@ -250,14 +268,19 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
             slide_height = 0
             if self.service_item.is_text():
                 if slide['verse']:
-                    # These tags are already translated.
-                    verse_def = slide['verse']
-                    verse_def = '%s%s' % (verse_def[0], verse_def[1:])
-                    two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
-                    row = two_line_def
-                    color = self._resolve_song_section_color(verse_def[0])
-                    color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
-                    header_colors.append(color)
+                    if self.service_item.name == 'bibles':
+                        # Bible slide tags are chapter/verse references, not song section letters.
+                        row = str(slide['verse'])
+                        header_colors.append(None)
+                    else:
+                        # These tags are already translated.
+                        verse_def = slide['verse']
+                        verse_def = '%s%s' % (verse_def[0], verse_def[1:])
+                        two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
+                        row = two_line_def
+                        color = self._resolve_song_section_color(verse_def[0])
+                        color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
+                        header_colors.append(color)
                 else:
                     row += 1
                     header_colors.append(None)
@@ -309,6 +332,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 self.setRowHeight(slide_index, 1)
                 self.setRowHeight(slide_index, int(slide_height))
         self.setVerticalHeaderLabels(text)
+        self._sync_vertical_header_width_from_labels(text)
         for row, color in enumerate(header_colors):
             if color is None:
                 continue
