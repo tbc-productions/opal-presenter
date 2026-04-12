@@ -28,6 +28,7 @@ import pytest
 
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import BackgroundType
+from openlp.core.pages.alignment import AlignmentPage, AlignmentTransitionsPage
 from openlp.core.ui.themeform import ThemeForm
 
 
@@ -654,6 +655,56 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.display_slide_transition_direction == 'horizontal'
     assert theme_form.theme.display_slide_transition_speed == 'normal'
     assert theme_form.theme.display_slide_transition_reverse is False
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_transition_settings_widget_prefers_standalone_transitions_page(mocked_setup, settings):
+    """
+    When both exist, the dedicated Transitions page owns transition settings.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = MagicMock()
+    theme_form.alignment_page = AlignmentPage()
+    assert theme_form._transition_settings_widget() is theme_form.transitions_page
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_transition_settings_widget_none_for_alignment_page_only(mocked_setup, settings):
+    """
+    Split wizard: AlignmentPage must not be used as the transition settings widget
+    (it has no transition_type / is_transition_enabled, etc.).
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentPage()
+    assert theme_form._transition_settings_widget() is None
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_transition_settings_widget_combined_alignment_transitions_page(mocked_setup, settings):
+    """
+    Legacy combined page embeds transition controls on the alignment widget.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentTransitionsPage()
+    assert theme_form._transition_settings_widget() is theme_form.alignment_page
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+def test_set_transition_page_values_without_transition_widget(mocked_setup, settings):
+    """
+    Opening a form with only AlignmentPage (no transition UI) must not touch missing properties.
+    """
+    theme_form = ThemeForm(None)
+    theme_form.theme = MagicMock(display_slide_transition=False)
+    theme_form.transitions_page = None
+    theme_form.alignment_page = AlignmentPage()
+    theme_form._set_play_transition_button_visible = MagicMock()
+    theme_form._sync_transition_reverse_enabled_state = MagicMock()
+    theme_form.set_transition_page_values()
+    theme_form._sync_transition_reverse_enabled_state.assert_called_once_with(False)
+    theme_form._set_play_transition_button_visible.assert_called_once_with(False)
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
