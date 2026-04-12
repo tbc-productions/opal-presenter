@@ -58,6 +58,7 @@ from openlp.core.ui.printserviceform import PrintServiceForm
 from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.shortcutlistform import ShortcutListForm
+from openlp.core.ui import HideMode
 from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
 from openlp.core.ui.thememanager import ThemeManager
 from openlp.core.version import get_version
@@ -245,6 +246,13 @@ class Ui_MainWindow(object):
                                                 triggers=self.set_preview_panel_visibility)
         self.view_live_panel = create_action(main_window, 'viewLivePanel', can_shortcuts=True, checked=live_visible,
                                              category=UiStrings().View, triggers=self.set_live_panel_visibility)
+        self.view_display_output_item = create_action(
+            main_window, 'viewDisplayOutputItem',
+            icon=UiIcons().get_icon_variant('live_presentation'),
+            checked=True,
+            can_shortcuts=True,
+            category=UiStrings().View,
+            triggers=self.on_view_display_output_toggled)
         self.lock_panel = create_action(main_window, 'lockPanel', can_shortcuts=True, checked=panel_locked,
                                         category=UiStrings().View, triggers=self.set_lock_panel)
         action_list.add_category(UiStrings().ViewMode, CategoryOrder.standard_menu)
@@ -344,7 +352,8 @@ class Ui_MainWindow(object):
                                           None, self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
                     self.view_projector_manager_item, self.view_service_manager_item, self.view_theme_manager_item,
-                    None, self.view_preview_panel, self.view_live_panel, None, self.lock_panel))
+                    None, self.view_preview_panel, self.view_live_panel, self.view_display_output_item, None,
+                    self.lock_panel))
         # i18n add Language Actions
         add_actions(self.settings_language_menu, (self.auto_language_item, None))
         add_actions(self.settings_language_menu, self.language_group.actions())
@@ -372,6 +381,7 @@ class Ui_MainWindow(object):
         self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
         # Connect up some signals and slots
         self.file_menu.aboutToShow.connect(self.update_recent_files_menu)
+        self.view_menu.aboutToShow.connect(self._sync_view_display_output_menu_action)
         # Hide the entry, as it does not have any functionality yet.
         self.tools_add_tool_item.setVisible(False)
         self.import_language_item.setVisible(False)
@@ -454,6 +464,12 @@ class Ui_MainWindow(object):
         self.lock_panel.setText(translate('OpenLP.MainWindow', 'L&ock visibility of the panels'))
         self.lock_panel.setStatusTip(translate('OpenLP.MainWindow', 'Lock visibility of the panels.'))
         self.view_live_panel.setStatusTip(translate('OpenLP.MainWindow', 'Toggle visibility of the Live.'))
+        self.view_display_output_item.setText(translate('OpenLP.MainWindow', 'Display &output'))
+        self.view_display_output_item.setToolTip(translate(
+            'OpenLP.MainWindow', 'Show or hide the presentation on the main display output.'))
+        self.view_display_output_item.setStatusTip(translate(
+            'OpenLP.MainWindow', 'Toggle display output (same as Show Presentation / Show Desktop on the Live '
+                                'toolbar).'))
         self.settings_plugin_list_item.setText(translate('OpenLP.MainWindow', '&Manage Plugins'))
         self.settings_plugin_list_item.setStatusTip(translate('OpenLP.MainWindow', 'You can enable and disable plugins '
                                                                                    'from here.'))
@@ -563,6 +579,35 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.http_server = HttpServer(self)
         self.ws_server = WebSocketServer()
         self.screen_updating_lock = Lock()
+        self._live_display_geometry_timer = QtCore.QTimer(self)
+        self._live_display_geometry_timer.setSingleShot(True)
+        self._live_display_geometry_timer.timeout.connect(self._refresh_live_display_geometry_for_single_screen)
+
+    def moveEvent(self, event: QtGui.QMoveEvent):
+        super().moveEvent(event)
+        self._schedule_live_display_geometry_refresh()
+
+    def resizeEvent(self, event: QtGui.QResizeEvent):
+        super().resizeEvent(event)
+        self._schedule_live_display_geometry_refresh()
+
+    def _schedule_live_display_geometry_refresh(self):
+        if len(ScreenList()) != 1:
+            return
+        if not self.settings.value('core/display on monitor'):
+            return
+        self._live_display_geometry_timer.start(75)
+
+    def _refresh_live_display_geometry_for_single_screen(self):
+        if len(ScreenList()) != 1:
+            return
+        if not self.settings.value('core/display on monitor'):
+            return
+        live = self.live_controller
+        if not live or not live.displays:
+            return
+        for display in live.displays:
+            display.update_from_screen(live.screens[display.screen_number])
 
     @contextmanager
     def _mute_left_dock_visibility_signals(self):
@@ -641,6 +686,29 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.load_settings()
         self.restore_current_media_manager_item()
         Registry().execute('theme_change_global')
+        self._sync_view_display_output_menu_action()
+        esc_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape), self)
+        esc_shortcut.setContext(QtCore.Qt.ShortcutContext.WindowShortcut)
+        esc_shortcut.activated.connect(self._on_escape_hide_presentation_from_main)
+
+    def _on_escape_hide_presentation_from_main(self):
+        """
+        Hide the live presentation (Show desktop) when Escape is pressed from the main interface.
+
+        Skips when a modal dialog is open or when a text field has focus so Escape keeps its usual behaviour.
+        """
+        if QtWidgets.QApplication.activeModalWidget():
+            return
+        fw = QtWidgets.QApplication.focusWidget()
+        if fw is not None and isinstance(fw, (QtWidgets.QLineEdit, QtWidgets.QPlainTextEdit, QtWidgets.QTextEdit,
+                                               QtWidgets.QAbstractSpinBox)):
+            return
+        live = self.live_controller
+        if not live or not live.display:
+            return
+        if not live.display.isVisible() or live.current_hide_mode == HideMode.Screen:
+            return
+        live.set_hide_mode(HideMode.Screen)
 
     def restore_current_media_manager_item(self):
         """
@@ -1633,6 +1701,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
     def _schedule_left_column_dock_layout(self) -> None:
         QtCore.QTimer.singleShot(0, self._deferred_apply_left_column_dock_layout)
+
+    def on_view_display_output_toggled(self, checked: bool = False):
+        """
+        Show display output or switch to desktop (Show desktop), matching the Live toolbar hide modes.
+        """
+        live = self.live_controller
+        if not live or not live.is_live:
+            return
+        if checked:
+            live.set_hide_mode(None)
+        else:
+            live.set_hide_mode(HideMode.Screen)
+
+    def _sync_view_display_output_menu_action(self):
+        """
+        Keep the View menu check state aligned with the live output mode.
+        """
+        live = self.live_controller
+        showing = False
+        if live and live.is_live and live.display is not None:
+            showing = live.current_hide_mode != HideMode.Screen
+        self.view_display_output_item.blockSignals(True)
+        self.view_display_output_item.setChecked(showing)
+        self.view_display_output_item.blockSignals(False)
 
     def set_live_panel_visibility(self, is_visible: bool, *, update_preset_layout_flag: bool = True):
         """

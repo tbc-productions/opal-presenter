@@ -662,7 +662,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         size = self.screens.current.display_geometry.size()
         if self.is_live and self.displays:
             for display in self.displays:
-                display.resize(size)
+                display.update_from_screen(self.screens[display.screen_number])
         old_preview_width = self.preview_display.size().width()
         scale = old_preview_width / size.width()
         new_preview_size = size * scale

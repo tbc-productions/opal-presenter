@@ -29,7 +29,7 @@ import re
 from pathlib import Path
 from urllib.parse import unquote
 
-from PySide6 import QtCore, QtWebChannel, QtWidgets
+from PySide6 import QtCore, QtGui, QtWebChannel, QtWidgets
 
 from openlp.core.common.enum import ServiceItemType
 from openlp.core.common.i18n import translate
@@ -45,6 +45,47 @@ from openlp.core.ui import HideMode
 FONT_FOUNDRY = re.compile(r'(.*?) \[(.*?)\]')
 TRANSITION_END_EVENT_NAME = 'transparent_transition_end'
 log = logging.getLogger(__name__)
+
+# Minimum live output size when sharing one physical screen with the main OpenLP window.
+_SINGLE_SCREEN_AVOID_MAIN_MIN_WIDTH = 320
+_SINGLE_SCREEN_AVOID_MAIN_MIN_HEIGHT = 200
+
+
+def largest_rect_on_screen_avoiding_rect(screen_rect: QtCore.QRect, obstacle_rect: QtCore.QRect,
+                                         min_width=_SINGLE_SCREEN_AVOID_MAIN_MIN_WIDTH,
+                                         min_height=_SINGLE_SCREEN_AVOID_MAIN_MIN_HEIGHT):
+    """
+    Return the largest axis-aligned rectangle inside ``screen_rect`` that does not overlap ``obstacle_rect``,
+    preferring the candidate with the greatest area. Returns ``None`` if no candidate meets the minimum size.
+    """
+    obstacle = obstacle_rect.intersected(screen_rect)
+    if obstacle.isEmpty():
+        return screen_rect
+    s = screen_rect
+    o = obstacle
+    candidates = []
+    # Top strip (full width)
+    h_top = o.top() - s.top()
+    if h_top > 0:
+        candidates.append(QtCore.QRect(s.left(), s.top(), s.width(), h_top))
+    # Bottom strip (full width)
+    y_below = o.top() + o.height()
+    h_bottom = s.top() + s.height() - y_below
+    if h_bottom > 0:
+        candidates.append(QtCore.QRect(s.left(), y_below, s.width(), h_bottom))
+    # Left of obstacle (middle band only — top/bottom already covered by strips)
+    w_left = o.left() - s.left()
+    if w_left > 0:
+        candidates.append(QtCore.QRect(s.left(), o.top(), w_left, o.height()))
+    # Right of obstacle (middle band)
+    x_right = o.left() + o.width()
+    w_right = s.left() + s.width() - x_right
+    if w_right > 0:
+        candidates.append(QtCore.QRect(x_right, o.top(), w_right, o.height()))
+    viable = [r for r in candidates if r.width() >= min_width and r.height() >= min_height]
+    if not viable:
+        return None
+    return max(viable, key=lambda r: r.width() * r.height())
 
 
 def _path_to_file_uri(image_path):
@@ -157,6 +198,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Create the display window
         """
         super(DisplayWindow, self).__init__(parent)
+        self._partial_screen_layout = False
         self.after_loaded_callback = after_loaded_callback
         # Gather all flags for the display window
         flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Tool |\
@@ -217,11 +259,26 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.log_debug('registering live display show/hide functions')
             Registry().register_function('live_display_hide', self.hide_display)
             Registry().register_function('live_display_show', self.show_display)
-            self.update_from_screen(screen)
             self.is_display = True
+            self.update_from_screen(screen)
             # Only make visible on single monitor setup if setting enabled.
             if not start_hidden and (len(ScreenList()) > 1 or self.settings.value('core/display on monitor')):
-                self.auto_show(screen.custom_geometry is not None)
+                use_windowed = screen.custom_geometry is not None or self._partial_screen_layout
+                self.auto_show(use_windowed)
+            esc_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape), self)
+            esc_shortcut.setContext(QtCore.Qt.ShortcutContext.WindowShortcut)
+            esc_shortcut.activated.connect(self._on_escape_hide_presentation_live)
+
+    def _on_escape_hide_presentation_live(self):
+        """
+        When the live output window has focus, Escape matches "Show desktop" in the slide controller.
+        """
+        if not self.is_display or not self.isVisible():
+            return
+        live = Registry().get('live_controller')
+        if not live or live.current_hide_mode == HideMode.Screen:
+            return
+        live.set_hide_mode(HideMode.Screen)
 
     def closeEvent(self, event):
         """
@@ -280,6 +337,53 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         self.setGeometry(screen.display_geometry)
         self.screen_number = screen.number
+        self._partial_screen_layout = self._try_apply_main_window_avoidance(screen)
+
+    def _try_apply_main_window_avoidance(self, screen):
+        """
+        On a single physical screen with "Display if a single screen", shrink the live output so it does not
+        cover the main OpenLP window. Respects user-defined custom display geometry (no automatic change).
+
+        :return: True if the window uses a reduced geometry (must not use showFullScreen).
+        :rtype: bool
+        """
+        if not self.is_display:
+            return False
+        if len(ScreenList()) != 1:
+            return False
+        if not self.settings.value('core/display on monitor'):
+            return False
+        if screen.custom_geometry is not None:
+            return False
+        main_window = Registry().get('main_window')
+        if main_window is None or not main_window.isVisible():
+            return False
+        full_rect = screen.display_geometry
+        main_rect = main_window.frameGeometry()
+        placed = largest_rect_on_screen_avoiding_rect(full_rect, main_rect)
+        if placed is None or placed == full_rect:
+            if placed is None:
+                log.warning('Could not place live display beside the main window; no rectangle met the minimum size.')
+            return False
+        self.setGeometry(placed)
+        return True
+
+    def _deferred_sync_geometry_avoid_main_window(self):
+        """
+        Re-run output placement after the main window has a valid frame (first show / layout).
+        """
+        if not self.is_display:
+            return
+        try:
+            screen = ScreenList()[self.screen_number]
+        except (IndexError, KeyError):
+            return
+        was_fullscreen = self.isFullScreen()
+        self.update_from_screen(screen)
+        if was_fullscreen and self._partial_screen_layout:
+            self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowFullScreen)
+        if not self.isHidden():
+            self.show()
 
     def auto_show(self, has_custom_geometry: bool):
         """
@@ -391,6 +495,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.set_startup_screen()
         if self.after_loaded_callback:
             self.after_loaded_callback()
+        if self.is_display:
+            QtCore.QTimer.singleShot(0, self._deferred_sync_geometry_avoid_main_window)
 
     def run_in_display(self, action, *parameters, raw_parameters=None, is_sync=False, return_event_name=None):
         if len(parameters):
@@ -556,6 +662,15 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             # Only make visible on single monitor setup if setting enabled.
             if len(ScreenList()) == 1 and not self.settings.value('core/display on monitor'):
                 return
+            try:
+                screen = ScreenList()[self.screen_number]
+            except (IndexError, KeyError):
+                screen = None
+            if screen is not None:
+                was_fullscreen = self.isFullScreen()
+                self.update_from_screen(screen)
+                if was_fullscreen and self._partial_screen_layout:
+                    self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowFullScreen)
         # Aborting setVisible(False) call in case the display modes are changed quickly
         self.display_watcher.unregister_event_listener(TRANSITION_END_EVENT_NAME)
         if self.isHidden():

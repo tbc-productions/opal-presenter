@@ -678,6 +678,12 @@ class Settings(QtCore.QSettings):
 
     def init_default_shortcuts(self):
         # Add shortcuts here so QKeySequence has a QApplication instance to use.
+        # On macOS, Qt maps ControlModifier to the Command (⌘) key; MetaModifier is the physical Control key.
+        _display_output_shortcut = (
+            [QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.MetaModifier | QtCore.Qt.Key.Key_Space)]
+            if is_macosx() else
+            [QtGui.QKeySequence(QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Space)]
+        )
         Settings.__default_settings__.update({
             'shortcuts/aboutItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Control + QtCore.Qt.Key.Key_F1)],
             'shortcuts/addToService': [],
@@ -822,6 +828,7 @@ class Settings(QtCore.QSettings):
             'shortcuts/viewMediaManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F8)],
             'shortcuts/viewPreviewPanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F11)],
             'shortcuts/viewLivePanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F12)],
+            'shortcuts/viewDisplayOutputItem': _display_output_shortcut,
             'shortcuts/viewServiceManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F9)],
             'shortcuts/webSiteItem': []
         })
