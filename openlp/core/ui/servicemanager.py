@@ -421,12 +421,7 @@ class Ui_ServiceManager(object):
                                                       triggers=self.on_auto_start)
         # Add already existing delete action to the menu.
         self.menu.addAction(self.delete_action)
-        self.custom_layout_section_sep_before = self.menu.addSeparator()
-        self.create_custom_action = create_widget_action(self.menu,
-                                                         text=translate('OpenLP.ServiceManager', 'Create New &Custom '
-                                                                                                 'Slide'),
-                                                         icon=UiIcons().custom,
-                                                         triggers=self.create_custom)
+        self.custom_layout_section_sep_before = _add_service_manager_context_menu_separator(self.menu)
         self.bible_layout_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', 'Layout style'), self.menu)
         self.menu.addMenu(self.bible_layout_menu)
         self.bible_layout_action_group = QtGui.QActionGroup(self.bible_layout_menu)
@@ -448,7 +443,12 @@ class Ui_ServiceManager(object):
             act.setData(int(ls))
             self.bible_layout_action_group.addAction(act)
             self.bible_layout_style_actions[ls] = act
-        self.custom_layout_section_sep_after = self.menu.addSeparator()
+        self.create_custom_action = create_widget_action(self.menu,
+                                                         text=translate('OpenLP.ServiceManager', 'Create New &Custom '
+                                                                                                 'Slide'),
+                                                         icon=UiIcons().custom,
+                                                         triggers=self.create_custom)
+        self.custom_layout_section_sep_after = _add_service_manager_context_menu_separator(self.menu)
         # Add AutoPlay menu actions
         self.auto_play_slides_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', '&Auto play slides'))
         self.menu.addMenu(self.auto_play_slides_menu)
@@ -480,6 +480,31 @@ class Ui_ServiceManager(object):
         self.service_manager_list.addActions([self.move_down_action, self.move_up_action, self.make_live_action,
                                               self.move_top_action, self.move_bottom_action,
                                               self.expand_collapse_action])
+
+
+def _add_service_manager_context_menu_separator(menu):
+    """
+    QMenu.addSeparator() can be effectively invisible on some platform themes (e.g. macOS with native menus).
+    Insert a non-interactive QWidgetAction with a 1px mid-tone line so the divider is always visible.
+    """
+    action = QtWidgets.QWidgetAction(menu)
+    action.setObjectName('openlp_service_manager_context_menu_sep')
+    container = QtWidgets.QWidget(menu)
+    layout = QtWidgets.QVBoxLayout(container)
+    layout.setContentsMargins(6, 4, 6, 4)
+    layout.setSpacing(0)
+    line = QtWidgets.QFrame(container)
+    line.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+    line.setFixedHeight(1)
+    mid = menu.palette().color(QtGui.QPalette.ColorRole.Mid)
+    line.setStyleSheet(
+        'background-color: {c}; border: none; min-height: 1px; max-height: 1px;'.format(c=mid.name()))
+    layout.addWidget(line)
+    container.setLayout(layout)
+    action.setDefaultWidget(container)
+    action.setEnabled(False)
+    menu.addAction(action)
+    return action
 
 
 class ServiceLoadWorker(ThreadWorker):
@@ -1456,8 +1481,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             current_layout = self.settings.value('bibles/verse layout style')
             for ls, act in self.bible_layout_style_actions.items():
                 act.setChecked(int(ls) == int(current_layout))
-        custom_layout_section_visible = (
-            self.create_custom_action.isVisible() or self.bible_layout_menu.menuAction().isVisible())
+        has_create_custom = self.create_custom_action.isVisible()
+        has_bible_layout = self.bible_layout_menu.menuAction().isVisible()
+        custom_layout_section_visible = has_create_custom or has_bible_layout
         self.custom_layout_section_sep_before.setVisible(custom_layout_section_visible)
         self.custom_layout_section_sep_after.setVisible(custom_layout_section_visible)
         self.menu.exec(self.service_manager_list.mapToGlobal(point))
