@@ -25,6 +25,7 @@ import logging
 import re
 
 from PySide6 import QtCore, QtGui, QtWidgets
+from shiboken6 import isValid as qobject_cpp_is_valid
 
 from openlp.core.common.actions import ActionList
 from openlp.core.common.i18n import translate
@@ -35,6 +36,21 @@ from openlp.core.ui.shortcutlistdialog import Ui_ShortcutListDialog
 REMOVE_AMPERSAND = re.compile(r'&')
 
 log = logging.getLogger(__name__)
+
+
+def _qobject_is_alive(obj):
+    """
+    Return True if ``obj`` is a Qt wrapper whose underlying C++ object still exists.
+
+    After a ``QAction`` is destroyed, Python may still hold references (e.g. in tree item
+    ``UserRole`` data); calling methods raises ``RuntimeError``.
+    """
+    if obj is None:
+        return False
+    try:
+        return qobject_cpp_is_valid(obj)
+    except (TypeError, AttributeError):
+        return False
 
 
 class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryProperties):
@@ -100,7 +116,12 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         if event.modifiers() & QtCore.Qt.KeyboardModifier.MetaModifier == QtCore.Qt.KeyboardModifier.MetaModifier:
             key_string = 'Meta+' + key_string
         key_sequence = QtGui.QKeySequence(key_string)
-        if self._validiate_shortcut(self._current_item_action(), key_sequence):
+        if not key_sequence:
+            return
+        changing = self._current_item_action()
+        if changing is None:
+            return
+        if self._validiate_shortcut(changing, key_sequence):
             if self.primary_push_button.isChecked():
                 self._adjust_button(self.primary_push_button, False,
                                     text=self.get_shortcut_string(key_sequence, for_display=True))
@@ -113,6 +134,7 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         Execute the dialog
         """
         self.changed_actions = {}
+        self._prune_stale_changed_actions()
         self.reload_shortcut_list()
         self._adjust_button(self.primary_push_button, False, False, '')
         self._adjust_button(self.alternate_push_button, False, False, '')
@@ -129,6 +151,9 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
                 continue
             item = QtWidgets.QTreeWidgetItem([category.name])
             for action in category.actions:
+                if not _qobject_is_alive(action):
+                    log.debug('Skipping destroyed QAction in shortcut list (category %r)', category.name)
+                    continue
                 action_text = REMOVE_AMPERSAND.sub('', action.text())
                 action_item = QtWidgets.QTreeWidgetItem([action_text])
                 action_item.setIcon(0, action.icon())
@@ -292,6 +317,8 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         self._adjust_button(self.alternate_push_button, False, text='')
         for category in self.action_list.categories:
             for action in category.actions:
+                if not _qobject_is_alive(action):
+                    continue
                 self.changed_actions[action] = action.default_shortcuts
         self.refresh_shortcut_list()
 
@@ -348,16 +375,25 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         Save the shortcuts. **Note**, that we do not have to load the shortcuts, as they are loaded in
         :class:`~openlp.core.utils.ActionList`.
         """
+        self._prune_stale_changed_actions()
         for category in self.action_list.categories:
             # Check if the category is for internal use only.
             if category.name is None:
                 continue
             for action in category.actions:
+                if not _qobject_is_alive(action):
+                    continue
                 if action in self.changed_actions:
-                    old_shortcuts = list(map(self.get_shortcut_string, action.shortcuts()))
+                    try:
+                        old_shortcuts = list(map(self.get_shortcut_string, action.shortcuts()))
+                    except RuntimeError:
+                        old_shortcuts = []
                     action.setShortcuts(self.changed_actions[action])
                     self.action_list.update_shortcut_map(action, old_shortcuts)
-                self.settings.setValue('shortcuts/' + action.objectName(), action.shortcuts())
+                try:
+                    self.settings.setValue('shortcuts/' + action.objectName(), action.shortcuts())
+                except RuntimeError:
+                    log.warning('Could not save shortcuts for a QAction that was destroyed.')
 
     def on_clear_primary_button_clicked(self, toggled):
         """
@@ -375,8 +411,10 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
             # has a default primary shortcut (an "empty" shortcut is always valid and if the action does not have a
             # default primary shortcut, then the alternative shortcut (not the default one) will become primary
             # shortcut, thus the check will assume that an action were going to have the same shortcut twice.
-            if not self._validiate_shortcut(action, new_shortcuts[0]) and new_shortcuts[0] != shortcuts[0]:
-                return
+            prev_primary = shortcuts[0] if len(shortcuts) > 0 else None
+            if not self._validiate_shortcut(action, new_shortcuts[0]):
+                if prev_primary is None or new_shortcuts[0] != prev_primary:
+                    return
         if len(shortcuts) == 2:
             new_shortcuts.append(shortcuts[1])
         self.changed_actions[action] = new_shortcuts
@@ -412,9 +450,20 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         :param changing_action: The action which wants to use the ``key_sequence``.
         :param key_sequence: The key sequence which the action want so use.
         """
+        if changing_action is None or not _qobject_is_alive(changing_action):
+            return False
+        if not key_sequence:
+            return False
         is_valid = True
+        try:
+            changing_parent = changing_action.parent()
+            changing_context = changing_action.shortcutContext()
+        except RuntimeError:
+            return False
         for category in self.action_list.categories:
             for action in category.actions:
+                if not _qobject_is_alive(action):
+                    continue
                 shortcuts = self._action_shortcuts(action)
                 if key_sequence not in shortcuts:
                     continue
@@ -423,21 +472,26 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
                         continue
                     if self.alternate_push_button.isChecked() and shortcuts.index(key_sequence) == 1:
                         continue
+                try:
+                    action_parent = action.parent()
+                    action_context = action.shortcutContext()
+                except RuntimeError:
+                    continue
                 # Have the same parent, thus they cannot have the same shortcut.
-                if action.parent() is changing_action.parent():
+                if action_parent is changing_parent:
                     is_valid = False
                 # The new shortcut is already assigned, but if both shortcuts are only valid in a different widget the
                 # new shortcut is valid, because they will not interfere.
-                if action.shortcutContext() in [QtCore.Qt.ShortcutContext.WindowShortcut,
-                                                QtCore.Qt.ShortcutContext.ApplicationShortcut]:
+                if action_context in [QtCore.Qt.ShortcutContext.WindowShortcut,
+                                      QtCore.Qt.ShortcutContext.ApplicationShortcut]:
                     is_valid = False
-                if changing_action.shortcutContext() in [QtCore.Qt.ShortcutContext.WindowShortcut,
-                                                         QtCore.Qt.ShortcutContext.ApplicationShortcut]:
+                if changing_context in [QtCore.Qt.ShortcutContext.WindowShortcut,
+                                          QtCore.Qt.ShortcutContext.ApplicationShortcut]:
                     is_valid = False
         if not is_valid:
             text = translate('OpenLP.ShortcutListDialog',
-                             'The shortcut "{key}" is already assigned to another action,\n'
-                             'please use a different shortcut.'
+                             'The shortcut "{key}" is already assigned to another action. '
+                             'Please use a different shortcut.'
                              ).format(key=self.get_shortcut_string(key_sequence))
             self.main_window.warning_message(translate('OpenLP.ShortcutListDialog', 'Duplicate Shortcut'),
                                              text)
@@ -449,9 +503,20 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         This returns the shortcuts for the given ``action``, which also includes those shortcuts which are not saved
         yet but already assigned (as changes are applied when closing the dialog).
         """
+        if action is None or not _qobject_is_alive(action):
+            return []
         if action in self.changed_actions:
             return self.changed_actions[action]
-        return action.shortcuts()
+        try:
+            return action.shortcuts()
+        except RuntimeError:
+            log.debug('QAction.shortcuts() failed (object likely destroyed).')
+            return []
+
+    def _prune_stale_changed_actions(self):
+        """Remove pending edits whose QAction has been destroyed."""
+        for dead in [a for a in list(self.changed_actions.keys()) if not _qobject_is_alive(a)]:
+            del self.changed_actions[dead]
 
     def _current_item_action(self, item=None):
         """
@@ -461,8 +526,14 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
         if item is None:
             item = self.tree_widget.currentItem()
             if item is None:
-                return
-        return item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+                return None
+        action = item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if action is None:
+            return None
+        if not _qobject_is_alive(action):
+            item.setData(0, QtCore.Qt.ItemDataRole.UserRole, None)
+            return None
+        return action
 
     def _adjust_button(self, button, checked=None, enabled=None, text=None):
         """
