@@ -552,6 +552,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         Handle the result from the asynchronous call
         """
+        if hasattr(result, 'toVariant'):
+            result = result.toVariant()
         self.__script_result = result
         self.__script_done = True
 
