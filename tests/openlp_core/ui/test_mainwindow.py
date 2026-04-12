@@ -679,7 +679,7 @@ def test_load_settings_view_mode_default_mode(mocked_view_mode, mocked_show, mai
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, True, False)
+    mocked_view_mode.assert_called_with(True, True, True, True, True, False, 'default')
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -704,7 +704,7 @@ def test_load_settings_view_mode_setup_mode(mocked_view_mode, mocked_show, main_
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(True, True, True, True, False, False)
+    mocked_view_mode.assert_called_with(True, True, True, True, False, False, 'setup')
 
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
@@ -729,7 +729,7 @@ def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_w
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(False, True, False, True, True, False)
+    mocked_view_mode.assert_called_with(False, True, False, True, True, False, 'live')
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -776,6 +776,30 @@ def test_load_settings_view_mode_live(mocked_view_mode, main_window, settings):
     # THEN:
     # The default mode should have been called.
     mocked_view_mode.assert_called_with(True, True, True, True, False, False)
+
+
+def test_left_dock_visibility_recover_themes_only_corruption(main_window, settings):
+    """
+    Tabified docks used to persist only ``show themes``; recover to all three panes intended for the layout.
+    """
+    settings.setValue('user interface/show library', False)
+    settings.setValue('user interface/show service', False)
+    settings.setValue('user interface/show themes', True)
+    settings.setValue('user interface/is preset layout', False)
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
+
+
+def test_set_view_mode_named_preset_keeps_is_preset_layout_flag(main_window, settings):
+    """
+    Preview/Live visibility updates must not clear the layout-preset flag when applying a named preset.
+    """
+    main_window._preview_controller = MagicMock()
+    main_window._preview_controller.panel = MagicMock()
+    main_window._live_controller = MagicMock()
+    main_window._live_controller.panel = MagicMock()
+    settings.setValue('user interface/is preset layout', False)
+    main_window.set_view_mode(True, True, True, True, True, False, 'default')
+    assert settings.value('user interface/is preset layout') is True
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')

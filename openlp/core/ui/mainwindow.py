@@ -351,7 +351,8 @@ class Ui_MainWindow(object):
         self.retranslate_ui(main_window)
         self.media_tool_box.setCurrentIndex(0)
         self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
-        self.view_theme_manager_item.setChecked(self.theme_manager_dock.isVisible())
+        # Tabified docks report isVisible() false when not the active tab; use saved intent.
+        self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
         # Connect up some signals and slots
         self.file_menu.aboutToShow.connect(self.update_recent_files_menu)
         # Hide the entry, as it does not have any functionality yet.
@@ -543,6 +544,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.screen_updating_lock = Lock()
 
     @contextmanager
+    def _mute_left_dock_visibility_signals(self):
+        docks = (self.service_manager_dock, self.media_manager_dock, self.theme_manager_dock)
+        for dock in docks:
+            dock.blockSignals(True)
+        try:
+            yield
+        finally:
+            for dock in docks:
+                dock.blockSignals(False)
+
+    @contextmanager
     def _show_wait_dialog(self, title: str, message: str):
         """
         Show a wait dialog, wait for some tasks to complete, and then close it.
@@ -684,14 +696,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # If we are using a default mode set accordingly
         if self.settings.value('user interface/is preset layout'):
             if view_mode == 'default':
-                self.set_view_mode(True, True, True, True, True, False)
+                self.set_view_mode(True, True, True, True, True, False, 'default')
                 self.mode_default_item.setChecked(True)
             elif view_mode == 'setup':
-                self.set_view_mode(True, True, True, True, False, False)
+                self.set_view_mode(True, True, True, True, False, False, 'setup')
                 self.mode_setup_item.setChecked(True)
             elif view_mode == 'live':
-                self.set_view_mode(False, True, False, True, True, False)
+                self.set_view_mode(False, True, False, True, True, False, 'live')
                 self.mode_live_item.setChecked(True)
+            # Applying a preset toggles panel visibility, which emits visibility signals that would
+            # otherwise clear the preset flag during startup.
+            self.settings.setValue('user interface/is preset layout', True)
         else:
             self.set_view_mode(
                 self.settings.value('user interface/show library'),
@@ -701,6 +716,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.settings.value('user interface/live panel'),
                 self.settings.value('user interface/show projectors')
             )
+        # restoreState() can leave Service/Library/Themes floating or detached; rebuilding the
+        # left column must run after the window exists (splitDockWidget crashed during bootstrap).
+        self._schedule_left_column_dock_layout()
 
     def first_time(self):
         """
@@ -1012,6 +1030,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.set_view_mode(True, True, True, True, True, False, 'default')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
+        self._schedule_left_column_dock_layout()
 
     def on_mode_setup_item_clicked(self):
         """
@@ -1020,6 +1039,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.set_view_mode(True, True, True, True, False, False, 'setup')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
+        self._schedule_left_column_dock_layout()
 
     def on_mode_live_item_clicked(self):
         """
@@ -1028,6 +1048,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.set_view_mode(False, True, False, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
+        self._schedule_left_column_dock_layout()
 
     def set_view_mode(self, media: bool = True, service: bool = True, theme: bool = True, preview: bool = True,
                       live: bool = True, projector: bool = True, mode: str = '') -> None:
@@ -1040,8 +1061,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.service_manager_dock.setVisible(service)
         self.theme_manager_dock.setVisible(theme)
         self.projector_manager_dock.setVisible(projector)
-        self.set_preview_panel_visibility(preview)
-        self.set_live_panel_visibility(live)
+        # Menu reflects layout intent, not QDockWidget.isVisible() (false for inactive tabified tabs).
+        self.view_media_manager_item.setChecked(media)
+        self.view_service_manager_item.setChecked(service)
+        self.view_theme_manager_item.setChecked(theme)
+        self.settings.setValue('user interface/show library', media)
+        self.settings.setValue('user interface/show service', service)
+        self.settings.setValue('user interface/show themes', theme)
+        # Preview/Live handlers clear "preset layout" unless we are applying a named preset (mode set).
+        if mode:
+            self.set_preview_panel_visibility(preview, update_preset_layout_flag=False)
+            self.set_live_panel_visibility(live, update_preset_layout_flag=False)
+            self.settings.setValue('user interface/is preset layout', True)
+        else:
+            self.set_preview_panel_visibility(preview)
+            self.set_live_panel_visibility(live)
 
     def screen_changed(self):
         """
@@ -1203,15 +1237,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.default_theme_label.setText(translate('OpenLP.MainWindow',
                                                    'Default Theme: {theme}').format(theme=theme_name))
 
+    def _dock_hidden_only_as_inactive_tab(self, dock: QtWidgets.QDockWidget) -> bool:
+        """
+        When Library and Themes are tabified, the inactive tab's dock is hidden but still "in" the layout.
+        """
+        if dock.isVisible():
+            return False
+        return any(w.isVisible() for w in self.tabifiedDockWidgets(dock))
+
+    def _sync_left_dock_menu_checks_from_settings(self) -> None:
+        self.view_media_manager_item.setChecked(self.settings.value('user interface/show library'))
+        self.view_service_manager_item.setChecked(self.settings.value('user interface/show service'))
+        self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
+
     def toggle_media_manager(self):
         """
         Toggle the visibility of the media manager
         """
         if self.sender() is self.view_media_manager_item:
-            self.media_manager_dock.setVisible(not self.media_manager_dock.isVisible())
-        self.view_media_manager_item.setChecked(self.media_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+            # Use saved intent, not isVisible() (inactive tabified tab reports hidden).
+            want_visible = not self.settings.value('user interface/show library')
+            self.settings.setValue('user interface/show library', want_visible)
+            self.media_manager_dock.setVisible(want_visible)
+            self.view_media_manager_item.setChecked(want_visible)
+            self.settings.setValue('user interface/is preset layout', False)
+            return
+        if self.sender() is self.media_manager_dock and self._dock_hidden_only_as_inactive_tab(self.media_manager_dock):
+            self._sync_left_dock_menu_checks_from_settings()
+            return
         self.settings.setValue('user interface/show library', self.media_manager_dock.isVisible())
+        self.settings.setValue('user interface/is preset layout', False)
+        self.view_media_manager_item.setChecked(self.settings.value('user interface/show library'))
 
     def toggle_projector_manager(self):
         """
@@ -1233,22 +1289,39 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Toggle the visibility of the service manager
         """
         if self.sender() is self.view_service_manager_item:
-            self.service_manager_dock.setVisible(not self.service_manager_dock.isVisible())
-        self.view_service_manager_item.setChecked(self.service_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+            want_visible = not self.settings.value('user interface/show service')
+            self.settings.setValue('user interface/show service', want_visible)
+            self.service_manager_dock.setVisible(want_visible)
+            self.view_service_manager_item.setChecked(want_visible)
+            self.settings.setValue('user interface/is preset layout', False)
+            return
+        if self.sender() is self.service_manager_dock and self._dock_hidden_only_as_inactive_tab(
+                self.service_manager_dock):
+            self._sync_left_dock_menu_checks_from_settings()
+            return
         self.settings.setValue('user interface/show service', self.service_manager_dock.isVisible())
+        self.settings.setValue('user interface/is preset layout', False)
+        self.view_service_manager_item.setChecked(self.settings.value('user interface/show service'))
 
     def toggle_theme_manager(self):
         """
         Toggle the visibility of the theme manager
         """
         if self.sender() is self.view_theme_manager_item:
-            self.theme_manager_dock.setVisible(not self.theme_manager_dock.isVisible())
-        self.view_theme_manager_item.setChecked(self.theme_manager_dock.isVisible())
-        self.settings.setValue('user interface/is preset layout', False)
+            want_visible = not self.settings.value('user interface/show themes')
+            self.settings.setValue('user interface/show themes', want_visible)
+            self.theme_manager_dock.setVisible(want_visible)
+            self.view_theme_manager_item.setChecked(want_visible)
+            self.settings.setValue('user interface/is preset layout', False)
+            return
+        if self.sender() is self.theme_manager_dock and self._dock_hidden_only_as_inactive_tab(self.theme_manager_dock):
+            self._sync_left_dock_menu_checks_from_settings()
+            return
         self.settings.setValue('user interface/show themes', self.theme_manager_dock.isVisible())
+        self.settings.setValue('user interface/is preset layout', False)
+        self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
 
-    def set_preview_panel_visibility(self, is_visible: bool):
+    def set_preview_panel_visibility(self, is_visible: bool, *, update_preset_layout_flag: bool = True):
         """
         Sets the visibility of the preview panel including saving the setting and updating the menu.
 
@@ -1260,7 +1333,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.preview_controller.panel.setVisible(is_visible)
         self.settings.setValue('user interface/preview panel', is_visible)
         self.view_preview_panel.setChecked(is_visible)
-        self.settings.setValue('user interface/is preset layout', False)
+        if update_preset_layout_flag:
+            self.settings.setValue('user interface/is preset layout', False)
 
     def set_lock_panel(self, is_locked: bool):
         """
@@ -1295,22 +1369,89 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.view_live_panel.setEnabled(True)
         self.settings.setValue('user interface/lock panel', is_locked)
 
+    def _left_dock_visibility_from_settings(self) -> tuple[bool, bool, bool]:
+        """
+        Effective visibility for Library, Service, and Themes.
+
+        Per-pane ``user interface/show *`` keys can be stale (e.g. Themes True but Library/Service
+        False) while a layout preset is still active; presets must win.
+        """
+        mode = self.settings.value('core/view mode')
+        lib = self.settings.value('user interface/show library')
+        svc = self.settings.value('user interface/show service')
+        thm = self.settings.value('user interface/show themes')
+
+        if self.settings.value('user interface/is preset layout'):
+            if mode == 'live':
+                return False, True, False
+            if mode in ('default', 'setup'):
+                return True, True, True
+
+        # Known bad state from tabified-dock visibility bugs: only Themes "on" in settings.
+        if not lib and not svc and thm:
+            return True, True, True
+
+        return (lib, svc, thm)
+
     def _reapply_left_column_dock_layout(self) -> None:
         """
         Saved QMainWindow state often tabifies Service with Library. Enforce: Service on top,
         Library + Themes tabified together in the row below (same dock cell as each other only).
         """
-        no_area = QtCore.Qt.DockWidgetArea.NoDockWidgetArea
         for dock in (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock):
-            if self.dockWidgetArea(dock) != no_area:
-                self.removeDockWidget(dock)
+            dock.setFloating(False)
+            self.removeDockWidget(dock)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
         self.splitDockWidget(self.service_manager_dock, self.media_manager_dock,
                              QtCore.Qt.Orientation.Vertical)
         self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
         self.media_manager_dock.raise_()
 
-    def set_live_panel_visibility(self, is_visible: bool):
+    def _ensure_left_column_dock_sizes(self) -> None:
+        """
+        After restoreState / rebuild, the left strip can have near-zero width or a collapsed Service/Library split.
+        """
+        show_lib, show_svc, show_thm = (
+            self.settings.value('user interface/show library'),
+            self.settings.value('user interface/show service'),
+            self.settings.value('user interface/show themes'),
+        )
+        if not (show_lib or show_svc or show_thm):
+            return
+        width = self.width()
+        height = self.height()
+        if width <= 0 or height <= 0:
+            return
+        target_w = max(300, min(520, int(width * 0.26)))
+        ref = self.service_manager_dock if show_svc else self.media_manager_dock
+        try:
+            self.resizeDocks([ref], [target_w], QtCore.Qt.Orientation.Horizontal)
+        except (TypeError, AttributeError):
+            pass
+    def _deferred_apply_left_column_dock_layout(self) -> None:
+        """
+        Rebuild the left column after the main window is shown. Called via QTimer so
+        QMainWindow layout and restoreState have settled (avoids splitDockWidget crashes during bootstrap).
+        """
+        try:
+            with self._mute_left_dock_visibility_signals():
+                self._reapply_left_column_dock_layout()
+                show_lib, show_svc, show_thm = self._left_dock_visibility_from_settings()
+                self.settings.setValue('user interface/show library', show_lib)
+                self.settings.setValue('user interface/show service', show_svc)
+                self.settings.setValue('user interface/show themes', show_thm)
+                self.service_manager_dock.setVisible(show_svc)
+                self.media_manager_dock.setVisible(show_lib)
+                self.theme_manager_dock.setVisible(show_thm)
+            self._sync_left_dock_menu_checks_from_settings()
+            self._ensure_left_column_dock_sizes()
+        except Exception:
+            self.log_exception('Failed to rebuild left column dock layout')
+
+    def _schedule_left_column_dock_layout(self) -> None:
+        QtCore.QTimer.singleShot(0, self._deferred_apply_left_column_dock_layout)
+
+    def set_live_panel_visibility(self, is_visible: bool, *, update_preset_layout_flag: bool = True):
         """
         Sets the visibility of the live panel including saving the setting and updating the menu.
 
@@ -1321,7 +1462,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.live_controller.panel.setVisible(is_visible)
         self.settings.setValue('user interface/live panel', is_visible)
         self.view_live_panel.setChecked(is_visible)
-        self.settings.setValue('user interface/is preset layout', False)
+        if update_preset_layout_flag:
+            self.settings.setValue('user interface/is preset layout', False)
 
     def load_settings(self):
         """
@@ -1342,13 +1484,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # This needs to be called after restoreState(), because saveState() also saves the "Collapsible" property
         # which was True (by default) < OpenLP 2.1.
         self.control_splitter.setChildrenCollapsible(False)
-        self._reapply_left_column_dock_layout()
         self.service_manager_dock.setVisible(self.settings.value('user interface/show service'))
         self.media_manager_dock.setVisible(self.settings.value('user interface/show library'))
         self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
-        self.view_service_manager_item.setChecked(self.service_manager_dock.isVisible())
-        self.view_media_manager_item.setChecked(self.media_manager_dock.isVisible())
-        self.view_theme_manager_item.setChecked(self.theme_manager_dock.isVisible())
+        self._sync_left_dock_menu_checks_from_settings()
 
     def _window_position_is_valid(self, position: QtCore.QPoint, geometry: QtCore.QRect):
         """
