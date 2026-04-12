@@ -35,7 +35,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common import ThemeLevel, delete_file, sha256_file_hash
 from openlp.core.common.actions import ActionList, CategoryOrder
 from openlp.core.common.applocation import AppLocation
-from openlp.core.common.enum import ServiceItemType
+from openlp.core.common.enum import LayoutStyle, ServiceItemType
 from openlp.core.common.i18n import UiStrings, format_time, translate
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
 from openlp.core.common.mixins import LogMixin, RegistryProperties
@@ -421,12 +421,34 @@ class Ui_ServiceManager(object):
                                                       triggers=self.on_auto_start)
         # Add already existing delete action to the menu.
         self.menu.addAction(self.delete_action)
+        self.custom_layout_section_sep_before = self.menu.addSeparator()
         self.create_custom_action = create_widget_action(self.menu,
                                                          text=translate('OpenLP.ServiceManager', 'Create New &Custom '
                                                                                                  'Slide'),
                                                          icon=UiIcons().custom,
                                                          triggers=self.create_custom)
-        self.menu.addSeparator()
+        self.bible_layout_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', 'Layout style'), self.menu)
+        self.menu.addMenu(self.bible_layout_menu)
+        self.bible_layout_action_group = QtGui.QActionGroup(self.bible_layout_menu)
+        self.bible_layout_action_group.setExclusive(True)
+        self.bible_layout_style_actions = {}
+        _bible_layout_labels = {
+            LayoutStyle.VersePerSlide: UiStrings().VersePerSlide,
+            LayoutStyle.VersePerLine: UiStrings().VersePerLine,
+            LayoutStyle.Continuous: UiStrings().Continuous,
+            LayoutStyle.WholeVerseContinuous: UiStrings().WholeVerseContinuous,
+        }
+        for ls in LayoutStyle:
+            act = create_widget_action(
+                self.bible_layout_menu,
+                name='bible_layout_{name}'.format(name=ls.name),
+                text=_bible_layout_labels[ls],
+                checked=False,
+                triggers=self.on_bible_layout_style_action)
+            act.setData(int(ls))
+            self.bible_layout_action_group.addAction(act)
+            self.bible_layout_style_actions[ls] = act
+        self.custom_layout_section_sep_after = self.menu.addSeparator()
         # Add AutoPlay menu actions
         self.auto_play_slides_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', '&Auto play slides'))
         self.menu.addMenu(self.auto_play_slides_menu)
@@ -1421,7 +1443,62 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 theme_action = self.theme_menu.findChild(QtGui.QAction, service_item['service_item'].theme)
             if theme_action is not None:
                 theme_action.setChecked(True)
+        self.bible_layout_menu.menuAction().setVisible(False)
+        si = service_item['service_item']
+        bible_media_item = None
+        for plugin in State().list_plugins():
+            if plugin.name == 'bibles' and plugin.is_active() and plugin.media_item:
+                bible_media_item = plugin.media_item
+                break
+        if (getattr(si, 'name', None) == 'bibles' and isinstance(si.data_string, dict)
+                and si.data_string.get('verse_source') and bible_media_item is not None):
+            self.bible_layout_menu.menuAction().setVisible(True)
+            current_layout = self.settings.value('bibles/verse layout style')
+            for ls, act in self.bible_layout_style_actions.items():
+                act.setChecked(int(ls) == int(current_layout))
+        custom_layout_section_visible = (
+            self.create_custom_action.isVisible() or self.bible_layout_menu.menuAction().isVisible())
+        self.custom_layout_section_sep_before.setVisible(custom_layout_section_visible)
+        self.custom_layout_section_sep_after.setVisible(custom_layout_section_visible)
         self.menu.exec(self.service_manager_list.mapToGlobal(point))
+
+    def on_bible_layout_style_action(self, checked=False):
+        """
+        Apply a Bible verse layout style to the selected service item and global Bible settings.
+        """
+        if not checked:
+            return
+        act = self.sender()
+        if act is None:
+            return
+        layout_style = act.data()
+        if layout_style is None:
+            return
+        layout_style = int(layout_style)
+        item_idx, _ = self.find_service_item()
+        if item_idx < 0 or item_idx >= len(self.service_items):
+            return
+        service_item = self.service_items[item_idx]['service_item']
+        bible_media_item = None
+        for plugin in State().list_plugins():
+            if plugin.name == 'bibles' and plugin.is_active() and plugin.media_item:
+                bible_media_item = plugin.media_item
+                break
+        if bible_media_item is None:
+            return
+        if not bible_media_item.apply_bible_layout_style_to_service_item(service_item, layout_style):
+            critical_error_message_box(
+                translate('OpenLP.ServiceManager', 'Bible layout'),
+                translate(
+                    'OpenLP.ServiceManager',
+                    'This Bible item was saved before layout switching was available. '
+                    'Remove it from the service and add the passage again, or change layout in the Bible Options tab.'),
+                parent=self)
+            return
+        self.repaint_service_list(item_idx, -1)
+        self.preview_controller.replace_service_manager_item(service_item, item_idx)
+        self.live_controller.replace_service_manager_item(service_item, item_idx)
+        self.set_modified()
 
     def on_service_item_note_form(self):
         """
@@ -2088,7 +2165,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             if item < 0 or item >= len(self.service_items):
                 return
             if self.service_items[item]['service_item'].is_valid:
-                self.preview_controller.add_service_manager_item(self.service_items[item]['service_item'], child)
+                self.preview_controller.add_service_manager_item(
+                    self.service_items[item]['service_item'], child, service_list_index=item)
             else:
                 critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),
                                            translate('OpenLP.ServiceManager',
@@ -2151,12 +2229,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.application.set_busy_cursor()
         if self.service_items[item]['service_item'].is_valid:
             self.servicemanager_changed.emit()
-            self.live_controller.add_service_manager_item(self.service_items[item]['service_item'], child)
+            self.live_controller.add_service_manager_item(
+                self.service_items[item]['service_item'], child, service_list_index=item)
             if self.settings.value('core/auto preview'):
                 item += 1
                 if self.service_items and item < len(self.service_items) and \
                         self.service_items[item]['service_item'].is_capable(ItemCapabilities.CanPreview):
-                    self.preview_controller.add_service_manager_item(self.service_items[item]['service_item'], 0)
+                    self.preview_controller.add_service_manager_item(
+                        self.service_items[item]['service_item'], 0, service_list_index=item)
                     self.live_controller.preview_widget.setFocus()
         else:
             critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),

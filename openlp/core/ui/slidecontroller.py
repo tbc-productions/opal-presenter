@@ -39,6 +39,7 @@ from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
 from openlp.core.display.window import DisplayWindow
 from openlp.core.lib import ServiceItemAction, image_to_byte
+from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_action
@@ -123,6 +124,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self._slide_selected_retry_pending = False
         self._slide_selected_retry_scheduled = False
         self._pending_live_preview_capture = False
+        self._service_manager_item_index = None
         Registry().set_flag('has doubleclick added item to service', True)
         Registry().set_flag('replace service manager item', False)
 
@@ -833,26 +835,46 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.song_edit = False
         self._process_item(item, slide_no)
 
-    def replace_service_manager_item(self, item):
+    def replace_service_manager_item(self, item, service_list_index=None):
         """
         Replacement item following a remote edit.
         This action  also takes place when a song that is sent to live from Service Manager is edited.
 
         :param item: The current service item
+        :param service_list_index: Zero-based index of this item in ServiceManager.service_items, if known.
+            Used when the item's ``unique_identifier`` no longer matches the controller copy (e.g. Bible rebuild).
         """
-        if item == self.service_item:
+        same_service_row = (
+            service_list_index is not None
+            and self._service_manager_item_index is not None
+            and service_list_index == self._service_manager_item_index)
+        should_reload = item == self.service_item or same_service_row
+        if should_reload:
             Registry().set_flag('replace service manager item', True)
-            self._process_item(item, self.preview_widget.current_slide_number())
+            slide_no = self.preview_widget.current_slide_number()
+            if slide_no < 0:
+                slide_no = 0
+            if isinstance(item, ServiceItem):
+                if item.is_text():
+                    slide_count = len(item.display_slides)
+                else:
+                    slide_count = len(item.slides)
+                if slide_count > 0:
+                    slide_no = min(slide_no, slide_count - 1)
+            self._process_item(item, slide_no)
             Registry().set_flag('replace service manager item', False)
 
-    def add_service_manager_item(self, item, slide_no):
+    def add_service_manager_item(self, item, slide_no, service_list_index=None):
         """
         Method to install the service item into the controller and request the correct toolbar for the plugin. Called by
         :class:`~openlp.core.ui.servicemanager.ServiceManager`
 
         :param item: The current service item
         :param slide_no: The slide number to select
+        :param service_list_index: Zero-based index in ServiceManager.service_items for this item (optional).
         """
+        if service_list_index is not None:
+            self._service_manager_item_index = service_list_index
         # If no valid slide number is specified we take the first one, but we remember the initial value to see if we
         # should reload the song or not
         slide_num = slide_no
