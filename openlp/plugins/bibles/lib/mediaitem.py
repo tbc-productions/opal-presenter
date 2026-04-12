@@ -21,6 +21,7 @@
 
 import logging
 import re
+from copy import deepcopy
 from enum import IntEnum, unique
 from typing import Any
 
@@ -49,6 +50,22 @@ DEFAULT_BIBLE_REFERENCE_FORMAT = '${bible_reference} (${copyright})'
 
 
 VALID_TEXT_SEARCH = re.compile(r'\w\w\w')
+
+
+def _bible_slide_row_label(first_data, last_data, seps):
+    """
+    Short label for the slide controller: chapter+verse_sep+verse, with range or list sep when needed.
+    """
+    vsep, rsep, lsep = seps['verse'], seps['range'], seps['list']
+    if first_data['chapter'] == last_data['chapter']:
+        ch = first_data['chapter']
+        if first_data['verse'] == last_data['verse']:
+            return '{ch}{v}{verse}'.format(ch=ch, v=vsep, verse=first_data['verse'])
+        return '{ch}{v}{start}{r}{end}'.format(
+            ch=ch, v=vsep, start=first_data['verse'], r=rsep, end=last_data['verse'])
+    a = '{ch}{v}{verse}'.format(ch=first_data['chapter'], v=vsep, verse=first_data['verse'])
+    b = '{ch}{v}{verse}'.format(ch=last_data['chapter'], v=vsep, verse=last_data['verse'])
+    return '{a}{l}{b}'.format(a=a, l=lsep, b=b)
 
 
 def get_reference_separators():
@@ -616,6 +633,19 @@ class BibleMediaItem(MediaManagerItem):
             self.saved_results.append(verse.data(QtCore.Qt.ItemDataRole.UserRole))
         self.on_results_view_tab_total_update(ResultsTab.Saved)
 
+    def _set_bible_layout_style(self, layout_style: int):
+        """
+        Persist Bible verse layout style and keep Settings tab and media UI in sync.
+        """
+        self.settings_tab.layout_style = layout_style
+        self.settings_tab.layout_style_combo_box.blockSignals(True)
+        self.settings_tab.layout_style_combo_box.setCurrentIndex(layout_style)
+        self.settings_tab.layout_style_combo_box.blockSignals(False)
+        self.style_combo_box.blockSignals(True)
+        self.style_combo_box.setCurrentIndex(layout_style)
+        self.style_combo_box.blockSignals(False)
+        self.settings.setValue('bibles/verse layout style', layout_style)
+
     def on_style_combo_box_index_changed(self, index):
         """
         Change the layout style and save the setting
@@ -623,10 +653,30 @@ class BibleMediaItem(MediaManagerItem):
         :param index: The index of the current item in the combobox (int)
         :return: None
         """
-        # TODO: Change layout_style to a property
-        self.settings_tab.layout_style = index
-        self.settings_tab.layout_style_combo_box.setCurrentIndex(index)
-        self.settings.setValue('bibles/verse layout style', self.settings_tab.layout_style)
+        self._set_bible_layout_style(index)
+
+    def apply_bible_layout_style_to_service_item(self, service_item, layout_style: int) -> bool:
+        """
+        Rebuild an in-service Bible item using stored verse data and a new layout style.
+
+        :return: True if the item was rebuilt; False if verse data is missing (older services).
+        """
+        ds = service_item.data_string
+        if not isinstance(ds, dict):
+            return False
+        verse_rows = ds.get('verse_source')
+        if not verse_rows:
+            return False
+        self._set_bible_layout_style(layout_style)
+        service_item.slides = []
+        service_item._clear_slides_cache()
+        service_item.capabilities = []
+        service_item.raw_footer = []
+        service_item.footer_html = ''
+        if not self.populate_bible_service_item(service_item, verse_rows):
+            return False
+        service_item.render_text_items()
+        return True
 
     def on_version_combo_box_index_changed(self):
         """
@@ -984,44 +1034,36 @@ class BibleMediaItem(MediaManagerItem):
             list_widget_items.append(bible_verse)
         return list_widget_items
 
-    def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
-                            **kwargs):
+    def populate_bible_service_item(self, service_item, verse_rows):
         """
-        Generate the slide data. Needs to be implemented by the plugin.
+        Fill ``service_item`` from a list of verse row dicts (same shape as list widget UserRole data).
 
-        :param service_item: The service item to be built on
-        :param item: The Bible items to be used
-        :param remote: Triggered from remote
-        :param context: Why is it being generated
-        :param kwargs: Consume other unused args specified by the base implementation, but not use by this one.
+        :param verse_rows: Ordered verse metadata and text for each row.
+        :return: False if ``verse_rows`` is empty.
         """
-        log.debug('generating slide data')
-        if item:
-            items = item
-        else:
-            items = self.list_view.selectedItems()
-        if not items:
+        if not verse_rows:
             return False
         bible_text = ''
         old_chapter = -1
-        raw_slides = []
+        raw_slide_entries = []
+        ref_seps = get_reference_separators()
         verses = VerseReferenceList()
-        for bitem in items:
-            data = bitem.data(QtCore.Qt.ItemDataRole.UserRole)
+        for data in verse_rows:
             verses.add(
                 data['book'], data['chapter'], data['verse'], data['version'], data['copyright'], data['permissions'])
             verse_text = self.format_verse(old_chapter, data['chapter'], data['verse'])
+            row_lbl = '{ch}{v}{verse}'.format(ch=data['chapter'], v=ref_seps['verse'], verse=data['verse'])
             # We only support 'Verse Per Slide' when using a scond bible
             if data['second_bible']:
                 second_text = self.format_verse(old_chapter, data['chapter'], data['verse'])
                 bible_text = '{first_version}{data[text]}\n\n{second_version}{data[second_text]}'\
                     .format(first_version=verse_text, second_version=second_text, data=data)
-                raw_slides.append(bible_text.rstrip())
+                raw_slide_entries.append((bible_text.rstrip(), row_lbl))
                 bible_text = ''
             # If we are 'Verse Per Slide' then create a new slide.
             elif self.settings_tab.layout_style == LayoutStyle.VersePerSlide:
                 bible_text = '{first_version}{data[text]}'.format(first_version=verse_text, data=data)
-                raw_slides.append(bible_text.rstrip())
+                raw_slide_entries.append((bible_text.rstrip(), row_lbl))
                 bible_text = ''
             # If we are 'Verse Per Line' then force a new line.
             elif self.settings_tab.layout_style == LayoutStyle.VersePerLine:
@@ -1033,6 +1075,7 @@ class BibleMediaItem(MediaManagerItem):
                 bible_text = '{bible} {verse}{data[text]}'.format(bible=bible_text, verse=verse_text, data=data)
             bible_text = bible_text.strip(' ')
             old_chapter = data['chapter']
+        data = verse_rows[-1]
         # Add service item data (handy things for http api)
         # Bibles in array to make api compatible with any number of bibles.
         bibles = []
@@ -1049,7 +1092,8 @@ class BibleMediaItem(MediaManagerItem):
                 'permissions': data['second_permissions']
             })
         service_item.data_string = {
-            'bibles': bibles
+            'bibles': bibles,
+            'verse_source': deepcopy(verse_rows),
         }
         # Add footer
         if data['second_bible']:
@@ -1068,7 +1112,9 @@ class BibleMediaItem(MediaManagerItem):
             service_item.raw_footer.append(permission_text)
         # If there are no more items we check whether we have to add bible_text.
         if bible_text:
-            raw_slides.append(bible_text.lstrip())
+            _first = verse_rows[0]
+            _last = verse_rows[-1]
+            raw_slide_entries.append((bible_text.lstrip(), _bible_slide_row_label(_first, _last, ref_seps)))
         # Service Item: Capabilities
         if self.settings_tab.layout_style == LayoutStyle.Continuous and not data['second_bible']:
             # Split the line but do not replace line breaks in renderer.
@@ -1089,9 +1135,30 @@ class BibleMediaItem(MediaManagerItem):
         # Service Item: Theme
         if self.settings_tab.bible_theme:
             service_item.theme = self.settings_tab.bible_theme
-        for slide in raw_slides:
-            service_item.add_from_text(slide)
+        for slide_text, verse_row in raw_slide_entries:
+            service_item.add_from_text(slide_text, verse_row)
         return True
+
+    def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
+                            **kwargs):
+        """
+        Generate the slide data. Needs to be implemented by the plugin.
+
+        :param service_item: The service item to be built on
+        :param item: The Bible items to be used
+        :param remote: Triggered from remote
+        :param context: Why is it being generated
+        :param kwargs: Consume other unused args specified by the base implementation, but not use by this one.
+        """
+        log.debug('generating slide data')
+        if item:
+            items = item
+        else:
+            items = self.list_view.selectedItems()
+        if not items:
+            return False
+        verse_rows = [bitem.data(QtCore.Qt.ItemDataRole.UserRole) for bitem in items]
+        return self.populate_bible_service_item(service_item, verse_rows)
 
     def _render_bible_reference(self, bible_reference, version, copyright, permission):
         """

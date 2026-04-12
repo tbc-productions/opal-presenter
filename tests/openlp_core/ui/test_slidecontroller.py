@@ -836,6 +836,29 @@ def test_replace_service_manager_item_same_item(settings: Settings):
     mocked_process_item.assert_called_once_with(mocked_item, 7)
 
 
+def test_replace_service_manager_item_same_service_row_different_uuid(settings: Settings):
+    """
+    Rebuilding a service item (e.g. Bible layout) can change unique_identifier; preview should still reload
+    when the service list index matches.
+    """
+    old_copy = MagicMock()
+    old_copy.unique_identifier = 'old-uuid'
+    new_canonical = MagicMock()
+    new_canonical.unique_identifier = 'new-uuid'
+    mocked_preview_widget = MagicMock()
+    mocked_preview_widget.current_slide_number.return_value = 3
+    mocked_process_item = MagicMock()
+    slide_controller = SlideController(None)
+    slide_controller.preview_widget = mocked_preview_widget
+    slide_controller._process_item = mocked_process_item
+    slide_controller.service_item = old_copy
+    slide_controller._service_manager_item_index = 2
+
+    slide_controller.replace_service_manager_item(new_canonical, service_list_index=2)
+
+    mocked_process_item.assert_called_once_with(new_canonical, 3)
+
+
 def test_on_slide_selected_index_no_service_item(settings: Settings):
     """
     Test that when there is no service item, the on_slide_selected_index() method returns immediately

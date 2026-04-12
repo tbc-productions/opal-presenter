@@ -1723,20 +1723,19 @@ def test_generate_slide_data_data_string(media_item: BibleMediaItem):
     media_item.generate_slide_data(mocked_service_item, item=mocked_items)
 
     # THEN: both primary and secondary bible info should be included in the returned service item data string
-    assert mocked_service_item.data_string == {
-        'bibles': [
-            {
-                'version': 'Bible version 104',
-                'copyright': 'copywrong',
-                'permissions': 'all the permissions'
-            },
-            {
-                'version': 'Bible version 4567',
-                'copyright': 'copywrite',
-                'permissions': 'no use allowed'
-            }
-        ]
-    }
+    assert mocked_service_item.data_string['bibles'] == [
+        {
+            'version': 'Bible version 104',
+            'copyright': 'copywrong',
+            'permissions': 'all the permissions'
+        },
+        {
+            'version': 'Bible version 4567',
+            'copyright': 'copywrite',
+            'permissions': 'no use allowed'
+        }
+    ]
+    assert mocked_service_item.data_string['verse_source'] == [slide_data]
 
 
 def test_generate_slide_data_data_string_one_bible(media_item: BibleMediaItem):
@@ -1763,15 +1762,14 @@ def test_generate_slide_data_data_string_one_bible(media_item: BibleMediaItem):
     media_item.generate_slide_data(mocked_service_item, item=mocked_items)
 
     # THEN: both primary and secondary bible info should be included in the returned service item data string
-    assert mocked_service_item.data_string == {
-        'bibles': [
-            {
-                'version': 'Bible version 104',
-                'copyright': 'copywrong',
-                'permissions': 'all the permissions'
-            }
-        ]
-    }
+    assert mocked_service_item.data_string['bibles'] == [
+        {
+            'version': 'Bible version 104',
+            'copyright': 'copywrong',
+            'permissions': 'all the permissions'
+        }
+    ]
+    assert mocked_service_item.data_string['verse_source'] == [slide_data]
 
 
 def test_generate_slide_data_title_uses_version_only(media_item: BibleMediaItem):

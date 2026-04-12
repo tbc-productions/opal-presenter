@@ -306,6 +306,8 @@ def test_build_context_menu(settings: Settings):
     service_manager.auto_play_slides_loop = MagicMock()
     service_manager.timed_slide_interval = MagicMock()
     service_manager.theme_menu = MagicMock()
+    service_manager.bible_layout_menu = MagicMock()
+    service_manager.bible_layout_style_actions = {}
     service_manager.menu = MagicMock()
     # WHEN I define a context menu
     service_manager.context_menu(1)
@@ -323,6 +325,8 @@ def test_build_context_menu(settings: Settings):
     assert service_manager.auto_play_slides_loop.setChecked.call_count == 0, 'Should not be called'
     assert service_manager.timed_slide_interval.setChecked.call_count == 0, 'Should not be called'
     assert service_manager.theme_menu.menuAction().setVisible.call_count == 1, \
+        'Should have been called once'
+    assert service_manager.bible_layout_menu.menuAction().setVisible.call_count == 1, \
         'Should have been called once'
 
 
