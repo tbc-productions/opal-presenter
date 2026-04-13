@@ -63,6 +63,9 @@ class ScreensTab(SettingsTab):
         self.display_on_monitor_check = QtWidgets.QCheckBox(self.generic_group_box)
         self.display_on_monitor_check.setObjectName('monitor_combo_box')
         self.generic_group_layout.addWidget(self.display_on_monitor_check)
+        self.always_on_top_check = QtWidgets.QCheckBox(self.generic_group_box)
+        self.always_on_top_check.setObjectName('always_on_top_check')
+        self.generic_group_layout.addWidget(self.always_on_top_check)
         self.tab_layout.addWidget(self.generic_group_box)
         self.tab_layout.addStretch()
         Registry().register_function('config_screen_changed', self.screen_selection_widget.load)
@@ -72,6 +75,7 @@ class ScreensTab(SettingsTab):
     def retranslate_ui(self):
         self.generic_group_box.setTitle(translate('OpenLP.ScreensTab', 'Generic screen settings'))
         self.display_on_monitor_check.setText(translate('OpenLP.ScreensTab', 'Display if a single screen'))
+        self.always_on_top_check.setText(translate('OpenLP.ScreensTab', 'Always on top'))
 
     def resizeEvent(self, event=None):
         """
@@ -88,10 +92,12 @@ class ScreensTab(SettingsTab):
         self.screen_selection_widget.load()
         # Load generic settings
         self.display_on_monitor_check.setChecked(self.settings.value('core/display on monitor'))
+        self.always_on_top_check.setChecked(self.settings.value('core/always on top'))
 
     def save(self):
         self.screen_selection_widget.save()
         self.settings.setValue('core/display on monitor', self.display_on_monitor_check.isChecked())
+        self.settings.setValue('core/always on top', self.always_on_top_check.isChecked())
         # On save update the screens as well
         if self.tab_visited:
             self.settings_form.register_post_process('config_screen_changed')

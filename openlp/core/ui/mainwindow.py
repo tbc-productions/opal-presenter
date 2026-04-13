@@ -1778,6 +1778,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         live = self.live_controller
         if not live or not live.is_live:
             return
+        if not checked and not live.is_desktop_hide_available():
+            self._sync_view_display_output_menu_action()
+            return
         if checked:
             live.set_hide_mode(None)
         else:
@@ -1789,9 +1792,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         live = self.live_controller
         showing = False
+        desktop_hide_available = True
         if live and live.is_live and live.display is not None:
+            desktop_hide_available = live.is_desktop_hide_available()
             showing = live.current_hide_mode != HideMode.Screen
+        if not desktop_hide_available:
+            # "Display output" maps to desktop hide/show, so disable it when desktop hide is unavailable.
+            showing = True
         self.view_display_output_item.blockSignals(True)
+        self.view_display_output_item.setEnabled(desktop_hide_available)
         self.view_display_output_item.setChecked(showing)
         self.view_display_output_item.blockSignals(False)
 

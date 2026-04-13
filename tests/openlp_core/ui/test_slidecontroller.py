@@ -531,6 +531,66 @@ def test_on_toggle_desktop_off(settings: Settings):
     mocked_set_hide_mode.assert_called_once_with(None)
 
 
+@patch('openlp.core.ui.slidecontroller.is_macosx')
+def test_is_desktop_hide_available_disabled_for_macos_always_on_top(mocked_is_macosx, settings: Settings):
+    """
+    Show Desktop should be unavailable on macOS when Always on top is enabled.
+    """
+    # GIVEN: A live slide controller on macOS with always-on-top enabled
+    mocked_is_macosx.return_value = True
+    slide_controller = SlideController(None)
+    mocked_settings = MagicMock()
+    mocked_settings.value.return_value = True
+    slide_controller.settings = mocked_settings
+
+    # WHEN: Checking desktop hide availability
+    available = slide_controller.is_desktop_hide_available()
+
+    # THEN: Desktop hide should be disabled
+    assert available is False
+
+
+def test_on_toggle_desktop_ignored_when_unavailable(settings: Settings):
+    """
+    Check that toggling desktop does nothing when desktop hide mode is unavailable.
+    """
+    # GIVEN: A new SlideController instance and unavailable desktop hide mode
+    mocked_set_hide_mode = MagicMock()
+    slide_controller = SlideController(None)
+    slide_controller.set_hide_mode = mocked_set_hide_mode
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=False)
+
+    # WHEN: on_toggle_desktop() is called
+    slide_controller.on_toggle_desktop()
+
+    # THEN: set_hide_mode should not be called
+    mocked_set_hide_mode.assert_not_called()
+
+
+def test_set_hide_mode_screen_falls_back_when_desktop_unavailable(settings: Settings):
+    """
+    set_hide_mode(HideMode.Screen) should be converted to show mode when desktop hide is unavailable.
+    """
+    # GIVEN: A controller where desktop mode is unavailable
+    slide_controller = SlideController(None)
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=False)
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.show_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.service_item = None
+    slide_controller.update_preview = MagicMock()
+    slide_controller.on_toggle_loop = MagicMock()
+
+    # WHEN: Desktop hide mode is requested
+    slide_controller.set_hide_mode(HideMode.Screen)
+
+    # THEN: Hide mode should fall back to showing presentation
+    assert slide_controller._current_hide_mode is None
+
+
 def test_on_go_live_live_controller(registry: Registry):
     """
     Test that when the on_go_live() method is called the message is sent to the live controller and focus is

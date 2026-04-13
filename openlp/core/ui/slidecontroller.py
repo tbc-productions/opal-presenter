@@ -33,7 +33,7 @@ from openlp.core.common import SlideLimits
 from openlp.core.common.actions import ActionList, CategoryOrder
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
-from openlp.core.common.platform import is_wayland_compositor
+from openlp.core.common.platform import is_macosx, is_wayland_compositor
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
@@ -345,6 +345,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.desktop_screen_button.setObjectName('desktop_screen_button')
             self.toolbar.add_toolbar_widget(self.desktop_screen_button)
             self.desktop_screen_button.setDefaultAction(self.desktop_screen)
+            self._update_desktop_hide_action_state()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
             self.play_slides_menu = QtWidgets.QToolButton(self.toolbar)
@@ -684,6 +685,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Settings dialog has changed the screen size of adjust output and screen previews.
         """
+        if self.is_live:
+            self._update_desktop_hide_action_state()
         size = self.screens.current.display_geometry.size()
         if self.is_live and self.displays:
             for display in self.displays:
@@ -743,6 +746,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.toolbar.set_widget_visible(WIDE_MENU, not narrow)
         else:
             self.toolbar.set_widget_visible(NON_TEXT_MENU, not narrow)
+        # Apply desktop-action visibility last so toolbar layout updates do not override it.
+        self._update_desktop_hide_action_state()
 
     def receive_spin_delay(self):
         """
@@ -1350,6 +1355,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Toggle the desktop
         """
+        if not self.is_desktop_hide_available():
+            return
         if self._current_hide_mode == HideMode.Screen:
             self.set_hide_mode(None)
         else:
@@ -1368,6 +1375,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Blank/Hide the display screen (within a plugin if required).
         """
+        if hide_mode == HideMode.Screen and not self.is_desktop_hide_available():
+            hide_mode = None
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
         # Update ui buttons
@@ -1405,6 +1414,26 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.update_preview()
         # Update loop state
         self.on_toggle_loop()
+
+    def is_desktop_hide_available(self):
+        """
+        Return True when "Show Desktop" mode is available in this environment.
+        """
+        return not (is_macosx() and self.settings.value('core/always on top'))
+
+    def _update_desktop_hide_action_state(self):
+        """
+        Enable or disable "Show Desktop" actions based on current platform/settings.
+        """
+        if not self.is_live:
+            return
+        enabled = self.is_desktop_hide_available()
+        self.desktop_screen.setEnabled(enabled)
+        self.desktop_screen.setVisible(enabled)
+        self.desktop_screen_button.setEnabled(enabled)
+        self.desktop_screen_button.setVisible(enabled)
+        if not enabled and self._current_hide_mode == HideMode.Screen:
+            self.set_hide_mode(None)
 
     def on_slide_selected(self):
         """
