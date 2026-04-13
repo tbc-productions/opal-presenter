@@ -975,15 +975,17 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         # Get theme
         theme_data = service_item.get_theme_data()
-        self._apply_pdf_presentation_transitions(service_item, theme_data)
+        self._apply_service_item_transitions(service_item, theme_data)
         # Set theme for preview
         self.preview_display.set_theme(theme_data, service_item_type=service_item.service_item_type)
         # Set theme for displays
         for display in self.displays:
             display.set_theme(theme_data, service_item_type=service_item.service_item_type)
 
-    def _apply_pdf_presentation_transitions(self, service_item, theme_data):
-        transition_settings = getattr(service_item, 'pdf_transition_settings', None)
+    def _apply_service_item_transitions(self, service_item, theme_data):
+        transition_settings = getattr(service_item, 'slide_transition_settings', None)
+        if not isinstance(transition_settings, dict):
+            transition_settings = getattr(service_item, 'pdf_transition_settings', None)
         if not isinstance(transition_settings, dict) or not transition_settings.get('enabled', False):
             return
         theme_data.display_slide_transition = True

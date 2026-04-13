@@ -35,7 +35,7 @@ from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.lib.theme import TransitionSpeed
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
 from tests.utils import convert_file_service_item
@@ -1153,6 +1153,31 @@ def test_get_service_repr_song(registry: Registry):
     assert rep['header'].get('plugin') == 'songs'
     assert rep['header'].get('theme') == 'Default'
     assert rep['header'].get('title') == 'Test Song'
+    assert rep['header'].get('slide_transition_settings') == {
+        'enabled': False,
+        'type': TransitionType.Fade,
+        'speed': TransitionSpeed.Normal
+    }
+
+
+def test_set_from_service_loads_slide_transition_settings(state_media, settings, service_item_env):
+    """Test that set_from_service() loads slide transition settings from header."""
+    service_item = ServiceItem(None)
+    service_item.add_icon = MagicMock()
+    line = convert_file_service_item(TEST_PATH, 'serviceitem_custom_1.osj')
+    line['serviceitem']['header']['slide_transition_settings'] = {
+        'enabled': True,
+        'type': TransitionType.Slide,
+        'speed': TransitionSpeed.Fast
+    }
+
+    service_item.set_from_service(line)
+
+    assert service_item.slide_transition_settings == {
+        'enabled': True,
+        'type': TransitionType.Slide,
+        'speed': TransitionSpeed.Fast
+    }
 
 
 @pytest.mark.parametrize('is_text, is_clear_called', ((True, True), (False, False)))

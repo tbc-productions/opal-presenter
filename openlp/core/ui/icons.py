@@ -174,6 +174,7 @@ class UiIcons(metaclass=Singleton):
             'time': {'icon': 'mdi.history'},
             'theme': {'icon': 'mdi.brush'},
             'top': {'icon': 'mdi.chevron-double-up'},
+            'transition': {'icon': 'mdi.transition'},
             'undo': {'icon': 'mdi.undo'},
             'upload': {'icon': 'mdi.upload'},
             'save_plus': {'icon': 'mdi.content-save-edit'},

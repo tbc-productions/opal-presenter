@@ -315,7 +315,44 @@ class PresentationMediaItem(FolderLibraryItem):
             service_item.add_capability(ItemCapabilities.CanLoop)
             service_item.add_capability(ItemCapabilities.CanAppend)
             service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
-            service_item.pdf_transition_settings = self._get_pdf_transition_settings()
+            inherited_transition_settings = None
+            if items and isinstance(items[0], ServiceItem):
+                inherited_transition_settings = getattr(items[0], 'slide_transition_settings', None)
+            if isinstance(inherited_transition_settings, dict):
+                transition_enabled = bool(inherited_transition_settings.get('enabled', False))
+                transition_type = inherited_transition_settings.get('type', TransitionType.Fade)
+                if isinstance(transition_type, str):
+                    transition_type = TransitionType.from_string(transition_type) or TransitionType.Fade
+                transition_speed = inherited_transition_settings.get('speed', TransitionSpeed.Normal)
+                if isinstance(transition_speed, str):
+                    transition_speed = TransitionSpeed.from_string(transition_speed) or TransitionSpeed.Normal
+                speed_seconds_lookup = {
+                    TransitionSpeed.Fast: 0.4,
+                    TransitionSpeed.Normal: 0.8,
+                    TransitionSpeed.Slow: 1.2
+                }
+                speed_seconds = speed_seconds_lookup.get(transition_speed, 0.8)
+                base_pdf_transition_settings = self._get_pdf_transition_settings()
+                service_item.slide_transition_settings = {
+                    'enabled': transition_enabled,
+                    'type': transition_type,
+                    'speed': transition_speed
+                }
+                service_item.pdf_transition_settings = {
+                    'enabled': transition_enabled,
+                    'effect': transition_type,
+                    'speed': transition_speed,
+                    'speed_seconds': speed_seconds,
+                    'easing': base_pdf_transition_settings.get('easing', 'balanced'),
+                    'type': transition_type
+                }
+            else:
+                service_item.pdf_transition_settings = self._get_pdf_transition_settings()
+                service_item.slide_transition_settings = {
+                    'enabled': bool(service_item.pdf_transition_settings.get('enabled', False)),
+                    'type': service_item.pdf_transition_settings.get('effect', TransitionType.Fade),
+                    'speed': service_item.pdf_transition_settings.get('speed', TransitionSpeed.Normal)
+                }
             service_item.name = 'images'
             # force a nonexistent theme
             service_item.theme = -1

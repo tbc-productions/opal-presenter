@@ -155,6 +155,20 @@ def _add_image_service_item(s_manager: ServiceManager, has_valid_image: bool = T
     return service_item
 
 
+def test_service_item_supports_transition_for_pdf_presentation():
+    """Test that transition support includes PDF presentation command items."""
+    service_item = MagicMock()
+    service_item.name = 'presentations'
+    service_item.service_item_type = ServiceItemType.Command
+    service_item.title = 'slides.pdf'
+    service_item.is_image.return_value = False
+
+    assert ServiceManager._service_item_supports_transition(service_item) is True
+
+    service_item.title = 'slides.pptx'
+    assert ServiceManager._service_item_supports_transition(service_item) is False
+
+
 @pytest.fixture()
 def service_manager(registry: Registry, settings: Settings):
     """Setup a service manager with a service item and a few mocked registry entries"""

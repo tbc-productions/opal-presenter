@@ -41,7 +41,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.common.utils import wait_for
 from openlp.core.display.render import remove_html_and_strip, remove_tags, render_tags, render_chords_for_printing
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
-from openlp.core.lib.theme import BackgroundType, TransitionSpeed
+from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.media import parse_stream_path
@@ -108,6 +108,11 @@ class ServiceItem(RegistryProperties):
         self.has_original_file_path = True
         self.sha256_file_hash = None
         self.stored_filename = None
+        self.slide_transition_settings = {
+            'enabled': False,
+            'type': TransitionType.Fade,
+            'speed': TransitionSpeed.Normal
+        }
         self._new_item()
         self.metadata = []
 
@@ -449,7 +454,8 @@ class ServiceItem(RegistryProperties):
             'processor': self.processor,
             'metadata': self.metadata,
             'sha256_file_hash': self.sha256_file_hash,
-            'stored_filename': stored_filename
+            'stored_filename': stored_filename,
+            'slide_transition_settings': self.slide_transition_settings
         }
         for file_path, file_hash in self.background_audio:
             if lite_save:
@@ -553,6 +559,10 @@ class ServiceItem(RegistryProperties):
         self.metadata = header.get('item_meta_data', [])
         self.sha256_file_hash = header.get('sha256_file_hash', None)
         self.stored_filename = header.get('stored_filename', None)
+        self.slide_transition_settings = header.get(
+            'slide_transition_settings',
+            {'enabled': False, 'type': TransitionType.Fade, 'speed': TransitionSpeed.Normal}
+        )
         if 'background_audio' in header and State().check_preconditions('media'):
             self.background_audio = []
             for file_str in header['background_audio']:

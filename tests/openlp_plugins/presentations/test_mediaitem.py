@@ -21,6 +21,7 @@
 """
 This module contains tests for the lib submodule of the Presentations plugin.
 """
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
@@ -28,7 +29,7 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.lib import ServiceItemContext
-from openlp.core.lib.serviceitem import ItemCapabilities
+from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
@@ -209,6 +210,54 @@ def test_generate_slide_data_from_pdf(media_item):
         'type': TransitionType.Fade,
         'speed': TransitionSpeed.Normal
     }
+
+
+def test_generate_slide_data_from_pdf_inherits_item_transition_settings(media_item):
+    """
+    Test that generating PDF slide data for live/preview inherits transition settings from an existing ServiceItem.
+    """
+    media_item.list_view = MagicMock()
+    media_item.display_type_combo_box = MagicMock(currentText=MagicMock(return_value='Pdf'))
+    media_item.find_controller_by_type = MagicMock(return_value='Pdf')
+    mocked_controller = MagicMock()
+    mocked_doc = MagicMock()
+    mocked_controller.add_document.return_value = mocked_doc
+    media_item.controllers = {'Pdf': mocked_controller}
+
+    source_item = ServiceItem(None)
+    source_item.slide_transition_settings = {
+        'enabled': True,
+        'type': TransitionType.Slide,
+        'speed': TransitionSpeed.Slow
+    }
+    target_service_item = ServiceItem(None)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        pdf_path = temp_path / 'test.pdf'
+        pdf_path.write_text('x')
+        (temp_path / 'mainslide001.png').write_text('x')
+        mocked_doc.get_thumbnail_path.return_value = None
+        mocked_doc.get_temp_folder.return_value = temp_path
+        mocked_doc.get_thumbnail_folder.return_value = temp_path
+
+        result = media_item.generate_slide_data(
+            target_service_item,
+            item=source_item,
+            context=ServiceItemContext.Live,
+            file_path=pdf_path
+        )
+
+    assert result is True
+    assert target_service_item.slide_transition_settings == {
+        'enabled': True,
+        'type': TransitionType.Slide,
+        'speed': TransitionSpeed.Slow
+    }
+    assert target_service_item.pdf_transition_settings['enabled'] is True
+    assert target_service_item.pdf_transition_settings['effect'] == TransitionType.Slide
+    assert target_service_item.pdf_transition_settings['speed'] == TransitionSpeed.Slow
+    assert target_service_item.pdf_transition_settings['speed_seconds'] == 1.2
 
 
 def test_generate_slide_data_rebuilds_missing_first_thumbnail_cache(media_item):

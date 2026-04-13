@@ -44,6 +44,7 @@ from openlp.core.lib import build_icon, ItemCapabilities
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ServiceItem
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box, find_and_set_in_combo_box
 from openlp.core.state import State
 from openlp.core.threading import ThreadWorker, run_thread
@@ -433,6 +434,14 @@ class Ui_ServiceManager(object):
                                                       triggers=self.on_auto_start)
         # Add already existing delete action to the menu.
         self.menu.addAction(self.delete_action)
+        self.transition_section_sep_before = _add_service_manager_context_menu_separator(self.menu)
+        self.transition_action = create_widget_action(
+            self.menu,
+            text=translate('OpenLP.ServiceManager', '&Transition'),
+            icon=UiIcons().transition,
+            triggers=self.on_service_item_transition_form)
+        self.transition_action.setCheckable(True)
+        self.transition_section_sep_after = _add_service_manager_context_menu_separator(self.menu)
         self.custom_layout_section_sep_before = _add_service_manager_context_menu_separator(self.menu)
         self.bible_layout_menu = QtWidgets.QMenu(translate('OpenLP.ServiceManager', 'Layout style'), self.menu)
         self.menu.addMenu(self.bible_layout_menu)
@@ -1430,6 +1439,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.notes_action.setVisible(False)
         self.time_action.setVisible(False)
         self.auto_start_action.setVisible(False)
+        self.transition_action.setVisible(False)
         if service_item['service_item'].is_capable(ItemCapabilities.CanEdit) and service_item['service_item'].edit_id:
             self.edit_action.setVisible(True)
         if service_item['service_item'].is_capable(ItemCapabilities.CanEditTitle):
@@ -1464,6 +1474,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             else:
                 self.auto_start_action.setIcon(UiIcons().inactive)
                 self.auto_start_action.setText(translate('OpenLP.ServiceManager', '&Auto Start - inactive'))
+        if self._service_item_supports_transition(service_item['service_item']):
+            transition_settings = self._get_service_item_transition_settings(service_item['service_item'])
+            self.transition_action.setVisible(True)
+            self.transition_action.setChecked(bool(transition_settings.get('enabled', False)))
         if service_item['service_item'].is_text():
             for plugin in State().list_plugins():
                 if plugin.name == 'custom' and plugin.status == PluginStatus.Active:
@@ -1498,7 +1512,107 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         custom_layout_section_visible = has_create_custom or has_bible_layout
         self.custom_layout_section_sep_before.setVisible(custom_layout_section_visible)
         self.custom_layout_section_sep_after.setVisible(custom_layout_section_visible)
+        transition_section_visible = self.transition_action.isVisible()
+        self.transition_section_sep_before.setVisible(transition_section_visible)
+        self.transition_section_sep_after.setVisible(transition_section_visible)
         self.menu.exec(self.service_manager_list.mapToGlobal(point))
+
+    @staticmethod
+    def _service_item_supports_transition(service_item):
+        """
+        Return True when item-level slide transitions are configurable for this service item.
+        """
+        is_pdf_presentation = (
+            getattr(service_item, 'name', None) == 'presentations'
+            and getattr(service_item, 'service_item_type', None) == ServiceItemType.Command
+            and str(getattr(service_item, 'title', '')).lower().endswith('.pdf')
+        )
+        supports = service_item.is_image() or is_pdf_presentation
+        return supports
+
+    @staticmethod
+    def _get_service_item_transition_settings(service_item):
+        """
+        Return normalised transition settings for a service item.
+        """
+        settings = getattr(service_item, 'slide_transition_settings', None)
+        if not isinstance(settings, dict):
+            settings = {}
+        transition_type = settings.get('type', TransitionType.Fade)
+        if isinstance(transition_type, str):
+            transition_type = TransitionType.from_string(transition_type) or TransitionType.Fade
+        transition_speed = settings.get('speed', TransitionSpeed.Normal)
+        if isinstance(transition_speed, str):
+            transition_speed = TransitionSpeed.from_string(transition_speed) or TransitionSpeed.Normal
+        return {
+            'enabled': bool(settings.get('enabled', False)),
+            'type': transition_type,
+            'speed': transition_speed
+        }
+
+    def on_service_item_transition_form(self):
+        """
+        Configure slide transition settings for the selected image/PDF service item.
+        """
+        item_index = self.find_service_item()[0]
+        if item_index < 0:
+            return
+        service_item = self.service_items[item_index]['service_item']
+        if not self._service_item_supports_transition(service_item):
+            return
+        settings = self._get_service_item_transition_settings(service_item)
+        transition_types = [
+            (translate('OpenLP.ServiceManager', 'Fade'), TransitionType.Fade),
+            (translate('OpenLP.ServiceManager', 'Slide'), TransitionType.Slide),
+            (translate('OpenLP.ServiceManager', 'Convex'), TransitionType.Convex),
+            (translate('OpenLP.ServiceManager', 'Concave'), TransitionType.Concave),
+            (translate('OpenLP.ServiceManager', 'Zoom'), TransitionType.Zoom)
+        ]
+        transition_speeds = [
+            (translate('OpenLP.ServiceManager', 'Fast'), TransitionSpeed.Fast),
+            (translate('OpenLP.ServiceManager', 'Normal'), TransitionSpeed.Normal),
+            (translate('OpenLP.ServiceManager', 'Slow'), TransitionSpeed.Slow)
+        ]
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(translate('OpenLP.ServiceManager', 'Transition'))
+        dialog_layout = QtWidgets.QFormLayout(dialog)
+        transition_combo = QtWidgets.QComboBox(dialog)
+        transition_combo.addItem(translate('OpenLP.ServiceManager', 'Disabled'), None)
+        for label, value in transition_types:
+            transition_combo.addItem(label, value)
+        speed_combo = QtWidgets.QComboBox(dialog)
+        for label, value in transition_speeds:
+            speed_combo.addItem(label, value)
+        dialog_layout.addRow(translate('OpenLP.ServiceManager', 'Type'), transition_combo)
+        dialog_layout.addRow(translate('OpenLP.ServiceManager', 'Speed'), speed_combo)
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel,
+            parent=dialog
+        )
+        dialog_layout.addRow(button_box)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        if settings['enabled']:
+            type_index = transition_combo.findData(settings['type'])
+            transition_combo.setCurrentIndex(max(0, type_index))
+            speed_index = speed_combo.findData(settings['speed'])
+            speed_combo.setCurrentIndex(max(0, speed_index))
+        else:
+            transition_combo.setCurrentIndex(0)
+        transition_combo.currentIndexChanged.connect(lambda: speed_combo.setEnabled(transition_combo.currentData() is not None))
+        speed_combo.setEnabled(transition_combo.currentData() is not None)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        selected_type = transition_combo.currentData()
+        service_item.slide_transition_settings = {
+            'enabled': selected_type is not None,
+            'type': selected_type if selected_type is not None else TransitionType.Fade,
+            'speed': speed_combo.currentData() if speed_combo.currentData() is not None else TransitionSpeed.Normal
+        }
+        self.repaint_service_list(item_index, -1)
+        self.preview_controller.replace_service_manager_item(service_item, item_index)
+        self.live_controller.replace_service_manager_item(service_item, item_index)
+        self.set_modified()
 
     def on_bible_layout_style_action(self, checked=False):
         """
@@ -1954,6 +2068,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_manager_list.clear()
         for _, item in enumerate(self.service_items):
             service_item_from_item = item['service_item']
+            transition_settings = self._get_service_item_transition_settings(service_item_from_item)
+            transition_enabled = self._service_item_supports_transition(service_item_from_item) and \
+                transition_settings.get('enabled', False)
             tree_widget_item = QtWidgets.QTreeWidgetItem(self.service_manager_list)
             self.tree_widget_items.append(tree_widget_item)
             is_dragged_item = item is self._internal_drag_item or item is self._external_drag_item
@@ -1968,6 +2085,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                              QtCore.Qt.TransformationMode.SmoothTransformation)
                     painter = QtGui.QPainter(icon)
                     painter.drawImage(0, 0, overlay)
+                    if transition_enabled:
+                        transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
+                        transition_overlay = transition_overlay.scaled(
+                            30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                            QtCore.Qt.TransformationMode.SmoothTransformation
+                        )
+                        painter.drawImage(50, 50, transition_overlay)
                     painter.end()
                     tree_widget_item.setIcon(0, build_icon(icon))
                 elif service_item_from_item.temporary_edit:
@@ -1976,13 +2100,33 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                              QtCore.Qt.TransformationMode.SmoothTransformation)
                     painter = QtGui.QPainter(icon)
                     painter.drawImage(40, 0, overlay)
+                    if transition_enabled:
+                        transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
+                        transition_overlay = transition_overlay.scaled(
+                            30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                            QtCore.Qt.TransformationMode.SmoothTransformation
+                        )
+                        painter.drawImage(50, 50, transition_overlay)
+                    painter.end()
+                    tree_widget_item.setIcon(0, build_icon(icon))
+                elif transition_enabled:
+                    transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
+                    transition_overlay = transition_overlay.scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter = QtGui.QPainter(icon)
+                    painter.drawImage(50, 50, transition_overlay)
                     painter.end()
                     tree_widget_item.setIcon(0, build_icon(icon))
                 else:
                     tree_widget_item.setIcon(0, themed_icon)
             else:
                 tree_widget_item.setIcon(0, UiIcons().delete)
-            tree_widget_item.setText(0, service_item_from_item.get_display_title())
+            title = service_item_from_item.get_display_title()
+            if transition_enabled:
+                title += ' \u21c4'
+            tree_widget_item.setText(0, title)
             tips = []
             if service_item_from_item.temporary_edit:
                 text1 = translate('OpenLP.ServiceManager', 'Edit')
