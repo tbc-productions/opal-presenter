@@ -48,6 +48,7 @@ from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.themeform import ThemeForm
+from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
@@ -238,7 +239,9 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         self.upgrade_themes()  # TODO: Can be removed when upgrade path from OpenLP 2.4 no longer needed
         self.load_themes()
         self._update_renderer_from_current_screen()
-        self.update_preview_images()
+        themes_to_refresh = self._get_themes_requiring_preview_refresh()
+        if themes_to_refresh:
+            self._regenerate_previews_with_progress_dialog(themes_to_refresh, reason='startup_stale_thumbnails')
 
     def load_settings(self):
         view_mode_value = None
@@ -270,7 +273,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
                     self._thumbnail_refresh_pending = True
                 else:
-                    self.update_preview_images()
+                    self._regenerate_previews_with_progress_dialog(self.get_theme_names(),
+                                                                   reason='screen_size_changed')
         if hasattr(self, 'theme_form') and self.theme_form is not None and self.theme_form.isVisible() and \
                 hasattr(self.theme_form, 'theme'):
             self.theme_form.update_theme()
@@ -320,7 +324,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         try:
             theme_data = self._get_theme_data(theme_name)
-            preview_pixmap = self.generate_image(theme_data, True)
+            preview_pixmap = self.generate_image(theme_data, False)
             if preview_pixmap is not None:
                 self.save_preview(theme_name, preview_pixmap)
         finally:
@@ -710,7 +714,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     icon = build_icon(thumb_path)
                 else:
                     # Ensure thumbnails are generated from a rendered preview so text/layout/fonts are visible.
-                    preview_pixmap = self.generate_image(theme_obj, True)
+                    preview_pixmap = self.generate_image(theme_obj, False)
                     if preview_pixmap is not None:
                         self.save_preview(text_name, preview_pixmap)
                     if thumb_path.exists():
@@ -918,6 +922,51 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         worker.finished.connect(worker.quit.emit)
         self._thumbnail_refresh_worker = worker
         run_thread(worker, 'theme_thumbnail_refresh')
+
+    def _get_themes_requiring_preview_refresh(self):
+        """
+        Return themes whose thumbnail is missing or stale.
+        """
+        themes_to_refresh = []
+        files = AppLocation.get_files('themes', '/*.json')
+        for file in files:
+            theme_file_path = self.theme_path / file
+            if not theme_file_path.exists():
+                continue
+            theme_name = theme_file_path.stem
+            thumb_path = self.thumb_path / '{name}.png'.format(name=theme_name)
+            if not validate_thumb(theme_file_path, thumb_path):
+                themes_to_refresh.append(theme_name)
+        return themes_to_refresh
+
+    def _regenerate_previews_with_progress_dialog(self, theme_name_list, reason='manual'):
+        """
+        Regenerate thumbnails while showing the theme progress dialog.
+        """
+        if not theme_name_list:
+            return
+        owner = self
+        try:
+            settings_form = self.settings_form
+            if settings_form and settings_form.isVisible():
+                owner = settings_form
+        except Exception:
+            pass
+        progress_form = ThemeProgressForm(owner)
+        progress_form.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        progress_form.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, True)
+        progress_form.theme_list = list(theme_name_list)
+        progress_form.show()
+        progress_form.raise_()
+        progress_form.activateWindow()
+        QtWidgets.QApplication.processEvents()
+        for theme_name in theme_name_list:
+            theme_data = self._get_theme_data(theme_name)
+            preview_pixmap = progress_form.get_preview(theme_name, theme_data)
+            if preview_pixmap is not None:
+                self.save_preview(theme_name, preview_pixmap)
+        progress_form.close()
+        self.load_themes()
 
     def generate_image(self, theme_data, force_page=False):
         """

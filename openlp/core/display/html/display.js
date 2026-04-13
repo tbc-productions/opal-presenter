@@ -830,6 +830,21 @@ var Display = {
     return currSlide.clientHeight >= currSlide.scrollHeight;
   },
   /**
+   * Return render details for preview diagnostics.
+   */
+  getPreviewRenderState: function () {
+    var currentSlide = Reveal.getCurrentSlide();
+    var paragraph = currentSlide ? currentSlide.querySelector("p") : null;
+    var textSample = paragraph ? (paragraph.innerText || "").slice(0, 40) : "";
+    var backgroundElement = $(".reveal .slide-background.present .slide-background-content")[0];
+    var backgroundImage = backgroundElement ? (backgroundElement.style.backgroundImage || "") : "";
+    return {
+      themeApplied: Display._themeApplied,
+      backgroundImage: backgroundImage,
+      textSample: textSample
+    };
+  },
+  /**
    * Generate the OpenLP startup splashscreen
    * @param {string} bg_color - The background color
    * @param {string} image - Path to the splash image

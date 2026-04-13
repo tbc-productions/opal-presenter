@@ -626,18 +626,32 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         """
         # save value for use in format_slide
         self.force_page = force_page
-        if not self.force_page:
-            self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
-            slides = self.format_slide(VERSE, None)
-            verses = dict()
-            verses['title'] = TITLE
-            verses['text'] = render_tags(slides[0])
-            verses['verse'] = 'V1'
-            verses['footer'] = self.generate_footer()
-            self.load_verses([verses], is_sync=True)
-            self.force_page = False
-            if generate_screenshot:
-                return self.grab()
+        self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+        slides = self.format_slide(VERSE, None)
+        verses = dict()
+        verses['title'] = TITLE
+        verses['text'] = render_tags(slides[0]) if slides else ''
+        verses['verse'] = 'V1'
+        verses['footer'] = self.generate_footer()
+        self.load_verses([verses], is_sync=True)
+        self.run_in_display('goToSlide', 'V1', is_sync=True)
+        self.run_in_display('resetTheme', is_sync=True)
+        self.force_page = False
+        if generate_screenshot:
+            preview_state = self.run_in_display('getPreviewRenderState', is_sync=True)
+            expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
+            if expected_image_background and not (preview_state or {}).get('backgroundImage'):
+                app = QtWidgets.QApplication.instance()
+                # First-theme warm-up: if image background is not yet bound, re-apply theme + slide once.
+                self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+                self.load_verses([verses], is_sync=True)
+                self.run_in_display('goToSlide', 'V1', is_sync=True)
+                self.run_in_display('resetTheme', is_sync=True)
+                if app:
+                    app.processEvents()
+                self.run_in_display('getPreviewRenderState', is_sync=True)
+            screenshot = self.save_screenshot()
+            return screenshot
         self.force_page = False
         return None
 
