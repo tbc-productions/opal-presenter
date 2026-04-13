@@ -1295,6 +1295,14 @@ var Display = {
   setImageSlides: function (slides) {
     Display._clearSlidesList();
     var parentSection = document.createElement("section");
+    var imageFit = _resolveBackgroundFit("contain");
+    var themeTransitionType = TransitionType.Fade;
+    var themeTransitionsEnabled = false;
+    if (Display._theme) {
+      themeTransitionType = Display._normaliseThemeTransitionType(Display._theme.display_slide_transition_type);
+      themeTransitionsEnabled = !!Display._theme.display_slide_transition;
+    }
+    var useNativeBackgroundForImageSlides = themeTransitionsEnabled && themeTransitionType === TransitionType.Fade;
     var hasPdfBackgroundSlides = slides.some(function (slide) {
       return !!slide.use_background_image;
     });
@@ -1316,25 +1324,48 @@ var Display = {
       section.setAttribute("style", "height: 100%; width: 100%;");
       section.setAttribute('data-slide', index);
       if (slide.use_background_image) {
-        section.classList.add("use-background-image");
         var pdfFit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
-        section.style.backgroundColor = "#000";
-        section.style.backgroundImage = "url('" + Display._getFileUrl(slide.path) + "')";
-        section.style.backgroundPosition = pdfFit.position;
-        section.style.backgroundSize = pdfFit.size;
-        section.style.backgroundRepeat = pdfFit.repeat;
+        var pdfEffect = Display._getPresentationTransitionEffect(slide.pdf_transition_effect);
+        var useNativeBackgroundForPdfSlides = !!slide.pdf_transition_enabled && pdfEffect === "fade";
+        if (useNativeBackgroundForPdfSlides) {
+          section.classList.add("use-background-image");
+          _applyFullscreenBackgroundImage(section, "#000", Display._getFileUrl(slide.path), pdfFit);
+          section.setAttribute("data-transition", "none");
+          section.setAttribute("data-background-transition", "fade");
+        } else {
+          section.classList.add("use-background-image");
+          section.style.backgroundColor = "#000";
+          section.style.backgroundImage = "url('" + Display._getFileUrl(slide.path) + "')";
+          section.style.backgroundPosition = pdfFit.position;
+          section.style.backgroundSize = pdfFit.size;
+          section.style.backgroundRepeat = pdfFit.repeat;
+          section.removeAttribute("data-background-transition");
+        }
         if (slide.pdf_transition_enabled) {
-          section.setAttribute("data-transition", Display._getPresentationTransitionName(slide.pdf_transition_effect));
-          section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
+          if (useNativeBackgroundForPdfSlides) {
+            section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
+          } else {
+            section.setAttribute("data-transition", Display._getPresentationTransitionName(slide.pdf_transition_effect));
+            section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
+          }
         } else {
           section.setAttribute("data-transition", "none");
+          section.removeAttribute("data-background-transition");
         }
       } else {
-        var img = document.createElement('img');
-        img.src = Display._getFileUrl(slide.path);
-        img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: contain;");
-        img.setAttribute('data-slide', index);
-        section.appendChild(img);
+        if (useNativeBackgroundForImageSlides) {
+          section.classList.add("use-background-image");
+          _applyFullscreenBackgroundImage(section, "#000", Display._getFileUrl(slide.path), imageFit);
+          section.setAttribute("data-transition", "none");
+          section.setAttribute("data-background-transition", "fade");
+        } else {
+          var img = document.createElement('img');
+          img.src = Display._getFileUrl(slide.path);
+          img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: contain;");
+          img.setAttribute('data-slide', index);
+          section.appendChild(img);
+          section.removeAttribute("data-background-transition");
+        }
       }
       parentSection.appendChild(section);
       Display._slides[index.toString()] = index;
