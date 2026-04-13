@@ -513,7 +513,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         if self.is_display:
             QtCore.QTimer.singleShot(0, self._deferred_sync_geometry_avoid_main_window)
 
-    def run_in_display(self, action, *parameters, raw_parameters=None, is_sync=False, return_event_name=None):
+    def run_in_display(self, action, *parameters, raw_parameters=None, is_sync=False, return_event_name=None,
+                       raise_window=True):
         if len(parameters):
             raw_parameters = ''
             first = True
@@ -529,17 +530,23 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             action_name = 'requestActionAsync'
             action_async = ', \'{event_name}\''.format(event_name=return_event_name)
         if not raw_parameters:
-            return self._run_javascript('{action_name}(\'{action}\'{action_async})'.format(action_name=action_name,
-                                                                                           action=action,
-                                                                                           action_async=action_async),
-                                        is_sync)
+            return self._run_javascript(
+                '{action_name}(\'{action}\'{action_async})'.format(
+                    action_name=action_name,
+                    action=action,
+                    action_async=action_async
+                ),
+                is_sync,
+                raise_window=raise_window
+            )
         else:
             return self._run_javascript('{action_name}(\'{action}\'{action_async}, {raw_parameters})'
                                         .format(action_name=action_name, action=action, action_async=action_async,
                                                 raw_parameters=raw_parameters),
-                                        is_sync)
+                                        is_sync,
+                                        raise_window=raise_window)
 
-    def _run_javascript(self, script, is_sync=False):
+    def _run_javascript(self, script, is_sync=False, raise_window=True):
         """
         Run some Javascript in the WebView
 
@@ -560,7 +567,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             return self.__script_result
         else:
             self.webview.page().runJavaScript(script)
-        self.raise_()
+        if raise_window:
+            self.raise_()
 
     @QtCore.Slot()
     def handle_javascript_result(self, result):
@@ -586,13 +594,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             payload_text = str(payload)
         log.warning('Display transition debug: {data}'.format(data=payload_text))
 
-    def go_to_slide(self, verse):
+    def go_to_slide(self, verse, raise_window=True):
         """
         Go to a particular slide.
 
         :param str verse: The verse to go to, e.g. "V1" for songs, or just "0" for other types
         """
-        self.run_in_display('goToSlide', verse)
+        self.run_in_display('goToSlide', verse, raise_window=raise_window)
 
     def load_verses(self, verses, is_sync=False):
         """

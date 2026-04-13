@@ -222,3 +222,41 @@ def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presenta
     mocked_slide.assert_called_once_with(1)
     mocked_doc.start_presentation.assert_called_once()
     mocked_registry_instance.execute.assert_called_with('live_display_hide', HideMode.Screen)
+
+
+@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+def test_message_listener_next_passes_restore_focus_option(media_mock, media_item):
+    """
+    Test that MessageListener.next forwards restore_focus option to the live handler.
+    """
+    message_listener = MessageListener(media_item)
+    message_listener.live_handler = MagicMock()
+    message_listener.live_handler.next.return_value = False
+
+    with patch('openlp.plugins.presentations.lib.messagelistener.Registry') as mocked_registry:
+        mocked_registry.return_value.get.return_value.value.return_value = False
+        message_listener.next([MagicMock(), True, {'restore_focus': False}])
+
+    message_listener.live_handler.next.assert_called_once_with(restore_focus=False)
+
+
+def test_controller_next_falls_back_for_legacy_controllers():
+    """
+    Test that Controller.next falls back when doc.next_step lacks restore_focus kwarg support.
+    """
+    controller = Controller(True)
+    mocked_doc = MagicMock()
+    mocked_doc.is_active.return_value = True
+    mocked_doc.get_slide_count.return_value = 3
+    mocked_doc.ui_slidenumber = 1
+    mocked_doc.next_step.side_effect = [TypeError('unexpected keyword'), False]
+    controller.doc = mocked_doc
+    controller.activate = MagicMock(return_value=True)
+    controller.poll = MagicMock()
+
+    result = controller.next(restore_focus=False)
+
+    assert result is False
+    assert mocked_doc.next_step.call_count == 2
+    mocked_doc.next_step.assert_any_call(restore_focus=False)
+    mocked_doc.next_step.assert_any_call()

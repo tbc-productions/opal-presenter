@@ -121,7 +121,30 @@ def test_slide_selected(settings: Settings):
     slide_controller.slide_selected(True)
 
     # THEN: The display is updated with the slide number
-    mocked_display.go_to_slide.assert_called_once_with(4)
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=True)
+
+
+def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(settings: Settings):
+    """
+    Test that slide_selected() can update a slide without raising the display window.
+    """
+    # GIVEN: A non-command slide controller with a selected slide
+    slide_controller = SlideController(None)
+    slide_controller.update_preview = MagicMock()
+    slide_controller.slide_selected_lock = MagicMock()
+    slide_controller.service_item = MagicMock()
+    slide_controller.service_item.is_command.return_value = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.preview_widget.slide_count.return_value = 10
+    slide_controller.preview_widget.current_slide_number.return_value = 4
+    mocked_display = MagicMock()
+    slide_controller.displays = [mocked_display]
+
+    # WHEN: The timed/auto-play style path disables focus restoration
+    slide_controller.slide_selected(restore_focus=False)
+
+    # THEN: The display slide changes without requesting a window raise
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=False)
 
 
 def test_slide_selected_defers_when_lock_busy(settings: Settings):

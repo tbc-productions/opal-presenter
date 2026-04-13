@@ -1422,7 +1422,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self._slide_selected_retry_pending = False
             self.slide_selected()
 
-    def slide_selected(self, start=False):
+    def slide_selected(self, start=False, restore_focus=True):
         """
         Generate the preview when you click on a slide. If this is the Live Controller also display on the screen.
 
@@ -1459,7 +1459,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        [self.service_item, self.is_live, row])
             else:
                 for display in self.displays:
-                    display.go_to_slide(row)
+                    display.go_to_slide(row, raise_window=restore_focus)
                 if not self.service_item.is_text():
                     # reset the store used to display first image
                     self.service_item.bg_image_bytes = None
@@ -1735,7 +1735,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.on_slide_selected_next()
 
-    def on_slide_selected_next(self, wrap=None):
+    def on_slide_selected_next(self, wrap=None, restore_focus=True):
         """
         Go to the next slide.
 
@@ -1744,8 +1744,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not self.service_item:
             return
         if self.service_item.is_command():
-            past_end = Registry().execute('{text}_next'.format(text=self.service_item.name.lower()),
-                                          [self.service_item, self.is_live])
+            past_end = Registry().execute(
+                '{text}_next'.format(text=self.service_item.name.lower()),
+                [self.service_item, self.is_live, {'restore_focus': restore_focus}]
+            )
             # Check if we have gone past the end of the last slide
             if self.is_live and past_end and past_end[0]:
                 if wrap is None:
@@ -1773,7 +1775,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 else:
                     row = self.preview_widget.slide_count() - 1
             self.preview_widget.change_slide(row)
-            self.slide_selected()
+            self.slide_selected(restore_focus=restore_focus)
 
     def on_slide_selected_previous(self):
         """
@@ -1888,7 +1890,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         :param event: The triggered event
         """
         if event.timerId() == self.timer_id:
-            self.on_slide_selected_next(self.play_slides_loop.isChecked())
+            # Timed auto-play should not force OpenLP to become the active application.
+            self.on_slide_selected_next(self.play_slides_loop.isChecked(), restore_focus=False)
 
     def on_edit_song(self):
         """
