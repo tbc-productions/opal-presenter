@@ -184,7 +184,10 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         for lab in labels:
             for line in str(lab).split('\n'):
                 max_line = max(max_line, fm.horizontalAdvance(line))
-        vh.setMinimumWidth(max_line + margin)
+        target_width = max_line + margin
+        vh.setMinimumWidth(target_width)
+        if vh.count() > 0:
+            vh.resizeSection(0, target_width)
 
     def resizeEvent(self, event):
         """
@@ -282,8 +285,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                         # These tags are already translated.
                         verse_def = slide['verse']
                         verse_def = '%s%s' % (verse_def[0], verse_def[1:])
-                        two_line_def = '%s\n%s' % (verse_def[0], verse_def[1:])
-                        row = two_line_def
+                        row = verse_def
                         color = self._resolve_song_section_color(verse_def[0])
                         color.setAlphaF(self._resolve_opacity(self._resolve_verse_number(verse_def[1:])))
                         header_colors.append(color)
