@@ -40,8 +40,9 @@ def test_save_triggers_processes_true(mock_settings):
     # WHEN: I change search as type check box
     themes_tab.save()
 
-    # THEN: we should have two post save processed to run
-    assert 1 == len(settings_form.processes), 'One post save processes should be created'
+    # THEN: update transitions and theme refresh should both be queued
+    assert 'slidecontroller_update_item_transitions' in settings_form.processes
+    assert 'theme_update_list' in settings_form.processes
 
 
 def test_save_triggers_processes_false(mock_settings):
@@ -56,5 +57,43 @@ def test_save_triggers_processes_false(mock_settings):
     # WHEN: I change search as type check box
     themes_tab.save()
 
-    # THEN: we should have two post save processed to run
-    assert 0 == len(settings_form.processes), 'No post save processes should be created'
+    # THEN: transition refresh should still be queued even when the tab is not visited
+    assert settings_form.processes == ['slidecontroller_update_item_transitions']
+
+
+def test_item_transition_controls_disabled_when_unchecked(mock_settings):
+    """
+    Test that transition speed/type controls are disabled when item transitions are off.
+    """
+    # GIVEN: A themes tab with item transitions disabled
+    settings_form = SettingsForm(None)
+    themes_tab = ThemesTab(settings_form)
+    themes_tab.item_transitions_check_box.setChecked(False)
+
+    # WHEN: The UI refreshes enabled state
+    themes_tab._update_item_transition_controls()
+
+    # THEN: Transition controls should be disabled
+    assert themes_tab.item_transition_speed_label.isEnabled() is False
+    assert themes_tab.item_transition_speed_spin_box.isEnabled() is False
+    assert themes_tab.item_transition_type_label.isEnabled() is False
+    assert themes_tab.item_transition_type_combo_box.isEnabled() is False
+
+
+def test_item_transition_controls_enabled_when_checked(mock_settings):
+    """
+    Test that transition speed/type controls are enabled when item transitions are on.
+    """
+    # GIVEN: A themes tab with item transitions enabled
+    settings_form = SettingsForm(None)
+    themes_tab = ThemesTab(settings_form)
+    themes_tab.item_transitions_check_box.setChecked(True)
+
+    # WHEN: The UI refreshes enabled state
+    themes_tab._update_item_transition_controls()
+
+    # THEN: Transition controls should be enabled
+    assert themes_tab.item_transition_speed_label.isEnabled() is True
+    assert themes_tab.item_transition_speed_spin_box.isEnabled() is True
+    assert themes_tab.item_transition_type_label.isEnabled() is True
+    assert themes_tab.item_transition_type_combo_box.isEnabled() is True

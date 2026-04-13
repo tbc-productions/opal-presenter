@@ -671,6 +671,23 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         return self.run_in_display('getVideoTypes', is_sync=True)
 
+    def _disable_preview_hide_transition(self):
+        """
+        Determine if hide/show transitions should be suppressed for preview windows.
+        """
+        return not self.is_display and not self.settings.value('themes/item transitions')
+
+    def _show_uses_transition_override(self):
+        """
+        Determine whether the "show" action should force disabled transitions.
+        """
+        return self._disable_preview_hide_transition() and self.hide_mode in {
+            HideMode.Blank,
+            HideMode.Theme,
+            HideMode.Logo,
+            HideMode.Screen
+        }
+
     def show_display(self):
         """
         Show the display
@@ -692,7 +709,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.display_watcher.unregister_event_listener(TRANSITION_END_EVENT_NAME)
         if self.isHidden():
             self.setVisible(True)
-        self.run_in_display('show')
+        if self._show_uses_transition_override():
+            self.run_in_display('show', True)
+        else:
+            self.run_in_display('show')
         self.hide_mode = None
 
     def hide_display(self, mode=HideMode.Screen):
@@ -719,14 +739,26 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                                                              lambda _: self.setVisible(False))
                 self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
             else:
-                self.run_in_display('toTransparent')
+                if self._disable_preview_hide_transition():
+                    self.run_in_display('toTransparent', True)
+                else:
+                    self.run_in_display('toTransparent')
         elif mode == HideMode.Blank:
-            self.run_in_display('toBlack')
+            if self._disable_preview_hide_transition():
+                self.run_in_display('toBlack', True)
+            else:
+                self.run_in_display('toBlack')
         elif mode == HideMode.Theme:
-            self.run_in_display('toTheme')
+            if self._disable_preview_hide_transition():
+                self.run_in_display('toTheme', True)
+            else:
+                self.run_in_display('toTheme')
         elif mode == HideMode.Logo:
             bg_color, image_uri, logo_fit = self._get_logo_settings()
-            self.run_in_display('toLogo', bg_color, image_uri, logo_fit)
+            if self._disable_preview_hide_transition():
+                self.run_in_display('toLogo', bg_color, image_uri, logo_fit, True)
+            else:
+                self.run_in_display('toLogo', bg_color, image_uri, logo_fit)
         self.hide_mode = mode
 
     def disable_display(self):

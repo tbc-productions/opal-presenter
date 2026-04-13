@@ -143,6 +143,7 @@ class ThemesTab(SettingsTab):
         self.service_level_radio_button.clicked.connect(self.on_service_level_button_clicked)
         self.global_level_radio_button.clicked.connect(self.on_global_level_button_clicked)
         self.default_combo_box.activated.connect(self.on_default_combo_box_changed)
+        self.item_transitions_check_box.toggled.connect(self._update_item_transition_controls)
         Registry().register_function('theme_update_list', self.update_theme_list)
 
     def retranslate_ui(self):
@@ -192,6 +193,7 @@ class ThemesTab(SettingsTab):
         if type_index == -1:
             type_index = self.item_transition_type_combo_box.findData('balanced')
         self.item_transition_type_combo_box.setCurrentIndex(type_index)
+        self._update_item_transition_controls()
         self.theme_hot_reload.setChecked(self.settings.value('themes/hot reload'))
         if self.theme_level == ThemeLevel.Global:
             self.global_level_radio_button.setChecked(True)
@@ -212,6 +214,7 @@ class ThemesTab(SettingsTab):
         self.settings.setValue('themes/item transition speed', self.item_transition_speed_spin_box.value())
         self.settings.setValue('themes/item transition type', self.item_transition_type_combo_box.currentData())
         self.settings.setValue('themes/hot reload', self.theme_hot_reload.isChecked())
+        self.settings_form.register_post_process('slidecontroller_update_item_transitions')
         self.renderer.set_theme_level(self.theme_level)
         if theme_level != self.theme_level:
             self.settings_form.register_post_process('theme_level_changed')
@@ -246,6 +249,16 @@ class ThemesTab(SettingsTab):
         self.global_theme = self.default_combo_box.currentText()
         # self.renderer.set_global_theme()
         self._preview_global_theme()
+
+    def _update_item_transition_controls(self):
+        """
+        Enable transition controls only when service item transitions are enabled.
+        """
+        enabled = self.item_transitions_check_box.isChecked()
+        self.item_transition_speed_label.setEnabled(enabled)
+        self.item_transition_speed_spin_box.setEnabled(enabled)
+        self.item_transition_type_label.setEnabled(enabled)
+        self.item_transition_type_combo_box.setEnabled(enabled)
 
     def update_theme_list(self, theme_list):
         """

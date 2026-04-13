@@ -1771,6 +1771,30 @@ def test_on_live_preview_capture_timer_ignores_when_not_pending(settings: Settin
     slide_controller.display_maindisplay.assert_not_called()
 
 
+def test_update_item_transitions_updates_active_displays(settings: Settings):
+    """
+    Test that changing item transition settings updates all initialised displays immediately.
+    """
+    # GIVEN: A slide controller with initialised live/preview displays
+    slide_controller = SlideController(None)
+    live_display = MagicMock()
+    live_display._is_initialised = True
+    preview_display = MagicMock()
+    preview_display._is_initialised = True
+    slide_controller.displays = [live_display]
+    slide_controller.preview_display = preview_display
+    settings.setValue('themes/item transitions', True)
+    settings.setValue('themes/item transition speed', 1.2)
+    settings.setValue('themes/item transition type', 'ease-in')
+
+    # WHEN: Item transition settings are refreshed
+    slide_controller._update_item_transitions()
+
+    # THEN: Both displays should receive the update command
+    live_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
+    preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
+
+
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
 def test_display_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry):
     """

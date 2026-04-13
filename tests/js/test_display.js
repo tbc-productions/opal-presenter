@@ -238,6 +238,40 @@ describe("The Display object", function () {
     expect(Reveal.addEventListener).toHaveBeenCalledWith('slidechanged', Display._onSlideChanged);
   });
 
+  it("should disable item transitions when passed string false values", function () {
+    spyOn(Reveal, "configure");
+    document.body.innerHTML = "";
+    _createDiv({"class": "slides"});
+    _createDiv({"class": "footer"});
+    _createDiv({"class": "backgrounds"});
+    _createDiv({"id": "logo-screen"});
+    _createDiv({"id": "logo-screen-image"});
+    Display._isInitialised = false;
+
+    Display.init({isDisplay: "true", doItemTransitions: "false", allowThemeTransitions: "false"});
+
+    expect(Display._doItemTransitions).toEqual(false);
+    expect(document.body.classList.contains("transition")).toEqual(false);
+  });
+
+  it("should apply updated item transition settings without reinit", function () {
+    document.body.innerHTML = "";
+    _createDiv({"class": "slides"});
+    _createDiv({"class": "footer"});
+    _createDiv({"class": "backgrounds"});
+    _createDiv({"id": "logo-screen"});
+    _createDiv({"id": "logo-screen-image"});
+    Display._isInitialised = false;
+
+    Display.init({isDisplay: true, doItemTransitions: false, allowThemeTransitions: true});
+    Display.updateItemTransitionSettings(true, 1.5, "ease-in-out");
+
+    expect(Display._doItemTransitions).toEqual(true);
+    expect(document.body.classList.contains("transition")).toEqual(true);
+    expect(document.body.style.getPropertyValue('--item-transition-ms')).toEqual('1500ms');
+    expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('ease-in-out');
+  });
+
   it("should have a correctly functioning clearSlides() method", function () {
     expect(Display.clearSlides).toBeDefined();
 

@@ -363,7 +363,7 @@ class Settings(QtCore.QSettings):
         'core/has run wizard': False,
         'core/language': '[en]',
         'core/last version test': '',
-        'core/live preview shows blank screen': False,
+        'core/live preview shows blank screen': True,
         'core/live preview shows presentation screen': False,
         'core/live preview shows slide transitions': False,
         'core/loop delay': 5,

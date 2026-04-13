@@ -252,6 +252,25 @@ function _prepareText(text) {
 }
 
 /**
+ * Coerce mixed persisted values into a boolean.
+ * @private
+ * @param {*} value - Input value from settings or payload
+ * @returns {boolean} Normalised boolean
+ */
+function _coerceBoolean(value) {
+  if (typeof value === "string") {
+    var lowered = value.trim().toLowerCase();
+    if (["false", "0", "no", "off", ""].includes(lowered)) {
+      return false;
+    }
+    if (["true", "1", "yes", "on"].includes(lowered)) {
+      return true;
+    }
+  }
+  return !!value;
+}
+
+/**
  * Change a camelCaseString to a camel-case-string
  * @private
  * @param {string} text
@@ -410,6 +429,8 @@ var Display = {
   _isInitialised: false,
   _initialisedSlidesContainer: null,
   _themeApplied: true,
+  _isDisplayOutput: false,
+  _itemTransitionsEnabledSetting: false,
   _textSlideDirection: TransitionDirection.Vertical,
   _textSlideReverse: false,
   _revealConfig: {
@@ -446,8 +467,9 @@ var Display = {
   init: function (options) {
     // Set defaults for undefined values
     options = options || {};
-    let isDisplay = options.isDisplay || false;
-    let doItemTransitions = options.doItemTransitions || false;
+    let isDisplay = _coerceBoolean(options.isDisplay);
+    let doItemTransitions = _coerceBoolean(options.doItemTransitions);
+    let allowThemeTransitions = _coerceBoolean(options.allowThemeTransitions);
     let itemTransitionSpeed = Number(options.itemTransitionSpeed);
     if (!Number.isFinite(itemTransitionSpeed) || itemTransitionSpeed <= 0) {
       itemTransitionSpeed = 0.8;
@@ -470,21 +492,24 @@ var Display = {
     Display._backgroundsContainer = $(".backgrounds")[0];
     Display._logoScreen = $("#logo-screen")[0];
     Display._logoScreenImage = $("#logo-screen-image")[0];
-    Display._doTransitions = isDisplay || !!(options.allowThemeTransitions);
+    Display._isDisplayOutput = isDisplay;
+    Display._doTransitions = isDisplay || allowThemeTransitions;
     Display._itemTransitionSpeedSeconds = itemTransitionSpeed;
     Display._itemTransitionType = itemTransitionType;
+    Display._itemTransitionsEnabledSetting = doItemTransitions;
+    var enableItemTransitions = Display._itemTransitionsEnabledSetting && Display._doTransitions;
     // Prevent duplicate Reveal wiring on repeated init calls in the same document lifecycle.
     var isSameSlidesContainer = !!Display._slidesContainer &&
       Display._initialisedSlidesContainer === Display._slidesContainer;
     if (Display._isInitialised && isSameSlidesContainer) {
-      Display.setItemTransition(doItemTransitions && isDisplay, itemTransitionSpeed, itemTransitionType);
+      Display.setItemTransition(enableItemTransitions, itemTransitionSpeed, itemTransitionType);
       return;
     }
     Reveal.initialize(Display._revealConfig);
     Reveal.addEventListener('slidechanged', Display._onSlideChanged);
     Display._isInitialised = true;
     Display._initialisedSlidesContainer = Display._slidesContainer;
-    Display.setItemTransition(doItemTransitions && isDisplay, itemTransitionSpeed, itemTransitionType);
+    Display.setItemTransition(enableItemTransitions, itemTransitionSpeed, itemTransitionType);
     displayWatcher.setInitialised(true);
   },
   /**
@@ -515,6 +540,29 @@ var Display = {
     } else {
       body.classList.remove("transition");
       Reveal.configure({"backgroundTransition": "none"});
+    }
+  },
+
+  updateItemTransitionSettings: function (enable, speedSeconds, transitionType) {
+    Display._itemTransitionsEnabledSetting = _coerceBoolean(enable);
+    Display.setItemTransition(
+      Display._itemTransitionsEnabledSetting && Display._doTransitions,
+      speedSeconds,
+      transitionType
+    );
+  },
+
+  setAllowThemeTransitions: function (allowThemeTransitions) {
+    Display._doTransitions = Display._isDisplayOutput || _coerceBoolean(allowThemeTransitions);
+    Display.setItemTransition(
+      Display._itemTransitionsEnabledSetting && Display._doTransitions,
+      Display._itemTransitionSpeedSeconds,
+      Display._itemTransitionType
+    );
+    var rootSlide = Display._getRootSlideSection();
+    if (Display._theme && rootSlide) {
+      Display.applyTheme(rootSlide, rootSlide.classList.contains("text-slides"));
+      Reveal.sync();
     }
   },
 
@@ -1465,10 +1513,15 @@ var Display = {
   /**
    * Blank the screen
   */
-  toBlack: function () {
+  toBlack: function (disableTransitions) {
     return new Promise((resolve, reject) => {
       /* Avoid race conditions where display goes to transparent and quickly goes to black */
       Display._abortLastTransitionOperation();
+      var body = document.body;
+      var useDisableTransitions = !!disableTransitions;
+      if (useDisableTransitions) {
+        body.classList.add('disable-transitions');
+      }
       /*
         Reveal's black overlay should be shown before the transitions are
         restored, to avoid screen flashes
@@ -1480,9 +1533,16 @@ var Display = {
         }
         // Hide logo only after black mode is active to avoid flashing slide content.
         Display._hideLogoScreen();
+        var documentBody = $("body")[0];
+        documentBody.style.opacity = 1;
+        if (useDisableTransitions) {
+          Display._requestAnimationFrameExclusive(function () {
+            body.classList.remove('disable-transitions');
+            resolve();
+          });
+          return;
+        }
         Display._reenableGlobalTransitions(function() {
-          var documentBody = $("body")[0];
-          documentBody.style.opacity = 1;
           resolve();
         });
       });
@@ -1491,9 +1551,14 @@ var Display = {
   /**
    * Hide all but theme background
   */
-  toTheme: function () {
+  toTheme: function (disableTransitions) {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      var body = document.body;
+      var useDisableTransitions = !!disableTransitions;
+      if (useDisableTransitions) {
+        body.classList.add('disable-transitions');
+      }
       Display._hideLogoScreen();
       Display._restoreThemeBackgroundFromLogo();
       /*
@@ -1502,23 +1567,65 @@ var Display = {
       */
       Display._restorePauseBehavior();
       var documentBody = $("body")[0];
-      documentBody.style.opacity = 1;
-      Display._slidesContainer.style.opacity = 0;
-      Display._footerContainer.style.opacity = 0;
-      if (Reveal.isPaused()) {
-        Reveal.togglePause();
+      var slidesContainer = Display._slidesContainer;
+      var footerContainer = Display._footerContainer;
+      var wasPaused = Reveal.isPaused();
+      var wasSlideLayerVisible = parseFloat(getComputedStyle(slidesContainer).opacity || "1") > 0.01;
+      var shouldFadeLyrics = !useDisableTransitions && !wasPaused && wasSlideLayerVisible;
+      // Only fade lyrics when coming from presentation. From black/theme/logo/desktop,
+      // lyrics must stay hidden and only the background transition should be visible.
+      if (shouldFadeLyrics) {
+        documentBody.style.opacity = 1;
+        slidesContainer.style.opacity = 0;
+        footerContainer.style.opacity = 0;
+        Display._requestAnimationFrameExclusive(function () {
+          if (Reveal.isPaused()) {
+            Reveal.togglePause();
+          }
+          Display._reenableGlobalTransitions(function() {
+            resolve();
+          });
+        });
+        return;
       }
-      Display._reenableGlobalTransitions(function() {
-        resolve();
+      var previousSlidesTransition = slidesContainer.style.transition;
+      var previousFooterTransition = footerContainer.style.transition;
+      // Hide lyric/content layers immediately for non-presentation source modes.
+      slidesContainer.style.transition = "none";
+      footerContainer.style.transition = "none";
+      documentBody.style.opacity = 1;
+      slidesContainer.style.opacity = 0;
+      footerContainer.style.opacity = 0;
+      Display._requestAnimationFrameExclusive(function () {
+        if (Reveal.isPaused()) {
+          Reveal.togglePause();
+        }
+        Display._requestAnimationFrameExclusive(function () {
+          slidesContainer.style.transition = previousSlidesTransition || "";
+          footerContainer.style.transition = previousFooterTransition || "";
+          if (useDisableTransitions) {
+            body.classList.remove('disable-transitions');
+            resolve();
+            return;
+          }
+          Display._reenableGlobalTransitions(function() {
+            resolve();
+          });
+        });
       });
     });
   },
   /**
    * Hide everything (CAUTION: Causes a invisible mouse barrier)
   */
-  toTransparent: function () {
+  toTransparent: function (disableTransitions) {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
+      var body = document.body;
+      var useDisableTransitions = !!disableTransitions;
+      if (useDisableTransitions) {
+        body.classList.add('disable-transitions');
+      }
       Display._hideLogoScreen();
       var documentBody = $("body")[0];
       documentBody.style.opacity = 0;
@@ -1534,6 +1641,15 @@ var Display = {
         Waiting for body transition to happen, now it would be safe to
         hide the Webview (as other transitions were suppressed)
       */
+      if (useDisableTransitions) {
+        Display._slidesContainer.style.opacity = 0;
+        Display._footerContainer.style.opacity = 0;
+        displayWatcher.pleaseRepaint();
+        Display._requestAnimationFrameExclusive(function() {
+          resolve();
+        });
+        return;
+      }
       Display._abortLastTransitionOperation();
       Display._addTransitionEndEventToBody(transitionEndEvent);
       function transitionEndEvent(e) {
@@ -1569,11 +1685,16 @@ var Display = {
    * @param {string} image - Path to the logo image
    * @param {string} logo_fit - cover, contain, stretch, repeat
   */
-  toLogo: function (bg_color, image, logo_fit) {
+  toLogo: function (bg_color, image, logo_fit, disableTransitions) {
     return new Promise((resolve, reject) => {
       Display._abortLastTransitionOperation();
       Display._restorePauseBehavior();
       var documentBody = $("body")[0];
+      var body = document.body;
+      var useDisableTransitions = !!disableTransitions;
+      if (useDisableTransitions) {
+        body.classList.add('disable-transitions');
+      }
       var wasSlideLayerVisible = parseFloat(getComputedStyle(Display._slidesContainer).opacity || "1") > 0.01;
       documentBody.style.opacity = 1;
       Display._hideLogoScreen();
@@ -1590,6 +1711,13 @@ var Display = {
         Display._slidesContainer.style.opacity = 0;
         Display._footerContainer.style.opacity = 0;
         Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
+        if (useDisableTransitions) {
+          Display._requestAnimationFrameExclusive(function () {
+            body.classList.remove('disable-transitions');
+            resolve();
+          });
+          return;
+        }
         resolve();
       }
 
@@ -1602,6 +1730,7 @@ var Display = {
           Display._logoScreen.classList.add("show");
           var logoScreenStyle = getComputedStyle(Display._logoScreen);
           var hasOpacityTransition =
+            !useDisableTransitions &&
             document.body.classList.contains("transition") &&
             logoScreenStyle.transitionDuration !== "0s";
           if (!hasOpacityTransition) {
@@ -1649,9 +1778,20 @@ var Display = {
   /**
    * Show the screen
   */
-  show: function () {
+  show: function (disableTransitions) {
     return new Promise((resolve, reject) => {
       var documentBody = $("body")[0];
+      var body = document.body;
+      var useDisableTransitions = !!disableTransitions;
+      var pauseOverlay = document.querySelector('.reveal .pause-overlay');
+      var previousPauseOverlayTransition = null;
+      if (useDisableTransitions) {
+        body.classList.add('disable-transitions');
+        if (pauseOverlay) {
+          previousPauseOverlayTransition = pauseOverlay.style.transition;
+          pauseOverlay.style.transition = 'none';
+        }
+      }
       /*
         Removing transitionend event, avoids the content being hidden if the user
         tries to show content again before toTransparent() transitionend event
@@ -1667,10 +1807,25 @@ var Display = {
         Reveal.togglePause();
       }
       Display._restorePauseBehavior();
-      Display._reenableGlobalTransitions(function() {
+      var finishShow = function () {
         documentBody.style.opacity = 1;
+        if (useDisableTransitions) {
+          Display._requestAnimationFrameExclusive(function () {
+            if (pauseOverlay) {
+              pauseOverlay.style.transition = previousPauseOverlayTransition || '';
+            }
+            body.classList.remove('disable-transitions');
+            resolve();
+          });
+          return;
+        }
         resolve();
-      });
+      };
+      if (useDisableTransitions) {
+        finishShow();
+      } else {
+        Display._reenableGlobalTransitions(finishShow);
+      }
     });
   },
 

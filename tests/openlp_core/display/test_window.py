@@ -699,6 +699,78 @@ def test_show_display_no_display(mocked_screenlist, display_window_env, mock_set
     assert display_window.run_in_display.call_count == 0
 
 
+def test_show_display_from_theme_preview_with_transitions_disabled(display_window_env, mock_settings):
+    """
+    Test preview show from theme suppresses transition when item transitions are disabled.
+    """
+    # GIVEN: Preview window returning from theme with transitions disabled
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    display_window.isHidden = MagicMock(return_value=False)
+    display_window.hide_mode = HideMode.Theme
+    mock_settings.value.return_value = False
+
+    # WHEN: Show display is run
+    display_window.show_display()
+
+    # THEN: Force-disable transition flag should be passed
+    display_window.run_in_display.assert_called_once_with('show', True)
+
+
+def test_show_display_from_blank_preview_with_transitions_enabled(display_window_env, mock_settings):
+    """
+    Test preview show from blank keeps transitions when item transitions are enabled.
+    """
+    # GIVEN: Preview window returning from blank with transitions enabled
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    display_window.isHidden = MagicMock(return_value=False)
+    display_window.hide_mode = HideMode.Blank
+    mock_settings.value.return_value = True
+
+    # WHEN: Show display is run
+    display_window.show_display()
+
+    # THEN: No force-disable transition flag should be passed
+    display_window.run_in_display.assert_called_once_with('show')
+
+
+def test_show_display_from_logo_preview_with_transitions_disabled(display_window_env, mock_settings):
+    """
+    Test preview show from logo suppresses transition when item transitions are disabled.
+    """
+    # GIVEN: Preview window returning from logo with transitions disabled
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    display_window.isHidden = MagicMock(return_value=False)
+    display_window.hide_mode = HideMode.Logo
+    mock_settings.value.return_value = False
+
+    # WHEN: Show display is run
+    display_window.show_display()
+
+    # THEN: Force-disable transition flag should be passed
+    display_window.run_in_display.assert_called_once_with('show', True)
+
+
+def test_show_display_from_desktop_preview_with_transitions_disabled(display_window_env, mock_settings):
+    """
+    Test preview show from desktop suppresses transition when item transitions are disabled.
+    """
+    # GIVEN: Preview window returning from desktop with transitions disabled
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    display_window.isHidden = MagicMock(return_value=False)
+    display_window.hide_mode = HideMode.Screen
+    mock_settings.value.return_value = False
+
+    # WHEN: Show display is run
+    display_window.show_display()
+
+    # THEN: Force-disable transition flag should be passed
+    display_window.run_in_display.assert_called_once_with('show', True)
+
+
 def test_hide_display_to_screen(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
@@ -714,7 +786,7 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
 
     # THEN: Should hide the display with the js transparency function (not setVisible)
     display_window.setVisible.call_count == 0
-    display_window.run_in_display.assert_called_once_with('toTransparent')
+    display_window.run_in_display.assert_called_once_with('toTransparent', True)
 
 
 def test_hide_display_to_blank(display_window_env, mock_settings):
@@ -730,6 +802,22 @@ def test_hide_display_to_blank(display_window_env, mock_settings):
     display_window.hide_display(HideMode.Blank)
 
     # THEN: Should run the correct javascript on the display and set the hide mode
+    display_window.run_in_display.assert_called_once_with('toBlack', True)
+
+
+def test_hide_display_to_blank_with_transitions_enabled(display_window_env, mock_settings):
+    """
+    Test hide to blank in preview when transitions are enabled.
+    """
+    # GIVEN: Display window and setting item transitions = True
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    mock_settings.value.return_value = True
+
+    # WHEN: Hide display is run with HideMode.Blank
+    display_window.hide_display(HideMode.Blank)
+
+    # THEN: Should not pass transition override
     display_window.run_in_display.assert_called_once_with('toBlack')
 
 
@@ -746,6 +834,22 @@ def test_hide_display_to_theme(display_window_env, mock_settings):
     display_window.hide_display(HideMode.Theme)
 
     # THEN: Should run the correct javascript on the display and set the hide mode
+    display_window.run_in_display.assert_called_once_with('toTheme', True)
+
+
+def test_hide_display_to_theme_with_transitions_enabled(display_window_env, mock_settings):
+    """
+    Test hide to theme in preview when transitions are enabled.
+    """
+    # GIVEN: Display window and setting item transitions = True
+    display_window = DisplayWindow()
+    display_window.run_in_display = MagicMock()
+    mock_settings.value.return_value = True
+
+    # WHEN: Hide display is run with HideMode.Theme
+    display_window.hide_display(HideMode.Theme)
+
+    # THEN: Should not pass transition override
     display_window.run_in_display.assert_called_once_with('toTheme')
 
 
@@ -763,6 +867,7 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
             'core/logo background color': '#001122',
             'core/logo file': logo_path,
             'core/logo fit': 'repeat',
+            'themes/item transitions': False,
             'advanced/disable transparent display': False
         }
         return values.get(key, False)
@@ -777,7 +882,8 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
         'toLogo',
         '#001122',
         'openlp-library://local-file//tmp/openlp-logo.png',
-        'repeat'
+        'repeat',
+        True
     )
 
 
@@ -795,7 +901,7 @@ def test_hide_display_to_transparent(display_window_env, mock_settings):
     display_window.hide_display(HideMode.Screen)
 
     # THEN: Should run the correct javascript on the display and not set the visiblity
-    display_window.run_in_display.assert_called_once_with('toTransparent')
+    display_window.run_in_display.assert_called_once_with('toTransparent', True)
     assert display_window.setVisible.call_count == 0
 
 

@@ -488,6 +488,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Registry().register_function('slidecontroller_update_slide_limits', self.update_slide_limits)
         Registry().register_function('slidecontroller_preview_display_show_display', self.preview_display.show_display)
         Registry().register_function('slidecontroller_update_preview_transitions', self._update_preview_transitions)
+        Registry().register_function('slidecontroller_update_item_transitions', self._update_item_transitions)
         getattr(self, 'slidecontroller_{text}_set'.format(text=self.type_prefix)).connect(self.on_slide_selected_index)
         getattr(self, 'slidecontroller_{text}_next'.format(text=self.type_prefix)).connect(self.on_slide_selected_next)
         # NOTE: {} used to keep line length < maxline
@@ -765,6 +766,25 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.preview_display.allow_theme_transitions = new_value
             # Update JavaScript side to reapply the theme with new transition setting
             self.preview_display.run_in_display('setAllowThemeTransitions', new_value)
+
+    def _update_item_transitions(self):
+        """
+        Apply item transition settings to all active displays without requiring restart.
+        """
+        item_transitions = self.settings.value('themes/item transitions')
+        item_transition_speed = self._get_item_transition_speed_seconds()
+        item_transition_type = self.settings.value('themes/item transition type')
+        all_displays = list(self.displays)
+        if self.preview_display:
+            all_displays.append(self.preview_display)
+        for display in all_displays:
+            if display and display._is_initialised:
+                display.run_in_display(
+                    'updateItemTransitionSettings',
+                    item_transitions,
+                    item_transition_speed,
+                    item_transition_type
+                )
 
     def enable_tool_bar(self, item):
         """
@@ -1150,8 +1170,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                     # These tags are already translated.
                     verse_def = slide['verse']
                     verse_def = '{def1}{def2}'.format(def1=verse_def[0], def2=verse_def[1:])
-                    two_line_def = '{def1}\n{def2}'.format(def1=verse_def[0], def2=verse_def[1:])
-                    row = two_line_def
+                    row = verse_def
                     if verse_def not in self.slide_list:
                         self.slide_list[verse_def] = slide_index
                         if self.is_live:
@@ -1471,26 +1490,33 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             mirror_live_preview = self.is_live and self.settings.value('core/live preview shows presentation screen')
             if mirror_live_preview:
                 self._schedule_live_preview_capture()
-            if (self.is_live and self.current_hide_mode and not mirror_live_preview and
-               self.settings.value('core/live preview shows blank screen')):
-                # If live, hidden and setting 'live preview shows blank screen' is active
-                # blank the live preview panel.
-                self.preview_display.hide_display(self.current_hide_mode)
+            preview_hide_mode = None
+            if (
+                self.is_live and
+                self.current_hide_mode and
+                not mirror_live_preview
+            ):
+                preview_hide_mode = self.current_hide_mode
+            if preview_hide_mode:
+                self.preview_display.hide_display(preview_hide_mode)
             if not mirror_live_preview and self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay):
-                if (self.is_live and not self.current_hide_mode):
+                if self.is_live and not preview_hide_mode:
                     # If live and not hidden grab screen-cap of main display in case the service item
                     # provides it's own display.
                     self._schedule_live_preview_capture()
-                elif not self.settings.value('core/live preview shows blank screen'):
-                    # If not live and setting 'live preview shows blank screen' is not active,
-                    # use the slide's thumbnail/icon instead in case the service item
-                    # provides it's own display.
+                elif not self.is_live:
+                    # For preview controllers, use the slide thumbnail/icon for items that
+                    # provide their own display.
                     image_path = Path(self.service_item.get_rendered_frame(self.selected_row))
                     self.screen_capture = image_path
                     self.preview_display.set_single_image('#000', image_path)
-            elif not mirror_live_preview:
-                self.preview_display.go_to_slide(self.selected_row)
-            if (not self.current_hide_mode and self.preview_display.hide_mode):
+            elif not mirror_live_preview and not preview_hide_mode:
+                restored_from_hide = bool(self.preview_display.hide_mode)
+                if restored_from_hide:
+                    self.preview_display.show_display()
+                else:
+                    self.preview_display.go_to_slide(self.selected_row)
+            if not preview_hide_mode and self.preview_display.hide_mode:
                 self.preview_display.show_display()
         if self.is_live:
             mirror = self.settings.value('core/live preview shows presentation screen')

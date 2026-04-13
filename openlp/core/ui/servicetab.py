@@ -132,6 +132,7 @@ class ServiceTab(SettingsTab):
         self.live_preview_shows_blank_screen_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
         self.live_preview_shows_blank_screen_check_box.setObjectName('live_preview_shows_blank_screen_check_box')
         self.slide_controller_layout.addRow(self.live_preview_shows_blank_screen_check_box)
+        self.live_preview_shows_blank_screen_check_box.hide()
         self.live_preview_shows_presentation_screen_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
         self.live_preview_shows_presentation_screen_check_box.setObjectName(
             'live_preview_shows_presentation_screen_check_box'
@@ -306,9 +307,8 @@ class ServiceTab(SettingsTab):
         self.auto_unblank_check_box.setChecked(self.settings.value('core/auto unblank'))
         self.click_live_slide_to_unblank_check_box.setChecked(self.settings.value('core/click live slide to unblank'))
         self.auto_preview_check_box.setChecked(self.settings.value('core/auto preview'))
-        self.live_preview_shows_blank_screen_check_box.setChecked(
-            self.settings.value('core/live preview shows blank screen')
-        )
+        self.live_preview_shows_blank_screen_check_box.setChecked(True)
+        self.settings.setValue('core/live preview shows blank screen', True)
         self.live_preview_shows_presentation_screen_check_box.setChecked(
             self.settings.value('core/live preview shows presentation screen')
         )
@@ -355,17 +355,12 @@ class ServiceTab(SettingsTab):
         self.settings.setValue('core/click live slide to unblank',
                                self.click_live_slide_to_unblank_check_box.isChecked())
         self.settings.setValue('core/auto preview', self.auto_preview_check_box.isChecked())
-        live_preview_shows_blank_screen_check_box_is_checked = \
-            self.live_preview_shows_blank_screen_check_box.isChecked()
-        self.settings.setValue('core/live preview shows blank screen',
-                               live_preview_shows_blank_screen_check_box_is_checked)
+        self.settings.setValue('core/live preview shows blank screen', True)
         self.settings.setValue('core/live preview shows presentation screen',
                                self.live_preview_shows_presentation_screen_check_box.isChecked())
         self.settings.setValue('core/live preview shows slide transitions',
                                self.live_preview_shows_slide_transitions_check_box.isChecked())
         self.settings_form.register_post_process('slidecontroller_update_preview_transitions')
-        if not live_preview_shows_blank_screen_check_box_is_checked:
-            self.settings_form.register_post_process('slidecontroller_preview_display_show_display')
         self.settings.setValue('core/loop delay', self.timeout_spin_box.value())
         # Service Item Wrapping
         self.settings.setValue('advanced/slide limits', self.slide_limits)
