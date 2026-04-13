@@ -921,6 +921,71 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
     assert main_window._left_dock_visibility_from_settings() == (True, False, True)
 
 
+@patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+def test_activate_layout_preset_saved_state_without_snapshot_applies_canonical(mock_sched, main_window, settings):
+    """
+    restoreState() from a saved preset can resurrect wrong dock/panel visibility; without a JSON snapshot,
+    factory preset visibility must be re-applied when no snapshot exists.
+    """
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'default')
+    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue(_preset_layout_storage_key('setup', _PRESET_VISIBILITY_SNAPSHOT_KEY), '')
+    with patch.object(main_window, '_restore_layout_from_preset') as mock_restore, \
+            patch.object(main_window, '_apply_canonical_preset_visibility') as mock_canonical:
+        main_window._activate_layout_preset('setup')
+    mock_restore.assert_called_once_with('setup')
+    mock_canonical.assert_called_once_with('setup')
+
+
+@patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+def test_activate_layout_preset_saved_state_with_snapshot_skips_canonical(mock_sched, main_window, settings):
+    """
+    When a visibility snapshot exists, it defines panel state; canonical factory visibility is not applied.
+    """
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'default')
+    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue(
+        _preset_layout_storage_key('setup', _PRESET_VISIBILITY_SNAPSHOT_KEY),
+        '{"show_library": true, "show_service": true, "show_themes": true, '
+        '"preview_panel": true, "live_panel": false, "show_projectors": false}')
+    with patch.object(main_window, '_restore_layout_from_preset') as mock_restore, \
+            patch.object(main_window, '_apply_canonical_preset_visibility') as mock_canonical:
+        main_window._activate_layout_preset('setup')
+    mock_restore.assert_called_once_with('setup')
+    mock_canonical.assert_not_called()
+
+
+@patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
+def test_deferred_left_column_setup_preset_uses_setup_dock_geometry(mock_sizes, main_window, settings):
+    """
+    Setup mode without saved preset layout should build full-height Service | Library+Themes
+    (tabified), not the Default preset's Service-over-Library stack.
+    """
+    settings.setValue('core/view mode', 'setup')
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray())
+    with patch.object(main_window, '_reapply_left_column_dock_layout_setup') as mock_setup, \
+            patch.object(main_window, '_reapply_left_column_dock_layout') as mock_default:
+        main_window._deferred_apply_left_column_dock_layout()
+    mock_setup.assert_called_once()
+    mock_default.assert_not_called()
+
+
+@patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
+def test_deferred_left_column_default_preset_uses_default_dock_geometry(mock_sizes, main_window, settings):
+    """Default mode without saved preset should use the standard left-column dock layout."""
+    settings.setValue('core/view mode', 'default')
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray())
+    with patch.object(main_window, '_reapply_left_column_dock_layout_setup') as mock_setup, \
+            patch.object(main_window, '_reapply_left_column_dock_layout') as mock_default:
+        main_window._deferred_apply_left_column_dock_layout()
+    mock_default.assert_called_once()
+    mock_setup.assert_not_called()
+
+
 @patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_show_skips_factory_set_view_mode_when_saved_preset_layout(mocked_view_mode, mocked_show, main_window, settings):

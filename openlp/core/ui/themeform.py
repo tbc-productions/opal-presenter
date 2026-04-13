@@ -73,7 +73,6 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self._applying_preview_layout_geometry = False
         self.temp_background_filename = None
         self._last_preview_scale = None
-        self._preview_demo_index = 0
         self.layout_guides_visible = False
         if hasattr(self, 'preview_area_layout'):
             try:
@@ -85,11 +84,6 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self._update_layout_guide_button_tooltip(False)
         if hasattr(self, 'refresh_preview_button'):
             self.refresh_preview_button.clicked.connect(self.on_refresh_preview_clicked)
-        if hasattr(self, 'previous_slide_button'):
-            self.previous_slide_button.clicked.connect(self.on_previous_demo_slide_clicked)
-        if hasattr(self, 'next_slide_button'):
-            self.next_slide_button.clicked.connect(self.on_next_demo_slide_clicked)
-        self._update_demo_nav_buttons()
         if hasattr(self, 'play_transition_button'):
             self.play_transition_button.clicked.connect(self.preview_transition)
             self._set_play_transition_button_visible(False)
@@ -162,35 +156,34 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme_manager.generate_image(self.theme, True)
         self.refresh_preview()
 
-    def on_previous_demo_slide_clicked(self):
+    def preview_transition(self, *args):
         """
-        Move to the previous demo slide.
+        Preview the current transition settings by loading two demo slides,
+        transitioning to the second, then back to the first after a short delay.
         """
-        self._go_to_demo_slide(0)
+        if not self.can_update_theme or getattr(self, '_updating_page_values', False):
+            return
+        if not hasattr(self, 'preview_box'):
+            return
+        self.update_theme()
+        self.theme_manager.generate_image(self.theme, True)
+        self.preview_box.allow_theme_transitions = True
+        self.preview_box.clear_slides()
+        self.preview_box.show()
+        self.preview_box.generate_preview_two_slides(self.theme)
+        QtCore.QTimer.singleShot(0, self._set_preview_scale)
+        self.update_layout_guide_overlay()
+        # Tell the JS side to handle the timed transition demo
+        self.preview_box.run_in_display('previewTransition', 300, 3500)
 
-    def on_next_demo_slide_clicked(self):
+    def _set_play_transition_button_visible(self, visible):
         """
-        Move to the next demo slide.
+        Show or hide the play transition toolbar button.
         """
-        self._go_to_demo_slide(1)
-
-    def _go_to_demo_slide(self, index):
-        """
-        Navigate to one of the two demo slides and refresh button state.
-        """
-        self._preview_demo_index = 0 if int(index) <= 0 else 1
-        if hasattr(self, 'preview_box'):
-            self.preview_box.run_in_display('goToSlide', self._preview_demo_index)
-        self._update_demo_nav_buttons()
-
-    def _update_demo_nav_buttons(self):
-        """
-        Enable/disable demo navigation buttons based on current demo slide.
-        """
-        if hasattr(self, 'previous_slide_button'):
-            self.previous_slide_button.setEnabled(self._preview_demo_index > 0)
-        if hasattr(self, 'next_slide_button'):
-            self.next_slide_button.setEnabled(self._preview_demo_index < 1)
+        if hasattr(self, 'play_transition_action'):
+            self.play_transition_action.setVisible(bool(visible))
+        if hasattr(self, 'play_transition_button'):
+            self.play_transition_button.setVisible(bool(visible))
 
     def update_lines_text(self, lines):
         """
@@ -478,10 +471,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self._initial_preview_refresh_pending = False
         self.preview_box.clear_slides()
         self.preview_box.show()
-        self.preview_box.generate_preview_two_slides(self.theme)
-        self._preview_demo_index = 0
-        self.preview_box.run_in_display('goToSlide', self._preview_demo_index)
-        self._update_demo_nav_buttons()
+        self.preview_box.generate_preview(self.theme, False, False)
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
         self.update_layout_guide_overlay()
 
@@ -552,33 +542,17 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Compute and apply a stable preview scale from the current preview width.
         """
         renderer_width = self.renderer.width()
-        renderer_height = self.renderer.height()
         if renderer_width <= 0:
             return
         if preview_width is None:
             self._apply_preview_layout_geometry()
             preview_width = self._get_preview_viewport_width()
-        self._update_preview_area_height(preview_width, renderer_width, renderer_height)
         scale = float(preview_width) / float(renderer_width)
         if scale <= 0:
             return
         if self._last_preview_scale is None or abs(scale - self._last_preview_scale) > 0.01:
             self._last_preview_scale = scale
             self.preview_box.set_scale(scale)
-
-    def _update_preview_area_height(self, preview_width, renderer_width, renderer_height):
-        """
-        Keep preview area height tight to the preview content so toolbar stays directly below it.
-        """
-        if not hasattr(self, 'preview_area') or not hasattr(self, 'preview_area_layout'):
-            return
-        if preview_width <= 0 or renderer_width <= 0 or renderer_height <= 0:
-            return
-        content_height = int((float(preview_width) * float(renderer_height)) / float(renderer_width))
-        margin = int(getattr(self.preview_area_layout, 'margin', 0) or 0)
-        target_height = max(content_height + (margin * 2), 120)
-        self.preview_area.setMinimumHeight(target_height)
-        self.preview_area.setMaximumHeight(target_height)
 
     def update_layout_guide_overlay(self):
         """
@@ -697,7 +671,6 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.alignment_page.horizontal_align_footer = self.theme.display_horizontal_align_footer
         self.alignment_page.vertical_align_footer = self.theme.display_vertical_align_footer
         self.alignment_page.is_transition_reverse_enabled = self.theme.display_slide_transition_reverse
-        self._update_demo_nav_buttons()
 
     def set_transition_page_values(self):
         """

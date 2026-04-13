@@ -503,8 +503,9 @@ class Ui_MainWindow(object):
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
         self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
-        self.mode_setup_item.setStatusTip(translate('OpenLP.MainWindow', 'Use layout that focuses on setting'
-                                                                         ' up the Service.'))
+        self.mode_setup_item.setStatusTip(translate(
+            'OpenLP.MainWindow',
+            'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -1289,6 +1290,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
         :param save_settings: Switch to prevent saving settings. Defaults to **True**.
         """
+        theme_manager = Registry().get('theme_manager')
+        if theme_manager is not None:
+            theme_form = getattr(theme_manager, 'theme_form', None)
+            if theme_form is not None and theme_form.isVisible():
+                # End nested modal loop so shutdown is not blocked (ThemeForm uses QDialog.exec).
+                theme_form.reject()
         if save_settings:
             if self.settings.value('advanced/save current plugin'):
                 self.settings.setValue('advanced/current media plugin', self.media_tool_box.currentIndex())
@@ -1373,13 +1380,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         }
         return json.dumps(blob)
 
-    def _apply_preset_visibility_snapshot(self, raw: str) -> None:
+    def _apply_preset_visibility_snapshot(self, raw: str) -> bool:
+        """
+        Apply per-preset visibility from JSON. Returns True if settings and widgets were updated.
+        """
         if not raw or not str(raw).strip():
-            return
+            return False
         try:
             blob = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
-            return
+            return False
         show_library = bool(blob.get('show_library', True))
         show_service = bool(blob.get('show_service', True))
         show_themes = bool(blob.get('show_themes', True))
@@ -1405,6 +1415,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.view_live_panel.setChecked(live_panel)
         self.projector_manager_dock.setVisible(show_projectors)
         self.view_projector_manager_item.setChecked(show_projectors)
+        return True
+
+    def _apply_canonical_preset_visibility(self, mode: str) -> None:
+        """
+        Factory visibility for a named layout preset (Show all / Setup / Live).
+        """
+        if mode == 'default':
+            self.set_view_mode(True, True, True, True, True, False, 'default')
+        elif mode == 'setup':
+            self.set_view_mode(True, True, True, True, False, False, 'setup')
+        elif mode == 'live':
+            self.set_view_mode(False, True, False, True, True, False, 'live')
 
     def _save_current_layout_to_preset(self, mode: str) -> None:
         self.settings.setValue(_preset_layout_storage_key(mode, 'main window state'), self.saveState())
@@ -1433,14 +1455,22 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         prev = self.settings.value('core/view mode')
         if (self.settings.value('user interface/is preset layout') and prev in _PRESET_LAYOUT_MODES and prev != mode):
             self._save_current_layout_to_preset(prev)
+        self.settings.setValue('core/view mode', mode)
+        has_saved = _preset_layout_has_saved_state(self.settings, mode)
+        if has_saved:
+            # restoreState() reapplies saved dock visibility; a stored snapshot (or canonical fallback)
+            # must run after so Setup/Live preview+live flags stay correct.
+            self._restore_layout_from_preset(mode)
+            snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
+            if not self._apply_preset_visibility_snapshot(snap):
+                self._apply_canonical_preset_visibility(mode)
+        else:
+            self._apply_canonical_preset_visibility(mode)
         if mode == 'default':
-            self.set_view_mode(True, True, True, True, True, False, 'default')
             self.mode_default_item.setChecked(True)
         elif mode == 'setup':
-            self.set_view_mode(True, True, True, True, False, False, 'setup')
             self.mode_setup_item.setChecked(True)
         elif mode == 'live':
-            self.set_view_mode(False, True, False, True, True, False, 'live')
             self.mode_live_item.setChecked(True)
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
@@ -1453,10 +1483,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         elif mode == 'live':
             self.mode_default_item.setChecked(False)
             self.mode_setup_item.setChecked(False)
-        if _preset_layout_has_saved_state(self.settings, mode):
-            self._restore_layout_from_preset(mode)
-            snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
-            self._apply_preset_visibility_snapshot(snap)
         self._schedule_left_column_dock_layout()
 
     def on_mode_reset_layout_presets_clicked(self) -> None:
@@ -1660,6 +1686,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
         self.media_manager_dock.raise_()
 
+    def _reapply_left_column_dock_layout_setup(self) -> None:
+        """
+        Setup preset: full-height Service | full-height Library + Themes (tabified), with
+        Preview over Live in the central column — three vertical bands (see View → Setup).
+        """
+        for dock in (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock):
+            dock.setFloating(False)
+            self.removeDockWidget(dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
+        self.splitDockWidget(self.service_manager_dock, self.media_manager_dock,
+                             QtCore.Qt.Orientation.Horizontal)
+        self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
+        self.media_manager_dock.raise_()
+
     def _ensure_left_column_dock_sizes(self) -> None:
         """
         After restoreState / rebuild, the left strip can have near-zero width or a collapsed Service/Library split.
@@ -1674,6 +1714,24 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         width = self.width()
         height = self.height()
         if width <= 0 or height <= 0:
+            return
+        mode = self.settings.value('core/view mode')
+        # Setup: Service | Library+Themes horizontally — size both columns so Library is not squeezed.
+        if (
+            mode == 'setup'
+            and self.settings.value('user interface/is preset layout')
+            and show_svc
+            and show_lib
+        ):
+            svc_w = max(220, min(340, int(width * 0.12)))
+            lib_w = max(520, min(900, int(width * 0.44)))
+            try:
+                self.resizeDocks(
+                    [self.service_manager_dock, self.media_manager_dock],
+                    [svc_w, lib_w],
+                    QtCore.Qt.Orientation.Horizontal)
+            except (TypeError, AttributeError):
+                pass
             return
         target_w = max(300, min(520, int(width * 0.26)))
         ref = self.service_manager_dock if show_svc else self.media_manager_dock
@@ -1694,7 +1752,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 and _preset_layout_has_saved_state(self.settings, mode))
             with self._mute_left_dock_visibility_signals():
                 if not skip_for_saved_preset:
-                    self._reapply_left_column_dock_layout()
+                    if mode == 'setup':
+                        self._reapply_left_column_dock_layout_setup()
+                    else:
+                        self._reapply_left_column_dock_layout()
                 show_lib, show_svc, show_thm = self._left_dock_visibility_from_settings()
                 self.settings.setValue('user interface/show library', show_lib)
                 self.settings.setValue('user interface/show service', show_svc)
@@ -1776,7 +1837,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
                 self._restore_layout_from_preset(mode)
                 snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
-                self._apply_preset_visibility_snapshot(snap)
+                if not self._apply_preset_visibility_snapshot(snap):
+                    self._apply_canonical_preset_visibility(mode)
                 self._sync_left_dock_menu_checks_from_settings()
 
     def _window_position_is_valid(self, position: QtCore.QPoint, geometry: QtCore.QRect):

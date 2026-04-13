@@ -13,6 +13,7 @@ __pycache__
 .mypy_cache
 .pylintrc
 .pytest_cache
+.pytest_deps
 .venv
 .venv
 .vscode
