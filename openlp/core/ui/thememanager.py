@@ -980,7 +980,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         :param force_page: Flag to tell message lines per page need to be generated.
         :rtype: QtGui.QPixmap
         """
-        return self.renderer.generate_preview(theme_data, force_page)
+        generate_screenshot = not bool(force_page)
+        return self.renderer.generate_preview(theme_data, force_page, generate_screenshot=generate_screenshot)
 
     @staticmethod
     def _create_theme_from_xml(theme_xml, image_path):

@@ -914,7 +914,7 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
         device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
         is_hidpi = device_pixel_ratio > 1.0
-        
+
         if is_hidpi or not self.isVisible():
             # Use grab() method for HiDPI or hidden widgets
             self.setVisible(True)
