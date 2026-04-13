@@ -176,7 +176,6 @@ body.transition .reveal .slide-background {
   padding: 0 !important;
   margin: 0 !important;
   max-height: none;
-  transform: none !important;
 }
 
 .reveal .slides > section p {

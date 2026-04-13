@@ -310,6 +310,23 @@ describe("The Display object", function () {
     expect(Display.alert).toBeDefined();
   });
 
+  it("should run preview transition between V1 and V2", function () {
+    spyOn(window, "setTimeout").and.callFake(function (handler) {
+      handler();
+      return 1;
+    });
+    spyOn(window, "clearTimeout");
+    spyOn(Display, "goToSlide");
+    Display._previewTransitionTimeoutHandles = [];
+
+    Display.previewTransition(250, 1000);
+
+    expect(Display.goToSlide).toHaveBeenCalledWith("V2");
+    expect(Display.goToSlide).toHaveBeenCalledWith("V1");
+    expect(window.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), 250);
+    expect(window.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), 1250);
+  });
+
 });
 
 describe("Transitions", function () {

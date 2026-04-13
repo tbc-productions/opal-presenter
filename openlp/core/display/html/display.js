@@ -452,6 +452,7 @@ var Display = {
     height: "100%"
   },
   _lastRequestAnimationFrameHandle: null,
+  _previewTransitionTimeoutHandles: [],
   _logoBackgroundOverrideActive: false,
   _savedBackgroundAttributes: null,
 
@@ -1501,6 +1502,32 @@ var Display = {
         Reveal.slide(0, slide);
       }
     }
+  },
+  /**
+   * Run a two-step transition demo for theme preview.
+   * @param {number} initialDelayMs - Delay before moving to slide 2
+   * @param {number} returnDelayMs - Delay before returning to slide 1
+   */
+  previewTransition: function (initialDelayMs, returnDelayMs) {
+    var firstDelay = Number(initialDelayMs);
+    if (!Number.isFinite(firstDelay) || firstDelay < 0) {
+      firstDelay = 300;
+    }
+    var secondDelay = Number(returnDelayMs);
+    if (!Number.isFinite(secondDelay) || secondDelay < 0) {
+      secondDelay = 3500;
+    }
+    Display._previewTransitionTimeoutHandles.forEach(function (handle) {
+      clearTimeout(handle);
+    });
+    Display._previewTransitionTimeoutHandles = [];
+    var toSecondSlide = setTimeout(function () {
+      Display.goToSlide("V2");
+    }, Math.round(firstDelay));
+    var backToFirstSlide = setTimeout(function () {
+      Display.goToSlide("V1");
+    }, Math.round(firstDelay + secondDelay));
+    Display._previewTransitionTimeoutHandles.push(toSecondSlide, backToFirstSlide);
   },
   /**
    * Go to the next slide in the list

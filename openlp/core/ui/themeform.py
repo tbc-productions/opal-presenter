@@ -168,6 +168,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.update_theme()
         self.theme_manager.generate_image(self.theme, True)
         self.preview_box.allow_theme_transitions = True
+        self.preview_box.run_in_display('setAllowThemeTransitions', True)
         self.preview_box.clear_slides()
         self.preview_box.show()
         self.preview_box.generate_preview_two_slides(self.theme)
@@ -461,17 +462,18 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.area_position_page.footer_width_spin_box.valueChanged.connect(self.calculate_lines)
         self.area_position_page.footer_height_spin_box.valueChanged.connect(self.calculate_lines)
 
-    def refresh_preview(self):
+    def refresh_preview(self, force_page=False):
         """
         Re-render the preview with the current theme values.
         """
         if not hasattr(self, 'preview_box'):
             return
         self.preview_box.allow_theme_transitions = False
+        self.preview_box.run_in_display('setAllowThemeTransitions', False)
         self._initial_preview_refresh_pending = False
         self.preview_box.clear_slides()
         self.preview_box.show()
-        self.preview_box.generate_preview(self.theme, False, False)
+        self.preview_box.generate_preview(self.theme, bool(force_page), False)
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
         self.update_layout_guide_overlay()
 
@@ -495,7 +497,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if preview_width <= 0 or renderer_width <= 0:
             QtCore.QTimer.singleShot(25, self._refresh_preview_when_ready)
             return
-        self.refresh_preview()
+        self.refresh_preview(force_page=True)
 
     def _on_preview_area_resized(self, size):
         """
