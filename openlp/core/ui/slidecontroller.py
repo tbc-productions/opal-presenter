@@ -1507,7 +1507,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 elif not self.is_live:
                     # For preview controllers, use the slide thumbnail/icon for items that
                     # provide their own display.
-                    image_path = Path(self.service_item.get_rendered_frame(self.selected_row))
+                    rendered_frame = self.service_item.get_rendered_frame(self.selected_row)
+                    image_path = Path(rendered_frame)
                     self.screen_capture = image_path
                     self.preview_display.set_single_image('#000', image_path)
             elif not mirror_live_preview and not preview_hide_mode:

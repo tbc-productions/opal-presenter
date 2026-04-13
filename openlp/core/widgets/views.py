@@ -122,7 +122,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.setColumnCount(1)
         self.horizontalHeader().setVisible(False)
         vertical_header = self.verticalHeader()
-        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        # Keep row height under explicit control; ResizeToContents can grow rows to full image height.
+        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Fixed)
         vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
         target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
         vertical_header.setMinimumWidth(max(20, target_width))
@@ -186,8 +187,6 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 max_line = max(max_line, fm.horizontalAdvance(line))
         target_width = max_line + margin
         vh.setMinimumWidth(target_width)
-        if vh.count() > 0:
-            vh.resizeSection(0, target_width)
 
     def resizeEvent(self, event):
         """
