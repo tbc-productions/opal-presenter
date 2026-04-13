@@ -195,7 +195,6 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         super(ThemeManager, self).__init__(parent)
         # Variables
         self._theme_list = {}
-        self.global_theme = None
         self.old_background_image_path = None
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
