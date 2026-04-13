@@ -195,6 +195,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         super(ThemeManager, self).__init__(parent)
         # Variables
         self._theme_list = {}
+        self.global_theme = None
         self.old_background_image_path = None
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
@@ -202,7 +203,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Registry().register_function('config_screen_changed', self.screen_changed)
 
     def get_global_theme(self):
-        return self.get_theme_data(self.global_theme)
+        theme_name = self.global_theme
+        if theme_name is None:
+            theme_name = self.settings.value('themes/global theme')
+        return self.get_theme_data(theme_name)
 
     def get_theme_data(self, theme_name):
         """
