@@ -205,15 +205,17 @@ function _buildTextOutline(size, color) {
  * @param {number} offset - The offset of the shadow
  * @param {number} size - The desired width of the shadow
  * @param {string} color - The color that the shadow should be
+ * @param {number} blur - The blur radius of the shadow
  * @returns {Array} A list of shadows to be given to "text-shadow"
  */
-function _buildTextShadow(offset, size, color) {
+function _buildTextShadow(offset, size, color, blur) {
   let shadows = [];
   let from = (size * -1) + offset;
   let to = size + offset;
+  let blurRadius = (typeof blur === "number") ? blur : 0;
   for (let i = from; i <= to; i++) {
     for (let j = from; j <= to; j++) {
-      shadows.push(color + " " + i + "pt " + j + "pt 0pt");
+      shadows.push(color + " " + i + "pt " + j + "pt " + blurRadius + "pt");
     }
   }
   return shadows;
@@ -2340,7 +2342,8 @@ var Display = {
         ),
         ...(
           Display._theme.font_main_shadow ?
-          _buildTextShadow(Display._theme.font_main_shadow_size, Display._theme.main_outline_size || 0, Display._theme.font_main_shadow_color) :
+          _buildTextShadow(Display._theme.font_main_shadow_size, Display._theme.font_main_outline_size || 0,
+            Display._theme.font_main_shadow_color, Display._theme.font_main_shadow_blur || 0) :
           []
         )
       ].join(", ")
@@ -2400,7 +2403,7 @@ var Display = {
         ...(
           Display._theme.font_footer_shadow ?
           _buildTextShadow(Display._theme.font_footer_shadow_size, Display._theme.font_footer_outline_size || 0,
-            Display._theme.font_footer_shadow_color) :
+            Display._theme.font_footer_shadow_color, Display._theme.font_footer_shadow_blur || 0) :
           []
         )
       ].join(", ")
