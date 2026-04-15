@@ -158,7 +158,9 @@ def test_download_and_install(mocked_download_version_info, mocked_download_file
 
     # THEN: The correct things should have been done
     assert result == CONFIG_DICT['latest']['version'], 'The correct version is returned'
-    mocked_download_file.assert_called_once_with(mocked_callback, REMOTE_URL + '0.1/remote-0.1.zip', mocked_remote_zip)
+    mocked_download_file.assert_called_once_with(
+        mocked_callback, REMOTE_URL + '0.1/remote-0.1.zip', mocked_remote_zip, session=None
+    )
     mocked_deploy_zipfile.assert_called_once_with(mocked_remote_path, 'remote.zip')
 
 

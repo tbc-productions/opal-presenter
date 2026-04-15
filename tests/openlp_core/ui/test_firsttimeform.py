@@ -383,8 +383,7 @@ def test_network_error(mocked_message_box, mocked_is_thread_finished, mocked_run
         mocked_message_box.StandardButton.Ok)
 
 
-@patch('openlp.core.ui.firsttimeform.requests.get')
-def test_download_index_worker_updates_byte_progress(mocked_requests_get, mock_settings):
+def test_download_index_worker_updates_byte_progress(mock_settings):
     """
     Test that the resource index download reports byte progress while streaming the file.
     """
@@ -394,18 +393,18 @@ def test_download_index_worker_updates_byte_progress(mocked_requests_get, mock_s
     mocked_response.headers = {'Content-Length': '8'}
     mocked_response.encoding = 'utf-8'
     mocked_response.iter_content.return_value = [b'{"a":', b' 1}']
-    mocked_requests_get.return_value = mocked_response
 
     mocked_progress_updated = MagicMock()
     mocked_download_succeeded = MagicMock()
     worker.progress_updated.connect(mocked_progress_updated)
     worker.download_succeeded.connect(mocked_download_succeeded)
 
-    # WHEN: the resource index file is downloaded
-    worker.start()
+    with patch.object(worker._http_session, 'get', return_value=mocked_response) as mocked_session_get:
+        # WHEN: the resource index file is downloaded
+        worker.start()
 
     # THEN: the content should be returned and progress updates should include byte counts
-    mocked_requests_get.assert_called_once()
+    mocked_session_get.assert_called_once()
     mocked_response.raise_for_status.assert_called_once()
     mocked_response.close.assert_called_once()
     mocked_progress_updated.assert_has_calls([
