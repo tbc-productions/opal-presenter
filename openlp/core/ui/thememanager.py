@@ -685,7 +685,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             self.settings.setValue('themes/global theme', theme.theme_name)
             new_themes = [theme.theme_name]
         if new_themes:
-            self.update_preview_images(new_themes)
+            self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
         self.application.set_normal_cursor()
 
     def load_themes(self):
