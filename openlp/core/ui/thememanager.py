@@ -563,18 +563,51 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Delete a theme triggered by the UI.
         :param field:
         """
-        if self._validate_theme_action(translate('OpenLP.ThemeManager', 'You must select a theme to delete.'),
-                                       translate('OpenLP.ThemeManager', 'Delete Confirmation'),
-                                       translate('OpenLP.ThemeManager', 'Delete {theme_name} theme?')):
-            item = self.theme_list_widget.currentItem()
-            theme = item.text()
-            row = self.theme_list_widget.row(item)
+        selected_items = list(self.theme_list_widget.selectedItems())
+        if not selected_items:
+            critical_error_message_box(message=translate('OpenLP.ThemeManager', 'You must select a theme to delete.'))
+            return
+        selected_theme_names = [item.data(QtCore.Qt.ItemDataRole.UserRole) for item in selected_items]
+        default_themes = [item.text() for item in selected_items
+                          if item.text() != item.data(QtCore.Qt.ItemDataRole.UserRole)]
+        if default_themes:
+            critical_error_message_box(
+                message=translate('OpenLP.ThemeManager', 'You are unable to delete the default theme.'))
+            return
+        plugin_usage = ''
+        for theme_name in selected_theme_names:
+            for plugin in State().list_plugins():
+                used_count = plugin.uses_theme(theme_name)
+                if used_count:
+                    plugin_usage = '{text}{theme}: {count} time(s) by {plugin}\n'.format(text=plugin_usage,
+                                                                                          theme=theme_name,
+                                                                                          count=used_count,
+                                                                                          plugin=plugin.name)
+        if plugin_usage:
+            critical_error_message_box(translate('OpenLP.ThemeManager', 'Unable to delete theme'),
+                                       translate('OpenLP.ThemeManager',
+                                                 'One or more selected themes are currently used\n\n{text}'
+                                                 ).format(text=plugin_usage))
+            return
+        if len(selected_theme_names) == 1:
+            confirm_text = translate('OpenLP.ThemeManager', 'Delete {theme_name} theme?').format(
+                theme_name=selected_theme_names[0])
+        else:
+            confirm_text = translate('OpenLP.ThemeManager', 'Delete {theme_count} selected themes?').format(
+                theme_count=len(selected_theme_names))
+        answer = QtWidgets.QMessageBox.question(self,
+                                                translate('OpenLP.ThemeManager', 'Delete Confirmation'),
+                                                confirm_text,
+                                                defaultButton=QtWidgets.QMessageBox.StandardButton.No)
+        if answer == QtWidgets.QMessageBox.StandardButton.No:
+            return
+        for row, theme_name in sorted([(self.theme_list_widget.row(item), item.data(QtCore.Qt.ItemDataRole.UserRole))
+                                       for item in selected_items], reverse=True):
             self.theme_list_widget.takeItem(row)
-            self.delete_theme(theme)
-            # self.renderer.set_theme(self.get_theme_data(item.data(QtCore.Qt.ItemDataRole.UserRole)))
-            # As we do not reload the themes, push out the change. Reload the
-            # list as the internal lists and events need to be triggered.
-            self._push_themes()
+            self.delete_theme(theme_name)
+        # As we do not reload the themes, push out the change. Reload the
+        # list as the internal lists and events need to be triggered.
+        self._push_themes()
 
     def delete_theme(self, theme):
         """
