@@ -369,3 +369,36 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     mocked_load_verses.assert_called_once()
     mocked_grab.assert_called_once()
     mocked_wait_for.assert_not_called()
+
+
+@patch('openlp.core.display.render.ThemePreviewRenderer.grab')
+@patch('openlp.core.display.render.ThemePreviewRenderer.load_verses')
+@patch('openlp.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
+@patch('openlp.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
+def test_generate_preview_disables_theme_transitions_during_screenshot(
+        mocked_format_slide, mocked_generate_footer, mocked_load_verses, mocked_grab, settings):
+    """
+    Test that generate_preview() disables theme transitions while capturing a screenshot.
+    """
+    # GIVEN: A preview renderer with transition support enabled
+    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    preview_renderer.force_page = False
+    preview_renderer.allow_theme_transitions = True
+    preview_renderer.run_in_display = MagicMock(return_value={})
+    allow_theme_transitions_seen = []
+
+    def capture_transition_state(*args, **kwargs):
+        allow_theme_transitions_seen.append(preview_renderer.allow_theme_transitions)
+
+    preview_renderer.set_theme = MagicMock(side_effect=capture_transition_state)
+
+    # WHEN: The preview screenshot is generated
+    preview_renderer.generate_preview(MagicMock(), generate_screenshot=True)
+
+    # THEN: Transitions are disabled during theme application and restored afterwards
+    assert allow_theme_transitions_seen[0] is False
+    assert preview_renderer.allow_theme_transitions is True
+    assert call('setAllowThemeTransitions', False, is_sync=True) in preview_renderer.run_in_display.call_args_list
+    assert call('setAllowThemeTransitions', True, is_sync=True) in preview_renderer.run_in_display.call_args_list

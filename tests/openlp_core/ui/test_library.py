@@ -95,9 +95,11 @@ def test_folderlibrary_retranslate_ui(folder_library_item):
 
 def test_folderlibrary_add_custom_context_actions(folder_library_item):
     """Test that add_custom_context_actions adds show-in-folder action."""
-    with patch('openlp.core.ui.library.create_widget_action') as mocked_create_widget_action:
+    with patch('openlp.core.ui.library.create_widget_action') as mocked_create_widget_action, \
+            patch('openlp.core.ui.library._add_library_context_menu_separator') as mocked_separator:
         folder_library_item.add_custom_context_actions()
     assert mocked_create_widget_action.call_count == 2
+    mocked_separator.assert_called_once_with(folder_library_item.list_view)
 
 
 @patch('openlp.core.ui.library.is_win', return_value=True)

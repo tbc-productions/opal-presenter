@@ -314,8 +314,12 @@ class Ui_MainWindow(object):
         self.settings_configure_item.setMenuRole(QtGui.QAction.MenuRole.PreferencesRole)
         self.settings_import_item = create_action(main_window, 'settingsImportItem',
                                                   category=UiStrings().Import, can_shortcuts=True)
+        self.formatting_tags_import_item = create_action(main_window, 'formattingTagsImportItem',
+                                                         category=UiStrings().Import, can_shortcuts=True)
         self.settings_export_item = create_action(main_window, 'settingsExportItem',
                                                   category=UiStrings().Export, can_shortcuts=True)
+        self.formatting_tags_export_item = create_action(main_window, 'formattingTagsExportItem',
+                                                         category=UiStrings().Export, can_shortcuts=True)
         action_list.add_category(UiStrings().Help, CategoryOrder.standard_menu)
         self.about_item = create_action(main_window, 'aboutItem', icon=UiIcons().info,
                                         can_shortcuts=True, category=UiStrings().Help,
@@ -341,8 +345,10 @@ class Ui_MainWindow(object):
                     self.import_projector_item, self.import_language_item, None))
         '''
         add_actions(self.file_import_menu, (self.settings_import_item, self.import_theme_item,
+                    self.formatting_tags_import_item,
                     self.import_language_item, None))
         add_actions(self.file_export_menu, (self.settings_export_item, self.export_theme_item,
+                    self.formatting_tags_export_item,
                     self.export_language_item, None))
         add_actions(self.file_menu, (self.file_new_item, self.file_open_item,
                     self.file_save_item, self.file_save_as_item, self.recent_files_menu.menuAction(), None,
@@ -435,10 +441,16 @@ class Ui_MainWindow(object):
         self.settings_export_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
         self.settings_export_item.setText(translate('OpenLP.MainWindow', 'Settings'))
+        self.formatting_tags_export_item.setStatusTip(
+            translate('OpenLP.MainWindow', 'Export formatting tags to a *.json file.'))
+        self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
         self.settings_import_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Import settings from a *.config file previously exported from '
                                            'this or another machine.'))
         self.settings_import_item.setText(translate('OpenLP.MainWindow', 'Settings'))
+        self.formatting_tags_import_item.setStatusTip(
+            translate('OpenLP.MainWindow', 'Import formatting tags from a *.json file.'))
+        self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
         self.view_projector_manager_item.setText(translate('OpenLP.MainWindow', '&Projector Controller'))
         self.view_projector_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show Projectors.'))
         self.view_projector_manager_item.setStatusTip(translate('OpenLP.MainWindow',
@@ -559,7 +571,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings_configure_item.triggered.connect(self.on_settings_configure_item_clicked)
         self.settings_shortcuts_item.triggered.connect(self.on_settings_shortcuts_item_clicked)
         self.settings_import_item.triggered.connect(self.on_settings_import_item_clicked)
+        self.formatting_tags_import_item.triggered.connect(self.on_formatting_tags_import_item_clicked)
         self.settings_export_item.triggered.connect(self.on_settings_export_item_clicked)
+        self.formatting_tags_export_item.triggered.connect(self.on_formatting_tags_export_item_clicked)
         # i18n set signals for languages
         self.language_group.triggered.connect(LanguageManager.set_language)
         self.mode_default_item.triggered.connect(self.on_mode_default_item_clicked)
@@ -978,7 +992,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Updates the new theme preview images.
         """
-        self.theme_manager_contents.update_preview_images()
+        self.theme_manager_contents._regenerate_previews_with_progress_dialog(
+            self.theme_manager_contents.get_theme_names())
 
     def on_formatting_tag_item_clicked(self):
         """
@@ -1136,6 +1151,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                                      ).format(err=ose.strerror),
                                            QtWidgets.QMessageBox.StandardButton(
                                                QtWidgets.QMessageBox.StandardButton.Ok))
+
+    def on_formatting_tags_import_item_clicked(self):
+        """
+        Import formatting tags using the Formatting Tags dialog handler.
+        """
+        self.formatting_tag_form.on_import_clicked()
+
+    def on_formatting_tags_export_item_clicked(self):
+        """
+        Export formatting tags using the Formatting Tags dialog handler.
+        """
+        self.formatting_tag_form.on_export_clicked()
 
     def on_mode_default_item_clicked(self):
         """
@@ -1724,8 +1751,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             and show_svc
             and show_lib
         ):
-            svc_w = max(220, min(340, int(width * 0.12)))
-            lib_w = max(520, min(900, int(width * 0.44)))
+            # Favour a wider Library column in Setup mode so tabs fit on one row on common display widths.
+            svc_w = max(200, min(300, int(width * 0.10)))
+            lib_w = max(680, min(1200, int(width * 0.52)))
             try:
                 self.resizeDocks(
                     [self.service_manager_dock, self.media_manager_dock],

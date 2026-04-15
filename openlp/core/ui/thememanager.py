@@ -963,6 +963,9 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         progress_form.raise_()
         progress_form.activateWindow()
         QtWidgets.QApplication.processEvents()
+        # Prime the preview renderer so the first saved thumbnail includes fully rendered demo text.
+        first_theme_data = self._get_theme_data(theme_name_list[0])
+        progress_form.warm_up_preview(first_theme_data)
         for theme_name in theme_name_list:
             theme_data = self._get_theme_data(theme_name)
             preview_pixmap = progress_form.get_preview(theme_name, theme_data)

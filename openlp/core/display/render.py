@@ -624,36 +624,47 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         :param generate_screenshot: Do I need to generate a screen shot?
         :rtype: QtGui.QPixmap
         """
-        # save value for use in format_slide
-        self.force_page = force_page
-        self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
-        slides = self.format_slide(VERSE, None)
-        verses = dict()
-        verses['title'] = TITLE
-        verses['text'] = render_tags(slides[0]) if slides else ''
-        verses['verse'] = 'V1'
-        verses['footer'] = self.generate_footer()
-        self.load_verses([verses], is_sync=True)
-        self.run_in_display('goToSlide', 'V1', is_sync=True)
-        self.run_in_display('resetTheme', is_sync=True)
-        self.force_page = False
+        # Disable theme slide transitions during thumbnail capture so text is fully visible in the screenshot.
+        previous_allow_theme_transitions = self.allow_theme_transitions
         if generate_screenshot:
-            preview_state = self.run_in_display('getPreviewRenderState', is_sync=True)
-            expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
-            if expected_image_background and not (preview_state or {}).get('backgroundImage'):
-                app = QtWidgets.QApplication.instance()
-                # First-theme warm-up: if image background is not yet bound, re-apply theme + slide once.
-                self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
-                self.load_verses([verses], is_sync=True)
-                self.run_in_display('goToSlide', 'V1', is_sync=True)
-                self.run_in_display('resetTheme', is_sync=True)
-                if app:
-                    app.processEvents()
-                self.run_in_display('getPreviewRenderState', is_sync=True)
-            screenshot = self.save_screenshot()
-            return screenshot
-        self.force_page = False
-        return None
+            self.allow_theme_transitions = False
+        try:
+            if generate_screenshot:
+                self.run_in_display('setAllowThemeTransitions', False, is_sync=True)
+            # save value for use in format_slide
+            self.force_page = force_page
+            self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+            slides = self.format_slide(VERSE, None)
+            verses = dict()
+            verses['title'] = TITLE
+            verses['text'] = render_tags(slides[0]) if slides else ''
+            verses['verse'] = 'V1'
+            verses['footer'] = self.generate_footer()
+            self.load_verses([verses], is_sync=True)
+            self.run_in_display('goToSlide', 'V1', is_sync=True)
+            self.run_in_display('resetTheme', is_sync=True)
+            self.force_page = False
+            if generate_screenshot:
+                preview_state = self.run_in_display('getPreviewRenderState', is_sync=True)
+                expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
+                if expected_image_background and not (preview_state or {}).get('backgroundImage'):
+                    app = QtWidgets.QApplication.instance()
+                    # First-theme warm-up: if image background is not yet bound, re-apply theme + slide once.
+                    self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+                    self.load_verses([verses], is_sync=True)
+                    self.run_in_display('goToSlide', 'V1', is_sync=True)
+                    self.run_in_display('resetTheme', is_sync=True)
+                    if app:
+                        app.processEvents()
+                    self.run_in_display('getPreviewRenderState', is_sync=True)
+                screenshot = self.save_screenshot()
+                return screenshot
+            self.force_page = False
+            return None
+        finally:
+            if generate_screenshot:
+                self.run_in_display('setAllowThemeTransitions', previous_allow_theme_transitions, is_sync=True)
+            self.allow_theme_transitions = previous_allow_theme_transitions
 
     def format_slide(self, text, item):
         """
