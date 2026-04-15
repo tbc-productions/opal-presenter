@@ -22,6 +22,7 @@
 The :mod:`ui` module provides the core user interface for OpenLP
 """
 from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
 
 
 class HideMode(object):
@@ -70,6 +71,7 @@ class SingleColumnTableWidget(QtWidgets.QTableWidget):
         vertical_header = self.verticalHeader()
         vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
+        vertical_header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         # Keep verse tags readable while avoiding an oversized row header.
         target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
         vertical_header.setMinimumWidth(max(20, target_width))

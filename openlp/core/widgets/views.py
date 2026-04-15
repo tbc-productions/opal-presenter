@@ -340,6 +340,10 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 self.setRowHeight(slide_index, 1)
                 self.setRowHeight(slide_index, int(slide_height))
         self.setVerticalHeaderLabels(text)
+        for row in range(self.rowCount()):
+            header_item = self.verticalHeaderItem(row)
+            if header_item:
+                header_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._sync_vertical_header_width_from_labels(text)
         for row, color in enumerate(header_colors):
             if color is None:

@@ -194,6 +194,7 @@ def test_replace_service_item_text_uses_single_line_verse_header(mocked_parent: 
 
     # THEN: The row header should be the one-line verse tag
     assert list_preview_widget.verticalHeaderItem(0).text() == 'V1'
+    assert list_preview_widget.verticalHeaderItem(0).textAlignment() == int(QtCore.Qt.AlignmentFlag.AlignCenter)
 
 
 def test_replace_recalculate_layout_text(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
