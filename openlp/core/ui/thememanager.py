@@ -52,7 +52,6 @@ from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
-
 class ThemeThumbnailRefreshWorker(ThreadWorker):
     """
     Background worker that walks the theme list and requests thumbnail refreshes.
@@ -199,6 +198,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
         self._thumbnail_refresh_pending = False
+        self._show_thumbnail_refresh_status = True
         Registry().register_function('config_screen_changed', self.screen_changed)
 
     def get_global_theme(self):
@@ -276,8 +276,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
                     self._thumbnail_refresh_pending = True
                 else:
-                    self._regenerate_previews_with_progress_dialog(self.get_theme_names(),
-                                                                   reason='screen_size_changed')
+                    # Screen-size-triggered regeneration should run silently in the background.
+                    self.update_preview_images(self.get_theme_names(), show_status=False)
         if hasattr(self, 'theme_form') and self.theme_form is not None and self.theme_form.isVisible() and \
                 hasattr(self.theme_form, 'theme'):
             self.theme_form.update_theme()
@@ -318,6 +318,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         Update the footer status bar with the current thumbnail refresh state.
         """
+        if not self._show_thumbnail_refresh_status:
+            return
         if hasattr(self, 'footer_status_bar'):
             self.footer_status_label.setText(status_text)
 
@@ -339,6 +341,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Clear the footer status once thumbnail refresh completes.
         """
         self._set_thumbnail_status('')
+        self._show_thumbnail_refresh_status = True
         self._thumbnail_refresh_worker = None
         if self._thumbnail_refresh_pending:
             self._thumbnail_refresh_pending = False
@@ -906,15 +909,17 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         thumb_path = self.thumb_path / '{name}.png'.format(name=theme_name)
         create_thumb(sample_path_name, thumb_path, False)
 
-    def update_preview_images(self, theme_name_list=None):
+    def update_preview_images(self, theme_name_list=None, show_status=True):
         """
         Called to update the themes' preview images in the background.
 
         :param theme_name_list: A list of theme names in the theme data folder
+        :param bool show_status: Should status text be shown while refreshing thumbnails.
         """
         theme_name_list = theme_name_list or self.get_theme_names()
         if not theme_name_list:
             return
+        self._show_thumbnail_refresh_status = show_status
         self._thumbnail_refresh_pending = False
         if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
             return
@@ -957,7 +962,6 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             pass
         progress_form = ThemeProgressForm(owner)
         progress_form.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        progress_form.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, True)
         progress_form.theme_list = list(theme_name_list)
         progress_form.show()
         progress_form.raise_()

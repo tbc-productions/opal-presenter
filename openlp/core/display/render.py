@@ -645,7 +645,7 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             self.run_in_display('resetTheme', is_sync=True)
             self.force_page = False
             if generate_screenshot:
-                preview_state = self.run_in_display('getPreviewRenderState', is_sync=True)
+                preview_state = self.run_in_display('getPreviewRenderState', is_sync=True) or {}
                 expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
                 if expected_image_background and not (preview_state or {}).get('backgroundImage'):
                     app = QtWidgets.QApplication.instance()
@@ -657,6 +657,16 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
                     if app:
                         app.processEvents()
                     self.run_in_display('getPreviewRenderState', is_sync=True)
+                # Give the web view a few event turns to paint text/background before capture.
+                app = QtWidgets.QApplication.instance()
+                attempts = 0
+                while attempts < 5:
+                    preview_state = self.run_in_display('getPreviewRenderState', is_sync=True) or {}
+                    if preview_state.get('themeApplied') and preview_state.get('textSample'):
+                        break
+                    if app:
+                        app.processEvents()
+                    attempts += 1
                 screenshot = self.save_screenshot()
                 return screenshot
             self.force_page = False
@@ -930,7 +940,22 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         except RuntimeError:
             is_hidpi = True
 
-        if is_hidpi or not self.isVisible():
+        if is_hidpi and not self.is_display:
+            previous_geometry = self.geometry()
+            offscreen_x = -max(5000, previous_geometry.width() + 1000)
+            offscreen_y = -max(5000, previous_geometry.height() + 1000)
+            self.setGeometry(offscreen_x, offscreen_y, previous_geometry.width(), previous_geometry.height())
+            self.setVisible(True)
+            QtWidgets.QApplication.instance().processEvents()
+            wait_for(lambda: False, timeout=1)
+            pixmap = self.grab()
+            self.setVisible(False)
+            self.setGeometry(previous_geometry)
+        elif not self.is_display and not self.isVisible():
+            # Offscreen renderer path: avoid showing a temporary window while creating theme thumbnails.
+            pixmap = QtGui.QPixmap(self.webview.size())
+            self.webview.render(pixmap)
+        elif is_hidpi or not self.isVisible():
             # Use grab() method for HiDPI or hidden widgets
             try:
                 self.setVisible(True)

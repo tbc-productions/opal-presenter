@@ -274,9 +274,25 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 theme_manager = Registry().get('theme_manager')
                 theme_names = theme_manager.get_theme_names() if theme_manager else []
                 Registry().execute(process, theme_names)
+            elif process == 'config_screen_changed':
+                # Defer costly thumbnail regeneration until after the dialog has closed.
+                QtCore.QTimer.singleShot(0, self._execute_deferred_config_screen_changed)
             else:
                 Registry().execute(process)
         return QtWidgets.QDialog.accept(self)
+
+    def _execute_deferred_config_screen_changed(self):
+        main_window = Registry().get('main_window')
+        original_should_show_message = None
+        try:
+            if main_window is not None and hasattr(main_window, 'should_show_screen_change_message'):
+                original_should_show_message = main_window.should_show_screen_change_message
+                main_window.should_show_screen_change_message = False
+            Registry().execute('config_screen_changed')
+        finally:
+            if main_window is not None and original_should_show_message is not None and \
+                    hasattr(main_window, 'should_show_screen_change_message'):
+                main_window.should_show_screen_change_message = original_should_show_message
 
     def reject(self):
         """

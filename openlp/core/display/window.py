@@ -216,9 +216,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self._partial_screen_layout = False
         self.screen_number = None
         self.after_loaded_callback = after_loaded_callback
-        # Gather all flags for the display window
-        flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Tool |\
-            QtCore.Qt.WindowType.WindowStaysOnTopHint
+        # Gather all flags for the display window. Keep non-display renderer windows out of always-on-top.
+        flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Tool
+        if screen and screen.is_display:
+            flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
         if self.settings.value('advanced/x11 bypass wm'):
             flags |= QtCore.Qt.WindowType.X11BypassWindowManagerHint
         else:
