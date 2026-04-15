@@ -122,6 +122,7 @@ class ImageMediaItem(FolderLibraryItem):
         """
         Add custom actions to the context menu.
         """
+        super().add_custom_context_actions()
         create_widget_action(self.list_view, separator=True)
         create_widget_action(self.list_view, text=UiStrings().AddFolder, icon=UiIcons().folder,
                              triggers=self.on_add_folder_click)
@@ -174,9 +175,10 @@ class ImageMediaItem(FolderLibraryItem):
         """Given an item object, return a FileTreeWidgetItem"""
         tree_item = None
         file_path = Path(item.file_path)
-        file_name = file_path.name
+        file_name = item.name or file_path.name
+        display_name = Path(file_name).stem
         if not file_path.exists():
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setIcon(0, UiIcons().delete)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
@@ -191,7 +193,7 @@ class ImageMediaItem(FolderLibraryItem):
                 if slide_height and slide_height > 0:
                     size = QtCore.QSize(-1, slide_height)
                 icon = create_thumb(file_path, thumbnail_path, size=size)
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
             file_type = file_path.suffix.lstrip('.').upper()
@@ -245,6 +247,8 @@ class ImageMediaItem(FolderLibraryItem):
                 name = Path(image_item.file_path).name
                 if name:
                     service_item.title = name
+            if service_item.title:
+                service_item.title = Path(service_item.title).stem
         else:
             service_item.title = str(self.plugin.name_strings['plural'])
 
@@ -305,9 +309,9 @@ class ImageMediaItem(FolderLibraryItem):
             return False
         # Continue with the existing images.
         for image in existing_images:
-            name = Path(image.file_path).name
+            name = image.name or Path(image.file_path).name
             thumbnail_path = self.generate_thumbnail_path(image)
-            service_item.add_from_image(Path(image.file_path), name, thumbnail_path)
+            service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
         return True
 
     def _get_default_image_transition_settings(self):

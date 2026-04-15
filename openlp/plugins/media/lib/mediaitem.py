@@ -236,6 +236,7 @@ class MediaMediaItem(FolderLibraryItem):
         """
         Add custom actions to the context menu.
         """
+        super().add_custom_context_actions()
         create_widget_action(self.list_view, separator=True)
         create_widget_action(
             self.list_view,
@@ -295,9 +296,23 @@ class MediaMediaItem(FolderLibraryItem):
                                                                                             details=details))
                 return False
             (path, name) = os.path.split(filename)
-            service_item.title = name
+            file_name = media_item.name or name
+            service_item.title = Path(file_name).stem
             service_item.processor = 'qt6'
-            service_item.add_from_command(path, name, self.clapperboard)
+            managed_library_dir = (AppLocation.get_section_data_path('media') / 'library').resolve()
+            media_path = Path(filename).resolve()
+            is_managed_file = False
+            try:
+                media_path.relative_to(managed_library_dir)
+                is_managed_file = True
+            except ValueError:
+                is_managed_file = False
+            if is_managed_file and media_item.file_hash:
+                # Managed files are stored as <hash><ext>; keep friendly names in UI while playing the stored file.
+                service_item.has_original_file_path = False
+                service_item.add_from_command(path, file_name, self.clapperboard, file_hash=media_item.file_hash)
+            else:
+                service_item.add_from_command(path, file_name, self.clapperboard)
             # Only get start and end times if going to a service
             if context == ServiceItemContext.Service:
                 self._queue_media_length_probe(service_item, filename)
@@ -386,18 +401,20 @@ class MediaMediaItem(FolderLibraryItem):
             tree_item.setToolTip(0, mrl)
         elif not Path(item.file_path).exists():
             # File doesn't exist, mark as error.
-            file_name = Path(item.file_path).name
-            tree_item = FileTreeWidgetItem([file_name])
-            tree_item.setText(0, file_name)
+            file_name = item.name or Path(item.file_path).name
+            display_name = Path(file_name).stem
+            tree_item = FileTreeWidgetItem([display_name])
+            tree_item.setText(0, display_name)
             tree_item.setIcon(0, UiIcons().error)
             tree_item.setToolTip(0, track_str)
         elif track_info.isFile():
             # Normal media file handling.
             file_path_obj = Path(item.file_path)
-            file_name = file_path_obj.name
+            file_name = item.name or file_path_obj.name
+            display_name = Path(file_name).stem
             file_type = file_path_obj.suffix.lstrip('.').upper()
-            tree_item = FileTreeWidgetItem([file_name])
-            tree_item.setText(0, file_name)
+            tree_item = FileTreeWidgetItem([display_name])
+            tree_item.setText(0, display_name)
             search = "*." + file_name.split('.')[-1].lower()
             a_suffixes, v_suffixes = get_supported_media_suffix()
             if search in a_suffixes:

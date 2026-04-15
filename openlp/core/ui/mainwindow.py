@@ -1237,7 +1237,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             else:
                 event.ignore()
         else:
-            if self.settings.value('advanced/enable exit confirmation'):
+            has_open_service = bool(self.service_manager_contents.service_items)
+            if self.settings.value('advanced/enable exit confirmation') and has_open_service:
                 msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
                                                 translate('OpenLP.MainWindow', 'Exit OpenLP+'),
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP+?'),

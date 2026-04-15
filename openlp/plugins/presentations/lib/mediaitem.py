@@ -126,6 +126,7 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         Add custom actions to the context menu.
         """
+        super().add_custom_context_actions()
         create_widget_action(self.list_view, separator=True)
         create_widget_action(
             self.list_view,
@@ -199,9 +200,10 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         tree_item = None
         file_path = Path(item.file_path)
-        file_name = file_path.name
+        file_name = item.name or file_path.name
+        display_name = Path(file_name).stem
         if not file_path.exists() or not os.access(file_path, os.R_OK):
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setIcon(0, UiIcons().delete)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
@@ -230,7 +232,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                                translate('PresentationPlugin.MediaItem',
                                                          'This type of presentation is not supported.'))
                     return None
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
             file_type = file_path.suffix.lstrip('.').upper()
@@ -305,6 +307,8 @@ class PresentationMediaItem(FolderLibraryItem):
             return False
         if file_path is None:
             file_path = Path(items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
+        source_name = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+        display_name = Path(source_name).stem
         file_type = file_path.suffix.lower()[1:]
         if not self.display_type_combo_box.currentText():
             return False
@@ -355,8 +359,8 @@ class PresentationMediaItem(FolderLibraryItem):
             for bitem in items:
                 if file_path is None:
                     file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-                path, file_name = file_path.parent, file_path.name
-                service_item.title = file_name
+                path = file_path.parent
+                service_item.title = display_name
                 if file_path.exists():
                     if not os.access(file_path, os.R_OK):
                         # File is inaccessible
@@ -383,7 +387,7 @@ class PresentationMediaItem(FolderLibraryItem):
                     image_path = doc.get_temp_folder() / 'mainslide{number:0>3d}.png'.format(number=i)
                     thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
                     while image_path.is_file():
-                        service_item.add_from_image(image_path, file_name, thumbnail=thumbnail_path)
+                        service_item.add_from_image(image_path, display_name, thumbnail=thumbnail_path)
                         # Hint the display layer to use Reveal background images so fade transitions cross-fade natively.
                         service_item.slides[-1]['use_background_image'] = True
                         service_item.slides[-1]['pdf_transition_enabled'] = bool(
@@ -417,8 +421,10 @@ class PresentationMediaItem(FolderLibraryItem):
             service_item.add_capability(ItemCapabilities.ProvidesOwnDisplay)
             for bitem in items:
                 file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-                path, file_name = file_path.parent, file_path.name
-                service_item.title = file_name
+                source_file_name = bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+                display_file_name = Path(source_file_name).stem
+                path = file_path.parent
+                service_item.title = display_file_name
                 if file_path.exists():
                     if os.access(file_path, os.R_OK):
                         if (self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex())
@@ -445,7 +451,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                 note = ''
                                 if notes and len(notes) >= i:
                                     note = notes[i - 1]
-                                service_item.add_from_command(str(path), file_name, thumbnail_path, title, note,
+                                service_item.add_from_command(str(path), source_file_name, thumbnail_path, title, note,
                                                               doc.get_sha256_file_hash())
                                 i += 1
                                 thumbnail_path = doc.get_thumbnail_path(i, True)
