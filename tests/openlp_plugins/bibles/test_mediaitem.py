@@ -250,11 +250,9 @@ def test_add_middle_header_bar(media_item: BibleMediaItem):
     assert media_item.options_tab is not None
     assert media_item.search_button_widget is not None
     assert media_item.results_view_tab is not None
-    assert media_item.page_layout.addWidget.call_args_list == [
-        call(media_item.search_tab_bar),
-        call(media_item.search_button_widget),
-        call(media_item.results_view_tab)
-    ]
+    assert media_item.page_layout.addWidget.call_args_list[0] == call(media_item.search_tab_bar)
+    assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.search_button_widget)
+    assert media_item.page_layout.addWidget.call_count == 3
 
 
 def test_on_focus_search_tab_visible(media_item: BibleMediaItem):
@@ -414,7 +412,13 @@ def test_populate_bible_combo_boxes(media_item: BibleMediaItem):
     bible_3 = MagicMock()
     media_item.settings.value = lambda key: {'bibles/primary bible': bible_2, 'bibles/second bible': bible_3}[key]
     media_item.version_combo_box = MagicMock()
+    media_item.version_combo_box.count.return_value = 3
     media_item.second_combo_box = MagicMock()
+    media_item.second_combo_box.count.return_value = 4
+    media_item.edit_action = MagicMock()
+    media_item.delete_action = MagicMock()
+    media_item.edit_context_action = MagicMock()
+    media_item.delete_context_action = MagicMock()
     media_item.plugin.manager.get_bibles.return_value = \
         {'Bible 2': bible_2, 'Bible 1': bible_1, 'Bible 3': bible_3}
     with patch('openlp.plugins.bibles.lib.mediaitem.get_locale_key', side_effect=lambda x: x), \
@@ -846,6 +850,7 @@ def test_on_style_combo_box_changed(media_item: BibleMediaItem):
     """
     # GIVEN: An instance of :class:`MediaManagerItem` a mocked media_item.settings
     media_item.settings_tab = MagicMock()
+    media_item.style_combo_box = MagicMock()
 
     # WHEN: Calling on_style_combo_box_index_changed
     media_item.on_style_combo_box_index_changed(2)

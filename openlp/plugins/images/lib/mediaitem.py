@@ -33,7 +33,8 @@ from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.path import create_paths
 from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, build_icon, check_item_selected, create_thumb, validate_thumb
-from openlp.core.lib.serviceitem import ItemCapabilities
+from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
@@ -259,6 +260,12 @@ class ImageMediaItem(FolderLibraryItem):
         else:
             # force a nonexistent theme
             service_item.theme = -1
+        resolved_transition_settings = self._get_custom_transition_settings(service_item)
+        if (not resolved_transition_settings) and items and isinstance(items[0], ServiceItem):
+            resolved_transition_settings = self._get_custom_transition_settings(items[0])
+        if not resolved_transition_settings:
+            resolved_transition_settings = self._get_default_image_transition_settings()
+        service_item.slide_transition_settings = resolved_transition_settings
         missing_items_file_names = []
         images = []
         existing_images = []
@@ -302,6 +309,59 @@ class ImageMediaItem(FolderLibraryItem):
             thumbnail_path = self.generate_thumbnail_path(image)
             service_item.add_from_image(Path(image.file_path), name, thumbnail_path)
         return True
+
+    def _get_default_image_transition_settings(self):
+        return {
+            'enabled': bool(self.settings.value('images/transitions')),
+            'type': self._get_transition_type_value(self.settings.value('images/transition type')),
+            'speed': self._get_transition_speed_value(self.settings.value('images/transition speed'))
+        }
+
+    @staticmethod
+    def _get_transition_type_value(value):
+        if isinstance(value, str):
+            converted = TransitionType.from_string(value)
+            return converted if converted is not None else TransitionType.Fade
+        if value in (TransitionType.Fade, TransitionType.Slide, TransitionType.Convex,
+                     TransitionType.Concave, TransitionType.Zoom):
+            return value
+        return TransitionType.Fade
+
+    @staticmethod
+    def _get_transition_speed_value(value):
+        if isinstance(value, str):
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        return TransitionSpeed.Normal
+
+    @classmethod
+    def _normalise_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return None
+        return {
+            'enabled': bool(settings.get('enabled', False)),
+            'type': cls._get_transition_type_value(settings.get('type', TransitionType.Fade)),
+            'speed': cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        }
+
+    @classmethod
+    def _is_default_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return False
+        transition_type = cls._get_transition_type_value(settings.get('type', TransitionType.Fade))
+        transition_speed = cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        transition_enabled = bool(settings.get('enabled', False))
+        return (not transition_enabled) and transition_type == TransitionType.Fade and \
+            transition_speed == TransitionSpeed.Normal
+
+    @classmethod
+    def _get_custom_transition_settings(cls, service_item):
+        slide_settings = cls._normalise_transition_settings(getattr(service_item, 'slide_transition_settings', None))
+        if slide_settings and not cls._is_default_transition_settings(slide_settings):
+            return slide_settings
+        return None
 
     def on_reset_click(self):
         """

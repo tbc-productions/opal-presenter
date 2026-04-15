@@ -85,7 +85,10 @@ def test_get_ip_address_default(api_tab):
     # THEN: the default ip address will be returned
     assert re.match(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', ip_address), \
         'The return value should be a valid ip address'
-    assert ip_address in ip_addresses, 'The return address should be in the list of local IP addresses'
+    if ip_addresses:
+        assert ip_address in ip_addresses, 'The return address should be in the list of local IP addresses'
+    else:
+        assert ip_address == ZERO_URL, 'Should fall back to the wildcard bind address when no interfaces exist'
 
 
 def test_get_ip_address_with_ip(api_tab):

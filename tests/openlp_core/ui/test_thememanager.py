@@ -84,7 +84,7 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     theme_manager._thumbnail_dimensions = MagicMock()
     theme_manager._get_current_screen = MagicMock(return_value=None)
     theme_manager._get_screen_dimensions = MagicMock(return_value='different-size')
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
     theme_manager.theme_form = MagicMock()
 
     # WHEN: The screen changes
@@ -93,7 +93,7 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     # THEN: Cached theme defaults should be recalculated and previews refreshed
     theme_one.set_default_header_footer.assert_called_once_with()
     theme_two.set_default_header_footer.assert_called_once_with()
-    theme_manager.update_preview_images.assert_called_once_with()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_called_once()
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
@@ -107,7 +107,7 @@ def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_mana
     theme_manager._thumbnail_dimensions = 'same-size'
     theme_manager._get_current_screen = MagicMock(return_value=None)
     theme_manager._get_screen_dimensions = MagicMock(return_value='same-size')
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
     theme_manager.theme_form = MagicMock()
 
     # WHEN: The screen changes
@@ -115,7 +115,7 @@ def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_mana
 
     # THEN: The theme defaults should still be updated, but thumbnails should not be rebuilt
     theme_one.set_default_header_footer.assert_called_once_with()
-    theme_manager.update_preview_images.assert_not_called()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_not_called()
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
@@ -536,7 +536,8 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     theme_manager.upgrade_themes = MagicMock()
     theme_manager._get_screen_dimensions = MagicMock(return_value='screen-size')
     theme_manager._get_current_screen = MagicMock(return_value=None)
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._get_themes_requiring_preview_refresh = MagicMock(return_value=[])
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
 
     # WHEN:
     theme_manager.bootstrap_post_set_up()
@@ -547,7 +548,7 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     assert theme_manager._thumbnail_dimensions == 'screen-size'
     theme_manager.upgrade_themes.assert_called_once()
     theme_manager.load_themes.assert_called_once()
-    theme_manager.update_preview_images.assert_called_once_with()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_not_called()
 
 
 @patch('openlp.core.lib.theme.Theme.set_default_header')

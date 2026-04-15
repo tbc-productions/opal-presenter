@@ -64,6 +64,7 @@ class ServiceItem(RegistryProperties):
 
         :param plugin: The plugin that this service item belongs to.
         """
+        self.name = ''
         if plugin:
             self.name = plugin.name
         self._rendered_slides = None

@@ -910,18 +910,25 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         Uses direct webview rendering on standard DPI systems for performance.
         Falls back to grab() on HiDPI systems to avoid artifacts.
         """
-        # Check if running in HiDPI mode
-        screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
-        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
-        is_hidpi = device_pixel_ratio > 1.0
+        # Check if running in HiDPI mode. If this widget was created via a mocked __init__
+        # (common in unit tests), querying geometry can raise at the Shiboken boundary.
+        try:
+            screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
+            device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+            is_hidpi = device_pixel_ratio > 1.0
+        except RuntimeError:
+            is_hidpi = True
 
         if is_hidpi or not self.isVisible():
             # Use grab() method for HiDPI or hidden widgets
-            self.setVisible(True)
-            QtWidgets.QApplication.instance().processEvents()
-            wait_for(lambda: False, timeout=1)
-            pixmap = self.grab()
-            self.setVisible(False)
+            try:
+                self.setVisible(True)
+                QtWidgets.QApplication.instance().processEvents()
+                wait_for(lambda: False, timeout=1)
+                pixmap = self.grab()
+                self.setVisible(False)
+            except RuntimeError:
+                pixmap = self.grab()
         else:
             # Use direct rendering for standard DPI
             pixmap = QtGui.QPixmap(self.webview.size())

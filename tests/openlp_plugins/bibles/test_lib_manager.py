@@ -22,6 +22,7 @@
 Functional tests to test the Bible Manager class and related methods.
 """
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from openlp.core.common.registry import Registry
@@ -36,7 +37,7 @@ def manager(settings):
             patch('openlp.core.common.applocation.AppLocation.get_files') as mocked_get_files:
         # GIVEN: A mocked out AppLocation.get_files()
         mocked_get_files.return_value = ["tests.sqlite"]
-        mocked_get_data_path.return_value = TEST_RESOURCES_PATH + "/bibles"
+        mocked_get_data_path.return_value = Path(TEST_RESOURCES_PATH) / 'bibles'
         return BibleManager(MagicMock())
 
 

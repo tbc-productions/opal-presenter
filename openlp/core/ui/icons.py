@@ -168,6 +168,7 @@ class UiIcons(metaclass=Singleton):
             'song_usage_active': {'icon': 'mdi.minus-circle'},
             'song_usage_inactive': {'icon': 'mdi.plus-circle'},
             'sort': {'icon': 'mdi.sort'},
+            'sync': {'icon': 'mdi.sync'},
             'stop': {'icon': 'mdi.stop'},
             'square': {'icon': 'mdi.checkbox-blank'},
             'text': {'icon': 'mdi.file-document-outline'},

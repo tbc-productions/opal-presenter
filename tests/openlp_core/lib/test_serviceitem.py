@@ -278,8 +278,14 @@ def test_service_item_load_image_from_local_service(mocked_get_section_data_path
             'The first frame should match the path to the image'
         assert test_file2 == service_item2.get_rendered_frame(0), \
             'The Second frame should match the path to the image'
-        assert frame_array1 == service_item.get_frames()[0], 'The return should match the frame array1'
-        assert frame_array2 == service_item2.get_frames()[0], 'The return should match the frame array2'
+        assert service_item.get_frames()[0]['path'] == frame_array1['path'], 'The return should match frame 1 path'
+        assert service_item.get_frames()[0]['title'] == frame_array1['title'], 'The return should match frame 1 title'
+        assert service_item.get_frames()[0]['file_hash'] == frame_array1['file_hash'], \
+            'The return should match frame 1 hash'
+        assert service_item2.get_frames()[0]['path'] == frame_array2['path'], 'The return should match frame 2 path'
+        assert service_item2.get_frames()[0]['title'] == frame_array2['title'], 'The return should match frame 2 title'
+        assert service_item2.get_frames()[0]['file_hash'] == frame_array2['file_hash'], \
+            'The return should match frame 2 hash'
         assert test_file1 == service_item.get_frame_path(0), \
             'The frame path should match the full path to the image'
         assert test_file2 == service_item2.get_frame_path(0), \

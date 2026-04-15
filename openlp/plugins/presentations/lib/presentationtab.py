@@ -25,10 +25,6 @@ from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 
-
-PDF_TRANSITION_EASING_TYPES = ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced']
-
-
 class PresentationTab(SettingsTab):
     """
     PresentationsTab is the Presentations settings tab in the settings dialog.
@@ -90,7 +86,7 @@ class PresentationTab(SettingsTab):
         self.impress_layout.addWidget(self.odp_display_check_box)
         self.left_layout.addWidget(self.impress_group_box)
         # PDF transitions
-        self.pdf_transition_group_box = QtWidgets.QGroupBox(self.left_column)
+        self.pdf_transition_group_box = QtWidgets.QGroupBox(self.right_column)
         self.pdf_transition_group_box.setObjectName('pdf_transition_group_box')
         self.pdf_transition_layout = QtWidgets.QFormLayout(self.pdf_transition_group_box)
         self.pdf_transition_layout.setObjectName('pdf_transition_layout')
@@ -106,20 +102,13 @@ class PresentationTab(SettingsTab):
         self.pdf_transition_layout.addRow(self.pdf_transition_effect_label, self.pdf_transition_effect_combo_box)
         self.pdf_transition_speed_label = QtWidgets.QLabel(self.pdf_transition_group_box)
         self.pdf_transition_speed_label.setObjectName('pdf_transition_speed_label')
-        self.pdf_transition_speed_spin_box = QtWidgets.QDoubleSpinBox(self.pdf_transition_group_box)
-        self.pdf_transition_speed_spin_box.setObjectName('pdf_transition_speed_spin_box')
-        self.pdf_transition_speed_spin_box.setRange(0.1, 10.0)
-        self.pdf_transition_speed_spin_box.setSingleStep(0.1)
-        self.pdf_transition_speed_spin_box.setDecimals(1)
-        self.pdf_transition_speed_spin_box.setValue(0.8)
-        self.pdf_transition_layout.addRow(self.pdf_transition_speed_label, self.pdf_transition_speed_spin_box)
-        self.pdf_transition_easing_label = QtWidgets.QLabel(self.pdf_transition_group_box)
-        self.pdf_transition_easing_label.setObjectName('pdf_transition_easing_label')
-        self.pdf_transition_easing_combo_box = QtWidgets.QComboBox(self.pdf_transition_group_box)
-        self.pdf_transition_easing_combo_box.setObjectName('pdf_transition_easing_combo_box')
-        self.pdf_transition_easing_combo_box.addItems(['', '', '', '', '', ''])
-        self.pdf_transition_layout.addRow(self.pdf_transition_easing_label, self.pdf_transition_easing_combo_box)
-        self.left_layout.addWidget(self.pdf_transition_group_box)
+        self.pdf_transition_speed_combo_box = QtWidgets.QComboBox(self.pdf_transition_group_box)
+        self.pdf_transition_speed_combo_box.setObjectName('pdf_transition_speed_combo_box')
+        self.pdf_transition_speed_combo_box.addItem('', TransitionSpeed.Fast)
+        self.pdf_transition_speed_combo_box.addItem('', TransitionSpeed.Normal)
+        self.pdf_transition_speed_combo_box.addItem('', TransitionSpeed.Slow)
+        self.pdf_transition_layout.addRow(self.pdf_transition_speed_label, self.pdf_transition_speed_combo_box)
+        self.right_layout.addWidget(self.pdf_transition_group_box)
         # setup layout
         self.left_layout.addStretch()
         self.right_column.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
@@ -164,16 +153,10 @@ class PresentationTab(SettingsTab):
                                                          translate('PresentationPlugin.PresentationTab', 'Concave'))
         self.pdf_transition_effect_combo_box.setItemText(TransitionType.Zoom,
                                                          translate('PresentationPlugin.PresentationTab', 'Zoom'))
-        self.pdf_transition_speed_label.setText(translate('PresentationPlugin.PresentationTab', 'Speed (seconds):'))
-        self.pdf_transition_easing_label.setText(translate('PresentationPlugin.PresentationTab', 'Type:'))
-        self.pdf_transition_easing_combo_box.setItemText(0, translate('PresentationPlugin.PresentationTab', 'Linear'))
-        self.pdf_transition_easing_combo_box.setItemText(1, translate('PresentationPlugin.PresentationTab', 'Ease'))
-        self.pdf_transition_easing_combo_box.setItemText(2, translate('PresentationPlugin.PresentationTab', 'Ease-in'))
-        self.pdf_transition_easing_combo_box.setItemText(3, translate('PresentationPlugin.PresentationTab', 'Ease-out'))
-        self.pdf_transition_easing_combo_box.setItemText(4,
-                                 translate('PresentationPlugin.PresentationTab', 'Ease-in-out'))
-        self.pdf_transition_easing_combo_box.setItemText(5,
-                                 translate('PresentationPlugin.PresentationTab', 'Balanced'))
+        self.pdf_transition_speed_label.setText(translate('PresentationPlugin.PresentationTab', 'Speed:'))
+        self.pdf_transition_speed_combo_box.setItemText(0, translate('PresentationPlugin.PresentationTab', 'Fast'))
+        self.pdf_transition_speed_combo_box.setItemText(1, translate('PresentationPlugin.PresentationTab', 'Normal'))
+        self.pdf_transition_speed_combo_box.setItemText(2, translate('PresentationPlugin.PresentationTab', 'Slow'))
 
     def set_controller_text(self, checkbox, controller):
         if checkbox.isEnabled():
@@ -212,13 +195,9 @@ class PresentationTab(SettingsTab):
         self.pdf_transition_enabled_check_box.setChecked(bool(self.settings.value('presentations/pdf transitions')))
         self.pdf_transition_effect_combo_box.setCurrentIndex(
             self._get_transition_type_value(self.settings.value('presentations/pdf transition type')))
-        self.pdf_transition_speed_spin_box.setValue(
-            self._get_transition_speed_seconds(self.settings.value('presentations/pdf transition speed')))
-        self.pdf_transition_easing_combo_box.setCurrentIndex(
-            PDF_TRANSITION_EASING_TYPES.index(
-                self._get_transition_easing_type(self.settings.value('presentations/pdf transition easing'))
-            )
-        )
+        speed_value = self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
+        speed_index = self.pdf_transition_speed_combo_box.findData(speed_value)
+        self.pdf_transition_speed_combo_box.setCurrentIndex(max(0, speed_index))
         self._on_pdf_transition_toggled(self.pdf_transition_enabled_check_box.isChecked())
 
     def save(self):
@@ -272,15 +251,9 @@ class PresentationTab(SettingsTab):
             changed = True
             pdf_transition_changed = True
         setting_key = 'presentations/pdf transition speed'
-        speed_value = round(self.pdf_transition_speed_spin_box.value(), 1)
-        if self._get_transition_speed_seconds(self.settings.value(setting_key)) != speed_value:
+        speed_value = self.pdf_transition_speed_combo_box.currentData()
+        if self._get_transition_speed_value(self.settings.value(setting_key)) != speed_value:
             self.settings.setValue(setting_key, speed_value)
-            changed = True
-            pdf_transition_changed = True
-        setting_key = 'presentations/pdf transition easing'
-        easing_value = PDF_TRANSITION_EASING_TYPES[self.pdf_transition_easing_combo_box.currentIndex()]
-        if self._get_transition_easing_type(self.settings.value(setting_key)) != easing_value:
-            self.settings.setValue(setting_key, easing_value)
             changed = True
             pdf_transition_changed = True
         if changed:
@@ -293,9 +266,7 @@ class PresentationTab(SettingsTab):
         self.pdf_transition_effect_label.setEnabled(enabled)
         self.pdf_transition_effect_combo_box.setEnabled(enabled)
         self.pdf_transition_speed_label.setEnabled(enabled)
-        self.pdf_transition_speed_spin_box.setEnabled(enabled)
-        self.pdf_transition_easing_label.setEnabled(enabled)
-        self.pdf_transition_easing_combo_box.setEnabled(enabled)
+        self.pdf_transition_speed_combo_box.setEnabled(enabled)
 
     @staticmethod
     def _get_transition_type_value(value):
@@ -308,40 +279,24 @@ class PresentationTab(SettingsTab):
         return TransitionType.Fade
 
     @staticmethod
-    def _get_transition_speed_seconds(value):
-        speed_lookup = {
-            TransitionSpeed.Fast: 0.4,
-            TransitionSpeed.Normal: 0.8,
-            TransitionSpeed.Slow: 1.2,
-            'fast': 0.4,
-            'normal': 0.8,
-            'slow': 1.2
-        }
-        if isinstance(value, bool):
-            return 0.8
-        if value in speed_lookup:
-            return speed_lookup[value]
+    def _get_transition_speed_value(value):
         if isinstance(value, str):
-            lowered = value.strip().lower()
-            if lowered in speed_lookup:
-                return speed_lookup[lowered]
-            try:
-                value = float(value)
-            except ValueError:
-                return 0.8
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        if isinstance(value, bool):
+            return TransitionSpeed.Normal
+        # Backward compatibility for older decimal-second values.
         try:
             value = float(value)
         except (TypeError, ValueError):
-            return 0.8
-        return max(0.1, value)
-
-    @staticmethod
-    def _get_transition_easing_type(value):
-        if isinstance(value, str):
-            normalised = value.strip().lower()
-            if normalised in PDF_TRANSITION_EASING_TYPES:
-                return normalised
-        return 'balanced'
+            return TransitionSpeed.Normal
+        if value <= 0.6:
+            return TransitionSpeed.Fast
+        if value >= 1.0:
+            return TransitionSpeed.Slow
+        return TransitionSpeed.Normal
 
     def tab_visible(self):
         """

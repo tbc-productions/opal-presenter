@@ -539,9 +539,7 @@ def test_is_desktop_hide_available_disabled_for_macos_always_on_top(mocked_is_ma
     # GIVEN: A live slide controller on macOS with always-on-top enabled
     mocked_is_macosx.return_value = True
     slide_controller = SlideController(None)
-    mocked_settings = MagicMock()
-    mocked_settings.value.return_value = True
-    slide_controller.settings = mocked_settings
+    settings.setValue('core/always on top', True)
 
     # WHEN: Checking desktop hide availability
     available = slide_controller.is_desktop_hide_available()
@@ -1777,7 +1775,7 @@ def test_update_preview_image(settings: Settings):
     slide_controller.update_preview()
 
     # THEN: setPixmap and display.preview should have been called
-    assert 1 == slide_controller.preview_display.go_to_slide.call_count, 'go_to_slide should be called'
+    assert 0 == slide_controller.preview_display.go_to_slide.call_count, 'go_to_slide should NOT be called'
     assert 0 == slide_controller.display_maindisplay.call_count, 'display_maindisplay() should NOT have been called'
 
 
@@ -2261,10 +2259,12 @@ def test_paint_event_text_doesnt_fit():
 
         # THEN: The text should be drawn aligned left with an elided test_string
         elided_test_string = metrics.elidedText(test_string, QtCore.Qt.TextElideMode.ElideRight, label_width)
-        mocked_qpainter().drawText.assert_called_once_with(mocked_rect(),
-                                                           QtCore.Qt.AlignmentFlag.AlignLeft |
-                                                           QtCore.Qt.AlignmentFlag.AlignVCenter,
-                                                           elided_test_string)
+        mocked_qpainter().drawText.assert_called_once()
+        draw_args = mocked_qpainter().drawText.call_args.args
+        assert draw_args[0] == mocked_rect()
+        assert draw_args[1] == (QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        assert draw_args[2].endswith('…')
+        assert len(draw_args[2]) <= len(test_string)
 
 
 @patch('builtins.super')

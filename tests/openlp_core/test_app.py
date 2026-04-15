@@ -241,7 +241,7 @@ def test_is_already_running_is_running_continue(MockedStandardButton, mocked_cri
     # THEN: The result should be false
     MockedStandardButton.assert_called_once_with(QtWidgets.QMessageBox.StandardButton.Ok)
     mocked_critical.assert_called_once_with(None, 'Error',
-                                            'OpenLP is already running on this machine. \nClosing this instance', 0)
+                                            'OpenLP+ is already running on this machine. \nClosing this instance', 0)
 
 
 @patch('openlp.core.app.QtWidgets.QApplication.processEvents')

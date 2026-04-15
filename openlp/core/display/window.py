@@ -27,7 +27,7 @@ import os
 import copy
 import re
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import quote
 
 from PySide6 import QtCore, QtGui, QtWebChannel, QtWidgets
 
@@ -93,7 +93,11 @@ def _path_to_file_uri(image_path):
     """
     Convert a path-like object to a file URI, normalizing any percent-encoded path fragments first.
     """
-    normalized_path = Path(unquote(path_to_str(image_path)))
+    normalized_path_text = path_to_str(image_path)
+    if re.match(r'^[a-zA-Z]:[\\/]', normalized_path_text):
+        windows_path = normalized_path_text.replace('\\', '/')
+        return 'file:///{path}'.format(path=quote(windows_path, safe='/:%'))
+    normalized_path = Path(normalized_path_text)
     return normalized_path.as_uri()
 
 
@@ -210,6 +214,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         super(DisplayWindow, self).__init__(parent)
         self._partial_screen_layout = False
+        self.screen_number = None
         self.after_loaded_callback = after_loaded_callback
         # Gather all flags for the display window
         flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Tool |\
@@ -385,6 +390,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         if not self.is_display:
             return
+        if self.screen_number is None:
+            return
         try:
             screen = ScreenList()[self.screen_number]
         except (IndexError, KeyError):
@@ -524,7 +531,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             QtCore.QTimer.singleShot(0, self._deferred_sync_geometry_avoid_main_window)
 
     def run_in_display(self, action, *parameters, raw_parameters=None, is_sync=False, return_event_name=None,
-                       raise_window=True):
+                       raise_window=False):
         if len(parameters):
             raw_parameters = ''
             first = True
@@ -540,23 +547,26 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             action_name = 'requestActionAsync'
             action_async = ', \'{event_name}\''.format(event_name=return_event_name)
         if not raw_parameters:
-            return self._run_javascript(
-                '{action_name}(\'{action}\'{action_async})'.format(
-                    action_name=action_name,
-                    action=action,
-                    action_async=action_async
-                ),
-                is_sync,
-                raise_window=raise_window
+            script = '{action_name}(\'{action}\'{action_async})'.format(
+                action_name=action_name,
+                action=action,
+                action_async=action_async
             )
+            if raise_window:
+                return self._run_javascript(script, is_sync, raise_window=True)
+            return self._run_javascript(script, is_sync)
         else:
-            return self._run_javascript('{action_name}(\'{action}\'{action_async}, {raw_parameters})'
-                                        .format(action_name=action_name, action=action, action_async=action_async,
-                                                raw_parameters=raw_parameters),
-                                        is_sync,
-                                        raise_window=raise_window)
+            script = '{action_name}(\'{action}\'{action_async}, {raw_parameters})'.format(
+                action_name=action_name,
+                action=action,
+                action_async=action_async,
+                raw_parameters=raw_parameters
+            )
+            if raise_window:
+                return self._run_javascript(script, is_sync, raise_window=True)
+            return self._run_javascript(script, is_sync)
 
-    def _run_javascript(self, script, is_sync=False, raise_window=True):
+    def _run_javascript(self, script, is_sync=False, raise_window=False):
         """
         Run some Javascript in the WebView
 
@@ -564,8 +574,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         :param is_sync: Run the script synchronously. Defaults to False
         """
         log.debug((script[:80] + '..') if len(script) > 80 else script)
+        if not hasattr(self, 'webview'):
+            return None
         # Wait for previous scripts to finish
-        wait_for(lambda: self.__script_done)
+        wait_for(lambda: getattr(self, '_DisplayWindow__script_done', True))
         if is_sync:
             self.__script_done = False
             self.__script_result = None
@@ -718,7 +730,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 screen = ScreenList()[self.screen_number]
             except (IndexError, KeyError):
                 screen = None
-            if screen is not None:
+            if screen is not None and isinstance(getattr(screen, 'display_geometry', None), QtCore.QRect):
                 was_fullscreen = self.isFullScreen()
                 self.update_from_screen(screen)
                 if was_fullscreen and self._partial_screen_layout:
@@ -748,7 +760,9 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.display_watcher.unregister_event_listener(TRANSITION_END_EVENT_NAME)
         # Update display to the selected mode
         if mode != HideMode.Screen:
-            if self.isHidden():
+            # Preview windows may not have a valid native surface at this point on macOS.
+            # Forcing visibility can trigger a Qt abort, so only force-show the live display.
+            if self.is_display and self.isHidden():
                 self.setVisible(True)
         if mode == HideMode.Screen:
             if self.settings.value('advanced/disable transparent display'):

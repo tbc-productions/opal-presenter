@@ -81,7 +81,6 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         'media': 'servicemanager/theme color media',
         'custom': 'servicemanager/theme color custom slide'
     }
-
     def __init__(self, parent=None, plugin=None):
         """
         Constructor to create the media manager item.
@@ -301,12 +300,12 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Enable/disable Preview/Live/Add toolbar actions based on whether anything is selected in the list.
         """
         has_selection = bool(getattr(self, 'list_view', None) and self.list_view.selectedIndexes())
-        if self.preview_action is not None:
-            self.preview_action.setEnabled(has_selection)
-        if self.live_action is not None:
-            self.live_action.setEnabled(has_selection)
-        if self.add_to_service_action is not None:
-            self.add_to_service_action.setEnabled(has_selection)
+        for action in (
+                getattr(self, 'preview_action', None),
+                getattr(self, 'live_action', None),
+                getattr(self, 'add_to_service_action', None)):
+            if action is not None:
+                action.setEnabled(has_selection)
 
     def _update_common_header_actions_enabled_state(self):
         """

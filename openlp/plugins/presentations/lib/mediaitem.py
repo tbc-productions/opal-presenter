@@ -309,23 +309,19 @@ class PresentationMediaItem(FolderLibraryItem):
         if not self.display_type_combo_box.currentText():
             return False
         service_item.add_capability(ItemCapabilities.CanEditTitle)
-        if file_type in PDF_CONTROLLER_FILETYPES and context != ServiceItemContext.Service:
+        if file_type in PDF_CONTROLLER_FILETYPES:
             service_item.add_capability(ItemCapabilities.CanMaintain)
             service_item.add_capability(ItemCapabilities.CanPreview)
             service_item.add_capability(ItemCapabilities.CanLoop)
             service_item.add_capability(ItemCapabilities.CanAppend)
             service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
-            inherited_transition_settings = None
-            if items and isinstance(items[0], ServiceItem):
-                inherited_transition_settings = getattr(items[0], 'slide_transition_settings', None)
-            if isinstance(inherited_transition_settings, dict):
-                transition_enabled = bool(inherited_transition_settings.get('enabled', False))
-                transition_type = inherited_transition_settings.get('type', TransitionType.Fade)
-                if isinstance(transition_type, str):
-                    transition_type = TransitionType.from_string(transition_type) or TransitionType.Fade
-                transition_speed = inherited_transition_settings.get('speed', TransitionSpeed.Normal)
-                if isinstance(transition_speed, str):
-                    transition_speed = TransitionSpeed.from_string(transition_speed) or TransitionSpeed.Normal
+            resolved_transition_settings = self._get_custom_transition_settings(service_item)
+            if (not resolved_transition_settings) and items and isinstance(items[0], ServiceItem):
+                resolved_transition_settings = self._get_custom_transition_settings(items[0])
+            if resolved_transition_settings:
+                transition_enabled = bool(resolved_transition_settings.get('enabled', False))
+                transition_type = resolved_transition_settings.get('type', TransitionType.Fade)
+                transition_speed = resolved_transition_settings.get('speed', TransitionSpeed.Normal)
                 speed_seconds_lookup = {
                     TransitionSpeed.Fast: 0.4,
                     TransitionSpeed.Normal: 0.8,
@@ -507,19 +503,12 @@ class PresentationMediaItem(FolderLibraryItem):
                 speed_seconds = 0.8
         speed_seconds = max(0.1, speed_seconds)
 
-        easing_value = self.settings.value('presentations/pdf transition easing')
-        valid_easing_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
-        if isinstance(easing_value, str):
-            easing_value = easing_value.strip().lower()
-        if not isinstance(easing_value, str) or easing_value not in valid_easing_types:
-            easing_value = 'balanced'
-
         effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
         return {
             'enabled': bool(self.settings.value('presentations/pdf transitions')),
             'effect': effect,
             'speed_seconds': speed_seconds,
-            'easing': easing_value,
+            'easing': 'balanced',
             # Backward-compatible aliases for existing consumers/tests.
             'type': effect,
             'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
@@ -557,6 +546,42 @@ class PresentationMediaItem(FolderLibraryItem):
         if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
             return value
         return TransitionSpeed.Normal
+
+    @classmethod
+    def _is_default_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return False
+        transition_type = cls._get_transition_type_value(settings.get('type', TransitionType.Fade))
+        transition_speed = cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        transition_enabled = bool(settings.get('enabled', False))
+        return (not transition_enabled) and transition_type == TransitionType.Fade and \
+            transition_speed == TransitionSpeed.Normal
+
+    @classmethod
+    def _normalise_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return None
+        return {
+            'enabled': bool(settings.get('enabled', False)),
+            'type': cls._get_transition_type_value(settings.get('type', TransitionType.Fade)),
+            'speed': cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        }
+
+    @classmethod
+    def _get_custom_transition_settings(cls, service_item):
+        slide_settings = cls._normalise_transition_settings(getattr(service_item, 'slide_transition_settings', None))
+        if slide_settings and not cls._is_default_transition_settings(slide_settings):
+            return slide_settings
+        pdf_settings = getattr(service_item, 'pdf_transition_settings', None)
+        if isinstance(pdf_settings, dict):
+            legacy_settings = cls._normalise_transition_settings({
+                'enabled': bool(pdf_settings.get('enabled', False)),
+                'type': pdf_settings.get('effect', pdf_settings.get('type', TransitionType.Fade)),
+                'speed': pdf_settings.get('speed', TransitionSpeed.Normal)
+            })
+            if legacy_settings and not cls._is_default_transition_settings(legacy_settings):
+                return legacy_settings
+        return None
 
     def find_controller_by_type(self, file_path):
         """
