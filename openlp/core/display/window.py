@@ -370,6 +370,9 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             return False
         if not self.settings.value('core/display on monitor'):
             return False
+        # In always-on-top mode, the output is expected to fully cover the main window.
+        if self.settings.value('core/always on top'):
+            return False
         if screen.custom_geometry is not None:
             return False
         main_window = Registry().get('main_window')

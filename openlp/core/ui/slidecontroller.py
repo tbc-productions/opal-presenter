@@ -33,7 +33,7 @@ from openlp.core.common import SlideLimits
 from openlp.core.common.actions import ActionList, CategoryOrder
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
-from openlp.core.common.platform import is_macosx, is_wayland_compositor
+from openlp.core.common.platform import is_wayland_compositor
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
@@ -1419,7 +1419,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Return True when "Show Desktop" mode is available in this environment.
         """
-        return not (is_macosx() and self.settings.value('core/always on top'))
+        return True
 
     def _update_desktop_hide_action_state(self):
         """

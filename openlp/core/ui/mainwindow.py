@@ -251,6 +251,7 @@ class Ui_MainWindow(object):
             icon=UiIcons().get_icon_variant('live_presentation'),
             checked=True,
             can_shortcuts=True,
+            context=QtCore.Qt.ShortcutContext.ApplicationShortcut,
             category=UiStrings().View,
             triggers=self.on_view_display_output_toggled)
         self.lock_panel = create_action(main_window, 'lockPanel', can_shortcuts=True, checked=panel_locked,
@@ -1829,7 +1830,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             # "Display output" maps to desktop hide/show, so disable it when desktop hide is unavailable.
             showing = True
         self.view_display_output_item.blockSignals(True)
-        self.view_display_output_item.setEnabled(desktop_hide_available)
+        # Keep this action enabled so users can always re-enable output from the keyboard/menu.
+        # If desktop hide is unavailable, toggling off is ignored in on_view_display_output_toggled().
+        self.view_display_output_item.setEnabled(True)
         self.view_display_output_item.setChecked(showing)
         self.view_display_output_item.blockSignals(False)
 

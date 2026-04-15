@@ -531,21 +531,19 @@ def test_on_toggle_desktop_off(settings: Settings):
     mocked_set_hide_mode.assert_called_once_with(None)
 
 
-@patch('openlp.core.ui.slidecontroller.is_macosx')
-def test_is_desktop_hide_available_disabled_for_macos_always_on_top(mocked_is_macosx, settings: Settings):
+def test_is_desktop_hide_available_with_macos_always_on_top(settings: Settings):
     """
-    Show Desktop should be unavailable on macOS when Always on top is enabled.
+    Show Desktop should remain available on macOS even when Always on top is enabled.
     """
-    # GIVEN: A live slide controller on macOS with always-on-top enabled
-    mocked_is_macosx.return_value = True
+    # GIVEN: A live slide controller with always-on-top enabled
     slide_controller = SlideController(None)
     settings.setValue('core/always on top', True)
 
     # WHEN: Checking desktop hide availability
     available = slide_controller.is_desktop_hide_available()
 
-    # THEN: Desktop hide should be disabled
-    assert available is False
+    # THEN: Desktop hide should still be available
+    assert available is True
 
 
 def test_on_toggle_desktop_ignored_when_unavailable(settings: Settings):
