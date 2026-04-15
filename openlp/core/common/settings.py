@@ -276,6 +276,7 @@ class Settings(QtCore.QSettings):
         'advanced/print notes': False,
         'advanced/print slide text': False,
         'advanced/protect data directory': False,
+        'advanced/copy library files to data folder': True,
         'advanced/proxy mode': ProxyMode.SYSTEM_PROXY,
         'advanced/proxy http': '',
         'advanced/proxy https': '',
