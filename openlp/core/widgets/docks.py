@@ -207,6 +207,8 @@ class MediaToolBox(QtWidgets.QWidget):
         self._syncing = False
 
     def _rebuild_tab_bars(self, top_count=None):
+        top_blocker = QtCore.QSignalBlocker(self._top_tab_bar)
+        bottom_blocker = QtCore.QSignalBlocker(self._bottom_tab_bar)
         if top_count is None:
             top_count = self._split_index()
         self._top_count = top_count
@@ -235,6 +237,8 @@ class MediaToolBox(QtWidgets.QWidget):
 
         self._bottom_tab_bar.setVisible(len(self._items) > top_count)
         self._update_tab_row_heights()
+        del top_blocker
+        del bottom_blocker
         self._sync_tab_selection()
 
     def _on_top_tab_changed(self, tab_index):

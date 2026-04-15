@@ -249,29 +249,18 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self._finish_internal_drag(False)
 
     def _show_drag_tooltip(self, text):
-        """Show or update the floating drag tooltip near the cursor."""
-        if self._drag_tooltip_label is None:
-            self._drag_tooltip_label = QtWidgets.QLabel(
-                text, None, QtCore.Qt.WindowType.ToolTip)
-            self._drag_tooltip_label.setAttribute(
-                QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
-        else:
-            self._drag_tooltip_label.setText(text)
-        self._drag_tooltip_label.adjustSize()
-        self._update_drag_tooltip_pos()
-        self._drag_tooltip_label.show()
+        """Show or update the drag tooltip near the cursor."""
+        QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), text, self)
 
     def _update_drag_tooltip_pos(self):
         """Reposition the drag tooltip to follow the cursor."""
-        if self._drag_tooltip_label is not None:
-            self._drag_tooltip_label.move(QtGui.QCursor.pos() + QtCore.QPoint(16, 8))
+        if self._is_internal_dragging and self.service_manager:
+            QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), self.service_manager.get_internal_drag_title(), self)
 
     def _hide_drag_tooltip(self):
-        """Hide and destroy the drag tooltip."""
-        if self._drag_tooltip_label is not None:
-            self._drag_tooltip_label.hide()
-            self._drag_tooltip_label.deleteLater()
-            self._drag_tooltip_label = None
+        """Hide the drag tooltip."""
+        QtWidgets.QToolTip.hideText()
+        self._drag_tooltip_label = None
 
 
 class Ui_ServiceManager(object):
