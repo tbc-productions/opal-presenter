@@ -151,6 +151,29 @@ def test_get_preview_not_visible(form: ThemeProgressForm, registry: Registry, se
     assert preview is None
 
 
+@patch('openlp.core.ui.themeprogressform.wait_for')
+@patch('openlp.core.ui.themeprogressform.QtWidgets.QApplication.instance')
+def test_warm_up_preview(mocked_app_instance: MagicMock, mocked_wait_for: MagicMock, form: ThemeProgressForm,
+                         registry: Registry, settings: Settings):
+    """
+    Test that warm_up_preview primes the renderer without taking a screenshot.
+    """
+    mocked_renderer = MagicMock()
+    registry.register('renderer', mocked_renderer)
+    test_theme_data = {'name': 'Test Theme'}
+    mocked_app = MagicMock()
+    mocked_app_instance.return_value = mocked_app
+    form.theme_display = MagicMock(**{'width.return_value': 192})
+    form.renderer.width = MagicMock(return_value=1920)
+
+    form.warm_up_preview(test_theme_data)
+
+    mocked_wait_for.assert_called_once()
+    form.theme_display.set_scale.assert_called_once_with(0.1)
+    form.theme_display.generate_preview.assert_called_once_with(test_theme_data, generate_screenshot=False)
+    mocked_app.processEvents.assert_called_once()
+
+
 def test_theme_list(qapp, form: ThemeProgressForm):
     # GIVEN: ThemeProgressForm object and theme list
     test_theme_list = ['Theme 1', 'Theme 2']

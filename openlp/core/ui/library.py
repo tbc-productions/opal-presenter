@@ -22,13 +22,17 @@
 Provides additional classes for working in the library
 """
 import os
+from shutil import copy2
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import sha256_file_hash
+from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, get_natural_key, translate
+from openlp.core.common.path import create_paths
+from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.lib import check_item_selected
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 from openlp.core.lib.plugin import StringContent
@@ -36,6 +40,30 @@ from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.folders import AddFolderForm, ChooseFolderForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.views import TreeWidgetWithDnD
+
+
+def _add_library_context_menu_separator(target):
+    """
+    Add a visible context-menu separator for platforms/themes where QMenu separators are hard to see.
+    """
+    action = QtWidgets.QWidgetAction(target)
+    action.setObjectName('openlp_library_context_menu_sep')
+    container = QtWidgets.QWidget(target)
+    layout = QtWidgets.QVBoxLayout(container)
+    layout.setContentsMargins(6, 4, 6, 4)
+    layout.setSpacing(0)
+    line = QtWidgets.QFrame(container)
+    line.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+    line.setFixedHeight(1)
+    mid = target.palette().color(QtGui.QPalette.ColorRole.Mid)
+    line.setStyleSheet(
+        'background-color: {c}; border: none; min-height: 1px; max-height: 1px;'.format(c=mid.name()))
+    layout.addWidget(line)
+    container.setLayout(layout)
+    action.setDefaultWidget(container)
+    action.setEnabled(False)
+    target.addAction(action)
+    return action
 
 
 class FolderLibraryItem(MediaManagerItem):
@@ -127,6 +155,7 @@ class FolderLibraryItem(MediaManagerItem):
                 item = tree_item.data(0, QtCore.Qt.ItemDataRole.UserRole)
                 if isinstance(item, Item):
                     self.delete_item(item)
+                    self._delete_managed_library_file(item)
                     if not item.folder_id or not tree_item.parent():
                         self.list_view.takeTopLevelItem(self.list_view.indexOfTopLevelItem(tree_item))
                     else:
@@ -204,6 +233,7 @@ class FolderLibraryItem(MediaManagerItem):
                 triggers=self.on_add_edit_click)
             create_widget_action(self.list_view, separator=True)
         if self.has_delete_icon:
+            _add_library_context_menu_separator(self.list_view)
             create_widget_action(
                 self.list_view,
                 'listView{name}{delete}Item'.format(name=self.plugin.name.title(), delete=StringContent.Delete.title()),
@@ -222,7 +252,39 @@ class FolderLibraryItem(MediaManagerItem):
         """
         Override this method to add custom context actions
         """
-        pass
+        create_widget_action(self.list_view, separator=True)
+        create_widget_action(
+            self.list_view,
+            text=translate('OpenLP.FolderLibraryItem', 'Show in folder'),
+            icon=UiIcons().folder,
+            triggers=self.on_show_in_folder_click
+        )
+        _add_library_context_menu_separator(self.list_view)
+
+    def on_show_in_folder_click(self):
+        """
+        Reveal the selected item in the platform file manager.
+        """
+        selected_items = self.list_view.selectedItems()
+        if not selected_items:
+            return
+        selected_item = selected_items[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if not isinstance(selected_item, self.item_class) or not selected_item.file_path:
+            return
+        file_path = Path(selected_item.file_path)
+        if not file_path.exists():
+            critical_error_message_box(
+                translate('OpenLP.FolderLibraryItem', 'File not found'),
+                translate('OpenLP.FolderLibraryItem', 'The file {path} does not exist.').format(path=file_path)
+            )
+            return
+        file_path_str = str(file_path.resolve())
+        if is_win():
+            QtCore.QProcess.startDetached('explorer', ['/select,', file_path_str])
+        elif is_macosx():
+            QtCore.QProcess.startDetached('open', ['-R', file_path_str])
+        else:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(file_path.parent)))
 
     def add_middle_header_bar(self):
         """
@@ -288,6 +350,7 @@ class FolderLibraryItem(MediaManagerItem):
         items = self.manager.get_all_objects(Item, Item.folder_id == folder.id)
         for item in items:
             self.delete_item(item)
+            self._delete_managed_library_file(item)
             self.manager.delete_object(Item, item.id)
         folders = self.manager.get_all_objects(Folder, Folder.parent_id == folder.id)
         for child in folders:
@@ -401,17 +464,19 @@ class FolderLibraryItem(MediaManagerItem):
         existing_files = [item.file_path for item in self.manager.get_all_objects(self.item_class)]
         # Convert file paths to items
         for file_path in file_paths:
-            if file_paths.count(file_path) > 1 or existing_files.count(file_path) > 0:
+            stored_path = self._prepare_library_file(file_path)
+            if file_paths.count(file_path) > 1 or existing_files.count(str(stored_path)) > 0:
                 # If a file already exists in the items or has been selected twice, show an error message
                 critical_error_message_box(translate('OpenLP.FolderLibraryItem', 'File Exists'),
                                            translate('OpenLP.FolderLibraryItem',
                                                      'An item with that filename already exists.'))
                 continue
 
-            self.log_debug('Adding new item: {name}'.format(name=file_path))
-            item = self.item_class(name=str(file_path), file_path=str(file_path))
-            if isinstance(file_path, Path) and file_path.exists():
-                item.file_hash = sha256_file_hash(file_path)
+            self.log_debug('Adding new item: {name}'.format(name=stored_path))
+            display_name = file_path.name if isinstance(file_path, Path) else str(file_path)
+            item = self.item_class(name=display_name, file_path=str(stored_path))
+            if isinstance(stored_path, Path) and stored_path.exists():
+                item.file_hash = sha256_file_hash(stored_path)
             if target_folder:
                 item.folder_id = target_folder.id
             self.manager.save_object(item)
@@ -420,6 +485,56 @@ class FolderLibraryItem(MediaManagerItem):
                        target_folder=target_folder)
         last_dir = Path(file_paths[0]).parent
         self.settings.setValue(self.settings_section + '/last directory', last_dir)
+
+    def _prepare_library_file(self, file_path: Union[Path, str]) -> Union[Path, str]:
+        """
+        Optionally copy library files into the OpenLP data folder and return the stored path.
+        """
+        if not isinstance(file_path, Path):
+            return file_path
+        if not file_path.exists():
+            return file_path
+        if not self.settings.value('advanced/copy library files to data folder'):
+            return file_path
+        return self._copy_file_to_library_storage(file_path)
+
+    def _copy_file_to_library_storage(self, file_path: Path) -> Path:
+        """
+        Copy a file to this plugin's managed library storage and return the destination.
+        """
+        library_dir = AppLocation.get_section_data_path(self.settings_section) / 'library'
+        create_paths(library_dir)
+        file_hash = sha256_file_hash(file_path)
+        destination = library_dir / '{hash}{ext}'.format(hash=file_hash, ext=file_path.suffix)
+        if destination == file_path:
+            return destination
+        if not destination.exists():
+            copy2(file_path, destination)
+        return destination
+
+    @staticmethod
+    def _is_path_in_directory(path: Path, directory: Path) -> bool:
+        """
+        Return True when ``path`` is inside ``directory``.
+        """
+        try:
+            path.relative_to(directory)
+            return True
+        except ValueError:
+            return False
+
+    def _delete_managed_library_file(self, item) -> None:
+        """
+        Delete a library file only when it is inside OpenLP's managed data folder.
+        """
+        if not item or not item.file_path:
+            return
+        file_path = Path(item.file_path)
+        if not file_path.exists():
+            return
+        library_dir = AppLocation.get_section_data_path(self.settings_section) / 'library'
+        if self._is_path_in_directory(file_path.resolve(), library_dir.resolve()):
+            file_path.unlink()
 
     def dnd_move_internal(self, target):
         """

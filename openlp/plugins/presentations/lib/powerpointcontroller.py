@@ -664,7 +664,7 @@ class PowerpointDocument(PresentationDocument):
             trace_error_handler(log)
             self.show_error_msg()
 
-    def next_step(self):
+    def next_step(self, restore_focus=True):
         """
         Triggers the next effect of slide on the running presentation.
         """
@@ -692,7 +692,7 @@ class PowerpointDocument(PresentationDocument):
         if self.presentation_hwnd:
             win32gui.FlashWindowEx(self.presentation_hwnd, win32con.FLASHW_STOP, 0, 0)
         # Make sure powerpoint doesn't steal focus, unless we're on a single screen setup
-        if len(ScreenList()) > 1:
+        if restore_focus and len(ScreenList()) > 1:
             Registry().get('main_window').activateWindow()
         return past_end
 

@@ -54,6 +54,7 @@ class FontSelectPage(GridLayoutPage):
     is_shadow_enabled_changed = QtCore.Signal(bool)
     shadow_color_changed = QtCore.Signal(str)
     shadow_size_changed = QtCore.Signal(int)
+    shadow_blur_changed = QtCore.Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -201,6 +202,14 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_size_spinbox.setMaximum(9999)
         self.shadow_size_spinbox.setObjectName('shadow_size_spinbox')
         self.shadow_layout.addWidget(self.shadow_size_spinbox, 1, 1)
+        # Shadow blur
+        self.shadow_blur_label = FormLabel(self.shadow_groupbox)
+        self.shadow_blur_label.setObjectName('shadow_blur_label')
+        self.shadow_layout.addWidget(self.shadow_blur_label, 2, 0)
+        self.shadow_blur_spinbox = QtWidgets.QSpinBox(self.shadow_groupbox)
+        self.shadow_blur_spinbox.setMaximum(9999)
+        self.shadow_blur_spinbox.setObjectName('shadow_blur_spinbox')
+        self.shadow_layout.addWidget(self.shadow_blur_spinbox, 2, 1)
         # Connect all the signals
         self.font_name_combobox.currentFontChanged.connect(self._on_font_name_changed)
         self.font_color_button.colorChanged.connect(self._on_font_color_changed)
@@ -216,6 +225,7 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_groupbox.toggled.connect(self._on_shadow_toggled)
         self.shadow_color_button.colorChanged.connect(self._on_shadow_color_changed)
         self.shadow_size_spinbox.valueChanged.connect(self._on_shadow_size_changed)
+        self.shadow_blur_spinbox.valueChanged.connect(self._on_shadow_blur_changed)
 
     def retranslate_ui(self):
         self.text_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Text'))
@@ -242,6 +252,7 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Shadow'))
         self.shadow_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
         self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size:'))
+        self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur:'))
 
     def _on_font_name_changed(self, font):
         if isinstance(font, QtGui.QFont):
@@ -287,6 +298,9 @@ class FontSelectPage(GridLayoutPage):
 
     def _on_shadow_size_changed(self, size):
         self.shadow_size_changed.emit(size)
+
+    def _on_shadow_blur_changed(self, blur):
+        self.shadow_blur_changed.emit(blur)
 
     def enable_features(self, *features):
         """
@@ -419,3 +433,11 @@ class FontSelectPage(GridLayoutPage):
     @shadow_size.setter
     def shadow_size(self, size):
         self.shadow_size_spinbox.setValue(size)
+
+    @property
+    def shadow_blur(self):
+        return self.shadow_blur_spinbox.value()
+
+    @shadow_blur.setter
+    def shadow_blur(self, blur):
+        self.shadow_blur_spinbox.setValue(blur)

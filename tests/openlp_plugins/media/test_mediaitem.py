@@ -155,6 +155,7 @@ def test_load_item_metadata_columns(media_item):
     # GIVEN: A media file item and a controlled stat result
     file_path = Path('/media/video.mp4')
     item = MagicMock(file_path=file_path)
+    media_item.service_path = Path('/tmp')
     mocked_stat = MagicMock()
     mocked_stat.st_size = 150 * 1024 * 1024  # 150.0 MB
     mocked_stat.st_mtime = 1700000000.0
@@ -316,7 +317,7 @@ def test_load_item_video_uses_cached_thumbnail(mocked_suffixes: MagicMock,
     mocked_validate_thumb.return_value = True
     mocked_build_icon.return_value = UiIcons().video
 
-    tree_item = media_item.load_item(item)
+    tree_item = media_item.load_item(item, force_generate=True)
 
     assert tree_item is not None
     mocked_build_icon.assert_called_once_with(tmp_path / 'abc123.png')
@@ -346,7 +347,7 @@ def test_load_item_video_generates_thumbnail_when_missing(mocked_suffixes: Magic
     mocked_info_instance.create_media_thumbnail.return_value = True
     mocked_media_info.return_value = mocked_info_instance
 
-    tree_item = media_item.load_item(item)
+    tree_item = media_item.load_item(item, force_generate=True)
 
     assert tree_item is not None
     mocked_info_instance.create_media_thumbnail.assert_called_once_with(str(video_file), str(tmp_path / 'abc123.png'))

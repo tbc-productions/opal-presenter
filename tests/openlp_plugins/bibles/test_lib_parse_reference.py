@@ -22,6 +22,7 @@
 This module contains tests for the lib submodule of the Bibles plugin.
 """
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from openlp.core.common.registry import Registry
@@ -48,7 +49,7 @@ def manager(settings):
         # GIVEN: A mocked out AppLocation.get_files()
         update_reference_separators()
         mocked_get_files.return_value = ["tests.sqlite"]
-        mocked_get_data_path.return_value = TEST_RESOURCES_PATH + "/bibles"
+        mocked_get_data_path.return_value = Path(TEST_RESOURCES_PATH) / 'bibles'
         return BibleManager(MagicMock())
 
 

@@ -164,7 +164,7 @@ class Controller(object):
         self.doc.goto_slide(self.doc.get_slide_count())
         self.poll()
 
-    def next(self):
+    def next(self, restore_focus=True):
         """
         Based on the handler passed at startup triggers the next slide event.
         """
@@ -182,7 +182,11 @@ class Controller(object):
             return False
         if not self.activate():
             return False
-        ret = self.doc.next_step()
+        try:
+            ret = self.doc.next_step(restore_focus=restore_focus)
+        except TypeError:
+            # Backward compatibility for controllers not yet updated with restore_focus.
+            ret = self.doc.next_step()
         self.poll()
         return ret
 
@@ -438,8 +442,10 @@ class MessageListener(object):
         :param message: The message {1} is_live
         """
         is_live = message[1]
+        options = message[2] if len(message) > 2 and isinstance(message[2], dict) else {}
+        restore_focus = options.get('restore_focus', True)
         if is_live:
-            ret = self.live_handler.next()
+            ret = self.live_handler.next(restore_focus=restore_focus)
             if Registry().get('settings').value('core/click live slide to unblank'):
                 Registry().execute('slidecontroller_live_unblank')
             return ret

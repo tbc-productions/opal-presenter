@@ -1115,6 +1115,27 @@ describe("Display.setImageSlides", function () {
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
+  it("should use native backgrounds for image slides when fade transitions are enabled", function () {
+    var slides = [{"path": "openlp-library://local-file//openlp1.jpg"}];
+    Display._theme = {
+      "display_slide_transition": true,
+      "display_slide_transition_type": TransitionType.Fade
+    };
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setImageSlides(slides);
+
+    expect($(".slides > section > section > img").length).toEqual(0);
+    expect($(".slides > section > section")[0].getAttribute("data-background-image"))
+      .toEqual("openlp-library://local-file//openlp1.jpg");
+    expect($(".slides > section > section")[0].getAttribute("data-background-size")).toEqual("contain");
+    expect($(".slides > section > section")[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
+    expect($(".slides > section > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
+    expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
+    expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toEqual("fade");
+  });
+
   it("should use reveal background image mode when requested", function () {
     var slides = [{
       "path": "openlp-library://local-file//openlp1.jpg",
@@ -1131,11 +1152,13 @@ describe("Display.setImageSlides", function () {
 
     expect($(".slides > section > section > img").length).toEqual(0);
     expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBeTrue();
-    expect($(".slides > section > section")[0].style.backgroundImage).toContain("openlp-library://local-file//openlp1.jpg");
-    expect($(".slides > section > section")[0].style.backgroundSize).toEqual("cover");
-    expect($(".slides > section > section")[0].style.backgroundRepeat).toEqual("no-repeat");
-    expect($(".slides > section > section")[0].style.backgroundPosition).toEqual("50% 50%");
-    expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("fade-horizontal");
+    expect($(".slides > section > section")[0].getAttribute("data-background-image"))
+      .toEqual("openlp-library://local-file//openlp1.jpg");
+    expect($(".slides > section > section")[0].getAttribute("data-background-size")).toEqual("cover");
+    expect($(".slides > section > section")[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
+    expect($(".slides > section > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
+    expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
+    expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toEqual("fade");
     expect($(".slides > section > section")[0].getAttribute("data-transition-speed")).toEqual("default");
     expect($("body")[0].classList.contains("presentation-slide-transition")).toBeTrue();
     expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-ms")).toEqual("800ms");
@@ -1158,7 +1181,21 @@ describe("Display.setImageSlides", function () {
     Display.setImageSlides(slides);
 
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
+    expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toBeNull();
     expect($("body")[0].classList.contains("presentation-slide-transition")).toBeFalse();
+  });
+
+  it("should keep non-fade transitions on image slide content", function () {
+    var slides = [{"path": "openlp-library://local-file//openlp1.jpg"}];
+    Display._theme = {"display_slide_transition_type": TransitionType.Slide};
+    spyOn(Reveal, "sync");
+    spyOn(Reveal, "slide");
+
+    Display.setImageSlides(slides);
+
+    expect($(".slides > section > section > img").length).toEqual(1);
+    expect($(".slides > section > section")[0].getAttribute("data-background-image")).toBeNull();
+    expect($(".slides > section > section > img")[0].getAttribute("src")).toEqual("openlp-library://local-file//openlp1.jpg");
   });
 });
 

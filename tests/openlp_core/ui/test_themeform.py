@@ -114,6 +114,7 @@ def test_setup(settings):
     theme_form.main_area_page.is_shadow_enabled_changed.connect.assert_called_once_with(
         theme_form.on_shadow_toggled)
     theme_form.main_area_page.shadow_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.main_area_page.shadow_blur_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.wrap_changed.connect.assert_called_once_with(theme_form.calculate_lines)
@@ -125,6 +126,7 @@ def test_setup(settings):
     theme_form.footer_area_page.is_shadow_enabled_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.shadow_color_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.footer_area_page.shadow_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
+    theme_form.footer_area_page.shadow_blur_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form._connect_live_preview_signals.assert_called_once_with()
 
 
@@ -598,12 +600,14 @@ def test_update_theme_static(mocked_setup, settings):
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock(font_name='Montserrat', font_color='#f00', font_size=50, line_spacing=12,
                                           is_outline_enabled=True, outline_color='#00f', outline_size=3,
-                                          is_shadow_enabled=True, shadow_color='#111', shadow_size=5, is_bold=True,
+                                          is_shadow_enabled=True, shadow_color='#111', shadow_size=5, shadow_blur=1,
+                                          is_bold=True,
                                           is_italic=False, letter_spacing=2)
     theme_form.footer_area_page = MagicMock(font_name='Oxygen', font_color='#fff', font_size=20, wrap=False,
                                             is_bold=False, is_italic=True, line_spacing=2, letter_spacing=-1,
                                             is_outline_enabled=True, outline_color='#0f0', outline_size=2,
-                                            is_shadow_enabled=True, shadow_color='#222', shadow_size=4)
+                                            is_shadow_enabled=True, shadow_color='#222', shadow_size=4,
+                                            shadow_blur=2)
     theme_form.alignment_page = MagicMock(horizontal_align='left', vertical_align='top', is_transition_enabled=True,
                                           transition_type='fade', transition_speed='normal',
                                           transition_direction='horizontal', is_transition_reverse_enabled=False)
@@ -625,6 +629,7 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.font_main_shadow is True
     assert theme_form.theme.font_main_shadow_color == '#111'
     assert theme_form.theme.font_main_shadow_size == 5
+    assert theme_form.theme.font_main_shadow_blur == 1
     assert theme_form.theme.font_main_bold is True
     assert theme_form.theme.font_main_italics is False
     assert theme_form.theme.font_main_override is False
@@ -645,6 +650,7 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.font_footer_shadow is True
     assert theme_form.theme.font_footer_shadow_color == '#222'
     assert theme_form.theme.font_footer_shadow_size == 4
+    assert theme_form.theme.font_footer_shadow_blur == 2
     theme_form.theme.set_default_footer.assert_called_once_with()
     # Alignment
     assert theme_form.theme.display_horizontal_align == 'left'

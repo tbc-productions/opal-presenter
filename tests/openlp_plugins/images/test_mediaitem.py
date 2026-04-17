@@ -34,6 +34,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.db.manager import DBManager
 from openlp.core.lib import build_icon, create_thumb
 from openlp.core.lib.serviceitem import ItemCapabilities
+from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.widgets.views import TreeWidgetWithDnD
 from openlp.plugins.images.lib.mediaitem import ImageMediaItem
 from tests.utils.constants import TEST_RESOURCES_PATH
@@ -225,7 +226,13 @@ def test_generate_slide_data_default_theme(media_item):
     # GIVEN: A mocked service item and settings
     mocked_service_item = MagicMock()
     media_item.list_view = MagicMock()
-    Registry().get('settings').value.side_effect = [ImageThemeMode.Black]
+    Registry().get('settings').value = MagicMock(side_effect=lambda key: {
+        'images/background mode': ImageThemeMode.Black,
+        'images/theme': None,
+        'images/transitions': False,
+        'images/transition type': TransitionType.Fade,
+        'images/transition speed': TransitionSpeed.Normal
+    }.get(key))
 
     # WHEN: generate_slide_data is called
     media_item.generate_slide_data(mocked_service_item)
@@ -233,6 +240,11 @@ def test_generate_slide_data_default_theme(media_item):
     # THEN: The service item should force the theme, and use the default theme
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.theme == -1
+    assert mocked_service_item.slide_transition_settings == {
+        'enabled': False,
+        'type': TransitionType.Fade,
+        'speed': TransitionSpeed.Normal
+    }
 
 
 def test_generate_slide_data_custom_theme(media_item):
@@ -242,7 +254,13 @@ def test_generate_slide_data_custom_theme(media_item):
     # GIVEN: A mocked service item and settings
     mocked_service_item = MagicMock()
     media_item.list_view = MagicMock()
-    Registry().get('settings').value.side_effect = [ImageThemeMode.CustomTheme, 'theme_name']
+    Registry().get('settings').value = MagicMock(side_effect=lambda key: {
+        'images/background mode': ImageThemeMode.CustomTheme,
+        'images/theme': 'theme_name',
+        'images/transitions': True,
+        'images/transition type': TransitionType.Zoom,
+        'images/transition speed': TransitionSpeed.Slow
+    }.get(key))
 
     # WHEN: generate_slide_data is called
     media_item.generate_slide_data(mocked_service_item)
@@ -250,6 +268,11 @@ def test_generate_slide_data_custom_theme(media_item):
     # THEN: The service item should force the theme, and use the theme in the settings
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.theme == 'theme_name'
+    assert mocked_service_item.slide_transition_settings == {
+        'enabled': True,
+        'type': TransitionType.Zoom,
+        'speed': TransitionSpeed.Slow
+    }
 
 
 @patch('openlp.plugins.images.lib.mediaitem.check_item_selected')

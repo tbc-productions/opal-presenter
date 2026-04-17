@@ -113,8 +113,12 @@ class ThemeListWidgetItem(QtWidgets.QListWidgetItem):
         worker.download_succeeded.connect(self._relay.on_downloaded)
         thread_name = 'thumbnail_download_{thumbnail}'.format(
             thumbnail=self._thumbnail.replace('/', '_').replace('\\', '_'))
-        run_thread(worker, thread_name)
-        ftw.thumbnail_download_threads.append(thread_name)
+        try:
+            run_thread(worker, thread_name)
+            ftw.thumbnail_download_threads.append(thread_name)
+        except Exception as err:
+            self._download_finished = True
+            ftw._on_theme_thumbnail_download_finished()
 
 
 class DownloadSetupWorker(ThreadWorker):
@@ -137,6 +141,7 @@ class DownloadSetupWorker(ThreadWorker):
         self.timeout = timeout
         self.retries = retries
         self.is_cancelled = False
+        self._http_session = requests.Session()
 
     def _get_file_size(self, url):
         """
@@ -146,7 +151,7 @@ class DownloadSetupWorker(ThreadWorker):
         attempts = 0
         while attempts <= retry_limit:
             try:
-                response = requests.head(url, timeout=float(self.timeout), allow_redirects=True)
+                response = self._http_session.head(url, timeout=float(self.timeout), allow_redirects=True)
                 response.raise_for_status()
                 content_length = response.headers.get('Content-Length')
                 return int(content_length) if content_length and content_length.isdigit() else 0
@@ -164,7 +169,7 @@ class DownloadSetupWorker(ThreadWorker):
         attempts = 0
         while attempts <= retry_limit:
             try:
-                response = requests.get(REMOTE_URL + 'version.json', timeout=float(self.timeout))
+                response = self._http_session.get(REMOTE_URL + 'version.json', timeout=float(self.timeout))
                 response.raise_for_status()
                 version_info = response.json()
                 return version_info['latest']['size']
@@ -235,6 +240,7 @@ class DownloadSetupWorker(ThreadWorker):
             trace_error_handler(log)
             self.download_failed.emit()
         finally:
+            self._http_session.close()
             self.quit.emit()
 
 
@@ -248,6 +254,7 @@ class _BaseDownloadWorker(ThreadWorker):
         self.previous_size = 0
         self.timeout = timeout
         self.retries = retries
+        self._http_session = requests.Session()
 
     def update_progress(self, block_count, block_size):
         """
@@ -264,7 +271,7 @@ class _BaseDownloadWorker(ThreadWorker):
         """
         try:
             return download_and_install(callback=self, can_update_range=False, timeout=self.timeout,
-                                        retries=self.retries)
+                                        retries=self.retries, session=self._http_session)
         except Exception:
             if not self.is_cancelled:
                 log.exception('Error downloading web remote')
@@ -302,7 +309,8 @@ class DownloadResourcesWorker(_BaseDownloadWorker):
         Download a single file and return True on success.
         """
         self.previous_size = 0
-        return download_file(self, url, destination_path, sha256, timeout=self.timeout, retries=self.retries)
+        return download_file(self, url, destination_path, sha256, timeout=self.timeout, retries=self.retries,
+                             session=self._http_session)
 
     def _download_resource_group(self, items, base_url, destination_path, label):
         """
@@ -353,6 +361,7 @@ class DownloadResourcesWorker(_BaseDownloadWorker):
             trace_error_handler(log)
             self.download_failed.emit()
         finally:
+            self._http_session.close()
             self.quit.emit()
 
 
@@ -391,6 +400,7 @@ class ResourceIndexDownloadWorker(ThreadWorker):
         self.user_agent = user_agent
         self.timeout = timeout
         self.is_cancelled = False
+        self._http_session = requests.Session()
 
     @staticmethod
     def format_download_size(size):
@@ -443,9 +453,9 @@ class ResourceIndexDownloadWorker(ThreadWorker):
             proxy = get_proxy_settings()
             self.progress_updated.emit(translate('OpenLP.FirstTimeWizard', 'Connecting to resource server...'),
                                        None, None, True)
-            response = requests.get('{host}{name}'.format(host=self.base_url, name='download_3.0.json'),
-                                    headers={'User-Agent': self.user_agent}, proxies=proxy,
-                                    timeout=float(self.timeout), stream=True)
+            response = self._http_session.get('{host}{name}'.format(host=self.base_url, name='download_3.0.json'),
+                                              headers={'User-Agent': self.user_agent}, proxies=proxy,
+                                              timeout=float(self.timeout), stream=True)
             response.raise_for_status()
             total_size_header = response.headers.get('Content-Length')
             total_size = int(total_size_header) if total_size_header and total_size_header.isdigit() else None
@@ -469,6 +479,7 @@ class ResourceIndexDownloadWorker(ThreadWorker):
         finally:
             if response:
                 response.close()
+            self._http_session.close()
             self.quit.emit()
 
     @QtCore.Slot()

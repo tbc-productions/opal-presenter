@@ -111,6 +111,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.main_area_page.is_shadow_enabled_changed.connect(self.on_shadow_toggled)
         self.main_area_page.shadow_color_changed.connect(self.calculate_lines)
         self.main_area_page.shadow_size_changed.connect(self.calculate_lines)
+        self.main_area_page.shadow_blur_changed.connect(self.calculate_lines)
         self.footer_area_page.font_name_changed.connect(self.calculate_lines)
         self.footer_area_page.font_color_changed.connect(self.calculate_lines)
         self.footer_area_page.is_bold_changed.connect(self.calculate_lines)
@@ -125,6 +126,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.is_shadow_enabled_changed.connect(self.calculate_lines)
         self.footer_area_page.shadow_color_changed.connect(self.calculate_lines)
         self.footer_area_page.shadow_size_changed.connect(self.calculate_lines)
+        self.footer_area_page.shadow_blur_changed.connect(self.calculate_lines)
         self._connect_live_preview_signals()
 
     def provide_help(self):
@@ -625,6 +627,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.main_area_page.is_shadow_enabled = self.theme.font_main_shadow
         self.main_area_page.shadow_color = self.theme.font_main_shadow_color
         self.main_area_page.shadow_size = self.theme.font_main_shadow_size
+        self.main_area_page.shadow_blur = self.theme.font_main_shadow_blur
         self.main_area_page.is_bold = self.theme.font_main_bold
         self.main_area_page.is_italic = self.theme.font_main_italics
 
@@ -646,6 +649,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.is_shadow_enabled = self.theme.font_footer_shadow
         self.footer_area_page.shadow_color = self.theme.font_footer_shadow_color
         self.footer_area_page.shadow_size = self.theme.font_footer_shadow_size
+        self.footer_area_page.shadow_blur = self.theme.font_footer_shadow_blur
 
     def set_position_page_values(self):
         """
@@ -745,6 +749,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.font_main_outline_size = self.main_area_page.outline_size
         self.theme.font_main_shadow = self.main_area_page.is_shadow_enabled
         self.theme.font_main_shadow_size = self.main_area_page.shadow_size
+        self.theme.font_main_shadow_blur = self.main_area_page.shadow_blur
         self.theme.font_main_shadow_color = self.main_area_page.shadow_color
         self.theme.font_main_bold = self.main_area_page.is_bold
         self.theme.font_main_italics = self.main_area_page.is_italic
@@ -762,6 +767,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.font_footer_outline_size = self.footer_area_page.outline_size
         self.theme.font_footer_shadow = self.footer_area_page.is_shadow_enabled
         self.theme.font_footer_shadow_size = self.footer_area_page.shadow_size
+        self.theme.font_footer_shadow_blur = self.footer_area_page.shadow_blur
         self.theme.font_footer_shadow_color = self.footer_area_page.shadow_color
         # position page (main)
         self.theme.font_main_override = not self.area_position_page.use_main_default_location

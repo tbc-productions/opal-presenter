@@ -120,7 +120,7 @@ def get_openlp_user_agent():
     return 'OpenLP/' + Registry().get('application-qt').applicationVersion()
 
 
-def get_web_page(url, headers=None, update_openlp=False, proxy=None, timeout=None, retries=None):
+def get_web_page(url, headers=None, update_openlp=False, proxy=None, timeout=None, retries=None, session=None):
     """
     Attempts to download the webpage at url and returns that page or None.
 
@@ -142,9 +142,10 @@ def get_web_page(url, headers=None, update_openlp=False, proxy=None, timeout=Non
     retry_limit = CONNECTION_RETRIES if retries is None else retries
     attempts = 0
     while attempts <= retry_limit:
+        request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
         try:
-            request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
-            response = requests.get(url, headers=headers, proxies=proxy, timeout=float(request_timeout))
+            requester = session if session else requests
+            response = requester.get(url, headers=headers, proxies=proxy, timeout=float(request_timeout))
             log.debug('Downloaded page {url}'.format(url=response.url))
             break
         except OSError:
@@ -190,7 +191,7 @@ def get_url_file_size(url, proxy=None):
                 continue
 
 
-def download_file(update_object, url, file_path, sha256=None, proxy=None, timeout=None, retries=None):
+def download_file(update_object, url, file_path, sha256=None, proxy=None, timeout=None, retries=None, session=None):
     """"
     Download a file given a URL.  The file is retrieved in chunks, giving the ability to cancel the download at any
     point. Returns False on download error.
@@ -210,10 +211,11 @@ def download_file(update_object, url, file_path, sha256=None, proxy=None, timeou
     retry_limit = CONNECTION_RETRIES if retries is None else retries
     attempts = 0
     while attempts <= retry_limit:
+        request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
         try:
             with file_path.open('wb') as saved_file:
-                request_timeout = CONNECTION_TIMEOUT if timeout is None else timeout
-                response = requests.get(url, proxies=proxy, timeout=float(request_timeout), stream=True)
+                requester = session if session else requests
+                response = requester.get(url, proxies=proxy, timeout=float(request_timeout), stream=True)
                 if sha256:
                     hasher = hashlib.sha256()
                 # Download until finished or canceled.
@@ -276,10 +278,10 @@ class DownloadWorker(ThreadWorker):
         if self.is_cancelled:
             self.quit.emit()
             return
+        url = '{url}{name}'.format(url=self._base_url, name=self._file_name)
         try:
             dest_path = Path(gettempdir()) / 'openlp' / self._file_name
             dest_path.parent.mkdir(parents=True, exist_ok=True)
-            url = '{url}{name}'.format(url=self._base_url, name=self._file_name)
             is_success = download_file(self, url, dest_path, timeout=self._timeout, retries=self._retries)
             if is_success and not self.is_cancelled:
                 self.download_succeeded.emit(dest_path)

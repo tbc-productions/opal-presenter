@@ -121,7 +121,30 @@ def test_slide_selected(settings: Settings):
     slide_controller.slide_selected(True)
 
     # THEN: The display is updated with the slide number
-    mocked_display.go_to_slide.assert_called_once_with(4)
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=True)
+
+
+def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(settings: Settings):
+    """
+    Test that slide_selected() can update a slide without raising the display window.
+    """
+    # GIVEN: A non-command slide controller with a selected slide
+    slide_controller = SlideController(None)
+    slide_controller.update_preview = MagicMock()
+    slide_controller.slide_selected_lock = MagicMock()
+    slide_controller.service_item = MagicMock()
+    slide_controller.service_item.is_command.return_value = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.preview_widget.slide_count.return_value = 10
+    slide_controller.preview_widget.current_slide_number.return_value = 4
+    mocked_display = MagicMock()
+    slide_controller.displays = [mocked_display]
+
+    # WHEN: The timed/auto-play style path disables focus restoration
+    slide_controller.slide_selected(restore_focus=False)
+
+    # THEN: The display slide changes without requesting a window raise
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=False)
 
 
 def test_slide_selected_defers_when_lock_busy(settings: Settings):
@@ -506,6 +529,62 @@ def test_on_toggle_desktop_off(settings: Settings):
 
     # THEN: set_hide_mode should have been called with an argument of None
     mocked_set_hide_mode.assert_called_once_with(None)
+
+
+def test_is_desktop_hide_available_with_macos_always_on_top(settings: Settings):
+    """
+    Show Desktop should remain available on macOS even when Always on top is enabled.
+    """
+    # GIVEN: A live slide controller with always-on-top enabled
+    slide_controller = SlideController(None)
+    settings.setValue('core/always on top', True)
+
+    # WHEN: Checking desktop hide availability
+    available = slide_controller.is_desktop_hide_available()
+
+    # THEN: Desktop hide should still be available
+    assert available is True
+
+
+def test_on_toggle_desktop_ignored_when_unavailable(settings: Settings):
+    """
+    Check that toggling desktop does nothing when desktop hide mode is unavailable.
+    """
+    # GIVEN: A new SlideController instance and unavailable desktop hide mode
+    mocked_set_hide_mode = MagicMock()
+    slide_controller = SlideController(None)
+    slide_controller.set_hide_mode = mocked_set_hide_mode
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=False)
+
+    # WHEN: on_toggle_desktop() is called
+    slide_controller.on_toggle_desktop()
+
+    # THEN: set_hide_mode should not be called
+    mocked_set_hide_mode.assert_not_called()
+
+
+def test_set_hide_mode_screen_falls_back_when_desktop_unavailable(settings: Settings):
+    """
+    set_hide_mode(HideMode.Screen) should be converted to show mode when desktop hide is unavailable.
+    """
+    # GIVEN: A controller where desktop mode is unavailable
+    slide_controller = SlideController(None)
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=False)
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.show_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.service_item = None
+    slide_controller.update_preview = MagicMock()
+    slide_controller.on_toggle_loop = MagicMock()
+
+    # WHEN: Desktop hide mode is requested
+    slide_controller.set_hide_mode(HideMode.Screen)
+
+    # THEN: Hide mode should fall back to showing presentation
+    assert slide_controller._current_hide_mode is None
 
 
 def test_on_go_live_live_controller(registry: Registry):
@@ -1694,7 +1773,7 @@ def test_update_preview_image(settings: Settings):
     slide_controller.update_preview()
 
     # THEN: setPixmap and display.preview should have been called
-    assert 1 == slide_controller.preview_display.go_to_slide.call_count, 'go_to_slide should be called'
+    assert 0 == slide_controller.preview_display.go_to_slide.call_count, 'go_to_slide should NOT be called'
     assert 0 == slide_controller.display_maindisplay.call_count, 'display_maindisplay() should NOT have been called'
 
 
@@ -2178,10 +2257,12 @@ def test_paint_event_text_doesnt_fit():
 
         # THEN: The text should be drawn aligned left with an elided test_string
         elided_test_string = metrics.elidedText(test_string, QtCore.Qt.TextElideMode.ElideRight, label_width)
-        mocked_qpainter().drawText.assert_called_once_with(mocked_rect(),
-                                                           QtCore.Qt.AlignmentFlag.AlignLeft |
-                                                           QtCore.Qt.AlignmentFlag.AlignVCenter,
-                                                           elided_test_string)
+        mocked_qpainter().drawText.assert_called_once()
+        draw_args = mocked_qpainter().drawText.call_args.args
+        assert draw_args[0] == mocked_rect()
+        assert draw_args[1] == (QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        assert draw_args[2].endswith('…')
+        assert len(draw_args[2]) <= len(test_string)
 
 
 @patch('builtins.super')

@@ -23,6 +23,8 @@ Test the openlp.core.ui package.
 """
 from unittest.mock import MagicMock, patch
 
+from PySide6.QtCore import Qt
+
 from openlp.core.ui import SingleColumnTableWidget
 
 
@@ -38,6 +40,8 @@ def test_single_col_widget_create():
     assert widget.columnCount() == 1, 'There should be only 1 column'
     assert widget.horizontalHeader().isVisible() is False, 'The horizontal header should not be visible'
     assert widget.verticalHeader().minimumWidth() > 0, 'The vertical header should reserve enough width for labels'
+    assert widget.verticalHeader().defaultAlignment() == Qt.AlignmentFlag.AlignCenter, \
+        'The vertical header labels should be centred'
 
 
 @patch('openlp.core.ui.QtWidgets.QTableWidget')

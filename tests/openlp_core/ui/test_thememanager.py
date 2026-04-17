@@ -84,7 +84,7 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     theme_manager._thumbnail_dimensions = MagicMock()
     theme_manager._get_current_screen = MagicMock(return_value=None)
     theme_manager._get_screen_dimensions = MagicMock(return_value='different-size')
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
     theme_manager.theme_form = MagicMock()
 
     # WHEN: The screen changes
@@ -93,7 +93,7 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     # THEN: Cached theme defaults should be recalculated and previews refreshed
     theme_one.set_default_header_footer.assert_called_once_with()
     theme_two.set_default_header_footer.assert_called_once_with()
-    theme_manager.update_preview_images.assert_called_once_with()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_called_once()
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
@@ -107,7 +107,7 @@ def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_mana
     theme_manager._thumbnail_dimensions = 'same-size'
     theme_manager._get_current_screen = MagicMock(return_value=None)
     theme_manager._get_screen_dimensions = MagicMock(return_value='same-size')
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
     theme_manager.theme_form = MagicMock()
 
     # WHEN: The screen changes
@@ -115,7 +115,7 @@ def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_mana
 
     # THEN: The theme defaults should still be updated, but thumbnails should not be rebuilt
     theme_one.set_default_header_footer.assert_called_once_with()
-    theme_manager.update_preview_images.assert_not_called()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_not_called()
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
@@ -536,7 +536,8 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     theme_manager.upgrade_themes = MagicMock()
     theme_manager._get_screen_dimensions = MagicMock(return_value='screen-size')
     theme_manager._get_current_screen = MagicMock(return_value=None)
-    theme_manager.update_preview_images = MagicMock()
+    theme_manager._get_themes_requiring_preview_refresh = MagicMock(return_value=[])
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
 
     # WHEN:
     theme_manager.bootstrap_post_set_up()
@@ -547,7 +548,7 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     assert theme_manager._thumbnail_dimensions == 'screen-size'
     theme_manager.upgrade_themes.assert_called_once()
     theme_manager.load_themes.assert_called_once()
-    theme_manager.update_preview_images.assert_called_once_with()
+    theme_manager._regenerate_previews_with_progress_dialog.assert_not_called()
 
 
 @patch('openlp.core.lib.theme.Theme.set_default_header')
@@ -574,3 +575,56 @@ def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, them
                                                                                           'background.jpg'))
     theme_manager.update_preview_images.assert_called_once_with(['New Theme'])
     theme_manager.load_themes.assert_called_once_with()
+
+
+@patch('openlp.core.ui.thememanager.QtWidgets.QMessageBox.question',
+       return_value=QtWidgets.QMessageBox.StandardButton.Yes)
+def test_on_delete_theme_deletes_selected_themes(mocked_question: MagicMock, theme_manager: ThemeManager):
+    """
+    Test that deleting themes removes all selected themes.
+    """
+    # GIVEN: Multiple selected theme items
+    item_1 = MagicMock()
+    item_1.text.return_value = 'Theme 1'
+    item_1.data.return_value = 'Theme 1'
+    item_2 = MagicMock()
+    item_2.text.return_value = 'Theme 2'
+    item_2.data.return_value = 'Theme 2'
+    theme_manager.theme_list_widget = MagicMock()
+    theme_manager.theme_list_widget.selectedItems.return_value = [item_1, item_2]
+    theme_manager.theme_list_widget.row.side_effect = lambda item: {item_1: 1, item_2: 3}[item]
+    theme_manager.delete_theme = MagicMock()
+    theme_manager._push_themes = MagicMock()
+
+    # WHEN: The delete action is triggered
+    theme_manager.on_delete_theme()
+
+    # THEN: All selected items should be deleted
+    mocked_question.assert_called_once()
+    assert mocked_question.call_args.args[2] == 'Delete 2 selected themes?'
+    assert theme_manager.theme_list_widget.takeItem.call_args_list == [call(3), call(1)]
+    assert theme_manager.delete_theme.call_args_list == [call('Theme 2'), call('Theme 1')]
+    theme_manager._push_themes.assert_called_once_with()
+
+
+@patch('openlp.core.ui.thememanager.critical_error_message_box')
+def test_on_delete_theme_blocks_default_theme(mocked_critical: MagicMock, theme_manager: ThemeManager):
+    """
+    Test that deleting the default theme is blocked.
+    """
+    # GIVEN: The selected item is the default theme
+    item = MagicMock()
+    item.text.return_value = 'Theme 1 (default)'
+    item.data.return_value = 'Theme 1'
+    theme_manager.theme_list_widget = MagicMock()
+    theme_manager.theme_list_widget.selectedItems.return_value = [item]
+    theme_manager.delete_theme = MagicMock()
+    theme_manager._push_themes = MagicMock()
+
+    # WHEN: The delete action is triggered
+    theme_manager.on_delete_theme()
+
+    # THEN: Deletion should be blocked
+    mocked_critical.assert_called_once_with(message='You are unable to delete the default theme.')
+    theme_manager.delete_theme.assert_not_called()
+    theme_manager._push_themes.assert_not_called()

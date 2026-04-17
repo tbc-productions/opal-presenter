@@ -48,6 +48,17 @@ class ThemeProgressForm(QtWidgets.QDialog, UiThemeProgressDialog, RegistryProper
         self.theme_preview_layout.aspect_ratio = self.ratio
         return super().show()
 
+    def warm_up_preview(self, theme_data):
+        """
+        Warm up the preview renderer so the first captured thumbnail is fully rendered.
+        """
+        wait_for(lambda: self.theme_display.is_initialised)
+        self.theme_display.set_scale(float(self.theme_display.width()) / self.renderer.width())
+        self.theme_display.generate_preview(theme_data, generate_screenshot=False)
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.processEvents()
+
     def get_preview(self, theme_name, theme_data):
         """
         Fetch a screenshot of the webengine preview

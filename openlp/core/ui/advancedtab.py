@@ -22,11 +22,15 @@
 The :mod:`advancedtab` provides an advanced settings facility.
 """
 import logging
+from pathlib import Path
+from shutil import copy2
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
+from openlp.core.common import sha256_file_hash
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.path import create_paths
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.edits import PathEdit
@@ -87,6 +91,19 @@ class AdvancedTab(SettingsTab):
         self.data_directory_protect_check_layout.addWidget(self.data_directory_protect_check_box)
         self.data_directory_layout.addRow(self.data_directory_copy_check_layout)
         self.data_directory_layout.addRow(self.data_directory_protect_check_layout)
+        self.copy_library_files_check_layout = QtWidgets.QHBoxLayout()
+        self.copy_library_files_check_layout.setObjectName('copy_library_files_check_layout')
+        self.copy_library_files_check_box = QtWidgets.QCheckBox(self.data_directory_group_box)
+        self.copy_library_files_check_box.setObjectName('copy_library_files_check_box')
+        self.copy_library_files_check_layout.addWidget(self.copy_library_files_check_box)
+        self.data_directory_layout.addRow(self.copy_library_files_check_layout)
+        self.migrate_library_files_button_layout = QtWidgets.QHBoxLayout()
+        self.migrate_library_files_button_layout.setObjectName('migrate_library_files_button_layout')
+        self.migrate_library_files_button = QtWidgets.QPushButton(self.data_directory_group_box)
+        self.migrate_library_files_button.setObjectName('migrate_library_files_button')
+        self.migrate_library_files_button_layout.addWidget(self.migrate_library_files_button)
+        self.migrate_library_files_button_layout.addStretch()
+        self.data_directory_layout.addRow(self.migrate_library_files_button_layout)
         self.data_directory_layout.addRow(self.new_data_directory_has_files_label)
         self.left_layout.addWidget(self.data_directory_group_box)
         # Display Workarounds
@@ -136,6 +153,7 @@ class AdvancedTab(SettingsTab):
         self.data_directory_path_edit.pathChanged.connect(self.on_data_directory_path_edit_path_changed)
         self.data_directory_cancel_button.clicked.connect(self.on_data_directory_cancel_button_clicked)
         self.data_directory_copy_check_box.toggled.connect(self.on_data_directory_copy_check_box_toggled)
+        self.migrate_library_files_button.clicked.connect(self.on_migrate_library_files_button_clicked)
         self.hidpi_mode_combobox.currentIndexChanged.connect(self.on_restart_needed)
 
     def retranslate_ui(self):
@@ -158,6 +176,14 @@ class AdvancedTab(SettingsTab):
                                   'multiple users access the data at the same time. Useful for instances shared via '
                                   'network. <strong>NOTE:</strong> This will only work if the network sharing is '
                                   'available when OpenLP is running.'))
+        self.copy_library_files_check_box.setText(translate(
+            'OpenLP.AdvancedTab', 'Copy library files to data folder.'))
+        self.copy_library_files_check_box.setToolTip(translate(
+            'OpenLP.AdvancedTab', 'Store Images, Media, and Presentations in the OpenLP data folder for reliability.'))
+        self.migrate_library_files_button.setText(translate(
+            'OpenLP.AdvancedTab', 'Migrate existing library files to data folder'))
+        self.migrate_library_files_button.setToolTip(translate(
+            'OpenLP.AdvancedTab', 'Copy existing Images, Media, and Presentations into OpenLP-managed storage.'))
         self.new_data_directory_has_files_label.setText(
             translate('OpenLP.AdvancedTab', '<strong>WARNING:</strong> New data directory location contains '
                       'OpenLP data files.  These files WILL be replaced during a copy.'))
@@ -199,6 +225,7 @@ class AdvancedTab(SettingsTab):
             self.data_directory_new_label.hide()
             self.data_directory_path_edit.hide()
         self.data_directory_protect_check_box.setChecked(self.settings.value('advanced/protect data directory'))
+        self.copy_library_files_check_box.setChecked(self.settings.value('advanced/copy library files to data folder'))
         self.hidpi_mode_combobox.setCurrentIndex(self.settings.value('advanced/hidpi mode'))
 
     def save(self):
@@ -218,6 +245,7 @@ class AdvancedTab(SettingsTab):
         if alternate_rows != self.alternate_rows_check_box.isChecked():
             self.settings_form.register_post_process('alternate_rows_changed')
         self.settings.setValue('advanced/protect data directory', self.data_directory_protect_check_box.isChecked())
+        self.settings.setValue('advanced/copy library files to data folder', self.copy_library_files_check_box.isChecked())
         self.settings.setValue('advanced/hidpi mode', self.hidpi_mode_combobox.currentIndex())
         self.proxy_widget.save()
 
@@ -325,3 +353,136 @@ class AdvancedTab(SettingsTab):
                                               translate('OpenLP.AdvancedTab',
                                                         'This change will only take effect once OpenLP '
                                                         'has been restarted.'))
+
+    @staticmethod
+    def _is_path_in_directory(path: Path, directory: Path) -> bool:
+        """
+        Return True when ``path`` is inside ``directory``.
+        """
+        try:
+            path.relative_to(directory)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _library_plugin_specs():
+        """
+        Return plugin/item mappings for folder-backed media libraries.
+        """
+        from openlp.plugins.images.lib.db import Item as ImageItem
+        from openlp.plugins.media.lib.db import Item as MediaItem
+        from openlp.plugins.presentations.lib.db import Item as PresentationItem
+        return (
+            ('images', ImageItem),
+            ('media', MediaItem),
+            ('presentations', PresentationItem)
+        )
+
+    def _collect_library_migration_candidates(self):
+        """
+        Collect candidate library entries from images/media/presentations.
+        """
+        candidates = []
+        for plugin_name, item_class in self._library_plugin_specs():
+            plugin = self.plugin_manager.get_plugin_by_name(plugin_name)
+            manager = getattr(plugin, 'manager', None) if plugin else None
+            if not manager:
+                continue
+            items = manager.get_all_objects(item_class)
+            for item in items:
+                if not item.file_path:
+                    continue
+                candidates.append((plugin_name, manager, item, Path(item.file_path)))
+        return candidates
+
+    def on_migrate_library_files_button_clicked(self):
+        """
+        Migrate existing external library files into OpenLP-managed storage.
+        """
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            translate('OpenLP.AdvancedTab', 'Migrate library files'),
+            translate('OpenLP.AdvancedTab',
+                      'Copy existing Image, Media, and Presentation files into the OpenLP data folder now?')
+        )
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        candidates = self._collect_library_migration_candidates()
+        if not candidates:
+            QtWidgets.QMessageBox.information(
+                self,
+                translate('OpenLP.AdvancedTab', 'Migrate library files'),
+                translate('OpenLP.AdvancedTab', 'No library files were found to migrate.')
+            )
+            return
+        progress_dialog = QtWidgets.QProgressDialog(
+            translate('OpenLP.AdvancedTab', 'Migrating library files...'),
+            translate('OpenLP.AdvancedTab', 'Cancel'),
+            0,
+            len(candidates),
+            self
+        )
+        progress_dialog.setWindowTitle(translate('OpenLP.AdvancedTab', 'Migrate library files'))
+        progress_dialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setValue(0)
+        progress_dialog.setMinimumWidth(520)
+        progress_dialog.setFixedSize(progress_dialog.sizeHint())
+        copied_count = 0
+        skipped_count = 0
+        failed_count = 0
+        for index, (plugin_name, manager, item, source_path) in enumerate(candidates, start=1):
+            if progress_dialog.wasCanceled():
+                break
+            display_name = source_path.name
+            if len(display_name) > 64:
+                display_name = '{prefix}...{suffix}'.format(prefix=display_name[:40], suffix=display_name[-21:])
+            progress_dialog.setLabelText(
+                translate('OpenLP.AdvancedTab', 'Migrating {plugin}: {name}').format(
+                    plugin=plugin_name,
+                    name=display_name
+                )
+            )
+            QtWidgets.QApplication.processEvents()
+            if not source_path.exists():
+                skipped_count += 1
+                progress_dialog.setValue(index)
+                continue
+            try:
+                library_dir = AppLocation.get_section_data_path(plugin_name) / 'library'
+                create_paths(library_dir)
+                source_hash = sha256_file_hash(source_path)
+                destination = library_dir / '{hash}{ext}'.format(hash=source_hash, ext=source_path.suffix)
+                if self._is_path_in_directory(source_path.resolve(), library_dir.resolve()):
+                    skipped_count += 1
+                else:
+                    if not destination.exists():
+                        copy2(source_path, destination)
+                    item.name = source_path.name
+                    item.file_path = str(destination)
+                    item.file_hash = source_hash
+                    manager.save_object(item)
+                    copied_count += 1
+            except Exception:
+                failed_count += 1
+                log.exception('Failed to migrate library file %s for plugin %s', source_path, plugin_name)
+            progress_dialog.setValue(index)
+        progress_dialog.close()
+        if progress_dialog.wasCanceled():
+            status_text = translate('OpenLP.AdvancedTab', 'Migration cancelled.')
+        else:
+            status_text = translate('OpenLP.AdvancedTab', 'Migration complete.')
+        QtWidgets.QMessageBox.information(
+            self,
+            translate('OpenLP.AdvancedTab', 'Migrate library files'),
+            translate(
+                'OpenLP.AdvancedTab',
+                '{status}\n\nCopied: {copied}\nSkipped: {skipped}\nFailed: {failed}'
+            ).format(
+                status=status_text,
+                copied=copied_count,
+                skipped=skipped_count,
+                failed=failed_count
+            )
+        )

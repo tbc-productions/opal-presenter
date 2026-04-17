@@ -23,6 +23,8 @@ Test the :mod:`~openlp.core.display.render` package.
 """
 from unittest.mock import MagicMock, call, patch
 
+from PySide6 import QtCore
+
 from openlp.core.display.render import compare_chord_lyric_width, find_formatting_tags, remove_tags, render_chords, \
     render_chords_for_printing, render_tags, ThemePreviewRenderer
 from openlp.core.lib.formattingtags import FormattingTags
@@ -277,10 +279,13 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
         preview_renderer = ThemePreviewRenderer()
     mocked_pixmap = MagicMock()
     preview_renderer.setVisible = MagicMock()
+    preview_renderer.setGeometry = MagicMock()
     preview_renderer.grab = MagicMock(return_value=mocked_pixmap)
     preview_renderer.isVisible = MagicMock(return_value=True)
-    preview_renderer.geometry = MagicMock()
+    preview_renderer.is_display = False
+    preview_renderer.geometry = MagicMock(return_value=QtCore.QRect(0, 0, 800, 600))
     preview_renderer.webview = MagicMock()
+    preview_renderer.webview.size = MagicMock(return_value=MagicMock())
 
     # Mock a HiDPI screen
     mocked_screen = MagicMock()
@@ -297,6 +302,7 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
 
         # THEN: It should use grab() and return that pixmap without webview.render() being called
         preview_renderer.setVisible.assert_has_calls([call(True), call(False)])
+        preview_renderer.setGeometry.assert_called()
         mocked_qapplication_instance.return_value.processEvents.assert_called_once_with()
         mocked_wait_for.assert_called_once()
         wait_for_args, wait_for_kwargs = mocked_wait_for.call_args
@@ -318,7 +324,8 @@ def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi
     mocked_pixmap = MagicMock()
     preview_renderer.grab = MagicMock(return_value=mocked_pixmap)
     preview_renderer.isVisible = MagicMock(return_value=True)
-    preview_renderer.geometry = MagicMock()
+    preview_renderer.is_display = False
+    preview_renderer.geometry = MagicMock(return_value=QtCore.QRect(0, 0, 800, 600))
     preview_renderer.webview = MagicMock()
     preview_renderer.webview.size = MagicMock(return_value=MagicMock())
 
@@ -358,9 +365,26 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     preview_renderer.force_page = False
+    preview_renderer.allow_theme_transitions = True
+    preview_renderer.is_display = False
+    preview_renderer.isVisible = MagicMock(return_value=True)
+    preview_renderer.geometry = MagicMock(return_value=QtCore.QRect(0, 0, 800, 600))
+    preview_renderer.setGeometry = MagicMock()
+    preview_renderer.setVisible = MagicMock()
+    preview_renderer.webview = MagicMock()
+    preview_renderer.webview.size = MagicMock(return_value=MagicMock())
+    preview_renderer.run_in_display = MagicMock(return_value={})
 
-    # WHEN: The preview is generated
-    preview_renderer.generate_preview(MagicMock(), generate_screenshot=True)
+    # Mock a HiDPI screen so generate_preview consistently uses the grab() screenshot branch.
+    mocked_screen = MagicMock()
+    mocked_screen.devicePixelRatio.return_value = 2.0
+    with patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
+            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
+        mocked_screen_at.return_value = mocked_screen
+        mocked_qapplication_instance.return_value = MagicMock()
+
+        # WHEN: The preview is generated
+        preview_renderer.generate_preview(MagicMock(), generate_screenshot=True)
 
     # THEN: Only the real rendering work should occur
     mocked_set_theme.assert_called_once()
@@ -368,4 +392,52 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     mocked_generate_footer.assert_called_once()
     mocked_load_verses.assert_called_once()
     mocked_grab.assert_called_once()
-    mocked_wait_for.assert_not_called()
+    mocked_wait_for.assert_called_once()
+
+
+@patch('openlp.core.display.render.ThemePreviewRenderer.grab')
+@patch('openlp.core.display.render.ThemePreviewRenderer.load_verses')
+@patch('openlp.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
+@patch('openlp.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
+def test_generate_preview_disables_theme_transitions_during_screenshot(
+        mocked_format_slide, mocked_generate_footer, mocked_load_verses, mocked_grab, settings):
+    """
+    Test that generate_preview() disables theme transitions while capturing a screenshot.
+    """
+    # GIVEN: A preview renderer with transition support enabled
+    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    preview_renderer.force_page = False
+    preview_renderer.allow_theme_transitions = True
+    preview_renderer.is_display = False
+    preview_renderer.isVisible = MagicMock(return_value=True)
+    preview_renderer.geometry = MagicMock(return_value=QtCore.QRect(0, 0, 800, 600))
+    preview_renderer.setGeometry = MagicMock()
+    preview_renderer.setVisible = MagicMock()
+    preview_renderer.webview = MagicMock()
+    preview_renderer.webview.size = MagicMock(return_value=MagicMock())
+    preview_renderer.run_in_display = MagicMock(return_value={})
+    allow_theme_transitions_seen = []
+
+    def capture_transition_state(*args, **kwargs):
+        allow_theme_transitions_seen.append(preview_renderer.allow_theme_transitions)
+
+    preview_renderer.set_theme = MagicMock(side_effect=capture_transition_state)
+
+    # Mock a HiDPI screen so generate_preview consistently uses the grab() screenshot branch.
+    mocked_screen = MagicMock()
+    mocked_screen.devicePixelRatio.return_value = 2.0
+    with patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
+            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
+        mocked_screen_at.return_value = mocked_screen
+        mocked_qapplication_instance.return_value = MagicMock()
+
+        # WHEN: The preview screenshot is generated
+        preview_renderer.generate_preview(MagicMock(), generate_screenshot=True)
+
+    # THEN: Transitions are disabled during theme application and restored afterwards
+    assert allow_theme_transitions_seen[0] is False
+    assert preview_renderer.allow_theme_transitions is True
+    assert call('setAllowThemeTransitions', False, is_sync=True) in preview_renderer.run_in_display.call_args_list
+    assert call('setAllowThemeTransitions', True, is_sync=True) in preview_renderer.run_in_display.call_args_list

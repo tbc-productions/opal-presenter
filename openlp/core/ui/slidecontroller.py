@@ -345,6 +345,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.desktop_screen_button.setObjectName('desktop_screen_button')
             self.toolbar.add_toolbar_widget(self.desktop_screen_button)
             self.desktop_screen_button.setDefaultAction(self.desktop_screen)
+            self._update_desktop_hide_action_state()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
             self.play_slides_menu = QtWidgets.QToolButton(self.toolbar)
@@ -684,6 +685,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Settings dialog has changed the screen size of adjust output and screen previews.
         """
+        if self.is_live:
+            self._update_desktop_hide_action_state()
         size = self.screens.current.display_geometry.size()
         if self.is_live and self.displays:
             for display in self.displays:
@@ -743,6 +746,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.toolbar.set_widget_visible(WIDE_MENU, not narrow)
         else:
             self.toolbar.set_widget_visible(NON_TEXT_MENU, not narrow)
+        # Apply desktop-action visibility last so toolbar layout updates do not override it.
+        self._update_desktop_hide_action_state()
 
     def receive_spin_delay(self):
         """
@@ -975,15 +980,17 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         # Get theme
         theme_data = service_item.get_theme_data()
-        self._apply_pdf_presentation_transitions(service_item, theme_data)
+        self._apply_service_item_transitions(service_item, theme_data)
         # Set theme for preview
         self.preview_display.set_theme(theme_data, service_item_type=service_item.service_item_type)
         # Set theme for displays
         for display in self.displays:
             display.set_theme(theme_data, service_item_type=service_item.service_item_type)
 
-    def _apply_pdf_presentation_transitions(self, service_item, theme_data):
-        transition_settings = getattr(service_item, 'pdf_transition_settings', None)
+    def _apply_service_item_transitions(self, service_item, theme_data):
+        transition_settings = getattr(service_item, 'slide_transition_settings', None)
+        if not isinstance(transition_settings, dict):
+            transition_settings = getattr(service_item, 'pdf_transition_settings', None)
         if not isinstance(transition_settings, dict) or not transition_settings.get('enabled', False):
             return
         theme_data.display_slide_transition = True
@@ -1348,6 +1355,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Toggle the desktop
         """
+        if not self.is_desktop_hide_available():
+            return
         if self._current_hide_mode == HideMode.Screen:
             self.set_hide_mode(None)
         else:
@@ -1366,6 +1375,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Blank/Hide the display screen (within a plugin if required).
         """
+        if hide_mode == HideMode.Screen and not self.is_desktop_hide_available():
+            hide_mode = None
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
         # Update ui buttons
@@ -1404,6 +1415,26 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Update loop state
         self.on_toggle_loop()
 
+    def is_desktop_hide_available(self):
+        """
+        Return True when "Show Desktop" mode is available in this environment.
+        """
+        return True
+
+    def _update_desktop_hide_action_state(self):
+        """
+        Enable or disable "Show Desktop" actions based on current platform/settings.
+        """
+        if not self.is_live:
+            return
+        enabled = self.is_desktop_hide_available()
+        self.desktop_screen.setEnabled(enabled)
+        self.desktop_screen.setVisible(enabled)
+        self.desktop_screen_button.setEnabled(enabled)
+        self.desktop_screen_button.setVisible(enabled)
+        if not enabled and self._current_hide_mode == HideMode.Screen:
+            self.set_hide_mode(None)
+
     def on_slide_selected(self):
         """
         Slide selected in controller
@@ -1420,7 +1451,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self._slide_selected_retry_pending = False
             self.slide_selected()
 
-    def slide_selected(self, start=False):
+    def slide_selected(self, start=False, restore_focus=True):
         """
         Generate the preview when you click on a slide. If this is the Live Controller also display on the screen.
 
@@ -1457,7 +1488,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        [self.service_item, self.is_live, row])
             else:
                 for display in self.displays:
-                    display.go_to_slide(row)
+                    display.go_to_slide(row, raise_window=restore_focus)
                 if not self.service_item.is_text():
                     # reset the store used to display first image
                     self.service_item.bg_image_bytes = None
@@ -1507,7 +1538,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 elif not self.is_live:
                     # For preview controllers, use the slide thumbnail/icon for items that
                     # provide their own display.
-                    image_path = Path(self.service_item.get_rendered_frame(self.selected_row))
+                    rendered_frame = self.service_item.get_rendered_frame(self.selected_row)
+                    image_path = Path(rendered_frame)
                     self.screen_capture = image_path
                     self.preview_display.set_single_image('#000', image_path)
             elif not mirror_live_preview and not preview_hide_mode:
@@ -1732,7 +1764,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.on_slide_selected_next()
 
-    def on_slide_selected_next(self, wrap=None):
+    def on_slide_selected_next(self, wrap=None, restore_focus=True):
         """
         Go to the next slide.
 
@@ -1741,8 +1773,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not self.service_item:
             return
         if self.service_item.is_command():
-            past_end = Registry().execute('{text}_next'.format(text=self.service_item.name.lower()),
-                                          [self.service_item, self.is_live])
+            past_end = Registry().execute(
+                '{text}_next'.format(text=self.service_item.name.lower()),
+                [self.service_item, self.is_live, {'restore_focus': restore_focus}]
+            )
             # Check if we have gone past the end of the last slide
             if self.is_live and past_end and past_end[0]:
                 if wrap is None:
@@ -1770,7 +1804,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 else:
                     row = self.preview_widget.slide_count() - 1
             self.preview_widget.change_slide(row)
-            self.slide_selected()
+            self.slide_selected(restore_focus=restore_focus)
 
     def on_slide_selected_previous(self):
         """
@@ -1885,7 +1919,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         :param event: The triggered event
         """
         if event.timerId() == self.timer_id:
-            self.on_slide_selected_next(self.play_slides_loop.isChecked())
+            # Timed auto-play should not force OpenLP to become the active application.
+            self.on_slide_selected_next(self.play_slides_loop.isChecked(), restore_focus=False)
 
     def on_edit_song(self):
         """

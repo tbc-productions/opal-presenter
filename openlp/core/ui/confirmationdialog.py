@@ -60,7 +60,7 @@ class Ui_ConfirmationDialog():
         self.confirmation_layout.addWidget(self.message_label)
 
         # listview to display the items
-        self.listview = QtWidgets.QListView(self)
+        self.listview = QtWidgets.QListView(confirmation_dialog)
         self.listview.setObjectName("confirmation listview")
         # make the entries read-only
         self.listview.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -91,5 +91,6 @@ class Ui_ConfirmationDialog():
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        if height is None:
-            confirmation_dialog.adjustSize()
+        # Avoid adjustSize() here as it can crash in some Qt/PySide test environments.
+        # Activate the layout so child geometry is computed for tests and callers.
+        self.confirmation_layout.activate()

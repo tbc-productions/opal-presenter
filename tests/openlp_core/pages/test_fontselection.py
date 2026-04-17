@@ -207,6 +207,18 @@ def test_shadow_size_changed(settings):
     instance.shadow_size_changed.emit.assert_called_once_with(5)
 
 
+def test_shadow_blur_changed(settings):
+    # GIVEN: An instance of FontSelectPage with a mocked out "shadow_blur_changed" signal
+    instance = FontSelectPage()
+    instance.shadow_blur_changed = MagicMock()
+
+    # WHEN: The shadow blur changes
+    instance._on_shadow_blur_changed(3)
+
+    # THEN: The signal should be emitted with the correct value
+    instance.shadow_blur_changed.emit.assert_called_once_with(3)
+
+
 def test_enable_features(settings):
     """
     Test that the `enable_features` method correctly enables widgets based on features
@@ -663,3 +675,33 @@ def test_set_shadow_size_property(settings):
 
     # THEN: The correct value should be set
     instance.shadow_size_spinbox.setValue.assert_called_once_with(10)
+
+
+def test_get_shadow_blur_property(settings):
+    """
+    Test the `shadow_blur` property
+    """
+    # GIVEN: An instance of FontSelectPage with some mocks
+    instance = FontSelectPage()
+    instance.shadow_blur_spinbox.value = MagicMock(return_value=2)
+
+    # WHEN: The `shadow_blur` property is accessed
+    result = instance.shadow_blur
+
+    # THEN: The value should be correct
+    assert result == 2
+
+
+def test_set_shadow_blur_property(settings):
+    """
+    Test setting the `shadow_blur` property
+    """
+    # GIVEN: An instance of FontSelectPage with some mocks
+    instance = FontSelectPage()
+    instance.shadow_blur_spinbox.setValue = MagicMock()
+
+    # WHEN: The `shadow_blur` property is set
+    instance.shadow_blur = 6
+
+    # THEN: The correct value should be set
+    instance.shadow_blur_spinbox.setValue.assert_called_once_with(6)

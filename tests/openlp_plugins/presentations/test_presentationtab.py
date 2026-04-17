@@ -35,8 +35,7 @@ __default_settings__ = {
     'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,
     'presentations/pdf transitions': False,
     'presentations/pdf transition type': TransitionType.Fade,
-    'presentations/pdf transition speed': 0.8,
-    'presentations/pdf transition easing': 'balanced'
+    'presentations/pdf transition speed': TransitionSpeed.Normal
 }
 
 
@@ -67,8 +66,7 @@ def test_check_boxes(settings):
     QtTest.QTest.mouseClick(form.odp_display_check_box, QtCore.Qt.MouseButton.LeftButton)
     QtTest.QTest.mouseClick(form.pdf_transition_enabled_check_box, QtCore.Qt.MouseButton.LeftButton)
     form.pdf_transition_effect_combo_box.setCurrentIndex(TransitionType.Zoom)
-    form.pdf_transition_speed_spin_box.setValue(1.4)
-    form.pdf_transition_easing_combo_box.setCurrentIndex(0)
+    form.pdf_transition_speed_combo_box.setCurrentIndex(TransitionSpeed.Slow)
     form.activated = True
     form.save()
     # THEN: The updated values should be stored in the settings
@@ -77,8 +75,7 @@ def test_check_boxes(settings):
     assert form.settings.value('presentations/impress use display setting') == QtCore.Qt.CheckState.Checked
     assert form.settings.value('presentations/pdf transitions') is True
     assert form.settings.value('presentations/pdf transition type') == TransitionType.Zoom
-    assert form.settings.value('presentations/pdf transition speed') == 1.4
-    assert form.settings.value('presentations/pdf transition easing') == 'linear'
+    assert form.settings.value('presentations/pdf transition speed') == TransitionSpeed.Slow
 
 
 def test_check_boxes_when_controllers_unavailable(settings):

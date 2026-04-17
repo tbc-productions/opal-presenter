@@ -95,17 +95,17 @@ def deploy_zipfile(app_root_path, zip_name):
     web_zip.extractall(app_root_path)
 
 
-def download_version_info(timeout=None, retries=None):
+def download_version_info(timeout=None, retries=None, session=None):
     """
     Download the version information file
     """
     try:
         if timeout is None:
             file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
-                                         retries=retries)
+                                         retries=retries, session=session)
         else:
             file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
-                                         timeout=timeout, retries=retries)
+                                         timeout=timeout, retries=retries, session=session)
     except ConnectionError:
         return False
     if not file_contents:
@@ -124,14 +124,14 @@ def get_latest_size():
     return version_info['latest']['size']
 
 
-def download_and_install(callback=None, can_update_range=True, timeout=None, retries=None):
+def download_and_install(callback=None, can_update_range=True, timeout=None, retries=None, session=None):
     """
     Download the web site and deploy it.
     """
     if timeout is not None or retries is not None:
-        version_info = download_version_info(timeout=timeout, retries=retries)
+        version_info = download_version_info(timeout=timeout, retries=retries, session=session)
     else:
-        version_info = download_version_info()
+        version_info = download_version_info(session=session)
     if not version_info:
         log.warning('Unable to access the version information, abandoning download')
         # Show the user an error message
@@ -146,7 +146,7 @@ def download_and_install(callback=None, can_update_range=True, timeout=None, ret
     if retries is not None:
         download_kwargs['retries'] = retries
     if download_file(callback, REMOTE_URL + '{version}/{filename}'.format(**version_info['latest']), zip_path,
-                     **download_kwargs):
+                     session=session, **download_kwargs):
         if not zip_path.exists():
             # File was deleted because the download was cancelled
             return None

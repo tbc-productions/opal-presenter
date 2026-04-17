@@ -624,36 +624,57 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         :param generate_screenshot: Do I need to generate a screen shot?
         :rtype: QtGui.QPixmap
         """
-        # save value for use in format_slide
-        self.force_page = force_page
-        self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
-        slides = self.format_slide(VERSE, None)
-        verses = dict()
-        verses['title'] = TITLE
-        verses['text'] = render_tags(slides[0]) if slides else ''
-        verses['verse'] = 'V1'
-        verses['footer'] = self.generate_footer()
-        self.load_verses([verses], is_sync=True)
-        self.run_in_display('goToSlide', 'V1', is_sync=True)
-        self.run_in_display('resetTheme', is_sync=True)
-        self.force_page = False
+        # Disable theme slide transitions during thumbnail capture so text is fully visible in the screenshot.
+        previous_allow_theme_transitions = self.allow_theme_transitions
         if generate_screenshot:
-            preview_state = self.run_in_display('getPreviewRenderState', is_sync=True)
-            expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
-            if expected_image_background and not (preview_state or {}).get('backgroundImage'):
+            self.allow_theme_transitions = False
+        try:
+            if generate_screenshot:
+                self.run_in_display('setAllowThemeTransitions', False, is_sync=True)
+            # save value for use in format_slide
+            self.force_page = force_page
+            self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+            slides = self.format_slide(VERSE, None)
+            verses = dict()
+            verses['title'] = TITLE
+            verses['text'] = render_tags(slides[0]) if slides else ''
+            verses['verse'] = 'V1'
+            verses['footer'] = self.generate_footer()
+            self.load_verses([verses], is_sync=True)
+            self.run_in_display('goToSlide', 'V1', is_sync=True)
+            self.run_in_display('resetTheme', is_sync=True)
+            self.force_page = False
+            if generate_screenshot:
+                preview_state = self.run_in_display('getPreviewRenderState', is_sync=True) or {}
+                expected_image_background = getattr(theme_data, 'background_type', None) == 'image'
+                if expected_image_background and not (preview_state or {}).get('backgroundImage'):
+                    app = QtWidgets.QApplication.instance()
+                    # First-theme warm-up: if image background is not yet bound, re-apply theme + slide once.
+                    self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
+                    self.load_verses([verses], is_sync=True)
+                    self.run_in_display('goToSlide', 'V1', is_sync=True)
+                    self.run_in_display('resetTheme', is_sync=True)
+                    if app:
+                        app.processEvents()
+                    self.run_in_display('getPreviewRenderState', is_sync=True)
+                # Give the web view a few event turns to paint text/background before capture.
                 app = QtWidgets.QApplication.instance()
-                # First-theme warm-up: if image background is not yet bound, re-apply theme + slide once.
-                self.set_theme(theme_data, is_sync=True, service_item_type=ServiceItemType.Text)
-                self.load_verses([verses], is_sync=True)
-                self.run_in_display('goToSlide', 'V1', is_sync=True)
-                self.run_in_display('resetTheme', is_sync=True)
-                if app:
-                    app.processEvents()
-                self.run_in_display('getPreviewRenderState', is_sync=True)
-            screenshot = self.save_screenshot()
-            return screenshot
-        self.force_page = False
-        return None
+                attempts = 0
+                while attempts < 5:
+                    preview_state = self.run_in_display('getPreviewRenderState', is_sync=True) or {}
+                    if preview_state.get('themeApplied') and preview_state.get('textSample'):
+                        break
+                    if app:
+                        app.processEvents()
+                    attempts += 1
+                screenshot = self.save_screenshot()
+                return screenshot
+            self.force_page = False
+            return None
+        finally:
+            if generate_screenshot:
+                self.run_in_display('setAllowThemeTransitions', previous_allow_theme_transitions, is_sync=True)
+            self.allow_theme_transitions = previous_allow_theme_transitions
 
     def format_slide(self, text, item):
         """
@@ -910,18 +931,40 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         Uses direct webview rendering on standard DPI systems for performance.
         Falls back to grab() on HiDPI systems to avoid artifacts.
         """
-        # Check if running in HiDPI mode
-        screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
-        device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
-        is_hidpi = device_pixel_ratio > 1.0
+        # Check if running in HiDPI mode. If this widget was created via a mocked __init__
+        # (common in unit tests), querying geometry can raise at the Shiboken boundary.
+        try:
+            screen = QtGui.QGuiApplication.screenAt(self.geometry().center())
+            device_pixel_ratio = screen.devicePixelRatio() if screen else 1.0
+            is_hidpi = device_pixel_ratio > 1.0
+        except RuntimeError:
+            is_hidpi = True
 
-        if is_hidpi or not self.isVisible():
-            # Use grab() method for HiDPI or hidden widgets
+        if is_hidpi and not self.is_display:
+            previous_geometry = self.geometry()
+            offscreen_x = -max(5000, previous_geometry.width() + 1000)
+            offscreen_y = -max(5000, previous_geometry.height() + 1000)
+            self.setGeometry(offscreen_x, offscreen_y, previous_geometry.width(), previous_geometry.height())
             self.setVisible(True)
             QtWidgets.QApplication.instance().processEvents()
             wait_for(lambda: False, timeout=1)
             pixmap = self.grab()
             self.setVisible(False)
+            self.setGeometry(previous_geometry)
+        elif not self.is_display and not self.isVisible():
+            # Offscreen renderer path: avoid showing a temporary window while creating theme thumbnails.
+            pixmap = QtGui.QPixmap(self.webview.size())
+            self.webview.render(pixmap)
+        elif is_hidpi or not self.isVisible():
+            # Use grab() method for HiDPI or hidden widgets
+            try:
+                self.setVisible(True)
+                QtWidgets.QApplication.instance().processEvents()
+                wait_for(lambda: False, timeout=1)
+                pixmap = self.grab()
+                self.setVisible(False)
+            except RuntimeError:
+                pixmap = self.grab()
         else:
             # Use direct rendering for standard DPI
             pixmap = QtGui.QPixmap(self.webview.size())

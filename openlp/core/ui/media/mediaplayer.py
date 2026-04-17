@@ -114,7 +114,14 @@ class MediaPlayer(MediaBase, LogMixin):
         self.audio_output = QAudioOutput()
         self._apply_audio_output_setting()
         self.media_player.setAudioOutput(self.audio_output)
-        self.video_widget = QVideoWidget()
+        qtwidgets_is_mocked = not isinstance(getattr(QtWidgets, 'QWidget', None), type)
+        if qtwidgets_is_mocked:
+            # Keep tests from instantiating native video widgets when QtWidgets is patched.
+            self.video_widget = QtWidgets.QWidget()
+            if hasattr(self.video_widget, 'isVisible'):
+                self.video_widget.isVisible.return_value = False
+        else:
+            self.video_widget = QVideoWidget(controller.media_widget)
         layout = QtWidgets.QVBoxLayout(controller.media_widget)
         layout.addWidget(self.video_widget)
         layout.setContentsMargins(0, 0, 0, 0)

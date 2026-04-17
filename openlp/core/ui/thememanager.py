@@ -52,7 +52,6 @@ from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
-
 class ThemeThumbnailRefreshWorker(ThreadWorker):
     """
     Background worker that walks the theme list and requests thumbnail refreshes.
@@ -199,6 +198,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
         self._thumbnail_refresh_pending = False
+        self._show_thumbnail_refresh_status = True
         Registry().register_function('config_screen_changed', self.screen_changed)
 
     def get_global_theme(self):
@@ -276,8 +276,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
                     self._thumbnail_refresh_pending = True
                 else:
-                    self._regenerate_previews_with_progress_dialog(self.get_theme_names(),
-                                                                   reason='screen_size_changed')
+                    # Screen-size-triggered regeneration should run silently in the background.
+                    self.update_preview_images(self.get_theme_names(), show_status=False)
         if hasattr(self, 'theme_form') and self.theme_form is not None and self.theme_form.isVisible() and \
                 hasattr(self.theme_form, 'theme'):
             self.theme_form.update_theme()
@@ -318,6 +318,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         Update the footer status bar with the current thumbnail refresh state.
         """
+        if not self._show_thumbnail_refresh_status:
+            return
         if hasattr(self, 'footer_status_bar'):
             self.footer_status_label.setText(status_text)
 
@@ -339,6 +341,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Clear the footer status once thumbnail refresh completes.
         """
         self._set_thumbnail_status('')
+        self._show_thumbnail_refresh_status = True
         self._thumbnail_refresh_worker = None
         if self._thumbnail_refresh_pending:
             self._thumbnail_refresh_pending = False
@@ -560,18 +563,51 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         Delete a theme triggered by the UI.
         :param field:
         """
-        if self._validate_theme_action(translate('OpenLP.ThemeManager', 'You must select a theme to delete.'),
-                                       translate('OpenLP.ThemeManager', 'Delete Confirmation'),
-                                       translate('OpenLP.ThemeManager', 'Delete {theme_name} theme?')):
-            item = self.theme_list_widget.currentItem()
-            theme = item.text()
-            row = self.theme_list_widget.row(item)
+        selected_items = list(self.theme_list_widget.selectedItems())
+        if not selected_items:
+            critical_error_message_box(message=translate('OpenLP.ThemeManager', 'You must select a theme to delete.'))
+            return
+        selected_theme_names = [item.data(QtCore.Qt.ItemDataRole.UserRole) for item in selected_items]
+        default_themes = [item.text() for item in selected_items
+                          if item.text() != item.data(QtCore.Qt.ItemDataRole.UserRole)]
+        if default_themes:
+            critical_error_message_box(
+                message=translate('OpenLP.ThemeManager', 'You are unable to delete the default theme.'))
+            return
+        plugin_usage = ''
+        for theme_name in selected_theme_names:
+            for plugin in State().list_plugins():
+                used_count = plugin.uses_theme(theme_name)
+                if used_count:
+                    plugin_usage = '{text}{theme}: {count} time(s) by {plugin}\n'.format(text=plugin_usage,
+                                                                                          theme=theme_name,
+                                                                                          count=used_count,
+                                                                                          plugin=plugin.name)
+        if plugin_usage:
+            critical_error_message_box(translate('OpenLP.ThemeManager', 'Unable to delete theme'),
+                                       translate('OpenLP.ThemeManager',
+                                                 'One or more selected themes are currently used\n\n{text}'
+                                                 ).format(text=plugin_usage))
+            return
+        if len(selected_theme_names) == 1:
+            confirm_text = translate('OpenLP.ThemeManager', 'Delete {theme_name} theme?').format(
+                theme_name=selected_theme_names[0])
+        else:
+            confirm_text = translate('OpenLP.ThemeManager', 'Delete {theme_count} selected themes?').format(
+                theme_count=len(selected_theme_names))
+        answer = QtWidgets.QMessageBox.question(self,
+                                                translate('OpenLP.ThemeManager', 'Delete Confirmation'),
+                                                confirm_text,
+                                                defaultButton=QtWidgets.QMessageBox.StandardButton.No)
+        if answer == QtWidgets.QMessageBox.StandardButton.No:
+            return
+        for row, theme_name in sorted([(self.theme_list_widget.row(item), item.data(QtCore.Qt.ItemDataRole.UserRole))
+                                       for item in selected_items], reverse=True):
             self.theme_list_widget.takeItem(row)
-            self.delete_theme(theme)
-            # self.renderer.set_theme(self.get_theme_data(item.data(QtCore.Qt.ItemDataRole.UserRole)))
-            # As we do not reload the themes, push out the change. Reload the
-            # list as the internal lists and events need to be triggered.
-            self._push_themes()
+            self.delete_theme(theme_name)
+        # As we do not reload the themes, push out the change. Reload the
+        # list as the internal lists and events need to be triggered.
+        self._push_themes()
 
     def delete_theme(self, theme):
         """
@@ -685,7 +721,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             self.settings.setValue('themes/global theme', theme.theme_name)
             new_themes = [theme.theme_name]
         if new_themes:
-            self.update_preview_images(new_themes)
+            self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
         self.application.set_normal_cursor()
 
     def load_themes(self):
@@ -906,15 +942,17 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         thumb_path = self.thumb_path / '{name}.png'.format(name=theme_name)
         create_thumb(sample_path_name, thumb_path, False)
 
-    def update_preview_images(self, theme_name_list=None):
+    def update_preview_images(self, theme_name_list=None, show_status=True):
         """
         Called to update the themes' preview images in the background.
 
         :param theme_name_list: A list of theme names in the theme data folder
+        :param bool show_status: Should status text be shown while refreshing thumbnails.
         """
         theme_name_list = theme_name_list or self.get_theme_names()
         if not theme_name_list:
             return
+        self._show_thumbnail_refresh_status = show_status
         self._thumbnail_refresh_pending = False
         if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
             return
@@ -957,12 +995,14 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             pass
         progress_form = ThemeProgressForm(owner)
         progress_form.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        progress_form.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, True)
         progress_form.theme_list = list(theme_name_list)
         progress_form.show()
         progress_form.raise_()
         progress_form.activateWindow()
         QtWidgets.QApplication.processEvents()
+        # Prime the preview renderer so the first saved thumbnail includes fully rendered demo text.
+        first_theme_data = self._get_theme_data(theme_name_list[0])
+        progress_form.warm_up_preview(first_theme_data)
         for theme_name in theme_name_list:
             theme_data = self._get_theme_data(theme_name)
             preview_pixmap = progress_form.get_preview(theme_name, theme_data)

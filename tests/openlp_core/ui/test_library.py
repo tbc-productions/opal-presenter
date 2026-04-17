@@ -94,8 +94,27 @@ def test_folderlibrary_retranslate_ui(folder_library_item):
 
 
 def test_folderlibrary_add_custom_context_actions(folder_library_item):
-    """Test that the folder_library_item.add_custom_context_actions does nothing"""
-    folder_library_item.add_custom_context_actions()
+    """Test that add_custom_context_actions adds show-in-folder action."""
+    with patch('openlp.core.ui.library.create_widget_action') as mocked_create_widget_action, \
+            patch('openlp.core.ui.library._add_library_context_menu_separator') as mocked_separator:
+        folder_library_item.add_custom_context_actions()
+    assert mocked_create_widget_action.call_count == 2
+    mocked_separator.assert_called_once_with(folder_library_item.list_view)
+
+
+@patch('openlp.core.ui.library.is_win', return_value=True)
+@patch('openlp.core.ui.library.QtCore.QProcess.startDetached')
+def test_on_show_in_folder_click_windows(mocked_start_detached, mocked_is_win, folder_library_item, tmp_path):
+    """Test that show in folder reveals selected file on Windows."""
+    file_path = tmp_path / 'video.mp4'
+    file_path.write_bytes(b'media')
+    selected_tree_item = MagicMock()
+    selected_tree_item.data.return_value = MockItem(file_path=str(file_path))
+    folder_library_item.list_view.selectedItems.return_value = [selected_tree_item]
+
+    folder_library_item.on_show_in_folder_click()
+
+    mocked_start_detached.assert_called_once()
 
 
 def test_folderlibrary_load_item(folder_library_item):
@@ -218,6 +237,55 @@ def test_validate_and_load(folder_library_item):
     # THEN: load_list should have been called with the file list and the group name,
     #       the directory should have been saved to the settings
     folder_library_item.load_list.assert_called_once_with(expected_list, target_folder=None)
+
+
+@patch('openlp.core.ui.library.copy2')
+@patch('openlp.core.ui.library.create_paths')
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('openlp.core.ui.library.sha256_file_hash')
+def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, mocked_get_section_data_path,
+                                                    mocked_create_paths, mocked_copy2, folder_library_item, tmp_path):
+    """
+    Test that library files are copied to managed storage when enabled.
+    """
+    source_file = tmp_path / 'clip.mp4'
+    source_file.write_bytes(b'media')
+    managed_root = tmp_path / 'managed'
+    mocked_get_section_data_path.return_value = managed_root
+    mocked_sha256_file_hash.return_value = 'abc123'
+    folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
+        'advanced/copy library files to data folder': True
+    }.get(key, False))
+
+    result = folder_library_item._prepare_library_file(source_file)
+
+    expected_destination = managed_root / 'library' / 'abc123.mp4'
+    assert result == expected_destination
+    mocked_create_paths.assert_called_once_with(managed_root / 'library')
+    mocked_copy2.assert_called_once_with(source_file, expected_destination)
+
+
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_delete_managed_library_file_only_inside_data_path(mocked_get_section_data_path, folder_library_item, tmp_path):
+    """
+    Test that managed file deletion only happens for files inside OpenLP data storage.
+    """
+    managed_root = tmp_path / 'managed'
+    managed_library = managed_root / 'library'
+    managed_library.mkdir(parents=True)
+    external_root = tmp_path / 'external'
+    external_root.mkdir(parents=True)
+    managed_file = managed_library / 'abc123.jpg'
+    external_file = external_root / 'outside.jpg'
+    managed_file.write_bytes(b'img')
+    external_file.write_bytes(b'img')
+    mocked_get_section_data_path.return_value = managed_root
+
+    folder_library_item._delete_managed_library_file(MockItem(file_path=str(managed_file)))
+    folder_library_item._delete_managed_library_file(MockItem(file_path=str(external_file)))
+
+    assert not managed_file.exists()
+    assert external_file.exists()
 
 
 @patch('openlp.core.ui.library.sha256_file_hash')

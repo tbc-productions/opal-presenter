@@ -122,8 +122,10 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.setColumnCount(1)
         self.horizontalHeader().setVisible(False)
         vertical_header = self.verticalHeader()
-        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        # Keep row height under explicit control; ResizeToContents can grow rows to full image height.
+        vertical_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Fixed)
         vertical_header.setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
+        vertical_header.setDefaultAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         target_width = int((self.fontMetrics().horizontalAdvance('W99') + 16) * 0.6)
         vertical_header.setMinimumWidth(max(20, target_width))
         self.setColumnWidth(0, self.parent().width())
@@ -186,8 +188,6 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 max_line = max(max_line, fm.horizontalAdvance(line))
         target_width = max_line + margin
         vh.setMinimumWidth(target_width)
-        if vh.count() > 0:
-            vh.resizeSection(0, target_width)
 
     def resizeEvent(self, event):
         """
@@ -340,6 +340,10 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 self.setRowHeight(slide_index, 1)
                 self.setRowHeight(slide_index, int(slide_height))
         self.setVerticalHeaderLabels(text)
+        for row in range(self.rowCount()):
+            header_item = self.verticalHeaderItem(row)
+            if header_item:
+                header_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._sync_vertical_header_width_from_labels(text)
         for row, color in enumerate(header_colors):
             if color is None:
@@ -620,16 +624,21 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self._ensure_first_column_width()
 
     def _ensure_first_column_width(self):
-        """Ensure the first column keeps most of the available width."""
+        """Keep the first column visible and proportional to the viewport width."""
         if self.columnCount() < 2 or self._resizing_columns:
             return
         available_width = self.viewport().width()
+        if available_width <= 0:
+            return
         minimum_width = int(available_width * self.first_column_min_ratio)
-        if self.columnWidth(0) >= minimum_width:
+        # Keep metadata columns readable, but ensure the name column still tracks overall viewport changes.
+        trailing_width = sum(self.columnWidth(i) for i in range(1, self.columnCount()))
+        target_width = max(minimum_width, available_width - trailing_width)
+        if self.columnWidth(0) == target_width:
             return
         self._resizing_columns = True
         try:
-            self.header().resizeSection(0, minimum_width)
+            self.header().resizeSection(0, target_width)
         finally:
             self._resizing_columns = False
 

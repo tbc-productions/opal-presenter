@@ -126,6 +126,7 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         Add custom actions to the context menu.
         """
+        super().add_custom_context_actions()
         create_widget_action(self.list_view, separator=True)
         create_widget_action(
             self.list_view,
@@ -199,9 +200,10 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         tree_item = None
         file_path = Path(item.file_path)
-        file_name = file_path.name
+        file_name = item.name or file_path.name
+        display_name = Path(file_name).stem
         if not file_path.exists() or not os.access(file_path, os.R_OK):
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setIcon(0, UiIcons().delete)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
@@ -230,7 +232,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                                translate('PresentationPlugin.MediaItem',
                                                          'This type of presentation is not supported.'))
                     return None
-            tree_item = FileTreeWidgetItem([file_name])
+            tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
             file_type = file_path.suffix.lstrip('.').upper()
@@ -305,25 +307,60 @@ class PresentationMediaItem(FolderLibraryItem):
             return False
         if file_path is None:
             file_path = Path(items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
+        source_name = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+        display_name = Path(source_name).stem
         file_type = file_path.suffix.lower()[1:]
         if not self.display_type_combo_box.currentText():
             return False
         service_item.add_capability(ItemCapabilities.CanEditTitle)
-        if file_type in PDF_CONTROLLER_FILETYPES and context != ServiceItemContext.Service:
+        if file_type in PDF_CONTROLLER_FILETYPES:
             service_item.add_capability(ItemCapabilities.CanMaintain)
             service_item.add_capability(ItemCapabilities.CanPreview)
             service_item.add_capability(ItemCapabilities.CanLoop)
             service_item.add_capability(ItemCapabilities.CanAppend)
             service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
-            service_item.pdf_transition_settings = self._get_pdf_transition_settings()
+            resolved_transition_settings = self._get_custom_transition_settings(service_item)
+            if (not resolved_transition_settings) and items and isinstance(items[0], ServiceItem):
+                resolved_transition_settings = self._get_custom_transition_settings(items[0])
+            if resolved_transition_settings:
+                transition_enabled = bool(resolved_transition_settings.get('enabled', False))
+                transition_type = resolved_transition_settings.get('type', TransitionType.Fade)
+                transition_speed = resolved_transition_settings.get('speed', TransitionSpeed.Normal)
+                speed_seconds_lookup = {
+                    TransitionSpeed.Fast: 0.4,
+                    TransitionSpeed.Normal: 0.8,
+                    TransitionSpeed.Slow: 1.2
+                }
+                speed_seconds = speed_seconds_lookup.get(transition_speed, 0.8)
+                base_pdf_transition_settings = self._get_pdf_transition_settings()
+                service_item.slide_transition_settings = {
+                    'enabled': transition_enabled,
+                    'type': transition_type,
+                    'speed': transition_speed
+                }
+                service_item.pdf_transition_settings = {
+                    'enabled': transition_enabled,
+                    'effect': transition_type,
+                    'speed': transition_speed,
+                    'speed_seconds': speed_seconds,
+                    'easing': base_pdf_transition_settings.get('easing', 'balanced'),
+                    'type': transition_type
+                }
+            else:
+                service_item.pdf_transition_settings = self._get_pdf_transition_settings()
+                service_item.slide_transition_settings = {
+                    'enabled': bool(service_item.pdf_transition_settings.get('enabled', False)),
+                    'type': service_item.pdf_transition_settings.get('effect', TransitionType.Fade),
+                    'speed': service_item.pdf_transition_settings.get('speed', TransitionSpeed.Normal)
+                }
             service_item.name = 'images'
             # force a nonexistent theme
             service_item.theme = -1
             for bitem in items:
                 if file_path is None:
                     file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-                path, file_name = file_path.parent, file_path.name
-                service_item.title = file_name
+                path = file_path.parent
+                service_item.title = display_name
                 if file_path.exists():
                     if not os.access(file_path, os.R_OK):
                         # File is inaccessible
@@ -350,7 +387,7 @@ class PresentationMediaItem(FolderLibraryItem):
                     image_path = doc.get_temp_folder() / 'mainslide{number:0>3d}.png'.format(number=i)
                     thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
                     while image_path.is_file():
-                        service_item.add_from_image(image_path, file_name, thumbnail=thumbnail_path)
+                        service_item.add_from_image(image_path, display_name, thumbnail=thumbnail_path)
                         # Hint the display layer to use Reveal background images so fade transitions cross-fade natively.
                         service_item.slides[-1]['use_background_image'] = True
                         service_item.slides[-1]['pdf_transition_enabled'] = bool(
@@ -384,8 +421,10 @@ class PresentationMediaItem(FolderLibraryItem):
             service_item.add_capability(ItemCapabilities.ProvidesOwnDisplay)
             for bitem in items:
                 file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-                path, file_name = file_path.parent, file_path.name
-                service_item.title = file_name
+                source_file_name = bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+                display_file_name = Path(source_file_name).stem
+                path = file_path.parent
+                service_item.title = display_file_name
                 if file_path.exists():
                     if os.access(file_path, os.R_OK):
                         if (self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex())
@@ -412,7 +451,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                 note = ''
                                 if notes and len(notes) >= i:
                                     note = notes[i - 1]
-                                service_item.add_from_command(str(path), file_name, thumbnail_path, title, note,
+                                service_item.add_from_command(str(path), source_file_name, thumbnail_path, title, note,
                                                               doc.get_sha256_file_hash())
                                 i += 1
                                 thumbnail_path = doc.get_thumbnail_path(i, True)
@@ -470,19 +509,12 @@ class PresentationMediaItem(FolderLibraryItem):
                 speed_seconds = 0.8
         speed_seconds = max(0.1, speed_seconds)
 
-        easing_value = self.settings.value('presentations/pdf transition easing')
-        valid_easing_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
-        if isinstance(easing_value, str):
-            easing_value = easing_value.strip().lower()
-        if not isinstance(easing_value, str) or easing_value not in valid_easing_types:
-            easing_value = 'balanced'
-
         effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
         return {
             'enabled': bool(self.settings.value('presentations/pdf transitions')),
             'effect': effect,
             'speed_seconds': speed_seconds,
-            'easing': easing_value,
+            'easing': 'balanced',
             # Backward-compatible aliases for existing consumers/tests.
             'type': effect,
             'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
@@ -520,6 +552,42 @@ class PresentationMediaItem(FolderLibraryItem):
         if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
             return value
         return TransitionSpeed.Normal
+
+    @classmethod
+    def _is_default_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return False
+        transition_type = cls._get_transition_type_value(settings.get('type', TransitionType.Fade))
+        transition_speed = cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        transition_enabled = bool(settings.get('enabled', False))
+        return (not transition_enabled) and transition_type == TransitionType.Fade and \
+            transition_speed == TransitionSpeed.Normal
+
+    @classmethod
+    def _normalise_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return None
+        return {
+            'enabled': bool(settings.get('enabled', False)),
+            'type': cls._get_transition_type_value(settings.get('type', TransitionType.Fade)),
+            'speed': cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        }
+
+    @classmethod
+    def _get_custom_transition_settings(cls, service_item):
+        slide_settings = cls._normalise_transition_settings(getattr(service_item, 'slide_transition_settings', None))
+        if slide_settings and not cls._is_default_transition_settings(slide_settings):
+            return slide_settings
+        pdf_settings = getattr(service_item, 'pdf_transition_settings', None)
+        if isinstance(pdf_settings, dict):
+            legacy_settings = cls._normalise_transition_settings({
+                'enabled': bool(pdf_settings.get('enabled', False)),
+                'type': pdf_settings.get('effect', pdf_settings.get('type', TransitionType.Fade)),
+                'speed': pdf_settings.get('speed', TransitionSpeed.Normal)
+            })
+            if legacy_settings and not cls._is_default_transition_settings(legacy_settings):
+                return legacy_settings
+        return None
 
     def find_controller_by_type(self, file_path):
         """
