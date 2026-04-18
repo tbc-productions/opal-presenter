@@ -151,6 +151,40 @@ if is_win():
                 yield winreg.EnumValue(k, i)
 
 
+LEGACY_OPENLP_ORGANIZATION = 'OpenLP'
+LEGACY_OPENLP_APPLICATION = 'OpenLP'
+
+
+def migrate_legacy_openlp_settings():
+    new_settings = Settings()
+    if new_settings.allKeys():
+        return False
+    legacy_settings = None
+    if is_macosx():
+        legacy_path = Path.home() / 'Library' / 'Preferences' / 'org.openlp.OpenLP.plist'
+        if legacy_path.exists():
+            legacy_settings = QtCore.QSettings(str(legacy_path), QtCore.QSettings.Format.NativeFormat)
+    elif is_linux():
+        legacy_path = Path.home() / '.config' / LEGACY_OPENLP_ORGANIZATION / '{app}.conf'.format(
+            app=LEGACY_OPENLP_APPLICATION)
+        if legacy_path.exists():
+            legacy_settings = QtCore.QSettings(str(legacy_path), QtCore.QSettings.Format.IniFormat)
+    elif is_win():
+        legacy_settings = QtCore.QSettings(
+            QtCore.QSettings.Format.NativeFormat, QtCore.QSettings.Scope.UserScope,
+            LEGACY_OPENLP_ORGANIZATION, LEGACY_OPENLP_APPLICATION)
+    if legacy_settings is None:
+        return False
+    legacy_keys = legacy_settings.allKeys()
+    if not legacy_keys:
+        return False
+    for key in legacy_keys:
+        new_settings.setValue(key, legacy_settings.value(key))
+    new_settings.sync()
+    log.info('Migrated %d settings from upstream OpenLP at %s', len(legacy_keys), legacy_settings.fileName())
+    return True
+
+
 def check_for_variant_migration(settings):
     """
     Check if the settings loaded contains PyQt5 variants from before the PySide6 migration. If so, we need to do some

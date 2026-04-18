@@ -45,7 +45,7 @@ from openlp.core.common.mixins import LogMixin
 from openlp.core.common.path import create_paths, resolve
 from openlp.core.common.platform import is_macosx, is_wayland_compositor, is_win
 from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings, check_for_variant_migration
+from openlp.core.common.settings import Settings, check_for_variant_migration, migrate_legacy_openlp_settings
 from openlp.core.display.screens import ScreenList
 from openlp.core.display.webengine import init_webview_custom_schemes, set_webview_display_path
 from openlp.core.lib.filelock import FileLock
@@ -493,14 +493,15 @@ def main():
     # Initialise OpenLP
     app = OpenLP()
     Registry.create()
-    QtWidgets.QApplication.setOrganizationName('OpenLP')
-    QtWidgets.QApplication.setApplicationName('OpenLP')
-    QtWidgets.QApplication.setOrganizationDomain('openlp.org')
+    QtWidgets.QApplication.setOrganizationName('tbcproductions')
+    QtWidgets.QApplication.setApplicationName('OpenLPPlus')
+    QtWidgets.QApplication.setOrganizationDomain('tbcproductions.net')
     if args.portable:
         # This has to be done here so that we can load the settings before instantiating the application object
-        QtWidgets.QApplication.setApplicationName('OpenLPPortable')
+        QtWidgets.QApplication.setApplicationName('OpenLPPlusPortable')
         portable_path, settings = setup_portable_settings(args.portablepath)
     else:
+        migrate_legacy_openlp_settings()
         settings = Settings()
     settings = check_for_variant_migration(settings)
     Registry().register('settings', settings)
