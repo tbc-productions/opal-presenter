@@ -28,9 +28,9 @@ jobs:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          PAYLOAD=$(printf '{"event_type":"upstream-release","client_payload":{"source":"openlp-plus","tag":"%s"}}' "$TAG")
+          PAYLOAD=$(printf '{"ref":"main","inputs":{"openlp_tag":"%s","create_release":"true","build_macos":"true","build_windows":"true","build_flatpak":"false"}}' "$TAG")
           curl -fsSL -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
-            "${GITHUB_SERVER_URL}/api/v1/repos/tbcproductions/openlp-packaging/dispatches"
+            "${GITHUB_SERVER_URL}/api/v1/repos/tbcproductions/openlp-packaging/actions/workflows/build.yml/dispatches"
