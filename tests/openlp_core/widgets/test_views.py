@@ -61,12 +61,13 @@ def preview_widget_env():
 
 
 @pytest.fixture()
-def mocked_parent():
+def mocked_parent(qapp):
     """A prepared parent object"""
     parent_obj = QtWidgets.QWidget(None)
     with patch.object(parent_obj, 'width') as mocked_width:
         mocked_width.return_value = 100
         yield parent_obj
+    parent_obj.deleteLater()
 
 
 @pytest.fixture()
@@ -747,7 +748,11 @@ def test_treewidgetwithdnd_keeps_first_column_wide_enough(qapp):
     widget.setup_columns(['Name', 'Date'])
     qapp.process_events()
 
-    assert widget.columnWidth(0) >= int(widget.viewport().width() * widget.first_column_min_ratio)
+    try:
+        assert widget.columnWidth(0) >= int(widget.viewport().width() * widget.first_column_min_ratio)
+    finally:
+        widget.hide()
+        widget.deleteLater()
 
 
 

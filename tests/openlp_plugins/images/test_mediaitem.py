@@ -334,13 +334,14 @@ def test_load_item_file_not_exist(mocked_create_thumb: MagicMock, media_item: Im
     """Test the load_item method when the file does not exist"""
     # GIVEN: A media item and an Item to load
     item = MagicMock(file_path=Path('myimage.jpg'), file_hash=None)
+    item.name = None
 
     # WHEN load_item() is called with the Item
     result = media_item.load_item(item)
 
     # THEN: A QTreeWidgetItem with a "delete" icon should be returned
     assert isinstance(result, QtWidgets.QTreeWidgetItem)
-    assert result.text(0) == 'myimage.jpg'
+    assert result.text(0) == 'myimage'
     mocked_create_thumb.assert_not_called()
 
 
@@ -355,13 +356,14 @@ def test_load_item_valid_thumbnail(mocked_build_icon: MagicMock, mocked_create_t
     mocked_validate_thumb.return_value = True
     image_path = Path(TEST_RESOURCES_PATH) / 'images' / 'tractor.jpg'
     item = MagicMock(file_path=image_path, file_hash=None)
+    item.name = None
 
     # WHEN load_item() is called with the Item
     result = media_item.load_item(item)
 
     # THEN: A QTreeWidgetItem with a "delete" icon should be returned
     assert isinstance(result, QtWidgets.QTreeWidgetItem)
-    assert result.text(0) == 'tractor.jpg'
+    assert result.text(0) == 'tractor'
     assert result.toolTip(0).splitlines()[0] == str(image_path)
     mocked_create_thumb.assert_not_called()
     mocked_build_icon.assert_called_once_with(image_path)
@@ -378,6 +380,7 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
         mocked_validate_thumb.return_value = False
         image_path = Path(TEST_RESOURCES_PATH) / 'images' / 'tractor.jpg'
         item = MagicMock(file_path=image_path, file_hash=None)
+        item.name = None
         registry.get('settings').value.return_value = 400
 
         # WHEN load_item() is called with the Item
@@ -385,7 +388,7 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
 
         # THEN: A QTreeWidgetItem with a "delete" icon should be returned
         assert isinstance(result, QtWidgets.QTreeWidgetItem)
-        assert result.text(0) == 'tractor.jpg'
+        assert result.text(0) == 'tractor'
         assert result.toolTip(0).splitlines()[0] == str(image_path)
         mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'), size=QtCore.QSize(-1, 400))
 

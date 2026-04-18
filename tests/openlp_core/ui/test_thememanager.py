@@ -84,7 +84,9 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     theme_manager._thumbnail_dimensions = MagicMock()
     theme_manager._get_current_screen = MagicMock(return_value=None)
     theme_manager._get_screen_dimensions = MagicMock(return_value='different-size')
-    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
+    theme_manager._thumbnail_refresh_worker = None
+    theme_manager.update_preview_images = MagicMock()
+    theme_manager.get_theme_names = MagicMock(return_value=['theme1', 'theme2'])
     theme_manager.theme_form = MagicMock()
 
     # WHEN: The screen changes
@@ -93,7 +95,7 @@ def test_screen_changed_updates_thumbnails_and_preview(theme_manager: ThemeManag
     # THEN: Cached theme defaults should be recalculated and previews refreshed
     theme_one.set_default_header_footer.assert_called_once_with()
     theme_two.set_default_header_footer.assert_called_once_with()
-    theme_manager._regenerate_previews_with_progress_dialog.assert_called_once()
+    theme_manager.update_preview_images.assert_called_once_with(['theme1', 'theme2'], show_status=False)
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
@@ -577,13 +579,16 @@ def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, them
     theme_manager.load_themes.assert_called_once_with()
 
 
+@patch('openlp.core.ui.thememanager.State')
 @patch('openlp.core.ui.thememanager.QtWidgets.QMessageBox.question',
        return_value=QtWidgets.QMessageBox.StandardButton.Yes)
-def test_on_delete_theme_deletes_selected_themes(mocked_question: MagicMock, theme_manager: ThemeManager):
+def test_on_delete_theme_deletes_selected_themes(mocked_question: MagicMock, mocked_state: MagicMock,
+                                                 theme_manager: ThemeManager):
     """
     Test that deleting themes removes all selected themes.
     """
     # GIVEN: Multiple selected theme items
+    mocked_state.return_value.list_plugins.return_value = []
     item_1 = MagicMock()
     item_1.text.return_value = 'Theme 1'
     item_1.data.return_value = 'Theme 1'

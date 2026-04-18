@@ -305,9 +305,13 @@ class PresentationMediaItem(FolderLibraryItem):
                      isinstance(items[0].data(0, QtCore.Qt.ItemDataRole.UserRole), Folder))
         if is_folder:
             return False
+        if items and not isinstance(items[0], ServiceItem):
+            source_data = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+        else:
+            source_data = None
         if file_path is None:
-            file_path = Path(items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-        source_name = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+            file_path = Path(source_data.file_path)
+        source_name = (source_data.name if source_data is not None else None) or file_path.name
         display_name = Path(source_name).stem
         file_type = file_path.suffix.lower()[1:]
         if not self.display_type_combo_box.currentText():

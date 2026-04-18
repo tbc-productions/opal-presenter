@@ -253,6 +253,7 @@ def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, moc
     managed_root = tmp_path / 'managed'
     mocked_get_section_data_path.return_value = managed_root
     mocked_sha256_file_hash.return_value = 'abc123'
+    folder_library_item.settings_section = 'tests'
     folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
         'advanced/copy library files to data folder': True
     }.get(key, False))
@@ -280,6 +281,7 @@ def test_delete_managed_library_file_only_inside_data_path(mocked_get_section_da
     managed_file.write_bytes(b'img')
     external_file.write_bytes(b'img')
     mocked_get_section_data_path.return_value = managed_root
+    folder_library_item.settings_section = 'tests'
 
     folder_library_item._delete_managed_library_file(MockItem(file_path=str(managed_file)))
     folder_library_item._delete_managed_library_file(MockItem(file_path=str(external_file)))

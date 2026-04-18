@@ -21,6 +21,7 @@
 """
 All the tests
 """
+import gc
 import os
 import shutil
 from tempfile import mkdtemp
@@ -30,12 +31,32 @@ from unittest.mock import MagicMock
 import pytest
 from pytestqt.qt_compat import qt_api
 
-from PySide6 import QtCore  # noqa
+from PySide6 import QtCore, QtWidgets  # noqa
 
 from openlp.core.app import OpenLP
 from openlp.core.state import State
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
+
+
+@pytest.fixture(autouse=True)
+def _qt_deferred_delete_and_gc():
+    """Flush Qt deferred deletes and run a deterministic GC after each test.
+
+    On Python 3.14 + PySide6 6.11 the cycle collector can fire mid-test while
+    ``MagicMock.__init__`` is allocating, collect a leftover QWidget from a
+    previous test, and re-enter ``QWidget::~QWidget`` through the shiboken
+    wrapper — segfaulting during ``QObjectPrivate::deleteChildren``.
+    Draining ``DeferredDelete`` while the QApplication is still alive and
+    then collecting cycles here forces that teardown to happen at a calm
+    point, not interleaved with the next test's patch setup.
+    """
+    yield
+    app = QtWidgets.QApplication.instance()
+    if app is not None:
+        app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        app.processEvents()
+    gc.collect()
 
 
 @pytest.fixture
