@@ -366,6 +366,8 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
     suitable for read-only list/table views that display lyrics or slides.
     """
 
+    HORIZONTAL_PADDING = 6
+
     @staticmethod
     def _tags_to_html(text):
         """
@@ -379,33 +381,118 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
             end_html = tag['end html']
             html = html.replace(tag['start tag'], start_html)
             html = html.replace(tag['end tag'], end_html)
-        html = html.replace('\n', '<br>')
         return html
+
+    @classmethod
+    def _segments(cls, text):
+        """
+        Split *text* into ``(kind, payload)`` segments where *kind* is
+        ``'text'`` or ``'marker'`` (e.g. ``[---]``).
+        """
+        segments = []
+        buffer = []
+
+        def flush_buffer():
+            if buffer:
+                segments.append(('text', '\n'.join(buffer)))
+                buffer.clear()
+
+        for line in text.split('\n'):
+            if SpellTextEdit.split_marker_style_for_text(line) is not None:
+                flush_buffer()
+                segments.append(('marker', line.strip()))
+            else:
+                buffer.append(line)
+        flush_buffer()
+        return segments
+
+    @classmethod
+    def _build_text_document(cls, font, text_run, available_width):
+        """
+        Build a QTextDocument for a non-marker text segment.
+        """
+        doc = QtGui.QTextDocument()
+        doc.setDefaultFont(font)
+        doc.setDocumentMargin(0)
+        doc.setHtml(cls._tags_to_html(text_run).replace('\n', '<br>'))
+        if available_width > 0:
+            doc.setTextWidth(available_width)
+        return doc
+
+    @classmethod
+    def _marker_line_height(cls, font):
+        """
+        Return the vertical space reserved for a split marker line.
+        """
+        return QtGui.QFontMetrics(font).height()
+
+    def _paint_marker(self, painter, marker_text, y_top, rect, base_color):
+        """
+        Draw a horizontal rule for *marker_text* centred within its reserved row.
+        """
+        pen_style = SpellTextEdit.split_marker_style_for_text(marker_text)
+        if not pen_style:
+            return
+        color = QtGui.QColor(base_color)
+        if marker_text == '[---]':
+            color.setAlphaF(0.5)
+        pen = QtGui.QPen(color, SpellTextEdit.split_marker_width_for_text(marker_text), pen_style)
+        painter.save()
+        painter.setPen(pen)
+        y = int(y_top + self._marker_line_height(painter.font()) / 2)
+        painter.drawLine(rect.left() + self.HORIZONTAL_PADDING, y,
+                         rect.right() - self.HORIZONTAL_PADDING, y)
+        painter.restore()
 
     def paint(self, painter, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
-        if not text:
+        if text is None or text == '':
             super().paint(painter, option, index)
             return
         painter.save()
         style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
         style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
-        doc = QtGui.QTextDocument()
-        doc.setHtml(self._tags_to_html(text))
-        doc.setTextWidth(option.rect.width() - 4)
-        painter.translate(option.rect.left() + 2, option.rect.top() + 2)
-        doc.drawContents(painter, QtCore.QRectF(0, 0, option.rect.width(), option.rect.height()))
+
+        available_width = max(0, option.rect.width() - 4)
+        x = option.rect.left() + 2
+        y = option.rect.top() + 2
+        base_color = option.palette.color(QtGui.QPalette.ColorRole.Text)
+        font = option.font
+        marker_height = self._marker_line_height(font)
+
+        for kind, payload in self._segments(text):
+            if kind == 'marker':
+                marker_rect = QtCore.QRect(x, y, available_width, marker_height)
+                self._paint_marker(painter, payload, y, marker_rect, base_color)
+                y += marker_height
+            else:
+                doc = self._build_text_document(font, payload, available_width)
+                painter.save()
+                painter.translate(x, y)
+                doc.drawContents(painter, QtCore.QRectF(0, 0, available_width, doc.size().height()))
+                painter.restore()
+                y += int(doc.size().height())
         painter.restore()
 
     def sizeHint(self, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
-        if not text:
+        if text is None or text == '':
             return super().sizeHint(option, index)
-        doc = QtGui.QTextDocument()
-        doc.setHtml(self._tags_to_html(text))
         width = option.rect.width() if option.rect.width() > 0 else 200
-        doc.setTextWidth(width - 4)
-        return QtCore.QSize(int(doc.idealWidth()), int(doc.size().height()) + 4)
+        available_width = max(0, width - 4)
+        font = option.font
+        marker_height = self._marker_line_height(font)
+
+        total_height = 0
+        ideal_width = 0
+        for kind, payload in self._segments(text):
+            if kind == 'marker':
+                total_height += marker_height
+            else:
+                doc = self._build_text_document(font, payload, available_width)
+                total_height += int(doc.size().height())
+                ideal_width = max(ideal_width, int(doc.idealWidth()))
+        return QtCore.QSize(ideal_width, total_height + 4)
 
 
 class SpellTextEdit(QtWidgets.QPlainTextEdit):
