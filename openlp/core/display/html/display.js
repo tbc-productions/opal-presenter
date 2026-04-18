@@ -875,13 +875,11 @@ var Display = {
    * Checks if the present slide content fits within the slide
   */
   doesContentFit: function () {
-    var currSlide = $("section.text-slides");
-    if (currSlide.length === 0) {
-      currSlide = Display._footerContainer;
-    } else {
-      currSlide = currSlide[0];
-    }
-    return currSlide.clientHeight >= currSlide.scrollHeight;
+    // The theme main-area dimensions (width/height/top/left) are applied to
+    // .slide-text-content by applyTheme, so measure that element directly.
+    var contentEls = $(".slide-text-content");
+    var target = contentEls.length > 0 ? contentEls[0] : Display._footerContainer;
+    return target.clientHeight >= target.scrollHeight;
   },
   /**
    * Return render details for preview diagnostics.

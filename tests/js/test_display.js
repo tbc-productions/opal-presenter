@@ -896,6 +896,59 @@ describe("Display.setTextSlide", function () {
   });
 });
 
+describe("Display.doesContentFit", function () {
+  beforeEach(function () {
+    document.body.innerHTML = "";
+    var slidesContainer = _createDiv({"class": "slides"});
+    var footerContainer = _createDiv({"class": "footer"});
+    Display._slidesContainer = slidesContainer;
+    Display._footerContainer = footerContainer;
+    Display._slides = {};
+    Display._theme = null;
+    Display._themeApplied = true;
+  });
+
+  function _buildSlideWithContent(clientHeight, scrollHeight, wrapInSlides) {
+    var wrapper = document.createElement("section");
+    wrapper.classList.add("text-slides");
+    var slide = document.createElement("section");
+    slide.classList.add("text-slide");
+    var content = document.createElement("div");
+    content.classList.add("slide-text-content");
+    Object.defineProperty(content, "clientHeight", {value: clientHeight, configurable: true});
+    Object.defineProperty(content, "scrollHeight", {value: scrollHeight, configurable: true});
+    slide.appendChild(content);
+    if (wrapInSlides) {
+      wrapper.appendChild(slide);
+      Display._slidesContainer.appendChild(wrapper);
+    } else {
+      Display._slidesContainer.appendChild(slide);
+    }
+    return content;
+  }
+
+  it("reports overflow on vertical layouts", function () {
+    _buildSlideWithContent(100, 200, true);
+    expect(Display.doesContentFit()).toBe(false);
+  });
+
+  it("reports overflow on horizontal layouts", function () {
+    _buildSlideWithContent(100, 500, false);
+    expect(Display.doesContentFit()).toBe(false);
+  });
+
+  it("reports fit when content fits within the main area", function () {
+    _buildSlideWithContent(500, 100, false);
+    expect(Display.doesContentFit()).toBe(true);
+  });
+
+  it("falls back to the footer when no slide content element exists", function () {
+    Object.defineProperty(Display._footerContainer, "clientHeight", {value: 100, configurable: true});
+    Object.defineProperty(Display._footerContainer, "scrollHeight", {value: 100, configurable: true});
+    expect(Display.doesContentFit()).toBe(true);
+  });
+});
+
 describe("Display.setTextSlides", function () {
   var textSlides;
 
