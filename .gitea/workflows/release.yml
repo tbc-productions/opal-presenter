@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    # Project convention is bare semver tags (3.2.0, 3.2.1, ...). Keep
+    # 'v*' accepted as well in case we ever adopt a v-prefix style.
+    tags: ['[0-9]*', 'v*']
 
 jobs:
   test:
