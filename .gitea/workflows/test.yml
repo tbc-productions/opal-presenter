@@ -9,38 +9,27 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
-    container:
-      # Needs both Python 3.14 AND Node.js 20+ installed in the image,
-      # because Gitea's act_runner runs JavaScript-based actions (e.g.
-      # actions/checkout@v4) *inside* the job container. The official
-      # python:X-bookworm image has no node, which breaks checkout
-      # with "exec: node: executable file not found".
-      image: nikolaik/python-nodejs:python3.14-nodejs22-bookworm
+    runs-on: macos
     env:
       QT_QPA_PLATFORM: offscreen
-      DEBIAN_FRONTEND: noninteractive
+      PYENCHANT_LIBRARY_PATH: /opt/homebrew/lib/libenchant-2.2.dylib
     steps:
       - name: Check out code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install system packages
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            xvfb libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libdbus-1-3 \
-            libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-image0 \
-            libxcb-render-util0 libxcb-randr0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
-            libfontconfig1 libasound2 libpulse0 enchant-2 libicu-dev pkg-config
+      - name: Install system deps
+        run: brew install python@3.14 icu4c enchant pkg-config || true
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install project and test extras
+      - name: Create venv and install project
         run: |
-          pip install -e '.[darkstyle,mysql,odbc,postgresql,spellcheck,sword-bibles,test]'
+          PY=/opt/homebrew/opt/python@3.14/bin/python3.14
+          export PATH="/opt/homebrew/opt/python@3.14/bin:/opt/homebrew/opt/icu4c/bin:$PATH"
+          export PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          "$PY" -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e '.[darkstyle,mysql,odbc,postgresql,spellcheck,sword-bibles,test]'
 
       - name: Generate resources
         run: |
@@ -49,4 +38,4 @@ jobs:
           fi
 
       - name: Run pytest
-        run: xvfb-run -s '-screen 0 1024x768x24' pytest --color=no --disable-warnings
+        run: .venv/bin/pytest --color=no --disable-warnings

@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-    # Project convention is bare semver tags (3.2.0, 3.2.1, ...). Keep
-    # 'v*' accepted as well in case we ever adopt a v-prefix style.
     tags: ['[0-9]*', 'v*']
 
 jobs:
@@ -13,20 +11,15 @@ jobs:
   release:
     name: Create release and notify packaging
     needs: test
-    runs-on: ubuntu-latest
-    container:
-      image: alpine:3.20
+    runs-on: self-hosted
     steps:
-      - name: Install curl and jq
-        run: apk add --no-cache curl jq
-
       - name: Create Gitea release
+        shell: bash
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          BODY="$(jq -n --arg tag "$TAG" \
-            '{tag_name:$tag, name:$tag, body:("Automated release of " + $tag), draft:false, prerelease:false}')"
+          BODY=$(printf '{"tag_name":"%s","name":"%s","body":"Automated release of %s","draft":false,"prerelease":false}' "$TAG" "$TAG" "$TAG")
           curl -fsSL -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
             -H "Content-Type: application/json" \
@@ -34,11 +27,12 @@ jobs:
             "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases"
 
       - name: Trigger openlp-packaging build
+        shell: bash
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          PAYLOAD="$(jq -n --arg tag "${GITHUB_REF_NAME}" \
-            '{event_type:"upstream-release", client_payload:{source:"openlp-plus", tag:$tag}}')"
+          TAG="${GITHUB_REF_NAME}"
+          PAYLOAD=$(printf '{"event_type":"upstream-release","client_payload":{"source":"openlp-plus","tag":"%s"}}' "$TAG")
           curl -fsSL -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
             -H "Content-Type: application/json" \
