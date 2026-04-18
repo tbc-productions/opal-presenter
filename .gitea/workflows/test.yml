@@ -11,7 +11,12 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     container:
-      image: python:3.14-bookworm
+      # Needs both Python 3.14 AND Node.js 20+ installed in the image,
+      # because Gitea's act_runner runs JavaScript-based actions (e.g.
+      # actions/checkout@v4) *inside* the job container. The official
+      # python:X-bookworm image has no node, which breaks checkout
+      # with "exec: node: executable file not found".
+      image: nikolaik/python-nodejs:python3.14-nodejs22-bookworm
     env:
       QT_QPA_PLATFORM: offscreen
       DEBIAN_FRONTEND: noninteractive
