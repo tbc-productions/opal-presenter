@@ -3,14 +3,14 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OpenLP"
+name = "OpenLPPlus"
 dynamic = ["version"]
-description = "Open source Church presentation and lyrics projection application."
+description = "Open-source church presentation and lyrics projection application."
 readme = "README.rst"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.10"
 authors = [
-    { name = "OpenLP Developers", email = "info@openlp.org" },
+    { name = "OpenLP+ Developers", email = "developer@tbcproductions.net" },
 ]
 keywords = [
     "bible",
