@@ -230,6 +230,11 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         self.verse_text_edit.setPlainText(text)
         self.verse_text_edit.reset_undo_redo_history()
         self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.Start)
+        # Skip past a leading verse label line so the caret lands on editable content.
+        first_line = text.split('\n', 1)[0] if isinstance(text, str) else ''
+        if first_line and VERSE_LINE_REGEX.match(first_line):
+            self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.Down)
+            self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.StartOfLine)
         self.verse_text_edit.verticalScrollBar().setValue(0)
         self.update_section_tag_highlighting()
         self.verse_text_edit.setFocus()

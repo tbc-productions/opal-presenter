@@ -409,7 +409,12 @@ def test_set_verse_multiple(settings: Settings, edit_verse_form: EditVerseForm):
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
         mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
-        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.Start)
+        # Caret advances past the verse label onto the first editable line.
+        assert mocked_verse_text_edit.moveCursor.call_args_list == [
+            call(QtGui.QTextCursor.MoveOperation.Start),
+            call(QtGui.QTextCursor.MoveOperation.Down),
+            call(QtGui.QTextCursor.MoveOperation.StartOfLine),
+        ]
 
 
 def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form: EditVerseForm):
@@ -436,7 +441,12 @@ def test_set_verse_multiple_chords_disabled(settings: Settings, edit_verse_form:
         mocked_verse_text_edit.setPlainText.assert_called_once_with('---[Verse:1]---\n')
         mocked_update_section.assert_called_once_with()
         mocked_verse_text_edit.setFocus.assert_called_once_with()
-        mocked_verse_text_edit.moveCursor.assert_called_once_with(QtGui.QTextCursor.MoveOperation.Start)
+        # Caret advances past the verse label onto the first editable line.
+        assert mocked_verse_text_edit.moveCursor.call_args_list == [
+            call(QtGui.QTextCursor.MoveOperation.Start),
+            call(QtGui.QTextCursor.MoveOperation.Down),
+            call(QtGui.QTextCursor.MoveOperation.StartOfLine),
+        ]
 
 
 def test_add_splitter_to_text(edit_verse_form: EditVerseForm):
