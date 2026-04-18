@@ -11,7 +11,7 @@ jobs:
   release:
     name: Create release and notify packaging
     needs: test
-    runs-on: synology-runner
+    runs-on: ubuntu-latest
     container:
       image: alpine:3.20
     steps:
