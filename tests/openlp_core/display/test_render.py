@@ -106,6 +106,69 @@ def test_render_tags(mocked_get_tags, settings):
     assert result_string == expected_string, 'The strings should be identical.'
 
 
+@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+def test_render_tags_unknown_tag_dims_content(mocked_get_tags, settings):
+    """
+    Unknown formatting tags in a slide should have their content wrapped in a
+    dimmed opacity span so the text renders but flags the unrecognised tag.
+    """
+    # GIVEN: Only known tags registered in the formatting tag list.
+    settings.setValue('songs/chord notation', 'english')
+    mocked_get_tags.return_value = [
+        {
+            'desc': 'Black',
+            'start tag': '{b}',
+            'start html': '<span style="-webkit-text-fill-color:black">',
+            'end tag': '{/b}', 'end html': '</span>', 'protected': True,
+            'temporary': False, 'hidden': False
+        }
+    ]
+    string_to_pass = 'Hello {mystery}friend{/mystery} and {b}world{/b}'
+    expected_string = ('Hello <span style="opacity: 65%">friend</span> and '
+                       '<span style="-webkit-text-fill-color:black">world</span>')
+
+    # WHEN: The text is rendered.
+    result_string = render_tags(string_to_pass)
+
+    # THEN: The unknown tag content should be wrapped in a dim span and the
+    # known tag should be rendered normally.
+    assert result_string == expected_string
+
+
+@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+def test_render_tags_unknown_tag_nested(mocked_get_tags, settings):
+    """
+    Nested unknown tags should each wrap their own content in a dim span.
+    """
+    # GIVEN: No unknown tags registered.
+    settings.setValue('songs/chord notation', 'english')
+    mocked_get_tags.return_value = []
+
+    # WHEN: The text with nested unknown tag pairs is rendered.
+    result_string = render_tags('{outer}A {inner}B{/inner} C{/outer}')
+
+    # THEN: Both pairs should be dimmed independently.
+    assert result_string == ('<span style="opacity: 65%">A '
+                             '<span style="opacity: 65%">B</span> C</span>')
+
+
+@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+def test_render_tags_unknown_tag_without_close_is_left_alone(mocked_get_tags, settings):
+    """
+    An unknown start tag without a matching close tag should be left unchanged
+    (we cannot safely guess the wrapped region).
+    """
+    # GIVEN: No tags registered and an unbalanced unknown tag.
+    settings.setValue('songs/chord notation', 'english')
+    mocked_get_tags.return_value = []
+
+    # WHEN: The text is rendered.
+    result_string = render_tags('Hello {mystery}friend without close')
+
+    # THEN: The text should be returned verbatim.
+    assert result_string == 'Hello {mystery}friend without close'
+
+
 def test_render_chords(settings):
     """
     Test that the rendering of chords works as expected.

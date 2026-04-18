@@ -55,6 +55,9 @@ FIRST_CHORD_TEMPLATE = '<span class="chordline">{chord}</span>'
 NO_CHORD_TEMPLATE = '<span class="nochordline">{chord}</span>'
 CHORD_LINE_TEMPLATE = '<span class="chord"><span><strong>{chord}</strong></span></span>{tail}{whitespace}{remainder}'
 WHITESPACE_TEMPLATE = '<span class="ws">{whitespaces}</span>'
+UNKNOWN_TAG_OPEN_SPAN = '<span style="opacity: 65%">'
+UNKNOWN_TAG_CLOSE_SPAN = '</span>'
+UNKNOWN_TAG_PAIR_PATTERN = re.compile(r'\{(?P<name>[^{}/][^{}]*)\}(?P<content>.*?)\{/(?P=name)\}', re.DOTALL)
 VERSE = 'The Lord said to {r}Noah{/r}: \n' \
     'There\'s gonna be a {su}floody{/su}, {sb}floody{/sb}\n' \
     'The Lord said to {g}Noah{/g}:\n' \
@@ -494,6 +497,28 @@ def render_tags(text, can_render_chords=False, is_printing=False):
     for tag in FormattingTags.get_html_tags():
         text = text.replace(tag['start tag'], tag['start html'])
         text = text.replace(tag['end tag'], tag['end html'])
+    text = _dim_unknown_tags(text)
+    return text
+
+
+def _dim_unknown_tags(text):
+    """
+    Wrap the content of any unrecognised OpenLP-style ``{tag}...{/tag}`` pairs in a
+    low-opacity span so the text still renders but visibly indicates that the
+    formatting tag was not recognised.
+
+    Nested unknown tag pairs are handled by applying the substitution repeatedly
+    until the text stops changing.
+    """
+    previous = None
+    while previous != text:
+        previous = text
+        text = UNKNOWN_TAG_PAIR_PATTERN.sub(
+            lambda match: '{open}{content}{close}'.format(
+                open=UNKNOWN_TAG_OPEN_SPAN,
+                content=match.group('content'),
+                close=UNKNOWN_TAG_CLOSE_SPAN),
+            text)
     return text
 
 
