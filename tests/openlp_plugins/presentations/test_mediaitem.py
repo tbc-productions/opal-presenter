@@ -199,8 +199,10 @@ def test_generate_slide_data_from_pdf(media_item):
     # WHEN: generate_slide_data is called
     media_item.generate_slide_data(mocked_service_item, context=ServiceItemContext.Live, file_path=Path('test.pdf'))
 
-    # THEN: Should be categorized as images and overrides the theme
-    assert mocked_service_item.name == 'images'
+    # THEN: The service item should retain the plugin-provided name (so the service
+    # manager shows the presentation icon after save/reload) and still override the theme.
+    assert isinstance(mocked_service_item.name, MagicMock), \
+        'PDF items must not overwrite service_item.name; it should remain the plugin default.'
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.pdf_transition_settings == {
         'enabled': False,

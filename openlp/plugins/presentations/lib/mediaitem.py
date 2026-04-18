@@ -357,7 +357,8 @@ class PresentationMediaItem(FolderLibraryItem):
                     'type': service_item.pdf_transition_settings.get('effect', TransitionType.Fade),
                     'speed': service_item.pdf_transition_settings.get('speed', TransitionSpeed.Normal)
                 }
-            service_item.name = 'images'
+            # Keep name as 'presentations' so the service icon survives save/reload;
+            # image-style rendering is driven by ServiceItemType.Image, not the name.
             # force a nonexistent theme
             service_item.theme = -1
             for bitem in items:

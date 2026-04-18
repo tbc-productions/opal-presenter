@@ -603,6 +603,13 @@ class ServiceItem(RegistryProperties):
         header = service_item['serviceitem']['header']
         self.title = header['title']
         self.name = header['name']
+        # Legacy PDF items were saved with name='images'; detect via thumbnail path.
+        if self.name == 'images':
+            for slide in service_item['serviceitem'].get('data') or []:
+                image = slide.get('image') if isinstance(slide, dict) else None
+                if isinstance(image, Path) and image.parts and image.parts[0] == 'presentations':
+                    self.name = 'presentations'
+                    break
         self.service_item_type = ServiceItemType.parse(header['type'])
         self.theme = header['theme']
         self.add_icon()
