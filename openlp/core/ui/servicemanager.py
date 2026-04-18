@@ -425,6 +425,10 @@ class Ui_ServiceManager(object):
         self.add_to_action.setIcon(UiIcons().edit)
         # build the context menu
         self.menu = QtWidgets.QMenu()
+        # Force visible separators (macOS default is nearly invisible).
+        _sep_colour = self.menu.palette().color(QtGui.QPalette.ColorRole.Mid).name()
+        self.menu.setStyleSheet(
+            'QMenu::separator {{ height: 1px; background: {c}; margin: 4px 8px; }}'.format(c=_sep_colour))
         self.edit_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Edit Item'),
                                                 icon=UiIcons().edit, triggers=self.remote_edit)
         self.rename_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Rename...'),
@@ -513,27 +517,9 @@ class Ui_ServiceManager(object):
 
 
 def _add_service_manager_context_menu_separator(menu):
-    """
-    QMenu.addSeparator() can be effectively invisible on some platform themes (e.g. macOS with native menus).
-    Insert a non-interactive QWidgetAction with a 1px mid-tone line so the divider is always visible.
-    """
-    action = QtWidgets.QWidgetAction(menu)
+    """Add a separator and return its QAction (supports setVisible for dynamic show/hide)."""
+    action = menu.addSeparator()
     action.setObjectName('openlp_service_manager_context_menu_sep')
-    container = QtWidgets.QWidget(menu)
-    layout = QtWidgets.QVBoxLayout(container)
-    layout.setContentsMargins(6, 4, 6, 4)
-    layout.setSpacing(0)
-    line = QtWidgets.QFrame(container)
-    line.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-    line.setFixedHeight(1)
-    mid = menu.palette().color(QtGui.QPalette.ColorRole.Mid)
-    line.setStyleSheet(
-        'background-color: {c}; border: none; min-height: 1px; max-height: 1px;'.format(c=mid.name()))
-    layout.addWidget(line)
-    container.setLayout(layout)
-    action.setDefaultWidget(container)
-    action.setEnabled(False)
-    menu.addAction(action)
     return action
 
 
