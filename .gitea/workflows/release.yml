@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  test:
+    uses: ./.gitea/workflows/test.yml
+
+  release:
+    name: Create release and notify packaging
+    needs: test
+    runs-on: synology-runner
+    container:
+      image: alpine:3.20
+    steps:
+      - name: Install curl and jq
+        run: apk add --no-cache curl jq
+
+      - name: Create Gitea release
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          BODY="$(jq -n --arg tag "$TAG" \
+            '{tag_name:$tag, name:$tag, body:("Automated release of " + $tag), draft:false, prerelease:false}')"
+          curl -fsSL -X POST \
+            -H "Authorization: token ${CI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases"
+
+      - name: Trigger openlp-packaging build
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: |
+          PAYLOAD="$(jq -n --arg tag "${GITHUB_REF_NAME}" \
+            '{event_type:"upstream-release", client_payload:{source:"openlp-plus", tag:$tag}}')"
+          curl -fsSL -X POST \
+            -H "Authorization: token ${CI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "${GITHUB_SERVER_URL}/api/v1/repos/tbcproductions/openlp-packaging/dispatches"
