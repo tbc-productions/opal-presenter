@@ -11,7 +11,7 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     container:
-      image: python:3.12-bookworm
+      image: python:3.14-bookworm
     env:
       QT_QPA_PLATFORM: offscreen
       DEBIAN_FRONTEND: noninteractive

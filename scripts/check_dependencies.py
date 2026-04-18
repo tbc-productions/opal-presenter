@@ -39,7 +39,7 @@ IS_MAC = sys.platform.startswith('dar')
 
 
 VERS = {
-    'Python': '3.12',
+    'Python': '3.14',
     'PySide6': '6.7',
     'Qt6': '6.7',
     'sqlalchemy': '0.5',
