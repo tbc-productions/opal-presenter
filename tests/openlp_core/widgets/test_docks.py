@@ -97,8 +97,11 @@ def test_media_tool_box_inactive_row_selects_placeholder(qapp):
 
     media_tool_box.setCurrentIndex(2)
     assert media_tool_box._top_tab_bar.currentIndex() == 0
-    split_index = media_tool_box._split_index()
-    assert media_tool_box._bottom_tab_bar.currentIndex() == (2 - split_index) + 1
+    # Assert against the rendered split (``_top_count``) rather than a fresh
+    # ``_split_index()`` recomputation, because tab widths aren't stable until
+    # the widget has been rendered and the two can disagree on a headless CI
+    # host. ``_sync_tab_selection`` itself uses ``_top_count``.
+    assert media_tool_box._bottom_tab_bar.currentIndex() == (2 - media_tool_box._top_count) + 1
 
 
 def test_media_tool_box_tab_bars_do_not_draw_base_line(qapp):
