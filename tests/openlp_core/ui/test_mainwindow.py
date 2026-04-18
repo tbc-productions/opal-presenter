@@ -190,14 +190,6 @@ def main_window(state, settings, qapp):
     qmainwindow_show_minimised_patcher.stop()
     qmainwindow_show_patcher.stop()
     add_toolbar_action_patcher.stop()
-    # Tear the MainWindow down deterministically so its QWidget children are
-    # destroyed while QApplication is still healthy. Leaving it to the next
-    # automatic cycle-GC causes QWidget::~QWidget to race with MagicMock
-    # allocation on Python 3.14 + PySide6 6.11 and segfaults the suite. We
-    # avoid close() because MainWindow.closeEvent touches attributes that
-    # aren't present on the test application; deleteLater() paired with the
-    # global DeferredDelete flush fixture is enough to destroy the widget
-    # tree at a safe point.
     _MAIN_WINDOWS.remove(mainwindow)
     mainwindow.deleteLater()
 
