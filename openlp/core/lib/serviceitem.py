@@ -522,6 +522,73 @@ class ServiceItem(RegistryProperties):
         self._display_slides = []
         self._rendered_slides = []
 
+    def _resolve_extracted_file(self, extract_path, file_hash, title):
+        """
+        Locate the main file for a hash-named entry inside an extracted service archive.
+
+        The archive stores media as ``<hash><ext>`` where ``<ext>`` comes from the original filename. The
+        title shown in the service is not guaranteed to carry the extension (e.g. imported library items
+        often use a unique identifier for the filename while exposing a friendlier display title), so we
+        probe the extract directory for the real file instead of reconstructing the name from the title.
+
+        :param extract_path: Path to the extracted service archive root.
+        :param file_hash: The sha256 hash used as the file stem in the archive.
+        :param title: The slide title, used as a last-resort hint for the extension.
+        :return: A :class:`~pathlib.Path` to the extracted file. Falls back to ``extract_path/<hash>``
+                 (extension inferred from ``title`` if possible) when no match is found on disk; callers
+                 are expected to validate the path afterwards via :meth:`validate_item`.
+        """
+        extract_path = Path(extract_path)
+        try:
+            for candidate in extract_path.glob('{hash}.*'.format(hash=file_hash)):
+                if candidate.is_file():
+                    return candidate
+            hash_only = extract_path / file_hash
+            if hash_only.is_file():
+                return hash_only
+        except OSError:
+            log.exception('Unable to probe extracted service path for %s', file_hash)
+        ext = os.path.splitext(title or '')[1]
+        return extract_path / '{hash}{ext}'.format(hash=file_hash, ext=ext)
+
+    def _extract_bundled_thumbnail(self, extract_path, image_rel_path):
+        """
+        Copy a thumbnail bundled in the extracted service archive into the plugin thumbnail folder.
+
+        The archive stores image thumbnails using a trimmed form of the original on-disk path. For the
+        ``images`` plugin this is ``thumbnails/<hash><ext>``, while images generated from presentations
+        are stored as ``<hash>/slideN.png``. Because the stripping rule is not consistent, we search the
+        extract directory for progressively shorter suffixes of ``image_rel_path`` until we find the
+        actual entry.
+
+        :param extract_path: Path to the extracted service archive root.
+        :param image_rel_path: The relative path recorded in the service manifest (``text_image['image']``).
+        :return: A :class:`~pathlib.Path` to the thumbnail copied into the app data folder, or to the
+                 expected app data location when nothing usable was bundled (useful for later
+                 regeneration). Returns ``None`` if no meaningful hint was provided.
+        """
+        if not image_rel_path:
+            return None
+        rel = Path(str(image_rel_path))
+        extract_path = Path(extract_path)
+        bundled = None
+        for start in range(len(rel.parts)):
+            candidate = extract_path.joinpath(*rel.parts[start:])
+            if candidate.is_file():
+                bundled = candidate
+                break
+        app_thumb_target = AppLocation.get_data_path() / rel
+        if bundled is None:
+            return app_thumb_target
+        try:
+            app_thumb_target.parent.mkdir(parents=True, exist_ok=True)
+            if bundled.resolve() != app_thumb_target.resolve():
+                copy(bundled, app_thumb_target)
+        except OSError:
+            log.exception('Unable to copy bundled thumbnail %s to %s', bundled, app_thumb_target)
+            return bundled
+        return app_thumb_target
+
     def set_from_service(self, service_item, path=None, version=2):
         """
         This method takes a service item from a saved service file (passed from the ServiceManager) and extracts the
@@ -597,13 +664,13 @@ class ServiceItem(RegistryProperties):
                     if version >= 3:
                         text = text_image['title']
                         file_hash = text_image['file_hash']
-                        file_path = path / '{base}{ext}'.format(base=file_hash, ext=os.path.splitext(text)[1])
+                        # The zip stores the main file as "<hash><ext>", where <ext> comes from the original
+                        # file's suffix at save time (see ``get_write_file_list``). The title is the
+                        # user-visible caption and frequently has no extension, so resolve the extension by
+                        # probing the extracted directory for a file whose stem matches the hash.
+                        file_path = self._resolve_extracted_file(path, file_hash, text)
                         if text_image['image']:
-                            thumbnail = AppLocation.get_data_path() / text_image['image']
-                            # copy thumbnail from servicemanager path
-                            if thumbnail.exists():
-                                copy(path / 'thumbnails' / os.path.basename(text_image['image']),
-                                     AppLocation.get_section_data_path(self.name) / 'thumbnails')
+                            thumbnail = self._extract_bundled_thumbnail(path, text_image['image'])
                     else:
                         text = text_image
                         org_file_path = path / text

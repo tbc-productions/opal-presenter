@@ -41,7 +41,7 @@ from openlp.core.common.i18n import UiStrings, format_time, translate
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
 from openlp.core.common.mixins import LogMixin, RegistryProperties
 from openlp.core.common.registry import Registry, RegistryBase
-from openlp.core.lib import build_icon, ItemCapabilities
+from openlp.core.lib import build_icon, create_thumb, ItemCapabilities, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ServiceItem
@@ -1398,11 +1398,228 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 else:
                     service_item.set_from_service(item, self.service_path, self.servicefile_version)
                 service_item.validate_item()
+                if service_item.uses_file() and not service_item.is_valid:
+                    if not self._resolve_missing_service_item_files(service_item):
+                        continue
+                self._regenerate_missing_thumbnails(service_item)
                 if service_item.is_capable(ItemCapabilities.OnLoadUpdate):
                     new_item = Registry().get(service_item.name).service_load(service_item)
                     if new_item:
                         service_item = new_item
                 self.add_service_item(service_item, repaint=False)
+
+    # Filters used when prompting the user to locate a replacement for a missing file.
+    _RELOCATE_FILE_FILTERS = {
+        'images': 'Image Files (*.png *.jpg *.jpeg *.gif *.bmp *.tif *.tiff *.webp);;All Files (*)',
+        'presentations': ('Presentation Files (*.ppt *.pptx *.pps *.ppsx *.odp *.pdf);;'
+                          'All Files (*)'),
+        'media': ('Media Files (*.mp3 *.mp4 *.mov *.avi *.mkv *.wav *.ogg *.m4a *.webm);;'
+                  'All Files (*)'),
+    }
+
+    def _resolve_missing_service_item_files(self, service_item):
+        """
+        When a loaded service item references source files that no longer exist, prompt
+        the user to locate the replacement file(s) or remove the item from the service.
+        Missing thumbnails are never surfaced here — they are regenerated automatically.
+
+        :param service_item: The ``ServiceItem`` with missing source-file references.
+        :return: ``True`` if the item should still be added to the service (user
+                 relocated the file(s) or chose to keep the item anyway), ``False`` if
+                 the user chose to remove the item.
+        """
+        missing_frames = [frame for frame in service_item.get_frames()
+                          if not service_item.get_frame_path(frame=frame).exists()]
+        if not missing_frames:
+            return True
+        # Presentations/media typically have many frames all pointing at a single source
+        # file, so deduplicate the list we show and act on.
+        seen = set()
+        unique_missing = []
+        for frame in missing_frames:
+            path = service_item.get_frame_path(frame=frame)
+            if path in seen:
+                continue
+            seen.add(path)
+            unique_missing.append(path)
+        title = service_item.title or service_item.name or ''
+        if service_item.is_image() and len(unique_missing) > 1:
+            message = translate(
+                'OpenLP.ServiceManager',
+                '"{title}" references image files that could not be found:\n{files}'
+            ).format(title=title, files='\n'.join(str(p) for p in unique_missing))
+        else:
+            # One source file per item (presentation/media) or a single missing image.
+            message = translate(
+                'OpenLP.ServiceManager',
+                'The source file for "{title}" could not be found:\n{file}'
+            ).format(title=title, file=str(unique_missing[0]))
+        box = QtWidgets.QMessageBox(self.main_window)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        box.setWindowTitle(translate('OpenLP.ServiceManager', 'Missing File'))
+        box.setText(message)
+        locate_button = box.addButton(translate('OpenLP.ServiceManager', 'Locate…'),
+                                      QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+        remove_button = box.addButton(translate('OpenLP.ServiceManager', 'Remove Item'),
+                                      QtWidgets.QMessageBox.ButtonRole.DestructiveRole)
+        box.setDefaultButton(locate_button)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is remove_button:
+            return False
+        if service_item.is_image():
+            for frame in missing_frames:
+                new_path = self._prompt_for_replacement_file(
+                    service_item, service_item.get_frame_path(frame=frame))
+                if new_path:
+                    self._update_image_frame_path(frame, new_path)
+        else:
+            new_path = self._prompt_for_replacement_file(service_item, unique_missing[0])
+            if new_path:
+                self._update_command_item_path(service_item, new_path)
+        service_item.validate_item()
+        return True
+
+    def _prompt_for_replacement_file(self, service_item, missing_path):
+        """Show a file-picker dialog scoped to the plugin's supported file types."""
+        file_filter = translate('OpenLP.ServiceManager',
+                                self._RELOCATE_FILE_FILTERS.get(service_item.name, ''))
+        caption = translate('OpenLP.ServiceManager',
+                            'Locate replacement for "{name}"').format(name=missing_path.name)
+        start_dir = missing_path.parent if missing_path.parent.exists() else Path.home()
+        new_path, _ = FileDialog.getOpenFileName(self.main_window, caption, start_dir, file_filter)
+        return new_path if new_path else None
+
+    @staticmethod
+    def _update_image_frame_path(frame, new_path):
+        """Rewrite an image slide to point at the replacement file."""
+        frame['path'] = new_path
+        frame['title'] = new_path.stem
+        try:
+            frame['file_hash'] = sha256_file_hash(new_path)
+        except OSError:
+            frame['file_hash'] = None
+        # Drop the cached thumbnail so it will be regenerated from the new source.
+        frame.pop('thumbnail', None)
+
+    @staticmethod
+    def _update_command_item_path(service_item, new_path):
+        """Rewrite a command-style (presentation/media) item to point at the replacement file."""
+        service_item.has_original_file_path = True
+        try:
+            service_item.sha256_file_hash = sha256_file_hash(new_path)
+        except OSError:
+            service_item.sha256_file_hash = None
+        service_item.stored_filename = new_path.name
+        for frame in service_item.get_frames():
+            frame['path'] = new_path.parent
+            frame['title'] = new_path.name
+            # Clear any stale bundled-thumbnail path; the regen pass will refresh it.
+            frame['image'] = None
+            frame['thumbnail'] = None
+
+    def _regenerate_missing_thumbnails(self, service_item):
+        """
+        Regenerate any missing or stale thumbnails referenced by a loaded service item.
+        Items whose source files are still missing are silently skipped.
+        """
+        if not service_item.is_capable(ItemCapabilities.HasThumbnails):
+            return
+        try:
+            if service_item.is_image():
+                self._regenerate_image_thumbnails(service_item)
+            elif service_item.is_command():
+                if service_item.name == 'media':
+                    self._regenerate_media_thumbnails(service_item)
+                elif service_item.name == 'presentations':
+                    self._regenerate_presentation_thumbnails(service_item)
+        except Exception:
+            self.log_exception('Failed to regenerate thumbnails for service item "{title}"'
+                               .format(title=service_item.title))
+
+    @staticmethod
+    def _regenerate_image_thumbnails(service_item):
+        thumb_dir = AppLocation.get_section_data_path(service_item.name) / 'thumbnails'
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        for frame in service_item.get_frames():
+            source_path = Path(frame['path'])
+            if not source_path.exists():
+                continue
+            file_hash = frame.get('file_hash')
+            if not file_hash:
+                try:
+                    file_hash = sha256_file_hash(source_path)
+                    frame['file_hash'] = file_hash
+                except OSError:
+                    continue
+            thumb_path = thumb_dir / '{hash}{ext}'.format(hash=file_hash,
+                                                          ext=source_path.suffix.lower())
+            existing = frame.get('thumbnail')
+            if existing and Path(existing).exists() and validate_thumb(source_path, Path(existing)):
+                continue
+            create_thumb(source_path, thumb_path, return_icon=False)
+            if thumb_path.exists():
+                frame['thumbnail'] = thumb_path
+
+    def _regenerate_media_thumbnails(self, service_item):
+        from openlp.core.ui.media import media_info
+        thumb_dir = AppLocation.get_section_data_path(service_item.name) / 'thumbnails'
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        for frame in service_item.get_frames():
+            source_path = service_item.get_frame_path(frame=frame)
+            if not source_path.exists():
+                continue
+            existing = frame.get('thumbnail') or frame.get('image')
+            if existing and Path(existing).exists() and validate_thumb(source_path, Path(existing)):
+                continue
+            file_hash = service_item.sha256_file_hash
+            if not file_hash:
+                try:
+                    file_hash = sha256_file_hash(source_path)
+                    service_item.sha256_file_hash = file_hash
+                except OSError:
+                    continue
+            thumb_path = thumb_dir / '{hash}.png'.format(hash=file_hash)
+            if media_info().create_media_thumbnail(str(source_path), str(thumb_path)):
+                frame['thumbnail'] = thumb_path
+                frame['image'] = thumb_path
+
+    def _regenerate_presentation_thumbnails(self, service_item):
+        plugin = Registry().get(service_item.name) if Registry().has(service_item.name) else None
+        media_item = getattr(plugin, 'media_item', None) if plugin else None
+        if media_item is None or not getattr(media_item, 'controllers', None):
+            return
+        # All frames in a presentation service item share one source file, so resolve it once.
+        source_path = None
+        for frame in service_item.get_frames():
+            candidate = service_item.get_frame_path(frame=frame)
+            if candidate.exists():
+                source_path = candidate
+                break
+        if source_path is None:
+            return
+        needs_regen = any(
+            not (frame.get('image') and Path(frame['image']).exists())
+            for frame in service_item.get_frames()
+        )
+        if not needs_regen:
+            return
+        controller_name = media_item.find_controller_by_type(source_path)
+        if not controller_name:
+            return
+        controller = media_item.controllers[controller_name]
+        doc = controller.add_document(source_path)
+        try:
+            thumb_path = doc.get_thumbnail_path(1, True)
+            if thumb_path is None:
+                doc.load_presentation()
+            for index, frame in enumerate(service_item.get_frames(), start=1):
+                regenerated = doc.get_thumbnail_path(index, True)
+                if regenerated and regenerated.exists():
+                    frame['image'] = regenerated
+                    frame['thumbnail'] = regenerated
+        finally:
+            doc.close_presentation()
 
     def _show_loading_status(self, message):
         """

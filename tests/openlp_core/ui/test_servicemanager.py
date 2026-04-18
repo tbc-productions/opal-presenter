@@ -2932,6 +2932,173 @@ def test_process_service_items(mocked_fns_combo: Mock, MockServiceItem: Mock, se
     ]
 
 
+def test_resolve_missing_service_item_files_no_missing(service_manager: ServiceManager):
+    """_resolve_missing_service_item_files returns True when nothing is missing."""
+    service_item = MagicMock()
+    existing_frame = {'path': '/does/matter'}
+    service_item.get_frames.return_value = [existing_frame]
+    existing_path = MagicMock()
+    existing_path.exists.return_value = True
+    service_item.get_frame_path.return_value = existing_path
+
+    assert service_manager._resolve_missing_service_item_files(service_item) is True
+
+
+def test_resolve_missing_service_item_files_remove_choice(service_manager: ServiceManager):
+    """When the user clicks "Remove Item" the helper returns False so the caller can drop it."""
+    service_item = MagicMock()
+    frame = {'path': '/gone'}
+    service_item.get_frames.return_value = [frame]
+    missing_path = MagicMock()
+    missing_path.exists.return_value = False
+    missing_path.__str__ = lambda self: '/gone'
+    service_item.get_frame_path.return_value = missing_path
+    service_item.is_image.return_value = True
+    service_item.title = 'Gone.jpg'
+
+    remove_button = object()
+    with patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls:
+        mocked_box = MagicMock()
+        mocked_box.addButton.side_effect = [object(), remove_button]
+        mocked_box.clickedButton.return_value = remove_button
+        mocked_box_cls.return_value = mocked_box
+
+        result = service_manager._resolve_missing_service_item_files(service_item)
+
+    assert result is False
+
+
+def test_resolve_missing_service_item_files_locate_image(service_manager: ServiceManager, tmp_path: Path):
+    """Relocating a missing image replaces the frame's path and hash and clears its thumbnail."""
+    replacement = tmp_path / 'found.png'
+    replacement.write_bytes(b'x')
+    frame = {'path': Path('/does/not/exist.png'), 'title': 'exist',
+             'file_hash': 'old', 'thumbnail': Path('stale-thumb.png')}
+    service_item = MagicMock()
+    service_item.get_frames.return_value = [frame]
+    missing_path = Path('/does/not/exist.png')
+    service_item.get_frame_path.return_value = missing_path
+    service_item.is_image.return_value = True
+    service_item.title = 'Missing'
+
+    locate_button = object()
+    with patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls, \
+            patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName',
+                  return_value=(replacement, '')):
+        mocked_box = MagicMock()
+        mocked_box.addButton.side_effect = [locate_button, object()]
+        mocked_box.clickedButton.return_value = locate_button
+        mocked_box_cls.return_value = mocked_box
+
+        result = service_manager._resolve_missing_service_item_files(service_item)
+
+    assert result is True
+    assert frame['path'] == replacement
+    assert frame['title'] == 'found'
+    assert frame['file_hash'] and frame['file_hash'] != 'old'
+    assert 'thumbnail' not in frame
+
+
+def test_update_command_item_path_rewrites_frames(tmp_path: Path):
+    """_update_command_item_path points every frame at the replacement file."""
+    replacement = tmp_path / 'slides.pptx'
+    replacement.write_bytes(b'y')
+    service_item = ServiceItem(MagicMock(name='plugin', name_attr='presentations'))
+    service_item.slides = [
+        {'title': 'old.pptx', 'path': Path('/missing'), 'image': Path('stale.png'),
+         'thumbnail': Path('stale.png')},
+        {'title': 'old.pptx', 'path': Path('/missing'), 'image': Path('stale2.png'),
+         'thumbnail': Path('stale2.png')},
+    ]
+    service_item.has_original_file_path = False
+
+    ServiceManager._update_command_item_path(service_item, replacement)
+
+    assert service_item.has_original_file_path is True
+    assert service_item.stored_filename == 'slides.pptx'
+    assert service_item.sha256_file_hash
+    for frame in service_item.slides:
+        assert frame['path'] == replacement.parent
+        assert frame['title'] == 'slides.pptx'
+        assert frame['image'] is None
+        assert frame['thumbnail'] is None
+
+
+def test_regenerate_missing_thumbnails_skips_unsupported(service_manager: ServiceManager):
+    """Items without HasThumbnails are ignored by the regeneration pass."""
+    service_item = MagicMock()
+    service_item.is_capable.return_value = False
+    # Should not raise or inspect any frames.
+    service_manager._regenerate_missing_thumbnails(service_item)
+    service_item.is_image.assert_not_called()
+
+
+def test_regenerate_image_thumbnails_creates_missing(tmp_path: Path):
+    """Missing image thumbnails are regenerated from the source file."""
+    source = tmp_path / 'pic.png'
+    source.write_bytes(b'not-a-real-image-but-create_thumb-is-mocked')
+    frame = {'path': source, 'title': 'pic', 'file_hash': 'abc123'}
+    service_item = MagicMock()
+    service_item.name = 'images'
+    service_item.get_frames.return_value = [frame]
+
+    thumbnail_root = tmp_path / 'section-data'
+    with patch('openlp.core.ui.servicemanager.AppLocation.get_section_data_path',
+               return_value=thumbnail_root), \
+            patch('openlp.core.ui.servicemanager.create_thumb') as mocked_create:
+        def fake_create(src, dest, *args, **kwargs):
+            Path(dest).write_bytes(b'thumb')
+        mocked_create.side_effect = fake_create
+        ServiceManager._regenerate_image_thumbnails(service_item)
+
+    expected_thumb = thumbnail_root / 'thumbnails' / 'abc123.png'
+    assert frame['thumbnail'] == expected_thumb
+    assert expected_thumb.exists()
+
+
+def test_regenerate_image_thumbnails_skips_valid(tmp_path: Path):
+    """A current thumbnail is left alone."""
+    source = tmp_path / 'pic.png'
+    source.write_bytes(b'src')
+    existing_thumb = tmp_path / 'thumb.png'
+    existing_thumb.write_bytes(b'thumb')
+    # Ensure the thumb looks up-to-date.
+    import os as _os
+    _os.utime(existing_thumb, None)
+    frame = {'path': source, 'title': 'pic', 'file_hash': 'abc', 'thumbnail': existing_thumb}
+    service_item = MagicMock()
+    service_item.name = 'images'
+    service_item.get_frames.return_value = [frame]
+
+    with patch('openlp.core.ui.servicemanager.AppLocation.get_section_data_path',
+               return_value=tmp_path), \
+            patch('openlp.core.ui.servicemanager.create_thumb') as mocked_create:
+        ServiceManager._regenerate_image_thumbnails(service_item)
+
+    mocked_create.assert_not_called()
+    assert frame['thumbnail'] == existing_thumb
+
+
+@patch('openlp.core.ui.servicemanager.ServiceItem')
+@patch('openlp.core.ui.servicemanager.find_and_set_in_combo_box')
+def test_process_service_items_removes_missing_file_item(mocked_fns_combo: Mock, MockServiceItem: Mock,
+                                                        service_manager: ServiceManager, registry: Registry):
+    """When the user chooses to remove a missing-file item, it is not added to the service."""
+    mocked_service_item = MagicMock()
+    mocked_service_item.name = 'images'
+    mocked_service_item.uses_file.return_value = True
+    mocked_service_item.is_valid = False
+    mocked_service_item.is_capable.return_value = False  # skip thumbnail regen
+    MockServiceItem.return_value = mocked_service_item
+    service_manager.add_service_item = MagicMock()
+    service_manager._resolve_missing_service_item_files = MagicMock(return_value=False)
+
+    service_manager.process_service_items([{}])
+
+    service_manager._resolve_missing_service_item_files.assert_called_once_with(mocked_service_item)
+    service_manager.add_service_item.assert_not_called()
+
+
 def test_on_theme_combo_box_selected(service_manager: ServiceManager, registry: Registry, settings: Settings):
     """Test the on_theme_combo_box_selected() method"""
     # GIVEN: A ServiceManager
