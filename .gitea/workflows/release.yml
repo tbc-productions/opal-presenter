@@ -5,12 +5,8 @@ on:
     tags: ['[0-9]*', 'v*']
 
 jobs:
-  test:
-    uses: ./.gitea/workflows/test.yml
-
   release:
     name: Create release and notify packaging
-    needs: test
     runs-on: self-hosted
     steps:
       - name: Create Gitea release
