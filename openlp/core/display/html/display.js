@@ -457,6 +457,7 @@ var Display = {
   _previewTransitionTimeoutHandles: [],
   _logoBackgroundOverrideActive: false,
   _savedBackgroundAttributes: null,
+  _lastLogoParams: null,
 
   /**
    * Start up reveal and do any other initialisation
@@ -747,6 +748,7 @@ var Display = {
         Display._reapplyTextThemeAfterLayout(new_slides);
       }
       Display._skipNextTransition = false;
+      Display._syncLogoOverrideAfterSlideReplacement();
       return;
     }
     if (Display._doItemTransitions) {
@@ -775,6 +777,7 @@ var Display = {
       Display._removeLastSection();
       Display._skipNextTransition = false;
     }
+    Display._syncLogoOverrideAfterSlideReplacement();
   },
   /**
    * Removes the last slides item if there are more than one
@@ -1269,6 +1272,7 @@ var Display = {
         } else {
           Display.applyTheme(slide, true);
         }
+        Display._syncLogoOverrideAfterSlideReplacement();
       }
     } else {
       Display._clearSlidesList();
@@ -1288,6 +1292,7 @@ var Display = {
         Display._slidesContainer.prepend(slide_html);
       }
       Display.reinit();
+      Display._syncLogoOverrideAfterSlideReplacement();
     }
   },
   /**
@@ -1954,6 +1959,52 @@ var Display = {
       rootSlide.removeAttribute("data-background-position");
     }
     Display._logoBackgroundOverrideActive = true;
+    Display._lastLogoParams = { bg_color: bg_color, image: image, logo_fit: logo_fit };
+    Reveal.sync();
+  },
+
+  /**
+   * Re-sync the logo background override after the slides (and thus the root
+   * slide element) have been replaced while logo mode is active. Captures the
+   * new root slide's freshly applied theme attributes so they can be restored
+   * when logo mode is exited, and re-applies the logo attributes on top so the
+   * reveal background layer continues to show the logo during transitions.
+   */
+  _syncLogoOverrideAfterSlideReplacement: function() {
+    if (!Display._logoBackgroundOverrideActive) {
+      return;
+    }
+    var rootSlide = Display._getRootSlideSection();
+    if (!rootSlide) {
+      return;
+    }
+    Display._savedBackgroundAttributes = {
+      background: rootSlide.getAttribute("data-background"),
+      image: rootSlide.getAttribute("data-background-image"),
+      color: rootSlide.getAttribute("data-background-color"),
+      size: rootSlide.getAttribute("data-background-size"),
+      repeat: rootSlide.getAttribute("data-background-repeat"),
+      position: rootSlide.getAttribute("data-background-position")
+    };
+    if (!Display._lastLogoParams) {
+      return;
+    }
+    var params = Display._lastLogoParams;
+    var fit = _resolveBackgroundFit(params.logo_fit || "cover");
+    rootSlide.setAttribute("data-background-color", params.bg_color || "#000");
+    if (params.image) {
+      rootSlide.setAttribute("data-background-image", params.image);
+      rootSlide.removeAttribute("data-background");
+      rootSlide.setAttribute("data-background-size", fit.size);
+      rootSlide.setAttribute("data-background-repeat", fit.repeat);
+      rootSlide.setAttribute("data-background-position", fit.position);
+    } else {
+      rootSlide.setAttribute("data-background", params.bg_color || "#000");
+      rootSlide.removeAttribute("data-background-image");
+      rootSlide.removeAttribute("data-background-size");
+      rootSlide.removeAttribute("data-background-repeat");
+      rootSlide.removeAttribute("data-background-position");
+    }
     Reveal.sync();
   },
 
@@ -1965,6 +2016,7 @@ var Display = {
     if (!rootSlide) {
       Display._logoBackgroundOverrideActive = false;
       Display._savedBackgroundAttributes = null;
+      Display._lastLogoParams = null;
       return;
     }
     var saved = Display._savedBackgroundAttributes || {};
@@ -2006,6 +2058,7 @@ var Display = {
     }
     Display._logoBackgroundOverrideActive = false;
     Display._savedBackgroundAttributes = null;
+    Display._lastLogoParams = null;
     Reveal.sync();
   },
 
@@ -2149,6 +2202,7 @@ var Display = {
     }
     Display.applyTheme(targetElement, targetElement.classList.contains("text-slides"));
     Reveal.sync();
+    Display._syncLogoOverrideAfterSlideReplacement();
   },
   /**
    * Apply the theme to the provided element
