@@ -9,7 +9,7 @@ on:
 
 jobs:
   pytest:
-    runs-on: synology-runner
+    runs-on: ubuntu-latest
     container:
       image: python:3.12-bookworm
     env:
