@@ -13,7 +13,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
         <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
 {error}</source>
-        <translation>Med uvozom Svetega psima SWORD je prišlo do nepričakovane napake. Pošljite poročilo OpenLP razvijalcem.
+        <translation>Med uvozom Svetega psima SWORD je prišlo do nepričakovane napake. Pošljite poročilo OpenLP+ razvijalcem.
 {error}</translation>
     </message>
 </context>
@@ -650,7 +650,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Ali ste prepričani, da želite povsem odstraniti Sveto pismo &quot;{bible}&quot; iz OpenLP?
+        <translation>Ali ste prepričani, da želite povsem odstraniti Sveto pismo &quot;{bible}&quot; iz OpenLP+?
 
 Za ponovno uporabo, ga boste morali ponovno uvoziti.</translation>
     </message>
@@ -667,7 +667,7 @@ Za ponovno uporabo, ga boste morali ponovno uvoziti.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
         <source>OpenLP cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
-        <translation>OpenLP ne more združevati zadetkov iskanja po vrsticah enega ali dveh Svetih pisem. Ali želite počistiti shranjene zadetke?</translation>
+        <translation>OpenLP+ ne more združevati zadetkov iskanja po vrsticah enega ali dveh Svetih pisem. Ali želite počistiti shranjene zadetke?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="626"/>
@@ -723,7 +723,7 @@ Prikazane bodo le vrstice, ki so v obesh Svetih pismih.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>V Svetem pismu {name} je bil najden posredniški strežnik {proxy} .&lt;br&gt;Ali ga želite nastaviti kot OpenLP-jev posredniški strežnik?</translation>
+        <translation>V Svetem pismu {name} je bil najden posredniški strežnik {proxy} .&lt;br&gt;Ali ga želite nastaviti kot OpenLP+-jev posredniški strežnik?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -1041,7 +1041,7 @@ vsaj {count} znakov in presledek zaradi učinkovitosti).</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP ne more določiti jezika tega prevoda Svetega pisma. Izberite jezik s spodnjega seznama.</translation>
+        <translation>OpenLP+ ne more določiti jezika tega prevoda Svetega pisma. Izberite jezik s spodnjega seznama.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1437,7 +1437,7 @@ Imen knjig ni mogoče prilagajati.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Če želite prilagajati imena knjig, mora biti &quot;Jezik Svetega pisma&quot; izbran v zavihku Metapodatki oz. na strani Sveto pismo v &quot;Nastavi OpenLP&quot;, če so izbrane &quot;Splošne nastavitve&quot;.</translation>
+        <translation>Če želite prilagajati imena knjig, mora biti &quot;Jezik Svetega pisma&quot; izbran v zavihku Metapodatki oz. na strani Sveto pismo v &quot;Nastavi OpenLP+&quot;, če so izbrane &quot;Splošne nastavitve&quot;.</translation>
     </message>
 </context>
 <context>
@@ -1601,7 +1601,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
         <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
-        <translation>Overjanje spodletelo. Preverite svoje poverilnice v nastavitvah OpenLPja.</translation>
+        <translation>Overjanje spodletelo. Preverite svoje poverilnice v nastavitvah OpenLP+ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="289"/>
@@ -1860,7 +1860,7 @@ Ali želite vseeno dodati druge slike?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Slikovni vtičnik&lt;/strong&gt;Slikovni vtičnik omogoča prikazovanje slik.&lt;br /&gt;Ena izmed odlik tega vtičnika je zmožnost združevanja večih slik v urejevalniku sporeda, kar omogoča lažje prikazovanje več slik. Ta vtičnik lahko z OpenLP-jevim &quot;časovnim zankanjem&quot; doseže samodejno predstavitev s prosojnicami. Dodatno se lahko slike z vtičnika uporabijo tudi namesto ozadja trenutne teme, ki izrisuje besedilne predmete kot npr. pesmi z izbrano sliko v ozadju namesto ozadja iz teme.</translation>
+        <translation>&lt;strong&gt;Slikovni vtičnik&lt;/strong&gt;Slikovni vtičnik omogoča prikazovanje slik.&lt;br /&gt;Ena izmed odlik tega vtičnika je zmožnost združevanja večih slik v urejevalniku sporeda, kar omogoča lažje prikazovanje več slik. Ta vtičnik lahko z OpenLP+-jevim &quot;časovnim zankanjem&quot; doseže samodejno predstavitev s prosojnicami. Dodatno se lahko slike z vtičnika uporabijo tudi namesto ozadja trenutne teme, ki izrisuje besedilne predmete kot npr. pesmi z izbrano sliko v ozadju namesto ozadja iz teme.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -2695,7 +2695,7 @@ Končnica ni podprta</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
         <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
-        <translation>Izgubili ste zaklep na deljeni OpenLPjevil podatkovni mapi, ki jo zase zahteva &quot;{user}&quot; na &quot;{host}&quot;! V izogib okvare podatkov predlagamo takojšnje zaprtje OpenLPja! Dostop do zaklenjene podatkovne mape lahko zahtevate s ponovnim zagonom OpenLPja</translation>
+        <translation>Izgubili ste zaklep na deljeni OpenLP+jevil podatkovni mapi, ki jo zase zahteva &quot;{user}&quot; na &quot;{host}&quot;! V izogib okvare podatkov predlagamo takojšnje zaprtje OpenLP+ja! Dostop do zaklenjene podatkovne mape lahko zahtevate s ponovnim zagonom OpenLP+ja</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="148"/>
@@ -2705,7 +2705,7 @@ Končnica ni podprta</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
         <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
-        <translation>Deljeno OpenLPjevo podatkovno mapo uporablja &quot;{user}&quot; na &quot;{host}&quot;. V izogib okvari podatkov lahko do njih dostopa istočasno le en uporabnik! Počakajte nekaj trenutkov in poskusite ponovno.</translation>
+        <translation>Deljeno OpenLP+jevo podatkovno mapo uporablja &quot;{user}&quot; na &quot;{host}&quot;. V izogib okvari podatkov lahko do njih dostopa istočasno le en uporabnik! Počakajte nekaj trenutkov in poskusite ponovno.</translation>
     </message>
 </context>
 <context>
@@ -3009,7 +3009,7 @@ Končnica ni podprta</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Ni veljavna pesemska zbirka OpenLPja 2.</translation>
+        <translation>Ni veljavna pesemska zbirka OpenLP+ja 2.</translation>
     </message>
 </context>
 <context>
@@ -3191,7 +3191,7 @@ Končnica ni podprta</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Nastavitev zaslona je spremenjena. OpenLP bo skušal samodejno izbrati prikazni zaslon, vendar vseeno predlagamo, da posodobite nastavitve zaslona.</translation>
+        <translation>Nastavitev zaslona je spremenjena. OpenLP+ bo skušal samodejno izbrati prikazni zaslon, vendar vseeno predlagamo, da posodobite nastavitve zaslona.</translation>
     </message>
 </context>
 <context>
@@ -3572,18 +3572,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
         <source>OpenLP Song Database</source>
-        <translation>OpenLPjeva pesemska zbirka</translation>
+        <translation>OpenLP+jeva pesemska zbirka</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>OpenLP se že izvaja na tej napravi.
+        <translation>OpenLP+ se že izvaja na tej napravi.
 Zapiranje tega programa</translation>
     </message>
     <message>
@@ -6033,7 +6033,7 @@ Zapiranje tega programa</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Prezri trenutne spremembe in se vrniti v OpenLP</translation>
+        <translation>Prezri trenutne spremembe in se vrniti v OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6048,7 +6048,7 @@ Zapiranje tega programa</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Shrani spremembe in se vrni v OpenLP</translation>
+        <translation>Shrani spremembe in se vrni v OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6443,7 +6443,7 @@ The location of the data folder was previously changed from the OpenLP's default
 You may reset the data location back to the default location, or you can try to make the current location available.
 
 Do you want to reset to the default data location? If not, OpenLP will be closed so you can try to fix the problem.</source>
-        <translation>OpenLP-jeve podatkovne map ni mogočen najti na:
+        <translation>OpenLP+-jeve podatkovne map ni mogočen najti na:
 
 {path}
 
@@ -6451,7 +6451,7 @@ Mesto podatkovne mape je bilo predhodno spremenjeno glede na privzeto mesto. Če
 
 Mesto podatkovne mape lahko ponastavite na privzeto pot, lahko pa poskusite omogočiti trenutno mest.
 
-Ali želite ponastaviti na privzeto mesto podatkov? Če ne, se bo OpenLP zaprl, da boste skušali odpraviti težavo.</translation>
+Ali želite ponastaviti na privzeto mesto podatkov? Če ne, se bo OpenLP+ zaprl, da boste skušali odpraviti težavo.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="236"/>
@@ -6464,7 +6464,7 @@ Ali želite ponastaviti na privzeto mesto podatkov? Če ne, se bo OpenLP zaprl, 
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>OpenLP je bil nadgrajen. Ali želite narediti
+        <translation>OpenLP+ je bil nadgrajen. Ali želite narediti
 varnostno kopijo stare mape s podatki?</translation>
     </message>
     <message>
@@ -6493,7 +6493,7 @@ varnostno kopijo stare mape s podatki?</translation>
 {data_folder_backup_path}
 
 Do you want to continue?</source>
-        <translation>OpenLP je našel nastavitveno datoteko, narejeno z novejšo različico OpenLP-ja. OpenLP se bo zagnal z novo namestitvijo, saj vrnitev na starejšo različico ni podprta. Vsi obstoječi podatki bodo varnostno kopirani v: 
+        <translation>OpenLP+ je našel nastavitveno datoteko, narejeno z novejšo različico OpenLP+-ja. OpenLP+ se bo zagnal z novo namestitvijo, saj vrnitev na starejšo različico ni podprta. Vsi obstoječi podatki bodo varnostno kopirani v: 
 
 {data_folder_backup_path}
 
@@ -6517,12 +6517,12 @@ Ali želite nadaljevati?</translation>
 OpenLP will attempt to continue.</source>
         <translation>Varnostno kopiranje nastavitev spodletelo.
 
-OpenLP bo poskusil nadaljevati.</translation>
+OpenLP+ bo poskusil nadaljevati.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
         <source>OpenLP Backup</source>
-        <translation>Varnostna kopija OpenLP-ja</translation>
+        <translation>Varnostna kopija OpenLP+-ja</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6553,7 +6553,7 @@ OpenLP bo poskusil nadaljevati.</translation>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Postavi OpenLP</translation>
+        <translation>Postavi OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7189,7 +7189,7 @@ OpenLP bo poskusil nadaljevati.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>O uporabi OpenLP-ja si lahko preberete v priročniku.</translation>
+        <translation>O uporabi OpenLP+-ja si lahko preberete v priročniku.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7486,7 +7486,7 @@ OpenLP bo poskusil nadaljevati.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Izberite prevod, ki ga želite uporabljati v OpenLP.</translation>
+        <translation>Izberite prevod, ki ga želite uporabljati v OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7709,7 +7709,7 @@ OpenLP bo poskusil nadaljevati.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>Datoteke OpenLP sporeda (*.osz)</translation>
+        <translation>Datoteke OpenLP+ sporeda (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7752,17 +7752,17 @@ These files will be removed if you continue to save.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
         <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>Oskubene datoteke OpenLP sporeda (*.oszl)</translation>
+        <translation>Oskubene datoteke OpenLP+ sporeda (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>Datoteke OpenLP sporeda (*.osz)</translation>
+        <translation>Datoteke OpenLP+ sporeda (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
         <source>The service file {file_path} could not be loaded because it is either corrupt, inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.</source>
-        <translation>Datoteke sporeda  {file_path} ni bilo mogoče naložiti, ker je bodisi okvarjena, bodisi nedosegljiva ali pa ni veljavna OpenLP 2 oz. OpenLP 3 datoteka sporeda.</translation>
+        <translation>Datoteke sporeda  {file_path} ni bilo mogoče naložiti, ker je bodisi okvarjena, bodisi nedosegljiva ali pa ni veljavna OpenLP+ 2 oz. OpenLP+ 3 datoteka sporeda.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="979"/>
@@ -7998,7 +7998,7 @@ Dodajte nanj nekaj predmetov in nato pritisnite Shrani</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>OpenLP-jeve teme (*.otz)</translation>
+        <translation>OpenLP+-jeve teme (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8357,12 +8357,12 @@ v upravljalniku prosojnic</translation>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Preveri nadgradnje OpenLPja</translation>
+        <translation>Preveri nadgradnje OpenLP+ja</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
         <source>Check for updates to OpenLP Remote UI</source>
-        <translation>Preveri posodobitve uporabniškega vmesnika OpenLP Remote daljinca</translation>
+        <translation>Preveri posodobitve uporabniškega vmesnika OpenLP+ Remote daljinca</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="211"/>
@@ -8398,12 +8398,12 @@ v upravljalniku prosojnic</translation>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
         <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
-        <translation>&lt;strong&gt;Opala, OpenLP je naletel na težavo, ki je ni mogel odpraviti!&lt;br&gt;&lt;br&gt;Lahko pomagate &lt;/strong&gt;razvijalcem OpenLPja &lt;strong&gt;to odpraviti&lt;/strong&gt; tako,&lt;br&gt; da jim pošljete &lt;strong&gt;poročilo ohrošču na {email}&lt;/strong&gt;{newlines}</translation>
+        <translation>&lt;strong&gt;Opala, OpenLP+ je naletel na težavo, ki je ni mogel odpraviti!&lt;br&gt;&lt;br&gt;Lahko pomagate &lt;/strong&gt;razvijalcem OpenLP+ja &lt;strong&gt;to odpraviti&lt;/strong&gt; tako,&lt;br&gt; da jim pošljete &lt;strong&gt;poročilo ohrošču na {email}&lt;/strong&gt;{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
         <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
-        <translation>{first_part}&lt;strong&gt;Ni epoštnega programa? &lt;/strong&gt; To informacijo lahko &lt;strong&gt;shranite&lt;/strong&gt; v &lt;strong&gt;datoteko&lt;/strong&gt; in jo&lt;br&gt; pošljete s svoje &lt;strong&gt;epoštev preko brskalnika&lt;/strong&gt; kot &lt;strong&gt;priponko.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Hvala,&lt;/strong&gt;ker sodelujete pri izboljševanju OpenLPja!&lt;br&gt;</translation>
+        <translation>{first_part}&lt;strong&gt;Ni epoštnega programa? &lt;/strong&gt; To informacijo lahko &lt;strong&gt;shranite&lt;/strong&gt; v &lt;strong&gt;datoteko&lt;/strong&gt; in jo&lt;br&gt; pošljete s svoje &lt;strong&gt;epoštev preko brskalnika&lt;/strong&gt; kot &lt;strong&gt;priponko.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Hvala,&lt;/strong&gt;ker sodelujete pri izboljševanju OpenLP+ja!&lt;br&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="112"/>
@@ -8579,7 +8579,7 @@ v upravljalniku prosojnic</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>Zapri OpenLP - Ugasni program.</translation>
+        <translation>Zapri OpenLP+ - Ugasni program.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8600,7 +8600,7 @@ v upravljalniku prosojnic</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Postavi OpenLP ...</translation>
+        <translation>&amp;Postavi OpenLP+ ...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8736,7 +8736,7 @@ v upravljalniku prosojnic</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>Več podatkov o OpenLP-ju.</translation>
+        <translation>Več podatkov o OpenLP+-ju.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8843,12 +8843,12 @@ v upravljalniku prosojnic</translation>
         <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
 
 You can download the latest version from https://openlp.org/.</source>
-        <translation>Na voljo je nova OpenLP-jeva različica {new} (trenutno uporabljate različico {current}). </translation>
+        <translation>Na voljo je nova OpenLP+-jeva različica {new} (trenutno uporabljate različico {current}). </translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>OpenLP posodobljen</translation>
+        <translation>OpenLP+ posodobljen</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8874,12 +8874,12 @@ Različico lahko prenesete tako, da greste na nastavitve daljinca in kliknete na
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Ali ste prepričani, da želite ponovno zagnati Začetnega čarovnika?
 
-Pozagon čarovnika lahko spremeni trenutno postavitev vašega OpenLP-ja, morda doda vašemu obstoječemu seznamu pesmi nove pesmi in spremeni vašo privzeto temo.</translation>
+Pozagon čarovnika lahko spremeni trenutno postavitev vašega OpenLP+-ja, morda doda vašemu obstoječemu seznamu pesmi nove pesmi in spremeni vašo privzeto temo.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>Glavni prikaz OpenLP-ja izpraznjen</translation>
+        <translation>Glavni prikaz OpenLP+-ja izpraznjen</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8900,9 +8900,9 @@ Pozagon čarovnika lahko spremeni trenutno postavitev vašega OpenLP-ja, morda d
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>ALi ste prepričani, da želite uvoziti nastavitve?
 
-Uvoz nastavitev naredi trajne spremembe v vaši trenutni postavitivi OpenLP-ja.
+Uvoz nastavitev naredi trajne spremembe v vaši trenutni postavitivi OpenLP+-ja.
 
-Uvažanje napačnih nastavitev lahko privede do nepredvidljivega odzivanja ali izrednega končanja OpenLP-ja.</translation>
+Uvažanje napačnih nastavitev lahko privede do nepredvidljivega odzivanja ali izrednega končanja OpenLP+-ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8916,14 +8916,14 @@ Uvažanje napačnih nastavitev lahko privede do nepredvidljivega odzivanja ali i
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>OpenLP-jeve nastavitve (*.conf)</translation>
+        <translation>OpenLP+-jeve nastavitve (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
         <source>OpenLP cannot import settings from a newer version of OpenLP.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>OpenLP ne more uvozii nastavitev iz novejše različice OpenLP.
+        <translation>OpenLP+ ne more uvozii nastavitev iz novejše različice OpenLP+.
 
 Postopek je bil prekinjen in ni prišlodo nobenih sprememb.</translation>
     </message>
@@ -8932,14 +8932,14 @@ Postopek je bil prekinjen in ni prišlodo nobenih sprememb.</translation>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Kaše, da izbrana datoteka ni veljavna OpenLP-jeva nastavitvena datoteka.
+        <translation>Kaše, da izbrana datoteka ni veljavna OpenLP+-jeva nastavitvena datoteka.
 
 Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP se bo zaprl. Uvožene nastavitve bodo uporabljene ob naslednjem zagonu programa.</translation>
+        <translation>OpenLP+ se bo zaprl. Uvožene nastavitve bodo uporabljene ob naslednjem zagonu programa.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8959,17 +8959,17 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Zapusti OpenLP</translation>
+        <translation>Zapusti OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Ali ste prepričani, da želite zapustiti OpenLP?</translation>
+        <translation>Ali ste prepričani, da želite zapustiti OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>&amp;Izhod iz OpenLP-ja</translation>
+        <translation>&amp;Izhod iz OpenLP+-ja</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -9000,14 +9000,14 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Kopiranje OpenLP-jevih podatkovo mapo - {path} - Počakajte, da se kopiranje zaključi</translation>
+        <translation>Kopiranje OpenLP+-jevih podatkovo mapo - {path} - Počakajte, da se kopiranje zaključi</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Kopiranje podatkovne mape OpenLP-ja spodletelo
+        <translation>Kopiranje podatkovne mape OpenLP+-ja spodletelo
 
 {err}</translation>
     </message>
@@ -9117,17 +9117,17 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="120"/>
         <source>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Find out more about OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Ustvarjalčeve pravice {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Izvedite več o OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;To je brezplačno programje: skladno s spločnim javnim dovoljenje GNU, objavljenim kot Free Software Foundation v bodisi različici 3 bodisi kateri drugi raličici po vaši izberi, lahko razširjate in/ali spreminjate&lt;/p&gt;&lt;p&gt;Ta program je na voljo v upanju, da bo ljudem v korist, vendar BREZ KAKRŠNEGA KOLI JAMSTVA; tudi brez IMPLICIRANEGA JAMSTVA ZA POVPREČNO TRŽNO KAKOVOST BLAGA IN USTREZNOST ZA PREDVIDENO RABO. Poglejte si priloženo spločno javnio dovoljenje GNU za več podrobnosti.&lt;/p&gt;&lt;p&gt;Izvod Splošnega javnega dovoljenja GNU ste prejeli skupaj s programom. Če ne, si poglejte&lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
+        <translation>&lt;p&gt;OpenLP+ {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Ustvarjalčeve pravice {crs} 2004-{yr} OpenLP+ Developers&lt;/p&gt;&lt;p&gt;Izvedite več o OpenLP+: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;To je brezplačno programje: skladno s spločnim javnim dovoljenje GNU, objavljenim kot Free Software Foundation v bodisi različici 3 bodisi kateri drugi raličici po vaši izberi, lahko razširjate in/ali spreminjate&lt;/p&gt;&lt;p&gt;Ta program je na voljo v upanju, da bo ljudem v korist, vendar BREZ KAKRŠNEGA KOLI JAMSTVA; tudi brez IMPLICIRANEGA JAMSTVA ZA POVPREČNO TRŽNO KAKOVOST BLAGA IN USTREZNOST ZA PREDVIDENO RABO. Poglejte si priloženo spločno javnio dovoljenje GNU za več podrobnosti.&lt;/p&gt;&lt;p&gt;Izvod Splošnega javnega dovoljenja GNU ste prejeli skupaj s programom. Če ne, si poglejte&lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="134"/>
         <source>OpenLP is written and maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the &quot;contribute&quot; button below.</source>
-        <translation>OpenLP v svojem prostem času pišejo in vzdržujejo prostovoljci z vsega sveta. Če želite, da bi ta projekt bil še boljši, lahko prispevate s pritiskom na spodnji gumb &quot;Prispevaj&quot;.</translation>
+        <translation>OpenLP+ v svojem prostem času pišejo in vzdržujejo prostovoljci z vsega sveta. Če želite, da bi ta projekt bil še boljši, lahko prispevate s pritiskom na spodnji gumb &quot;Prispevaj&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
         <source>OpenLP would not be possible without the following software libraries:</source>
-        <translation>OpenLP ne bi mogel delovati brez naslednjih programskih knjižnic:</translation>
+        <translation>OpenLP+ ne bi mogel delovati brez naslednjih programskih knjižnic:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="165"/>
@@ -9199,7 +9199,7 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="233"/>
         <source>OpenLP was unable to read the resource index file. Please try again later.</source>
-        <translation>OpenLP ni mogel prebrati izvorne kazalne datoteke. Ponovno poskusite čez čas.</translation>
+        <translation>OpenLP+ ni mogel prebrati izvorne kazalne datoteke. Ponovno poskusite čez čas.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="443"/>
@@ -9220,7 +9220,7 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Pošakajte, da se OpenLP nastavi in da se podatki prenesejo.</translation>
+        <translation>Pošakajte, da se OpenLP+ nastavi in da se podatki prenesejo.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9230,22 +9230,22 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Prenos končan. Za povratek v OpenLP klinknite gumb &quot;{finish_button}&quot;.</translation>
+        <translation>Prenos končan. Za povratek v OpenLP+ klinknite gumb &quot;{finish_button}&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Prenos končan. Za zagon OpenLPja klinknite gumb &quot;{finish_button}&quot;.</translation>
+        <translation>Prenos končan. Za zagon OpenLP+ja klinknite gumb &quot;{finish_button}&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
         <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Za povratek v OpenLP klinknite gumb &quot;{finish_button}&quot;.</translation>
+        <translation>Za povratek v OpenLP+ klinknite gumb &quot;{finish_button}&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
         <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Za zagon OpenLPja klinknite gumb &quot;{finish_button}&quot;.</translation>
+        <translation>Za zagon OpenLP+ja klinknite gumb &quot;{finish_button}&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
@@ -9286,7 +9286,7 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
         <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
-        <translation>OpenLP ima spletni daljinec, ki omogoča upravljanje OpenLPja z drugega računalnika, telefona ali tablice, če je na istem omrežju kot OpenLP. OpenLP lahko sedaj prenese spletni daljinec, lahko pa ga preko nastavitev daljinca prenesete tudi pozneje.</translation>
+        <translation>OpenLP+ ima spletni daljinec, ki omogoča upravljanje OpenLP+ja z drugega računalnika, telefona ali tablice, če je na istem omrežju kot OpenLP+. OpenLP+ lahko sedaj prenese spletni daljinec, lahko pa ga preko nastavitev daljinca prenesete tudi pozneje.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="78"/>
@@ -9336,7 +9336,7 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Počakate, OpenLP še prenaša izvorno kazalo ... </translation>
+        <translation>Počakate, OpenLP+ še prenaša izvorno kazalo ... </translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9356,7 +9356,7 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Choose the main display screen for OpenLP.</source>
-        <translation>Izberite glavni prikazni zaslon OpenLP-ja.</translation>
+        <translation>Izberite glavni prikazni zaslon OpenLP+-ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
@@ -9406,14 +9406,14 @@ Postopek je bil prekinjen in ni prišlo do nobenih sprememb.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
         <source>Can OpenLP download some resource data?</source>
-        <translation>Ali lahko OpenLP prenese nekaj podatkova o viru?</translation>
+        <translation>Ali lahko OpenLP+ prenese nekaj podatkova o viru?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="350"/>
         <source>OpenLP has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
-        <translation>OpenLP je zbral nekaj virov, ki jih sme razširjati.
+        <translation>OpenLP+ je zbral nekaj virov, ki jih sme razširjati.
 
 Če bi želeli prenesti nekatere izme teh virov, kliknite gumb &quot;{next_button}&quot;, v nasprotnem primeru pa gumb &quot;{finish_button}&quot;.</translation>
     </message>
@@ -9436,13 +9436,13 @@ Please check your internet connection. If your church uses a proxy server click 
 Click the '{back_button}' button to try again.
 
 If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
-        <translation>OpenLP se ni mogel povezati v medmrežje, da bi pridobil podatke o razpoložljivih vzorčnih podatkih.
+        <translation>OpenLP+ se ni mogel povezati v medmrežje, da bi pridobil podatke o razpoložljivih vzorčnih podatkih.
 
 Preverite spletno povezavo. Če v vaši cerkvi uporabljate posredniški strežnik, kliknite spodaj gumb &quot;Nastavitve medmrežja&quot;, da pridete do podrobnosti o strežniku.
 
 Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
 
-Če kliknete gumb &quot;{finish_button}&quot;, lahko podatke še vedno prenesete pozneje tako, da v meniju &quot;Orodja&quot; znotraj OpenLP-ja izberete &quot;Pozagon Začetnega čarovnika&quot;.</translation>
+Če kliknete gumb &quot;{finish_button}&quot;, lahko podatke še vedno prenesete pozneje tako, da v meniju &quot;Orodja&quot; znotraj OpenLP+-ja izberete &quot;Pozagon Začetnega čarovnika&quot;.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="366"/>
@@ -9497,7 +9497,7 @@ Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Počakajte, da se viri prenesejo in OpenLP postavi.</translation>
+        <translation>Počakajte, da se viri prenesejo in OpenLP+ postavi.</translation>
     </message>
 </context>
 <context>
@@ -9625,7 +9625,7 @@ Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Prekliči spremembo mesta podatkovne mape OpenLP-ja.</translation>
+        <translation>Prekliči spremembo mesta podatkovne mape OpenLP+-ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9635,7 +9635,7 @@ Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Kopiraj OpenLP-je podatkovne datoteke na novo mesto.</translation>
+        <translation>Kopiraj OpenLP+-je podatkovne datoteke na novo mesto.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9645,12 +9645,12 @@ Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="157"/>
         <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when OpenLP is running.</source>
-        <translation>Zaščitite podatkovno mapo z zaklepom in tako preprečite okvaro podatkov v primeru istočasnega dostopanja večih uporabnikov do podatkov. Uporabno za primerke, deljene preko mreže. &lt;strong&gt;OPOMBA:&lt;/strong&gt; To deluje le, če je med delovanjem OpenLPja mrežno deljenje na voljo.</translation>
+        <translation>Zaščitite podatkovno mapo z zaklepom in tako preprečite okvaro podatkov v primeru istočasnega dostopanja večih uporabnikov do podatkov. Uporabno za primerke, deljene preko mreže. &lt;strong&gt;OPOMBA:&lt;/strong&gt; To deluje le, če je med delovanjem OpenLP+ja mrežno deljenje na voljo.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;OPOZORILO:&lt;/strong&gt; Novo mesto podatkovne mape vsebuje OpenLP-jeve podatkovne datoteke. Pri kopiranju BODO te datoteke nadomeščene z novimi.</translation>
+        <translation>&lt;strong&gt;OPOZORILO:&lt;/strong&gt; Novo mesto podatkovne mape vsebuje OpenLP+-jeve podatkovne datoteke. Pri kopiranju BODO te datoteke nadomeščene z novimi.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9714,11 +9714,11 @@ Za ponovni poskus kliknite gumb &quot;{back_button}&quot;.
 {path}
 
 Existing files in this directory could be overwritten. The data directory will be changed when OpenLP is closed.</source>
-        <translation>Ali ste prepričani, da želite spremeniti mesto OpenLP-jeve podatkovne datoteke na:
+        <translation>Ali ste prepričani, da želite spremeniti mesto OpenLP+-jeve podatkovne datoteke na:
 
 {path}
 
-Obstoječe datoteke v tej mapi bodo lako povožene. Podatkovna mapa bo spremenjena ob zaustavitvi OpenLP-ja.</translation>
+Obstoječe datoteke v tej mapi bodo lako povožene. Podatkovna mapa bo spremenjena ob zaustavitvi OpenLP+-ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="246"/>
@@ -9727,11 +9727,11 @@ Obstoječe datoteke v tej mapi bodo lako povožene. Podatkovna mapa bo spremenje
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Ali ste prepričani, da želite spremeniti mesto OpenLP-jeve podatkovne datoteke na:
+        <translation>Ali ste prepričani, da želite spremeniti mesto OpenLP+-jeve podatkovne datoteke na:
 
 {path}
 
-Podatkovna mapa bo spremenjena ob zaustavitvi OpenLP-ja.</translation>
+Podatkovna mapa bo spremenjena ob zaustavitvi OpenLP+-ja.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9758,7 +9758,7 @@ Kaže, da mesto, ki ste ga izbrali,
 
 {path}
 
-že vsebuje OpenLP-je podatkovne datoteke. Ali jih želite nadomestiti s trenutnimi podatkovnimi datotekami?</translation>
+že vsebuje OpenLP+-je podatkovne datoteke. Ali jih želite nadomestiti s trenutnimi podatkovnimi datotekami?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9768,7 +9768,7 @@ Kaže, da mesto, ki ste ga izbrali,
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Te spremembe stopijo v veljavo po ponovnem zagonu OpenLP-ja.</translation>
+        <translation>Te spremembe stopijo v veljavo po ponovnem zagonu OpenLP+-ja.</translation>
     </message>
 </context>
 <context>
@@ -9817,7 +9817,7 @@ Kaže, da mesto, ki ste ga izbrali,
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Te spremembe stopijo v veljavo po ponovnem zagonu OpenLP-ja.</translation>
+        <translation>Te spremembe stopijo v veljavo po ponovnem zagonu OpenLP+-ja.</translation>
     </message>
 </context>
 <context>
@@ -10002,7 +10002,7 @@ Kaže, da mesto, ki ste ga izbrali,
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP ne more naložiti vaše zbirke podatkov.
+        <translation>OpenLP+ ne more naložiti vaše zbirke podatkov.
 
 Zbirka podatkov: {db}</translation>
     </message>
@@ -10019,7 +10019,7 @@ Zbirka podatkov: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Podatkovna zbira, ki jo nalagate, je bila narejena v novejši različici OpenLP-ja. Različica podatkovne zbirke je {db_ver}, medtem ko OpenLP potrebuje različico {db_up}. Zbirka podatkov ne bo naložena.
+        <translation>Podatkovna zbira, ki jo nalagate, je bila narejena v novejši različici OpenLP+-ja. Različica podatkovne zbirke je {db_ver}, medtem ko OpenLP+ potrebuje različico {db_up}. Zbirka podatkov ne bo naložena.
 
 Zbirka podatkov: {db_name}</translation>
     </message>
@@ -10076,7 +10076,7 @@ Zbirka podatkov: {db_name}</translation>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
         <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Med zasloni in nastavitvijo zaslonov je neskladje. OpenLP bo skušal samodejno izbrati prikazni zaslon, vendar je vseeno priporočljivo posodobiti nastavitve zaslonov.</translation>
+        <translation>Med zasloni in nastavitvijo zaslonov je neskladje. OpenLP+ bo skušal samodejno izbrati prikazni zaslon, vendar je vseeno priporočljivo posodobiti nastavitve zaslonov.</translation>
     </message>
 </context>
 <context>
@@ -10147,12 +10147,12 @@ Zbirka podatkov: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>Izvožene pesmi OpenLyricsa ali OpenLPja 2</translation>
+        <translation>Izvožene pesmi OpenLyricsa ali OpenLP+ja 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>Podatkovne zbirke OpenLPja 2</translation>
+        <translation>Podatkovne zbirke OpenLP+ja 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10162,7 +10162,7 @@ Zbirka podatkov: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Uvozilnik splošnih dokumentov/predstavitev je bil onemogočen, ker OpenLP nima dostopa do OpenOffica ali LibreOffica.</translation>
+        <translation>Uvozilnik splošnih dokumentov/predstavitev je bil onemogočen, ker OpenLP+ nima dostopa do OpenOffica ali LibreOffica.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10317,7 +10317,7 @@ Zbirka podatkov: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Uvozilnik za Songs Of Fellowship je onemogočen, ker OpenLP nima dostopa do OpenOffica ali LibreOffica.</translation>
+        <translation>Uvozilnik za Songs Of Fellowship je onemogočen, ker OpenLP+ nima dostopa do OpenOffica ali LibreOffica.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>
@@ -11534,7 +11534,7 @@ To opozorilo lahko izključite v nastavitvah pesmi.</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="171"/>
         <source>OpenLP can only import simple lyrics or ChordPro</source>
-        <translation>OpenLP lahko uvozi le enostavno besedilo ali ChordPro</translation>
+        <translation>OpenLP+ lahko uvozi le enostavno besedilo ali ChordPro</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="196"/>

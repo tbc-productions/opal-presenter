@@ -13,7 +13,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
         <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
 {error}</source>
-        <translation>Nem várt hiba történt a SWORD biblia importálása közben. Javasolt a hiba jelentése az OpenLP fejlesztőinek.
+        <translation>Nem várt hiba történt a SWORD biblia importálása közben. Javasolt a hiba jelentése az OpenLP+ fejlesztőinek.
 {error}</translation>
     </message>
 </context>
@@ -650,7 +650,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Valóban teljes egészében törölhető ez a biblia az OpenLP-ből: „{bible}”?
+        <translation>Valóban teljes egészében törölhető ez a biblia az OpenLP+-ből: „{bible}”?
 
 Az esetleges újbóli alkalmazásához újra be kell majd importálni.</translation>
     </message>
@@ -667,7 +667,7 @@ Az esetleges újbóli alkalmazásához újra be kell majd importálni.</translat
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
         <source>OpenLP cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
-        <translation>Az egyes és a kettőzött bibliaversek nem kombinálhatók az OpenLP keresési eredményeiben. Töröljük a keresési eredményt és kezdjünk egy újabbat?</translation>
+        <translation>Az egyes és a kettőzött bibliaversek nem kombinálhatók az OpenLP+ keresési eredményeiben. Töröljük a keresési eredményt és kezdjünk egy újabbat?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="626"/>
@@ -723,7 +723,7 @@ Csak a mindkét bibliában fellelhető versek fognak megjelenni.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>A(z) „{name}” Bibliában egy proxykiszolgáló található: „{proxy}”.&lt;br&gt;Bejegyezhető proxyként az OpenLP számára?</translation>
+        <translation>A(z) „{name}” Bibliában egy proxykiszolgáló található: „{proxy}”.&lt;br&gt;Bejegyezhető proxyként az OpenLP+ számára?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -1042,7 +1042,7 @@ a keresett szöveg minimum {count} karaktert és egy üres karaktert kell tartal
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>Az OpenLP nem képes megállapítani a bibliafordítás nyelvét. A kívánt nyelvet az alábbi listából lehet kiválasztani.</translation>
+        <translation>Az OpenLP+ nem képes megállapítani a bibliafordítás nyelvét. A kívánt nyelvet az alábbi listából lehet kiválasztani.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1438,7 +1438,7 @@ Nincs lehetőség a könyvnevek módosítására.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Az egyedi könyvnevek alkalmazásához a „Biblia nyelve” beállítást kell alkalmazni a metaadat fülön, vagy „Globális beállítások” esetén az OpenLP beállításai között a „Biblia” lapon.</translation>
+        <translation>Az egyedi könyvnevek alkalmazásához a „Biblia nyelve” beállítást kell alkalmazni a metaadat fülön, vagy „Globális beállítások” esetén az OpenLP+ beállításai között a „Biblia” lapon.</translation>
     </message>
 </context>
 <context>
@@ -1602,7 +1602,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
         <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
-        <translation>Az azonosítás sikertelen. Ellenőrizze a hitelesítési adatokat az OpenLP beállításaiban.</translation>
+        <translation>Az azonosítás sikertelen. Ellenőrizze a hitelesítési adatokat az OpenLP+ beállításaiban.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="289"/>
@@ -1861,7 +1861,7 @@ Más képekkel kellene helyettesíteni ezeket?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Kép bővítmény&lt;/strong&gt;&lt;br /&gt;A kép bővítmény különféle képek vetítését teszi lehetővé.&lt;br /&gt;A bővítmény egyik különös figyelmet érdemlő képessége az, hogy képes a sorrendkezelőn csoportba foglalni a képeket, így könnyebbé téve képek tömeges vetítését. A bővítmény képes az OpenLP „időzített körkörös” lejátszásra is, amivel a diasort automatikusan tudjuk léptetni. Továbbá, a bővítményben megadott képekkel felülírhatjuk a téma háttérképét, így a szöveg alapú elemek ‒ mint pl. a dalok ‒ a megadott háttérképpel jelennek meg, a témában beállított háttérkép helyett.</translation>
+        <translation>&lt;strong&gt;Kép bővítmény&lt;/strong&gt;&lt;br /&gt;A kép bővítmény különféle képek vetítését teszi lehetővé.&lt;br /&gt;A bővítmény egyik különös figyelmet érdemlő képessége az, hogy képes a sorrendkezelőn csoportba foglalni a képeket, így könnyebbé téve képek tömeges vetítését. A bővítmény képes az OpenLP+ „időzített körkörös” lejátszásra is, amivel a diasort automatikusan tudjuk léptetni. Továbbá, a bővítményben megadott képekkel felülírhatjuk a téma háttérképét, így a szöveg alapú elemek ‒ mint pl. a dalok ‒ a megadott háttérképpel jelennek meg, a témában beállított háttérkép helyett.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -2696,7 +2696,7 @@ Az utótag nem támogatott</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
         <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
-        <translation>Elvesztette az OpenLP megosztott adatmappájának a zárolását, melyet „{user}” felhasználó igényelt ezen a gazdagépen: „{host}”! Az OpenLP-t azonnal be kell zárnia, hogy elkerülje az adatok sérülését! Az OpenLP újraindításával megpróbálhatja visszaszerezni az adatmappa zárolást.</translation>
+        <translation>Elvesztette az OpenLP+ megosztott adatmappájának a zárolását, melyet „{user}” felhasználó igényelt ezen a gazdagépen: „{host}”! Az OpenLP+-t azonnal be kell zárnia, hogy elkerülje az adatok sérülését! Az OpenLP+ újraindításával megpróbálhatja visszaszerezni az adatmappa zárolást.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="148"/>
@@ -2706,7 +2706,7 @@ Az utótag nem támogatott</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
         <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
-        <translation>Az OpenLP megosztott adatmappáját „{user}” felhasználó használja ezen a gazdagépen: „{host}”. Az adatok sérülésének elkerülése érdekében egyszerre csak egy felhasználó férhet hozzá az adatokhoz! Kérjük, várjon néhány percet, és próbálja meg újra.</translation>
+        <translation>Az OpenLP+ megosztott adatmappáját „{user}” felhasználó használja ezen a gazdagépen: „{host}”. Az adatok sérülésének elkerülése érdekében egyszerre csak egy felhasználó férhet hozzá az adatokhoz! Kérjük, várjon néhány percet, és próbálja meg újra.</translation>
     </message>
 </context>
 <context>
@@ -3010,7 +3010,7 @@ Az utótag nem támogatott</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Ez nem egy OpenLP 2 daladatbázis.</translation>
+        <translation>Ez nem egy OpenLP+ 2 daladatbázis.</translation>
     </message>
 </context>
 <context>
@@ -3173,7 +3173,7 @@ Az utótag nem támogatott</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>A nyelvi beállítások az OpenLP újraindítása után lépnek érvénybe.</translation>
+        <translation>A nyelvi beállítások az OpenLP+ újraindítása után lépnek érvénybe.</translation>
     </message>
 </context>
 <context>
@@ -3192,7 +3192,7 @@ Az utótag nem támogatott</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>A képernyők beállítás módosításra került. Az OpenLP megkísérli automatikusan kiválasztani a vetítési képernyőt, de valószínűleg frissíteni kell a beállításokat.</translation>
+        <translation>A képernyők beállítás módosításra került. Az OpenLP+ megkísérli automatikusan kiválasztani a vetítési képernyőt, de valószínűleg frissíteni kell a beállításokat.</translation>
     </message>
 </context>
 <context>
@@ -3573,18 +3573,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
         <source>OpenLP Song Database</source>
-        <translation>OpenLP daladatbázis</translation>
+        <translation>OpenLP+ daladatbázis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>Az OpenLP már fut a gépen.
+        <translation>Az OpenLP+ már fut a gépen.
 Ez a példány bezáródik.</translation>
     </message>
     <message>
@@ -6034,7 +6034,7 @@ Ez a példány bezáródik.</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Aktuális módosítások elvetése és visszatérés az OpenLP-be.</translation>
+        <translation>Aktuális módosítások elvetése és visszatérés az OpenLP+-be.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6049,7 +6049,7 @@ Ez a példány bezáródik.</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Módosítások mentése és visszatérés az OpenLP-be</translation>
+        <translation>Módosítások mentése és visszatérés az OpenLP+-be</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6444,15 +6444,15 @@ The location of the data folder was previously changed from the OpenLP's default
 You may reset the data location back to the default location, or you can try to make the current location available.
 
 Do you want to reset to the default data location? If not, OpenLP will be closed so you can try to fix the problem.</source>
-        <translation>Az OpenLP adatmappa nem található
+        <translation>Az OpenLP+ adatmappa nem található
 
 {path}
 
-Az OpenLP alapértelmezett mappája előzőleg meg lett változtatva. Ha ez az új hely egy cserélhető adathordozón volt, azt újra elérhetővé kell tenni.
+Az OpenLP+ alapértelmezett mappája előzőleg meg lett változtatva. Ha ez az új hely egy cserélhető adathordozón volt, azt újra elérhetővé kell tenni.
 
 Szerencsés lenne az adatmappát helyreállítani az alapértelmezett helyére, vagy talán elérhetővé tenni a jelenlegi helyén.
 
-Helyreállítható az adatmappa az alapértelmezett helyére? Ha nem, akkor az OpenLP bezáródik és meg lehet kísérelni elhárítani a problémát.</translation>
+Helyreállítható az adatmappa az alapértelmezett helyére? Ha nem, akkor az OpenLP+ bezáródik és meg lehet kísérelni elhárítani a problémát.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="236"/>
@@ -6465,8 +6465,8 @@ Helyreállítható az adatmappa az alapértelmezett helyére? Ha nem, akkor az O
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>Az OpenLP frissítve lett, készüljön biztonsági mentés 
-az OpenLP régi adatmappájáról?</translation>
+        <translation>Az OpenLP+ frissítve lett, készüljön biztonsági mentés 
+az OpenLP+ régi adatmappájáról?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="249"/>
@@ -6494,7 +6494,7 @@ az OpenLP régi adatmappájáról?</translation>
 {data_folder_backup_path}
 
 Do you want to continue?</source>
-        <translation>Az OpenLP olyan beállítófájlt talált, amely az OpenLP egy újabb verziójával készült. Az OpenLP friss telepítésként fog indulni, mivel az adatok visszafejlesztése nem támogatott. Minden meglévő adat ide lesz mentve:
+        <translation>Az OpenLP+ olyan beállítófájlt talált, amely az OpenLP+ egy újabb verziójával készült. Az OpenLP+ friss telepítésként fog indulni, mivel az adatok visszafejlesztése nem támogatott. Minden meglévő adat ide lesz mentve:
 
 {data_folder_backup_path}
 
@@ -6518,12 +6518,12 @@ Folytatható a telepítés?</translation>
 OpenLP will attempt to continue.</source>
         <translation>A beállítások biztonsági mentése nem sikerült.
 
-Az OpenLP megkísérli a folytatást.</translation>
+Az OpenLP+ megkísérli a folytatást.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
         <source>OpenLP Backup</source>
-        <translation>OpenLP biztonsági mentés </translation>
+        <translation>OpenLP+ biztonsági mentés </translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6554,7 +6554,7 @@ Az OpenLP megkísérli a folytatást.</translation>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>OpenLP beállítása</translation>
+        <translation>OpenLP+ beállítása</translation>
     </message>
 </context>
 <context>
@@ -7190,7 +7190,7 @@ Az OpenLP megkísérli a folytatást.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Segítség az OpenLP kézikönyvben.</translation>
+        <translation>Segítség az OpenLP+ kézikönyvben.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7487,7 +7487,7 @@ Az OpenLP megkísérli a folytatást.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Ki kell választani egy fordítást az OpenLP számára.</translation>
+        <translation>Ki kell választani egy fordítást az OpenLP+ számára.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7710,7 +7710,7 @@ Az OpenLP megkísérli a folytatást.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>OpenLP sorrendfájlok (*.osz *.oszl)</translation>
+        <translation>OpenLP+ sorrendfájlok (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7753,17 +7753,17 @@ Ezen fájlok el lesznek távolítva, ha folytatódik a mentés.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
         <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>OpenLP sorrendfájlok ‒ egyszerű (*.oszl)</translation>
+        <translation>OpenLP+ sorrendfájlok ‒ egyszerű (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>OpenLP sorrend fájlok (*.osz)</translation>
+        <translation>OpenLP+ sorrend fájlok (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
         <source>The service file {file_path} could not be loaded because it is either corrupt, inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.</source>
-        <translation>A sorrendfájlt nem lehet betölteni, mivel vagy sérült, vagy elérhetetlen vagy nem érvényes OpenLP2 vagy OpenLP 3 sorrendfájl: {file_path}</translation>
+        <translation>A sorrendfájlt nem lehet betölteni, mivel vagy sérült, vagy elérhetetlen vagy nem érvényes OpenLP+2 vagy OpenLP+ 3 sorrendfájl: {file_path}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="979"/>
@@ -7999,7 +7999,7 @@ Adjon hozzá néhány elemet és nyomja meg a Mentés gombot</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>OpenLP témák (*.otz)</translation>
+        <translation>OpenLP+ témák (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8357,12 +8357,12 @@ magassága a diakezelőben:</translation>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Frissítés keresése az OpenLP-hez</translation>
+        <translation>Frissítés keresése az OpenLP+-hez</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
         <source>Check for updates to OpenLP Remote UI</source>
-        <translation>Frissítés keresése az OpenLP távirányító felhasználói felülethez</translation>
+        <translation>Frissítés keresése az OpenLP+ távirányító felhasználói felülethez</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="211"/>
@@ -8398,12 +8398,12 @@ magassága a diakezelőben:</translation>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
         <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
-        <translation>&lt;strong&gt;Hoppá! Az OpenLP hibába ütközött, és nem tudta lekezelni.&lt;br&gt;&lt;br&gt; Az OpenLP fejlesztők örülnének és &lt;strong&gt;segítség&lt;/strong&gt; lenne számukra ha hibajelentést kapnának erről, hogy &lt;strong&gt;megoldják&lt;/strong&gt;. Javasolt a hibajelentés elküldése erre a címre: {email}{newlines}</translation>
+        <translation>&lt;strong&gt;Hoppá! Az OpenLP+ hibába ütközött, és nem tudta lekezelni.&lt;br&gt;&lt;br&gt; Az OpenLP+ fejlesztők örülnének és &lt;strong&gt;segítség&lt;/strong&gt; lenne számukra ha hibajelentést kapnának erről, hogy &lt;strong&gt;megoldják&lt;/strong&gt;. Javasolt a hibajelentés elküldése erre a címre: {email}{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
         <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
-        <translation>{first_part}&lt;strong&gt;Nincs e-mail program? &lt;/strong&gt; Az információ &lt;strong&gt;lementhető&lt;/strong&gt; &lt;strong&gt;fájlba&lt;/strong&gt; és &lt;br&gt;elküldhető &lt;strong&gt;böngészős levelezőből&lt;/strong&gt; is &lt;strong&gt;csatolmányként&lt;/strong&gt;.&lt;br&gt;&lt;br&gt; &lt;strong&gt;Köszönet&lt;/strong&gt; a hibajelentésért és hogy ezáltal az OpenLP jobb lesz!&lt;br&gt;</translation>
+        <translation>{first_part}&lt;strong&gt;Nincs e-mail program? &lt;/strong&gt; Az információ &lt;strong&gt;lementhető&lt;/strong&gt; &lt;strong&gt;fájlba&lt;/strong&gt; és &lt;br&gt;elküldhető &lt;strong&gt;böngészős levelezőből&lt;/strong&gt; is &lt;strong&gt;csatolmányként&lt;/strong&gt;.&lt;br&gt;&lt;br&gt; &lt;strong&gt;Köszönet&lt;/strong&gt; a hibajelentésért és hogy ezáltal az OpenLP+ jobb lesz!&lt;br&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="112"/>
@@ -8579,7 +8579,7 @@ magassága a diakezelőben:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>OpenLP bezárása ‒ a program kikapcsolása.</translation>
+        <translation>OpenLP+ bezárása ‒ a program kikapcsolása.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8600,7 +8600,7 @@ magassága a diakezelőben:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>OpenLP &amp;beállítása…</translation>
+        <translation>OpenLP+ &amp;beállítása…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8736,7 +8736,7 @@ magassága a diakezelőben:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>További információ az OpenLP-ről</translation>
+        <translation>További információ az OpenLP+-ről</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8843,14 +8843,14 @@ magassága a diakezelőben:</translation>
         <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
 
 You can download the latest version from https://openlp.org/.</source>
-        <translation>Már letölthető az OpenLP {new} verziója (jelenleg a {current} verzió fut).
+        <translation>Már letölthető az OpenLP+ {new} verziója (jelenleg a {current} verzió fut).
 
 A legfrissebb verzió a https://openlp.org/ oldalról szerezhető be.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>OpenLP verziófrissítés</translation>
+        <translation>OpenLP+ verziófrissítés</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8876,12 +8876,12 @@ A távirányító beállításai között a Frissítés gombbal lehet letölteni
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Valóban újra futtatható az Első indítás tündér?
 
-A tündér újbóli futtatása során megváltozhatnak az OpenLP aktuális beállításai, az alapértelmezett téma és új dalok adhatók hozzá a jelenlegi dallistákhoz.</translation>
+A tündér újbóli futtatása során megváltozhatnak az OpenLP+ aktuális beállításai, az alapértelmezett téma és új dalok adhatók hozzá a jelenlegi dallistákhoz.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>Elsötétített OpenLP fő képernyő</translation>
+        <translation>Elsötétített OpenLP+ fő képernyő</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8902,9 +8902,9 @@ A tündér újbóli futtatása során megváltozhatnak az OpenLP aktuális beál
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Valóban betölthetők a beállítások?
 
-A beállítások betöltése tartós változásokat okoz a OpenLP jelenlegi beállításain.
+A beállítások betöltése tartós változásokat okoz a OpenLP+ jelenlegi beállításain.
 
-Hibás beállítások betöltése rendellenes működést okozhat, vagy akár az OpenLP abnormális megszakadását is.</translation>
+Hibás beállítások betöltése rendellenes működést okozhat, vagy akár az OpenLP+ abnormális megszakadását is.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8918,28 +8918,28 @@ Hibás beállítások betöltése rendellenes működést okozhat, vagy akár az
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>OpenLP beállítások (*.conf)</translation>
+        <translation>OpenLP+ beállítások (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
         <source>OpenLP cannot import settings from a newer version of OpenLP.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Az OpenLP nem tud beállításokat az OpenLP egy újabb verziójából importálni.</translation>
+        <translation>Az OpenLP+ nem tud beállításokat az OpenLP+ egy újabb verziójából importálni.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="920"/>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>A kijelölt fájl nem tűnik érvényes OpenLP beállítás fájlnak.
+        <translation>A kijelölt fájl nem tűnik érvényes OpenLP+ beállítás fájlnak.
 
 A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>Az OpenLP most leáll. Az importált beállítások az OpenLP következő indításakor lépnek érvénybe.</translation>
+        <translation>Az OpenLP+ most leáll. Az importált beállítások az OpenLP+ következő indításakor lépnek érvénybe.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8959,17 +8959,17 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>OpenLP bezárása</translation>
+        <translation>OpenLP+ bezárása</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Valóban bezárható az OpenLP?</translation>
+        <translation>Valóban bezárható az OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>OpenLP be&amp;zárása</translation>
+        <translation>OpenLP+ be&amp;zárása</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -9000,14 +9000,14 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Az OpenLP adatok új helyre való másolása folyamatban ‒ {path} ‒ Türelem a folyamat befejeződéséig</translation>
+        <translation>Az OpenLP+ adatok új helyre való másolása folyamatban ‒ {path} ‒ Türelem a folyamat befejeződéséig</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Az OpenLP adatmappa másolása nem sikerül
+        <translation>Az OpenLP+ adatmappa másolása nem sikerül
 
 {err}</translation>
     </message>
@@ -9117,17 +9117,17 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="120"/>
         <source>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Find out more about OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;OpenLP {{version}}{{revision}} - Nyílt forrású dalszöveg vetítő&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP fejlesztők&lt;/p&gt;&lt;p&gt;Továbbiak az OpenLP-ről: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Ez egy szabad szoftver; terjeszthető, illetve módosítható a GNU Általános Közreadási Feltételek dokumentumában leírtak szerint ‒ 3. verzió ‒, melyet a Szabad Szoftver Alapítvány ad ki.&lt;/p&gt;&lt;p&gt;Ez a program abban a reményben kerül közreadásra, hogy hasznos lesz, de minden egyéb GARANCIA NÉLKÜL, az eladhatóságra vagy valamely célra való alkalmazhatóságra való származtatott garanciát is beleértve. A további részletek a GNU Általános Közreadási Feltételek licencben.&lt;/p&gt;&lt;p&gt;A programmal együtt kerül terjesztésre a GNU Általános Közreadási Feltételek licenc. Ha mégsem, itt található: &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
+        <translation>&lt;p&gt;OpenLP+ {{version}}{{revision}} - Nyílt forrású dalszöveg vetítő&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP+ fejlesztők&lt;/p&gt;&lt;p&gt;Továbbiak az OpenLP+-ről: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Ez egy szabad szoftver; terjeszthető, illetve módosítható a GNU Általános Közreadási Feltételek dokumentumában leírtak szerint ‒ 3. verzió ‒, melyet a Szabad Szoftver Alapítvány ad ki.&lt;/p&gt;&lt;p&gt;Ez a program abban a reményben kerül közreadásra, hogy hasznos lesz, de minden egyéb GARANCIA NÉLKÜL, az eladhatóságra vagy valamely célra való alkalmazhatóságra való származtatott garanciát is beleértve. A további részletek a GNU Általános Közreadási Feltételek licencben.&lt;/p&gt;&lt;p&gt;A programmal együtt kerül terjesztésre a GNU Általános Közreadási Feltételek licenc. Ha mégsem, itt található: &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="134"/>
         <source>OpenLP is written and maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the &quot;contribute&quot; button below.</source>
-        <translation>Az OpenLP-t az egész világról származó önkéntesek készítették és tartják karban a szabad idejükben. A projekt örömmel veszi további önkéntesek csatlakozását, hogy sikerre jusson.</translation>
+        <translation>Az OpenLP+-t az egész világról származó önkéntesek készítették és tartják karban a szabad idejükben. A projekt örömmel veszi további önkéntesek csatlakozását, hogy sikerre jusson.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
         <source>OpenLP would not be possible without the following software libraries:</source>
-        <translation>Az OpenLP nem jött volna létre az alábbi programkönyvtárak nélkül:</translation>
+        <translation>Az OpenLP+ nem jött volna létre az alábbi programkönyvtárak nélkül:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="165"/>
@@ -9199,7 +9199,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="233"/>
         <source>OpenLP was unable to read the resource index file. Please try again later.</source>
-        <translation>Az OpenLP nem tudta beolvasni az erőforrásjegyzék fájlt. Később érdemes újra próbálkozni.</translation>
+        <translation>Az OpenLP+ nem tudta beolvasni az erőforrásjegyzék fájlt. Később érdemes újra próbálkozni.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="443"/>
@@ -9220,7 +9220,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Türelem, amíg az OpenLP beállítások érvényre jutnak és míg az adatok letöltődnek.</translation>
+        <translation>Türelem, amíg az OpenLP+ beállítások érvényre jutnak és míg az adatok letöltődnek.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9230,7 +9230,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>A letöltés befejeződött. Visszatérés az OpenLP-be az alábbi „{finish_button}” gombbal.</translation>
+        <translation>A letöltés befejeződött. Visszatérés az OpenLP+-be az alábbi „{finish_button}” gombbal.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
@@ -9240,12 +9240,12 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
         <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Visszatérés az OpenLP-be az alábbi „{finish_button}” gombbal.</translation>
+        <translation>Visszatérés az OpenLP+-be az alábbi „{finish_button}” gombbal.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
         <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Az OpenLP indítása az alábbi „{finish_button}” gombbal.</translation>
+        <translation>Az OpenLP+ indítása az alábbi „{finish_button}” gombbal.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
@@ -9286,7 +9286,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
         <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
-        <translation>Az OpenLP-nek van egy webes távirányítója, amely lehetővé teszi egy olyan másik számítógépről, mobilról vagy tabletről való irányítását, amellyel azonos hálózaton vannak. Az OpenLP le tudja tölteni ezt a távirányítót akár most, vagy lehetősége van később is letölteni a távirányító beállításaiban.</translation>
+        <translation>Az OpenLP+-nek van egy webes távirányítója, amely lehetővé teszi egy olyan másik számítógépről, mobilról vagy tabletről való irányítását, amellyel azonos hálózaton vannak. Az OpenLP+ le tudja tölteni ezt a távirányítót akár most, vagy lehetősége van később is letölteni a távirányító beállításaiban.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="78"/>
@@ -9316,7 +9316,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="318"/>
         <source>This wizard will help you to configure OpenLP for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
-        <translation>A tündér segít elkezdeni az OpenLP használatát. Az alábbi „{next_button}” gombbal indítható a folyamat.</translation>
+        <translation>A tündér segít elkezdeni az OpenLP+ használatát. Az alábbi „{next_button}” gombbal indítható a folyamat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
@@ -9336,7 +9336,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Türelem, míg az OpenLP letölti a forrás tartalomjegyzékét…</translation>
+        <translation>Türelem, míg az OpenLP+ letölti a forrás tartalomjegyzékét…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9356,7 +9356,7 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Choose the main display screen for OpenLP.</source>
-        <translation>Ki kell választani a fő képernyőt az OpenLP számára.</translation>
+        <translation>Ki kell választani a fő képernyőt az OpenLP+ számára.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
@@ -9406,14 +9406,14 @@ A folyamat megszakad és a változások nem lesznek elmentve.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
         <source>Can OpenLP download some resource data?</source>
-        <translation>Az OpenLP letölthet néhány erőforrásadatot?</translation>
+        <translation>Az OpenLP+ letölthet néhány erőforrásadatot?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="350"/>
         <source>OpenLP has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
-        <translation>Az OpenLP összegyűjtött néhány erőforrást, melyek terjesztéséhez engedélyünk van.
+        <translation>Az OpenLP+ összegyűjtött néhány erőforrást, melyek terjesztéséhez engedélyünk van.
 
 A „{next_button}” gombra kattintva ezen fájlok letöltése indítható, a „{finish_button}” gombbal pedig elkerülhető.</translation>
     </message>
@@ -9436,13 +9436,13 @@ Please check your internet connection. If your church uses a proxy server click 
 Click the '{back_button}' button to try again.
 
 If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
-        <translation>Az OpenLP nem tudott csatlakozni az internetre, hogy információkat szerezzen a rendelkezésre álló mintaadatokról.
+        <translation>Az OpenLP+ nem tudott csatlakozni az internetre, hogy információkat szerezzen a rendelkezésre álló mintaadatokról.
 
 Érdemes lenne ellenőrizni az internetkapcsolatot. Ha a gyülekezet proxykiszolgálót használ az alábbi „Internetbeállítások” gombbal lehet a kiszolgáló részleteit megadni.
 
 A „{back_button}” gombbal újra meg lehet kísérelni a letöltést.
 
-A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármikor újraindítható az OpenLP „Eszközök” menüjének „Első indítás tündér” pontjával.</translation>
+A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármikor újraindítható az OpenLP+ „Eszközök” menüjének „Első indítás tündér” pontjával.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="366"/>
@@ -9497,7 +9497,7 @@ A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármiko
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Türelem, míg a források letöltődnek és az OpenLP beállításra kerül.</translation>
+        <translation>Türelem, míg a források letöltődnek és az OpenLP+ beállításra kerül.</translation>
     </message>
 </context>
 <context>
@@ -9625,7 +9625,7 @@ A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármiko
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Az OpenLP adathely-modósításának visszavonása.</translation>
+        <translation>Az OpenLP+ adathely-modósításának visszavonása.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9635,7 +9635,7 @@ A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármiko
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Az OpenLP adatállományainak az új helyre való másolása.</translation>
+        <translation>Az OpenLP+ adatállományainak az új helyre való másolása.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9645,12 +9645,12 @@ A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármiko
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="157"/>
         <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when OpenLP is running.</source>
-        <translation>Adatmappa védelme egy zárolási mechanizmussal az adatok sérülésének elkerülése érdekében, ha több felhasználó egyszerre fér hozzá az adatokhoz. Hasznos a hálózaton keresztül megosztott példányok esetében. &lt;strong&gt;MEGJEGYZÉS:&lt;/strong&gt; Ez csak akkor működik, ha a hálózati megosztás elérhető az OpenLP futtatásakor.</translation>
+        <translation>Adatmappa védelme egy zárolási mechanizmussal az adatok sérülésének elkerülése érdekében, ha több felhasználó egyszerre fér hozzá az adatokhoz. Hasznos a hálózaton keresztül megosztott példányok esetében. &lt;strong&gt;MEGJEGYZÉS:&lt;/strong&gt; Ez csak akkor működik, ha a hálózati megosztás elérhető az OpenLP+ futtatásakor.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;FIGYELMEZTETÉS:&lt;/strong&gt; Az új mappa már tartalmaz OpenLP adatállományokat, melyek másoláskor felül lesznek írva.</translation>
+        <translation>&lt;strong&gt;FIGYELMEZTETÉS:&lt;/strong&gt; Az új mappa már tartalmaz OpenLP+ adatállományokat, melyek másoláskor felül lesznek írva.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9714,11 +9714,11 @@ A „&apos;{finish_button}” gombra kattintva megszakad a folyamat, de bármiko
 {path}
 
 Existing files in this directory could be overwritten. The data directory will be changed when OpenLP is closed.</source>
-        <translation>Valóban megváltoztatható az OpenLP adatmappájának helye erre?
+        <translation>Valóban megváltoztatható az OpenLP+ adatmappájának helye erre?
 
 {path}
 
-A meglévő fájlok ebben a mappában felül lesznek írva. Az adatmappa az OpenLP bezárása után fog megváltozni.</translation>
+A meglévő fájlok ebben a mappában felül lesznek írva. Az adatmappa az OpenLP+ bezárása után fog megváltozni.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="246"/>
@@ -9727,11 +9727,11 @@ A meglévő fájlok ebben a mappában felül lesznek írva. Az adatmappa az Open
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Valóban megváltoztatható az OpenLP adatmappájának helye erre?
+        <translation>Valóban megváltoztatható az OpenLP+ adatmappájának helye erre?
 
 {path}
 
-Az OpenLP bezárása után jut érvényre a változás.</translation>
+Az OpenLP+ bezárása után jut érvényre a változás.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9758,7 +9758,7 @@ A kijelölt
 
 {path}
 
-mappa már tartalmaz OpenLP adatállományokat. Valóban felülírhatók ezek a fájlok az aktuális adatfájlokkal?</translation>
+mappa már tartalmaz OpenLP+ adatállományokat. Valóban felülírhatók ezek a fájlok az aktuális adatfájlokkal?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9768,7 +9768,7 @@ mappa már tartalmaz OpenLP adatállományokat. Valóban felülírhatók ezek a 
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Az OpenLP újraindítása során jut érvényre a változás.</translation>
+        <translation>Az OpenLP+ újraindítása során jut érvényre a változás.</translation>
     </message>
 </context>
 <context>
@@ -9817,7 +9817,7 @@ mappa már tartalmaz OpenLP adatállományokat. Valóban felülírhatók ezek a 
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Az OpenLP újraindítása során jut érvényre a változás.</translation>
+        <translation>Az OpenLP+ újraindítása során jut érvényre a változás.</translation>
     </message>
 </context>
 <context>
@@ -10002,7 +10002,7 @@ mappa már tartalmaz OpenLP adatállományokat. Valóban felülírhatók ezek a 
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>Az OpenLP nem képes beolvasni az adatbázist.
+        <translation>Az OpenLP+ nem képes beolvasni az adatbázist.
 
 Adatbázis: {db}</translation>
     </message>
@@ -10019,7 +10019,7 @@ Adatbázis: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>A betöltés alatt álló adatbázis az OpenLP egy frissebb változatával készült. Az adatbázis verziószáma {db_ver}, míg az OpenLP {db_up} verziót vár el. Az adatbázis nem lesz betöltve.
+        <translation>A betöltés alatt álló adatbázis az OpenLP+ egy frissebb változatával készült. Az adatbázis verziószáma {db_ver}, míg az OpenLP+ {db_up} verziót vár el. Az adatbázis nem lesz betöltve.
 
 Adatbázis: {db_name}</translation>
     </message>
@@ -10076,7 +10076,7 @@ Adatbázis: {db_name}</translation>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
         <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>A képernyők és a képernyők beállításai között eltérés van. Az OpenLP megkísérli automatikusan kiválasztani a vetítési képernyőt, de valószínűleg frissíteni kell a beállításokat.</translation>
+        <translation>A képernyők és a képernyők beállításai között eltérés van. Az OpenLP+ megkísérli automatikusan kiválasztani a vetítési képernyőt, de valószínűleg frissíteni kell a beállításokat.</translation>
     </message>
 </context>
 <context>
@@ -10147,12 +10147,12 @@ Adatbázis: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>OpenLyrics vagy OpenLP 2 exportált dal</translation>
+        <translation>OpenLyrics vagy OpenLP+ 2 exportált dal</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>OpenLP 2 adatbázisok</translation>
+        <translation>OpenLP+ 2 adatbázisok</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10162,7 +10162,7 @@ Adatbázis: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Az általános dokumentum, ill. bemutató importáló le lett tiltva, mivel az OpenLP nem talál OpenOffice-t vagy LibreOffice-t a számítógépen.</translation>
+        <translation>Az általános dokumentum, ill. bemutató importáló le lett tiltva, mivel az OpenLP+ nem talál OpenOffice-t vagy LibreOffice-t a számítógépen.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10317,7 +10317,7 @@ Adatbázis: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>A Songs of Fellowship importáló le lett tiltva, mivel az OpenLP nem talál OpenOffice-t vagy LibreOffice-t a számítógépen.</translation>
+        <translation>A Songs of Fellowship importáló le lett tiltva, mivel az OpenLP+ nem talál OpenOffice-t vagy LibreOffice-t a számítógépen.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>
@@ -11533,7 +11533,7 @@ Ez a figyelmeztető üzenetet kikapcsolható a dalok beállításaiban.</transla
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="171"/>
         <source>OpenLP can only import simple lyrics or ChordPro</source>
-        <translation>Az OpenLP csak egyszerű dalszövegeket vagy ChordPro-t tud importálni.</translation>
+        <translation>Az OpenLP+ csak egyszerű dalszövegeket vagy ChordPro-t tud importálni.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="196"/>

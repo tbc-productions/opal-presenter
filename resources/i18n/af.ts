@@ -649,7 +649,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Wis Bybel &quot;{bible}&quot; geheel en al vanaf OpenLP?
+        <translation>Wis Bybel &quot;{bible}&quot; geheel en al vanaf OpenLP+?
 
 Hierdie Bybel sal weer ingevoer moet word voordat dit gebruik geneem kan word.</translation>
     </message>
@@ -1036,7 +1036,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP is nie in staat om die taal van hierdie Bybelvertaling te bepaal nie. Kies asseblief die taal van die lys hieronder.</translation>
+        <translation>OpenLP+ is nie in staat om die taal van hierdie Bybelvertaling te bepaal nie. Kies asseblief die taal van die lys hieronder.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1432,7 +1432,7 @@ Dit is nie moontlik om die Boek Name aan te pas nie.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Om eie boek name te gebruik, moet &quot;Bybel taal&quot; in die Meta Data blad op die Bybel bladsy OpenLP Instelling gekies wees, of wanneer &quot;Globale instellings&quot; geselekteer is.</translation>
+        <translation>Om eie boek name te gebruik, moet &quot;Bybel taal&quot; in die Meta Data blad op die Bybel bladsy OpenLP+ Instelling gekies wees, of wanneer &quot;Globale instellings&quot; geselekteer is.</translation>
     </message>
 </context>
 <context>
@@ -1855,7 +1855,7 @@ Voeg steeds die ander beelde by?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Beeld Mini-program&lt;/strong&gt;&lt;br/&gt;Die beeld mini-program verskaf vertoning van beelde.&lt;br/&gt;Een van die onderskeidende kenmerke van hierdie mini-program is die vermoë om beelde te groepeer in die diensbestuurder wat dit maklik maak om verskeie beelde te vertoon. Die mini-program kan ook van OpenLP se &quot;tydgebonde herhaling&quot;-funksie gebruik maak om &apos;n automatiese skyfe-vertoning te verkry. Verder kan beelde van hierdie mini-program gebruik word om die huidige tema se agtergrond te vervang hoewel &apos;n tema sy eie agtergrond het.</translation>
+        <translation>&lt;strong&gt;Beeld Mini-program&lt;/strong&gt;&lt;br/&gt;Die beeld mini-program verskaf vertoning van beelde.&lt;br/&gt;Een van die onderskeidende kenmerke van hierdie mini-program is die vermoë om beelde te groepeer in die diensbestuurder wat dit maklik maak om verskeie beelde te vertoon. Die mini-program kan ook van OpenLP+ se &quot;tydgebonde herhaling&quot;-funksie gebruik maak om &apos;n automatiese skyfe-vertoning te verkry. Verder kan beelde van hierdie mini-program gebruik word om die huidige tema se agtergrond te vervang hoewel &apos;n tema sy eie agtergrond het.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -3165,7 +3165,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Herlaai asseblief OpenLP om die nuwe taal instelling te gebruik.</translation>
+        <translation>Herlaai asseblief OpenLP+ om die nuwe taal instelling te gebruik.</translation>
     </message>
 </context>
 <context>
@@ -3565,7 +3565,7 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
@@ -6528,7 +6528,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Konfigureer OpenLP</translation>
+        <translation>Konfigureer OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7164,7 +7164,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Konsulteer die OpenLP handleiding vir gebruik.</translation>
+        <translation>Konsulteer die OpenLP+ handleiding vir gebruik.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7459,7 +7459,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Kies die taal wat gebruik moet word in OpenLP.</translation>
+        <translation>Kies die taal wat gebruik moet word in OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7726,7 +7726,7 @@ These files will be removed if you continue to save.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>OpenLP Diens Lêers (*.osz)</translation>
+        <translation>OpenLP+ Diens Lêers (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -8319,7 +8319,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Kyk vir opdaterings van OpenLP</translation>
+        <translation>Kyk vir opdaterings van OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8562,7 +8562,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Konfigureer OpenLP...</translation>
+        <translation>&amp;Konfigureer OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8810,7 +8810,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>OpenLP Weergawe is Opdateer</translation>
+        <translation>OpenLP+ Weergawe is Opdateer</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8835,12 +8835,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Is u seker u wil weer die Eerste-ker Gids gebruik?
 
-Her-gebruik van hierdie gids mag veranderinge aan die huidige OpenLP konfigurasie aanbring en kan moontlik liedere byvoeg by die bestaande liedere lys en kan ook die verstek tema verander.</translation>
+Her-gebruik van hierdie gids mag veranderinge aan die huidige OpenLP+ konfigurasie aanbring en kan moontlik liedere byvoeg by die bestaande liedere lys en kan ook die verstek tema verander.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>OpenLP Hoof Vertoning Blanko</translation>
+        <translation>OpenLP+ Hoof Vertoning Blanko</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8892,7 +8892,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP sal nou toe maak.  Ingevoerde verstellings sal toegepas word die volgende keer as OpenLP begin word.</translation>
+        <translation>OpenLP+ sal nou toe maak.  Ingevoerde verstellings sal toegepas word die volgende keer as OpenLP+ begin word.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8953,14 +8953,14 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>OpenLP data word na &apos;n nuwe data gids - {path} - gekopiër. Wag asseblief totdat dit voltooi is.</translation>
+        <translation>OpenLP+ data word na &apos;n nuwe data gids - {path} - gekopiër. Wag asseblief totdat dit voltooi is.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Kopiëring van OpenLP Data gids het gevaal
+        <translation>Kopiëring van OpenLP+ Data gids het gevaal
 
 {err}</translation>
     </message>
@@ -9173,7 +9173,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Wag asseblief terwyl OpenLP opgestel en die data afgelaai word.</translation>
+        <translation>Wag asseblief terwyl OpenLP+ opgestel en die data afgelaai word.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9570,7 +9570,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Kanselleer OpenLP data lêer ligging verandering.</translation>
+        <translation>Kanselleer OpenLP+ data lêer ligging verandering.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9580,7 +9580,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Kopiër die OpenLP data lêers na die nuwe ligging.</translation>
+        <translation>Kopiër die OpenLP+ data lêers na die nuwe ligging.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9595,7 +9595,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;WAARSKUWING:&lt;/strong&gt; Nuwe data lêer ligging bevat OpenLP data lêers.  Hierdie lêers SAL vervang word gedurende kopiëring.</translation>
+        <translation>&lt;strong&gt;WAARSKUWING:&lt;/strong&gt; Nuwe data lêer ligging bevat OpenLP+ data lêers.  Hierdie lêers SAL vervang word gedurende kopiëring.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9668,11 +9668,11 @@ Existing files in this directory could be overwritten. The data directory will b
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Verander die ligging van die OpenLP data gids sekerlik na:
+        <translation>Verander die ligging van die OpenLP+ data gids sekerlik na:
 
 {path}
 
-Die data gids sal verander word wanneer OpenLP toe gemaak word.</translation>
+Die data gids sal verander word wanneer OpenLP+ toe gemaak word.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9937,7 +9937,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP kan nie die databasis laai nie.
+        <translation>OpenLP+ kan nie die databasis laai nie.
 
 Databasis: {db}</translation>
     </message>
@@ -9954,7 +9954,7 @@ Databasis: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Die databasis wat gelaai is, was geskep in &apos;n meer onlangse weergawe van OpenLP. Die databasis is weergawe {db_ver}, terwyl OpenLP weergawe {db_up} verwag. Die databasis sal nie gelaai word nie.
+        <translation>Die databasis wat gelaai is, was geskep in &apos;n meer onlangse weergawe van OpenLP+. Die databasis is weergawe {db_ver}, terwyl OpenLP+ weergawe {db_up} verwag. Die databasis sal nie gelaai word nie.
 
 Databasis: {db_name}</translation>
     </message>
@@ -10097,7 +10097,7 @@ Databasis: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Die generiese dokument/aanbieding invoerder is onaktief gestel omdat OpenLP nie toegang tot OpenOffice of LibreOffice het nie.</translation>
+        <translation>Die generiese dokument/aanbieding invoerder is onaktief gestel omdat OpenLP+ nie toegang tot OpenOffice of LibreOffice het nie.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10252,7 +10252,7 @@ Databasis: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Die Liedere van Volgelinge invoerder is onaktief gestel omdat OpenLP nie toegang tot OpenOffice of LibreOffice het nie.</translation>
+        <translation>Die Liedere van Volgelinge invoerder is onaktief gestel omdat OpenLP+ nie toegang tot OpenOffice of LibreOffice het nie.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>

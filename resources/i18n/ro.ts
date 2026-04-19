@@ -649,7 +649,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Sunteți siguri că vreți să ștergeți complet Biblia &quot;{bible}&quot; din OpenLP?
+        <translation>Sunteți siguri că vreți să ștergeți complet Biblia &quot;{bible}&quot; din OpenLP+?
 
 Va trebui să o importați din nou pentru a mai putea folosi această Biblie.</translation>
     </message>
@@ -1033,7 +1033,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP nu poate determina limba acestei traduceri a Bibliei. Vă rog selectați limba din lista următoare.</translation>
+        <translation>OpenLP+ nu poate determina limba acestei traduceri a Bibliei. Vă rog selectați limba din lista următoare.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1429,7 +1429,7 @@ Nu se pot personaliza Numele Cărților.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Pentru a folosi numele cărților personalizate, &quot;Limba Bibliei&quot; trebuie selectată în fila Meta Data sau, dacă &quot;Setări Globale&quot; este selectat, în pagina de configurare a Bibliei din Configurare OpenLP.</translation>
+        <translation>Pentru a folosi numele cărților personalizate, &quot;Limba Bibliei&quot; trebuie selectată în fila Meta Data sau, dacă &quot;Setări Globale&quot; este selectat, în pagina de configurare a Bibliei din Configurare OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -1852,7 +1852,7 @@ Doriți totuși să adăugați celelalte imagini?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Extensia Imagine&lt;/strong&gt;&lt;br /&gt;Extensia imagine dă posibilitatea afișării imaginilor.&lt;br /&gt;Una din facilitățile deosebite ale acestei extensii este posibilitatea de a grupa un număr de imagini împreună în organizatorul de servicii, făcând mai ușoară afișarea imaginilor multiple. Această extensie poate folosi &quot;temporizatorul&quot; OpenLP pentru a crea diapozitive care se schimbă automat. Ar mai fi de adăugat că imaginile din extensie pot fi folosite să înlocuiască fundalul temei curente, generând elemente de text - cântece de exemplu - cu imaginea selectată ca și fundal.</translation>
+        <translation>&lt;strong&gt;Extensia Imagine&lt;/strong&gt;&lt;br /&gt;Extensia imagine dă posibilitatea afișării imaginilor.&lt;br /&gt;Una din facilitățile deosebite ale acestei extensii este posibilitatea de a grupa un număr de imagini împreună în organizatorul de servicii, făcând mai ușoară afișarea imaginilor multiple. Această extensie poate folosi &quot;temporizatorul&quot; OpenLP+ pentru a crea diapozitive care se schimbă automat. Ar mai fi de adăugat că imaginile din extensie pot fi folosite să înlocuiască fundalul temei curente, generând elemente de text - cântece de exemplu - cu imaginea selectată ca și fundal.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -3000,7 +3000,7 @@ File extension not supported</source>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Bază de date OpenLP 2 invalidă.</translation>
+        <translation>Bază de date OpenLP+ 2 invalidă.</translation>
     </message>
 </context>
 <context>
@@ -3163,7 +3163,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Reporniți vă rog, OpenLP pentru a folosi noua setare de limbă.</translation>
+        <translation>Reporniți vă rog, OpenLP+ pentru a folosi noua setare de limbă.</translation>
     </message>
 </context>
 <context>
@@ -3563,7 +3563,7 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
@@ -6023,7 +6023,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Se ignoră schimbările curente și se revine la OpenLP</translation>
+        <translation>Se ignoră schimbările curente și se revine la OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6038,7 +6038,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Salvați modificările și reveniți la OpenLP</translation>
+        <translation>Salvați modificările și reveniți la OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6526,7 +6526,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Configurare OpenLP</translation>
+        <translation>Configurare OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7162,7 +7162,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Consultați manualul OpenLP pentru folosire.</translation>
+        <translation>Consultați manualul OpenLP+ pentru folosire.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7457,7 +7457,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Alegeți traducerea pe care doriți să o folosiți în OpenLP.</translation>
+        <translation>Alegeți traducerea pe care doriți să o folosiți în OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7680,7 +7680,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>Fișiere Serviciu OpenLP (*.osz *.oszl)</translation>
+        <translation>Fișiere Serviciu OpenLP+ (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7966,7 +7966,7 @@ Add some items to it then press Save</source>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>Teme OpenLP (*.otz)</translation>
+        <translation>Teme OpenLP+ (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8321,7 +8321,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Verifică dacă sunt actualizări la OpenLP</translation>
+        <translation>Verifică dacă sunt actualizări la OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8564,7 +8564,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Configurați OpenLP...</translation>
+        <translation>&amp;Configurați OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8812,7 +8812,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>Versiunea OpenLP s-a Actualizat</translation>
+        <translation>Versiunea OpenLP+ s-a Actualizat</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8837,12 +8837,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Sigur voiți să reporniți Interfața Inițială?
 
-Repornind această interfață poate aduce schimbări la configurația curentă a OpenLP și e posibil să adauge cântece la lista existentă de cântece și să schimbe tema dumneavoastră implicită.</translation>
+Repornind această interfață poate aduce schimbări la configurația curentă a OpenLP+ și e posibil să adauge cântece la lista existentă de cântece și să schimbe tema dumneavoastră implicită.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>Ecranul Principal al OpenLP este Oprit</translation>
+        <translation>Ecranul Principal al OpenLP+ este Oprit</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8863,9 +8863,9 @@ Repornind această interfață poate aduce schimbări la configurația curentă 
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Sigur doriți să importați setările?
 
-Importând setările se vor face schimbări permanente la configurația actuală a OpenLP.
+Importând setările se vor face schimbări permanente la configurația actuală a OpenLP+.
 
-Importând setări incorecte poate cauza comportament nesigur sau OpenLP să se închidă anormal.</translation>
+Importând setări incorecte poate cauza comportament nesigur sau OpenLP+ să se închidă anormal.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8893,14 +8893,14 @@ Processing has terminated and no changes have been made.</source>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Fișierul pe care l-ați selectat nu pare să fie un fișier valid de setări OpenLP.
+        <translation>Fișierul pe care l-ați selectat nu pare să fie un fișier valid de setări OpenLP+.
 
 Procesarea s-a terminat și nici o schimbare nu a fost făcută.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP se va închide acum. Setările importate vor fi aplicate data viitoare când porniți OpenLP.</translation>
+        <translation>OpenLP+ se va închide acum. Setările importate vor fi aplicate data viitoare când porniți OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8920,17 +8920,17 @@ Procesarea s-a terminat și nici o schimbare nu a fost făcută.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Închide OpenLP</translation>
+        <translation>Închide OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Sigur vreți să închideți OpenLP?</translation>
+        <translation>Sigur vreți să închideți OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>&amp;Închide OpenLP</translation>
+        <translation>&amp;Închide OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -8961,14 +8961,14 @@ Procesarea s-a terminat și nici o schimbare nu a fost făcută.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Se copiază datele OpenLP în locația nouă a dosarului data - {path} - Așteptați vă rog, să se termine copierea</translation>
+        <translation>Se copiază datele OpenLP+ în locația nouă a dosarului data - {path} - Așteptați vă rog, să se termine copierea</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Copierea dosarului Data a OpenLP a eșuat
+        <translation>Copierea dosarului Data a OpenLP+ a eșuat
 
 {err}</translation>
     </message>
@@ -9181,7 +9181,7 @@ Procesarea s-a terminat și nici o schimbare nu a fost făcută.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Așteptați vă rog, cât timp OpenLP este configurat și datele sunt descărcate.</translation>
+        <translation>Așteptați vă rog, cât timp OpenLP+ este configurat și datele sunt descărcate.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9450,7 +9450,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Așteptați vă rog, cât timp resursele sunt descărcate și OpenLP este configurat.</translation>
+        <translation>Așteptați vă rog, cât timp resursele sunt descărcate și OpenLP+ este configurat.</translation>
     </message>
 </context>
 <context>
@@ -9578,7 +9578,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Anulați schimbarea locației dosarului data a OpenLP.</translation>
+        <translation>Anulați schimbarea locației dosarului data a OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9588,7 +9588,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Copiați fișierele de date a OpenLP la noua locație.</translation>
+        <translation>Copiați fișierele de date a OpenLP+ la noua locație.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9603,7 +9603,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;ATENȚIE:&lt;/strong&gt; Noua locație a dosarului data conține fișiere de date OpenLP. Aceste fișiere VOR fi înlocuite în timpul copierii.</translation>
+        <translation>&lt;strong&gt;ATENȚIE:&lt;/strong&gt; Noua locație a dosarului data conține fișiere de date OpenLP+. Aceste fișiere VOR fi înlocuite în timpul copierii.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9676,11 +9676,11 @@ Existing files in this directory could be overwritten. The data directory will b
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Sunteți sigur(ă) că vreți să schimbați locația dosarului data OpenLP la:
+        <translation>Sunteți sigur(ă) că vreți să schimbați locația dosarului data OpenLP+ la:
 
 {path}
 
-Dosarul data va fi schimbat când OpenLP este închis.</translation>
+Dosarul data va fi schimbat când OpenLP+ este închis.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9707,7 +9707,7 @@ Locația pe care ați selectat-o
 
 {path}
 
-pare să conțină fișiere de date OpenLP. Voiți să înlocuiți aceste fișiere cu fișierele curente de date?</translation>
+pare să conțină fișiere de date OpenLP+. Voiți să înlocuiți aceste fișiere cu fișierele curente de date?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9717,7 +9717,7 @@ pare să conțină fișiere de date OpenLP. Voiți să înlocuiți aceste fișie
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Această schimbare va avea efect numai după ce OpenLP va fi repornit.</translation>
+        <translation>Această schimbare va avea efect numai după ce OpenLP+ va fi repornit.</translation>
     </message>
 </context>
 <context>
@@ -9766,7 +9766,7 @@ pare să conțină fișiere de date OpenLP. Voiți să înlocuiți aceste fișie
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Această schimbare va avea efect numai după ce OpenLP va fi repornit.</translation>
+        <translation>Această schimbare va avea efect numai după ce OpenLP+ va fi repornit.</translation>
     </message>
 </context>
 <context>
@@ -9951,7 +9951,7 @@ pare să conțină fișiere de date OpenLP. Voiți să înlocuiți aceste fișie
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP nu poate încărca baza dumneavoastră de date.
+        <translation>OpenLP+ nu poate încărca baza dumneavoastră de date.
 
 Baza de date: {db}</translation>
     </message>
@@ -9968,7 +9968,7 @@ Baza de date: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Baza de date care se încărca a fost creată într-o versiune mai recentă a OpenLP. Baza de date are versiunea {db_ver}, în timp ce OpenLP cere versiunea {db_up}. Baza de date nu va fi încărcată.
+        <translation>Baza de date care se încărca a fost creată într-o versiune mai recentă a OpenLP+. Baza de date are versiunea {db_ver}, în timp ce OpenLP+ cere versiunea {db_up}. Baza de date nu va fi încărcată.
 
 Baza de date: {db_name}</translation>
     </message>
@@ -10096,12 +10096,12 @@ Baza de date: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>Cântece exportate OpenLyrics sau OpenLP 2</translation>
+        <translation>Cântece exportate OpenLyrics sau OpenLP+ 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>Bază de date OpenLP 2</translation>
+        <translation>Bază de date OpenLP+ 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10111,7 +10111,7 @@ Baza de date: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Importatorul generic de document/prezentare a fost dezactivat pentru că OpenLP nu poate accesa OpenOffice sau LibreOffice.</translation>
+        <translation>Importatorul generic de document/prezentare a fost dezactivat pentru că OpenLP+ nu poate accesa OpenOffice sau LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10266,7 +10266,7 @@ Baza de date: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Importatorul de cântece Songs of Fellowship a fost dezactivat pentru că OpenLP nu poate accesa OpenOffice sau LibreOffice.</translation>
+        <translation>Importatorul de cântece Songs of Fellowship a fost dezactivat pentru că OpenLP+ nu poate accesa OpenOffice sau LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>

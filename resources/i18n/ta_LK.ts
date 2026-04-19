@@ -649,7 +649,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>நீங்கள் முற்றிலும் நீக்க வேண்டுமா &quot;{bible}&quot; பைபிள் OpenLP இருந்து? 
+        <translation>நீங்கள் முற்றிலும் நீக்க வேண்டுமா &quot;{bible}&quot; பைபிள் OpenLP+ இருந்து? 
 
 நீங்கள் இந்த பைபிள் மீண்டும் பயன்படுத்த மீண்டும் இறக்குமதி செய்ய வேண்டும்.</translation>
     </message>
@@ -1032,7 +1032,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP வேதாகமம் இந்த மொழிபெயர்ப்பு மொழியை தீர்மானிக்க முடியவில்லை. கீழே உள்ள பட்டியலில் இருந்து மொழி தேர்ந்தெடுக்கவும்.</translation>
+        <translation>OpenLP+ வேதாகமம் இந்த மொழிபெயர்ப்பு மொழியை தீர்மானிக்க முடியவில்லை. கீழே உள்ள பட்டியலில் இருந்து மொழி தேர்ந்தெடுக்கவும்.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1427,7 +1427,7 @@ It is not possible to customize the Book Names.</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>தனிப்பயனாக்கப்பட்ட புத்தகம் பெயர்களை பயன்படுத்த, &quot;வேதாகமம் மொழி&quot; என்ற தேர்ந்தெடுத்த Meta Data tab அல்லது &quot;உலகளாவிய அமைப்புகள்&quot; கட்டமைத்தல் OpenLP பைபிள் பக்கத்திலும், தேர்வு.</translation>
+        <translation>தனிப்பயனாக்கப்பட்ட புத்தகம் பெயர்களை பயன்படுத்த, &quot;வேதாகமம் மொழி&quot; என்ற தேர்ந்தெடுத்த Meta Data tab அல்லது &quot;உலகளாவிய அமைப்புகள்&quot; கட்டமைத்தல் OpenLP+ பைபிள் பக்கத்திலும், தேர்வு.</translation>
     </message>
 </context>
 <context>
@@ -1851,7 +1851,7 @@ Do you want to add the other images anyway?</source>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
         <translation>&lt;strong&gt;படம் Plugin&lt;/strong&gt;&lt;br /&gt;படத்தை Plugin படங்களை காண்பிக்கும் வழங்குகிறது.&lt;br /&gt;
-இந்த Plugin மேன்மையான அம்சங்கள் ஒரு சேவையை மேலாளர் ஒன்றாக படங்களை பல குழு திறன் ஆகும். பல படங்களை காண்பிக்கும் எளிதாக்கும். இந்த Plugin அந்த தானாக இயங்கும் ஒரு காட்சியை உருவாக்க OpenLP தான் &quot;காலக்கெடு வளைவு&quot; அம்சத்தை பயன்படுத்தலாம். இந்த கூடுதலாக, Plugin இருந்து படங்களை தற்போதைய தீம் பின்னணி புறக்கணிக்க பயன்படுத்த முடியும். அதற்கு பதிலாக வழங்கப்பட்ட பின்னணி ஒரு பின்னணி போன்ற தேர்ந்தெடுத்த படத்தை கொண்ட இசை போன்ற உரை சார்ந்த உருப்படிகளை வழங்குவதுமான இது</translation>
+இந்த Plugin மேன்மையான அம்சங்கள் ஒரு சேவையை மேலாளர் ஒன்றாக படங்களை பல குழு திறன் ஆகும். பல படங்களை காண்பிக்கும் எளிதாக்கும். இந்த Plugin அந்த தானாக இயங்கும் ஒரு காட்சியை உருவாக்க OpenLP+ தான் &quot;காலக்கெடு வளைவு&quot; அம்சத்தை பயன்படுத்தலாம். இந்த கூடுதலாக, Plugin இருந்து படங்களை தற்போதைய தீம் பின்னணி புறக்கணிக்க பயன்படுத்த முடியும். அதற்கு பதிலாக வழங்கப்பட்ட பின்னணி ஒரு பின்னணி போன்ற தேர்ந்தெடுத்த படத்தை கொண்ட இசை போன்ற உரை சார்ந்த உருப்படிகளை வழங்குவதுமான இது</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -3159,7 +3159,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>உங்கள் புதிய மொழி அமைப்பு பயன்படுத்த OpenLP மறுதொடக்கம் செய்க.</translation>
+        <translation>உங்கள் புதிய மொழி அமைப்பு பயன்படுத்த OpenLP+ மறுதொடக்கம் செய்க.</translation>
     </message>
 </context>
 <context>
@@ -6522,7 +6522,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>OpenLP உள்ளமைக்கவும்</translation>
+        <translation>OpenLP+ உள்ளமைக்கவும்</translation>
     </message>
 </context>
 <context>
@@ -7158,7 +7158,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>பயன்பாட்டுக்கு OpenLP கையேட்டினை.</translation>
+        <translation>பயன்பாட்டுக்கு OpenLP+ கையேட்டினை.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7453,7 +7453,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>நீங்கள் OpenLP பயன்படுத்த விரும்பும் மொழிபெயர்ப்பு தேர்வு.</translation>
+        <translation>நீங்கள் OpenLP+ பயன்படுத்த விரும்பும் மொழிபெயர்ப்பு தேர்வு.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7720,7 +7720,7 @@ These files will be removed if you continue to save.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>OpenLP Service Files (*.osz)</translation>
+        <translation>OpenLP+ Service Files (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -8313,7 +8313,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>மேம்படுத்தல்கள் OpenLP என்று சோதிக்க</translation>
+        <translation>மேம்படுத்தல்கள் OpenLP+ என்று சோதிக்க</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8556,7 +8556,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;OpenLP கட்டமைக்க ...</translation>
+        <translation>&amp;OpenLP+ கட்டமைக்க ...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8804,7 +8804,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>OpenLP பதிப்பு புதுப்பிக்கப்பட்டது</translation>
+        <translation>OpenLP+ பதிப்பு புதுப்பிக்கப்பட்டது</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8829,12 +8829,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>நீங்கள் முதலில் நேரம் விசார்ட் மீண்டும் இயக்க வேண்டுமா?
 
-மீண்டும் இயங்கும் இந்த வழிகாட்டி உங்கள் தற்போதைய OpenLP கட்டமைப்பு மாற்றங்கள் மற்றும் சாத்தியமான ஏற்கனவே இசை பட்டியலில் இசை சேர்க்க, உங்கள் இயல்புநிலை தீம் மாற்றலாம்.</translation>
+மீண்டும் இயங்கும் இந்த வழிகாட்டி உங்கள் தற்போதைய OpenLP+ கட்டமைப்பு மாற்றங்கள் மற்றும் சாத்தியமான ஏற்கனவே இசை பட்டியலில் இசை சேர்க்க, உங்கள் இயல்புநிலை தீம் மாற்றலாம்.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>OpenLP முக்கிய காட்சி வெற்றாக</translation>
+        <translation>OpenLP+ முக்கிய காட்சி வெற்றாக</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8886,7 +8886,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP இப்போது மூடிவிடும். இறக்குமதி அமைப்புகளை நீங்கள் OpenLP தொடங்க அடுத்த முறை பயன்படுத்தப்படும்.</translation>
+        <translation>OpenLP+ இப்போது மூடிவிடும். இறக்குமதி அமைப்புகளை நீங்கள் OpenLP+ தொடங்க அடுத்த முறை பயன்படுத்தப்படும்.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8947,14 +8947,14 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>புதிய தரவு அடைவு இடத்திற்கு OpenLP தரவு நகல் - {path} - நகல் முடிக்க காத்திருக்கவும</translation>
+        <translation>புதிய தரவு அடைவு இடத்திற்கு OpenLP+ தரவு நகல் - {path} - நகல் முடிக்க காத்திருக்கவும</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>OpenLP தரவு அடைவு நகல் தோல்வியடைந்தது 
+        <translation>OpenLP+ தரவு அடைவு நகல் தோல்வியடைந்தது 
 
 {err}</translation>
     </message>
@@ -9167,7 +9167,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>OpenLP அமைக்கப்பட்டுள்ளது உங்கள் தரவு பதிவிறக்கம் வரை காத்திருக்கவும்.</translation>
+        <translation>OpenLP+ அமைக்கப்பட்டுள்ளது உங்கள் தரவு பதிவிறக்கம் வரை காத்திருக்கவும்.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9564,7 +9564,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>OpenLP தரவு அடைவு இடம் மாற்றம் ரத்து.</translation>
+        <translation>OpenLP+ தரவு அடைவு இடம் மாற்றம் ரத்து.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9574,7 +9574,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>புதிய இடத்திற்கு OpenLP தரவு கோப்புகளை நகலெடுக்க.</translation>
+        <translation>புதிய இடத்திற்கு OpenLP+ தரவு கோப்புகளை நகலெடுக்க.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9589,7 +9589,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;எச்சரிக்கை:&lt;/strong&gt; புதிய தரவு அடைவு இடம் OpenLP தரவு கோப்புகளை கொண்டுள்ளது. இந்த கோப்புகள் ஒரு பிரதியை போது இடமாற்றப்படும்.</translation>
+        <translation>&lt;strong&gt;எச்சரிக்கை:&lt;/strong&gt; புதிய தரவு அடைவு இடம் OpenLP+ தரவு கோப்புகளை கொண்டுள்ளது. இந்த கோப்புகள் ஒரு பிரதியை போது இடமாற்றப்படும்.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9662,11 +9662,11 @@ Existing files in this directory could be overwritten. The data directory will b
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>நீங்கள் OpenLP தரவு அடைவு இடம் மாற்ற வேண்டுமா: 
+        <translation>நீங்கள் OpenLP+ தரவு அடைவு இடம் மாற்ற வேண்டுமா: 
 
 {path}
 
-OpenLP மூடப்படும் போது தரவு அடைவு மாற்றப்படும்.</translation>
+OpenLP+ மூடப்படும் போது தரவு அடைவு மாற்றப்படும்.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9931,7 +9931,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP உங்கள் தரவுத்தள 
+        <translation>OpenLP+ உங்கள் தரவுத்தள 
 
 தரவுத்தளம் ஏற்ற முடியாது: {db}</translation>
     </message>
@@ -9948,7 +9948,7 @@ Database: {db}</source>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>ஏற்றாமல் தரவுத்தள OpenLP மிகவும் சமீபத்திய பதிப்பு ல் உருவாக்கப்பட்டது. தரவுத்தள பதிப்பு {db_ver}, OpenLP பதிப்பு எதிர்பார்க்கிறது போது {db_up}.
+        <translation>ஏற்றாமல் தரவுத்தள OpenLP+ மிகவும் சமீபத்திய பதிப்பு ல் உருவாக்கப்பட்டது. தரவுத்தள பதிப்பு {db_ver}, OpenLP+ பதிப்பு எதிர்பார்க்கிறது போது {db_up}.
 The database will not be loaded.
 
 Database: {db_name}</translation>
@@ -10092,7 +10092,7 @@ Database: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>OpenLP இப்பொழுது OpenOffice அல்லது LibreOffice திறக்க முடியாது, ஏனெனில் generic ஆவணம் / விளக்கக்காட்சி இறக்குமதியாளர் முடக்கப்பட்டுள்ளது.</translation>
+        <translation>OpenLP+ இப்பொழுது OpenOffice அல்லது LibreOffice திறக்க முடியாது, ஏனெனில் generic ஆவணம் / விளக்கக்காட்சி இறக்குமதியாளர் முடக்கப்பட்டுள்ளது.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10247,7 +10247,7 @@ Database: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation> Fellowship importer பாடல்கள் முடக்கப்பட்டுள்ளதால், OpenLP ஏனெனில் OpenOffice அல்லது LibreOffice திறக்க முடியாது.</translation>
+        <translation> Fellowship importer பாடல்கள் முடக்கப்பட்டுள்ளதால், OpenLP+ ஏனெனில் OpenOffice அல்லது LibreOffice திறக்க முடியாது.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>

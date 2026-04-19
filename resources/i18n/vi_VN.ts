@@ -13,7 +13,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
         <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
 {error}</source>
-        <translation>Đã có lỗi không mong muốn xảy ra khi nhập bản Kinh Thánh SWORD, vui lòng báo cáo cho các nhà phát triển OpenLP.
+        <translation>Đã có lỗi không mong muốn xảy ra khi nhập bản Kinh Thánh SWORD, vui lòng báo cáo cho các nhà phát triển OpenLP+.
 {error}</translation>
     </message>
 </context>
@@ -650,7 +650,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Bạn có chắc chắn muốn xóa hoàn toàn bản Kinh Thánh &quot;{bible}&quot; khỏi OpenLP không?
+        <translation>Bạn có chắc chắn muốn xóa hoàn toàn bản Kinh Thánh &quot;{bible}&quot; khỏi OpenLP+ không?
 
 Bạn sẽ cần phải nhập lại bản Kinh Thánh này để sử dụng lại.</translation>
     </message>
@@ -667,7 +667,7 @@ Bạn sẽ cần phải nhập lại bản Kinh Thánh này để sử dụng l�
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
         <source>OpenLP cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
-        <translation>OpenLP không thể kết hợp kết quả tìm kiếm kinh thánh đơn và đôi. Bạn có muốn xóa kết quả đã lưu không?</translation>
+        <translation>OpenLP+ không thể kết hợp kết quả tìm kiếm kinh thánh đơn và đôi. Bạn có muốn xóa kết quả đã lưu không?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="626"/>
@@ -723,7 +723,7 @@ Chỉ các câu kinh thánh được tìm thấy trong cả hai kinh thánh mớ
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>Phát hiện proxy server {proxy} trong Kinh Thánh {name}.&lt;br&gt;Bạn có muốn đặt nó làm proxy cho OpenLP?</translation>
+        <translation>Phát hiện proxy server {proxy} trong Kinh Thánh {name}.&lt;br&gt;Bạn có muốn đặt nó làm proxy cho OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -1041,7 +1041,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP không thể xác định ngôn ngữ của bản dịch Kinh thánh này. Vui lòng chọn ngôn ngữ từ danh sách bên dưới.</translation>
+        <translation>OpenLP+ không thể xác định ngôn ngữ của bản dịch Kinh thánh này. Vui lòng chọn ngôn ngữ từ danh sách bên dưới.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1437,7 +1437,7 @@ Không thể chỉnh sửa tên sách.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Để sử dụng tên sách được tùy chỉnh, người dùng phải chọn &quot;Ngôn ngữ Kinh Thánh&quot; trên tab dữ liệu Meta hoặc, nếu &quot;Cài đặt sẳn từ hệ thống&quot; được chọn, trên trang Kinh Thánh trong Cấu hình OpenLP.</translation>
+        <translation>Để sử dụng tên sách được tùy chỉnh, người dùng phải chọn &quot;Ngôn ngữ Kinh Thánh&quot; trên tab dữ liệu Meta hoặc, nếu &quot;Cài đặt sẳn từ hệ thống&quot; được chọn, trên trang Kinh Thánh trong Cấu hình OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -1601,7 +1601,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
         <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
-        <translation> Xác thực không thành công. Kiểm tra thông tin xác thực của bạn trong Cài đặt OpenLP.</translation>
+        <translation> Xác thực không thành công. Kiểm tra thông tin xác thực của bạn trong Cài đặt OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="289"/>
@@ -1860,7 +1860,7 @@ Bạn có muốn thêm những hình ảnh khác không?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Plugin Hình ảnh&lt;/strong&gt;&lt;br /&gt;Plugin Hình ảnh cung cấp tính năng hiển thị hình ảnh.&lt;br /&gt;Một trong những tính năng nổi bật của plugin này là khả năng nhóm nhiều hình ảnh cùng nhau trong trình quản lý dịch vụ, giúp việc hiển thị nhiều hình ảnh trở nên dễ dàng hơn. Plugin này cũng có thể sử dụng tính năng lặp lại theo thời gian của OpenLP để tạo ra một bộ trình chiếu tự động chạy. Ngoài ra, hình ảnh từ plugin có thể được sử dụng để ghi đè lên nền tảng hiện tại của chủ đề, làm nền cho các mục dựa trên văn bản như bài hát với hình ảnh đã chọn thay vì nền được cung cấp bởi chủ đề.</translation>
+        <translation>&lt;strong&gt;Plugin Hình ảnh&lt;/strong&gt;&lt;br /&gt;Plugin Hình ảnh cung cấp tính năng hiển thị hình ảnh.&lt;br /&gt;Một trong những tính năng nổi bật của plugin này là khả năng nhóm nhiều hình ảnh cùng nhau trong trình quản lý dịch vụ, giúp việc hiển thị nhiều hình ảnh trở nên dễ dàng hơn. Plugin này cũng có thể sử dụng tính năng lặp lại theo thời gian của OpenLP+ để tạo ra một bộ trình chiếu tự động chạy. Ngoài ra, hình ảnh từ plugin có thể được sử dụng để ghi đè lên nền tảng hiện tại của chủ đề, làm nền cho các mục dựa trên văn bản như bài hát với hình ảnh đã chọn thay vì nền được cung cấp bởi chủ đề.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -2695,7 +2695,7 @@ Phần mở rộng tệp không được hỗ trợ</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
         <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
-        <translation>Bạn đã mất Khóa thư mục dữ liệu được chia sẻ của OpenLP, thay vào đó, khóa này đã được &quot;{user}&quot; xác nhận quyền sở hữu trên &quot;{host}&quot;! Bạn nên đóng OpenLP ngay để tránh dữ liệu bị hỏng! Bạn có thể thử lấy lại Khóa thư mục dữ liệu bằng cách khởi động lại OpenLP</translation>
+        <translation>Bạn đã mất Khóa thư mục dữ liệu được chia sẻ của OpenLP+, thay vào đó, khóa này đã được &quot;{user}&quot; xác nhận quyền sở hữu trên &quot;{host}&quot;! Bạn nên đóng OpenLP+ ngay để tránh dữ liệu bị hỏng! Bạn có thể thử lấy lại Khóa thư mục dữ liệu bằng cách khởi động lại OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="148"/>
@@ -2705,7 +2705,7 @@ Phần mở rộng tệp không được hỗ trợ</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
         <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
-        <translation>Thư mục dữ liệu chia sẻ OpenLP đang được &quot;{user}&quot; sử dụng trên &quot;{host}&quot;. Để tránh hỏng dữ liệu, mỗi lần chỉ một người dùng có thể truy cập dữ liệu! Vui lòng chờ đợi trong vài phút và thử lại.</translation>
+        <translation>Thư mục dữ liệu chia sẻ OpenLP+ đang được &quot;{user}&quot; sử dụng trên &quot;{host}&quot;. Để tránh hỏng dữ liệu, mỗi lần chỉ một người dùng có thể truy cập dữ liệu! Vui lòng chờ đợi trong vài phút và thử lại.</translation>
     </message>
 </context>
 <context>
@@ -3009,7 +3009,7 @@ Phần mở rộng tệp không được hỗ trợ</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Cơ sở dữ liệu bài hát OpenLP2 không đúng.</translation>
+        <translation>Cơ sở dữ liệu bài hát OpenLP+2 không đúng.</translation>
     </message>
 </context>
 <context>
@@ -3172,7 +3172,7 @@ Phần mở rộng tệp không được hỗ trợ</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Vui lòng khởi động lại OpenLP để sử dụng cài đặt ngôn ngữ mới của bạn.</translation>
+        <translation>Vui lòng khởi động lại OpenLP+ để sử dụng cài đặt ngôn ngữ mới của bạn.</translation>
     </message>
 </context>
 <context>
@@ -3191,7 +3191,7 @@ Phần mở rộng tệp không được hỗ trợ</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Thiết lập màn hình đã thay đổi. OpenLP sẽ cố gắng tự động chọn màn hình hiển thị, nhưng bạn nên cân nhắc cập nhật cài đặt màn hình.</translation>
+        <translation>Thiết lập màn hình đã thay đổi. OpenLP+ sẽ cố gắng tự động chọn màn hình hiển thị, nhưng bạn nên cân nhắc cập nhật cài đặt màn hình.</translation>
     </message>
 </context>
 <context>
@@ -3572,18 +3572,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
         <source>OpenLP Song Database</source>
-        <translation>Cơ sở dữ liệu ca khúc của OpenLP</translation>
+        <translation>Cơ sở dữ liệu ca khúc của OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>OpenLP đang hoạt động trên máy này rồi.
+        <translation>OpenLP+ đang hoạt động trên máy này rồi.
 Đóng lại phiên này đi</translation>
     </message>
     <message>
@@ -6033,7 +6033,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Bỏ qua các thay đổi hiện tại và quay lại OpenLP</translation>
+        <translation>Bỏ qua các thay đổi hiện tại và quay lại OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6048,7 +6048,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Lưu các thay đổi và quay lại OpenLP</translation>
+        <translation>Lưu các thay đổi và quay lại OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6443,15 +6443,15 @@ The location of the data folder was previously changed from the OpenLP's default
 You may reset the data location back to the default location, or you can try to make the current location available.
 
 Do you want to reset to the default data location? If not, OpenLP will be closed so you can try to fix the problem.</source>
-        <translation>Thư mục dữ liệu OpenLP không được tìm thấy tại:
+        <translation>Thư mục dữ liệu OpenLP+ không được tìm thấy tại:
 
 {path}
 
-Vị trí của thư mục dữ liệu trước đó đã được thay đổi khỏi vị trí mặc định của OpenLP. Nếu dữ liệu được lưu trữ trên thiết bị có thể tháo rời, thiết bị đó cần được kết nối.
+Vị trí của thư mục dữ liệu trước đó đã được thay đổi khỏi vị trí mặc định của OpenLP+. Nếu dữ liệu được lưu trữ trên thiết bị có thể tháo rời, thiết bị đó cần được kết nối.
 
 Bạn có thể đặt lại vị trí dữ liệu về vị trí mặc định hoặc bạn có thể thử làm cho vị trí hiện tại có thể truy cập được.
 
-Bạn có muốn đặt lại vị trí dữ liệu mặc định không? Nếu không, OpenLP sẽ bị đóng lại để bạn có thể sửa chữa vấn đề.</translation>
+Bạn có muốn đặt lại vị trí dữ liệu mặc định không? Nếu không, OpenLP+ sẽ bị đóng lại để bạn có thể sửa chữa vấn đề.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="236"/>
@@ -6464,7 +6464,7 @@ Bạn có muốn đặt lại vị trí dữ liệu mặc định không? Nếu 
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>OpenLP đã được nâng cấp, bạn có muốn tạo 
+        <translation>OpenLP+ đã được nâng cấp, bạn có muốn tạo 
 bản sao lưu cho thư mục dữ liệu cũ không?</translation>
     </message>
     <message>
@@ -6493,7 +6493,7 @@ bản sao lưu cho thư mục dữ liệu cũ không?</translation>
 {data_folder_backup_path}
 
 Do you want to continue?</source>
-        <translation>OpenLP đã phát hiện một tệp cấu hình được tạo bởi một phiên bản OpenLP mới hơn. OpenLP sẽ bắt đầu với cài đặt mới vì việc hạ cấp dữ liệu không được hỗ trợ. Bất kỳ dữ liệu hiện có sẽ được sao lưu tại:
+        <translation>OpenLP+ đã phát hiện một tệp cấu hình được tạo bởi một phiên bản OpenLP+ mới hơn. OpenLP+ sẽ bắt đầu với cài đặt mới vì việc hạ cấp dữ liệu không được hỗ trợ. Bất kỳ dữ liệu hiện có sẽ được sao lưu tại:
 
 {data_folder_backup_path}
 
@@ -6517,12 +6517,12 @@ Bạn có muốn tiếp tục không?</translation>
 OpenLP will attempt to continue.</source>
         <translation>Cài đặt bản sao lưu thất bại.
 
-OpenLP sẽ cố gắng tiếp tục hoạt động.</translation>
+OpenLP+ sẽ cố gắng tiếp tục hoạt động.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
         <source>OpenLP Backup</source>
-        <translation>Sao lưu OpenLP</translation>
+        <translation>Sao lưu OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6553,7 +6553,7 @@ OpenLP sẽ cố gắng tiếp tục hoạt động.</translation>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Cấu hình OpenLP</translation>
+        <translation>Cấu hình OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7189,7 +7189,7 @@ OpenLP sẽ cố gắng tiếp tục hoạt động.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Tham khảo hướng dẫn sử dụng OpenLP để sử dụng.</translation>
+        <translation>Tham khảo hướng dẫn sử dụng OpenLP+ để sử dụng.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7486,7 +7486,7 @@ OpenLP sẽ cố gắng tiếp tục hoạt động.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Chọn bản dịch bạn muốn sử dụng trong OpenLP.</translation>
+        <translation>Chọn bản dịch bạn muốn sử dụng trong OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7709,7 +7709,7 @@ OpenLP sẽ cố gắng tiếp tục hoạt động.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>Tập tên DS chiếu cho OpenLP (*.osz *.oszl)</translation>
+        <translation>Tập tên DS chiếu cho OpenLP+ (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7752,17 +7752,17 @@ Nếu bạn tiếp tục lưu, các tệp tin này sẽ bị xóa đi.</translat
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
         <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>Tệp DS chiếu cho OpenLP - nhẹ (*.oszl)</translation>
+        <translation>Tệp DS chiếu cho OpenLP+ - nhẹ (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>Tập tên DS chiếu cho OpenLP (*.osz)</translation>
+        <translation>Tập tên DS chiếu cho OpenLP+ (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
         <source>The service file {file_path} could not be loaded because it is either corrupt, inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.</source>
-        <translation>Tệp danh sách chiếu {file_path} không thể được tải lên do bị hỏng, không thể truy cập hoặc không phải là tệp danh sách chiếu của OpenLP 2 hoặc OpenLP 3 hợp lệ.</translation>
+        <translation>Tệp danh sách chiếu {file_path} không thể được tải lên do bị hỏng, không thể truy cập hoặc không phải là tệp danh sách chiếu của OpenLP+ 2 hoặc OpenLP+ 3 hợp lệ.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="979"/>
@@ -7998,7 +7998,7 @@ Thêm một số mục vào đó rồi nhấn Lưu</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>Giao diện OpenLP (*.otz)</translation>
+        <translation>Giao diện OpenLP+ (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8357,12 +8357,12 @@ trong bộ điều khiển slide:</translation>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Kiểm tra cập nhật cho OpenLP</translation>
+        <translation>Kiểm tra cập nhật cho OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
         <source>Check for updates to OpenLP Remote UI</source>
-        <translation>Kiểm tra các bản cập nhật cho OpenLP Remote UI</translation>
+        <translation>Kiểm tra các bản cập nhật cho OpenLP+ Remote UI</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="211"/>
@@ -8398,12 +8398,12 @@ trong bộ điều khiển slide:</translation>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
         <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
-        <translation>&lt;strong&gt;Oops, OpenLP đã gặp sự cố và không thể khôi phục!&lt;br&gt;&lt;br&gt;Bạn có thể &lt;/strong&gt;giúp các nhà phát triển OpenLP &lt;strong&gt;sửa lỗi này&lt;/strong&gt; bằng&lt;br&gt; cách gửi cho họ &lt;strong&gt;một báo cáo lỗi đến {email}&lt;/strong&gt;{newlines}</translation>
+        <translation>&lt;strong&gt;Oops, OpenLP+ đã gặp sự cố và không thể khôi phục!&lt;br&gt;&lt;br&gt;Bạn có thể &lt;/strong&gt;giúp các nhà phát triển OpenLP+ &lt;strong&gt;sửa lỗi này&lt;/strong&gt; bằng&lt;br&gt; cách gửi cho họ &lt;strong&gt;một báo cáo lỗi đến {email}&lt;/strong&gt;{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
         <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
-        <translation>{first_part}&lt;strong&gt;Nếu không có ứng dụng email? &lt;/strong&gt; bạn có thể &lt;strong&gt;lưu&lt;/strong&gt; thông tin này vào một &lt;strong&gt;tệp tin&lt;/strong&gt; và&lt;br&gt;gửi nó từ &lt;strong&gt;trình duyệt email&lt;/strong&gt;  của bạn qua một &lt;strong&gt;tệp dính kèm.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Cảm ơn bạn&lt;/strong&gt; đã đóng góp vào việc làm cho OpenLP tốt hơn!&lt;br&gt;</translation>
+        <translation>{first_part}&lt;strong&gt;Nếu không có ứng dụng email? &lt;/strong&gt; bạn có thể &lt;strong&gt;lưu&lt;/strong&gt; thông tin này vào một &lt;strong&gt;tệp tin&lt;/strong&gt; và&lt;br&gt;gửi nó từ &lt;strong&gt;trình duyệt email&lt;/strong&gt;  của bạn qua một &lt;strong&gt;tệp dính kèm.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Cảm ơn bạn&lt;/strong&gt; đã đóng góp vào việc làm cho OpenLP+ tốt hơn!&lt;br&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="112"/>
@@ -8579,7 +8579,7 @@ trong bộ điều khiển slide:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>Đóng OpenLP - Tắt chương trình.</translation>
+        <translation>Đóng OpenLP+ - Tắt chương trình.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8600,7 +8600,7 @@ trong bộ điều khiển slide:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Cấu hình OpenLP...</translation>
+        <translation>&amp;Cấu hình OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8736,7 +8736,7 @@ trong bộ điều khiển slide:</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>Thông tin thêm về OpenLP.</translation>
+        <translation>Thông tin thêm về OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8843,14 +8843,14 @@ trong bộ điều khiển slide:</translation>
         <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
 
 You can download the latest version from https://openlp.org/.</source>
-        <translation>Phiên bản {new} của OpenLP đã có sẵn để tải xuống (hiện tại bạn đang sử dụng phiên bản {current}).
+        <translation>Phiên bản {new} của OpenLP+ đã có sẵn để tải xuống (hiện tại bạn đang sử dụng phiên bản {current}).
 
 Bạn có thể tải xuống phiên bản mới nhất tại https://openlp.org/.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>Phiên bản OpenLP đã được cập nhật</translation>
+        <translation>Phiên bản OpenLP+ đã được cập nhật</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8876,12 +8876,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Bạn có chắc chắn muốn chạy lại Trình hướng dẫn Lần đầu tiên không?
 
-Chạy lại trình này có thể tạo ra các thay đổi đến cấu hình OpenLP hiện tại của bạn và có thể thêm bài hát vào danh sách bài hát hiện có của bạn và thay đổi chủ đề mặc định.</translation>
+Chạy lại trình này có thể tạo ra các thay đổi đến cấu hình OpenLP+ hiện tại của bạn và có thể thêm bài hát vào danh sách bài hát hiện có của bạn và thay đổi chủ đề mặc định.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>Màn hình chính OpenLP không có nội dung hiển thị</translation>
+        <translation>Màn hình chính OpenLP+ không có nội dung hiển thị</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8902,9 +8902,9 @@ Chạy lại trình này có thể tạo ra các thay đổi đến cấu hình 
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Bạn có chắc chắn muốn nhập cài đặt không?
 
-Nhập cài đặt sẽ tạo ra các thay đổi vĩnh viễn đối với cấu hình OpenLP hiện tại của bạn.
+Nhập cài đặt sẽ tạo ra các thay đổi vĩnh viễn đối với cấu hình OpenLP+ hiện tại của bạn.
 
-Nhập cài đặt không chính xác có thể gây ra hành vi không ổn định hoặc OpenLP bị chấm dứt bất thường.</translation>
+Nhập cài đặt không chính xác có thể gây ra hành vi không ổn định hoặc OpenLP+ bị chấm dứt bất thường.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8918,14 +8918,14 @@ Nhập cài đặt không chính xác có thể gây ra hành vi không ổn đ�
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>Cài đặt OpenLP (*.conf)</translation>
+        <translation>Cài đặt OpenLP+ (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
         <source>OpenLP cannot import settings from a newer version of OpenLP.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>OpenLP không thể nhập cài đặt từ phiên bản OpenLP mới hơn.
+        <translation>OpenLP+ không thể nhập cài đặt từ phiên bản OpenLP+ mới hơn.
 
 Quá trình xử lý đã chấm dứt và không có thay đổi nào được thực hiện.</translation>
     </message>
@@ -8934,14 +8934,14 @@ Quá trình xử lý đã chấm dứt và không có thay đổi nào được 
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Tập tin bạn đã chọn có vẻ là một tập tin cài đặt OpenLP không hợp lệ.
+        <translation>Tập tin bạn đã chọn có vẻ là một tập tin cài đặt OpenLP+ không hợp lệ.
 
 Xử lý đã bị chấm dứt và không có thay đổi nào được thực hiện.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP sẽ đóng ngay bây giờ. Các cài đặt được nhập sẽ được áp dụng khi bạn khởi động lại OpenLP.</translation>
+        <translation>OpenLP+ sẽ đóng ngay bây giờ. Các cài đặt được nhập sẽ được áp dụng khi bạn khởi động lại OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8961,17 +8961,17 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Thoát OpenLP</translation>
+        <translation>Thoát OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Bạn có chắc chắn muốn thoát OpenLP không?</translation>
+        <translation>Bạn có chắc chắn muốn thoát OpenLP+ không?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>&amp;Thoát OpenLP</translation>
+        <translation>&amp;Thoát OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -9002,14 +9002,14 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Đang sao chép dữ liệu OpenLP đến vị trí thư mục dữ liệu mới - {path} - Vui lòng đợi cho quá trình sao chép hoàn tất</translation>
+        <translation>Đang sao chép dữ liệu OpenLP+ đến vị trí thư mục dữ liệu mới - {path} - Vui lòng đợi cho quá trình sao chép hoàn tất</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Sao chép thư mục dữ liệu OpenLP thất bại
+        <translation>Sao chép thư mục dữ liệu OpenLP+ thất bại
 
 {err}</translation>
     </message>
@@ -9119,17 +9119,17 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="120"/>
         <source>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Find out more about OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;OpenLP {{version}}{{revision}} - Phần mềm chiếu lời bài hát mã nguồn mở&lt;br&gt;Bản quyền{crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Tìm hiểu thêm về OpenLP:&lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Chương trình này là phần mềm miễn phí: bạn có thể phân phối lại hoặc sửa đổi nó theo các điều khoản của Giấy phép Công cộng GNU được xuất bản bởi Quỹ Phần mềm Tự do, phiên bản 3 của Giấy phép hoặc (theo sự lựa chọn của bạn) bất kỳ phiên bản sau.&lt;/p&gt;&lt;p&gt;Chương trình này được phân phối với hy vọng rằng nó sẽ hữu ích, nhưng KHÔNG CÓ BẤT KỲ BẢO HÀNH NÀO; thậm chí không có bảo hành ngụ ý về TÍNH CHẤT HỢP LÝ HOẶC TÍNH THÍCH HỢP CHO MỤC ĐÍCH CỤ THỂ nào cả. Xem Giấy phép Công cộng GNU để biết thêm chi tiết.&lt;/p&gt;&lt;p&gt;Bạn nên nhận được một bản sao của Giấy phép Công cộng GNU cùng với chương trình này. Nếu không, hãy xem tại  &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
+        <translation>&lt;p&gt;OpenLP+ {{version}}{{revision}} - Phần mềm chiếu lời bài hát mã nguồn mở&lt;br&gt;Bản quyền{crs} 2004-{yr} OpenLP+ Developers&lt;/p&gt;&lt;p&gt;Tìm hiểu thêm về OpenLP+:&lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Chương trình này là phần mềm miễn phí: bạn có thể phân phối lại hoặc sửa đổi nó theo các điều khoản của Giấy phép Công cộng GNU được xuất bản bởi Quỹ Phần mềm Tự do, phiên bản 3 của Giấy phép hoặc (theo sự lựa chọn của bạn) bất kỳ phiên bản sau.&lt;/p&gt;&lt;p&gt;Chương trình này được phân phối với hy vọng rằng nó sẽ hữu ích, nhưng KHÔNG CÓ BẤT KỲ BẢO HÀNH NÀO; thậm chí không có bảo hành ngụ ý về TÍNH CHẤT HỢP LÝ HOẶC TÍNH THÍCH HỢP CHO MỤC ĐÍCH CỤ THỂ nào cả. Xem Giấy phép Công cộng GNU để biết thêm chi tiết.&lt;/p&gt;&lt;p&gt;Bạn nên nhận được một bản sao của Giấy phép Công cộng GNU cùng với chương trình này. Nếu không, hãy xem tại  &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="134"/>
         <source>OpenLP is written and maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the &quot;contribute&quot; button below.</source>
-        <translation>OpenLP được viết và bảo trì bởi các tình nguyện viên trên khắp thế giới trong thời gian rảnh của họ. Nếu bạn muốn thấy dự án này thành công, hãy xem xét đóng góp bằng cách nhấp vào nút &quot;đóng góp&quot; ở dưới đây.</translation>
+        <translation>OpenLP+ được viết và bảo trì bởi các tình nguyện viên trên khắp thế giới trong thời gian rảnh của họ. Nếu bạn muốn thấy dự án này thành công, hãy xem xét đóng góp bằng cách nhấp vào nút &quot;đóng góp&quot; ở dưới đây.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
         <source>OpenLP would not be possible without the following software libraries:</source>
-        <translation>OpenLP không thể tồn tại nếu thiếu các thư viện phần mềm sau:</translation>
+        <translation>OpenLP+ không thể tồn tại nếu thiếu các thư viện phần mềm sau:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="165"/>
@@ -9201,7 +9201,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="233"/>
         <source>OpenLP was unable to read the resource index file. Please try again later.</source>
-        <translation>OpenLP không thể đọc tệp index tài nguyên. Vui lòng thử lại sau.</translation>
+        <translation>OpenLP+ không thể đọc tệp index tài nguyên. Vui lòng thử lại sau.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="443"/>
@@ -9222,7 +9222,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Xin vui lòng đợi trong khi OpenLP được thiết lập và dữ liệu của bạn được tải xuống.</translation>
+        <translation>Xin vui lòng đợi trong khi OpenLP+ được thiết lập và dữ liệu của bạn được tải xuống.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9232,22 +9232,22 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Tải xuống hoàn tất. Nhấn nút &apos;{finish_button}&apos; để trở lại OpenLP.</translation>
+        <translation>Tải xuống hoàn tất. Nhấn nút &apos;{finish_button}&apos; để trở lại OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Tải xuống hoàn tất. Nhấn nút &apos;{finish_button}&apos; để bắt đầu OpenLP.</translation>
+        <translation>Tải xuống hoàn tất. Nhấn nút &apos;{finish_button}&apos; để bắt đầu OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
         <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Nhấn nút &apos;{finish_button}&apos; để quay lại OpenLP.</translation>
+        <translation>Nhấn nút &apos;{finish_button}&apos; để quay lại OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
         <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Nhấn nút &apos;{finish_button}&apos; để bắt đầu OpenLP.</translation>
+        <translation>Nhấn nút &apos;{finish_button}&apos; để bắt đầu OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
@@ -9288,7 +9288,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
         <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
-        <translation>OpenLP có một trình điều khiển từ xa trên web, cho phép bạn điều khiển OpenLP từ một máy tính, điện thoại hoặc máy tính bảng khác trên cùng một mạng với máy tính chạy OpenLP. OpenLP có thể tải xuống trình điều khiển từ xa này ngay bây giờ, hoặc bạn có thể tải xuống nó sau thông qua cài đặt từ xa.</translation>
+        <translation>OpenLP+ có một trình điều khiển từ xa trên web, cho phép bạn điều khiển OpenLP+ từ một máy tính, điện thoại hoặc máy tính bảng khác trên cùng một mạng với máy tính chạy OpenLP+. OpenLP+ có thể tải xuống trình điều khiển từ xa này ngay bây giờ, hoặc bạn có thể tải xuống nó sau thông qua cài đặt từ xa.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="78"/>
@@ -9318,7 +9318,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="318"/>
         <source>This wizard will help you to configure OpenLP for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
-        <translation>Trình hướng dẫn này sẽ giúp bạn cấu hình OpenLP cho việc sử dụng ban đầu. Nhấn nút &apos;{next_button}&apos; bên dưới để bắt đầu.</translation>
+        <translation>Trình hướng dẫn này sẽ giúp bạn cấu hình OpenLP+ cho việc sử dụng ban đầu. Nhấn nút &apos;{next_button}&apos; bên dưới để bắt đầu.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
@@ -9338,7 +9338,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Xin vui lòng đợi trong khi OpenLP tải xuống tệp chỉ mục tài nguyên...</translation>
+        <translation>Xin vui lòng đợi trong khi OpenLP+ tải xuống tệp chỉ mục tài nguyên...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9358,7 +9358,7 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Choose the main display screen for OpenLP.</source>
-        <translation>Dùng màn hình hiển thị chính cho OpenLP.</translation>
+        <translation>Dùng màn hình hiển thị chính cho OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
@@ -9408,14 +9408,14 @@ Xử lý đã bị chấm dứt và không có thay đổi nào được thực 
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
         <source>Can OpenLP download some resource data?</source>
-        <translation>OpenLP có thể tải xuống một số dữ liệu tài nguyên không?</translation>
+        <translation>OpenLP+ có thể tải xuống một số dữ liệu tài nguyên không?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="350"/>
         <source>OpenLP has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
-        <translation>OpenLP đã thu thập một số tài nguyên mà chúng tôi được phép phân phối. 
+        <translation>OpenLP+ đã thu thập một số tài nguyên mà chúng tôi được phép phân phối. 
 
 Nếu bạn muốn tải xuống một số trong số này, hãy nhấp vào nút &apos;{next_button}&apos;, nếu không, hãy nhấp vào nút &apos;{finish_button}&apos;.</translation>
     </message>
@@ -9438,13 +9438,13 @@ Please check your internet connection. If your church uses a proxy server click 
 Click the '{back_button}' button to try again.
 
 If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
-        <translation>OpenLP không thể kết nối với internet để lấy thông tin về dữ liệu mẫu có sẵn.
+        <translation>OpenLP+ không thể kết nối với internet để lấy thông tin về dữ liệu mẫu có sẵn.
 
 Vui lòng kiểm tra kết nối internet của bạn. Nếu nhà thờ của bạn sử dụng máy chủ proxy, hãy nhấp vào nút &apos;Cài đặt Internet&apos; bên dưới và nhập chi tiết máy chủ ở đó.
 
 Nhấp vào nút &apos;{back_button}&apos; để thử lại.
 
-Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải xuống dữ liệu vào một thời điểm sau bằng cách chọn &apos;Chạy lại Trình hướng dẫn Lần đầu tiên&apos; từ menu &apos;Công cụ&apos; trong OpenLP.</translation>
+Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải xuống dữ liệu vào một thời điểm sau bằng cách chọn &apos;Chạy lại Trình hướng dẫn Lần đầu tiên&apos; từ menu &apos;Công cụ&apos; trong OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="366"/>
@@ -9499,7 +9499,7 @@ Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải x
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Xin vui lòng đợi trong khi các tài nguyên được tải xuống và OpenLP được cấu hình.</translation>
+        <translation>Xin vui lòng đợi trong khi các tài nguyên được tải xuống và OpenLP+ được cấu hình.</translation>
     </message>
 </context>
 <context>
@@ -9627,7 +9627,7 @@ Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải x
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Hủy thay đổi vị trí thư mục dữ liệu của OpenLP.</translation>
+        <translation>Hủy thay đổi vị trí thư mục dữ liệu của OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9637,7 +9637,7 @@ Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải x
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Sao chép các tệp dữ liệu của OpenLP đến vị trí mới.</translation>
+        <translation>Sao chép các tệp dữ liệu của OpenLP+ đến vị trí mới.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9647,12 +9647,12 @@ Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải x
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="157"/>
         <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when OpenLP is running.</source>
-        <translation>Bảo vệ thư mục dữ liệu bằng cơ chế khóa để tránh hỏng dữ liệu nếu nhiều người dùng truy cập dữ liệu cùng một lúc. Hữu ích cho các phiên bản được chia sẻ qua mạng. &lt;strong&gt;LƯU Ý:&lt;/strong&gt; Điều này sẽ chỉ hoạt động nếu tính năng chia sẻ mạng khả dụng khi OpenLP đang chạy.</translation>
+        <translation>Bảo vệ thư mục dữ liệu bằng cơ chế khóa để tránh hỏng dữ liệu nếu nhiều người dùng truy cập dữ liệu cùng một lúc. Hữu ích cho các phiên bản được chia sẻ qua mạng. &lt;strong&gt;LƯU Ý:&lt;/strong&gt; Điều này sẽ chỉ hoạt động nếu tính năng chia sẻ mạng khả dụng khi OpenLP+ đang chạy.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;CẢNH BÁO:&lt;/strong&gt; Vị trí thư mục dữ liệu mới chứa các tệp dữ liệu của OpenLP. Những tệp này SẼ bị thay thế trong quá trình sao chép.</translation>
+        <translation>&lt;strong&gt;CẢNH BÁO:&lt;/strong&gt; Vị trí thư mục dữ liệu mới chứa các tệp dữ liệu của OpenLP+. Những tệp này SẼ bị thay thế trong quá trình sao chép.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9716,11 +9716,11 @@ Nếu bạn nhấp vào nút &apos;{finish_button}&apos; bạn có thể tải x
 {path}
 
 Existing files in this directory could be overwritten. The data directory will be changed when OpenLP is closed.</source>
-        <translation>Bạn có chắc chắn muốn thay đổi vị trí của thư mục dữ liệu OpenLP thành:
+        <translation>Bạn có chắc chắn muốn thay đổi vị trí của thư mục dữ liệu OpenLP+ thành:
 
 {path}
 
-Các tệp hiện có trong thư mục này có thể bị ghi đè. Thư mục dữ liệu sẽ được thay đổi khi OpenLP đóng.</translation>
+Các tệp hiện có trong thư mục này có thể bị ghi đè. Thư mục dữ liệu sẽ được thay đổi khi OpenLP+ đóng.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="246"/>
@@ -9729,11 +9729,11 @@ Các tệp hiện có trong thư mục này có thể bị ghi đè. Thư mục 
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Bạn có chắc chắn muốn thay đổi vị trí của thư mục dữ liệu OpenLP thành:
+        <translation>Bạn có chắc chắn muốn thay đổi vị trí của thư mục dữ liệu OpenLP+ thành:
 
 {path}
 
-Thư mục dữ liệu sẽ được thay đổi khi OpenLP đóng.</translation>
+Thư mục dữ liệu sẽ được thay đổi khi OpenLP+ đóng.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9760,7 +9760,7 @@ Vị trí mà bạn đã chọn
 
 {path}
 
-có vẻ chứa các tập tin dữ liệu của OpenLP. Bạn có muốn thay thế những tập tin này bằng các tập tin dữ liệu hiện tại không?</translation>
+có vẻ chứa các tập tin dữ liệu của OpenLP+. Bạn có muốn thay thế những tập tin này bằng các tập tin dữ liệu hiện tại không?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9770,7 +9770,7 @@ có vẻ chứa các tập tin dữ liệu của OpenLP. Bạn có muốn thay t
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Thay đổi này chỉ có hiệu lực sau khi OpenLP đã được khởi động lại.</translation>
+        <translation>Thay đổi này chỉ có hiệu lực sau khi OpenLP+ đã được khởi động lại.</translation>
     </message>
 </context>
 <context>
@@ -9819,7 +9819,7 @@ có vẻ chứa các tập tin dữ liệu của OpenLP. Bạn có muốn thay t
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Thay đổi này chỉ có hiệu lực sau khi OpenLP đã được khởi động lại.</translation>
+        <translation>Thay đổi này chỉ có hiệu lực sau khi OpenLP+ đã được khởi động lại.</translation>
     </message>
 </context>
 <context>
@@ -10004,7 +10004,7 @@ có vẻ chứa các tập tin dữ liệu của OpenLP. Bạn có muốn thay t
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP không thể tải cơ sở dữ liệu của bạn.
+        <translation>OpenLP+ không thể tải cơ sở dữ liệu của bạn.
 
 Cơ sở dữ liệu: {db}</translation>
     </message>
@@ -10021,7 +10021,7 @@ Cơ sở dữ liệu: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Cơ sở dữ liệu đang được tải đã được tạo trong phiên bản OpenLP mới hơn. Cơ sở dữ liệu có phiên bản {db_ver}, trong khi OpenLP yêu cầu phiên bản {db_up}. Cơ sở dữ liệu sẽ không được tải.
+        <translation>Cơ sở dữ liệu đang được tải đã được tạo trong phiên bản OpenLP+ mới hơn. Cơ sở dữ liệu có phiên bản {db_ver}, trong khi OpenLP+ yêu cầu phiên bản {db_up}. Cơ sở dữ liệu sẽ không được tải.
 
 Cơ sở dữ liệu: {db_name}</translation>
     </message>
@@ -10078,7 +10078,7 @@ Cơ sở dữ liệu: {db_name}</translation>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
         <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Có sự không phù hợp giữa màn hình và cài đặt màn hình. OpenLP sẽ cố gắng tự động chọn màn hình hiển thị, nhưng bạn nên cân nhắc cập nhật cài đặt màn hình.</translation>
+        <translation>Có sự không phù hợp giữa màn hình và cài đặt màn hình. OpenLP+ sẽ cố gắng tự động chọn màn hình hiển thị, nhưng bạn nên cân nhắc cập nhật cài đặt màn hình.</translation>
     </message>
 </context>
 <context>
@@ -10149,12 +10149,12 @@ Cơ sở dữ liệu: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>Bài hát được xuất từ OpenLyrics hoặc OpenLP 2</translation>
+        <translation>Bài hát được xuất từ OpenLyrics hoặc OpenLP+ 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>Dữ liệu OpenLP 2</translation>
+        <translation>Dữ liệu OpenLP+ 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10164,7 +10164,7 @@ Cơ sở dữ liệu: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Trình nhập tài liệu/bài thuyết trình chung đã bị vô hiệu hóa vì OpenLP không thể truy cập OpenOffice hoặc LibreOffice.</translation>
+        <translation>Trình nhập tài liệu/bài thuyết trình chung đã bị vô hiệu hóa vì OpenLP+ không thể truy cập OpenOffice hoặc LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10319,7 +10319,7 @@ Cơ sở dữ liệu: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Trình nhập Songs of Fellowship đã bị vô hiệu hóa vì OpenLP không thể truy cập OpenOffice hoặc LibreOffice.</translation>
+        <translation>Trình nhập Songs of Fellowship đã bị vô hiệu hóa vì OpenLP+ không thể truy cập OpenOffice hoặc LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>
@@ -11536,7 +11536,7 @@ Bạn có thể tắt cảnh báo này trong cài đặt bài hát.</translation
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="171"/>
         <source>OpenLP can only import simple lyrics or ChordPro</source>
-        <translation>OpenLP chỉ có thể nhập lời bài hát đơn giản hoặc ChordPro</translation>
+        <translation>OpenLP+ chỉ có thể nhập lời bài hát đơn giản hoặc ChordPro</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="196"/>

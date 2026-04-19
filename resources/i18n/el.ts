@@ -649,7 +649,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Είστε σίγουροι ότι θέλετε να διαγράψετε την &quot;{bible}&quot; Βίβλο από το OpenLP;
+        <translation>Είστε σίγουροι ότι θέλετε να διαγράψετε την &quot;{bible}&quot; Βίβλο από το OpenLP+;
 
 Θα χρειαστεί να την κάνετε εισαγωγή εκ νέου για να την χρησιμοποιήσετε.</translation>
     </message>
@@ -1033,7 +1033,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>Το OpenLP δεν μπορεί να αναγνωρίσει την γλώσσα αυτής της μετάφρασης της Βίβλου. Παρακαλούμε επιλέξτε την γλώσσα από την παρακάτω λίστα.</translation>
+        <translation>Το OpenLP+ δεν μπορεί να αναγνωρίσει την γλώσσα αυτής της μετάφρασης της Βίβλου. Παρακαλούμε επιλέξτε την γλώσσα από την παρακάτω λίστα.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1429,7 +1429,7 @@ It is not possible to customize the Book Names.</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Για χρήση των παραμετροποιημένων ονομάτων βιβλίων, η &quot;Γλώσσα Βίβλου&quot; πρέπει να έχει επιλεχθεί στην καρτέλα Meta Data, ή αν έχει επιλεχθεί το &quot;Καθολικές Ρυθμίσεις&quot;, στην σελίδα Βίβλων του μενού Ρύθμιση του OpenLP.</translation>
+        <translation>Για χρήση των παραμετροποιημένων ονομάτων βιβλίων, η &quot;Γλώσσα Βίβλου&quot; πρέπει να έχει επιλεχθεί στην καρτέλα Meta Data, ή αν έχει επιλεχθεί το &quot;Καθολικές Ρυθμίσεις&quot;, στην σελίδα Βίβλων του μενού Ρύθμιση του OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -3161,7 +3161,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Παρακαλούμε επανεκκινήστε το OpenLP για να ενεργοποιηθεί η νέα γλώσσα.</translation>
+        <translation>Παρακαλούμε επανεκκινήστε το OpenLP+ για να ενεργοποιηθεί η νέα γλώσσα.</translation>
     </message>
 </context>
 <context>
@@ -3561,7 +3561,7 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
@@ -6524,7 +6524,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Ρύθμιση του OpenLP</translation>
+        <translation>Ρύθμιση του OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7160,7 +7160,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Συμβουλευτείτε το εγχειρίδιο του OpenLP για την χρήση.</translation>
+        <translation>Συμβουλευτείτε το εγχειρίδιο του OpenLP+ για την χρήση.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7455,7 +7455,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Επιλέξτε την μετάφραση που θέλετε να χρησιμοποιήσετε στο OpenLP.</translation>
+        <translation>Επιλέξτε την μετάφραση που θέλετε να χρησιμοποιήσετε στο OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7722,7 +7722,7 @@ These files will be removed if you continue to save.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>Αρχεία Λειτουργίας του OpenLP (*.osz)</translation>
+        <translation>Αρχεία Λειτουργίας του OpenLP+ (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -8315,7 +8315,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Έλεγχος για ενημερώσεις του OpenLP</translation>
+        <translation>Έλεγχος για ενημερώσεις του OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8558,7 +8558,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Ρύθμιση του OpenLP...</translation>
+        <translation>&amp;Ρύθμιση του OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8806,7 +8806,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>Η έκδοση του OpenLP αναβαθμίστηκε</translation>
+        <translation>Η έκδοση του OpenLP+ αναβαθμίστηκε</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8831,12 +8831,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Είστε σίγουροι ότι θέλετε να επανεκτελέσετε τον Οδηγό Πρώτης Εκτέλεσης;
 
-Η επαντεκτέλεσή του μπορεί να επιφέρει αλλαγές στις τρέχουσες ρυθμίσεις του OpenLP και πιθανότατα να προσθέσει ύμνους στην υπάρχουσα λίστα ύμνων σας και να αλλάξει το προκαθορισμένο θέμα σας.</translation>
+Η επαντεκτέλεσή του μπορεί να επιφέρει αλλαγές στις τρέχουσες ρυθμίσεις του OpenLP+ και πιθανότατα να προσθέσει ύμνους στην υπάρχουσα λίστα ύμνων σας και να αλλάξει το προκαθορισμένο θέμα σας.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>Κύρια Οθόνη του OpenLP Κενή</translation>
+        <translation>Κύρια Οθόνη του OpenLP+ Κενή</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8888,7 +8888,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>Το OpenLP θα τερματιστεί. Οι εισηγμένες ρυθμίσεις θα εφαρμοστούν την επόμενη φορά που θα ξεκινήσετε το OpenLP.</translation>
+        <translation>Το OpenLP+ θα τερματιστεί. Οι εισηγμένες ρυθμίσεις θα εφαρμοστούν την επόμενη φορά που θα ξεκινήσετε το OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8949,14 +8949,14 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Αντιγραφή των δεδομένων του OpenLP στην νέα τοποθεσία του φακέλου δεδομένων - {path} - Παρακαλούμε περιμένετε να τελειώσει η αντιγραφή</translation>
+        <translation>Αντιγραφή των δεδομένων του OpenLP+ στην νέα τοποθεσία του φακέλου δεδομένων - {path} - Παρακαλούμε περιμένετε να τελειώσει η αντιγραφή</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Η αντιγραφή του φακέλου των αρχείων δεδομένων του OpenLP έχει αποτύχει
+        <translation>Η αντιγραφή του φακέλου των αρχείων δεδομένων του OpenLP+ έχει αποτύχει
 
 {err}</translation>
     </message>
@@ -9169,7 +9169,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Περιμένετε όσο το OpenLP διαμορφώνεται και γίνεται λήψη των δεδομένων σας.</translation>
+        <translation>Περιμένετε όσο το OpenLP+ διαμορφώνεται και γίνεται λήψη των δεδομένων σας.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9566,7 +9566,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Ακυρώστε την αλλαγή τοποθεσίας του φακέλου δεδομένων του OpenLP.</translation>
+        <translation>Ακυρώστε την αλλαγή τοποθεσίας του φακέλου δεδομένων του OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9576,7 +9576,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Αντιγραφή των αρχείων δεδομένων του OpenLP στην νέα τοποθεσία.</translation>
+        <translation>Αντιγραφή των αρχείων δεδομένων του OpenLP+ στην νέα τοποθεσία.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9591,7 +9591,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;ΠΡΟΣΟΧΗ:&lt;/strong&gt; Η τοποθεσία του νέου φακέλου δεδομένων περιέχει τα αρχεία δεδομένων του OpenLP.  Τα αρχεία αυτά θα αντικατασταθούν κατά την αντιγραφή.</translation>
+        <translation>&lt;strong&gt;ΠΡΟΣΟΧΗ:&lt;/strong&gt; Η τοποθεσία του νέου φακέλου δεδομένων περιέχει τα αρχεία δεδομένων του OpenLP+.  Τα αρχεία αυτά θα αντικατασταθούν κατά την αντιγραφή.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9668,7 +9668,7 @@ The data directory will be changed when OpenLP is closed.</source>
 
 {path}
 
-Ο φάκελος δεδομένων θα αλλαχτεί μόλις κλείσετε το OpenLP.</translation>
+Ο φάκελος δεδομένων θα αλλαχτεί μόλις κλείσετε το OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9933,7 +9933,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>Το OpenLP δεν μπορεί να φορτώσει την βάση δεδομένων σας.
+        <translation>Το OpenLP+ δεν μπορεί να φορτώσει την βάση δεδομένων σας.
 
 Βάση Δεδομένων: {db}</translation>
     </message>
@@ -9950,7 +9950,7 @@ Database: {db}</source>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Η υπό φόρτωση βάση δεδομένων δημιουργήθηκε από μια νεότερη έκδοση του OpenLP. Η βάση δεδομένων είναι έκδοσης {db_ver}, ενώ το OpenLP αναμένει την έκδοση {db_up}. Η βάση δεδομένων δεν θα φορτωθεί.
+        <translation>Η υπό φόρτωση βάση δεδομένων δημιουργήθηκε από μια νεότερη έκδοση του OpenLP+. Η βάση δεδομένων είναι έκδοσης {db_ver}, ενώ το OpenLP+ αναμένει την έκδοση {db_up}. Η βάση δεδομένων δεν θα φορτωθεί.
 
 Βάση Δεδομένων: {db_name}</translation>
     </message>
@@ -10093,7 +10093,7 @@ Database: {db_name}</source>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Η εισαγωγή αρχείων γενικού τύπου έχει απενεργοποιηθεί επειδή το OpenLP δεν έχει προσβαση στο OpenOffice ή το Libreoffice.</translation>
+        <translation>Η εισαγωγή αρχείων γενικού τύπου έχει απενεργοποιηθεί επειδή το OpenLP+ δεν έχει προσβαση στο OpenOffice ή το Libreoffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10248,7 +10248,7 @@ Database: {db_name}</source>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Η εισαγωγή αρχείων τύπου Songs of Fellowship έχει απενεργοποιηθεί επειδή το OpenLP δεν έχει προσβαση στο OpenOffice ή το Libreoffice.</translation>
+        <translation>Η εισαγωγή αρχείων τύπου Songs of Fellowship έχει απενεργοποιηθεί επειδή το OpenLP+ δεν έχει προσβαση στο OpenOffice ή το Libreoffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>
