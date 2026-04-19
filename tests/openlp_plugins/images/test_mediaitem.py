@@ -275,6 +275,34 @@ def test_generate_slide_data_custom_theme(media_item):
     }
 
 
+def test_generate_slide_data_preserves_existing_title(media_item):
+    """
+    Test that adding an image to an existing service item does not change its title.
+    """
+    # GIVEN: A mocked service item with an existing title and a selected image item
+    mocked_service_item = MagicMock()
+    mocked_service_item.title = 'Existing service title'
+    image_item = MagicMock(file_path='path/to/image.jpg')
+    selected_item = MagicMock()
+    selected_item.text.return_value = 'Image title'
+    selected_item.data.return_value = image_item
+    media_item.list_view = MagicMock()
+    media_item.list_view.selectedItems.return_value = [selected_item]
+    Registry().get('settings').value = MagicMock(side_effect=lambda key: {
+        'images/background mode': ImageThemeMode.Black,
+        'images/theme': None,
+        'images/transitions': False,
+        'images/transition type': TransitionType.Fade,
+        'images/transition speed': TransitionSpeed.Normal
+    }.get(key))
+
+    with patch('openlp.plugins.images.lib.mediaitem.Path.exists', return_value=True):
+        media_item.generate_slide_data(mocked_service_item)
+
+    # THEN: The existing service item title should be preserved
+    assert mocked_service_item.title == 'Existing service title'
+
+
 @patch('openlp.plugins.images.lib.mediaitem.check_item_selected')
 @patch('openlp.plugins.images.lib.mediaitem.isinstance')
 @patch('openlp.plugins.images.lib.mediaitem.Path.exists')

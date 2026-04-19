@@ -233,18 +233,20 @@ class ImageMediaItem(FolderLibraryItem):
             items = self.list_view.selectedItems()
             if not items:
                 return False
-        # Determine service item title
+        # Determine service item title. Preserve an existing service item title when adding to an existing service item.
+        preserve_title = bool(service_item.title)
         image_item = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
-        if isinstance(image_item, Folder) or len(items) == 1:
-            service_item.title = items[0].text(0)
-            if not service_item.title:
-                name = Path(image_item.file_path).name
-                if name:
-                    service_item.title = name
-            if service_item.title:
-                service_item.title = Path(service_item.title).stem
-        else:
-            service_item.title = str(self.plugin.name_strings['plural'])
+        if not preserve_title:
+            if isinstance(image_item, Folder) or len(items) == 1:
+                service_item.title = items[0].text(0)
+                if not service_item.title:
+                    name = Path(image_item.file_path).name
+                    if name:
+                        service_item.title = name
+                if service_item.title:
+                    service_item.title = Path(service_item.title).stem
+            else:
+                service_item.title = str(self.plugin.name_strings['plural'])
 
         service_item.add_capability(ItemCapabilities.CanMaintain)
         service_item.add_capability(ItemCapabilities.CanPreview)

@@ -198,7 +198,10 @@ class ServiceItem(RegistryProperties):
         elif self.name == 'presentations':
             self.icon = UiIcons().presentation
         elif self.name == 'images':
-            self.icon = UiIcons().picture
+            if len(self.slides) > 1:
+                self.icon = UiIcons().image_plus
+            else:
+                self.icon = UiIcons().picture
         elif self.name == 'media':
             self.icon = UiIcons().video
         else:
@@ -769,6 +772,7 @@ class ServiceItem(RegistryProperties):
                         image_path = text_image['image']
                     self.add_from_command(Path(text_image['path']), str(text_image['title']), image_path)
         self._new_item()
+        self.add_icon()
 
     def get_display_title(self):
         """

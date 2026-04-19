@@ -1138,6 +1138,21 @@ def test_add_icon(registry, plugin_name, icon):
     assert service_item.icon.name() == getattr(UiIcons(), icon).name()
 
 
+def test_add_icon_images_multiple():
+    """Test that images with multiple slides use image_plus icon"""
+    # GIVEN: A service item for images with multiple slides
+    service_item = ServiceItem()
+    service_item.name = 'images'
+    service_item.add_from_image(Path('test1.jpg'), 'Test 1')
+    service_item.add_from_image(Path('test2.jpg'), 'Test 2')
+
+    # WHEN: add_icon() is called
+    service_item.add_icon()
+
+    # THEN: The icon should be image_plus
+    assert service_item.icon.name() == UiIcons().image_plus.name()
+
+
 def test_get_service_repr_song(registry: Registry):
     """Test the get_service_repr() method with a song"""
     # GIVEN: A service item

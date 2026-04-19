@@ -147,6 +147,7 @@ class UiIcons(metaclass=Singleton):
             'projector_select_disconnect': {'icon': 'mdi.power-plug', 'attr': 'red'},  # Toolbar disconnect
             'projector_warmup': {'icon': 'mdi.projector', 'attr': 'yellow'},
             'picture': {'icon': 'mdi.image-outline'},
+            'image_plus': {'icon': 'mdi.image-multiple-outline'},
             'print': {'icon': 'mdi.printer'},
             'remote': {'icon': 'mdi.rss'},
             'refresh': {'icon': 'mdi.refresh'},
