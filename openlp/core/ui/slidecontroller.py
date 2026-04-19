@@ -215,12 +215,13 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.panel_layout.setContentsMargins(0, 0, 0, 0)
         # Type label at the top of the slide controller with icon
         self.top_label_horizontal = QtWidgets.QHBoxLayout()
+        self.top_label_horizontal.setContentsMargins(0, 4, 0, 4)
         self.panel_layout.addLayout(self.top_label_horizontal)
         if self.is_live:
             icon = UiIcons().live
         else:
             icon = UiIcons().preview
-        pixmap = icon.pixmap(QtCore.QSize(28, 28))
+        pixmap = icon.pixmap(QtCore.QSize(20, 20))
         self.top_icon = QtWidgets.QLabel()
         self.top_icon.setPixmap(pixmap)
         self.top_icon.setStyleSheet("padding: 0px 0px 0px 25px;")
