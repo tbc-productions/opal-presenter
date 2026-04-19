@@ -417,23 +417,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         if has_custom_geometry:
             self.show()
         elif is_macosx():
-            if self._should_force_macos_fullscreen():
-                # Native fullscreen is required to draw over the macOS menu bar and other system UI.
-                self.showFullScreen()
-            else:
-                # On macOS, showFullScreen() creates a native fullscreen Space whose compositing
-                # does not support WA_TranslucentBackground, causing a black screen instead of
-                # transparency when hiding the display. Using show() with the screen geometry
-                # (already set via setGeometry) avoids this issue.
-                self.show()
+            # On macOS, showFullScreen() creates a native fullscreen Space whose compositing
+            # does not support WA_TranslucentBackground, causing a black screen instead of
+            # transparency when hiding the display. Always use show() with the full screen
+            # geometry (already set via setGeometry) instead of native fullscreen mode.
+            self.show()
         else:
             self.showFullScreen()
-
-    def _should_force_macos_fullscreen(self):
-        """
-        Return True when the display window should use native macOS fullscreen.
-        """
-        return self.is_display and self.settings.value('core/always on top')
 
     def set_background_image(self, image_path):
         image_uri = _path_to_file_uri(image_path)
