@@ -311,7 +311,13 @@ class ImageMediaItem(FolderLibraryItem):
         for image in existing_images:
             name = image.name or Path(image.file_path).name
             thumbnail_path = self.generate_thumbnail_path(image)
-            service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
+            file_hash = service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
+            if file_hash is None and Path(image.file_path).exists():
+                QtWidgets.QMessageBox.warning(
+                    self.main_window,
+                    translate('ImagesPlugin.MediaItem', 'File cannot be read'),
+                    translate('ImagesPlugin.MediaItem', 'The file "{file}" cannot be read. It may be in cloud storage that is not fully synced.').format(file=image.file_path)
+                )
         return True
 
     def _get_default_image_transition_settings(self):

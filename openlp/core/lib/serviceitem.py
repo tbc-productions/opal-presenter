@@ -330,6 +330,7 @@ class ServiceItem(RegistryProperties):
         :param title: A title for the slide in the service item.
         :param thumbnail: Optional alternative thumbnail, used for remote thumbnails.
         :param file_hash: Unique Reference to file .
+        :return: The file hash used for the slide.
         """
         self.service_item_type = ServiceItemType.Image
         if not file_hash:
@@ -339,6 +340,7 @@ class ServiceItem(RegistryProperties):
             slide['thumbnail'] = thumbnail
         self.slides.append(slide)
         self._new_item()
+        return file_hash
 
     def add_from_text(self, text, verse_tag=None, footer_html=None, metadata=None):
         """
