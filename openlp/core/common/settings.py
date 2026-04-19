@@ -552,6 +552,7 @@ class Settings(QtCore.QSettings):
         'user interface/main window position': QtCore.QPoint(0, 0),
         'user interface/main window splitter geometry': QtCore.QByteArray(),
         'user interface/main window state': QtCore.QByteArray(),
+        'user interface/show layout preset tabs': True,
         # Per layout-preset window geometry (Show all / Setup / Live); empty until user customises.
         'user interface/preset layout/default/main window state': QtCore.QByteArray(),
         'user interface/preset layout/default/main window splitter geometry': QtCore.QByteArray(),
