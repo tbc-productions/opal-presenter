@@ -6571,6 +6571,21 @@ OpenLP will attempt to continue.</source>
         <source>Playing time: </source>
         <translation>Playing time:</translation>
     </message>
+    <message>
+        <location filename="../../openlp/core/ui/servicemanager.py" line="437"/>
+        <source>Expand or collapse all the service items</source>
+        <translation>Expand/collapse items</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/servicemanager.py" line="444"/>
+        <source>View or edit notes for the selected item</source>
+        <translation>Edit notes</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/servicemanager.py" line="451"/>
+        <source>Send the selected item to Preview</source>
+        <translation>Send to preview</translation>
+    </message>
 </context>
 <context>
     <name>OpenLP.SettingsForm</name>
@@ -7629,7 +7644,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="226"/>
         <source>Send the selected item to Live.</source>
-        <translation>Send item to live</translation>
+        <translation>Send to live</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="241"/>

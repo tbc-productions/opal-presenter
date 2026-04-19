@@ -434,21 +434,21 @@ class Ui_ServiceManager(object):
             'expandCollapse', can_shortcuts=True, checked=False,
             text=translate('OpenLP.ServiceManager', '&Expand all'),
                         icon=UiIcons().arrow_expand_vertical,
-            tooltip=translate('OpenLP.ServiceManager', 'Expand or collapse all the service items.'),
+            tooltip=translate('OpenLP.ServiceManager', 'Expand or collapse all the service items'),
             category=UiStrings().Service, triggers=self.on_toggle_expand_all)
         self.expand_collapse_action.setEnabled(False)
         self.note_toolbar_action = self.order_toolbar.add_toolbar_action(
             'serviceNotes',
             text=translate('OpenLP.ServiceManager', '&Notes'),
             icon=UiIcons().notes,
-            tooltip=translate('OpenLP.ServiceManager', 'View or edit notes for the selected item.'),
+            tooltip=translate('OpenLP.ServiceManager', 'View or edit notes for the selected item'),
             triggers=self.on_service_item_note_form)
         self.note_toolbar_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.make_preview_action = self.order_toolbar.add_toolbar_action(
             'make_preview', can_shortcuts=True,
             text=translate('OpenLP.ServiceManager', 'Show &Preview'), icon=UiIcons().preview,
-            tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Preview.'),
+            tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Preview'),
             category=UiStrings().Service,
             triggers=self.make_preview)
         self.make_preview_action.setEnabled(False)
