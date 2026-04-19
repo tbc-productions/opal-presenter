@@ -183,6 +183,34 @@ def test_on_selection_change_updates_preview_live_service_action_state(media_env
     mmi.add_to_service_action.setEnabled.assert_called_with(True)
 
 
+def test_on_selection_change_updates_add_to_selected_service_action_state(media_env, registry):
+    """
+    Test that the "Add to selected Service Item" context action is disabled when no service item is selected.
+    """
+    mocked_settings = MagicMock()
+    mocked_settings.value.return_value = False
+    Registry().register('settings', mocked_settings)
+    mmi = MediaManagerItem(None)
+    mmi.list_view = MagicMock()
+    mmi._service_manager = MagicMock()
+    mmi._service_manager.find_service_item.return_value = (-1, -1)
+    mmi.add_to_service_context_action = MagicMock()
+
+    # WHEN: A library item is selected but no service item is selected
+    mmi.list_view.selectedIndexes.return_value = [MagicMock()]
+    mmi.on_selection_change()
+
+    # THEN: The add-to-selected-service action should be disabled
+    mmi.add_to_service_context_action.setEnabled.assert_called_with(False)
+
+    # WHEN: A valid service item is selected
+    mmi.service_manager.find_service_item.return_value = (0, -1)
+    mmi.on_selection_change()
+
+    # THEN: The add-to-selected-service action should be enabled
+    mmi.add_to_service_context_action.setEnabled.assert_called_with(True)
+
+
 def test_on_selection_change_updates_edit_delete_action_state(media_env, registry):
     """
     Test that Edit/Delete actions are disabled with no selection and enabled with selection.

@@ -385,10 +385,11 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 triggers=self.on_delete_click)
         if self.add_to_service_item:
             create_widget_action(self.list_view, separator=True)
-            create_widget_action(self.list_view,
-                                 text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
-                                 icon=UiIcons().add,
-                                 triggers=self.on_add_edit_click)
+            self.add_to_service_context_action = create_widget_action(
+                self.list_view,
+                text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
+                icon=UiIcons().add,
+                triggers=self.on_add_edit_click)
         self.add_custom_context_actions()
         # Create the context menu and add all actions from the list_view.
         self.menu = QtWidgets.QMenu()
@@ -396,6 +397,12 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)
+        if hasattr(self.service_manager, 'service_manager_list'):
+            try:
+                self.service_manager.service_manager_list.itemSelectionChanged.connect(
+                    self.on_selection_change)
+            except Exception:
+                pass
         self._update_common_header_actions_enabled_state()
         self._update_common_end_actions_enabled_state()
 
@@ -640,9 +647,24 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         self._update_common_header_actions_enabled_state()
         self._update_common_end_actions_enabled_state()
+        self._update_add_to_selected_service_action_state()
         if self.settings.value('advanced/single click preview') and self.quick_preview_allowed \
                 and self.list_view.selectedIndexes() and self.auto_select_id == -1:
             self.on_preview_click(True)
+
+    def _update_add_to_selected_service_action_state(self):
+        """
+        Enable or disable the "Add to selected Service Item" context action.
+        """
+        if getattr(self, 'add_to_service_context_action', None) is None:
+            return
+        has_library_selection = bool(self.list_view.selectedIndexes())
+        has_service_selection = False
+        try:
+            has_service_selection = self.service_manager.find_service_item()[0] != -1
+        except Exception:
+            has_service_selection = False
+        self.add_to_service_context_action.setEnabled(has_library_selection and has_service_selection)
 
     def on_preview_click(self, keep_focus=False):
         """

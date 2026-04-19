@@ -127,15 +127,6 @@ class PresentationMediaItem(FolderLibraryItem):
         Add custom actions to the context menu.
         """
         super().add_custom_context_actions()
-        create_widget_action(self.list_view, separator=True)
-        create_widget_action(
-            self.list_view,
-            text=UiStrings().AddFolder, icon=UiIcons().folder, triggers=self.on_add_folder_click)
-        create_widget_action(
-            self.list_view,
-            text=translate('PresentationsPlugin', 'Add new presentation'),
-            icon=UiIcons().open, triggers=self.on_file_click)
-        create_widget_action(self.list_view, separator=True)
 
     def add_middle_header_bar(self):
         """

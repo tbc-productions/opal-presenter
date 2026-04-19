@@ -123,12 +123,6 @@ class ImageMediaItem(FolderLibraryItem):
         Add custom actions to the context menu.
         """
         super().add_custom_context_actions()
-        create_widget_action(self.list_view, separator=True)
-        create_widget_action(self.list_view, text=UiStrings().AddFolder, icon=UiIcons().folder,
-                             triggers=self.on_add_folder_click)
-        create_widget_action(self.list_view, text=translate('ImagePlugin', 'Add new image(s)'),
-                             icon=UiIcons().open, triggers=self.on_file_click)
-        create_widget_action(self.list_view, separator=True)
         self.replace_action_context = create_widget_action(self.list_view, text=UiStrings().ReplaceBG,
                                                            icon=UiIcons().theme, triggers=self.on_replace_click)
         self.reset_action_context = create_widget_action(self.list_view, text=UiStrings().ReplaceLiveBG,

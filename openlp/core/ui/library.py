@@ -226,12 +226,11 @@ class FolderLibraryItem(MediaManagerItem):
                 triggers=self.on_add_click)
         if self.add_to_service_item:
             create_widget_action(self.list_view, separator=True)
-            create_widget_action(
+            self.add_to_service_context_action = create_widget_action(
                 self.list_view,
                 text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
                 icon=UiIcons().add,
                 triggers=self.on_add_edit_click)
-            create_widget_action(self.list_view, separator=True)
         if self.has_delete_icon:
             _add_library_context_menu_separator(self.list_view)
             create_widget_action(
@@ -247,19 +246,24 @@ class FolderLibraryItem(MediaManagerItem):
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)
+        if hasattr(self.service_manager, 'service_manager_list'):
+            try:
+                self.service_manager.service_manager_list.itemSelectionChanged.connect(
+                    self.on_selection_change)
+            except Exception:
+                pass
 
     def add_custom_context_actions(self):
         """
         Override this method to add custom context actions
         """
-        create_widget_action(self.list_view, separator=True)
+        _add_library_context_menu_separator(self.list_view)
         create_widget_action(
             self.list_view,
             text=translate('OpenLP.FolderLibraryItem', 'Show in folder'),
             icon=UiIcons().folder,
             triggers=self.on_show_in_folder_click
         )
-        _add_library_context_menu_separator(self.list_view)
 
     def on_show_in_folder_click(self):
         """
