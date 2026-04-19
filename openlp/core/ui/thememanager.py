@@ -768,6 +768,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     else:
                         icon = UiIcons().get_icon_variant('picture')
                 item_name.setIcon(icon)
+                item_name.setSizeHint(QtCore.QSize(0, 64))
                 item_name.setData(QtCore.Qt.ItemDataRole.UserRole, text_name)
                 self.theme_list_widget.addItem(item_name)
                 self._theme_list[text_name] = theme_obj

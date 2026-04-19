@@ -188,18 +188,13 @@ class SongMediaItem(MediaManagerItem):
 
         self.add_search_to_toolbar()
         # Add in an extra toggle button
-        self.favourite_toggle_button = QtWidgets.QToolButton(self)
+        self.favourite_toggle_button = QtWidgets.QPushButton(self)
         self.favourite_toggle_button.setObjectName('favourite_toggle_button')
         self.favourite_toggle_button.setIcon(UiIcons().favourite)
-        self.favourite_toggle_button.setAutoRaise(True)
         self.favourite_toggle_button.setCheckable(True)
         self.favourite_toggle_button.setChecked(self.settings.value('songs/favourites_toggled'))
-        self.favourite_button_layout = QtWidgets.QHBoxLayout()
-        self.favourite_button_layout.setContentsMargins(0, 0, 0, 0)
-        self.favourite_button_layout.setSpacing(6)
-        self.favourite_button_layout.addStretch()
-        self.favourite_button_layout.addWidget(self.favourite_toggle_button)
-        self.search_layout.addLayout(self.favourite_button_layout)
+        self.favourite_toggle_button.setFlat(True)
+        self.search_button_layout.insertWidget(1, self.favourite_toggle_button)
         # Signals and slots
         Registry().register_function('songs_load_list', self.on_song_list_load)
         Registry().register_function('songs_preview', self.on_preview_click)
@@ -261,7 +256,7 @@ class SongMediaItem(MediaManagerItem):
 
     def retranslate_ui(self):
         self.search_text_label.setText('{text}:'.format(text=UiStrings().Search))
-        self.search_text_button.setToolTip(UiStrings().Search)
+        self.search_text_button.setText(UiStrings().Search)
         self.maintenance_action.setText(SongStrings().SongMaintenance)
         self.maintenance_action.setToolTip(translate('SongsPlugin.MediaItem',
                                                      'Maintain the lists of authors, topics and books.'))

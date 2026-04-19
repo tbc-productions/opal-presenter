@@ -90,7 +90,7 @@ def test_folderlibrary_retranslate_ui(folder_library_item):
 
     # THEN: there should be no errors and the text should be correct
     folder_library_item.add_folder_action.setText.assert_called_once_with('Add folder')
-    folder_library_item.add_folder_action.setToolTip.assert_called_once_with('Add folder.')
+    folder_library_item.add_folder_action.setToolTip.assert_called_once_with('Add folder')
 
 
 def test_folderlibrary_add_custom_context_actions(folder_library_item):

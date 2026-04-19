@@ -1294,6 +1294,13 @@ def test_process_item_transition(mocked_execute: MagicMock, registry: Registry, 
     slide_controller.split = 0
     slide_controller.type_prefix = 'test'
     slide_controller.screen_capture = 'old_capture'
+    slide_controller.show_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.neutral_hide_action = MagicMock()
 
     # WHEN: _process_item is called
     slide_controller._process_item(mocked_media_item, 0)
@@ -1355,6 +1362,13 @@ def test_process_item_text(mocked_execute: MagicMock, registry: Registry, state_
     slide_controller.split = 0
     slide_controller.type_prefix = 'test'
     slide_controller.screen_capture = 'old_capture'
+    slide_controller.show_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.neutral_hide_action = MagicMock()
 
     # WHEN: _process_item is called
     slide_controller._process_item(mocked_media_item, 0)
@@ -1512,6 +1526,13 @@ def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute:
     slide_controller.split = 0
     slide_controller.type_prefix = 'test'
     slide_controller.screen_capture = 'old_capture'
+    slide_controller.show_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.neutral_hide_action = MagicMock()
 
     # WHEN: _process_item is called with is_reloading=True
     slide_controller._process_item(mocked_media_item, 0, is_reloading=True)
