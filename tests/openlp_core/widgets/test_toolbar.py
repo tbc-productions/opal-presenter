@@ -24,9 +24,9 @@ Package to test the OpenLP default toolbars.
 from unittest.mock import MagicMock, patch
 import pytest
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 
-from openlp.core.widgets.toolbar import MediaToolbar, ClickableSlider
+from openlp.core.widgets.toolbar import MediaToolbar, ClickableSlider, OpenLPToolbar
 
 
 HIDE_COMPONENTS = [
@@ -239,4 +239,22 @@ def test_clickable_slider_click_then_drag_scrubs_position(qapp):
     slider.mouseReleaseEvent(release_event)
 
     assert slider.value() >= 80, f"Expected value >= 80 after dragging, got {slider.value()}"
+
+
+def test_set_widget_enabled_disables_embedded_widget(qapp):
+    """Disabling a toolbar widget should disable the underlying embedded widget too."""
+    toolbar = OpenLPToolbar(None)
+    button = QtWidgets.QToolButton()
+    button.setObjectName('test_button')
+    toolbar.add_toolbar_widget(button)
+
+    toolbar.set_widget_enabled('test_button', False)
+
+    assert toolbar.actions_map['test_button'].isEnabled() is False
+    assert button.isEnabled() is False
+
+    toolbar.set_widget_enabled('test_button', True)
+
+    assert toolbar.actions_map['test_button'].isEnabled() is True
+    assert button.isEnabled() is True
 

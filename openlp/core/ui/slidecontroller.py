@@ -292,6 +292,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
             self.hide_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Hide'), self.toolbar))
             self.toolbar.add_toolbar_widget(self.hide_menu)
+            self.neutral_hide_action = create_action(self, 'neutralHideMode',
+                                                     text=translate('OpenLP.SlideController', 'Hide'))
             # The order of the blank to modes in Shortcuts list comes from here.
             self.show_screen = create_action(self, 'showScreen',
                                              text=translate('OpenLP.SlideController', 'Show Presentation'),
@@ -318,7 +320,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                 icon=UiIcons().get_icon_variant_selected('live_desktop'),
                                                 checked=False, can_shortcuts=True, category=self.category,
                                                 triggers=self.on_toggle_desktop)
-            self.hide_menu.setDefaultAction(self.show_screen)
+            self.hide_menu.setDefaultAction(self.neutral_hide_action)
             self.hide_menu.menu().addAction(self.show_screen)
             self.hide_menu.menu().addAction(self.theme_screen)
             self.hide_menu.menu().addAction(self.logo_screen)
@@ -513,6 +515,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             slide_count = self.preview_widget.slide_count()
             if isinstance(slide_count, (int, float)):
                 has_slides = slide_count > 0
+        has_item = getattr(self, 'service_item', None) is not None
         if hasattr(self, 'previous_item'):
             self.previous_item.setEnabled(has_slides)
         if hasattr(self, 'next_item'):
@@ -522,6 +525,46 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.go_live_action.setEnabled(has_slides)
             if hasattr(self, 'add_to_service_action'):
                 self.add_to_service_action.setEnabled(has_slides)
+        else:
+            self._sync_live_hide_action_state(has_item)
+            live_actions = ['show_screen', 'theme_screen', 'logo_screen', 'blank_screen', 'play_slides_loop',
+                            'play_slides_once']
+            for name in live_actions:
+                if hasattr(self, name):
+                    getattr(self, name).setEnabled(has_item)
+            if hasattr(self, 'toolbar'):
+                self.toolbar.set_widget_enabled([
+                    'hide_menu',
+                    'show_screen_button', 'theme_screen_button', 'logo_screen_button', 'blank_screen_button',
+                    'play_slides_menu', 'delay_spin_box'
+                ], has_item)
+            self._update_desktop_hide_action_state(has_item=has_item)
+
+    def _sync_live_hide_action_state(self, has_item):
+        """
+        Keep live hide-mode actions visually neutral until a live item is loaded.
+        """
+        if not self.is_live:
+            return
+        hide_mode_actions = {
+            None: self.show_screen,
+            HideMode.Blank: self.blank_screen,
+            HideMode.Theme: self.theme_screen,
+            HideMode.Logo: self.logo_screen,
+            HideMode.Screen: self.desktop_screen,
+        }
+        active_action = hide_mode_actions.get(getattr(self, '_current_hide_mode', None), self.show_screen)
+        if not has_item:
+            for action in hide_mode_actions.values():
+                action.setChecked(False)
+            self.hide_menu.setDefaultAction(self.neutral_hide_action)
+            return
+        self.hide_menu.setDefaultAction(active_action)
+        self.show_screen.setChecked(active_action is self.show_screen)
+        self.blank_screen.setChecked(active_action is self.blank_screen)
+        self.theme_screen.setChecked(active_action is self.theme_screen)
+        self.logo_screen.setChecked(active_action is self.logo_screen)
+        self.desktop_screen.setChecked(active_action is self.desktop_screen)
 
     def new_song_menu(self):
         """
@@ -1379,21 +1422,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             hide_mode = None
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
-        # Update ui buttons
-        _hide_mode_actions = {
-            None: self.show_screen,
-            HideMode.Blank: self.blank_screen,
-            HideMode.Theme: self.theme_screen,
-            HideMode.Logo: self.logo_screen,
-            HideMode.Screen: self.desktop_screen,
-        }
-        self.hide_menu.setDefaultAction(_hide_mode_actions[hide_mode])
         self.settings.setValue('core/screen blank', hide_mode is not None)
-        self.show_screen.setChecked(hide_mode is None)
-        self.blank_screen.setChecked(hide_mode == HideMode.Blank)
-        self.theme_screen.setChecked(hide_mode == HideMode.Theme)
-        self.logo_screen.setChecked(hide_mode == HideMode.Logo)
-        self.desktop_screen.setChecked(hide_mode == HideMode.Screen)
+        self._sync_live_hide_action_state(self.service_item is not None)
         # Update plugin display
         if self.service_item is not None:
             if hide_mode:
@@ -1421,18 +1451,28 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         return True
 
-    def _update_desktop_hide_action_state(self):
+    def _update_desktop_hide_action_state(self, has_item=True):
         """
         Enable or disable "Show Desktop" actions based on current platform/settings.
         """
         if not self.is_live:
             return
-        enabled = self.is_desktop_hide_available()
-        self.desktop_screen.setEnabled(enabled)
-        self.desktop_screen.setVisible(enabled)
-        self.desktop_screen_button.setEnabled(enabled)
-        self.desktop_screen_button.setVisible(enabled)
-        if not enabled and self._current_hide_mode == HideMode.Screen:
+        # Desktop hide is only available when the platform supports it and the main
+        # window 'Display output' is currently enabled (checked). If the View menu
+        # has display output unselected, 'Show Desktop' should be disabled.
+        desktop_available = self.is_desktop_hide_available()
+        view_output_checked = True
+        view_output_enabled = True
+        if getattr(self, 'main_window', None) and hasattr(self.main_window, 'view_display_output_item'):
+            view_display_output_item = self.main_window.view_display_output_item
+            view_output_checked = view_display_output_item.isChecked()
+            view_output_enabled = view_display_output_item.isEnabled()
+        enabled = has_item and desktop_available and view_output_enabled and view_output_checked
+        if hasattr(self, 'desktop_screen'):
+            self.desktop_screen.setEnabled(enabled)
+        if hasattr(self, 'toolbar'):
+            self.toolbar.set_widget_enabled('desktop_screen_button', enabled)
+        if not enabled and getattr(self, '_current_hide_mode', None) == HideMode.Screen:
             self.set_hide_mode(None)
 
     def on_slide_selected(self):

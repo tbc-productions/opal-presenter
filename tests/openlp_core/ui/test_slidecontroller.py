@@ -682,7 +682,7 @@ def test_update_slide_action_enabled_state_preview(settings: Settings):
 
 def test_update_slide_action_enabled_state_live(settings: Settings):
     """
-    Live controller previous/next actions should be disabled with no slides and enabled when slides exist.
+    Live controller actions should be disabled with no live item and enabled when a live item exists.
     """
     # GIVEN: A live controller with mocked actions and preview widget
     slide_controller = SlideController(None)
@@ -690,22 +690,128 @@ def test_update_slide_action_enabled_state_live(settings: Settings):
     slide_controller.preview_widget = MagicMock()
     slide_controller.previous_item = MagicMock()
     slide_controller.next_item = MagicMock()
+    slide_controller.show_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.play_slides_loop = MagicMock()
+    slide_controller.play_slides_once = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.neutral_hide_action = MagicMock()
+    slide_controller.toolbar = MagicMock()
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=True)
+    mocked_main_window = MagicMock()
+    mocked_main_window.view_display_output_item.isChecked.return_value = True
+    mocked_main_window.view_display_output_item.isEnabled.return_value = True
+    Registry().register('main_window', mocked_main_window)
 
-    # WHEN: There are no slides
+    # WHEN: There are no slides and no live item
     slide_controller.preview_widget.slide_count.return_value = 0
+    slide_controller.service_item = None
     slide_controller._update_slide_action_enabled_state()
 
-    # THEN: Move actions should be disabled
+    # THEN: Move actions and live controls should be disabled
     slide_controller.previous_item.setEnabled.assert_called_with(False)
     slide_controller.next_item.setEnabled.assert_called_with(False)
+    slide_controller.show_screen.setEnabled.assert_called_with(False)
+    slide_controller.theme_screen.setEnabled.assert_called_with(False)
+    slide_controller.logo_screen.setEnabled.assert_called_with(False)
+    slide_controller.blank_screen.setEnabled.assert_called_with(False)
+    slide_controller.play_slides_loop.setEnabled.assert_called_with(False)
+    slide_controller.play_slides_once.setEnabled.assert_called_with(False)
+    slide_controller.desktop_screen.setEnabled.assert_called_with(False)
+    slide_controller.show_screen.setChecked.assert_called_with(False)
+    slide_controller.theme_screen.setChecked.assert_called_with(False)
+    slide_controller.logo_screen.setChecked.assert_called_with(False)
+    slide_controller.blank_screen.setChecked.assert_called_with(False)
+    slide_controller.desktop_screen.setChecked.assert_called_with(False)
+    slide_controller.hide_menu.setDefaultAction.assert_called_with(slide_controller.neutral_hide_action)
+    slide_controller.toolbar.set_widget_enabled.assert_any_call([
+        'hide_menu',
+        'show_screen_button', 'theme_screen_button', 'logo_screen_button', 'blank_screen_button',
+        'play_slides_menu', 'delay_spin_box'
+    ], False)
+    slide_controller.toolbar.set_widget_enabled.assert_any_call('desktop_screen_button', False)
 
-    # WHEN: Slides exist
+    # WHEN: Slides exist and a live item is loaded
     slide_controller.preview_widget.slide_count.return_value = 3
+    slide_controller.service_item = MagicMock()
+    slide_controller._current_hide_mode = None
     slide_controller._update_slide_action_enabled_state()
 
-    # THEN: Move actions should be enabled
+    # THEN: Move actions and live controls should be enabled
     slide_controller.previous_item.setEnabled.assert_called_with(True)
     slide_controller.next_item.setEnabled.assert_called_with(True)
+    slide_controller.show_screen.setEnabled.assert_called_with(True)
+    slide_controller.theme_screen.setEnabled.assert_called_with(True)
+    slide_controller.logo_screen.setEnabled.assert_called_with(True)
+    slide_controller.blank_screen.setEnabled.assert_called_with(True)
+    slide_controller.play_slides_loop.setEnabled.assert_called_with(True)
+    slide_controller.play_slides_once.setEnabled.assert_called_with(True)
+    slide_controller.desktop_screen.setEnabled.assert_called_with(True)
+    slide_controller.show_screen.setChecked.assert_called_with(True)
+    slide_controller.theme_screen.setChecked.assert_called_with(False)
+    slide_controller.logo_screen.setChecked.assert_called_with(False)
+    slide_controller.blank_screen.setChecked.assert_called_with(False)
+    slide_controller.desktop_screen.setChecked.assert_called_with(False)
+    slide_controller.hide_menu.setDefaultAction.assert_called_with(slide_controller.show_screen)
+    slide_controller.toolbar.set_widget_enabled.assert_any_call([
+        'hide_menu',
+        'show_screen_button', 'theme_screen_button', 'logo_screen_button', 'blank_screen_button',
+        'play_slides_menu', 'delay_spin_box'
+    ], True)
+    slide_controller.toolbar.set_widget_enabled.assert_any_call('desktop_screen_button', True)
+
+
+def test_sync_live_hide_action_state_is_neutral_without_live_item(settings: Settings):
+    """Live hide-mode actions should look neutral until a live item is loaded."""
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.show_screen = MagicMock()
+    slide_controller.theme_screen = MagicMock()
+    slide_controller.logo_screen = MagicMock()
+    slide_controller.blank_screen = MagicMock()
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.hide_menu = MagicMock()
+    slide_controller.neutral_hide_action = MagicMock()
+    slide_controller._current_hide_mode = None
+
+    slide_controller._sync_live_hide_action_state(has_item=False)
+
+    slide_controller.show_screen.setChecked.assert_called_with(False)
+    slide_controller.theme_screen.setChecked.assert_called_with(False)
+    slide_controller.logo_screen.setChecked.assert_called_with(False)
+    slide_controller.blank_screen.setChecked.assert_called_with(False)
+    slide_controller.desktop_screen.setChecked.assert_called_with(False)
+    slide_controller.hide_menu.setDefaultAction.assert_called_once_with(slide_controller.neutral_hide_action)
+
+
+def test_update_desktop_hide_action_state_respects_view_display_output(settings: Settings):
+    """Show Desktop should be disabled when View > Display output is unchecked or disabled."""
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.desktop_screen = MagicMock()
+    slide_controller.toolbar = MagicMock()
+    slide_controller.is_desktop_hide_available = MagicMock(return_value=True)
+    mocked_main_window = MagicMock()
+    mocked_main_window.view_display_output_item.isChecked.return_value = False
+    mocked_main_window.view_display_output_item.isEnabled.return_value = True
+    Registry().register('main_window', mocked_main_window)
+    slide_controller._current_hide_mode = None
+
+    slide_controller._update_desktop_hide_action_state(has_item=True)
+
+    slide_controller.desktop_screen.setEnabled.assert_called_with(False)
+    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
+
+    mocked_main_window.view_display_output_item.isChecked.return_value = True
+    mocked_main_window.view_display_output_item.isEnabled.return_value = False
+
+    slide_controller._update_desktop_hide_action_state(has_item=True)
+
+    slide_controller.desktop_screen.setEnabled.assert_called_with(False)
+    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
 
 
 def test_service_previous(settings: Settings):
