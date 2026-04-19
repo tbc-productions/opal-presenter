@@ -519,7 +519,8 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
             font = QtGui.QFont()
             font.setItalic(True)
             painter.setFont(font)
-            painter.drawText(QtCore.QRect(0, 0, viewport.width(), viewport.height()),
+            padded_rect = QtCore.QRect(0, 0, viewport.width(), viewport.height()).adjusted(8, 8, -8, -8)
+            painter.drawText(padded_rect,
                              (QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.TextFlag.TextWordWrap),
                              self.no_results_text)
 
