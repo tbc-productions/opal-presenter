@@ -520,7 +520,7 @@ def main():
     apply_dpi_adjustments_stage_qt(hidpi_mode, qt_args)
     # Instantiating QCoreApplication
     init_webview_custom_schemes()
-    application = QtWidgets.QApplication(qt_args)
+    application = QtWidgets.QApplication([sys.argv[0]] + qt_args)
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     # Doing HiDPI adjustments that need to be done after QCoreApplication instantiation.
     apply_dpi_adjustments_stage_application(hidpi_mode, application)
