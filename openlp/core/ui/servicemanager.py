@@ -41,6 +41,7 @@ from openlp.core.common.i18n import UiStrings, format_time, translate
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
 from openlp.core.common.mixins import LogMixin, RegistryProperties
 from openlp.core.common.registry import Registry, RegistryBase
+from openlp.core.display.render import remove_tags
 from openlp.core.lib import build_icon, create_thumb, ItemCapabilities, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.plugin import PluginStatus
@@ -2311,21 +2312,19 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         :param service_item: The item which changed. (int)
         :param service_item_child: The child of the ``service_item``, which will be selected. (int)
         """
-        for item_index, item in enumerate(self.service_items):
-            service_item_from_item = item['service_item']
-            for slide_index, slide in enumerate(service_item_from_item.get_frames()):
-                if service_item == item_index:
-                    try:
-                        if item['expanded'] and service_item_child == slide_index:
-                            self.service_manager_list.setCurrentIndex(
-                                self.service_manager_list.model().index(service_item, 0).child(service_item_child, 0)
-                            )
-                        elif service_item_child == -1:
-                            self.service_manager_list.setCurrentIndex(
-                                self.service_manager_list.model().index(service_item, 0)
-                            )
-                    except RuntimeError:
-                        pass
+        if service_item >= 0 and service_item < len(self.tree_widget_items):
+            tree_item = self.tree_widget_items[service_item]
+            try:
+                if tree_item.childCount() > 0 and self.service_items[service_item]['expanded'] and service_item_child >= 0:
+                    self.service_manager_list.setCurrentIndex(
+                        self.service_manager_list.model().index(service_item, 0).child(service_item_child, 0)
+                    )
+                else:
+                    self.service_manager_list.setCurrentIndex(
+                        self.service_manager_list.model().index(service_item, 0)
+                    )
+            except RuntimeError:
+                pass
 
     def _repaint_service_list(self) -> bool:
         """
@@ -2600,28 +2599,43 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 dragged_text_color.setAlpha(140)
                 tree_widget_item.setForeground(0, QtGui.QBrush(dragged_text_color))
             # Add the children to their parent tree_widget_item.
-            for slide_index, slide in enumerate(service_item_from_item.get_frames()):
-                try:
-                    child = QtWidgets.QTreeWidgetItem(tree_widget_item)
-                    # prefer to use a display_title
-                    if service_item_from_item.is_capable(ItemCapabilities.HasDisplayTitle) or \
-                            service_item_from_item.service_item_type is not ServiceItemType.Text:
-                        text = slide['title'].replace('\n', ' ')
-                    else:
-                        text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
-                    child.setText(0, text[:40])
-                    child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
-                    if is_dragged_item:
-                        child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
-                        child_text_color.setAlpha(140)
-                        child.setForeground(0, QtGui.QBrush(child_text_color))
-                except RuntimeError:
-                    # it's probably a "wrapped C/C++ object of type QTreeWidgetItem has been deleted" due to
-                    # consecutive/parallel repaint_service_list execution. We've added some mitigation to avoid this
-                    # to happen, but it for any reason it happens again, we'll silent it and try to repaint the list
-                    # again (to avoid a broken list presented to the user).
-                    self.is_running_repaint = False
-                    return True
+            frames = service_item_from_item.get_frames()
+            # Don't add children for Media/Image/Presentation items with only a single sub-item
+            if not (service_item_from_item.name in ['images', 'media', 'presentations'] and len(frames) == 1):
+                for slide_index, slide in enumerate(frames):
+                    try:
+                        child = QtWidgets.QTreeWidgetItem(tree_widget_item)
+                        # prefer to use a display_title
+                        if service_item_from_item.is_capable(ItemCapabilities.HasDisplayTitle) or \
+                                service_item_from_item.service_item_type is not ServiceItemType.Text:
+                            text = slide['title'].replace('\n', ' ')
+                        else:
+                            text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
+                        # For presentations, use "Slide N" instead of repeating the title
+                        if service_item_from_item.name == 'presentations':
+                            text = f"Slide {slide_index + 1}"
+                        # For songs, add the section label
+                        if service_item_from_item.name == 'songs':
+                            text = slide['verse'] + ': ' + text
+                        # Hide formatting tags from preview
+                        text = remove_tags(text)
+                        # Flatten to a single preview line and remove excess spacing
+                        text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
+                        text = ' '.join(text.split())
+                        # For songs, use HTML to dim the label (but since HTML not supported, use plain)
+                        child.setText(0, text)
+                        child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
+                        if is_dragged_item:
+                            child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                            child_text_color.setAlpha(140)
+                            child.setForeground(0, QtGui.QBrush(child_text_color))
+                    except RuntimeError:
+                        # it's probably a "wrapped C/C++ object of type QTreeWidgetItem has been deleted" due to
+                        # consecutive/parallel repaint_service_list execution. We've added some mitigation to avoid this
+                        # to happen, but it for any reason it happens again, we'll silent it and try to repaint the list
+                        # again (to avoid a broken list presented to the user).
+                        self.is_running_repaint = False
+                        return True
             tree_widget_item.setExpanded(item['expanded'])
         self.is_running_repaint = False
         self._update_move_actions()
