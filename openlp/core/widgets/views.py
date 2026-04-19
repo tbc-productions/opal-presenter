@@ -404,8 +404,8 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         super().__init__(parent)
         self.mime_data_text = name
         self.no_results_text = UiStrings().NoResults
-        self.setSpacing(1)
-        self.setStyleSheet('QListWidget::item { padding: 4px 2px; }')
+        self.setStyleSheet('QListWidget { outline: 0; } QListWidget::item { padding: 4px 2px; border: 0; }')
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
@@ -631,6 +631,7 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self._drag_start_pos = None
         self._disclosure_style = TreeDisclosureStyle()
         self.setStyle(self._disclosure_style)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         self.setRootIsDecorated(True)
         self.setAlternatingRowColors(True)
         self.setAllColumnsShowFocus(True)

@@ -100,7 +100,7 @@ class FolderLibraryItem(MediaManagerItem):
         to another language.
         """
         self.add_folder_action.setText(UiStrings().AddFolder)
-        self.add_folder_action.setToolTip(UiStrings().AddFolderDot)
+        self.add_folder_action.setToolTip(UiStrings().AddFolder)
 
     def create_item_from_id(self, item_id: Any):
         """
@@ -295,7 +295,7 @@ class FolderLibraryItem(MediaManagerItem):
         Add buttons after the main buttons
         """
         self.add_folder_action = self.toolbar.add_toolbar_action(
-            'add_folder_action', icon=UiIcons().folder, triggers=self.on_add_folder_click)
+            'add_folder_action', icon=UiIcons().folder_plus, triggers=self.on_add_folder_click)
 
     def _get_proportional_folder_icon(self) -> QtGui.QIcon:
         """

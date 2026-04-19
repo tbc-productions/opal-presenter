@@ -97,6 +97,7 @@ class UiIcons(metaclass=Singleton):
             'exit': {'icon': 'mdi.logout'},
             'favourite': {'icon': 'mdi.star'},
             'folder': {'icon': 'mdi.folder'},
+            'folder_plus': {'icon': 'mdi.folder-plus'},
             'group': {'icon': 'mdi.group'},
             'inactive': {'icon': 'mdi.human-handsup', 'attr': 'lightGray'},
             'info': {'icon': 'mdi.information-variant'},
