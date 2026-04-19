@@ -101,11 +101,12 @@ class Ui_ThemeManager(object):
                                         text=UiStrings().NewTheme, icon=UiIcons().new,
                                         tooltip=translate('OpenLP.ThemeManager', 'Create a new theme.'),
                                         triggers=self.on_add_theme)
-        self.toolbar.add_toolbar_action('editTheme',
+        self.edit_toolbar_action = self.toolbar.add_toolbar_action('editTheme',
                                         text=translate('OpenLP.ThemeManager', 'Edit Theme'),
                                         icon=UiIcons().edit,
                                         tooltip=translate('OpenLP.ThemeManager', 'Edit a theme.'),
                                         triggers=self.on_edit_theme)
+        self.edit_toolbar_action.setEnabled(False)
         self.delete_toolbar_action = self.toolbar.add_toolbar_action('delete_theme',
                                                                      text=translate('OpenLP.ThemeManager',
                                                                                     'Delete Theme'),
@@ -113,17 +114,19 @@ class Ui_ThemeManager(object):
                                                                      tooltip=translate('OpenLP.ThemeManager',
                                                                                        'Delete a theme.'),
                                                                      triggers=self.on_delete_theme)
+        self.delete_toolbar_action.setEnabled(False)
         self.toolbar.addSeparator()
         self.toolbar.add_toolbar_action('importTheme',
                                         text=translate('OpenLP.ThemeManager', 'Import Theme'),
                                         icon=UiIcons().download,
                                         tooltip=translate('OpenLP.ThemeManager', 'Import a theme.'),
                                         triggers=self.on_import_theme)
-        self.toolbar.add_toolbar_action('exportTheme',
+        self.export_toolbar_action = self.toolbar.add_toolbar_action('exportTheme',
                                         text=translate('OpenLP.ThemeManager', 'Export Theme'),
                                         icon=UiIcons().upload,
                                         tooltip=translate('OpenLP.ThemeManager', 'Export a theme.'),
                                         triggers=self.on_export_theme)
+        self.export_toolbar_action.setEnabled(False)
         self.toolbar.addSeparator()
         add_list_view_mode_items_to_toolbar(self.toolbar, self)
         self.layout.addWidget(self.toolbar)
@@ -386,15 +389,17 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         :param field:
         :param item: Service Item to process
         """
+        has_selection = item is not None
+        self.edit_toolbar_action.setEnabled(has_selection)
+        self.export_toolbar_action.setEnabled(has_selection)
         if item is None:
+            self.delete_toolbar_action.setEnabled(False)
             return
         real_theme_name = item.data(QtCore.Qt.ItemDataRole.UserRole)
         theme_name = item.text()
-        # If default theme restrict actions
-        if real_theme_name == theme_name:
-            self.delete_toolbar_action.setVisible(True)
-        else:
-            self.delete_toolbar_action.setVisible(False)
+        # Disable delete for the global default theme (indicated by a decorated name)
+        is_default = real_theme_name != theme_name
+        self.delete_toolbar_action.setEnabled(not is_default)
 
     def context_menu(self, point):
         """
