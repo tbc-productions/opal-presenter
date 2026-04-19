@@ -130,6 +130,7 @@ class Plugin(RegistryBase, RegistryProperties):
         self.media_item = None
         self.weight = 0
         self.status = PluginStatus.Inactive
+        self.can_be_disabled = True
         Registry().register_function('{name}_add_service_item'.format(name=self.name), self.process_add_service_event)
         Registry().register_function('{name}_config_updated'.format(name=self.name), self.config_update)
         Registry().register_function('{name}_visible_name'.format(name=self.name), self.get_visible_name)

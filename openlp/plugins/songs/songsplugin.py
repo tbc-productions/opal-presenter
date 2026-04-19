@@ -129,6 +129,7 @@ class SongsPlugin(Plugin):
         self.manager = DBManager('songs', init_schema, upgrade_mod=upgrade)
         Registry().register('songs_manager', self.manager)
         self.weight = -10
+        self.can_be_disabled = False
         self.icon_path = UiIcons().music
         self.icon = build_icon(self.icon_path)
         self.songselect_form = None

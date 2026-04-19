@@ -39,6 +39,7 @@ class Ui_PluginViewDialog(object):
         plugin_view_dialog.setObjectName('plugin_view_dialog')
         plugin_view_dialog.setWindowIcon(UiIcons().main_icon)
         plugin_view_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        plugin_view_dialog.setMinimumSize(750, 500)
         self.plugin_layout = QtWidgets.QVBoxLayout(plugin_view_dialog)
         self.plugin_layout.setObjectName('plugin_layout')
         self.list_layout = QtWidgets.QHBoxLayout()
