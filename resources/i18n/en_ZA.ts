@@ -877,6 +877,30 @@ search results and on display:</translation>
 minimum of {count} characters and a space for performance reasons)</source>
         <translation type="unfinished"/>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>

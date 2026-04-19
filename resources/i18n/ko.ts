@@ -881,6 +881,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>입력하는 동안 자동 검색(원문 검색시 성능상 문제로
 최소 문자 {count}개와 공백 문자를 입력해야합니다)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>

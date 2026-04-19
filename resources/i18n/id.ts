@@ -879,6 +879,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>Cari otomatis selagi diketik (Pencarian teks harus mengandung
 minimal {count} karakter dan sebuah spasi unutk alasan performa)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>

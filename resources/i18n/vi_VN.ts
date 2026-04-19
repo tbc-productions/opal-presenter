@@ -885,6 +885,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>Tự động tìm kiếm khi nhập (Tìm kiếm văn bản phải chứa 
 ít nhất {count} ký tự và một khoảng trắng để tăng hiệu suất)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>
