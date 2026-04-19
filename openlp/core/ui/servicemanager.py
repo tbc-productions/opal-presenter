@@ -428,6 +428,13 @@ class Ui_ServiceManager(object):
             tooltip=translate('OpenLP.ServiceManager', 'Expand or collapse all the service items.'),
             category=UiStrings().Service, triggers=self.on_toggle_expand_all)
         self.expand_collapse_action.setEnabled(False)
+        self.note_toolbar_action = self.order_toolbar.add_toolbar_action(
+            'serviceNotes',
+            text=translate('OpenLP.ServiceManager', '&Notes'),
+            icon=UiIcons().notes,
+            tooltip=translate('OpenLP.ServiceManager', 'View or edit notes for the selected item.'),
+            triggers=self.on_service_item_note_form)
+        self.note_toolbar_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.make_preview_action = self.order_toolbar.add_toolbar_action(
             'make_preview', can_shortcuts=True,
@@ -552,7 +559,7 @@ class Ui_ServiceManager(object):
         self.menu.addMenu(self.theme_menu)
         self.service_manager_list.addActions([self.move_down_action, self.move_up_action, self.make_live_action,
                                               self.move_top_action, self.move_bottom_action,
-                                              self.expand_collapse_action])
+                                              self.expand_collapse_action, self.note_toolbar_action])
 
 
 def _add_service_manager_context_menu_separator(menu):
@@ -670,8 +677,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._internal_drag_item = None
         self._internal_drag_original_index = None
         self._internal_drag_child = -1
+        self._internal_drag_visual_item_index = -1
         self._external_drag_item = None
         self._external_drag_plugin_name = None
+        self._external_drag_target_index = -1
+        self._external_drag_highlight_index = -1
         self._load_service_file_path = None
         self._pending_loading_status_message = ''
         self._loading_status_timer = QtCore.QTimer(self)
@@ -2692,6 +2702,198 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._update_move_actions()
         return False
 
+    def _render_service_item_row(self, item_data, tree_widget_item):
+        """Render one top-level service row and its children into an existing QTreeWidgetItem."""
+        service_item_from_item = item_data['service_item']
+        transition_settings = self._get_service_item_transition_settings(service_item_from_item)
+        transition_enabled = self._service_item_supports_transition(service_item_from_item) and \
+            transition_settings.get('enabled', False)
+        autoplay_loop_enabled = bool(service_item_from_item.auto_play_slides_loop)
+        is_dragged_item = item_data is self._internal_drag_item or item_data is self._external_drag_item
+        if service_item_from_item.is_valid:
+            themed_icon = self._create_colored_service_icon(service_item_from_item.icon, service_item_from_item)
+            icon = themed_icon.pixmap(80, 80).toImage()
+            icon = icon.scaled(80, 80, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                               QtCore.Qt.TransformationMode.SmoothTransformation)
+            if service_item_from_item.notes:
+                painter = QtGui.QPainter(icon)
+                if transition_enabled:
+                    transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
+                    transition_overlay = transition_overlay.scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.drawImage(50, 50, transition_overlay)
+                if autoplay_loop_enabled:
+                    sync_overlay = UiIcons().sync.pixmap(30, 30).toImage().scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+                    painter.setBrush(QtGui.QColor(0, 0, 0, 180))
+                    painter.setPen(QtCore.Qt.PenStyle.NoPen)
+                    painter.drawEllipse(QtCore.QRectF(16, 46, 38, 38))
+                    painter.drawImage(20, 50, sync_overlay)
+                painter.end()
+                tree_widget_item.setIcon(0, build_icon(icon))
+            elif service_item_from_item.temporary_edit:
+                overlay = QtGui.QImage(UiIcons().upload)
+                overlay = overlay.scaled(40, 40, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                         QtCore.Qt.TransformationMode.SmoothTransformation)
+                painter = QtGui.QPainter(icon)
+                painter.drawImage(40, 0, overlay)
+                if transition_enabled:
+                    transition_overlay = UiIcons().transition.pixmap(30, 30).toImage().scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.drawImage(50, 50, transition_overlay)
+                if autoplay_loop_enabled:
+                    sync_overlay = UiIcons().sync.pixmap(30, 30).toImage().scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+                    painter.setBrush(QtGui.QColor(0, 0, 0, 180))
+                    painter.setPen(QtCore.Qt.PenStyle.NoPen)
+                    painter.drawEllipse(QtCore.QRectF(16, 46, 38, 38))
+                    painter.drawImage(20, 50, sync_overlay)
+                painter.end()
+                tree_widget_item.setIcon(0, build_icon(icon))
+            elif transition_enabled or autoplay_loop_enabled:
+                painter = QtGui.QPainter(icon)
+                if transition_enabled:
+                    transition_overlay = UiIcons().transition.pixmap(30, 30).toImage().scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.drawImage(50, 50, transition_overlay)
+                if autoplay_loop_enabled:
+                    sync_overlay = UiIcons().sync.pixmap(30, 30).toImage().scaled(
+                        30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+                    painter.setBrush(QtGui.QColor(0, 0, 0, 180))
+                    painter.setPen(QtCore.Qt.PenStyle.NoPen)
+                    painter.drawEllipse(QtCore.QRectF(16, 46, 38, 38))
+                    painter.drawImage(20, 50, sync_overlay)
+                painter.end()
+                tree_widget_item.setIcon(0, build_icon(icon))
+            else:
+                tree_widget_item.setIcon(0, themed_icon)
+        else:
+            tree_widget_item.setIcon(0, UiIcons().delete)
+        title = service_item_from_item.get_display_title()
+        if transition_enabled:
+            title += ' \u21c4'
+        tree_widget_item.setText(0, title)
+        tree_widget_item.setTextAlignment(1, int(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter))
+        tips = []
+        if service_item_from_item.temporary_edit:
+            text1 = translate('OpenLP.ServiceManager', 'Edit')
+            text2 = translate('OpenLP.ServiceManager', 'Service copy only')
+            tips.append('<strong>{text1}:</strong> <em>{text2}</em>'.format(text1=text1, text2=text2))
+        if service_item_from_item.theme and service_item_from_item.theme != -1:
+            text = translate('OpenLP.ServiceManager', 'Slide theme')
+            tips.append('<strong>{text1}:</strong> <em>{text2}</em>'.format(text1=text, text2=service_item_from_item.theme))
+        if service_item_from_item.notes:
+            text1 = translate('OpenLP.ServiceManager', 'Notes')
+            text2 = html.escape(service_item_from_item.notes)
+            tips.append('<strong>{text1}: </strong> {text2}'.format(text1=text1, text2=text2))
+        if item_data['service_item'].is_capable(ItemCapabilities.HasVariableStartTime):
+            tips.append(item_data['service_item'].get_media_time())
+        if item_data['service_item'].is_capable(ItemCapabilities.HasMetaData):
+            for meta in item_data['service_item'].metadata:
+                tips.append(meta)
+        tree_widget_item.setToolTip(0, '<br>'.join(tips))
+        if service_item_from_item.notes:
+            notes_icon_size = self.service_manager_list.iconSize()
+            if not notes_icon_size.isValid() or notes_icon_size.width() <= 0:
+                notes_icon_size = QtCore.QSize(16, 16)
+            notes_label = QtWidgets.QLabel(self.service_manager_list)
+            notes_label.setPixmap(UiIcons().edit.pixmap(notes_icon_size))
+            notes_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+            notes_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            notes_opacity = QtWidgets.QGraphicsOpacityEffect(notes_label)
+            notes_opacity.setOpacity(0.65)
+            notes_label.setGraphicsEffect(notes_opacity)
+            self.service_manager_list.setItemWidget(tree_widget_item, 1, notes_label)
+            tree_widget_item.setToolTip(1, '<br>'.join(tips))
+        else:
+            self.service_manager_list.removeItemWidget(tree_widget_item, 1)
+            tree_widget_item.setToolTip(1, '')
+        tree_widget_item.setSelected(item_data['selected'] and not is_dragged_item)
+        if is_dragged_item:
+            dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+            dragged_text_color.setAlpha(140)
+            tree_widget_item.setForeground(0, QtGui.QBrush(dragged_text_color))
+        frames = service_item_from_item.get_frames()
+        if not (service_item_from_item.name in ['images', 'media', 'presentations'] and len(frames) == 1):
+            for slide_index, slide in enumerate(frames):
+                child = QtWidgets.QTreeWidgetItem(tree_widget_item)
+                if service_item_from_item.is_capable(ItemCapabilities.HasDisplayTitle) or \
+                        service_item_from_item.service_item_type is not ServiceItemType.Text:
+                    text = slide['title'].replace('\n', ' ')
+                else:
+                    text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
+                if service_item_from_item.name == 'presentations':
+                    text = f"Slide {slide_index + 1}"
+                if service_item_from_item.name == 'songs':
+                    text = slide['verse'] + ': ' + text
+                text = remove_tags(text)
+                text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
+                text = ' '.join(text.split())
+                child.setText(0, text)
+                child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
+                if is_dragged_item:
+                    child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                    child_text_color.setAlpha(140)
+                    child.setForeground(0, QtGui.QBrush(child_text_color))
+        tree_widget_item.setExpanded(item_data['expanded'])
+
+    def _refresh_tree_rows_from_service_items(self, start_index=0):
+        """Update top-level order metadata and row styling after in-place list changes."""
+        for index, item_data in enumerate(self.service_items):
+            item_data['order'] = index + 1
+            if index >= len(self.tree_widget_items):
+                continue
+            tree_item = self.tree_widget_items[index]
+            tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item_data['order'])
+            if item_data is self._internal_drag_item:
+                dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                dragged_text_color.setAlpha(140)
+                drag_brush = QtGui.QBrush(dragged_text_color)
+                tree_item.setForeground(0, drag_brush)
+                for child_index in range(tree_item.childCount()):
+                    tree_item.child(child_index).setForeground(0, drag_brush)
+
+    def _insert_service_item_row(self, index):
+        """Insert a single rendered row at index without rebuilding the full list."""
+        tree_item = QtWidgets.QTreeWidgetItem()
+        self._render_service_item_row(self.service_items[index], tree_item)
+        self.service_manager_list.insertTopLevelItem(index, tree_item)
+        self.tree_widget_items.insert(index, tree_item)
+        self._refresh_tree_rows_from_service_items(max(0, index))
+
+    def _move_service_item_row(self, from_index, to_index):
+        """Move one service row and matching data model entry without full repaint."""
+        if from_index == to_index:
+            return
+        dragged_item = self.service_items.pop(from_index)
+        self.service_items.insert(to_index, dragged_item)
+        if from_index >= self.service_manager_list.topLevelItemCount() or to_index > self.service_manager_list.topLevelItemCount():
+            self._refresh_tree_rows_from_service_items(min(from_index, to_index))
+            return
+        if from_index >= len(self.tree_widget_items):
+            self._refresh_tree_rows_from_service_items(min(from_index, to_index))
+            return
+        moved_tree_item = self.service_manager_list.takeTopLevelItem(from_index)
+        self.service_manager_list.insertTopLevelItem(to_index, moved_tree_item)
+        moved_tree_widget_item = self.tree_widget_items.pop(from_index)
+        self.tree_widget_items.insert(to_index, moved_tree_widget_item)
+        self._refresh_tree_rows_from_service_items(min(from_index, to_index))
+
     def clean_up(self):
         """
         Empties the service_path of temporary files on system exit.
@@ -2810,7 +3012,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if replace > -1:
             item.merge(self.service_items[replace]['service_item'])
             self.service_items[replace]['service_item'] = item
-            self.repaint_service_list(replace, -1)
+            if replace < len(self.tree_widget_items):
+                tree_item = self.tree_widget_items[replace]
+                tree_item.takeChildren()
+                self.service_manager_list.removeItemWidget(tree_item, 1)
+                self._render_service_item_row(self.service_items[replace], tree_item)
+                self._refresh_tree_rows_from_service_items(replace)
+            elif repaint:
+                self.repaint_service_list(replace, -1)
             self.live_controller.replace_service_manager_item(item)
         else:
             item.render_text_items()
@@ -2821,21 +3030,29 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         self.service_items.append({'service_item': ind_item,
                                                    'order': len(self.service_items) + 1,
                                                    'expanded': expand, 'selected': selected})
+                        if repaint:
+                            self._insert_service_item_row(len(self.service_items) - 1)
                 else:
                     self.service_items.append({'service_item': item,
                                                'order': len(self.service_items) + 1,
                                                'expanded': expand, 'selected': selected})
-                if repaint:
-                    self.repaint_service_list(len(self.service_items) - 1, -1)
+                    if repaint:
+                        self._insert_service_item_row(len(self.service_items) - 1)
             else:
                 self.service_items.insert(self.drop_position,
                                           {'service_item': item, 'order': self.drop_position,
                                            'expanded': expand, 'selected': selected})
-                self.repaint_service_list(self.drop_position, -1)
+                if repaint:
+                    self._insert_service_item_row(self.drop_position)
             # if rebuilding list make sure live is fixed.
             if rebuild:
                 self.live_controller.replace_service_manager_item(item)
+            if repaint and self.drop_position != -1 and self.drop_position < len(self.tree_widget_items):
+                self.service_manager_list.setCurrentItem(self.tree_widget_items[self.drop_position])
+            elif repaint and self.service_items and self.drop_position == -1:
+                self.service_manager_list.setCurrentItem(self.tree_widget_items[len(self.service_items) - 1])
         self.drop_position = -1
+        self._update_move_actions()
         self.set_modified()
 
     def delete_item(self):
@@ -3043,6 +3260,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.make_preview_action.setEnabled(has_selection)
         if hasattr(self, 'make_live_action'):
             self.make_live_action.setEnabled(has_selection)
+        if hasattr(self, 'note_toolbar_action'):
+            self.note_toolbar_action.setEnabled(has_selection)
         self.move_top_action.setEnabled(has_selection and not at_top)
         self.move_up_action.setEnabled(has_selection and not at_top)
         self.move_down_action.setEnabled(has_selection and not at_bottom)
@@ -3052,7 +3271,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         return self._internal_drag_item is not None
 
     def is_external_drag_active(self):
-        return self._external_drag_item is not None
+        return self._external_drag_plugin_name is not None
 
     def get_internal_drag_title(self):
         """Return the display title of the item currently being dragged internally."""
@@ -3087,30 +3306,19 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
     def begin_external_drag_preview(self, plugin_name, item_title=None):
         """
-        Create a placeholder service item for an incoming external drag and insert it at the end
-        of the service list to provide a live drop-position preview.
+        Start external drag preview state and track a lightweight insertion target without
+        mutating the service item list.
 
         :param plugin_name: The plugin name from the drag MIME data (e.g. 'songs', 'images').
         :param item_title: The actual title of the item being dragged, if available.
-        :returns: The display title of the placeholder (for the drag tooltip).
+        :returns: The display title used by the drag tooltip.
         """
-        from openlp.core.lib.serviceitem import ServiceItem
-        placeholder = ServiceItem()
-        placeholder.name = plugin_name
-        placeholder.add_icon()
-        placeholder.add_capability(ItemCapabilities.CanEditTitle)
-        placeholder.title = item_title or self._PLUGIN_DISPLAY_NAMES.get(plugin_name, plugin_name.title())
-        insert_idx = len(self.service_items)
-        self._external_drag_item = {
-            'service_item': placeholder,
-            'order': insert_idx + 1,
-            'expanded': False,
-            'selected': False,
-        }
+        display_title = item_title or self._PLUGIN_DISPLAY_NAMES.get(plugin_name, plugin_name.title())
+        self._external_drag_item = object()
         self._external_drag_plugin_name = plugin_name
-        self.service_items.append(self._external_drag_item)
-        self.repaint_service_list(insert_idx, -1)
-        return placeholder.get_display_title()
+        self._external_drag_target_index = len(self.service_items)
+        self._set_external_drag_highlight(self._external_drag_target_index)
+        return display_title
 
     def update_external_drag_preview(self, pos):
         """Move the external drag placeholder to the position under the cursor."""
@@ -3120,49 +3328,67 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._move_external_drag_preview(target_index)
 
     def _move_external_drag_preview(self, target_index):
-        current_index = self._get_external_drag_item_index()
-        if current_index == -1:
-            return
         insert_index = max(0, min(target_index, len(self.service_items)))
-        if insert_index > current_index:
-            insert_index -= 1
-        if insert_index == current_index:
+        if insert_index == self._external_drag_target_index:
             return
-        dragged_item = self.service_items.pop(current_index)
-        self.service_items.insert(insert_index, dragged_item)
-        self.repaint_service_list(insert_index, -1)
+        self._external_drag_target_index = insert_index
+        self._set_external_drag_highlight(insert_index)
 
     def _get_external_drag_item_index(self):
         if not self.is_external_drag_active():
             return -1
-        for index, item in enumerate(self.service_items):
-            if item is self._external_drag_item:
-                return index
-        return -1
+        return self._external_drag_target_index
+
+    def _set_external_drag_highlight(self, insert_index):
+        """Highlight only the current external drop target row to avoid full-list repaint."""
+        if self._external_drag_highlight_index != -1 and self._external_drag_highlight_index < len(self.tree_widget_items):
+            previous_item = self.tree_widget_items[self._external_drag_highlight_index]
+            previous_item.setBackground(0, QtGui.QBrush())
+            previous_item.setBackground(1, QtGui.QBrush())
+        self._external_drag_highlight_index = -1
+        if not self.tree_widget_items:
+            return
+        highlight_index = insert_index if insert_index < len(self.tree_widget_items) else len(self.tree_widget_items) - 1
+        if highlight_index < 0:
+            return
+        highlight_item = self.tree_widget_items[highlight_index]
+        highlight_color = self.palette().color(QtGui.QPalette.ColorRole.Highlight)
+        highlight_color.setAlpha(60)
+        highlight_brush = QtGui.QBrush(highlight_color)
+        highlight_item.setBackground(0, highlight_brush)
+        highlight_item.setBackground(1, highlight_brush)
+        self._external_drag_highlight_index = highlight_index
+
+    def _clear_external_drag_highlight(self):
+        if self._external_drag_highlight_index == -1:
+            return
+        if self._external_drag_highlight_index < len(self.tree_widget_items):
+            item = self.tree_widget_items[self._external_drag_highlight_index]
+            item.setBackground(0, QtGui.QBrush())
+            item.setBackground(1, QtGui.QBrush())
+        self._external_drag_highlight_index = -1
 
     def cancel_external_drag_preview(self):
         """Remove the external drag placeholder without committing."""
         if not self.is_external_drag_active():
             return
-        idx = self._get_external_drag_item_index()
+        self._clear_external_drag_highlight()
         self._external_drag_item = None
         self._external_drag_plugin_name = None
-        if idx != -1:
-            self.service_items.pop(idx)
-        self.repaint_service_list(-1, -1)
+        self._external_drag_target_index = -1
 
     def finish_external_drag_preview(self):
         """
-        Commit the external drag: record the placeholder's position as drop_position, then remove
-        the placeholder so the real item can be inserted at that index by add_service_item.
+        Commit the external drag: record the tracked insertion target as drop_position.
         """
         if not self.is_external_drag_active():
             return
         idx = self._get_external_drag_item_index()
+        self._clear_external_drag_highlight()
         self._external_drag_item = None
         self._external_drag_plugin_name = None
+        self._external_drag_target_index = -1
         if idx != -1:
-            self.service_items.pop(idx)
             self.drop_position = idx
 
     def begin_internal_drag(self):
@@ -3172,7 +3398,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._internal_drag_item = self.service_items[start_pos]
         self._internal_drag_original_index = start_pos
         self._internal_drag_child = child
-        self.repaint_service_list(start_pos, child)
+        self._apply_internal_drag_grab_visual(start_pos)
         return True
 
     def update_internal_drag_preview(self, pos):
@@ -3198,12 +3424,39 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.service_items.insert(original_index, dragged_item)
             current_index = original_index
         has_moved = current_index != original_index
+        self._clear_internal_drag_grab_visual()
         self._internal_drag_item = None
         self._internal_drag_original_index = None
         self._internal_drag_child = -1
-        self.repaint_service_list(current_index, child)
+        if current_index >= 0 and current_index < len(self.tree_widget_items):
+            self.service_manager_list.setCurrentItem(self.tree_widget_items[current_index])
+        self._update_move_actions()
         if is_drop_complete and has_moved:
             self.set_modified()
+
+    def _apply_internal_drag_grab_visual(self, item_index):
+        """Dim the grabbed item in-place so drag start does not trigger a full list repaint."""
+        self._clear_internal_drag_grab_visual()
+        if item_index < 0 or item_index >= len(self.tree_widget_items):
+            return
+        root_item = self.tree_widget_items[item_index]
+        dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+        dragged_text_color.setAlpha(140)
+        drag_brush = QtGui.QBrush(dragged_text_color)
+        root_item.setForeground(0, drag_brush)
+        for child_index in range(root_item.childCount()):
+            root_item.child(child_index).setForeground(0, drag_brush)
+        self._internal_drag_visual_item_index = item_index
+
+    def _clear_internal_drag_grab_visual(self):
+        if self._internal_drag_visual_item_index == -1:
+            return
+        if self._internal_drag_visual_item_index < len(self.tree_widget_items):
+            root_item = self.tree_widget_items[self._internal_drag_visual_item_index]
+            root_item.setForeground(0, QtGui.QBrush())
+            for child_index in range(root_item.childCount()):
+                root_item.child(child_index).setForeground(0, QtGui.QBrush())
+        self._internal_drag_visual_item_index = -1
 
     def _get_internal_drag_item_index(self):
         if not self.is_internal_drag_active():
@@ -3232,9 +3485,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             insert_index -= 1
         if insert_index == current_index:
             return
-        dragged_item = self.service_items.pop(current_index)
-        self.service_items.insert(insert_index, dragged_item)
-        self.repaint_service_list(insert_index, self._internal_drag_child)
+        self._move_service_item_row(current_index, insert_index)
+        self._apply_internal_drag_grab_visual(insert_index)
+        if insert_index >= 0 and insert_index < len(self.tree_widget_items):
+            self.service_manager_list.setCurrentItem(self.tree_widget_items[insert_index])
 
     def drop_event(self, event):
         """

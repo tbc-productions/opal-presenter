@@ -1343,16 +1343,34 @@ def test_finish_internal_drag_restore_on_cancel(service_manager: ServiceManager)
     assert service_manager.is_internal_drag_active() is False
 
 
+def test_begin_internal_drag_does_not_repaint_list(service_manager: ServiceManager):
+    """
+    Test that beginning an internal drag does not trigger a full list repaint.
+    """
+    # GIVEN: A service manager with a selected item
+    _add_song_service_item(service_manager)
+    _add_bible_service_item(service_manager)
+    service_manager.find_service_item = MagicMock(return_value=(0, -1))
+    service_manager.repaint_service_list = MagicMock()
+
+    # WHEN: Internal drag starts
+    started = service_manager.begin_internal_drag()
+
+    # THEN: Drag starts but no full repaint occurs on initial grab
+    assert started is True
+    service_manager.repaint_service_list.assert_not_called()
+
+
 def test_drop_event_external_plugin_uses_preview_position(service_manager: ServiceManager):
     """
     Test that when an external plugin item is dropped while the drag preview is active,
-    the drop_position is set to the placeholder's current index.
+    the drop_position is set to the tracked preview index.
     """
     # GIVEN: A service manager with two items and an active external drag preview at index 1
     first_item = _add_song_service_item(service_manager)
     second_item = _add_bible_service_item(service_manager)
     service_manager.begin_external_drag_preview('images')
-    # Move placeholder between the two existing items
+    # Move preview target between the two existing items
     service_manager._move_external_drag_preview(1)
     assert service_manager.is_external_drag_active()
     assert service_manager.drop_position == -1  # not set yet
@@ -1405,7 +1423,7 @@ def test_drop_event_external_plugin_rejects_unsupported_type(service_manager: Se
 
 def test_begin_external_drag_preview(service_manager: ServiceManager):
     """
-    Test that begin_external_drag_preview creates a translucent placeholder at the end of the list.
+    Test that begin_external_drag_preview tracks an insertion target at the end of the list.
     Without an item_title, falls back to the friendly plugin name.
     """
     # GIVEN: A service manager with one item
@@ -1415,13 +1433,12 @@ def test_begin_external_drag_preview(service_manager: ServiceManager):
     # WHEN: An external drag preview starts for 'images' without a title
     title = service_manager.begin_external_drag_preview('images')
 
-    # THEN: A placeholder is appended and the title is the friendly name
+    # THEN: Preview state is active and the title is the friendly name
     assert title == 'Image'
-    assert len(service_manager.service_items) == 2
+    assert len(service_manager.service_items) == 1
     assert service_manager.is_external_drag_active()
-    placeholder = service_manager.service_items[-1]['service_item']
-    assert placeholder.title == 'Image'
-    assert placeholder.name == 'images'
+    assert service_manager._external_drag_plugin_name == 'images'
+    assert service_manager._external_drag_target_index == 1
 
 
 def test_begin_external_drag_preview_with_item_title(service_manager: ServiceManager):
@@ -1434,44 +1451,42 @@ def test_begin_external_drag_preview_with_item_title(service_manager: ServiceMan
     # WHEN: An external drag preview starts with the actual song title
     title = service_manager.begin_external_drag_preview('songs', item_title='Amazing Grace')
 
-    # THEN: The placeholder shows the actual item title
+    # THEN: The tooltip title uses the actual item title
     assert title == 'Amazing Grace'
-    placeholder = service_manager.service_items[-1]['service_item']
-    assert placeholder.title == 'Amazing Grace'
 
 
 def test_cancel_external_drag_preview(service_manager: ServiceManager):
     """
-    Test that cancelling an external drag preview removes the placeholder from the list.
+    Test that cancelling an external drag preview clears preview state.
     """
     # GIVEN: A service manager with an active external drag preview
     _add_song_service_item(service_manager)
     service_manager.begin_external_drag_preview('songs')
-    assert len(service_manager.service_items) == 2
+    assert len(service_manager.service_items) == 1
 
     # WHEN: The preview is cancelled
     service_manager.cancel_external_drag_preview()
 
-    # THEN: The placeholder is removed and drag state is cleared
+    # THEN: Drag state is cleared and service items are unchanged
     assert len(service_manager.service_items) == 1
     assert not service_manager.is_external_drag_active()
 
 
 def test_finish_external_drag_preview_sets_drop_position(service_manager: ServiceManager):
     """
-    Test that finish_external_drag_preview removes the placeholder and sets drop_position.
+    Test that finish_external_drag_preview uses the tracked preview index for drop_position.
     """
-    # GIVEN: Three items with the external drag placeholder at index 1
+    # GIVEN: Two items with the external drag target at index 1
     _add_song_service_item(service_manager)
     _add_bible_service_item(service_manager)
     service_manager.begin_external_drag_preview('images')
     service_manager._move_external_drag_preview(1)
-    assert len(service_manager.service_items) == 3
+    assert len(service_manager.service_items) == 2
 
     # WHEN: The external drag is finished (committed)
     service_manager.finish_external_drag_preview()
 
-    # THEN: Placeholder removed, drop_position = 1 (where placeholder was)
+    # THEN: Service list unchanged, drop_position = 1 (tracked target)
     assert len(service_manager.service_items) == 2
     assert service_manager.drop_position == 1
     assert not service_manager.is_external_drag_active()
@@ -2337,7 +2352,7 @@ def test_save_actions_enabled_when_service_has_items(service_manager: ServiceMan
 
 
 def test_preview_and_live_actions_disabled_without_selection(service_manager: ServiceManager):
-    """Preview/Live actions should be disabled when no service item is selected."""
+    """Preview/Live/Notes actions should be disabled when no service item is selected."""
     # GIVEN: No selected service item
     service_manager.service_manager_list.clearSelection()
 
@@ -2347,10 +2362,11 @@ def test_preview_and_live_actions_disabled_without_selection(service_manager: Se
     # THEN: Both actions should be disabled
     assert service_manager.make_preview_action.isEnabled() is False
     assert service_manager.make_live_action.isEnabled() is False
+    assert service_manager.note_toolbar_action.isEnabled() is False
 
 
 def test_preview_and_live_actions_enabled_with_selection(service_manager: ServiceManager):
-    """Preview/Live actions should be enabled when a service item is selected."""
+    """Preview/Live/Notes actions should be enabled when a service item is selected."""
     # GIVEN: A selected service item in the list
     _add_song_service_item(service_manager)
 
@@ -2360,6 +2376,7 @@ def test_preview_and_live_actions_enabled_with_selection(service_manager: Servic
     # THEN: Both actions should be enabled
     assert service_manager.make_preview_action.isEnabled() is True
     assert service_manager.make_live_action.isEnabled() is True
+    assert service_manager.note_toolbar_action.isEnabled() is True
 
 
 @patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt')
