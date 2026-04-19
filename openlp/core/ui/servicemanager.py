@@ -319,10 +319,18 @@ class Ui_ServiceManager(object):
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.add_toolbar_action('newService', text=UiStrings().NewService, icon=UiIcons().new,
                                         tooltip=UiStrings().CreateService, triggers=self.on_new_service_clicked)
-        self.toolbar.add_toolbar_action('openService', text=UiStrings().OpenService,
-                                        icon=UiIcons().open,
-                                        tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
-                                        triggers=self.on_load_service_clicked)
+        self.open_service_action = self.toolbar.add_toolbar_action(
+            'openService',
+            text=UiStrings().OpenService,
+            icon=UiIcons().open,
+            tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
+            triggers=self.on_load_service_clicked)
+        self.open_service_button = self.toolbar.widgetForAction(self.open_service_action)
+        if isinstance(self.open_service_button, QtWidgets.QToolButton):
+            self.open_service_recent_menu = QtWidgets.QMenu(self.open_service_button)
+            self.open_service_recent_menu.aboutToShow.connect(self.update_open_service_recent_menu)
+            self.open_service_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+            self.open_service_button.setMenu(self.open_service_recent_menu)
         self.save_service_action = self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
                                                                    icon=UiIcons().save,
                                                                    tooltip=translate('OpenLP.ServiceManager',
@@ -766,14 +774,27 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
     def _update_unsaved_changes_indicator(self):
         """
-        Show the toolbar indicator using the same modified-state logic as the main window title bar.
+        Show unsaved state in the Service dock title and hide the legacy toolbar indicator.
         """
+        self._update_service_manager_dock_title()
         if not hasattr(self, 'unsaved_changes_container'):
             return
-        should_show = self._modified
-        self.unsaved_changes_container.setVisible(should_show)
+        self.unsaved_changes_container.setVisible(False)
         if 'unsaved_changes_container' in self.toolbar.actions_map:
-            self.toolbar.actions_map['unsaved_changes_container'].setVisible(should_show)
+            self.toolbar.actions_map['unsaved_changes_container'].setVisible(False)
+
+    def _update_service_manager_dock_title(self):
+        """
+        Update the Service pane title, appending unsaved state when required.
+        """
+        dock_widget = self.parentWidget()
+        if not isinstance(dock_widget, QtWidgets.QDockWidget):
+            return
+        service_title = translate('OpenLP.MainWindow', 'Service')
+        if self._modified:
+            unsaved_text = translate('OpenLP.ServiceManager', 'unsaved changes')
+            service_title = '{title} ({unsaved})'.format(title=service_title, unsaved=unsaved_text)
+        dock_widget.setWindowTitle(service_title)
 
     def repaint_list_icons(self):
         """
@@ -916,6 +937,39 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         self.load_service()
 
+    def update_open_service_recent_menu(self):
+        """
+        Rebuild the Open Service toolbar dropdown using the main window's recent service list.
+        """
+        if not hasattr(self, 'open_service_recent_menu'):
+            return
+        self.open_service_recent_menu.clear()
+        if not self.main_window:
+            return
+        self.main_window.update_recent_files_menu()
+        has_recent_file = False
+        for recent_action in self.main_window.recent_files_menu.actions():
+            recent_file_path = recent_action.data()
+            if recent_action.isSeparator() or not recent_file_path:
+                continue
+            action_copy = self.open_service_recent_menu.addAction(recent_action.text())
+            action_copy.setEnabled(recent_action.isEnabled())
+            if recent_file_path:
+                has_recent_file = True
+                action_copy.setData(recent_file_path)
+                action_copy.triggered.connect(
+                    lambda checked=False, file_path=recent_file_path: self.on_recent_service_clicked(checked,
+                                                                                                      file_path))
+        if not has_recent_file:
+            no_recent_action = self.open_service_recent_menu.addAction(
+                translate('OpenLP.ServiceManager', 'No recent services'))
+            no_recent_action.setEnabled(False)
+        self.open_service_recent_menu.addSeparator()
+        clear_recent_files_action = self.open_service_recent_menu.addAction(
+            translate('OpenLP.MainWindow', 'Clear List', 'Clear List of recent files'))
+        clear_recent_files_action.setEnabled(bool(self.main_window.recent_files))
+        clear_recent_files_action.triggered.connect(self.main_window.clear_recent_file_menu)
+
     def load_service(self, file_path=None):
         """
         Loads the service file and saves the existing one it there is one unchanged.
@@ -953,11 +1007,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                               QtWidgets.QMessageBox.StandardButton.Cancel,
                                               QtWidgets.QMessageBox.StandardButton.Save)
 
-    def on_recent_service_clicked(self, checked):
+    def on_recent_service_clicked(self, checked, file_path=None):
         """
         Load a recent file as the service triggered by mainwindow recent service list.
 
         :param bool checked: Not used
+        :param Path | str | None file_path: Optional path for callers that are not QAction senders.
         """
         if self.is_modified():
             result = self.save_modified_service()
@@ -965,8 +1020,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 return False
             elif result == QtWidgets.QMessageBox.StandardButton.Save:
                 self.decide_save_method()
-        sender = self.sender()
-        self.load_file_in_thread(Path(sender.data()))
+        if file_path is None:
+            sender = self.sender()
+            if not sender:
+                return False
+            file_path = sender.data()
+        if not file_path:
+            return False
+        self.load_file_in_thread(Path(file_path))
 
     def load_file_in_thread(self, file_path):
         """

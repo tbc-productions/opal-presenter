@@ -33,6 +33,7 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import ThemeLevel
+from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.state import State
@@ -280,19 +281,27 @@ def test_is_modified(settings: Settings):
     assert result is True, 'is_modified should return True'
 
 
-def test_unsaved_changes_indicator_hidden_when_not_modified(service_manager: ServiceManager):
-    """The toolbar indicator should stay hidden when the service is not modified."""
+def test_service_dock_title_when_not_modified(service_manager: ServiceManager):
+    """The Service dock title should not include an unsaved marker for clean services."""
+    service_dock = QtWidgets.QDockWidget()
+    service_dock.setWidget(service_manager)
+
     service_manager.set_modified(False)
 
-    assert service_manager.unsaved_changes_container.isHidden() is True
+    assert service_dock.windowTitle() == translate('OpenLP.MainWindow', 'Service')
 
 
-def test_unsaved_changes_indicator_visible_when_modified(service_manager: ServiceManager):
-    """The toolbar indicator should be shown whenever the service is modified."""
+def test_service_dock_title_when_modified(service_manager: ServiceManager):
+    """The Service dock title should include an unsaved marker for modified services."""
+    service_dock = QtWidgets.QDockWidget()
+    service_dock.setWidget(service_manager)
 
     service_manager.set_modified(True)
 
-    assert service_manager.unsaved_changes_container.isHidden() is False
+    expected_title = '{title} ({unsaved})'.format(
+        title=translate('OpenLP.MainWindow', 'Service'),
+        unsaved=translate('OpenLP.ServiceManager', 'unsaved changes'))
+    assert service_dock.windowTitle() == expected_title
 
 
 def test_build_context_menu(settings: Settings):
