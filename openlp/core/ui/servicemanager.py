@@ -99,6 +99,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         if not notes_icon_size.isValid() or notes_icon_size.width() <= 0:
             notes_icon_size = QtCore.QSize(16, 16)
         self.setColumnWidth(1, notes_icon_size.width() + 6)
+        self.setIndentation(30)
         self.setMouseTracking(True)
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager

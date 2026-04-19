@@ -1099,6 +1099,13 @@ def test_service_manager_list_drag_enter_event_accepts_supported_plugin(registry
     service_manager.begin_external_drag_preview.assert_called_once_with('songs', item_title='Test Song')
 
 
+def test_service_manager_list_uses_small_child_indentation():
+    """Test that ServiceManagerList adds an indent for sub-items."""
+    service_manager_list = ServiceManagerList(MagicMock())
+
+    assert service_manager_list.indentation() == 30
+
+
 def test_service_manager_list_drag_enter_event_rejects_unsupported_plugin():
     """
     Test that ServiceManagerList.dragEnterEvent rejects unsupported plugin drags.
