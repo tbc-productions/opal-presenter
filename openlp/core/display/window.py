@@ -450,10 +450,15 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         bg_color = self.settings.value('core/logo background color')
         image = self.settings.value('core/logo file')
         logo_fit = _normalise_logo_fit(self.settings.value('core/logo fit'))
-        if path_to_str(image).startswith(':'):
-            image_uri = self.openlp_splash_screen_path
+        qt_resource_map = {
+            ':/graphics/openlp-splash-screen.png': self.openlp_splash_screen_path,
+            ':/graphics/openlp-logo-background.svg': 'openlp://display/openlp-logo-background.svg',
+        }
+        image_str = path_to_str(image)
+        if image_str.startswith(':'):
+            image_uri = qt_resource_map.get(image_str, self.openlp_splash_screen_path)
         else:
-            image_path = path_to_str(image).replace('\\', '/')
+            image_path = image_str.replace('\\', '/')
             if not image_path:
                 image_uri = ''
             else:

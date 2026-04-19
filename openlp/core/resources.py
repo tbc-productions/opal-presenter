@@ -1,27 +1,3 @@
-# vim: autoindent shiftwidth=4 expandtab textwidth=120 tabstop=4 softtabstop=4
-
-##########################################################################
-# OpenLP - Open Source Lyrics Projection                                 #
-# ---------------------------------------------------------------------- #
-# Copyright (c) 2008-2024 OpenLP Developers                              #
-# ---------------------------------------------------------------------- #
-# This program is free software: you can redistribute it and/or modify   #
-# it under the terms of the GNU General Public License as published by   #
-# the Free Software Foundation, either version 3 of the License, or      #
-# (at your option) any later version.                                    #
-#                                                                        #
-# This program is distributed in the hope that it will be useful,        #
-# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
-# GNU General Public License for more details.                           #
-#                                                                        #
-# You should have received a copy of the GNU General Public License      #
-# along with this program.  If not, see <https://www.gnu.org/licenses/>. #
-##########################################################################
-"""
-The :mod:`resources` module provides application images and icons in a central
-store for use by OpenLP.
-"""
 from PySide6 import QtCore
 
 qt_resource_data = b"\
@@ -277643,6 +277619,205 @@ d\xa9\x07\xaap\x83\x96\x10\xefM\xc4^\x8e\x1b\xd40\
 \x04\xf7\xf5\xfb\x10\xee\xed\x92\x9a\x84[r\xc6\xff\x07\xeb\
 T\xe8\xc9\x94.a\xce\x00\x00\x00\x00IEND\xae\
 B`\x82\
+\x00\x00\x0cE\
+<\
+?xml version=\x221.\
+0\x22 encoding=\x22UTF\
+-8\x22 standalone=\x22\
+no\x22?>\x0a<svg width\
+=\x221920\x22 height=\x22\
+1080\x22 viewBox=\x220\
+ 0 1920 1080\x22 ve\
+rsion=\x221.1\x22 xmln\
+s=\x22http://www.w3\
+.org/2000/svg\x22 x\
+mlns:xlink=\x22http\
+://www.w3.org/19\
+99/xlink\x22>\x0a  <de\
+fs>\x0a    <linearG\
+radient id=\x22bg_b\
+ase\x22 x1=\x220\x22 y1=\x22\
+0\x22 x2=\x221\x22 y2=\x221\x22\
+ gradientUnits=\x22\
+objectBoundingBo\
+x\x22>\x0a      <stop \
+offset=\x220\x22 style\
+=\x22stop-color:#14\
+2c5c;stop-opacit\
+y:1\x22>\x0a        <a\
+nimate attribute\
+Name=\x22stop-color\
+\x22 values=\x22#142c5\
+c;#2a52a1;#142c5\
+c\x22 dur=\x2215s\x22 rep\
+eatCount=\x22indefi\
+nite\x22/>\x0a      </\
+stop>\x0a      <sto\
+p offset=\x221\x22 sty\
+le=\x22stop-color:#\
+081329;stop-opac\
+ity:1\x22>\x0a        \
+<animate attribu\
+teName=\x22stop-col\
+or\x22 values=\x22#081\
+329;#132c5e;#081\
+329\x22 dur=\x2215s\x22 r\
+epeatCount=\x22inde\
+finite\x22/>\x0a      \
+</stop>\x0a    </li\
+nearGradient>\x0a  \
+  \x0a    <radialGr\
+adient id=\x22glow_\
+top_right\x22 cx=\x221\
+\x22 cy=\x220\x22 r=\x220.9\x22\
+ gradientUnits=\x22\
+objectBoundingBo\
+x\x22>\x0a      <stop \
+offset=\x220\x22 style\
+=\x22stop-color:#2b\
+5ba8;stop-opacit\
+y:0.5\x22>\x0a        \
+<animate attribu\
+teName=\x22stop-opa\
+city\x22 values=\x220.\
+3;0.9;0.3\x22 dur=\x22\
+10s\x22 repeatCount\
+=\x22indefinite\x22/>\x0a\
+      </stop>\x0a  \
+    <stop offset\
+=\x221\x22 style=\x22stop\
+-color:#2b5ba8;s\
+top-opacity:0\x22/>\
+\x0a    </radialGra\
+dient>\x0a\x0a    <rad\
+ialGradient id=\x22\
+glow_bottom_left\
+\x22 cx=\x220\x22 cy=\x221\x22 \
+r=\x220.7\x22 gradient\
+Units=\x22objectBou\
+ndingBox\x22>\x0a     \
+ <stop offset=\x220\
+\x22 style=\x22stop-co\
+lor:#1e468c;stop\
+-opacity:0.6\x22>\x0a \
+       <animate \
+attributeName=\x22s\
+top-opacity\x22 val\
+ues=\x220.4;1.0;0.4\
+\x22 dur=\x2213s\x22 repe\
+atCount=\x22indefin\
+ite\x22/>\x0a      </s\
+top>\x0a      <stop\
+ offset=\x221\x22 styl\
+e=\x22stop-color:#1\
+e468c;stop-opaci\
+ty:0\x22/>\x0a    </ra\
+dialGradient>\x0a\x0a \
+   <linearGradie\
+nt id=\x22watermark\
+_grad\x22 x1=\x220\x22 y1\
+=\x220\x22 x2=\x221\x22 y2=\x22\
+1\x22 gradientUnits\
+=\x22objectBounding\
+Box\x22>\x0a      <sto\
+p offset=\x220\x22 sty\
+le=\x22stop-color:#\
+ffffff;stop-opac\
+ity:0.12\x22/>\x0a    \
+  <stop offset=\x22\
+1\x22 style=\x22stop-c\
+olor:#ffffff;sto\
+p-opacity:0.02\x22/\
+>\x0a    </linearGr\
+adient>\x0a  </defs\
+>\x0a  <rect x=\x220\x22 \
+y=\x220\x22 width=\x22192\
+0\x22 height=\x221080\x22\
+ style=\x22fill:url\
+(#bg_base);\x22/>\x0a \
+ <rect x=\x220\x22 y=\x22\
+0\x22 width=\x221920\x22 \
+height=\x221080\x22 st\
+yle=\x22fill:url(#g\
+low_top_right);\x22\
+/>\x0a  <rect x=\x220\x22\
+ y=\x220\x22 width=\x2219\
+20\x22 height=\x221080\
+\x22 style=\x22fill:ur\
+l(#glow_bottom_l\
+eft);\x22/>\x0a  <g tr\
+ansform=\x22transla\
+te(200, -700) sc\
+ale(1.5)\x22>\x0a    <\
+path d=\x22M943.793\
+,69.308c-483.106\
+,0 -874.466,391.\
+697 -874.466,874\
+.229c0,482.532 3\
+91.36,874.229 87\
+4.466,874.229c48\
+3.106,0 874.466,\
+-391.697 874.466\
+,-874.229c0,-482\
+.532 -391.36,-87\
+4.229 -874.466,-\
+874.229Zm-2.659,\
+73.111c442.33,0 \
+801.336,358.908 \
+801.336,801.118c\
+0,65.578 -7.978,\
+130.713 -23.934,\
+194.076l-558.896\
+,-447.97l-576.62\
+5,-462.592c111.2\
+47,-55.83 233.57\
+5,-84.631 358.11\
+9,-84.631Zm-561.\
+112,229.524l702.\
+942,417.84l569.0\
+9,338.526l-571.7\
+49,-281.809l-779\
+.175,-384.608c23\
+.934,-31.903 50.\
+527,-62.034 78.8\
+93,-89.949Zm-195\
+.459,307.066l844\
+.328,280.923l582\
+.83,194.076l-582\
+.83,-144.449l-87\
+4.91,-216.231c7.\
+091,-38.993 17.2\
+85,-77.099 30.58\
+2,-114.319Zm-39.\
+446,359.794l859.\
+84,92.164l602.77\
+5,64.692l-621.39\
+,-17.724l-818.62\
+1,-23.484c-10.19\
+4,-37.663 -17.72\
+9,-76.656 -22.60\
+4,-115.648Zm1486\
+.548,194.519l-65\
+9.063,121.851l-6\
+33.8,117.42c-25.\
+707,-29.244 -49.\
+64,-60.704 -70.9\
+15,-93.493l723.7\
+73,-77.099l640.0\
+05,-68.68Zm49.64\
+,18.61c-170.195,\
+408.535 -639.562\
+,602.168 -1048.2\
+07,431.576c-35.4\
+57,-14.622 -70.0\
+28,-32.346 -102.\
+826,-51.842l476.\
+458,-157.299l674\
+.576,-222.434Z\x22 \
+style=\x22fill:url(\
+#watermark_grad)\
+;\x22 />\x0a  </g>\x0a</s\
+vg>\x0a\
 "
 
 qt_resource_name = b"\
@@ -277694,33 +277869,40 @@ qt_resource_name = b"\
 \x00o\
 \x00p\x00e\x00n\x00l\x00p\x00-\x00s\x00p\x00l\x00a\x00s\x00h\x00-\x00s\x00c\x00r\
 \x00e\x00e\x00n\x00.\x00p\x00n\x00g\
+\x00\x1a\
+\x00\xe6\xf6\x07\
+\x00o\
+\x00p\x00e\x00n\x00l\x00p\x00-\x00l\x00o\x00g\x00o\x00-\x00b\x00a\x00c\x00k\x00g\
+\x00r\x00o\x00u\x00n\x00d\x00.\x00s\x00v\x00g\
 "
 
 qt_resource_struct = b"\
 \x00\x00\x00\x00\x00\x02\x00\x00\x00\x04\x00\x00\x00\x01\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00>\x00\x02\x00\x00\x00\x01\x00\x00\x00\x0b\
+\x00\x00\x00>\x00\x02\x00\x00\x00\x01\x00\x00\x00\x0c\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\x0a\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x0a\
 \x00\x00\x00\x00\x00\x00\x00\x00\
 \x00\x00\x00\x16\x00\x02\x00\x00\x00\x01\x00\x00\x00\x09\
 \x00\x00\x00\x00\x00\x00\x00\x00\
 \x00\x00\x00*\x00\x02\x00\x00\x00\x04\x00\x00\x00\x05\
 \x00\x00\x00\x00\x00\x00\x00\x00\
 \x00\x00\x00p\x00\x00\x00\x00\x00\x01\x00\x00\x0a\xf2\
-\x00\x00\x01\x9d\x5chK\xaf\
+\x00\x00\x01\x9d\x82]: \
 \x00\x00\x00\xd2\x00\x00\x00\x00\x00\x01\x00\x0f}i\
-\x00\x00\x01\x9d\x5ck_\xb9\
+\x00\x00\x01\x9d\x82]:#\
 \x00\x00\x00\xf6\x00\x00\x00\x00\x00\x01\x00(\xd63\
-\x00\x00\x01\x9d\x5cp\xb3)\
+\x00\x00\x01\x9d\x82]:\x1e\
 \x00\x00\x00\xa2\x00\x00\x00\x00\x00\x01\x00\x0e\xe3\x12\
 \x00\x00\x01\x9dR\xb5\xc4:\
 \x00\x00\x012\x00\x01\x00\x00\x00\x01\x00AD\xb2\
 \x00\x00\x01\x9dR\xb5\xc48\
+\x00\x00\x01\x82\x00\x00\x00\x00\x00\x01\x00C\xc6!\
+\x00\x00\x01\x9d\xa5\x8e\xfb\xde\
 \x00\x00\x01L\x00\x00\x00\x00\x00\x01\x00AK\x09\
-\x00\x00\x01\x9d\x5c-\xb5\x9e\
+\x00\x00\x01\x9d\x82]:\x18\
 \x00\x00\x00L\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\
-\x00\x00\x01\x9d[dS\xf0\
+\x00\x00\x01\x9d\x82]:\x16\
 "
 
 def qInitResources():

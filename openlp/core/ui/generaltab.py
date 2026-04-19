@@ -28,7 +28,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.registry import Registry
 from openlp.core.lib.settingstab import SettingsTab
+from openlp.core.ui import HideMode
 from openlp.core.ui.style import UiThemes, has_ui_theme
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.edits import PathEdit
@@ -90,7 +92,7 @@ class GeneralTab(SettingsTab):
         self.logo_file_label = QtWidgets.QLabel(self.logo_group_box)
         self.logo_file_label.setObjectName('logo_file_label')
         self.logo_file_path_edit = PathEdit(self.logo_group_box,
-                                            default_path=Path(':/graphics/openlp-splash-screen.png'))
+                                            default_path=Path(':/graphics/openlp-logo-background.svg'))
         self.logo_layout.addRow(self.logo_file_label, self.logo_file_path_edit)
         self.logo_color_label = QtWidgets.QLabel(self.logo_group_box)
         self.logo_color_label.setObjectName('logo_color_label')
@@ -111,6 +113,7 @@ class GeneralTab(SettingsTab):
         self.logo_layout.addRow(self.logo_hide_on_startup_check_box)
         self.left_layout.addWidget(self.logo_group_box)
         self.logo_color_button.colorChanged.connect(self.on_logo_background_color_changed)
+        self.logo_file_path_edit.pathChanged.connect(self._on_logo_file_changed)
         # CCLI Details
         self.ccli_group_box = QtWidgets.QGroupBox(self.left_column)
         self.ccli_group_box.setObjectName('ccli_group_box')
@@ -312,6 +315,7 @@ class GeneralTab(SettingsTab):
                 self.logo_fit_combo_box.setCurrentIndex(i)
                 break
         self.logo_color_button.color = self.logo_background_color
+        self._on_logo_file_changed(self.logo_file_path_edit.path)
         self.check_for_updates_check_box.setChecked(self.settings.value('core/update check'))
         self.check_for_remote_updates_check_box.setChecked(self.settings.value('api/update check'))
         # UI Settings
@@ -424,6 +428,46 @@ class GeneralTab(SettingsTab):
         Apply settings after the tab has loaded
         """
         self.settings_form.register_post_process('slidecontroller_live_spin_delay')
+        # If the live display is currently showing the logo, refresh it so the
+        # new logo file / fit / colour takes effect immediately without a restart.
+        QtCore.QTimer.singleShot(0, self._refresh_live_logo_if_active)
+
+    def _refresh_live_logo_if_active(self):
+        """
+        Re-apply logo display settings to the live display if it is currently showing the logo screen.
+        Called via a deferred timer so it runs after the settings dialog has closed.
+        """
+        live_controller = Registry().get('live_controller')
+        if not live_controller:
+            return
+        hide_mode = getattr(live_controller, '_current_hide_mode', None)
+        if hide_mode == HideMode.Logo:
+            # Currently in logo hide mode - re-apply via display
+            Registry().execute('live_display_hide', HideMode.Logo)
+        elif hide_mode is None and getattr(live_controller, 'service_item', None) is None:
+            # No service item loaded - still showing the startup logo screen
+            display = getattr(live_controller, 'display', None)
+            if display and hasattr(display, 'set_startup_screen'):
+                display.set_startup_screen()
+
+    def _on_logo_file_changed(self, path):
+        """
+        Enable or disable logo fit options that don't apply to SVG images.
+        """
+        is_svg = path is not None and str(path).lower().endswith('.svg')
+        model = self.logo_fit_combo_box.model()
+        for i in range(self.logo_fit_combo_box.count()):
+            fit_value = self.logo_fit_combo_box.itemData(i)
+            if fit_value in ('stretch', 'repeat'):
+                flags = QtCore.Qt.ItemFlag.NoItemFlags if is_svg else (
+                    QtCore.Qt.ItemFlag.ItemIsSelectable | QtCore.Qt.ItemFlag.ItemIsEnabled)
+                model.item(i).setFlags(flags)
+        # If the current selection is now disabled, fall back to 'cover'
+        if is_svg and self.logo_fit_combo_box.currentData() in ('stretch', 'repeat'):
+            for i in range(self.logo_fit_combo_box.count()):
+                if self.logo_fit_combo_box.itemData(i) == 'cover':
+                    self.logo_fit_combo_box.setCurrentIndex(i)
+                    break
 
     def on_logo_background_color_changed(self, color):
         """
