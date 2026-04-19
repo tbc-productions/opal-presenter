@@ -211,6 +211,11 @@ class ServiceItem(RegistryProperties):
         """
         Create frames for rendering and display
         """
+        if self.service_item_type != ServiceItemType.Text:
+            log.warning('_create_slides called on non-text service item (type=%s, name=%s)',
+                        self.service_item_type, self.name)
+            self._creating_slides = False
+            return
         wait_for(lambda: not self._creating_slides)
         self._creating_slides = True
         self._rendered_slides = []
@@ -231,7 +236,7 @@ class ServiceItem(RegistryProperties):
             bible_chapter_hint_from_row_tag = None
             row_label_from_raw_page_text = None
         for raw_slide in self.slides:
-            verse_tag = raw_slide['verse']
+            verse_tag = raw_slide.get('verse', str(index + 1))
             if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                 pages = previous_pages[verse_tag][1]
             else:
@@ -309,7 +314,7 @@ class ServiceItem(RegistryProperties):
             previous_pages = {}
             index = 0
             for raw_slide in self.slides:
-                verse_tag = raw_slide['verse']
+                verse_tag = raw_slide.get('verse', str(index + 1))
                 if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                     pages = previous_pages[verse_tag][1]
                 else:
