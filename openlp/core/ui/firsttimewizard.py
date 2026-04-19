@@ -24,7 +24,6 @@ The UI widgets for the first time wizard.
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common import clean_button_text
-from openlp.core.common.platform import is_macosx
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import add_welcome_page
 from openlp.core.ui.icons import UiIcons
@@ -166,12 +165,7 @@ class UiFirstTimeWizard(object):
                                      QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage |
                                      QtWidgets.QWizard.WizardOption.NoBackButtonOnLastPage |
                                      QtWidgets.QWizard.WizardOption.HaveCustomButton1)
-        if is_macosx():                                                                             # pragma: nocover
-            first_time_wizard.setPixmap(QtWidgets.QWizard.WizardPixmap.BackgroundPixmap,
-                                        QtGui.QPixmap(':/wizards/openlp-osx-wizard.png'))
-            first_time_wizard.resize(634, 486)
-        else:
-            first_time_wizard.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
+        first_time_wizard.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
         add_welcome_page(first_time_wizard, ':/wizards/openlp-osx-wizard.png')
         # The screen config page
         self.screen_page = QtWidgets.QWizardPage()
