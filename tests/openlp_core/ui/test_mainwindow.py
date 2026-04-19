@@ -945,8 +945,8 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
 def test_layout_preset_tab_bar_has_expected_tabs(main_window):
     """Main window should include a left vertical tab bar for layout presets."""
     assert main_window.layout_preset_tab_bar.count() == 3
-    assert main_window.layout_preset_tab_bar.tabText(0) == 'Overview'
-    assert main_window.layout_preset_tab_bar.tabText(1) == 'Prepare'
+    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
+    assert main_window.layout_preset_tab_bar.tabText(1) == 'Setup'
     assert main_window.layout_preset_tab_bar.tabText(2) == 'Live'
 
 
