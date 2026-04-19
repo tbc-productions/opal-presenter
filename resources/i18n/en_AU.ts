@@ -4,7 +4,7 @@
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="89"/>
         <source>Importing {name}...</source>
-        <translation>Importing {name}...</translation>
+        <translation>Importing {name}…</translation>
     </message>
 </context>
 <context>
@@ -35,7 +35,7 @@
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/zefania.py" line="89"/>
         <source>Importing {book} {chapter}...</source>
-        <translation>Importing {book} {chapter}...</translation>
+        <translation>Importing {book} {chapter}…</translation>
     </message>
 </context>
 <context>
@@ -49,7 +49,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/csvbible.py" line="189"/>
         <source>Importing verses from {book}...</source>
         <comment>Importing verses from &lt;book name&gt;...</comment>
-        <translation>Importing verses from {book}...</translation>
+        <translation>Importing verses from {book}…</translation>
     </message>
 </context>
 <context>
@@ -623,7 +623,7 @@
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="317"/>
         <source>Text or Reference...</source>
-        <translation>Text or reference...</translation>
+        <translation>Text or reference…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="319"/>
@@ -633,7 +633,7 @@
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="320"/>
         <source>Search Scripture Reference...</source>
-        <translation>Search scripture reference...</translation>
+        <translation>Search scripture reference…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="322"/>
@@ -643,7 +643,7 @@
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="323"/>
         <source>Search Text...</source>
-        <translation>Search text...</translation>
+        <translation>Search text…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="462"/>
@@ -710,12 +710,12 @@ Only verses found in both Bibles will be shown.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/bibleimport.py" line="172"/>
         <source>Removing unused tags (this may take a few minutes)...</source>
-        <translation>Removing unused tags (this may take a few minutes)...</translation>
+        <translation>Removing unused tags (this may take a few minutes)…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/bibleimport.py" line="200"/>
         <source>Importing {book} {chapter}...</source>
-        <translation>Importing {book} {chapter}...</translation>
+        <translation>Importing {book} {chapter}…</translation>
     </message>
 </context>
 <context>
@@ -1291,7 +1291,7 @@ ${permission}</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="720"/>
         <source>Registering Bible...</source>
-        <translation>Registering bible...</translation>
+        <translation>Registering bible…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="787"/>
@@ -2000,7 +2000,7 @@ Do you want to add the other images anyway?</source>
     <message>
         <location filename="../../openlp/plugins/custom/lib/mediaitem.py" line="109"/>
         <source>Search Titles...</source>
-        <translation>Search titles...</translation>
+        <translation>Search titles…</translation>
     </message>
 </context>
 <context>
@@ -2978,7 +2978,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="57"/>
         <source>Importing &quot;{source}&quot;...</source>
-        <translation>Importing &quot;{source}&quot;...</translation>
+        <translation>Importing &quot;{source}&quot;…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="58"/>
@@ -3013,7 +3013,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="64"/>
         <source>Starting import...</source>
-        <translation>Starting import...</translation>
+        <translation>Starting import…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="65"/>
@@ -3340,7 +3340,7 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="359"/>
         <source>Browse...</source>
-        <translation>Browse...</translation>
+        <translation>Browse…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="360"/>
@@ -3722,7 +3722,7 @@ Closing this instance</source>
         <location filename="../../openlp/core/common/i18n.py" line="459"/>
         <source>Search Themes...</source>
         <comment>Search bar place holder text </comment>
-        <translation>Search themes...</translation>
+        <translation>Search themes…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="460"/>
@@ -3767,7 +3767,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="469"/>
         <source>Starting import...</source>
-        <translation>Starting import...</translation>
+        <translation>Starting import…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="470"/>
@@ -7664,7 +7664,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="249"/>
         <source>&amp;Rename...</source>
-        <translation>&amp;Rename...</translation>
+        <translation>&amp;Rename…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="252"/>
@@ -8582,7 +8582,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="386"/>
         <source>Save Service &amp;As...</source>
-        <translation>Save service &amp;As...</translation>
+        <translation>Save service &amp;As…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="387"/>
@@ -8618,17 +8618,17 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="398"/>
         <source>Configure &amp;Shortcuts...</source>
-        <translation>Configure &amp;Shortcuts...</translation>
+        <translation>Configure &amp;Shortcuts…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="399"/>
         <source>Configure &amp;Formatting Tags...</source>
-        <translation>Configure &amp;Formatting tags...</translation>
+        <translation>Configure &amp;Formatting tags…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Configure OpenLP+...</translation>
+        <translation>&amp;Configure OpenLP+…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8799,7 +8799,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="449"/>
         <source>Add &amp;Tool...</source>
-        <translation>Add &amp;Tool...</translation>
+        <translation>Add &amp;Tool…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="450"/>
@@ -8809,7 +8809,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="452"/>
         <source>Open &amp;Data Folder...</source>
-        <translation>Open &amp;Data folder...</translation>
+        <translation>Open &amp;Data folder…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="453"/>
@@ -9009,7 +9009,7 @@ Processing has terminated and no changes have been made.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1104"/>
         <source>Waiting for some things to finish...</source>
-        <translation>Waiting for some things to finish...</translation>
+        <translation>Waiting for some things to finish…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1184"/>
@@ -9217,7 +9217,7 @@ Processing has terminated and no changes have been made.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="199"/>
         <source>Downloading {name}...</source>
-        <translation>Downloading {name}...</translation>
+        <translation>Downloading {name}…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="232"/>
@@ -9364,7 +9364,7 @@ Processing has terminated and no changes have been made.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Please wait while OpenLP+ downloads the resource index file...</translation>
+        <translation>Please wait while OpenLP+ downloads the resource index file…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -10551,7 +10551,7 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="157"/>
         <source>Search Entire Song...</source>
-        <translation>Search entire song...</translation>
+        <translation>Search entire song…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="159"/>
@@ -10561,7 +10561,7 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="160"/>
         <source>Search Titles...</source>
-        <translation>Search titles...</translation>
+        <translation>Search titles…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="162"/>
@@ -10571,22 +10571,22 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="163"/>
         <source>Search Lyrics...</source>
-        <translation>Search lyrics...</translation>
+        <translation>Search lyrics…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="165"/>
         <source>Search Authors...</source>
-        <translation>Search authors...</translation>
+        <translation>Search authors…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="167"/>
         <source>Search Topics...</source>
-        <translation>Search topics...</translation>
+        <translation>Search topics…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="169"/>
         <source>Search Songbooks...</source>
-        <translation>Search songbooks...</translation>
+        <translation>Search songbooks…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="172"/>
@@ -10596,7 +10596,7 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="173"/>
         <source>Search Copyright...</source>
-        <translation>Search copyright...</translation>
+        <translation>Search copyright…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="175"/>
@@ -10606,7 +10606,7 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="176"/>
         <source>Search CCLI number...</source>
-        <translation>Search CCLI number...</translation>
+        <translation>Search CCLI number…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="546"/>
@@ -10943,7 +10943,7 @@ See log for details</source>
     <message>
         <location filename="../../openlp/plugins/songs/lib/openlyricsexport.py" line="70"/>
         <source>Exporting &quot;{title}&quot;...</source>
-        <translation>Exporting &quot;{title}&quot;...</translation>
+        <translation>Exporting &quot;{title}&quot;…</translation>
     </message>
 </context>
 <context>
@@ -11152,7 +11152,7 @@ You can disable this warning message in songs settings.</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="243"/>
         <source>Starting export...</source>
-        <translation>Starting export...</translation>
+        <translation>Starting export…</translation>
     </message>
 </context>
 <context>
@@ -11511,7 +11511,7 @@ You can disable this warning message in songs settings.</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songimportform.py" line="155"/>
         <source>Add Files...</source>
-        <translation>Add files...</translation>
+        <translation>Add files…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songimportform.py" line="157"/>
@@ -12031,7 +12031,7 @@ has been successfully created. </source>
     <message>
         <location filename="../../openlp/plugins/songs/songsplugin.py" line="240"/>
         <source>Reindexing songs...</source>
-        <translation>Reindexing songs...</translation>
+        <translation>Reindexing songs…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/songsplugin.py" line="241"/>
@@ -12503,18 +12503,18 @@ has been successfully created.</source>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="647"/>
         <source>Registering Bible and loading books...</source>
-        <translation>Registering Bible and loading books...</translation>
+        <translation>Registering Bible and loading books…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="663"/>
         <source>Registering Language...</source>
-        <translation>Registering language...</translation>
+        <translation>Registering language…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="670"/>
         <source>Importing {book}...</source>
         <comment>Importing &lt;book name&gt;...</comment>
-        <translation>Importing {book}...</translation>
+        <translation>Importing {book}…</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="814"/>
