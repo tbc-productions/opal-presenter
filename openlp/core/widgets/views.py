@@ -404,7 +404,18 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         super().__init__(parent)
         self.mime_data_text = name
         self.no_results_text = UiStrings().NoResults
-        self.setStyleSheet('QListWidget { outline: 0; } QListWidget::item { padding: 4px 2px; border: 0; }')
+        palette = self.palette()
+        highlight = palette.color(QtGui.QPalette.ColorRole.Highlight).name()
+        highlighted_text = palette.color(QtGui.QPalette.ColorRole.HighlightedText).name()
+        inactive_highlight = QtGui.QColor(palette.color(QtGui.QPalette.ColorRole.Highlight))
+        inactive_highlight.setAlpha(110)
+        inactive_highlight_name = inactive_highlight.name(QtGui.QColor.NameFormat.HexArgb)
+        self.setStyleSheet(
+            'QListWidget { outline: 0; }'
+            'QListWidget::item { padding: 4px 2px; border: 0; }'
+            f'QListWidget::item:selected:active {{ background: {highlight}; color: {highlighted_text}; }}'
+            f'QListWidget::item:selected:!active {{ background: {inactive_highlight_name}; color: palette(text); }}'
+        )
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(use_alternate_rows())
