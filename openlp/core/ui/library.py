@@ -297,6 +297,36 @@ class FolderLibraryItem(MediaManagerItem):
         self.add_folder_action = self.toolbar.add_toolbar_action(
             'add_folder_action', icon=UiIcons().folder, triggers=self.on_add_folder_click)
 
+    def _get_proportional_folder_icon(self) -> QtGui.QIcon:
+        """
+        Return a folder icon rendered at a modest visual size, centered on a transparent
+        pixmap matching the tree's icon cell. This prevents folders from visually dominating
+        rows that otherwise show ~88x50 thumbnails.
+        """
+        cell = self.list_view.iconSize()
+        if not cell.isValid() or cell.width() <= 0 or cell.height() <= 0:
+            return UiIcons().folder
+        cached = getattr(self, '_cached_folder_icon', None)
+        cached_size = getattr(self, '_cached_folder_icon_size', None)
+        if cached is not None and cached_size == (cell.width(), cell.height()):
+            return cached
+        glyph = min(32, cell.height() - 4)
+        device_ratio = self.list_view.devicePixelRatioF() or 1.0
+        pixmap = QtGui.QPixmap(int(cell.width() * device_ratio), int(cell.height() * device_ratio))
+        pixmap.setDevicePixelRatio(device_ratio)
+        pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+        glyph_pixmap = UiIcons().folder.pixmap(glyph, glyph)
+        painter = QtGui.QPainter(pixmap)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        x = (cell.width() - glyph) // 2
+        y = (cell.height() - glyph) // 2
+        painter.drawPixmap(x, y, glyph, glyph, glyph_pixmap)
+        painter.end()
+        icon = QtGui.QIcon(pixmap)
+        self._cached_folder_icon = icon
+        self._cached_folder_icon_size = (cell.width(), cell.height())
+        return icon
+
     def add_sub_folders(self, folder_list: List[QtWidgets.QTreeWidgetItem], parent_id: Optional[int] = None):
         """
         Recursively add subfolders to the given parent folder in a QTreeWidget.
@@ -309,12 +339,17 @@ class FolderLibraryItem(MediaManagerItem):
 
         folders = self.manager.get_all_objects(Folder, Folder.parent_id == parent_id)
         folders.sort(key=lambda folder_object: get_natural_key(folder_object.name))
-        folder_icon = UiIcons().folder
+        folder_icon = self._get_proportional_folder_icon()
+        folder_font = QtGui.QFont(self.list_view.font())
+        folder_font.setWeight(QtGui.QFont.Weight.DemiBold)
         for folder in folders:
             folder_item = QtWidgets.QTreeWidgetItem()
-            folder_item.setText(0, folder.name)
+            item_count = len(folder.items) + len(folder.folders)
+            folder_text = f'{folder.name} ({item_count})' if item_count > 0 else folder.name
+            folder_item.setText(0, folder_text)
             folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
             folder_item.setIcon(0, folder_icon)
+            folder_item.setFont(0, folder_font)
             if parent_id is None:
                 self.list_view.addTopLevelItem(folder_item)
             else:

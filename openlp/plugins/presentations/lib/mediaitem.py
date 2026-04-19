@@ -227,14 +227,13 @@ class PresentationMediaItem(FolderLibraryItem):
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
             file_type = file_path.suffix.lstrip('.').upper()
-            tree_item.setToolTip(0, str(file_path))
+            tree_item.setToolTip(0, f'{file_type} · {size_str}')
             try:
                 stat = file_path.stat()
                 size_str = _format_file_size(stat.st_size)
                 mtime = stat.st_mtime
                 tree_item.setText(1, datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'))
                 tree_item.set_sort_data(1, mtime)
-                tree_item.setToolTip(0, f'{file_path}\n{file_type} · {size_str}')
             except OSError:
                 pass
         return tree_item

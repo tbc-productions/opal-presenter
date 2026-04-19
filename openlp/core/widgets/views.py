@@ -547,25 +547,66 @@ class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
         return self.text(col) < other.text(col)
 
 
-class TreeBranchLineStyle(QtWidgets.QProxyStyle):
+class TreeDisclosureStyle(QtWidgets.QProxyStyle):
     """
-    A proxy style that draws simple connector lines between tree branches,
-    using the palette's mid color so it adapts to themes and dark mode.
+    Proxy style that draws a small outlined chevron as the expand/collapse indicator,
+    plus faint 1px hairline guide lines under expanded parents to reinforce hierarchy.
     """
+    ARROW_HALF = 4
+    ARROW_WEIGHT = 1.6
+    LINE_ALPHA = 46
+
     def drawPrimitive(self, element, option, painter, widget=None):
-        if element == QtWidgets.QStyle.PrimitiveElement.PE_IndicatorBranch:
-            color = option.palette.mid().color()
-            painter.save()
-            painter.setPen(color)
-            mid_x = option.rect.center().x()
-            mid_y = option.rect.center().y()
-            if option.state & QtWidgets.QStyle.StateFlag.State_Item:
-                painter.drawLine(mid_x, option.rect.top(), mid_x, mid_y)
-                painter.drawLine(mid_x, mid_y, option.rect.right(), mid_y)
-            if option.state & QtWidgets.QStyle.StateFlag.State_Sibling:
-                painter.drawLine(mid_x, mid_y, mid_x, option.rect.bottom())
-            painter.restore()
-        super().drawPrimitive(element, option, painter, widget)
+        if element != QtWidgets.QStyle.PrimitiveElement.PE_IndicatorBranch:
+            super().drawPrimitive(element, option, painter, widget)
+            return
+        rect = option.rect
+        cx = float(rect.center().x())
+        cy = float(rect.center().y())
+        top = float(rect.top())
+        bottom = float(rect.bottom())
+        state = option.state
+        has_item = bool(state & QtWidgets.QStyle.StateFlag.State_Item)
+        has_sibling = bool(state & QtWidgets.QStyle.StateFlag.State_Sibling)
+        has_children = bool(state & QtWidgets.QStyle.StateFlag.State_Children)
+        is_open = bool(state & QtWidgets.QStyle.StateFlag.State_Open)
+        painter.save()
+        line_colour = QtGui.QColor(option.palette.mid().color())
+        line_colour.setAlpha(self.LINE_ALPHA)
+        line_pen = QtGui.QPen(line_colour)
+        line_pen.setWidthF(1.0)
+        line_pen.setCosmetic(True)
+        painter.setPen(line_pen)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
+        if has_item:
+            # Current row's own column. Only draw a vertical rail for leaf rows;
+            # folder rows use the chevron as their anchor instead of a line.
+            if not has_children:
+                painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, cy))
+                if has_sibling:
+                    painter.drawLine(QtCore.QPointF(cx, cy), QtCore.QPointF(cx, bottom))
+        elif has_sibling:
+            # Ancestor column whose node has more siblings below: full-height rail.
+            painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, bottom))
+        if has_children:
+            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+            s = float(self.ARROW_HALF)
+            pen = QtGui.QPen(option.palette.mid().color())
+            pen.setWidthF(self.ARROW_WEIGHT)
+            pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+            if is_open:
+                path = QtGui.QPainterPath(QtCore.QPointF(cx - s, cy - s * 0.4))
+                path.lineTo(cx, cy + s * 0.5)
+                path.lineTo(cx + s, cy - s * 0.4)
+            else:
+                path = QtGui.QPainterPath(QtCore.QPointF(cx - s * 0.4, cy - s))
+                path.lineTo(cx + s * 0.5, cy)
+                path.lineTo(cx - s * 0.4, cy + s)
+            painter.drawPath(path)
+        painter.restore()
 
 
 class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
@@ -588,9 +629,33 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self.setIndentation(0)
         self.setAnimated(True)
         self._drag_start_pos = None
-        self._branch_line_style = TreeBranchLineStyle()
-        self.setStyle(self._branch_line_style)
-        self.setStyleSheet('QTreeWidget::item { padding: 4px 2px; }')
+        self._disclosure_style = TreeDisclosureStyle()
+        self.setStyle(self._disclosure_style)
+        self.setRootIsDecorated(True)
+        self.setAlternatingRowColors(True)
+        self.setAllColumnsShowFocus(True)
+        palette = self.palette()
+        base = palette.color(QtGui.QPalette.ColorRole.Base)
+        # Derive a gentle zebra tint from the base colour — lighter on dark themes, darker on light.
+        if base.lightnessF() < 0.5:
+            alternate = base.lighter(108)
+        else:
+            alternate = base.darker(103)
+        palette.setColor(QtGui.QPalette.ColorRole.AlternateBase, alternate)
+        self.setPalette(palette)
+        highlight = palette.color(QtGui.QPalette.ColorRole.Highlight).name()
+        highlighted_text = palette.color(QtGui.QPalette.ColorRole.HighlightedText).name()
+        inactive_highlight = QtGui.QColor(palette.color(QtGui.QPalette.ColorRole.Highlight))
+        inactive_highlight.setAlpha(110)
+        inactive_highlight_name = inactive_highlight.name(QtGui.QColor.NameFormat.HexArgb)
+        self.setStyleSheet(
+            'QTreeWidget { outline: 0; background: palette(base); '
+            'alternate-background-color: palette(alternate-base); }'
+            'QTreeWidget::item { padding: 6px 4px; border: 0; }'
+            f'QTreeWidget::item:selected:active {{ background: {highlight}; color: {highlighted_text}; }}'
+            f'QTreeWidget::item:selected:!active {{ background: {inactive_highlight_name}; '
+            'color: palette(text); }'
+        )
 
     def setup_columns(self, labels: list):
         """
