@@ -103,7 +103,7 @@ class UiIcons(metaclass=Singleton):
             'info': {'icon': 'mdi.information-variant'},
             'italic': {'icon': 'mdi.format-italic'},
             'light_bulb': {'icon': 'mdi.lightbulb-outline'},
-            'live': {'icon': 'op.live'},
+            'live': {'icon': 'mdi.presentation'},
             'live_presentation': {'icon': 'op.live-presentation'},
             'live_theme': {'icon': 'op.live-theme'},
             'live_logo': {'icon': 'op.live-logo'},
