@@ -252,6 +252,7 @@ class SourceSelectTabs(QtWidgets.QDialog):
         self.layout.setObjectName('source_select_tabs_layout')
         if is_macosx():
             self.tabwidget = QtWidgets.QTabWidget(self)
+            self.tabwidget.setDocumentMode(True)
         else:
             self.tabwidget = FingerTabWidget(self)
         self.tabwidget.setObjectName('source_select_tabs_tabwidget')

@@ -113,6 +113,8 @@ class Ui_MainWindow(object):
         self.layout_preset_tab_bar = QtWidgets.QTabBar(self.layout_preset_toolbar)
         self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')
         self.layout_preset_tab_bar.setShape(QtWidgets.QTabBar.Shape.RoundedWest)
+        if is_macosx():
+            self.layout_preset_tab_bar.setDocumentMode(True)
         self.layout_preset_tab_bar.setDrawBase(False)
         self.layout_preset_tab_bar.setMovable(False)
         self.layout_preset_tab_bar.setExpanding(True)
