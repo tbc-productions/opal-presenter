@@ -139,19 +139,19 @@ class Ui_MainWindow(object):
         self.file_menu = QtWidgets.QMenu(self.menu_bar)
         self.file_menu.setObjectName('fileMenu')
         self.recent_files_menu = QtWidgets.QMenu(self.file_menu)
+        self.recent_files_menu.setIcon(UiIcons().time)
         self.recent_files_menu.setObjectName('recentFilesMenu')
         self.file_import_menu = QtWidgets.QMenu(self.file_menu)
-        if not is_macosx():
-            self.file_import_menu.setIcon(UiIcons().download)
+        self.file_import_menu.setIcon(UiIcons().download)
         self.file_import_menu.setObjectName('file_import_menu')
         self.file_export_menu = QtWidgets.QMenu(self.file_menu)
-        if not is_macosx():
-            self.file_export_menu.setIcon(UiIcons().upload)
+        self.file_export_menu.setIcon(UiIcons().upload)
         self.file_export_menu.setObjectName('file_export_menu')
         # View Menu
         self.view_menu = QtWidgets.QMenu(self.menu_bar)
         self.view_menu.setObjectName('viewMenu')
         self.view_mode_menu = QtWidgets.QMenu(self.view_menu)
+        self.view_mode_menu.setIcon(UiIcons().dashboard)
         self.view_mode_menu.setObjectName('viewModeMenu')
         # Tools Menu
         self.tools_menu = QtWidgets.QMenu(self.menu_bar)
@@ -160,6 +160,7 @@ class Ui_MainWindow(object):
         self.settings_menu = QtWidgets.QMenu(self.menu_bar)
         self.settings_menu.setObjectName('settingsMenu')
         self.settings_language_menu = QtWidgets.QMenu(self.settings_menu)
+        self.settings_language_menu.setIcon(UiIcons().translation)
         self.settings_language_menu.setObjectName('settingsLanguageMenu')
         # Help Menu
         self.help_menu = QtWidgets.QMenu(self.menu_bar)
@@ -224,11 +225,11 @@ class Ui_MainWindow(object):
         self.file_save_item = create_action(main_window, 'fileSaveItem', icon=UiIcons().save,
                                             can_shortcuts=True, category=UiStrings().File,
                                             triggers=self.service_manager_contents.decide_save_method)
-        self.file_save_as_item = create_action(main_window, 'fileSaveAsItem', can_shortcuts=True,
-                                               category=UiStrings().File,
+        self.file_save_as_item = create_action(main_window, 'fileSaveAsItem', icon=UiIcons().save_plus,
+                                               can_shortcuts=True, category=UiStrings().File,
                                                triggers=self.service_manager_contents.save_file_as)
-        self.print_service_order_item = create_action(main_window, 'printServiceItem', can_shortcuts=True,
-                                                      category=UiStrings().File,
+        self.print_service_order_item = create_action(main_window, 'printServiceItem', icon=UiIcons().print,
+                                                      can_shortcuts=True, category=UiStrings().File,
                                                       triggers=lambda x: PrintServiceForm().exec())
         self.file_exit_item = create_action(main_window, 'fileExitItem', icon=UiIcons().exit,
                                             can_shortcuts=True,
@@ -236,17 +237,17 @@ class Ui_MainWindow(object):
         # Give QT Extra Hint that this is the Exit Menu Item
         self.file_exit_item.setMenuRole(QtGui.QAction.MenuRole.QuitRole)
         action_list.add_category(UiStrings().Import, CategoryOrder.standard_menu)
-        self.import_theme_item = create_action(main_window, 'importThemeItem', category=UiStrings().Import,
-                                               can_shortcuts=True)
+        self.import_theme_item = create_action(main_window, 'importThemeItem',
+                                               category=UiStrings().Import, can_shortcuts=True)
         self.import_language_item = create_action(main_window, 'importLanguageItem')
         action_list.add_category(UiStrings().Export, CategoryOrder.standard_menu)
-        self.export_theme_item = create_action(main_window, 'exportThemeItem', category=UiStrings().Export,
-                                               can_shortcuts=True)
+        self.export_theme_item = create_action(main_window, 'exportThemeItem',
+                                               category=UiStrings().Export, can_shortcuts=True)
         self.export_language_item = create_action(main_window, 'exportLanguageItem')
         action_list.add_category(UiStrings().View, CategoryOrder.standard_menu)
         # Projector items
-        self.import_projector_item = create_action(main_window, 'importProjectorItem', category=UiStrings().Import,
-                                                   can_shortcuts=False)
+        self.import_projector_item = create_action(main_window, 'importProjectorItem',
+                                                   category=UiStrings().Import, can_shortcuts=False)
         action_list.add_category(UiStrings().Import, CategoryOrder.standard_menu)
         self.view_projector_manager_item = create_action(main_window, 'viewProjectorManagerItem',
                                                          icon=UiIcons().projector,
@@ -255,7 +256,7 @@ class Ui_MainWindow(object):
                                                          category=UiStrings().View,
                                                          triggers=self.toggle_projector_manager)
         self.view_media_manager_item = create_action(main_window, 'viewMediaManagerItem',
-                                                     icon=UiIcons().box,
+                                                     icon=UiIcons().library,
                                                      checked=self.media_manager_dock.isVisible(),
                                                      can_shortcuts=True,
                                                      category=UiStrings().View, triggers=self.toggle_media_manager)
@@ -267,10 +268,12 @@ class Ui_MainWindow(object):
                                                        icon=UiIcons().live,
                                                        checked=self.service_manager_dock.isVisible(),
                                                        category=UiStrings().View, triggers=self.toggle_service_manager)
-        self.view_preview_panel = create_action(main_window, 'viewPreviewPanel', can_shortcuts=True,
-                                                checked=preview_visible, category=UiStrings().View,
+        self.view_preview_panel = create_action(main_window, 'viewPreviewPanel', icon=UiIcons().preview,
+                                                can_shortcuts=True, checked=preview_visible,
+                                                category=UiStrings().View,
                                                 triggers=self.set_preview_panel_visibility)
-        self.view_live_panel = create_action(main_window, 'viewLivePanel', can_shortcuts=True, checked=live_visible,
+        self.view_live_panel = create_action(main_window, 'viewLivePanel', icon=UiIcons().live,
+                                             can_shortcuts=True, checked=live_visible,
                                              category=UiStrings().View, triggers=self.set_live_panel_visibility)
         self.view_display_output_item = create_action(
             main_window, 'viewDisplayOutputItem',
@@ -280,23 +283,25 @@ class Ui_MainWindow(object):
             context=QtCore.Qt.ShortcutContext.ApplicationShortcut,
             category=UiStrings().View,
             triggers=self.on_view_display_output_toggled)
-        self.lock_panel = create_action(main_window, 'lockPanel', can_shortcuts=True, checked=panel_locked,
-                                        category=UiStrings().View, triggers=self.set_lock_panel)
+        self.lock_panel = create_action(main_window, 'lockPanel', icon=UiIcons().lock, can_shortcuts=True,
+                                        checked=panel_locked, category=UiStrings().View,
+                                        triggers=self.set_lock_panel)
         action_list.add_category(UiStrings().ViewMode, CategoryOrder.standard_menu)
         self.mode_default_item = create_action(
-            main_window, 'modeDefaultItem', checked=False, category=UiStrings().ViewMode, can_shortcuts=True)
-        self.mode_setup_item = create_action(main_window, 'modeSetupItem', checked=False, category=UiStrings().ViewMode,
-                                             can_shortcuts=True)
-        self.mode_live_item = create_action(main_window, 'modeLiveItem', checked=True, category=UiStrings().ViewMode,
-                                            can_shortcuts=True)
+            main_window, 'modeDefaultItem', checked=False,
+            category=UiStrings().ViewMode, can_shortcuts=True)
+        self.mode_setup_item = create_action(main_window, 'modeSetupItem',
+                                             checked=False, category=UiStrings().ViewMode, can_shortcuts=True)
+        self.mode_live_item = create_action(main_window, 'modeLiveItem', checked=True,
+                                            category=UiStrings().ViewMode, can_shortcuts=True)
         self.mode_group = QtGui.QActionGroup(main_window)
         self.mode_group.addAction(self.mode_default_item)
         self.mode_group.addAction(self.mode_setup_item)
         self.mode_group.addAction(self.mode_live_item)
         self.mode_default_item.setChecked(True)
         self.mode_reset_layout_presets_item = create_action(
-            main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode, can_shortcuts=False,
-            triggers=self.on_mode_reset_layout_presets_clicked)
+            main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode,
+            can_shortcuts=False, triggers=self.on_mode_reset_layout_presets_clicked)
         self.view_layout_preset_tabs_item = create_action(
             main_window,
             'viewLayoutPresetTabsItem',
@@ -315,7 +320,8 @@ class Ui_MainWindow(object):
                                                      'toolsFirstTimeWizard', icon=UiIcons().undo,
                                                      category=UiStrings().Tools, can_shortcuts=True)
         self.update_theme_images = create_action(main_window,
-                                                 'updateThemeImages', category=UiStrings().Tools, can_shortcuts=True)
+                                                 'updateThemeImages', icon=UiIcons().refresh,
+                                                 category=UiStrings().Tools, can_shortcuts=True)
         action_list.add_category(UiStrings().Settings, CategoryOrder.standard_menu)
         self.settings_plugin_list_item = create_action(main_window,
                                                        'settingsPluginListItem',
@@ -335,11 +341,11 @@ class Ui_MainWindow(object):
             language_item = create_action(main_window, key, checked=qm_list[key] == saved_language)
             add_actions(self.language_group, [language_item])
         self.settings_shortcuts_item = create_action(main_window, 'settingsShortcutsItem',
-                                                     icon=UiIcons().shortcuts,
+                                                     icon=UiIcons().keyboard,
                                                      category=UiStrings().Settings, can_shortcuts=True)
         # Formatting Tags were also known as display tags.
         self.formatting_tag_item = create_action(main_window, 'displayTagItem',
-                                                 icon=UiIcons().edit, category=UiStrings().Settings,
+                                                 icon=UiIcons().theme, category=UiStrings().Settings,
                                                  can_shortcuts=True)
         self.settings_configure_item = create_action(main_window, 'settingsConfigureItem',
                                                      icon=UiIcons().settings, can_shortcuts=True,
@@ -367,7 +373,8 @@ class Ui_MainWindow(object):
         self.user_manual_item = create_action(main_window, 'userManualItem', icon=UiIcons().manual,
                                               can_shortcuts=True, category=UiStrings().Help,
                                               triggers=self.on_help_clicked)
-        self.web_site_item = create_action(main_window, 'webSiteItem', can_shortcuts=True, category=UiStrings().Help)
+        self.web_site_item = create_action(main_window, 'webSiteItem', icon=UiIcons().web, can_shortcuts=True,
+                                           category=UiStrings().Help)
         # Shortcuts not connected to buttons or menu entries.
         self.search_shortcut_action = create_action(main_window,
                                                     'searchShortcut', can_shortcuts=True,
@@ -2046,7 +2053,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             count += 1
             self.log_debug('Recent file name: {name}'.format(name=recent_path))
             action = create_action(self, '',
-                                   text='&{n} {name}'.format(n=count, name=recent_path.name),
+                                   text='&{n}. {name}'.format(n=count, name=recent_path.name),
                                    data=recent_path, triggers=self.service_manager_contents.on_recent_service_clicked)
             self.recent_files_menu.addAction(action)
             if count == recent_file_count:
