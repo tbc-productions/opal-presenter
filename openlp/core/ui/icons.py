@@ -121,7 +121,7 @@ class UiIcons(metaclass=Singleton):
             'network_stream': {'icon': 'mdi.network'},
             'new': {'icon': 'mdi.file-plus-outline'},
             'new_group': {'icon': 'mdi.folder'},
-            'notes': {'icon': 'mdi.note'},
+            'notes': {'icon': 'mdi.note-text'},
             'obs_studio': {'icon': 'mdi.spotlight'},
             'open': {'icon': 'mdi.folder-open'},
             'pause': {'icon': 'mdi.pause'},
