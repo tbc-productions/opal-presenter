@@ -546,15 +546,15 @@ class Ui_MainWindow(object):
         self.update_theme_images.setText(translate('OpenLP.MainWindow', 'Update Theme Images'))
         self.update_theme_images.setStatusTip(translate('OpenLP.MainWindow',
                                                         'Update the preview images for all themes.'))
-        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Overview'))
+        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Show all'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
-        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow', 'Overview'))
-        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Prepare'))
+        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow', 'Show all'))
+        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
-        self.layout_preset_tab_bar.setTabText(1, translate('OpenLP.MainWindow', 'Prepare'))
+        self.layout_preset_tab_bar.setTabText(1, translate('OpenLP.MainWindow', 'Setup'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -567,7 +567,7 @@ class Ui_MainWindow(object):
         self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
         self.mode_reset_layout_presets_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Discard saved custom layouts for Overview, Prepare, and Live. Built-in preset behaviour is restored.'))
+            'Discard saved custom layouts for Show all, Setup, and Live. Built-in preset behaviour is restored.'))
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
