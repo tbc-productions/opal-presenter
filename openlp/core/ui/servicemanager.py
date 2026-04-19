@@ -90,13 +90,47 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         super(ServiceManagerList, self).__init__(parent)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
         self.setAlternatingRowColors(use_alternate_rows())
+        self.setColumnCount(2)
         self.setHeaderHidden(True)
+        self.header().setStretchLastSection(False)
+        self.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.header().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Fixed)
+        notes_icon_size = self.iconSize()
+        if not notes_icon_size.isValid() or notes_icon_size.width() <= 0:
+            notes_icon_size = QtCore.QSize(16, 16)
+        self.setColumnWidth(1, notes_icon_size.width() + 6)
+        self.setMouseTracking(True)
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
         self._drag_start_pos = None
         self._is_internal_dragging = False
         self._drag_tooltip_label = None
+        self._last_notes_tooltip_item = None
         self.setStyleSheet('QTreeWidget::item { padding: 4px 2px; }')
+
+    def _show_notes_tooltip_on_hover(self, event):
+        """Show notes tooltip immediately when hovering the right-side notes indicator column."""
+        if not isinstance(event, QtGui.QMouseEvent):
+            return False
+        index = self.indexAt(event.pos())
+        if index.isValid() and index.column() == 1:
+            item = self.itemFromIndex(index)
+            tooltip = item.toolTip(1) if item else ''
+            if tooltip and self._last_notes_tooltip_item is not item:
+                QtWidgets.QToolTip.showText(self.viewport().mapToGlobal(event.pos()), tooltip, self.viewport())
+                self._last_notes_tooltip_item = item
+            return True
+        self._last_notes_tooltip_item = None
+        QtWidgets.QToolTip.hideText()
+        return False
+
+    def leaveEvent(self, event):
+        """
+        Hide any immediate tooltip when mouse leaves the list.
+        """
+        self._last_notes_tooltip_item = None
+        QtWidgets.QToolTip.hideText()
+        super(ServiceManagerList, self).leaveEvent(event)
 
     def dragEnterEvent(self, event):
         """
@@ -191,7 +225,11 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         if not left_held:
             if self._is_internal_dragging:
                 self._cancel_internal_drag()
-            event.ignore()
+            if isinstance(event, QtGui.QMouseEvent):
+                self._show_notes_tooltip_on_hover(event)
+                super().mouseMoveEvent(event)
+            else:
+                event.ignore()
             return
 
         if self._is_internal_dragging:
@@ -2389,11 +2427,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 icon = icon.scaled(80, 80, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
                                    QtCore.Qt.TransformationMode.SmoothTransformation)
                 if service_item_from_item.notes:
-                    overlay = UiIcons().notes.pixmap(40, 40).toImage()
-                    overlay = overlay.scaled(40, 40, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                             QtCore.Qt.TransformationMode.SmoothTransformation)
                     painter = QtGui.QPainter(icon)
-                    painter.drawImage(0, 0, overlay)
                     if transition_enabled:
                         transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
                         transition_overlay = transition_overlay.scaled(
@@ -2573,6 +2607,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             if transition_enabled:
                 title += ' \u21c4'
             tree_widget_item.setText(0, title)
+            tree_widget_item.setTextAlignment(1, int(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter))
             tips = []
             if service_item_from_item.temporary_edit:
                 text1 = translate('OpenLP.ServiceManager', 'Edit')
@@ -2592,6 +2627,22 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 for meta in item['service_item'].metadata:
                     tips.append(meta)
             tree_widget_item.setToolTip(0, '<br>'.join(tips))
+            if service_item_from_item.notes:
+                notes_icon_size = self.service_manager_list.iconSize()
+                if not notes_icon_size.isValid() or notes_icon_size.width() <= 0:
+                    notes_icon_size = QtCore.QSize(16, 16)
+                notes_label = QtWidgets.QLabel(self.service_manager_list)
+                notes_label.setPixmap(UiIcons().edit.pixmap(notes_icon_size))
+                notes_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+                notes_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+                notes_opacity = QtWidgets.QGraphicsOpacityEffect(notes_label)
+                notes_opacity.setOpacity(0.65)
+                notes_label.setGraphicsEffect(notes_opacity)
+                self.service_manager_list.setItemWidget(tree_widget_item, 1, notes_label)
+                tree_widget_item.setToolTip(1, '<br>'.join(tips))
+            else:
+                self.service_manager_list.removeItemWidget(tree_widget_item, 1)
+                tree_widget_item.setToolTip(1, '')
             tree_widget_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item['order'])
             tree_widget_item.setSelected(item['selected'] and not is_dragged_item)
             if is_dragged_item:
