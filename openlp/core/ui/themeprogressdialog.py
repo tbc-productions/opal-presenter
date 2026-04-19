@@ -39,7 +39,7 @@ class UiThemeProgressDialog(object):
         """
         theme_progress_dialog.setObjectName('theme_progress_dialog')
         theme_progress_dialog.setWindowIcon(UiIcons().main_icon)
-        theme_progress_dialog.resize(400, 306)
+        theme_progress_dialog.resize(900, 700)
         self.theme_progress_layout = QtWidgets.QVBoxLayout(theme_progress_dialog)
         self.theme_progress_layout.setObjectName('theme_progress_layout')
         self.preview_area = QtWidgets.QWidget(theme_progress_dialog)
