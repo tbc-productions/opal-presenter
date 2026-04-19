@@ -686,7 +686,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             # Display a progress dialog with a message
             wait_dialog = QtWidgets.QProgressDialog(message, '', 0, 0, self)
             wait_dialog.setWindowTitle(title)
-            wait_dialog.resize(500, 150)
+            wait_dialog.setMinimumSize(600, 200)
+            wait_dialog.setMinimumWidth(600)
+            wait_dialog.setMinimumHeight(200)
+            # Make the label word-wrap to fill available space
+            wait_dialog.setLabelText(message)
+            label = wait_dialog.findChild(QtWidgets.QLabel)
+            if label:
+                label.setWordWrap(True)
+                label.setMinimumHeight(60)
+            # Set progress bar height
+            progress_bar = wait_dialog.findChild(QtWidgets.QProgressBar)
+            if progress_bar:
+                progress_bar.setMinimumHeight(40)
             for window_flag in [QtCore.Qt.WindowType.WindowContextHelpButtonHint]:
                 wait_dialog.setWindowFlag(window_flag, False)
             wait_dialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
