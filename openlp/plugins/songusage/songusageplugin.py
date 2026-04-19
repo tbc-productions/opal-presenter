@@ -74,6 +74,7 @@ class SongUsagePlugin(Plugin):
         self.tools_menu = tools_menu
         self.song_usage_menu = QtWidgets.QMenu(tools_menu)
         self.song_usage_menu.setObjectName('song_usage_menu')
+        self.song_usage_menu.setIcon(UiIcons().song_usage)
         self.song_usage_menu.setTitle(translate('SongUsagePlugin', '&Song Usage Tracking'))
         # SongUsage Delete
         self.song_usage_delete = create_action(
