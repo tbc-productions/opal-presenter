@@ -2472,7 +2472,7 @@ Do you want to add the other images anyway?</source>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="99"/>
         <source>Display &amp;&amp; Cl&amp;ose</source>
-        <translation>Display &amp;&amp; Cl&amp;ose</translation>
+        <translation>Display &amp;&amp; cl&amp;ose</translation>
     </message>
 </context>
 <context>
@@ -3757,7 +3757,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="466"/>
         <source>Optional &amp;Split</source>
-        <translation>Optional &amp;Split</translation>
+        <translation>Optional &amp;split</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="467"/>
@@ -3887,7 +3887,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="451"/>
         <source>&amp;Save &amp;&amp; Close</source>
-        <translation>&amp;Save &amp;&amp; Close</translation>
+        <translation>&amp;Save &amp;&amp; close</translation>
     </message>
 </context>
 <context>
@@ -5183,7 +5183,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/manager.py" line="226"/>
         <source>Power &amp;On Projector</source>
-        <translation>Power &amp;On projector</translation>
+        <translation>Power &amp;on projector</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/manager.py" line="231"/>
@@ -5193,7 +5193,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/manager.py" line="237"/>
         <source>Select &amp;Input</source>
-        <translation>Select &amp;Input</translation>
+        <translation>Select &amp;input</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/manager.py" line="242"/>
@@ -7283,7 +7283,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="203"/>
         <source>&amp;Remain on Slide</source>
-        <translation>&amp;Remain on Slide</translation>
+        <translation>&amp;Remain on slide</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="204"/>
@@ -7684,7 +7684,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="266"/>
         <source>Create New &amp;Custom Slide</source>
-        <translation>Create new &amp;Custom Slide</translation>
+        <translation>Create new &amp;custom slide</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="272"/>
@@ -7694,12 +7694,12 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="277"/>
         <source>Auto play slides &amp;Loop</source>
-        <translation>Auto play slides &amp;Loop</translation>
+        <translation>Auto play slides &amp;loop</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="282"/>
         <source>Auto play slides &amp;Once</source>
-        <translation>Auto play slides &amp;Once</translation>
+        <translation>Auto play slides &amp;once</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="288"/>
@@ -7710,7 +7710,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="292"/>
         <source>Show &amp;Preview</source>
-        <translation>Show &amp;Preview</translation>
+        <translation>Show &amp;preview</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="297"/>
@@ -7962,7 +7962,7 @@ Add some items to it then press Save</source>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="128"/>
         <source>Set As &amp;Global Default</source>
-        <translation>Set as &amp;Global default</translation>
+        <translation>Set as &amp;global default</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="132"/>
@@ -8582,7 +8582,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="386"/>
         <source>Save Service &amp;As...</source>
-        <translation>Save service &amp;As…</translation>
+        <translation>Save service &amp;as…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="387"/>
@@ -8618,12 +8618,12 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="398"/>
         <source>Configure &amp;Shortcuts...</source>
-        <translation>Configure &amp;Shortcuts…</translation>
+        <translation>Configure &amp;shortcuts…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="399"/>
         <source>Configure &amp;Formatting Tags...</source>
-        <translation>Configure &amp;Formatting tags…</translation>
+        <translation>Configure &amp;formatting tags…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
@@ -8799,7 +8799,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="449"/>
         <source>Add &amp;Tool...</source>
-        <translation>Add &amp;Tool…</translation>
+        <translation>Add &amp;tool…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="450"/>
@@ -8809,7 +8809,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="452"/>
         <source>Open &amp;Data Folder...</source>
-        <translation>Open &amp;Data folder…</translation>
+        <translation>Open &amp;data folder…</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="453"/>
@@ -10536,7 +10536,7 @@ The encoding is responsible for the correct character representation.</translati
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="142"/>
         <source>Maintain the lists of authors, topics and books.</source>
-        <translation>Maintain lists of authors, topics and books</translation>
+        <translation>Manage authors, topics and books</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="144"/>
@@ -11631,12 +11631,12 @@ Are you sure you want to import this song?</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="407"/>
         <source>&amp;Add to Song</source>
-        <translation>&amp;Add to Song</translation>
+        <translation>&amp;Add to song</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="408"/>
         <source>&amp;Edit Author Type</source>
-        <translation>&amp;Edit Author type</translation>
+        <translation>&amp;Edit author type</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="409"/>
@@ -11652,7 +11652,7 @@ Are you sure you want to import this song?</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="412"/>
         <source>A&amp;dd to Song</source>
-        <translation>A&amp;dd to Song</translation>
+        <translation>A&amp;dd to song</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="413"/>
@@ -11662,7 +11662,7 @@ Are you sure you want to import this song?</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="415"/>
         <source>Add &amp;to Song</source>
-        <translation>Add &amp;to Song</translation>
+        <translation>Add &amp;to song</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="416"/>
@@ -11677,7 +11677,7 @@ Are you sure you want to import this song?</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="420"/>
         <source>New &amp;Theme</source>
-        <translation>New &amp;Theme</translation>
+        <translation>New &amp;theme</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="421"/>
@@ -11712,17 +11712,17 @@ Are you sure you want to import this song?</translation>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="431"/>
         <source>Add &amp;File(s)</source>
-        <translation>Add &amp;File(s)</translation>
+        <translation>Add &amp;file(s)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="432"/>
         <source>Add &amp;Media</source>
-        <translation>Add &amp;Media</translation>
+        <translation>Add &amp;media</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="434"/>
         <source>Remove &amp;All</source>
-        <translation>Remove &amp;All</translation>
+        <translation>Remove &amp;all</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="436"/>
@@ -12011,7 +12011,7 @@ has been successfully created. </source>
     <message>
         <location filename="../../openlp/plugins/songs/songsplugin.py" line="212"/>
         <source>Find &amp;Duplicate Songs</source>
-        <translation>Find &amp;Duplicate songs</translation>
+        <translation>Find &amp;duplicate songs</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/songsplugin.py" line="213"/>
