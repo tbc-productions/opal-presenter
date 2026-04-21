@@ -655,6 +655,7 @@ var Display = {
     var body = $("body")[0];
     if (!enabled) {
       body.classList.remove("presentation-slide-transition");
+      Display._logTransitionDebug("pdfTransition.set enabled=false");
       return;
     }
     var durationSeconds = Number(speedSeconds);
@@ -662,9 +663,14 @@ var Display = {
       durationSeconds = 0.8;
     }
     var easing = Display._normaliseItemTransitionType(transitionType);
+    var ms = Math.round(durationSeconds * 1000) + 'ms';
     body.classList.add("presentation-slide-transition");
-    body.style.setProperty('--presentation-slide-transition-ms', Math.round(durationSeconds * 1000) + 'ms');
+    body.style.setProperty('--presentation-slide-transition-ms', ms);
     body.style.setProperty('--presentation-slide-transition-easing', Display._getTransitionEasing(easing));
+    Display._logTransitionDebug("pdfTransition.set enabled=true seconds=" + durationSeconds
+      + " cssVarMs=" + ms + " easing=" + Display._getTransitionEasing(easing)
+      + " bodyHasClass=" + body.classList.contains("presentation-slide-transition")
+      + " readback=" + getComputedStyle(body).getPropertyValue('--presentation-slide-transition-ms'));
   },
 
   _getPresentationTransitionEffect: function (effect) {
@@ -1243,8 +1249,12 @@ var Display = {
           + ",bgt=" + (bg.getAttribute('data-background-transition') || ''));
       });
       var backgroundsContainer = document.querySelector('.reveal .backgrounds');
+      var firstBg = document.querySelector('.reveal .backgrounds > .slide-background');
+      var firstBgStyle = firstBg ? window.getComputedStyle(firstBg) : null;
       var bodyEl = document.body;
       var bodyComputed = window.getComputedStyle(bodyEl);
+      var presentationMsVar = bodyComputed ? bodyComputed.getPropertyValue('--presentation-slide-transition-ms') : '';
+      var itemMsVar = bodyComputed ? bodyComputed.getPropertyValue('--item-transition-ms') : '';
       var slidesContainer = Display._slidesContainer || document.querySelector('.reveal .slides');
       var footerContainer = Display._footerContainer || document.querySelector('.reveal .footer');
       var logoScreen = Display._logoScreen || document.getElementById('logo-screen');
@@ -1278,7 +1288,12 @@ var Display = {
         futureTransition: futureSlide ? (futureSlide.getAttribute('data-transition') || "") : "",
         futureClassList: futureSlide ? futureSlide.className : "",
         futureComputedTransform: futureStyle ? futureStyle.transform : "",
-        futureComputedOpacity: futureStyle ? futureStyle.opacity : ""
+        futureComputedOpacity: futureStyle ? futureStyle.opacity : "",
+        bgComputedTransition: firstBgStyle ? firstBgStyle.transition : "",
+        bgComputedTransitionDuration: firstBgStyle ? firstBgStyle.transitionDuration : "",
+        bgComputedBlendMode: firstBgStyle ? firstBgStyle.mixBlendMode : "",
+        presentationMsVar: (presentationMsVar || "").trim(),
+        itemMsVar: (itemMsVar || "").trim()
       };
       if (window.displayWatcher && window.displayWatcher.dispatchEvent) {
         window.displayWatcher.dispatchEvent('transition_debug', payload);
