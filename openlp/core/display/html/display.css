@@ -79,6 +79,25 @@ body.is-desktop .pause-overlay {
   opacity: 0 !important;
 }
 
+/*
+  Keep the Reveal pause overlay (used to paint "Show Black") consistent
+  with every other hide/show animation. reveal.css ships with a fixed 1s
+  ease transition which otherwise makes the Black fade slower and ignore
+  the user-configured transition settings.
+*/
+body.transition .reveal .pause-overlay {
+  transition: opacity var(--item-transition-ms) var(--item-transition-easing),
+              visibility var(--item-transition-ms) var(--item-transition-easing) !important;
+}
+
+body:not(.transition) .reveal .pause-overlay {
+  transition: none !important;
+}
+
+body.disable-transitions .reveal .pause-overlay {
+  transition: none !important;
+}
+
 #logo-screen {
   position: absolute;
   inset: 0;
@@ -151,6 +170,16 @@ body.presentation-slide-transition .reveal .slide-background {
 
 body.transition .reveal .slide-background {
   transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
+}
+
+/* Respect reveal's guards: no-transition on backgrounds (same-hash adjacent slides)
+   and data-background-transition=none (theme has no slide transitions) must win
+   over the body.transition item-transition rule above. */
+body.transition .reveal .backgrounds.no-transition .slide-background,
+body.transition .reveal[data-background-transition=none] .slide-background,
+body.presentation-slide-transition .reveal .backgrounds.no-transition .slide-background,
+body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background {
+  transition: none !important;
 }
 
 .reveal .slides > section,

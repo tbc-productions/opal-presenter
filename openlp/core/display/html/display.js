@@ -324,6 +324,51 @@ function _applyFullscreenBackgroundImage(section, backgroundColor, imageUrl, fit
 }
 
 /**
+ * Populate a slide <section> with an image using the structure appropriate for
+ * the requested transition effect.
+ *
+ * When `useNativeBackground` is true the image is applied via reveal.js
+ * `data-background-image` attributes so reveal natively cross-fades the
+ * background between adjacent slides. Otherwise the image is rendered as an
+ * `<img>` inside the section, which lets reveal's section transition (slide
+ * / zoom / convex / concave) carry the image with the section. The source
+ * URL is also stored on the section via `data-slide-image` so the structure
+ * can be rebuilt at runtime (e.g. when PDF transition settings change).
+ *
+ * @private
+ * @param {HTMLElement} section - The slide section to populate
+ * @param {string} imageUrl - URL of the image to render
+ * @param {boolean} useNativeBackground - Use reveal background vs <img>
+ * @param {{size: string, repeat: string, position: string, objectFit: string}} fit
+ * @param {string} [backgroundColor] - Colour to show behind the image (default #000)
+ */
+function _applyImageSlideContent(section, imageUrl, useNativeBackground, fit, backgroundColor) {
+  var bgColor = backgroundColor || "#000";
+  section.innerHTML = "";
+  section.removeAttribute("style");
+  section.removeAttribute("data-background");
+  section.removeAttribute("data-background-image");
+  section.removeAttribute("data-background-color");
+  section.removeAttribute("data-background-size");
+  section.removeAttribute("data-background-repeat");
+  section.removeAttribute("data-background-position");
+  section.setAttribute("data-slide-image", imageUrl);
+  if (useNativeBackground) {
+    section.setAttribute("data-background-image", imageUrl);
+    section.setAttribute("data-background-color", bgColor);
+    section.setAttribute("data-background-size", fit.size);
+    section.setAttribute("data-background-repeat", fit.repeat);
+    section.setAttribute("data-background-position", fit.position);
+  } else {
+    section.setAttribute("style", "height: 100%; width: 100%; background-color: " + bgColor + ";");
+    var img = document.createElement("img");
+    img.src = imageUrl;
+    img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: " + fit.objectFit + ";");
+    section.appendChild(img);
+  }
+}
+
+/**
  * Ensure the layout guide overlay exists.
  * @private
  * @returns {HTMLElement} Overlay element
@@ -458,6 +503,20 @@ var Display = {
   _logoBackgroundOverrideActive: false,
   _savedBackgroundAttributes: null,
   _lastLogoParams: null,
+  /*
+    Every hide/show operation bumps _transitionToken on entry. Async
+    continuations (requestAnimationFrame, transitionend, setTimeout, image
+    preloaders) capture the value and check it before mutating state. When
+    the user presses multiple hide/show buttons in quick succession, the
+    superseded callbacks become no-ops instead of corrupting state.
+  */
+  _transitionToken: 0,
+  _pendingLogoTransitionEndHandler: null,
+  _pendingLogoTransitionElement: null,
+  _pendingLogoFallbackTimeout: null,
+  _pendingLogoPreloader: null,
+  _suppressRevealConfigure: false,
+  _pendingRevealConfig: null,
 
   /**
    * Start up reveal and do any other initialisation
@@ -533,17 +592,14 @@ var Display = {
       Display._itemTransitionSpeedSeconds = speedSeconds;
     }
     Display._itemTransitionType = Display._normaliseItemTransitionType(transitionType || Display._itemTransitionType);
-    var transitionSpeedName = Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds);
     var transitionMs = Math.round(Display._itemTransitionSpeedSeconds * 1000);
     document.body.style.setProperty('--item-transition-ms', transitionMs + 'ms');
     document.body.style.setProperty('--item-transition-easing', Display._getTransitionEasing(Display._itemTransitionType));
     var body = $("body")[0];
     if (enable) {
       body.classList.add("transition");
-      Reveal.configure({"backgroundTransition": "fade", "transitionSpeed": transitionSpeedName});
     } else {
       body.classList.remove("transition");
-      Reveal.configure({"backgroundTransition": "none"});
     }
   },
 
@@ -734,15 +790,26 @@ var Display = {
   replaceSlides: function (new_slides, is_text=false) {
     if (Array.isArray(new_slides)) {
       Display._slidesContainer.innerHTML = "";
-      new_slides.forEach(function (slide) {
-        if (Display._doItemTransitions) {
-          slide.setAttribute('data-transition', "fade");
-          slide.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
-        }
-        slide.classList.add("future");
-        Display.applyTheme(slide, is_text);
-        Display._slidesContainer.appendChild(slide);
-      });
+      Display._suppressRevealConfigure = true;
+      Display._pendingRevealConfig = null;
+      try {
+        new_slides.forEach(function (slide) {
+          if (Display._doItemTransitions) {
+            slide.setAttribute('data-transition', "fade");
+            slide.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
+          }
+          slide.classList.add("future");
+          Display.applyTheme(slide, is_text);
+          Display._slidesContainer.appendChild(slide);
+        });
+      } finally {
+        Display._suppressRevealConfigure = false;
+      }
+      if (Display._pendingRevealConfig) {
+        Reveal.configure(Display._pendingRevealConfig);
+        Display._logTransitionDebug("applyTheme.configure batched effect=" + Display._pendingRevealConfig.transition);
+        Display._pendingRevealConfig = null;
+      }
       Display.reinit();
       if (is_text) {
         Display._reapplyTextThemeAfterLayout(new_slides);
@@ -802,18 +869,10 @@ var Display = {
       return;
     }
 
-    // Apply once immediately to avoid a first-frame flash at 0,0.
-    if (Array.isArray(targets)) {
-      targets.forEach(function (element) {
-        Display.applyTheme(element, true);
-      });
-    } else {
-      Display.applyTheme(targets, true);
-    }
-
-    // Apply again after Reveal finishes layout/reflow frames.
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
+    var applyAll = function () {
+      Display._suppressRevealConfigure = true;
+      Display._pendingRevealConfig = null;
+      try {
         if (Array.isArray(targets)) {
           targets.forEach(function (element) {
             Display.applyTheme(element, true);
@@ -821,6 +880,19 @@ var Display = {
         } else {
           Display.applyTheme(targets, true);
         }
+      } finally {
+        Display._suppressRevealConfigure = false;
+      }
+      Display._pendingRevealConfig = null;
+    };
+
+    // Apply once immediately to avoid a first-frame flash at 0,0.
+    applyAll();
+
+    // Apply again after Reveal finishes layout/reflow frames.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        applyAll();
       });
     });
   },
@@ -1164,10 +1236,33 @@ var Display = {
       var currentStyle = currentSlide ? window.getComputedStyle(currentSlide) : null;
       var pastStyle = pastSlide ? window.getComputedStyle(pastSlide) : null;
       var futureStyle = futureSlide ? window.getComputedStyle(futureSlide) : null;
+      var slideBackgrounds = document.querySelectorAll('.reveal .backgrounds > .slide-background');
+      var backgroundSummary = [];
+      slideBackgrounds.forEach(function (bg, idx) {
+        backgroundSummary.push(idx + ":cls=" + bg.className
+          + ",bgt=" + (bg.getAttribute('data-background-transition') || ''));
+      });
+      var backgroundsContainer = document.querySelector('.reveal .backgrounds');
+      var bodyEl = document.body;
+      var bodyComputed = window.getComputedStyle(bodyEl);
+      var slidesContainer = Display._slidesContainer || document.querySelector('.reveal .slides');
+      var footerContainer = Display._footerContainer || document.querySelector('.reveal .footer');
+      var logoScreen = Display._logoScreen || document.getElementById('logo-screen');
       var payload = {
         reason: reason || "unknown",
+        bodyClassList: bodyEl.className || "",
+        bodyStyleOpacity: bodyEl.style.opacity || "",
+        bodyComputedOpacity: bodyComputed ? bodyComputed.opacity : "",
+        slidesOpacity: slidesContainer ? (slidesContainer.style.opacity || "") : "",
+        footerOpacity: footerContainer ? (footerContainer.style.opacity || "") : "",
+        logoClassList: logoScreen ? logoScreen.className : "",
+        backgroundsClass: backgroundsContainer ? backgroundsContainer.className : "",
         revealTransition: revealConfig.transition || "",
         revealTransitionSpeed: revealConfig.transitionSpeed || "",
+        revealBackgroundTransition: revealConfig.backgroundTransition || "",
+        wrapperBgTransitionAttr: wrapper ? (wrapper.getAttribute('data-background-transition') || '') : '',
+        backgrounds: backgroundSummary.join(' | '),
+        slideSectionCount: document.querySelectorAll('.slides > section').length,
         revealClassList: wrapper ? wrapper.className : "",
         indexH: (indices && indices.h !== undefined ? indices.h : null),
         indexV: (indices && indices.v !== undefined ? indices.v : null),
@@ -1204,6 +1299,7 @@ var Display = {
    * @param {Object[]} slides - A list of slides to add as JS objects: {"verse": "v1", "text": "line 1\nline2"}
    */
   setTextSlides: function (slides) {
+    Display._logTransitionDebug("setTextSlides.enter count=" + (slides ? slides.length : 0));
     Display._setPresentationSlideTransition(false);
     Display._clearSlidesList();
     var layout = Display._resolveTextSlideLayout();
@@ -1247,6 +1343,7 @@ var Display = {
     } else {
       Display.replaceSlides(topLevelSlides, true);
     }
+    Display._logTransitionDebug("setTextSlides.post");
   },
   /**
    * Set a single text slide. This changes the slide with no transition.
@@ -1326,56 +1423,46 @@ var Display = {
     slides.forEach(function (slide, index) {
       var section = document.createElement("section");
       section.setAttribute("id", index);
-      section.setAttribute("style", "height: 100%; width: 100%;");
       section.setAttribute('data-slide', index);
+      section.classList.add("use-background-image");
+      var imageUrl = Display._getFileUrl(slide.path);
       if (slide.use_background_image) {
         var pdfFit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
         var pdfEffect = Display._getPresentationTransitionEffect(slide.pdf_transition_effect);
         var useNativeBackgroundForPdfSlides = !!slide.pdf_transition_enabled && pdfEffect === "fade";
+        _applyImageSlideContent(section, imageUrl, useNativeBackgroundForPdfSlides, pdfFit);
         if (useNativeBackgroundForPdfSlides) {
-          section.classList.add("use-background-image");
-          _applyFullscreenBackgroundImage(section, "#000", Display._getFileUrl(slide.path), pdfFit);
           section.setAttribute("data-transition", "none");
           section.setAttribute("data-background-transition", "fade");
-        } else {
-          section.classList.add("use-background-image");
-          section.style.backgroundColor = "#000";
-          section.style.backgroundImage = "url('" + Display._getFileUrl(slide.path) + "')";
-          section.style.backgroundPosition = pdfFit.position;
-          section.style.backgroundSize = pdfFit.size;
-          section.style.backgroundRepeat = pdfFit.repeat;
-          section.removeAttribute("data-background-transition");
-        }
-        if (slide.pdf_transition_enabled) {
-          if (useNativeBackgroundForPdfSlides) {
-            section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
-          } else {
-            section.setAttribute("data-transition", Display._getPresentationTransitionName(slide.pdf_transition_effect));
-            section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
-          }
+          section.setAttribute("data-transition-speed",
+            Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
+        } else if (slide.pdf_transition_enabled) {
+          section.setAttribute("data-transition",
+            Display._getPresentationTransitionName(slide.pdf_transition_effect));
+          section.setAttribute("data-transition-speed",
+            Display._getRevealTransitionSpeed(slide.pdf_transition_speed_seconds));
         } else {
           section.setAttribute("data-transition", "none");
-          section.removeAttribute("data-background-transition");
         }
       } else {
+        _applyImageSlideContent(section, imageUrl, useNativeBackgroundForImageSlides, imageFit);
         if (useNativeBackgroundForImageSlides) {
-          section.classList.add("use-background-image");
-          _applyFullscreenBackgroundImage(section, "#000", Display._getFileUrl(slide.path), imageFit);
           section.setAttribute("data-transition", "none");
           section.setAttribute("data-background-transition", "fade");
-        } else {
-          var img = document.createElement('img');
-          img.src = Display._getFileUrl(slide.path);
-          img.setAttribute("style", "width: 100%; height: 100%; margin: 0; object-fit: contain;");
-          img.setAttribute('data-slide', index);
-          section.appendChild(img);
-          section.removeAttribute("data-background-transition");
         }
       }
       parentSection.appendChild(section);
       Display._slides[index.toString()] = index;
     });
+    Display._logTransitionDebug("setImageSlides.pre isDisplay=" + Display._isDisplayOutput
+      + " themeSet=" + !!Display._theme
+      + " dst=" + (Display._theme ? Display._theme.display_slide_transition : null)
+      + " dstType=" + (Display._theme ? Display._theme.display_slide_transition_type : null)
+      + " doTransitions=" + Display._doTransitions
+      + " useNativeBgImages=" + useNativeBackgroundForImageSlides
+      + " hasPdfBg=" + hasPdfBackgroundSlides);
     Display.replaceSlides(parentSection);
+    Display._logTransitionDebug("setImageSlides.post");
   },
 
   updatePdfSlideTransitions: function (settings) {
@@ -1384,11 +1471,31 @@ var Display = {
     var speedSeconds = Number(settings.speedSeconds);
     var easing = settings.easing;
     var effect = settings.effect;
+    var effectName = Display._getPresentationTransitionEffect(effect);
+    var useNativeBackground = enabled && effectName === "fade";
+    var pdfFit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
+    var speedName = Display._getRevealTransitionSpeed(speedSeconds);
     Display._setPresentationSlideTransition(enabled, speedSeconds, easing);
     $(".slides > section > section.use-background-image").forEach(function (section) {
-      if (enabled) {
+      var imageUrl = section.getAttribute("data-slide-image")
+        || section.getAttribute("data-background-image");
+      if (!imageUrl) {
+        var existingImg = section.querySelector("img");
+        if (existingImg) {
+          imageUrl = existingImg.getAttribute("src");
+        }
+      }
+      if (!imageUrl) {
+        return;
+      }
+      _applyImageSlideContent(section, imageUrl, useNativeBackground, pdfFit);
+      if (useNativeBackground) {
+        section.setAttribute("data-transition", "none");
+        section.setAttribute("data-background-transition", "fade");
+        section.setAttribute("data-transition-speed", speedName);
+      } else if (enabled) {
         section.setAttribute("data-transition", Display._getPresentationTransitionName(effect));
-        section.setAttribute("data-transition-speed", Display._getRevealTransitionSpeed(speedSeconds));
+        section.setAttribute("data-transition-speed", speedName);
       } else {
         section.setAttribute("data-transition", "none");
         section.removeAttribute("data-transition-speed");
@@ -1578,19 +1685,29 @@ var Display = {
   */
   toBlack: function (disableTransitions) {
     return new Promise((resolve, reject) => {
+      Display._logTransitionDebug("toBlack.enter disable=" + !!disableTransitions);
       /* Avoid race conditions where display goes to transparent and quickly goes to black */
-      Display._abortLastTransitionOperation();
+      var token = Display._beginTransitionOperation();
       var body = document.body;
       var useDisableTransitions = !!disableTransitions;
       if (useDisableTransitions) {
         body.classList.add('disable-transitions');
       }
       /*
+        Restore the theme background in case we're coming from Logo mode so
+        the underlying content is never left in the logo-override state
+        once Black is dismissed.
+      */
+      Display._restoreThemeBackgroundFromLogo();
+      /*
         Reveal's black overlay should be shown before the transitions are
         restored, to avoid screen flashes
       */
       Display._restorePauseBehavior();
       Display._requestAnimationFrameExclusive(function() {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
         if (!Reveal.isPaused()) {
           Reveal.togglePause();
         }
@@ -1600,12 +1717,18 @@ var Display = {
         documentBody.style.opacity = 1;
         if (useDisableTransitions) {
           Display._requestAnimationFrameExclusive(function () {
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             body.classList.remove('disable-transitions');
             resolve();
           });
           return;
         }
         Display._reenableGlobalTransitions(function() {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           resolve();
         });
       });
@@ -1616,7 +1739,7 @@ var Display = {
   */
   toTheme: function (disableTransitions) {
     return new Promise((resolve, reject) => {
-      Display._abortLastTransitionOperation();
+      var token = Display._beginTransitionOperation();
       var body = document.body;
       var useDisableTransitions = !!disableTransitions;
       if (useDisableTransitions) {
@@ -1642,10 +1765,16 @@ var Display = {
         slidesContainer.style.opacity = 0;
         footerContainer.style.opacity = 0;
         Display._requestAnimationFrameExclusive(function () {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           if (Reveal.isPaused()) {
             Reveal.togglePause();
           }
           Display._reenableGlobalTransitions(function() {
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             resolve();
           });
         });
@@ -1660,10 +1789,16 @@ var Display = {
       slidesContainer.style.opacity = 0;
       footerContainer.style.opacity = 0;
       Display._requestAnimationFrameExclusive(function () {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
         if (Reveal.isPaused()) {
           Reveal.togglePause();
         }
         Display._requestAnimationFrameExclusive(function () {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           slidesContainer.style.transition = previousSlidesTransition || "";
           footerContainer.style.transition = previousFooterTransition || "";
           if (useDisableTransitions) {
@@ -1672,6 +1807,9 @@ var Display = {
             return;
           }
           Display._reenableGlobalTransitions(function() {
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             resolve();
           });
         });
@@ -1683,13 +1821,15 @@ var Display = {
   */
   toTransparent: function (disableTransitions) {
     return new Promise((resolve, reject) => {
-      Display._abortLastTransitionOperation();
+      Display._logTransitionDebug("toTransparent.enter disable=" + !!disableTransitions);
+      var token = Display._beginTransitionOperation();
       var body = document.body;
       var useDisableTransitions = !!disableTransitions;
       if (useDisableTransitions) {
         body.classList.add('disable-transitions');
       }
       Display._hideLogoScreen();
+      Display._restoreThemeBackgroundFromLogo();
       var documentBody = $("body")[0];
       documentBody.style.opacity = 0;
       if (!Reveal.isPaused()) {
@@ -1699,6 +1839,13 @@ var Display = {
         */
         document.body.classList.add('is-desktop');
         Reveal.togglePause();
+      } else {
+        /*
+          When coming from Black we're already paused, but we still need
+          the is-desktop class so the pause overlay doesn't linger as a
+          black flash beneath the now-transparent body.
+        */
+        document.body.classList.add('is-desktop');
       }
       /*
         Waiting for body transition to happen, now it would be safe to
@@ -1709,15 +1856,21 @@ var Display = {
         Display._footerContainer.style.opacity = 0;
         displayWatcher.pleaseRepaint();
         Display._requestAnimationFrameExclusive(function() {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           resolve();
         });
         return;
       }
-      Display._abortLastTransitionOperation();
       Display._addTransitionEndEventToBody(transitionEndEvent);
       function transitionEndEvent(e) {
         // Targeting only body
         if (e.target != documentBody) {
+          return;
+        }
+        if (!Display._isCurrentTransition(token)) {
+          Display._removeTransitionEndEventToBody();
           return;
         }
         /*
@@ -1735,8 +1888,11 @@ var Display = {
         displayWatcher.pleaseRepaint();
         /* Waiting for repaint to happen before saying that it's done. */
         Display._requestAnimationFrameExclusive(function() {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           /* We're transparent now, aborting any transition event between */
-          Display._abortLastTransitionOperation();
+          Display._removeTransitionEndEventToBody();
           resolve();
         });
       }
@@ -1750,7 +1906,7 @@ var Display = {
   */
   toLogo: function (bg_color, image, logo_fit, disableTransitions) {
     return new Promise((resolve, reject) => {
-      Display._abortLastTransitionOperation();
+      var token = Display._beginTransitionOperation();
       Display._restorePauseBehavior();
       var documentBody = $("body")[0];
       var body = document.body;
@@ -1771,11 +1927,17 @@ var Display = {
       Display._setLogoScreenBackground(bg_color, null, logo_fit);
 
       function hideSlideLayerAndResolve() {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
         Display._slidesContainer.style.opacity = 0;
         Display._footerContainer.style.opacity = 0;
         Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
         if (useDisableTransitions) {
           Display._requestAnimationFrameExclusive(function () {
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             body.classList.remove('disable-transitions');
             resolve();
           });
@@ -1786,6 +1948,9 @@ var Display = {
 
       function fadeLogoOverSlide() {
         Display._requestAnimationFrameExclusive(function() {
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           if (!Display._logoScreen) {
             hideSlideLayerAndResolve();
             return;
@@ -1800,37 +1965,72 @@ var Display = {
             hideSlideLayerAndResolve();
             return;
           }
-          var transitionDone = false;
           var onTransitionEnd = function(event) {
             if (event.target !== Display._logoScreen || event.propertyName !== "opacity") {
               return;
             }
-            transitionDone = true;
-            Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
+            if (Display._pendingLogoTransitionElement) {
+              Display._pendingLogoTransitionElement.removeEventListener(
+                "transitionend", onTransitionEnd);
+            }
+            Display._pendingLogoTransitionEndHandler = null;
+            Display._pendingLogoTransitionElement = null;
+            if (Display._pendingLogoFallbackTimeout) {
+              clearTimeout(Display._pendingLogoFallbackTimeout);
+              Display._pendingLogoFallbackTimeout = null;
+            }
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             hideSlideLayerAndResolve();
           };
+          Display._pendingLogoTransitionEndHandler = onTransitionEnd;
+          Display._pendingLogoTransitionElement = Display._logoScreen;
           Display._logoScreen.addEventListener("transitionend", onTransitionEnd);
           // Safety fallback in case transitionend is skipped by the browser.
-          setTimeout(function() {
-            if (!transitionDone) {
-              Display._logoScreen.removeEventListener("transitionend", onTransitionEnd);
-              hideSlideLayerAndResolve();
+          Display._pendingLogoFallbackTimeout = setTimeout(function() {
+            Display._pendingLogoFallbackTimeout = null;
+            if (Display._pendingLogoTransitionElement && Display._pendingLogoTransitionEndHandler) {
+              Display._pendingLogoTransitionElement.removeEventListener(
+                "transitionend", Display._pendingLogoTransitionEndHandler);
             }
+            Display._pendingLogoTransitionEndHandler = null;
+            Display._pendingLogoTransitionElement = null;
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
+            hideSlideLayerAndResolve();
           }, 900);
         });
       }
 
       Display._reenableGlobalTransitions(function() {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
         if (!image) {
           fadeLogoOverSlide();
           return;
         }
         var preloader = new Image();
+        Display._pendingLogoPreloader = preloader;
         preloader.onload = function() {
+          if (Display._pendingLogoPreloader === preloader) {
+            Display._pendingLogoPreloader = null;
+          }
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           Display._setLogoScreenBackground(bg_color, image, logo_fit);
           fadeLogoOverSlide();
         };
         preloader.onerror = function() {
+          if (Display._pendingLogoPreloader === preloader) {
+            Display._pendingLogoPreloader = null;
+          }
+          if (!Display._isCurrentTransition(token)) {
+            return;
+          }
           Display._setLogoScreenBackground(bg_color, null, logo_fit);
           fadeLogoOverSlide();
         };
@@ -1843,6 +2043,13 @@ var Display = {
   */
   show: function (disableTransitions) {
     return new Promise((resolve, reject) => {
+      Display._logTransitionDebug("show.enter disable=" + !!disableTransitions);
+      /*
+        _beginTransitionOperation() bumps the token *and* aborts any pending
+        async continuations left behind by a prior transition (stale
+        transitionend listeners, fallback timeouts, preloader handlers).
+      */
+      var token = Display._beginTransitionOperation();
       var documentBody = $("body")[0];
       var body = document.body;
       var useDisableTransitions = !!disableTransitions;
@@ -1855,12 +2062,6 @@ var Display = {
           pauseOverlay.style.transition = 'none';
         }
       }
-      /*
-        Removing transitionend event, avoids the content being hidden if the user
-        tries to show content again before toTransparent() transitionend event
-        happens
-      */
-      Display._abortLastTransitionOperation();
       Display._hideLogoScreen();
       Display._restoreThemeBackgroundFromLogo();
 
@@ -1871,9 +2072,15 @@ var Display = {
       }
       Display._restorePauseBehavior();
       var finishShow = function () {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
         documentBody.style.opacity = 1;
         if (useDisableTransitions) {
           Display._requestAnimationFrameExclusive(function () {
+            if (!Display._isCurrentTransition(token)) {
+              return;
+            }
             if (pauseOverlay) {
               pauseOverlay.style.transition = previousPauseOverlayTransition || '';
             }
@@ -2093,11 +2300,46 @@ var Display = {
 
   /**
    * Aborts last body's transitionend and requestAnimationFrame's events, to avoid
-   * race condition bugs.
+   * race condition bugs. Also tears down any in-flight logo helpers (transitionend
+   * listener, fallback timeout and image preloader) so they can't mutate state
+   * after a different hide/show operation has taken over.
    */
   _abortLastTransitionOperation: function() {
     Display._removeTransitionEndEventToBody();
     cancelAnimationFrame(Display._lastRequestAnimationFrameHandle);
+    if (Display._pendingLogoTransitionElement && Display._pendingLogoTransitionEndHandler) {
+      Display._pendingLogoTransitionElement.removeEventListener(
+        "transitionend", Display._pendingLogoTransitionEndHandler);
+    }
+    Display._pendingLogoTransitionEndHandler = null;
+    Display._pendingLogoTransitionElement = null;
+    if (Display._pendingLogoFallbackTimeout) {
+      clearTimeout(Display._pendingLogoFallbackTimeout);
+      Display._pendingLogoFallbackTimeout = null;
+    }
+    if (Display._pendingLogoPreloader) {
+      Display._pendingLogoPreloader.onload = null;
+      Display._pendingLogoPreloader.onerror = null;
+      Display._pendingLogoPreloader = null;
+    }
+  },
+
+  /**
+   * Claim a new transition token. Any async callback registered during this
+   * operation should capture the returned value and verify it is still the
+   * current token before mutating state.
+   */
+  _beginTransitionOperation: function() {
+    Display._abortLastTransitionOperation();
+    Display._transitionToken += 1;
+    return Display._transitionToken;
+  },
+
+  /**
+   * Whether the given token is still the most recent transition token.
+   */
+  _isCurrentTransition: function(token) {
+    return token === Display._transitionToken;
   },
 
   /**
@@ -2139,6 +2381,9 @@ var Display = {
       Display._themeApplied = false;
       Display._theme = theme;
     }
+    Display._logTransitionDebug("setTheme isDisplay=" + Display._isDisplayOutput
+      + " dst=" + (theme ? theme.display_slide_transition : null)
+      + " type=" + (theme ? theme.display_slide_transition_type : null));
   },
   /**
    * Set background image, replaced when theme is updated/applied
@@ -2257,9 +2502,21 @@ var Display = {
       }
       var revealRtl = themeTransitionDirection === TransitionDirection.Horizontal && themeTransitionReverse;
       // Reveal's global transition setting must be one of: none/fade/slide/convex/concave/zoom.
-      Reveal.configure({"transition": reveal_transition_type, "transitionSpeed": new_transition_speed, "rtl": revealRtl});
+      var enabledConfig = {"transition": reveal_transition_type, "transitionSpeed": new_transition_speed, "rtl": revealRtl, "backgroundTransition": "fade"};
+      if (!Display._suppressRevealConfigure) {
+        Reveal.configure(enabledConfig);
+        Display._logTransitionDebug("applyTheme.configure enabled effect=" + reveal_transition_type);
+      } else {
+        Display._pendingRevealConfig = enabledConfig;
+      }
     } else {
-      Reveal.configure({"transition": "none", "transitionSpeed": "default", "rtl": false});
+      var disabledConfig = {"transition": "none", "transitionSpeed": "default", "rtl": false, "backgroundTransition": "none"};
+      if (!Display._suppressRevealConfigure) {
+        Reveal.configure(disabledConfig);
+        Display._logTransitionDebug("applyTheme.configure disabled");
+      } else {
+        Display._pendingRevealConfig = disabledConfig;
+      }
     }
     if (targetElement && targetElement.tagName === "SECTION" && !targetElement.classList.contains("use-background-image")) {
       targetElement.setAttribute("data-transition", reveal_transition_type);

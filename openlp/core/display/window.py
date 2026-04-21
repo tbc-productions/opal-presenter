@@ -613,7 +613,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             payload_text = json.dumps(payload, sort_keys=True)
         except TypeError:
             payload_text = str(payload)
-        log.warning('Display transition debug: {data}'.format(data=payload_text))
+        source = 'DISPLAY' if self.is_display else 'preview'
+        log.warning('[{src}] transition debug: {data}'.format(src=source, data=payload_text))
 
     def go_to_slide(self, verse, raise_window=True):
         """
@@ -700,17 +701,24 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         return self.run_in_display('getVideoTypes', is_sync=True)
 
-    def _disable_preview_hide_transition(self):
+    def _disable_hide_transition(self):
         """
-        Determine if hide/show transitions should be suppressed for preview windows.
+        Determine if hide/show transitions should be suppressed.
+
+        When the user has turned "themes/item transitions" off we want every
+        hide/show operation to be an instant cut, on both the live and the
+        preview windows. Applying the flag symmetrically insulates the
+        behaviour from any unscoped CSS transitions (e.g. reveal.js's
+        pause-overlay) that would otherwise fade for their hard-coded
+        duration on the live window when the user expected an instant cut.
         """
-        return not self.is_display and not self.settings.value('themes/item transitions')
+        return not self.settings.value('themes/item transitions')
 
     def _show_uses_transition_override(self):
         """
         Determine whether the "show" action should force disabled transitions.
         """
-        return self._disable_preview_hide_transition() and self.hide_mode in {
+        return self._disable_hide_transition() and self.hide_mode in {
             HideMode.Blank,
             HideMode.Theme,
             HideMode.Logo,
@@ -770,23 +778,23 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                                                              lambda _: self.setVisible(False))
                 self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
             else:
-                if self._disable_preview_hide_transition():
+                if self._disable_hide_transition():
                     self.run_in_display('toTransparent', True)
                 else:
                     self.run_in_display('toTransparent')
         elif mode == HideMode.Blank:
-            if self._disable_preview_hide_transition():
+            if self._disable_hide_transition():
                 self.run_in_display('toBlack', True)
             else:
                 self.run_in_display('toBlack')
         elif mode == HideMode.Theme:
-            if self._disable_preview_hide_transition():
+            if self._disable_hide_transition():
                 self.run_in_display('toTheme', True)
             else:
                 self.run_in_display('toTheme')
         elif mode == HideMode.Logo:
             bg_color, image_uri, logo_fit = self._get_logo_settings()
-            if self._disable_preview_hide_transition():
+            if self._disable_hide_transition():
                 self.run_in_display('toLogo', bg_color, image_uri, logo_fit, True)
             else:
                 self.run_in_display('toLogo', bg_color, image_uri, logo_fit)
