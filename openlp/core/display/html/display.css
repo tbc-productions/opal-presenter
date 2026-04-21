@@ -178,11 +178,19 @@ body.presentation-slide-transition .reveal .slide-background {
 
 /* Respect reveal's guards: no-transition on backgrounds (same-hash adjacent slides)
    and data-background-transition=none (theme has no slide transitions) must win
-   over the body.transition item-transition rule above. */
+   over the body.transition item-transition rule above.
+
+   When the wrapper says none, only kill the transition if the slide-background
+   itself has no overriding per-slide data-background-transition. PDFs set
+   data-background-transition=fade per-slide even when the THEME has no
+   transitions (because PDFs have their own transition settings, independent
+   of the theme); without the :not() guard we'd kill those PDF fades too. */
 body.transition .reveal .backgrounds.no-transition .slide-background,
-body.transition .reveal[data-background-transition=none] .slide-background,
 body.presentation-slide-transition .reveal .backgrounds.no-transition .slide-background,
-body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background {
+body.transition .reveal[data-background-transition=none] .slide-background:not([data-background-transition]),
+body.transition .reveal[data-background-transition=none] .slide-background[data-background-transition=none],
+body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background:not([data-background-transition]),
+body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background[data-background-transition=none] {
   transition: none !important;
 }
 
