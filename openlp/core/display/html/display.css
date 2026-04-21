@@ -164,12 +164,16 @@ body.presentation-slide-transition .reveal.fade .slides > section > section:not(
   transition: opacity var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
-body.presentation-slide-transition .reveal .slide-background {
-  transition: all var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
-}
-
 body.transition .reveal .slide-background {
   transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
+}
+
+/* Per-slide presentation transitions (e.g. PDFs) take precedence over the
+   global item-transition speed. Without this order, body.transition's rule
+   wins on same specificity and PDFs always fade at the item-transition
+   duration regardless of the user's configured PDF transition speed. */
+body.presentation-slide-transition .reveal .slide-background {
+  transition: all var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
 /* Respect reveal's guards: no-transition on backgrounds (same-hash adjacent slides)
@@ -180,6 +184,19 @@ body.transition .reveal[data-background-transition=none] .slide-background,
 body.presentation-slide-transition .reveal .backgrounds.no-transition .slide-background,
 body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background {
   transition: none !important;
+}
+
+/* True cross-fade: with plus-lighter, outgoing + incoming alphas sum to 100%
+   at every point of the transition, instead of compositing via "over" which
+   leaves a visible dip where you can see through both images. mix-blend-mode
+   composites against the parent stacking context, so the .backgrounds wrapper
+   must isolate — otherwise the blend falls through to whatever's behind
+   .reveal (often a transparent body, which defeats the point). */
+.reveal[data-background-transition=fade] .backgrounds {
+  isolation: isolate;
+}
+.reveal[data-background-transition=fade] .backgrounds:not(.no-transition) .slide-background {
+  mix-blend-mode: plus-lighter;
 }
 
 .reveal .slides > section,
