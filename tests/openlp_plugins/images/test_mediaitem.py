@@ -229,9 +229,6 @@ def test_generate_slide_data_default_theme(media_item):
     Registry().get('settings').value = MagicMock(side_effect=lambda key: {
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
-        'images/transitions': False,
-        'images/transition type': TransitionType.Fade,
-        'images/transition speed': TransitionSpeed.Normal
     }.get(key))
 
     # WHEN: generate_slide_data is called
@@ -257,9 +254,6 @@ def test_generate_slide_data_custom_theme(media_item):
     Registry().get('settings').value = MagicMock(side_effect=lambda key: {
         'images/background mode': ImageThemeMode.CustomTheme,
         'images/theme': 'theme_name',
-        'images/transitions': True,
-        'images/transition type': TransitionType.Zoom,
-        'images/transition speed': TransitionSpeed.Slow
     }.get(key))
 
     # WHEN: generate_slide_data is called
@@ -269,9 +263,9 @@ def test_generate_slide_data_custom_theme(media_item):
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.theme == 'theme_name'
     assert mocked_service_item.slide_transition_settings == {
-        'enabled': True,
-        'type': TransitionType.Zoom,
-        'speed': TransitionSpeed.Slow
+        'enabled': False,
+        'type': TransitionType.Fade,
+        'speed': TransitionSpeed.Normal
     }
 
 
@@ -291,9 +285,6 @@ def test_generate_slide_data_preserves_existing_title(media_item):
     Registry().get('settings').value = MagicMock(side_effect=lambda key: {
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
-        'images/transitions': False,
-        'images/transition type': TransitionType.Fade,
-        'images/transition speed': TransitionSpeed.Normal
     }.get(key))
 
     with patch('openlp.plugins.images.lib.mediaitem.Path.exists', return_value=True):

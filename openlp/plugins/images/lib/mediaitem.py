@@ -264,7 +264,11 @@ class ImageMediaItem(FolderLibraryItem):
         if (not resolved_transition_settings) and items and isinstance(items[0], ServiceItem):
             resolved_transition_settings = self._get_custom_transition_settings(items[0])
         if not resolved_transition_settings:
-            resolved_transition_settings = self._get_default_image_transition_settings()
+            resolved_transition_settings = {
+                'enabled': False,
+                'type': TransitionType.Fade,
+                'speed': TransitionSpeed.Normal
+            }
         service_item.slide_transition_settings = resolved_transition_settings
         missing_items_file_names = []
         images = []
@@ -315,13 +319,6 @@ class ImageMediaItem(FolderLibraryItem):
                     translate('ImagesPlugin.MediaItem', 'The file "{file}" cannot be read. It may be in cloud storage that is not fully synced.').format(file=image.file_path)
                 )
         return True
-
-    def _get_default_image_transition_settings(self):
-        return {
-            'enabled': bool(self.settings.value('images/transitions')),
-            'type': self._get_transition_type_value(self.settings.value('images/transition type')),
-            'speed': self._get_transition_speed_value(self.settings.value('images/transition speed'))
-        }
 
     @staticmethod
     def _get_transition_type_value(value):

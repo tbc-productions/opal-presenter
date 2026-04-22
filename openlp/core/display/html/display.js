@@ -1480,44 +1480,6 @@ var Display = {
     Display._logTransitionDebug("setImageSlides.post");
   },
 
-  updatePdfSlideTransitions: function (settings) {
-    settings = settings || {};
-    var enabled = !!settings.enabled;
-    var speedSeconds = Number(settings.speedSeconds);
-    var easing = settings.easing;
-    var effect = settings.effect;
-    var effectName = Display._getPresentationTransitionEffect(effect);
-    var useNativeBackground = enabled && effectName === "fade";
-    var pdfFit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
-    var speedName = Display._getRevealTransitionSpeed(speedSeconds);
-    Display._setPresentationSlideTransition(enabled, speedSeconds, easing);
-    $(".slides > section > section.use-background-image").forEach(function (section) {
-      var imageUrl = section.getAttribute("data-slide-image")
-        || section.getAttribute("data-background-image");
-      if (!imageUrl) {
-        var existingImg = section.querySelector("img");
-        if (existingImg) {
-          imageUrl = existingImg.getAttribute("src");
-        }
-      }
-      if (!imageUrl) {
-        return;
-      }
-      _applyImageSlideContent(section, imageUrl, useNativeBackground, pdfFit);
-      if (useNativeBackground) {
-        section.setAttribute("data-transition", "none");
-        section.setAttribute("data-background-transition", "fade");
-        section.setAttribute("data-transition-speed", speedName);
-      } else if (enabled) {
-        section.setAttribute("data-transition", Display._getPresentationTransitionName(effect));
-        section.setAttribute("data-transition-speed", speedName);
-      } else {
-        section.setAttribute("data-transition", "none");
-        section.removeAttribute("data-transition-speed");
-      }
-    });
-    Reveal.sync();
-  },
   /**
    * Set a video
    * @param {Object} video - The video to show as a JS object: {"path": "url/to/file"}

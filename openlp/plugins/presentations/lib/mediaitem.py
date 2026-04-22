@@ -88,19 +88,10 @@ class PresentationMediaItem(FolderLibraryItem):
         self.single_service_item = False
         Registry().register_function('mediaitem_presentation_rebuild', self.populate_display_types)
         Registry().register_function('mediaitem_suffixes', self.build_file_mask_string)
-        Registry().register_function('presentations_pdf_transition_settings_changed',
-                                     self.apply_pdf_transition_settings_to_active_items)
         # Allow DnD from the desktop
         self.list_view.activateDnD()
         self.list_view.setup_columns([translate('PresentationPlugin.MediaItem', 'Name'),
                                       translate('PresentationPlugin.MediaItem', 'Date')])
-
-    @staticmethod
-    def apply_pdf_transition_settings_to_active_items():
-        for controller_key in ('preview_controller', 'live_controller'):
-            controller = Registry().get(controller_key)
-            if controller and hasattr(controller, 'apply_pdf_transition_settings'):
-                controller.apply_pdf_transition_settings()
 
     def required_icons(self):
         """
@@ -327,7 +318,6 @@ class PresentationMediaItem(FolderLibraryItem):
                     TransitionSpeed.Slow: 1.2
                 }
                 speed_seconds = speed_seconds_lookup.get(transition_speed, 0.8)
-                base_pdf_transition_settings = self._get_pdf_transition_settings()
                 service_item.slide_transition_settings = {
                     'enabled': transition_enabled,
                     'type': transition_type,
@@ -338,15 +328,22 @@ class PresentationMediaItem(FolderLibraryItem):
                     'effect': transition_type,
                     'speed': transition_speed,
                     'speed_seconds': speed_seconds,
-                    'easing': base_pdf_transition_settings.get('easing', 'balanced'),
+                    'easing': 'balanced',
                     'type': transition_type
                 }
             else:
-                service_item.pdf_transition_settings = self._get_pdf_transition_settings()
+                service_item.pdf_transition_settings = {
+                    'enabled': False,
+                    'effect': TransitionType.Fade,
+                    'speed': TransitionSpeed.Normal,
+                    'speed_seconds': 0.8,
+                    'easing': 'balanced',
+                    'type': TransitionType.Fade
+                }
                 service_item.slide_transition_settings = {
-                    'enabled': bool(service_item.pdf_transition_settings.get('enabled', False)),
-                    'type': service_item.pdf_transition_settings.get('effect', TransitionType.Fade),
-                    'speed': service_item.pdf_transition_settings.get('speed', TransitionSpeed.Normal)
+                    'enabled': False,
+                    'type': TransitionType.Fade,
+                    'speed': TransitionSpeed.Normal
                 }
             # Keep name as 'presentations' so the service icon survives save/reload;
             # image-style rendering is driven by ServiceItemType.Image, not the name.
@@ -481,40 +478,6 @@ class PresentationMediaItem(FolderLibraryItem):
                                                              'The presentation {name} no longer exists.'
                                                              ).format(name=file_path))
                     return False
-
-    def _get_pdf_transition_settings(self):
-        speed_value = self.settings.value('presentations/pdf transition speed')
-        speed_lookup = {
-            TransitionSpeed.Fast: 0.4,
-            TransitionSpeed.Normal: 0.8,
-            TransitionSpeed.Slow: 1.2,
-            'fast': 0.4,
-            'normal': 0.8,
-            'slow': 1.2
-        }
-        if isinstance(speed_value, bool):
-            speed_seconds = 0.8
-        elif speed_value in speed_lookup:
-            speed_seconds = speed_lookup[speed_value]
-        elif isinstance(speed_value, str) and speed_value.strip().lower() in speed_lookup:
-            speed_seconds = speed_lookup[speed_value.strip().lower()]
-        else:
-            try:
-                speed_seconds = float(speed_value)
-            except (TypeError, ValueError):
-                speed_seconds = 0.8
-        speed_seconds = max(0.1, speed_seconds)
-
-        effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
-        return {
-            'enabled': bool(self.settings.value('presentations/pdf transitions')),
-            'effect': effect,
-            'speed_seconds': speed_seconds,
-            'easing': 'balanced',
-            # Backward-compatible aliases for existing consumers/tests.
-            'type': effect,
-            'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
-        }
 
     @staticmethod
     def _ensure_first_thumbnail(doc):

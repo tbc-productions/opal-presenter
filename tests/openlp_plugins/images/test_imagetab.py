@@ -26,7 +26,6 @@ from unittest.mock import MagicMock
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.enum import ImageThemeMode
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.plugins.images.lib.imagetab import ImageTab
 
 
@@ -80,19 +79,3 @@ def test_save_tab_theme_mode_change(form):
         'Image Post processing should have been requested'
     # THEN: The theme should be set
     assert form.background_mode == ImageThemeMode.CustomTheme, 'The updated background mode should have been saved'
-
-
-def test_save_tab_image_transition_settings(form):
-    """
-    Test image transition defaults are saved correctly.
-    """
-    form.image_transition_enabled_check_box.setChecked(True)
-    form.image_transition_effect_combo_box.setCurrentIndex(TransitionType.Zoom)
-    speed_index = form.image_transition_speed_combo_box.findData(TransitionSpeed.Slow)
-    form.image_transition_speed_combo_box.setCurrentIndex(max(0, speed_index))
-
-    form.save()
-
-    assert form.settings.value('images/transitions') is True
-    assert form.settings.value('images/transition type') == TransitionType.Zoom
-    assert form.settings.value('images/transition speed') == TransitionSpeed.Slow

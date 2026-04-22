@@ -214,52 +214,6 @@ def test_generate_slide_data_from_pdf(media_item):
     }
 
 
-def test_generate_slide_data_from_pdf_applies_global_default_transition_settings(media_item):
-    """
-    Test that new PDF service items use global PDF transition defaults when enabled.
-    """
-    media_item.settings.setValue('presentations/pdf transitions', True)
-    media_item.settings.setValue('presentations/pdf transition type', TransitionType.Zoom)
-    media_item.settings.setValue('presentations/pdf transition speed', TransitionSpeed.Slow)
-    media_item.list_view = MagicMock()
-    media_item.display_type_combo_box = MagicMock(currentText=MagicMock(return_value='Pdf'))
-    media_item.find_controller_by_type = MagicMock(return_value='Pdf')
-    mocked_controller = MagicMock()
-    mocked_doc = MagicMock()
-    mocked_controller.add_document.return_value = mocked_doc
-    media_item.controllers = {'Pdf': mocked_controller}
-    target_service_item = ServiceItem(None)
-    list_item = QtWidgets.QTreeWidgetItem(None)
-    list_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, Item(id=1, file_path='test.pdf'))
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        pdf_path = temp_path / 'test.pdf'
-        pdf_path.write_text('x')
-        (temp_path / 'mainslide001.png').write_text('x')
-        mocked_doc.get_thumbnail_path.return_value = None
-        mocked_doc.get_temp_folder.return_value = temp_path
-        mocked_doc.get_thumbnail_folder.return_value = temp_path
-
-        result = media_item.generate_slide_data(
-            target_service_item,
-            item=list_item,
-            context=ServiceItemContext.Service,
-            file_path=pdf_path
-        )
-
-    assert result is True
-    assert target_service_item.slide_transition_settings == {
-        'enabled': True,
-        'type': TransitionType.Zoom,
-        'speed': TransitionSpeed.Slow
-    }
-    assert target_service_item.pdf_transition_settings['enabled'] is True
-    assert target_service_item.pdf_transition_settings['effect'] == TransitionType.Zoom
-    assert target_service_item.pdf_transition_settings['speed'] == TransitionSpeed.Slow
-    assert target_service_item.pdf_transition_settings['speed_seconds'] == 1.2
-
-
 def test_generate_slide_data_from_pdf_inherits_item_transition_settings(media_item):
     """
     Test that generating PDF slide data for live/preview inherits transition settings from an existing ServiceItem.
