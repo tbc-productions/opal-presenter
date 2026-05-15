@@ -26,8 +26,10 @@ from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtWidgets
 
+from openlp.core.common.enum import LayoutStyle
 from openlp.core.common.registry import Registry
 from openlp.core.lib.mediamanageritem import MediaManagerItem
+from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.plugins.bibles.lib.mediaitem import VALID_TEXT_SEARCH, BibleMediaItem, BibleSearch, ResultsTab, \
     SearchStatus, SearchTabs, get_reference_separators
 
@@ -1826,3 +1828,21 @@ def test_generate_slide_data_title_uses_version_only(media_item: BibleMediaItem)
     # THEN: The title should include version in parentheses and omit copyright text
     assert mocked_service_item.title.endswith(' (Bible version 104)')
     assert 'copywrong' not in mocked_service_item.title
+
+
+def test_generate_slide_data_whole_verse_continuous_can_word_split(media_item: BibleMediaItem):
+    """WholeVerseContinuous items allow the renderer to split long verses across slides."""
+    service_item = MagicMock()
+    verse = {
+        'book': 'Matthew', 'chapter': '1', 'verse': '2',
+        'version': 'Bible version 104', 'copyright': 'copywrong',
+        'permissions': 'all the permissions', 'second_bible': '',
+        'text': 'text from matthew 1:2'
+    }
+    media_item.format_verse = MagicMock(return_value='')
+    media_item.settings_tab = MagicMock(layout_style=LayoutStyle.WholeVerseContinuous, bible_theme='')
+
+    media_item.populate_bible_service_item(service_item, [verse])
+
+    service_item.add_capability.assert_any_call(ItemCapabilities.NoLineBreaks)
+    service_item.add_capability.assert_any_call(ItemCapabilities.CanWordSplit)
