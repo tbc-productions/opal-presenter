@@ -2454,6 +2454,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.service_has_all_original_files = False
         # Repaint the screen
         self.tree_widget_items = []
+        self.service_manager_list.setUpdatesEnabled(False)
         self.service_manager_list.clearSelection()
         self.service_manager_list.clear()
         # region agent log
@@ -2757,9 +2758,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         # consecutive/parallel repaint_service_list execution. We've added some mitigation to avoid this
                         # to happen, but it for any reason it happens again, we'll silent it and try to repaint the list
                         # again (to avoid a broken list presented to the user).
+                        self.service_manager_list.setUpdatesEnabled(True)
                         self.is_running_repaint = False
                         return True
             tree_widget_item.setExpanded(item['expanded'])
+        self.service_manager_list.setUpdatesEnabled(True)
         self.is_running_repaint = False
         self._update_move_actions()
         return False
@@ -3285,9 +3288,26 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     def on_selection_changed(self):
         """
         Called whenever the selection in the service manager list changes. Updates the enabled state of the
-        move toolbar buttons.
+        move toolbar buttons, and clears any Library selection so the Preview panel is not polluted by a
+        previously-highlighted library item.
         """
         self._update_move_actions()
+        if self.service_manager_list.selectedItems():
+            self._clear_library_selections()
+
+    def _clear_library_selections(self):
+        """
+        Deselect all items in every Library panel so that switching service items does not trigger a
+        library single-click preview in the Preview controller.
+        """
+        try:
+            media_tool_box = self.main_window.media_tool_box
+            for i in range(media_tool_box.count()):
+                widget = media_tool_box.widget(i)
+                if widget is not None and hasattr(widget, 'list_view'):
+                    widget.list_view.clearSelection()
+        except Exception:
+            pass
 
     def _update_move_actions(self):
         """

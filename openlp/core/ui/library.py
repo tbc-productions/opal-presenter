@@ -253,7 +253,7 @@ class FolderLibraryItem(MediaManagerItem):
         if hasattr(self.service_manager, 'service_manager_list'):
             try:
                 self.service_manager.service_manager_list.itemSelectionChanged.connect(
-                    self.on_selection_change)
+                    self._update_add_to_selected_service_action_state)
             except Exception:
                 pass
 
