@@ -21,10 +21,13 @@
 """
 The service item edit dialog
 """
+from pathlib import Path
+
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
+from openlp.core.lib import build_icon
 from openlp.core.ui.serviceitemeditdialog import Ui_ServiceItemEditDialog
 
 
@@ -76,6 +79,9 @@ class ServiceItemEditForm(QtWidgets.QDialog, Ui_ServiceItemEditDialog, RegistryP
         self.list_widget.clear()
         for frame in self.item_list:
             item_name = QtWidgets.QListWidgetItem(frame['title'])
+            thumbnail = frame.get('thumbnail')
+            if thumbnail and Path(thumbnail).exists():
+                item_name.setIcon(build_icon(Path(thumbnail)))
             self.list_widget.addItem(item_name)
 
     def on_delete_button_clicked(self):

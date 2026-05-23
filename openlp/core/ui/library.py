@@ -159,7 +159,9 @@ class FolderLibraryItem(MediaManagerItem):
                     if not item.folder_id or not tree_item.parent():
                         self.list_view.takeTopLevelItem(self.list_view.indexOfTopLevelItem(tree_item))
                     else:
-                        tree_item.parent().removeChild(tree_item)
+                        parent_item = tree_item.parent()
+                        parent_item.removeChild(tree_item)
+                        self._update_folder_count(parent_item)
                     self.manager.delete_object(Item, item.id)
                 elif isinstance(item, Folder):
                     if QtWidgets.QMessageBox.question(
@@ -174,7 +176,9 @@ class FolderLibraryItem(MediaManagerItem):
                         if item.parent_id is None:
                             self.list_view.takeTopLevelItem(self.list_view.indexOfTopLevelItem(tree_item))
                         else:
-                            tree_item.parent().removeChild(tree_item)
+                            parent_item = tree_item.parent()
+                            parent_item.removeChild(tree_item)
+                            self._update_folder_count(parent_item)
                 self.main_window.increment_progress_bar()
             self.main_window.finished_progress_bar()
             self.application.set_normal_cursor()
@@ -249,7 +253,7 @@ class FolderLibraryItem(MediaManagerItem):
         if hasattr(self.service_manager, 'service_manager_list'):
             try:
                 self.service_manager.service_manager_list.itemSelectionChanged.connect(
-                    self.on_selection_change)
+                    self._update_add_to_selected_service_action_state)
             except Exception:
                 pass
 
@@ -326,6 +330,13 @@ class FolderLibraryItem(MediaManagerItem):
         self._cached_folder_icon = icon
         self._cached_folder_icon_size = (cell.width(), cell.height())
         return icon
+
+    def _update_folder_count(self, folder_tree_item: QtWidgets.QTreeWidgetItem):
+        """Update the displayed item count on a folder tree item after a child is added or removed."""
+        folder = folder_tree_item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if isinstance(folder, self.folder_class):
+            count = folder_tree_item.childCount()
+            folder_tree_item.setText(0, f'{folder.name} ({count})' if count > 0 else folder.name)
 
     def add_sub_folders(self, folder_list: List[QtWidgets.QTreeWidgetItem], parent_id: Optional[int] = None):
         """

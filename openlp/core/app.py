@@ -355,7 +355,12 @@ def backup_if_version_changed(settings):
     :param Settings settings: The settings object
     :rtype: bool
     """
-    is_downgrade = get_version()['version'] < settings.value('core/application version')
+    def _version_tuple(v):
+        try:
+            return tuple(int(x) for x in v.split('.'))
+        except (ValueError, AttributeError):
+            return (0,)
+    is_downgrade = _version_tuple(get_version()['version']) < _version_tuple(settings.value('core/application version'))
     # No need to backup if version matches and we're not downgrading
     if not (settings.version_mismatched() and settings.value('core/has run wizard')) and not is_downgrade:
         return True
