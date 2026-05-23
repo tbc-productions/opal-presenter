@@ -57,7 +57,7 @@ class PlanningCenterAPI:
             The production default is False """
         self.airplane_mode = False
         module_directory = os.path.dirname(__file__)
-        self.airplane_mode_directory = "{0}/airplane_mode".format(module_directory)
+        self.airplane_mode_directory = os.path.join(module_directory, 'airplane_mode')
         if os.path.isdir(self.airplane_mode_directory):
             self.airplane_mode = True
 
@@ -72,8 +72,7 @@ class PlanningCenterAPI:
         airplane_mode_suffix = re.sub(r'\W', '_', url_suffix)
         if len(airplane_mode_suffix) == 0:
             airplane_mode_suffix = 'null'
-        airplane_mode_filename = "{0}/{1}.json".format(
-            self.airplane_mode_directory, airplane_mode_suffix)
+        airplane_mode_filename = os.path.join(self.airplane_mode_directory, f'{airplane_mode_suffix}.json')
         if self.airplane_mode:
             if os.path.isfile(airplane_mode_filename):
                 with open(airplane_mode_filename) as json_file:

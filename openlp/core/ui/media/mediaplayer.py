@@ -44,7 +44,9 @@ log = logging.getLogger(__name__)
 
 # A workaround for https://bugreports.qt.io/browse/PYSIDE-2935
 if is_win():
-    os.add_dll_directory(sysconfig.get_path('purelib') + '/PySide6/')
+    pyside6_path = os.path.join(sysconfig.get_path('purelib'), 'PySide6')
+    if os.path.exists(pyside6_path):
+        os.add_dll_directory(pyside6_path)
 
 
 class MediaPlayer(MediaBase, LogMixin):

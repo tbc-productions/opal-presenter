@@ -22,6 +22,7 @@
 The :mod:`~openlp.plugins.songs.forms.songselectform` module contains the GUI for the SongSelect importer
 """
 import logging
+import os
 import re
 
 from PySide6 import QtCore, QtWidgets, QtWebEngineCore
@@ -125,8 +126,8 @@ class SongSelectForm(QtWidgets.QDialog, Ui_SongSelectDialog, RegistryProperties)
             if self.current_download_item.state() ==\
                     QtWebEngineCore.QWebEngineDownloadRequest.DownloadState.DownloadCompleted:
                 self.song_progress_bar.setValue(2)
-                song_filename = self.current_download_item.downloadDirectory() + '/' \
-                    + self.current_download_item.downloadFileName()
+                song_filename = os.path.join(self.current_download_item.downloadDirectory(),
+                                            self.current_download_item.downloadFileName())
                 song_file = open(song_filename, 'rt', encoding='utf-8')
                 song_content = song_file.read()
                 song_file.seek(0)
