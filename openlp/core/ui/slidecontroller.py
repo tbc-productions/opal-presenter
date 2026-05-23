@@ -215,12 +215,13 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.panel_layout.setContentsMargins(0, 0, 0, 0)
         # Type label at the top of the slide controller with icon
         self.top_label_horizontal = QtWidgets.QHBoxLayout()
+        self.top_label_horizontal.setContentsMargins(0, 4, 0, 4)
         self.panel_layout.addLayout(self.top_label_horizontal)
         if self.is_live:
             icon = UiIcons().live
         else:
             icon = UiIcons().preview
-        pixmap = icon.pixmap(QtCore.QSize(28, 28))
+        pixmap = icon.pixmap(QtCore.QSize(20, 20))
         self.top_icon = QtWidgets.QLabel()
         self.top_icon.setPixmap(pixmap)
         self.top_icon.setStyleSheet("padding: 0px 0px 0px 25px;")
@@ -292,6 +293,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
             self.hide_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Hide'), self.toolbar))
             self.toolbar.add_toolbar_widget(self.hide_menu)
+            self.neutral_hide_action = create_action(self, 'neutralHideMode',
+                                                     text=translate('OpenLP.SlideController', 'Hide'))
             # The order of the blank to modes in Shortcuts list comes from here.
             self.show_screen = create_action(self, 'showScreen',
                                              text=translate('OpenLP.SlideController', 'Show Presentation'),
@@ -318,7 +321,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                 icon=UiIcons().get_icon_variant_selected('live_desktop'),
                                                 checked=False, can_shortcuts=True, category=self.category,
                                                 triggers=self.on_toggle_desktop)
-            self.hide_menu.setDefaultAction(self.show_screen)
+            self.hide_menu.setDefaultAction(self.neutral_hide_action)
             self.hide_menu.menu().addAction(self.show_screen)
             self.hide_menu.menu().addAction(self.theme_screen)
             self.hide_menu.menu().addAction(self.logo_screen)
@@ -513,6 +516,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             slide_count = self.preview_widget.slide_count()
             if isinstance(slide_count, (int, float)):
                 has_slides = slide_count > 0
+        has_item = getattr(self, 'service_item', None) is not None
         if hasattr(self, 'previous_item'):
             self.previous_item.setEnabled(has_slides)
         if hasattr(self, 'next_item'):
@@ -522,6 +526,46 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.go_live_action.setEnabled(has_slides)
             if hasattr(self, 'add_to_service_action'):
                 self.add_to_service_action.setEnabled(has_slides)
+        else:
+            self._sync_live_hide_action_state(has_item)
+            live_actions = ['show_screen', 'theme_screen', 'logo_screen', 'blank_screen', 'play_slides_loop',
+                            'play_slides_once']
+            for name in live_actions:
+                if hasattr(self, name):
+                    getattr(self, name).setEnabled(has_item)
+            if hasattr(self, 'toolbar'):
+                self.toolbar.set_widget_enabled([
+                    'hide_menu',
+                    'show_screen_button', 'theme_screen_button', 'logo_screen_button', 'blank_screen_button',
+                    'play_slides_menu', 'delay_spin_box'
+                ], has_item)
+            self._update_desktop_hide_action_state(has_item=has_item)
+
+    def _sync_live_hide_action_state(self, has_item):
+        """
+        Keep live hide-mode actions visually neutral until a live item is loaded.
+        """
+        if not self.is_live:
+            return
+        hide_mode_actions = {
+            None: self.show_screen,
+            HideMode.Blank: self.blank_screen,
+            HideMode.Theme: self.theme_screen,
+            HideMode.Logo: self.logo_screen,
+            HideMode.Screen: self.desktop_screen,
+        }
+        active_action = hide_mode_actions.get(getattr(self, '_current_hide_mode', None), self.show_screen)
+        if not has_item:
+            for action in hide_mode_actions.values():
+                action.setChecked(False)
+            self.hide_menu.setDefaultAction(self.neutral_hide_action)
+            return
+        self.hide_menu.setDefaultAction(active_action)
+        self.show_screen.setChecked(active_action is self.show_screen)
+        self.blank_screen.setChecked(active_action is self.blank_screen)
+        self.theme_screen.setChecked(active_action is self.theme_screen)
+        self.logo_screen.setChecked(active_action is self.logo_screen)
+        self.desktop_screen.setChecked(active_action is self.desktop_screen)
 
     def new_song_menu(self):
         """
@@ -1029,85 +1073,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 speed = 0.8
         return max(0.1, speed)
 
-    def apply_pdf_transition_settings(self):
-        """
-        Apply current PDF transition settings immediately to currently displayed converted PDF slides.
-        """
-        if not self.service_item or not isinstance(getattr(self.service_item, 'slides', None), list):
-            return
-        has_pdf_slides = any(isinstance(slide, dict) and slide.get('use_background_image')
-                             for slide in self.service_item.slides)
-        if not has_pdf_slides:
-            return
-        enabled = bool(self.settings.value('presentations/pdf transitions'))
-        effect = self._get_transition_type_value(self.settings.value('presentations/pdf transition type'))
-        speed_seconds = self._get_pdf_transition_speed_seconds(self.settings.value('presentations/pdf transition speed'))
-        easing = self._get_pdf_transition_easing_type(self.settings.value('presentations/pdf transition easing'))
-        self.service_item.pdf_transition_settings = {
-            'enabled': enabled,
-            'effect': effect,
-            'speed_seconds': speed_seconds,
-            'easing': easing,
-            'type': effect,
-            'speed': self._get_transition_speed_value(self.settings.value('presentations/pdf transition speed'))
-        }
-        for slide in self.service_item.slides:
-            if isinstance(slide, dict) and slide.get('use_background_image'):
-                slide['pdf_transition_enabled'] = enabled
-                slide['pdf_transition_effect'] = effect
-                slide['pdf_transition_speed_seconds'] = speed_seconds
-                slide['pdf_transition_easing'] = easing
-        displays_to_update = []
-        if getattr(self, 'preview_display', None):
-            displays_to_update.append(self.preview_display)
-        displays_to_update.extend(self.displays)
-        payload = {
-            'enabled': enabled,
-            'effect': effect,
-            'speedSeconds': speed_seconds,
-            'easing': easing
-        }
-        for display in displays_to_update:
-            if display and getattr(display, '_is_initialised', False):
-                display.run_in_display('updatePdfSlideTransitions', payload)
-
-    @staticmethod
-    def _get_pdf_transition_speed_seconds(value):
-        speed_lookup = {
-            TransitionSpeed.Fast: 0.4,
-            TransitionSpeed.Normal: 0.8,
-            TransitionSpeed.Slow: 1.2,
-            'fast': 0.4,
-            'normal': 0.8,
-            'slow': 1.2
-        }
-        if isinstance(value, bool):
-            return 0.8
-        if value in speed_lookup:
-            return speed_lookup[value]
-        if isinstance(value, str):
-            lowered = value.strip().lower()
-            if lowered in speed_lookup:
-                return speed_lookup[lowered]
-            try:
-                value = float(value)
-            except ValueError:
-                return 0.8
-        try:
-            value = float(value)
-        except (TypeError, ValueError):
-            return 0.8
-        return max(0.1, value)
-
-    @staticmethod
-    def _get_pdf_transition_easing_type(value):
-        valid_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
-        if isinstance(value, str):
-            normalised = value.strip().lower()
-            if normalised in valid_types:
-                return normalised
-        return 'balanced'
-
     def _process_item(self, service_item, slide_no, is_reloading=False):
         """
         Loads a ServiceItem into the system from ServiceManager. Display the slide number passed.
@@ -1379,21 +1344,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             hide_mode = None
         self.log_debug('set_hide_mode {text}'.format(text=hide_mode))
         self._current_hide_mode = hide_mode
-        # Update ui buttons
-        _hide_mode_actions = {
-            None: self.show_screen,
-            HideMode.Blank: self.blank_screen,
-            HideMode.Theme: self.theme_screen,
-            HideMode.Logo: self.logo_screen,
-            HideMode.Screen: self.desktop_screen,
-        }
-        self.hide_menu.setDefaultAction(_hide_mode_actions[hide_mode])
         self.settings.setValue('core/screen blank', hide_mode is not None)
-        self.show_screen.setChecked(hide_mode is None)
-        self.blank_screen.setChecked(hide_mode == HideMode.Blank)
-        self.theme_screen.setChecked(hide_mode == HideMode.Theme)
-        self.logo_screen.setChecked(hide_mode == HideMode.Logo)
-        self.desktop_screen.setChecked(hide_mode == HideMode.Screen)
+        self._sync_live_hide_action_state(self.service_item is not None)
         # Update plugin display
         if self.service_item is not None:
             if hide_mode:
@@ -1421,18 +1373,28 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         return True
 
-    def _update_desktop_hide_action_state(self):
+    def _update_desktop_hide_action_state(self, has_item=True):
         """
         Enable or disable "Show Desktop" actions based on current platform/settings.
         """
         if not self.is_live:
             return
-        enabled = self.is_desktop_hide_available()
-        self.desktop_screen.setEnabled(enabled)
-        self.desktop_screen.setVisible(enabled)
-        self.desktop_screen_button.setEnabled(enabled)
-        self.desktop_screen_button.setVisible(enabled)
-        if not enabled and self._current_hide_mode == HideMode.Screen:
+        # Desktop hide is only available when the platform supports it and the main
+        # window 'Display output' is currently enabled (checked). If the View menu
+        # has display output unselected, 'Show Desktop' should be disabled.
+        desktop_available = self.is_desktop_hide_available()
+        view_output_checked = True
+        view_output_enabled = True
+        if getattr(self, 'main_window', None) and hasattr(self.main_window, 'view_display_output_item'):
+            view_display_output_item = self.main_window.view_display_output_item
+            view_output_checked = view_display_output_item.isChecked()
+            view_output_enabled = view_display_output_item.isEnabled()
+        enabled = has_item and desktop_available and view_output_enabled and view_output_checked
+        if hasattr(self, 'desktop_screen'):
+            self.desktop_screen.setEnabled(enabled)
+        if hasattr(self, 'toolbar'):
+            self.toolbar.set_widget_enabled('desktop_screen_button', enabled)
+        if not enabled and getattr(self, '_current_hide_mode', None) == HideMode.Screen:
             self.set_hide_mode(None)
 
     def on_slide_selected(self):

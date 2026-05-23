@@ -27,6 +27,7 @@ import datetime
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.platform import is_macosx
 from openlp.core.lib.ui import create_button, create_button_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.version import get_version
@@ -77,6 +78,8 @@ class AboutForm(QtWidgets.QDialog):
         self.base_layout.addWidget(self.content_widget, 1)
 
         self.about_notebook = QtWidgets.QTabWidget(self)
+        if is_macosx():
+            self.about_notebook.setDocumentMode(True)
         self.about_notebook.setObjectName('about_notebook')
         self.about_tab = QtWidgets.QWidget()
         self.about_tab.setObjectName('about_tab')

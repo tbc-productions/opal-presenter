@@ -13,7 +13,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
         <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
 {error}</source>
-        <translation>Ett oväntat fel inträffade under importen av SWORD-bibel, vänligen rapportera detta fel till utvecklarna av OpenLP.
+        <translation>Ett oväntat fel inträffade under importen av SWORD-bibel, vänligen rapportera detta fel till utvecklarna av OpenLP+.
 {error}</translation>
     </message>
 </context>
@@ -650,7 +650,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Är du säker på att du vill ta bort bibeln &quot;{bible}&quot; från OpenLP?
+        <translation>Är du säker på att du vill ta bort bibeln &quot;{bible}&quot; från OpenLP+?
 
 För att bibeln ska gå att använda igen måste den importeras på nytt.</translation>
     </message>
@@ -723,7 +723,7 @@ Bara verserna som finns i båda biblarna kommer att visas.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>Proxyservern {proxy} hittades i bibeln {name}.&lt;br&gt;Vill du sätta denna som proxy för OpenLP?</translation>
+        <translation>Proxyservern {proxy} hittades i bibeln {name}.&lt;br&gt;Vill du sätta denna som proxy för OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -885,6 +885,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>Sök automatiskt under inmatning (Textsökning måste innehålla
 minst {count} tecken och ett mellanslag för prestandan)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>
@@ -1041,7 +1065,7 @@ minst {count} tecken och ett mellanslag för prestandan)</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP kan inte avgöra den här bibelöversättningens språk. Välj språk från listan nedan.</translation>
+        <translation>OpenLP+ kan inte avgöra den här bibelöversättningens språk. Välj språk från listan nedan.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1437,7 +1461,7 @@ Det går inte att anpassa boknamnen.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>För att kunna använda anpassade boknamn måste &quot;Bibelspråk&quot; vara valt under fliken &quot;Metadata&quot; eller, om &quot;Globala inställningar&quot; är valt, på bibelsidan i OpenLP-inställningarna.</translation>
+        <translation>För att kunna använda anpassade boknamn måste &quot;Bibelspråk&quot; vara valt under fliken &quot;Metadata&quot; eller, om &quot;Globala inställningar&quot; är valt, på bibelsidan i OpenLP+-inställningarna.</translation>
     </message>
 </context>
 <context>
@@ -1860,7 +1884,7 @@ Vill du lägga till dom andra bilderna ändå?</translation>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
         <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Bildmodul&lt;/strong&gt;&lt;br /&gt;Bildmodulen erbjuder visning av bilder.&lt;br /&gt;En av funktionerna i modulen är möjligheten att gruppera bilder i körschemat, vilket gör visning av flera bilder enklare. Modulen kan även använda OpenLP:s funktion för &quot;tidsstyrd bildväxling&quot; för att skapa ett bildspel som rullar automatiskt. Dessutom kan bilder från modulen användas för att ersätta det aktuella temats bakgrund, så att textbaserade sidor som till exempel sånger visas med den valda bilden som bakgrund i stället för temats bakgrund.</translation>
+        <translation>&lt;strong&gt;Bildmodul&lt;/strong&gt;&lt;br /&gt;Bildmodulen erbjuder visning av bilder.&lt;br /&gt;En av funktionerna i modulen är möjligheten att gruppera bilder i körschemat, vilket gör visning av flera bilder enklare. Modulen kan även använda OpenLP+:s funktion för &quot;tidsstyrd bildväxling&quot; för att skapa ett bildspel som rullar automatiskt. Dessutom kan bilder från modulen användas för att ersätta det aktuella temats bakgrund, så att textbaserade sidor som till exempel sånger visas med den valda bilden som bakgrund i stället för temats bakgrund.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -3009,7 +3033,7 @@ Filtillägget stöds inte</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Inte en giltig OpenLP 2 sång-databas</translation>
+        <translation>Inte en giltig OpenLP+ 2 sång-databas</translation>
     </message>
 </context>
 <context>
@@ -3172,7 +3196,7 @@ Filtillägget stöds inte</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Vänligen starta om OpenLP för att aktivera dina nya språkinställningar.</translation>
+        <translation>Vänligen starta om OpenLP+ för att aktivera dina nya språkinställningar.</translation>
     </message>
 </context>
 <context>
@@ -3572,18 +3596,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
         <source>OpenLP Song Database</source>
-        <translation>OpenLP sångdatabas</translation>
+        <translation>OpenLP+ sångdatabas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>OpenLP körs redan på den här maskinen.
+        <translation>OpenLP+ körs redan på den här maskinen.
 Stäng den här instansen.</translation>
     </message>
     <message>
@@ -6033,7 +6057,7 @@ Stäng den här instansen.</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Ignorera gjorda ändringar och återgå till OpenLP</translation>
+        <translation>Ignorera gjorda ändringar och återgå till OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6048,7 +6072,7 @@ Stäng den här instansen.</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Spara ändringar och återgå till OpenLP</translation>
+        <translation>Spara ändringar och återgå till OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6456,7 +6480,7 @@ Do you want to reset to the default data location? If not, OpenLP will be closed
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>OpenLP har uppgraderats. Vill du skapa
+        <translation>OpenLP+ har uppgraderats. Vill du skapa
 en säkerhetskopia av den gamla datamappen?</translation>
     </message>
     <message>
@@ -6508,7 +6532,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
         <source>OpenLP Backup</source>
-        <translation>OpenLP säkerhetskopiering</translation>
+        <translation>OpenLP+ säkerhetskopiering</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6539,7 +6563,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Konfigurera OpenLP</translation>
+        <translation>Konfigurera OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7175,7 +7199,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Läs i OpenLP-manualen för information om funktionen.</translation>
+        <translation>Läs i OpenLP+-manualen för information om funktionen.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7472,7 +7496,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Välj språk som du vill använda i OpenLP.</translation>
+        <translation>Välj språk som du vill använda i OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7695,7 +7719,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>OpenLP körschemafiler (*.osz *.oszl)</translation>
+        <translation>OpenLP+ körschemafiler (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7738,12 +7762,12 @@ Filerna kommer att tas bort från körschemat om du fortsätter och sparar.</tra
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
         <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>OpenLP körschemafiler - enkel (*.oszl);;</translation>
+        <translation>OpenLP+ körschemafiler - enkel (*.oszl);;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>OpenLP körschemafiler (*.osz)</translation>
+        <translation>OpenLP+ körschemafiler (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -7983,7 +8007,7 @@ Add some items to it then press Save</source>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>OpenLP-teman (*.otz)</translation>
+        <translation>OpenLP+-teman (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8337,12 +8361,12 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Sök efter uppdateringar till OpenLP</translation>
+        <translation>Sök efter uppdateringar till OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
         <source>Check for updates to OpenLP Remote UI</source>
-        <translation>Sök efter uppdateringar till OpenLP fjärrstyrning</translation>
+        <translation>Sök efter uppdateringar till OpenLP+ fjärrstyrning</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="211"/>
@@ -8559,7 +8583,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>Stäng OpenLP - Stänger av programmet.</translation>
+        <translation>Stäng OpenLP+ - Stänger av programmet.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8580,7 +8604,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Konfigurera OpenLP...</translation>
+        <translation>&amp;Konfigurera OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8716,7 +8740,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>Mer information om OpenLP.</translation>
+        <translation>Mer information om OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8828,7 +8852,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>Ny version av OpenLP</translation>
+        <translation>Ny version av OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8853,12 +8877,12 @@ To download this version, go to the Remote settings and click the Upgrade button
 Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Är du säker på att du vill köra Kom igång-guiden?
 
-Om du kör den här guiden kan din nuvarande konfiguration av OpenLP komma att ändras, sånger eventuellt läggas till din befintliga sånglista och standardtemat bytas.</translation>
+Om du kör den här guiden kan din nuvarande konfiguration av OpenLP+ komma att ändras, sånger eventuellt läggas till din befintliga sånglista och standardtemat bytas.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>OpenLPs huvudskärm släckt</translation>
+        <translation>OpenLP+s huvudskärm släckt</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8879,9 +8903,9 @@ Om du kör den här guiden kan din nuvarande konfiguration av OpenLP komma att �
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Är du säker på att du vill importera inställningar?
 
- Om du importerar inställningar görs bestående ändringar i din nuvarande OpenLP-konfiguration.
+ Om du importerar inställningar görs bestående ändringar i din nuvarande OpenLP+-konfiguration.
 
- Att importera inställningar kan leda till oväntade beteenden eller att OpenLP avslutas onormalt.</translation>
+ Att importera inställningar kan leda till oväntade beteenden eller att OpenLP+ avslutas onormalt.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8895,7 +8919,7 @@ Om du kör den här guiden kan din nuvarande konfiguration av OpenLP komma att �
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>OpenLP-inställningar (*.conf)</translation>
+        <translation>OpenLP+-inställningar (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
@@ -8909,14 +8933,14 @@ Processing has terminated and no changes have been made.</source>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Filen du valde verkar inte vara en giltig OpenLP-konfigurationsfil.
+        <translation>Filen du valde verkar inte vara en giltig OpenLP+-konfigurationsfil.
 
 Processen har avbrutits och inga ändringar gjordes.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP kommer nu att avslutas.  Importerade inställningar kommer att tillämpas nästa gång du startar OpenLP.</translation>
+        <translation>OpenLP+ kommer nu att avslutas.  Importerade inställningar kommer att tillämpas nästa gång du startar OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8936,17 +8960,17 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Avsluta OpenLP</translation>
+        <translation>Avsluta OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Är du säker på att du vill avsluta OpenLP?</translation>
+        <translation>Är du säker på att du vill avsluta OpenLP+?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>A&amp;vsluta OpenLP</translation>
+        <translation>A&amp;vsluta OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -8977,14 +9001,14 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Kopierar OpenLP-data till ny plats för datakatalogen - {path} - Vänta tills kopieringen är avslutad</translation>
+        <translation>Kopierar OpenLP+-data till ny plats för datakatalogen - {path} - Vänta tills kopieringen är avslutad</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Kopiering av OpenLP:s datakatalog misslyckades
+        <translation>Kopiering av OpenLP+:s datakatalog misslyckades
 
 {err}</translation>
     </message>
@@ -9197,7 +9221,7 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Vänta medan OpenLP ställs in och din data laddas ner.</translation>
+        <translation>Vänta medan OpenLP+ ställs in och din data laddas ner.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9207,22 +9231,22 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Nedladdningen färdig. Klicka på knappen &apos;{finish_button}&apos; för att återvända till OpenLP.</translation>
+        <translation>Nedladdningen färdig. Klicka på knappen &apos;{finish_button}&apos; för att återvända till OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Nedladdningen färdig. Klicka på knappen &apos;{finish_button}&apos; för att starta OpenLP.</translation>
+        <translation>Nedladdningen färdig. Klicka på knappen &apos;{finish_button}&apos; för att starta OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
         <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Klicka på knappen &apos;{finish_button}&apos; för att återvända till OpenLP.</translation>
+        <translation>Klicka på knappen &apos;{finish_button}&apos; för att återvända till OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
         <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Klicka på knappen &apos;{finish_button}&apos; för att starta OpenLP.</translation>
+        <translation>Klicka på knappen &apos;{finish_button}&apos; för att starta OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
@@ -9313,7 +9337,7 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Vänta medan OpenLP laddar ner resursindexfilen...</translation>
+        <translation>Vänta medan OpenLP+ laddar ner resursindexfilen...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9333,7 +9357,7 @@ Processen har avbrutits och inga ändringar gjordes.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Choose the main display screen for OpenLP.</source>
-        <translation>Välj huvudskärm för OpenLP.</translation>
+        <translation>Välj huvudskärm för OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
@@ -9466,7 +9490,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Vänta medan resurser laddas ner och OpenLP konfigureras.</translation>
+        <translation>Vänta medan resurser laddas ner och OpenLP+ konfigureras.</translation>
     </message>
 </context>
 <context>
@@ -9594,7 +9618,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Avbryt ändring av plats för OpenLP:s datalagring.</translation>
+        <translation>Avbryt ändring av plats för OpenLP+:s datalagring.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9604,7 +9628,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Kopiera OpenLP:s data till den nya platsen.</translation>
+        <translation>Kopiera OpenLP+:s data till den nya platsen.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9619,7 +9643,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;VARNING:&lt;/strong&gt; Den nya datakatalogen innehåller OpenLP-datafiler. Dessa filer kommer att ersättas vid kopieringen.</translation>
+        <translation>&lt;strong&gt;VARNING:&lt;/strong&gt; Den nya datakatalogen innehåller OpenLP+-datafiler. Dessa filer kommer att ersättas vid kopieringen.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9692,11 +9716,11 @@ Existing files in this directory could be overwritten. The data directory will b
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Är du säker på att du vill ändra plats för OpenLP:s datakatalog till:
+        <translation>Är du säker på att du vill ändra plats för OpenLP+:s datakatalog till:
 
 {path}
 
-Datakatalogen kommer att ändras när OpenLP avslutas.</translation>
+Datakatalogen kommer att ändras när OpenLP+ avslutas.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9723,7 +9747,7 @@ Platsen du har valt
 
 {path}
 
-verkar innehålla OpenLP-data. Är du säker på att du vill ersätta de filerna med nuvarande data?</translation>
+verkar innehålla OpenLP+-data. Är du säker på att du vill ersätta de filerna med nuvarande data?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9733,7 +9757,7 @@ verkar innehålla OpenLP-data. Är du säker på att du vill ersätta de filerna
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Den här ändringen börjar gälla när OpenLP har startats om.</translation>
+        <translation>Den här ändringen börjar gälla när OpenLP+ har startats om.</translation>
     </message>
 </context>
 <context>
@@ -9782,7 +9806,7 @@ verkar innehålla OpenLP-data. Är du säker på att du vill ersätta de filerna
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Den här ändringen börjar gälla när OpenLP har startats om.</translation>
+        <translation>Den här ändringen börjar gälla när OpenLP+ har startats om.</translation>
     </message>
 </context>
 <context>
@@ -9967,7 +9991,7 @@ verkar innehålla OpenLP-data. Är du säker på att du vill ersätta de filerna
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP kan inte ladda databasen.
+        <translation>OpenLP+ kan inte ladda databasen.
 
 Databas: {db}</translation>
     </message>
@@ -9984,7 +10008,7 @@ Databas: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Databasen som skulle laddas är skapad i en nyare version av OpenLP. Databasen har version {db_ver}, och OpenLP kräver version {db_up}. Databasen kommer inte att laddas.
+        <translation>Databasen som skulle laddas är skapad i en nyare version av OpenLP+. Databasen har version {db_ver}, och OpenLP+ kräver version {db_up}. Databasen kommer inte att laddas.
 
 Databas: {db_name}</translation>
     </message>
@@ -10112,12 +10136,12 @@ Databas: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>OpenLyrics eller OpenLP 2 exporterad sång</translation>
+        <translation>OpenLyrics eller OpenLP+ 2 exporterad sång</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>OpenLP 2 databas</translation>
+        <translation>OpenLP+ 2 databas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10127,7 +10151,7 @@ Databas: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
         <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Import av vanliga dokument/presentationer har inaktiverats eftersom OpenLP inte hittar OpenOffice eller LibreOffice.</translation>
+        <translation>Import av vanliga dokument/presentationer har inaktiverats eftersom OpenLP+ inte hittar OpenOffice eller LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10282,7 +10306,7 @@ Databas: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
         <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Import av Songs of Fellowship har inaktiverats eftersom OpenLP inte kan hitta OpenOffice eller LibreOffice.</translation>
+        <translation>Import av Songs of Fellowship har inaktiverats eftersom OpenLP+ inte kan hitta OpenOffice eller LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>

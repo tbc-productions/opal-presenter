@@ -191,7 +191,17 @@ class BibleMediaItem(MediaManagerItem):
         self.search_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.search_edit = SearchEdit(self.search_tab, 'bibles')
         self.search_edit.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
-        self.search_layout.addRow(translate('BiblesPlugin.MediaItem', 'Find:'), self.search_edit)
+        self.search_row_widget = QtWidgets.QWidget(self.search_tab)
+        self.search_row_layout = QtWidgets.QHBoxLayout(self.search_row_widget)
+        self.search_row_layout.setContentsMargins(0, 0, 0, 0)
+        self.search_row_layout.setSpacing(6)
+        self.search_row_layout.addWidget(self.search_edit)
+        self.search_button = QtWidgets.QPushButton(self.search_tab)
+        self.search_button.setMinimumHeight(28)
+        self.search_button.setIcon(UiIcons().search)
+        self.search_button.setText('')
+        self.search_row_layout.addWidget(self.search_button)
+        self.search_layout.addRow(translate('BiblesPlugin.MediaItem', 'Find:'), self.search_row_widget)
         self.search_tab_bar.addTab(self.search_tab, translate('BiblesPlugin.MediaItem', 'Find'))
         # Add the Select tab.
         self.select_tab = QtWidgets.QWidget()
@@ -251,14 +261,14 @@ class BibleMediaItem(MediaManagerItem):
         self.search_button_layout.setSpacing(6)
         self.search_button_layout.addStretch()
         # Note: If we use QPushButton instead of the QToolButton, the icon will be larger than the Lock icon.
-        self.clear_button = QtWidgets.QPushButton()
+        self.clear_button = QtWidgets.QToolButton()
         self.clear_button.setIcon(self.clear_icon)
-        self.save_results_button = QtWidgets.QPushButton()
+        self.clear_button.setAutoRaise(True)
+        self.save_results_button = QtWidgets.QToolButton()
         self.save_results_button.setIcon(self.save_results_icon)
+        self.save_results_button.setAutoRaise(True)
         self.search_button_layout.addWidget(self.clear_button)
         self.search_button_layout.addWidget(self.save_results_button)
-        self.search_button = QtWidgets.QPushButton(self)
-        self.search_button_layout.addWidget(self.search_button)
         self.search_button_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                             QtWidgets.QSizePolicy.Policy.Fixed)
         header_layout.addWidget(self.search_button_widget)
@@ -268,19 +278,17 @@ class BibleMediaItem(MediaManagerItem):
         self.results_view_tab.setCurrentIndex(ResultsTab.Search)
         self.results_view_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                             QtWidgets.QSizePolicy.Policy.Fixed)
-        header_layout.addSpacing(4)
         self.results_view_tab_container = QtWidgets.QWidget(self)
         self.results_view_tab_container_layout = QtWidgets.QHBoxLayout(self.results_view_tab_container)
-        self.results_view_tab_container_layout.setContentsMargins(8, 0, 8, 0)
+        self.results_view_tab_container_layout.setContentsMargins(0, 0, 0, 0)
         self.results_view_tab_container_layout.setSpacing(0)
         self.results_view_tab_container_layout.addWidget(self.results_view_tab)
         header_layout.addWidget(self.results_view_tab_container)
-        header_layout.addSpacing(4)
 
     def setup_ui(self):
         super().setup_ui()
         # Let the tab bars span the full library width in the Bibles panel.
-        self.panel_layout.setContentsMargins(0, 0, 0, 8)
+        self.panel_layout.setContentsMargins(0, 0, 0, 0)
         # Keep the header compact and let the results list consume available height.
         self.panel_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         self.page_layout.setStretchFactor(self.panel_widget, 0)
@@ -330,7 +338,7 @@ class BibleMediaItem(MediaManagerItem):
         self.clear_button.setToolTip(translate('BiblesPlugin.MediaItem', 'Clear the results on the current tab.'))
         self.save_results_button.setToolTip(
             translate('BiblesPlugin.MediaItem', 'Add the search results to the saved list.'))
-        self.search_button.setText(UiStrings().Search)
+        self.search_button.setToolTip(UiStrings().Search)
 
     def on_focus(self):
         """

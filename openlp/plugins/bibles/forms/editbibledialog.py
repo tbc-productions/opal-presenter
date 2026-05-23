@@ -23,6 +23,7 @@ from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.enum import LanguageSelection
 from openlp.core.common.i18n import translate
+from openlp.core.common.platform import is_macosx
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
 from openlp.plugins.bibles.lib import BibleStrings
@@ -40,6 +41,8 @@ class Ui_EditBibleDialog(object):
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
         self.dialog_layout.setObjectName('dialog_layout')
         self.bible_tab_widget = QtWidgets.QTabWidget(edit_bible_dialog)
+        if is_macosx():
+            self.bible_tab_widget.setDocumentMode(True)
         self.bible_tab_widget.setObjectName('BibleTabWidget')
         # Meta tab
         self.meta_tab = QtWidgets.QWidget()

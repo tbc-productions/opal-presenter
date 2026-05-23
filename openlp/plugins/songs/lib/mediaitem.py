@@ -193,6 +193,7 @@ class SongMediaItem(MediaManagerItem):
         self.favourite_toggle_button.setIcon(UiIcons().favourite)
         self.favourite_toggle_button.setCheckable(True)
         self.favourite_toggle_button.setChecked(self.settings.value('songs/favourites_toggled'))
+        self.favourite_toggle_button.setFlat(True)
         self.search_button_layout.insertWidget(1, self.favourite_toggle_button)
         # Signals and slots
         Registry().register_function('songs_load_list', self.on_song_list_load)

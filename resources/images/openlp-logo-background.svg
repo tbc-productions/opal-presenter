@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="bg_base" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" style="stop-color:#142c5c;stop-opacity:1">
+        <animate attributeName="stop-color" values="#142c5c;#2a52a1;#142c5c" dur="15s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="1" style="stop-color:#081329;stop-opacity:1">
+        <animate attributeName="stop-color" values="#081329;#132c5e;#081329" dur="15s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+    
+    <radialGradient id="glow_top_right" cx="1" cy="0" r="0.9" gradientUnits="objectBoundingBox">
+      <stop offset="0" style="stop-color:#2b5ba8;stop-opacity:0.5">
+        <animate attributeName="stop-opacity" values="0.3;0.9;0.3" dur="10s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="1" style="stop-color:#2b5ba8;stop-opacity:0"/>
+    </radialGradient>
+
+    <radialGradient id="glow_bottom_left" cx="0" cy="1" r="0.7" gradientUnits="objectBoundingBox">
+      <stop offset="0" style="stop-color:#1e468c;stop-opacity:0.6">
+        <animate attributeName="stop-opacity" values="0.4;1.0;0.4" dur="13s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="1" style="stop-color:#1e468c;stop-opacity:0"/>
+    </radialGradient>
+
+    <linearGradient id="watermark_grad" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" style="stop-color:#ffffff;stop-opacity:0.12"/>
+      <stop offset="1" style="stop-color:#ffffff;stop-opacity:0.02"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1920" height="1080" style="fill:url(#bg_base);"/>
+  <rect x="0" y="0" width="1920" height="1080" style="fill:url(#glow_top_right);"/>
+  <rect x="0" y="0" width="1920" height="1080" style="fill:url(#glow_bottom_left);"/>
+  <g transform="translate(200, -700) scale(1.5)">
+    <path d="M943.793,69.308c-483.106,0 -874.466,391.697 -874.466,874.229c0,482.532 391.36,874.229 874.466,874.229c483.106,0 874.466,-391.697 874.466,-874.229c0,-482.532 -391.36,-874.229 -874.466,-874.229Zm-2.659,73.111c442.33,0 801.336,358.908 801.336,801.118c0,65.578 -7.978,130.713 -23.934,194.076l-558.896,-447.97l-576.625,-462.592c111.247,-55.83 233.575,-84.631 358.119,-84.631Zm-561.112,229.524l702.942,417.84l569.09,338.526l-571.749,-281.809l-779.175,-384.608c23.934,-31.903 50.527,-62.034 78.893,-89.949Zm-195.459,307.066l844.328,280.923l582.83,194.076l-582.83,-144.449l-874.91,-216.231c7.091,-38.993 17.285,-77.099 30.582,-114.319Zm-39.446,359.794l859.84,92.164l602.775,64.692l-621.39,-17.724l-818.621,-23.484c-10.194,-37.663 -17.729,-76.656 -22.604,-115.648Zm1486.548,194.519l-659.063,121.851l-633.8,117.42c-25.707,-29.244 -49.64,-60.704 -70.915,-93.493l723.773,-77.099l640.005,-68.68Zm49.64,18.61c-170.195,408.535 -639.562,602.168 -1048.207,431.576c-35.457,-14.622 -70.028,-32.346 -102.826,-51.842l476.458,-157.299l674.576,-222.434Z" style="fill:url(#watermark_grad);" />
+  </g>
+</svg>

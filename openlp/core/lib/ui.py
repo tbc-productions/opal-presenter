@@ -27,7 +27,6 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.actions import ActionList
 from openlp.core.common.i18n import UiStrings, translate
-from openlp.core.common.platform import is_macosx
 from openlp.core.common.registry import Registry
 from openlp.core.lib import build_icon
 from openlp.core.ui.icons import UiIcons
@@ -348,8 +347,6 @@ def create_action(parent, name, **kwargs):
     """
     action = QtGui.QAction(parent)
     action.setObjectName(name)
-    if is_macosx():
-        action.setIconVisibleInMenu(False)
     if kwargs.get('text'):
         action.setText(kwargs.pop('text'))
     if kwargs.get('icon'):

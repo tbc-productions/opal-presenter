@@ -128,64 +128,21 @@ def test_not_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, dis
     assert display_window.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow) is False
 
 
-def test_should_force_macos_fullscreen_when_always_on_top_enabled(display_window_env, mock_settings):
-    """
-    Test that native macOS fullscreen is only forced for live display windows when enabled in settings.
-    """
-    # GIVEN: A display window representing the live output and always-on-top enabled
-    display_window = DisplayWindow()
-    display_window.is_display = True
-
-    def get_setting_value(key):
-        if key == 'core/always on top':
-            return True
-        return False
-
-    mock_settings.value.side_effect = get_setting_value
-
-    # WHEN: Checking whether native fullscreen should be forced
-    result = display_window._should_force_macos_fullscreen()
-
-    # THEN: The fullscreen override should be enabled
-    assert result is True
-
-
 @patch('openlp.core.display.window.is_macosx')
-def test_auto_show_macos_always_on_top_uses_fullscreen(mocked_is_macosx, display_window_env, mock_settings):
+def test_auto_show_macos_always_uses_show(mocked_is_macosx, display_window_env, mock_settings):
     """
-    Test that macOS uses native fullscreen when always-on-top mode is active.
+    Test that macOS always uses windowed show mode, never native fullscreen.
     """
-    # GIVEN: A macOS display window configured to force native fullscreen
+    # GIVEN: A macOS display window
     mocked_is_macosx.return_value = True
     display_window = DisplayWindow()
     display_window.show = MagicMock()
     display_window.showFullScreen = MagicMock()
-    display_window._should_force_macos_fullscreen = MagicMock(return_value=True)
 
     # WHEN: auto_show is called without custom geometry
     display_window.auto_show(False)
 
-    # THEN: Native fullscreen should be used
-    display_window.showFullScreen.assert_called_once()
-    display_window.show.assert_not_called()
-
-
-@patch('openlp.core.display.window.is_macosx')
-def test_auto_show_macos_default_uses_show(mocked_is_macosx, display_window_env, mock_settings):
-    """
-    Test that macOS keeps using windowed show mode unless always-on-top mode is active.
-    """
-    # GIVEN: A macOS display window with default fullscreen behaviour
-    mocked_is_macosx.return_value = True
-    display_window = DisplayWindow()
-    display_window.show = MagicMock()
-    display_window.showFullScreen = MagicMock()
-    display_window._should_force_macos_fullscreen = MagicMock(return_value=False)
-
-    # WHEN: auto_show is called without custom geometry
-    display_window.auto_show(False)
-
-    # THEN: Windowed show mode should be used
+    # THEN: Windowed show mode should always be used on macOS
     display_window.show.assert_called_once()
     display_window.showFullScreen.assert_not_called()
 

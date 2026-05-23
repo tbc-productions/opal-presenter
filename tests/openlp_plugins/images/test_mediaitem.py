@@ -229,9 +229,6 @@ def test_generate_slide_data_default_theme(media_item):
     Registry().get('settings').value = MagicMock(side_effect=lambda key: {
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
-        'images/transitions': False,
-        'images/transition type': TransitionType.Fade,
-        'images/transition speed': TransitionSpeed.Normal
     }.get(key))
 
     # WHEN: generate_slide_data is called
@@ -257,9 +254,6 @@ def test_generate_slide_data_custom_theme(media_item):
     Registry().get('settings').value = MagicMock(side_effect=lambda key: {
         'images/background mode': ImageThemeMode.CustomTheme,
         'images/theme': 'theme_name',
-        'images/transitions': True,
-        'images/transition type': TransitionType.Zoom,
-        'images/transition speed': TransitionSpeed.Slow
     }.get(key))
 
     # WHEN: generate_slide_data is called
@@ -269,10 +263,35 @@ def test_generate_slide_data_custom_theme(media_item):
     mocked_service_item.add_capability.assert_any_call(ItemCapabilities.ProvidesOwnTheme)
     assert mocked_service_item.theme == 'theme_name'
     assert mocked_service_item.slide_transition_settings == {
-        'enabled': True,
-        'type': TransitionType.Zoom,
-        'speed': TransitionSpeed.Slow
+        'enabled': False,
+        'type': TransitionType.Fade,
+        'speed': TransitionSpeed.Normal
     }
+
+
+def test_generate_slide_data_preserves_existing_title(media_item):
+    """
+    Test that adding an image to an existing service item does not change its title.
+    """
+    # GIVEN: A mocked service item with an existing title and a selected image item
+    mocked_service_item = MagicMock()
+    mocked_service_item.title = 'Existing service title'
+    image_item = MagicMock(file_path='path/to/image.jpg')
+    selected_item = MagicMock()
+    selected_item.text.return_value = 'Image title'
+    selected_item.data.return_value = image_item
+    media_item.list_view = MagicMock()
+    media_item.list_view.selectedItems.return_value = [selected_item]
+    Registry().get('settings').value = MagicMock(side_effect=lambda key: {
+        'images/background mode': ImageThemeMode.Black,
+        'images/theme': None,
+    }.get(key))
+
+    with patch('openlp.plugins.images.lib.mediaitem.Path.exists', return_value=True):
+        media_item.generate_slide_data(mocked_service_item)
+
+    # THEN: The existing service item title should be preserved
+    assert mocked_service_item.title == 'Existing service title'
 
 
 @patch('openlp.plugins.images.lib.mediaitem.check_item_selected')

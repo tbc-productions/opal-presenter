@@ -16,6 +16,7 @@
   </qresource>
   <qresource prefix="graphics">
     <file>openlp-splash-screen.png</file>
+    <file>openlp-logo-background.svg</file>
   </qresource>
   <qresource prefix="imports">
     </qresource>

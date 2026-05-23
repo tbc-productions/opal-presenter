@@ -100,6 +100,32 @@ class Ui_MainWindow(object):
         self.main_content_layout.setContentsMargins(0, 0, 0, 0)
         self.main_content_layout.setObjectName('main_content_layout')
         main_window.setCentralWidget(self.main_content)
+        show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
+        if show_layout_preset_tabs is None:
+            show_layout_preset_tabs = True
+        self.layout_preset_toolbar = QtWidgets.QToolBar(main_window)
+        self.layout_preset_toolbar.setObjectName('layout_preset_toolbar')
+        self.layout_preset_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        self.layout_preset_toolbar.setMovable(False)
+        self.layout_preset_toolbar.setFloatable(False)
+        self.layout_preset_toolbar.setIconSize(QtCore.QSize(1, 1))
+        main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.layout_preset_toolbar)
+        self.layout_preset_tab_bar = QtWidgets.QTabBar(self.layout_preset_toolbar)
+        self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')
+        self.layout_preset_tab_bar.setShape(QtWidgets.QTabBar.Shape.RoundedWest)
+        if is_macosx():
+            self.layout_preset_tab_bar.setDocumentMode(True)
+        self.layout_preset_tab_bar.setDrawBase(False)
+        self.layout_preset_tab_bar.setMovable(False)
+        self.layout_preset_tab_bar.setExpanding(True)
+        self.layout_preset_tab_bar.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed,
+            QtWidgets.QSizePolicy.Policy.Expanding)
+        self.layout_preset_tab_bar.addTab('')
+        self.layout_preset_tab_bar.addTab('')
+        self.layout_preset_tab_bar.addTab('')
+        self.layout_preset_toolbar.addWidget(self.layout_preset_tab_bar)
+        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
         self.control_splitter = QtWidgets.QSplitter(self.main_content)
         self.control_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.control_splitter.setObjectName('control_splitter')
@@ -113,19 +139,19 @@ class Ui_MainWindow(object):
         self.file_menu = QtWidgets.QMenu(self.menu_bar)
         self.file_menu.setObjectName('fileMenu')
         self.recent_files_menu = QtWidgets.QMenu(self.file_menu)
+        self.recent_files_menu.setIcon(UiIcons().time)
         self.recent_files_menu.setObjectName('recentFilesMenu')
         self.file_import_menu = QtWidgets.QMenu(self.file_menu)
-        if not is_macosx():
-            self.file_import_menu.setIcon(UiIcons().download)
+        self.file_import_menu.setIcon(UiIcons().download)
         self.file_import_menu.setObjectName('file_import_menu')
         self.file_export_menu = QtWidgets.QMenu(self.file_menu)
-        if not is_macosx():
-            self.file_export_menu.setIcon(UiIcons().upload)
+        self.file_export_menu.setIcon(UiIcons().upload)
         self.file_export_menu.setObjectName('file_export_menu')
         # View Menu
         self.view_menu = QtWidgets.QMenu(self.menu_bar)
         self.view_menu.setObjectName('viewMenu')
         self.view_mode_menu = QtWidgets.QMenu(self.view_menu)
+        self.view_mode_menu.setIcon(UiIcons().dashboard)
         self.view_mode_menu.setObjectName('viewModeMenu')
         # Tools Menu
         self.tools_menu = QtWidgets.QMenu(self.menu_bar)
@@ -134,6 +160,7 @@ class Ui_MainWindow(object):
         self.settings_menu = QtWidgets.QMenu(self.menu_bar)
         self.settings_menu.setObjectName('settingsMenu')
         self.settings_language_menu = QtWidgets.QMenu(self.settings_menu)
+        self.settings_language_menu.setIcon(UiIcons().translation)
         self.settings_language_menu.setObjectName('settingsLanguageMenu')
         # Help Menu
         self.help_menu = QtWidgets.QMenu(self.menu_bar)
@@ -198,11 +225,11 @@ class Ui_MainWindow(object):
         self.file_save_item = create_action(main_window, 'fileSaveItem', icon=UiIcons().save,
                                             can_shortcuts=True, category=UiStrings().File,
                                             triggers=self.service_manager_contents.decide_save_method)
-        self.file_save_as_item = create_action(main_window, 'fileSaveAsItem', can_shortcuts=True,
-                                               category=UiStrings().File,
+        self.file_save_as_item = create_action(main_window, 'fileSaveAsItem', icon=UiIcons().save_plus,
+                                               can_shortcuts=True, category=UiStrings().File,
                                                triggers=self.service_manager_contents.save_file_as)
-        self.print_service_order_item = create_action(main_window, 'printServiceItem', can_shortcuts=True,
-                                                      category=UiStrings().File,
+        self.print_service_order_item = create_action(main_window, 'printServiceItem', icon=UiIcons().print,
+                                                      can_shortcuts=True, category=UiStrings().File,
                                                       triggers=lambda x: PrintServiceForm().exec())
         self.file_exit_item = create_action(main_window, 'fileExitItem', icon=UiIcons().exit,
                                             can_shortcuts=True,
@@ -210,17 +237,17 @@ class Ui_MainWindow(object):
         # Give QT Extra Hint that this is the Exit Menu Item
         self.file_exit_item.setMenuRole(QtGui.QAction.MenuRole.QuitRole)
         action_list.add_category(UiStrings().Import, CategoryOrder.standard_menu)
-        self.import_theme_item = create_action(main_window, 'importThemeItem', category=UiStrings().Import,
-                                               can_shortcuts=True)
+        self.import_theme_item = create_action(main_window, 'importThemeItem',
+                                               category=UiStrings().Import, can_shortcuts=True)
         self.import_language_item = create_action(main_window, 'importLanguageItem')
         action_list.add_category(UiStrings().Export, CategoryOrder.standard_menu)
-        self.export_theme_item = create_action(main_window, 'exportThemeItem', category=UiStrings().Export,
-                                               can_shortcuts=True)
+        self.export_theme_item = create_action(main_window, 'exportThemeItem',
+                                               category=UiStrings().Export, can_shortcuts=True)
         self.export_language_item = create_action(main_window, 'exportLanguageItem')
         action_list.add_category(UiStrings().View, CategoryOrder.standard_menu)
         # Projector items
-        self.import_projector_item = create_action(main_window, 'importProjectorItem', category=UiStrings().Import,
-                                                   can_shortcuts=False)
+        self.import_projector_item = create_action(main_window, 'importProjectorItem',
+                                                   category=UiStrings().Import, can_shortcuts=False)
         action_list.add_category(UiStrings().Import, CategoryOrder.standard_menu)
         self.view_projector_manager_item = create_action(main_window, 'viewProjectorManagerItem',
                                                          icon=UiIcons().projector,
@@ -229,7 +256,7 @@ class Ui_MainWindow(object):
                                                          category=UiStrings().View,
                                                          triggers=self.toggle_projector_manager)
         self.view_media_manager_item = create_action(main_window, 'viewMediaManagerItem',
-                                                     icon=UiIcons().box,
+                                                     icon=UiIcons().library,
                                                      checked=self.media_manager_dock.isVisible(),
                                                      can_shortcuts=True,
                                                      category=UiStrings().View, triggers=self.toggle_media_manager)
@@ -241,10 +268,12 @@ class Ui_MainWindow(object):
                                                        icon=UiIcons().live,
                                                        checked=self.service_manager_dock.isVisible(),
                                                        category=UiStrings().View, triggers=self.toggle_service_manager)
-        self.view_preview_panel = create_action(main_window, 'viewPreviewPanel', can_shortcuts=True,
-                                                checked=preview_visible, category=UiStrings().View,
+        self.view_preview_panel = create_action(main_window, 'viewPreviewPanel', icon=UiIcons().preview,
+                                                can_shortcuts=True, checked=preview_visible,
+                                                category=UiStrings().View,
                                                 triggers=self.set_preview_panel_visibility)
-        self.view_live_panel = create_action(main_window, 'viewLivePanel', can_shortcuts=True, checked=live_visible,
+        self.view_live_panel = create_action(main_window, 'viewLivePanel', icon=UiIcons().live,
+                                             can_shortcuts=True, checked=live_visible,
                                              category=UiStrings().View, triggers=self.set_live_panel_visibility)
         self.view_display_output_item = create_action(
             main_window, 'viewDisplayOutputItem',
@@ -254,23 +283,32 @@ class Ui_MainWindow(object):
             context=QtCore.Qt.ShortcutContext.ApplicationShortcut,
             category=UiStrings().View,
             triggers=self.on_view_display_output_toggled)
-        self.lock_panel = create_action(main_window, 'lockPanel', can_shortcuts=True, checked=panel_locked,
-                                        category=UiStrings().View, triggers=self.set_lock_panel)
+        self.lock_panel = create_action(main_window, 'lockPanel', icon=UiIcons().lock, can_shortcuts=True,
+                                        checked=panel_locked, category=UiStrings().View,
+                                        triggers=self.set_lock_panel)
         action_list.add_category(UiStrings().ViewMode, CategoryOrder.standard_menu)
         self.mode_default_item = create_action(
-            main_window, 'modeDefaultItem', checked=False, category=UiStrings().ViewMode, can_shortcuts=True)
-        self.mode_setup_item = create_action(main_window, 'modeSetupItem', checked=False, category=UiStrings().ViewMode,
-                                             can_shortcuts=True)
-        self.mode_live_item = create_action(main_window, 'modeLiveItem', checked=True, category=UiStrings().ViewMode,
-                                            can_shortcuts=True)
+            main_window, 'modeDefaultItem', checked=False,
+            category=UiStrings().ViewMode, can_shortcuts=True)
+        self.mode_setup_item = create_action(main_window, 'modeSetupItem',
+                                             checked=False, category=UiStrings().ViewMode, can_shortcuts=True)
+        self.mode_live_item = create_action(main_window, 'modeLiveItem', checked=True,
+                                            category=UiStrings().ViewMode, can_shortcuts=True)
         self.mode_group = QtGui.QActionGroup(main_window)
         self.mode_group.addAction(self.mode_default_item)
         self.mode_group.addAction(self.mode_setup_item)
         self.mode_group.addAction(self.mode_live_item)
         self.mode_default_item.setChecked(True)
         self.mode_reset_layout_presets_item = create_action(
-            main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode, can_shortcuts=False,
-            triggers=self.on_mode_reset_layout_presets_clicked)
+            main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode,
+            can_shortcuts=False, triggers=self.on_mode_reset_layout_presets_clicked)
+        self.view_layout_preset_tabs_item = create_action(
+            main_window,
+            'viewLayoutPresetTabsItem',
+            checked=show_layout_preset_tabs,
+            category=UiStrings().ViewMode,
+            can_shortcuts=False,
+            triggers=self.on_toggle_layout_preset_tabs)
         action_list.add_category(UiStrings().Tools, CategoryOrder.standard_menu)
         self.tools_add_tool_item = create_action(main_window,
                                                  'toolsAddToolItem', icon=UiIcons().add,
@@ -282,7 +320,8 @@ class Ui_MainWindow(object):
                                                      'toolsFirstTimeWizard', icon=UiIcons().undo,
                                                      category=UiStrings().Tools, can_shortcuts=True)
         self.update_theme_images = create_action(main_window,
-                                                 'updateThemeImages', category=UiStrings().Tools, can_shortcuts=True)
+                                                 'updateThemeImages', icon=UiIcons().refresh,
+                                                 category=UiStrings().Tools, can_shortcuts=True)
         action_list.add_category(UiStrings().Settings, CategoryOrder.standard_menu)
         self.settings_plugin_list_item = create_action(main_window,
                                                        'settingsPluginListItem',
@@ -302,11 +341,11 @@ class Ui_MainWindow(object):
             language_item = create_action(main_window, key, checked=qm_list[key] == saved_language)
             add_actions(self.language_group, [language_item])
         self.settings_shortcuts_item = create_action(main_window, 'settingsShortcutsItem',
-                                                     icon=UiIcons().shortcuts,
+                                                     icon=UiIcons().keyboard,
                                                      category=UiStrings().Settings, can_shortcuts=True)
         # Formatting Tags were also known as display tags.
         self.formatting_tag_item = create_action(main_window, 'displayTagItem',
-                                                 icon=UiIcons().edit, category=UiStrings().Settings,
+                                                 icon=UiIcons().theme, category=UiStrings().Settings,
                                                  can_shortcuts=True)
         self.settings_configure_item = create_action(main_window, 'settingsConfigureItem',
                                                      icon=UiIcons().settings, can_shortcuts=True,
@@ -334,7 +373,8 @@ class Ui_MainWindow(object):
         self.user_manual_item = create_action(main_window, 'userManualItem', icon=UiIcons().manual,
                                               can_shortcuts=True, category=UiStrings().Help,
                                               triggers=self.on_help_clicked)
-        self.web_site_item = create_action(main_window, 'webSiteItem', can_shortcuts=True, category=UiStrings().Help)
+        self.web_site_item = create_action(main_window, 'webSiteItem', icon=UiIcons().web, can_shortcuts=True,
+                                           category=UiStrings().Help)
         # Shortcuts not connected to buttons or menu entries.
         self.search_shortcut_action = create_action(main_window,
                                                     'searchShortcut', can_shortcuts=True,
@@ -356,7 +396,8 @@ class Ui_MainWindow(object):
                     self.file_import_menu.menuAction(), self.file_export_menu.menuAction(), None,
                     self.print_service_order_item, self.file_exit_item))
         add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item,
-                                          None, self.mode_reset_layout_presets_item))
+                                          None, self.view_layout_preset_tabs_item,
+                                          self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
                     self.view_projector_manager_item, self.view_service_manager_item, self.view_theme_manager_item,
                     None, self.view_preview_panel, self.view_live_panel, self.view_display_output_item, None,
@@ -515,14 +556,21 @@ class Ui_MainWindow(object):
         self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Show all'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
+        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow', 'Show all'))
         self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
+        self.layout_preset_tab_bar.setTabText(1, translate('OpenLP.MainWindow', 'Setup'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
+        self.layout_preset_tab_bar.setTabText(2, translate('OpenLP.MainWindow', 'Live'))
+        self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &tabs'))
+        self.view_layout_preset_tabs_item.setStatusTip(translate(
+            'OpenLP.MainWindow',
+            'Show or hide the vertical layout preset tabs on the left side of the window.'))
         self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
         self.mode_reset_layout_presets_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -580,6 +628,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.mode_default_item.triggered.connect(self.on_mode_default_item_clicked)
         self.mode_setup_item.triggered.connect(self.on_mode_setup_item_clicked)
         self.mode_live_item.triggered.connect(self.on_mode_live_item_clicked)
+        self.layout_preset_tab_bar.currentChanged.connect(self.on_layout_preset_tab_changed)
         # Media Manager
         self.media_tool_box.currentChanged.connect(self.on_media_tool_box_changed)
         self.application.set_busy_cursor()
@@ -646,6 +695,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             # Display a progress dialog with a message
             wait_dialog = QtWidgets.QProgressDialog(message, '', 0, 0, self)
             wait_dialog.setWindowTitle(title)
+            wait_dialog.setMinimumSize(300, 70)
             for window_flag in [QtCore.Qt.WindowType.WindowContextHelpButtonHint]:
                 wait_dialog.setWindowFlag(window_flag, False)
             wait_dialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -1171,6 +1221,44 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         self._activate_layout_preset('default')
 
+    @staticmethod
+    def _layout_preset_mode_to_tab_index(mode: str) -> int:
+        mode_to_index = {'default': 0, 'setup': 1, 'live': 2}
+        return mode_to_index.get(mode, 0)
+
+    @staticmethod
+    def _layout_preset_tab_index_to_mode(index: int) -> str | None:
+        index_to_mode = {0: 'default', 1: 'setup', 2: 'live'}
+        return index_to_mode.get(index)
+
+    def _sync_layout_preset_tab_from_settings(self) -> None:
+        if not hasattr(self, 'layout_preset_tab_bar'):
+            return
+        mode = self.settings.value('core/view mode')
+        index = self._layout_preset_mode_to_tab_index(mode)
+        signal_blocker = QtCore.QSignalBlocker(self.layout_preset_tab_bar)
+        self.layout_preset_tab_bar.setCurrentIndex(index)
+        del signal_blocker
+
+    def on_layout_preset_tab_changed(self, index: int) -> None:
+        """
+        Activate a named layout preset when the left preset tab selection changes.
+        """
+        mode = self._layout_preset_tab_index_to_mode(index)
+        if not mode:
+            return
+        if self.settings.value('core/view mode') == mode and self.settings.value('user interface/is preset layout'):
+            return
+        self._activate_layout_preset(mode)
+
+    def on_toggle_layout_preset_tabs(self, checked: bool) -> None:
+        """
+        Show or hide the left layout preset tabs and persist the user preference.
+        """
+        self.settings.setValue('user interface/show layout preset tabs', checked)
+        self.layout_preset_toolbar.setVisible(checked)
+        self.view_layout_preset_tabs_item.setChecked(checked)
+
     def on_mode_setup_item_clicked(self):
         """
         Put OpenLP into "Setup" view mode.
@@ -1512,6 +1600,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         elif mode == 'live':
             self.mode_default_item.setChecked(False)
             self.mode_setup_item.setChecked(False)
+        self._sync_layout_preset_tab_from_settings()
         self._schedule_left_column_dock_layout()
 
     def on_mode_reset_layout_presets_clicked(self) -> None:
@@ -1717,14 +1806,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
     def _reapply_left_column_dock_layout_setup(self) -> None:
         """
-        Setup preset: full-height Service | full-height Library + Themes (tabified), with
+        Setup preset: full-height Library + Themes (tabified) | full-height Service, with
         Preview over Live in the central column — three vertical bands (see View → Setup).
         """
         for dock in (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock):
             dock.setFloating(False)
             self.removeDockWidget(dock)
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
-        self.splitDockWidget(self.service_manager_dock, self.media_manager_dock,
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)
+        self.splitDockWidget(self.media_manager_dock, self.service_manager_dock,
                              QtCore.Qt.Orientation.Horizontal)
         self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
         self.media_manager_dock.raise_()
@@ -1757,8 +1846,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             lib_w = max(680, min(1200, int(width * 0.52)))
             try:
                 self.resizeDocks(
-                    [self.service_manager_dock, self.media_manager_dock],
-                    [svc_w, lib_w],
+                    [self.media_manager_dock, self.service_manager_dock],
+                    [lib_w, svc_w],
                     QtCore.Qt.Orientation.Horizontal)
             except (TypeError, AttributeError):
                 pass
@@ -1881,6 +1970,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 if not self._apply_preset_visibility_snapshot(snap):
                     self._apply_canonical_preset_visibility(mode)
                 self._sync_left_dock_menu_checks_from_settings()
+        show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
+        if show_layout_preset_tabs is None:
+            show_layout_preset_tabs = True
+        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
+        self.view_layout_preset_tabs_item.setChecked(show_layout_preset_tabs)
+        self._sync_layout_preset_tab_from_settings()
 
     def _window_position_is_valid(self, position: QtCore.QPoint, geometry: QtCore.QRect):
         """
@@ -1958,7 +2053,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             count += 1
             self.log_debug('Recent file name: {name}'.format(name=recent_path))
             action = create_action(self, '',
-                                   text='&{n} {name}'.format(n=count, name=recent_path.name),
+                                   text='&{n}. {name}'.format(n=count, name=recent_path.name),
                                    data=recent_path, triggers=self.service_manager_contents.on_recent_service_clicked)
             self.recent_files_menu.addAction(action)
             if count == recent_file_count:

@@ -79,6 +79,25 @@ body.is-desktop .pause-overlay {
   opacity: 0 !important;
 }
 
+/*
+  Keep the Reveal pause overlay (used to paint "Show Black") consistent
+  with every other hide/show animation. reveal.css ships with a fixed 1s
+  ease transition which otherwise makes the Black fade slower and ignore
+  the user-configured transition settings.
+*/
+body.transition .reveal .pause-overlay {
+  transition: opacity var(--item-transition-ms) var(--item-transition-easing),
+              visibility var(--item-transition-ms) var(--item-transition-easing) !important;
+}
+
+body:not(.transition) .reveal .pause-overlay {
+  transition: none !important;
+}
+
+body.disable-transitions .reveal .pause-overlay {
+  transition: none !important;
+}
+
 #logo-screen {
   position: absolute;
   inset: 0;
@@ -145,12 +164,47 @@ body.presentation-slide-transition .reveal.fade .slides > section > section:not(
   transition: opacity var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
+body.transition .reveal .slide-background {
+  transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
+}
+
+/* Per-slide presentation transitions (e.g. PDFs) take precedence over the
+   global item-transition speed. Without this order, body.transition's rule
+   wins on same specificity and PDFs always fade at the item-transition
+   duration regardless of the user's configured PDF transition speed. */
 body.presentation-slide-transition .reveal .slide-background {
   transition: all var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
-body.transition .reveal .slide-background {
-  transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
+/* Respect reveal's guards: no-transition on backgrounds (same-hash adjacent slides)
+   and data-background-transition=none (theme has no slide transitions) must win
+   over the body.transition item-transition rule above.
+
+   When the wrapper says none, only kill the transition if the slide-background
+   itself has no overriding per-slide data-background-transition. PDFs set
+   data-background-transition=fade per-slide even when the THEME has no
+   transitions (because PDFs have their own transition settings, independent
+   of the theme); without the :not() guard we'd kill those PDF fades too. */
+body.transition .reveal .backgrounds.no-transition .slide-background,
+body.presentation-slide-transition .reveal .backgrounds.no-transition .slide-background,
+body.transition .reveal[data-background-transition=none] .slide-background:not([data-background-transition]),
+body.transition .reveal[data-background-transition=none] .slide-background[data-background-transition=none],
+body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background:not([data-background-transition]),
+body.presentation-slide-transition .reveal[data-background-transition=none] .slide-background[data-background-transition=none] {
+  transition: none !important;
+}
+
+/* True cross-fade: with plus-lighter, outgoing + incoming alphas sum to 100%
+   at every point of the transition, instead of compositing via "over" which
+   leaves a visible dip where you can see through both images. mix-blend-mode
+   composites against the parent stacking context, so the .backgrounds wrapper
+   must isolate — otherwise the blend falls through to whatever's behind
+   .reveal (often a transparent body, which defeats the point). */
+.reveal[data-background-transition=fade] .backgrounds {
+  isolation: isolate;
+}
+.reveal[data-background-transition=fade] .backgrounds:not(.no-transition) .slide-background {
+  mix-blend-mode: plus-lighter;
 }
 
 .reveal .slides > section,

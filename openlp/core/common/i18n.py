@@ -271,7 +271,13 @@ class LanguageManager(object):
         language = str(language)
         if re.match(r'\[(.*)\]', language):
             LanguageManager.auto_language = True
-            language = QtCore.QLocale.system().name()[:2]
+            locale_name = QtCore.QLocale.system().name()
+            lang_path = str(AppLocation.get_directory(AppLocation.LanguageDir))
+            # Prefer the full locale (e.g. en_AU) over the language-only fallback (e.g. en)
+            if QtCore.QDir(lang_path).entryList([f'{locale_name}.qm'], QtCore.QDir.Filter.Files):
+                language = locale_name
+            else:
+                language = locale_name[:2]
         log.info(f"Language: '{language}' detected.")
         return language
 

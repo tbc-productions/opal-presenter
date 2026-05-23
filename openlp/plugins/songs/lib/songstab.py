@@ -23,6 +23,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.enum import SongFirstSlideMode
+from openlp.core.common.platform import is_macosx
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.plugins.songs.lib.db import AuthorType
 from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS, SECTION_KEYS_ORDERED, normalize_rgb_hex
@@ -108,6 +109,8 @@ class SongsTab(SettingsTab):
         self.footer_layout = QtWidgets.QVBoxLayout(self.footer_group_box)
         self.footer_layout.setObjectName('footer_layout')
         self.footer_tabs = QtWidgets.QTabWidget(self.footer_group_box)
+        if is_macosx():
+            self.footer_tabs.setDocumentMode(True)
         self.footer_template_page = QtWidgets.QWidget()
         self.footer_template_layout = QtWidgets.QVBoxLayout(self.footer_template_page)
         self.footer_edit_box = QtWidgets.QTextEdit(self.footer_template_page)

@@ -270,7 +270,7 @@ def sha256_file_hash(filename):
     """
     Returns the hashed output of sha256 on the file content using Python3 hashlib
 
-    This method allows PermissionError to bubble up, while supressing other exceptions
+    This method suppresses exceptions and returns None if the file cannot be hashed
 
     :param filename: Name of the file to hash
     :returns: str
@@ -284,8 +284,6 @@ def sha256_file_hash(filename):
             for chunk in iter(lambda: f.read(65536), b''):
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
-    except PermissionError:
-        raise
     except Exception:
         return None
 

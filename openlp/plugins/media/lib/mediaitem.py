@@ -237,15 +237,6 @@ class MediaMediaItem(FolderLibraryItem):
         Add custom actions to the context menu.
         """
         super().add_custom_context_actions()
-        create_widget_action(self.list_view, separator=True)
-        create_widget_action(
-            self.list_view,
-            text=UiStrings().AddFolder, icon=UiIcons().folder, triggers=self.on_add_folder_click)
-        create_widget_action(
-            self.list_view,
-            text=translate('MediaPlugin', 'Add new media'),
-            icon=UiIcons().open, triggers=self.on_file_click)
-        create_widget_action(self.list_view, separator=True)
 
     def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
                             **kwargs):

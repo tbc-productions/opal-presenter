@@ -40,7 +40,6 @@ from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, Hi
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder, is_serializable
 from openlp.core.common.path import files_to_paths, str_to_path
 from openlp.core.common.platform import is_linux, is_win, is_macosx
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui.style import UiThemes
 
 if is_win():
@@ -407,7 +406,7 @@ class Settings(QtCore.QSettings):
         'core/screen blank': False,
         'core/show splash': True,
         'core/logo background color': '#ffffff',
-        'core/logo file': Path(':/graphics/openlp-splash-screen.png'),
+        'core/logo file': Path(':/graphics/openlp-logo-background.svg'),
         'core/logo fit': 'contain',
         'core/logo hide on startup': False,
         'core/songselect password': '',
@@ -423,9 +422,6 @@ class Settings(QtCore.QSettings):
         'core/application version': '0.0',
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
-        'images/transitions': False,
-        'images/transition type': TransitionType.Fade,
-        'images/transition speed': TransitionSpeed.Normal,
         'images/db type': 'sqlite',
         'images/db username': '',
         'images/db password': '',
@@ -470,10 +466,6 @@ class Settings(QtCore.QSettings):
         'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint control window': QtCore.Qt.CheckState.Unchecked,
         'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,
-        'presentations/pdf transitions': False,
-        'presentations/pdf transition type': TransitionType.Fade,
-        'presentations/pdf transition speed': TransitionSpeed.Normal,
-        'presentations/pdf transition easing': 'balanced',
         'presentations/last directory': None,
         'presentations/db type': 'sqlite',
         'presentations/db username': '',
@@ -552,6 +544,7 @@ class Settings(QtCore.QSettings):
         'user interface/main window position': QtCore.QPoint(0, 0),
         'user interface/main window splitter geometry': QtCore.QByteArray(),
         'user interface/main window state': QtCore.QByteArray(),
+        'user interface/show layout preset tabs': True,
         # Per layout-preset window geometry (Show all / Setup / Live); empty until user customises.
         'user interface/preset layout/default/main window state': QtCore.QByteArray(),
         'user interface/preset layout/default/main window splitter geometry': QtCore.QByteArray(),

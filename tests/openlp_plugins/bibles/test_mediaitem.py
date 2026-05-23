@@ -762,6 +762,29 @@ def test_on_search_tab_bar_current_changed(media_item: BibleMediaItem, index: in
     media_item.on_focus.assert_called_once_with()
 
 
+def test_update_search_tab_bar_height_uses_frame_metric(media_item: BibleMediaItem):
+    """Test that the Bibles tabs use the widget frame metric in the height calculation."""
+    page = MagicMock()
+    page.contentsMargins.return_value = QtCore.QMargins(0, 3, 0, 4)
+    page.sizeHint.return_value = QtCore.QSize(100, 90)
+    tab_bar = MagicMock()
+    tab_bar.sizeHint.return_value = QtCore.QSize(100, 20)
+    style = MagicMock()
+    style.pixelMetric.return_value = 1
+    media_item.search_tab_bar = MagicMock()
+    media_item.search_tab_bar.widget.return_value = page
+    media_item.search_tab_bar.tabBar.return_value = tab_bar
+    media_item.search_tab_bar.style.return_value = style
+
+    media_item._update_search_tab_bar_height(0)
+
+    style.pixelMetric.assert_called_once_with(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth,
+                                              None,
+                                              media_item.search_tab_bar)
+    media_item.search_tab_bar.setMinimumHeight.assert_called_once_with(119)
+    media_item.search_tab_bar.setMaximumHeight.assert_called_once_with(119)
+
+
 @pytest.mark.parametrize('index, widget_name', [(ResultsTab.Saved, 'saved_results'),
                                                 (ResultsTab.Search, 'current_results')])
 def test_on_results_view_tab_current_changed_saved(media_item: BibleMediaItem, index: int, widget_name: str):

@@ -111,7 +111,7 @@ class CustomMediaItem(MediaManagerItem):
 
         """
         self.search_text_label.setText('{text}:'.format(text=UiStrings().Search))
-        self.search_text_button.setText(UiStrings().Search)
+        self.search_text_button.setToolTip(UiStrings().Search)
 
     def initialise(self):
         """
@@ -206,7 +206,7 @@ class CustomMediaItem(MediaManagerItem):
             if QtWidgets.QMessageBox.question(
                     self, UiStrings().ConfirmDelete,
                     translate('CustomPlugin.MediaItem',
-                              'Are you sure you want to delete the "{items:d}" '
+                              'Are you sure you want to delete the {items:d} '
                               'selected custom slide(s)?').format(items=len(items)),
                     defaultButton=QtWidgets.QMessageBox.StandardButton.Yes) == QtWidgets.QMessageBox.StandardButton.No:
                 return

@@ -27,7 +27,6 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
-from openlp.core.common.platform import is_macosx
 from openlp.core.common.registry import Registry
 from openlp.core.lib.ui import add_welcome_page
 from openlp.core.ui.icons import UiIcons
@@ -139,11 +138,7 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
         if (self.provide_help.__module__ != __name__):
             self.setOption(QtWidgets.QWizard.WizardOption.HaveHelpButton, True)
             self.helpRequested.connect(self.provide_help)
-        if is_macosx():
-            self.setPixmap(QtWidgets.QWizard.WizardPixmap.BackgroundPixmap,
-                           QtGui.QPixmap(':/wizards/openlp-osx-wizard.png'))
-        else:
-            self.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
+        self.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
         add_welcome_page(self, image)
         self.add_custom_pages()
         if self.with_progress_page:

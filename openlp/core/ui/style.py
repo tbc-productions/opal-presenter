@@ -500,6 +500,8 @@ def get_library_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
+    if is_macosx():
+        return ''
     if is_ui_theme(UiThemes.Automatic) or is_ui_theme(UiThemes.QDarkStyle):
         return ''
     if is_ui_theme(UiThemes.DefaultDark) or is_ui_theme_dark():

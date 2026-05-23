@@ -129,6 +129,7 @@ class SongsPlugin(Plugin):
         self.manager = DBManager('songs', init_schema, upgrade_mod=upgrade)
         Registry().register('songs_manager', self.manager)
         self.weight = -10
+        self.can_be_disabled = False
         self.icon_path = UiIcons().music
         self.icon = build_icon(self.icon_path)
         self.songselect_form = None
@@ -206,11 +207,11 @@ class SongsPlugin(Plugin):
         self.tools_menu = tools_menu
         self.song_tools_menu = QtWidgets.QMenu(tools_menu)
         self.song_tools_menu.setObjectName('song_tools_menu')
+        self.song_tools_menu.setIcon(UiIcons().music)
         self.song_tools_menu.setTitle(translate('SongsPlugin', 'Songs'))
         self.tools_reindex_item = create_action(
             tools_menu, 'toolsReindexItem',
             text=translate('SongsPlugin', '&Re-index Songs'),
-            icon=UiIcons().music,
             statustip=translate('SongsPlugin', 'Re-index the songs database to improve searching and ordering.'),
             triggers=self.on_tools_reindex_item_triggered)
         self.tools_find_duplicates = create_action(

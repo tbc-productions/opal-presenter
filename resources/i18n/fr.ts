@@ -13,7 +13,7 @@
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
         <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
 {error}</source>
-        <translation>Une erreur inattendue est survenue lors de l&apos;importe de la Bible SWORD. Merci de bien vouloir communiquer l&apos;erreur ci-dessous à l&apos;équipe de développement OpenLP.
+        <translation>Une erreur inattendue est survenue lors de l&apos;importe de la Bible SWORD. Merci de bien vouloir communiquer l&apos;erreur ci-dessous à l&apos;équipe de développement OpenLP+.
 {error}</translation>
     </message>
 </context>
@@ -650,7 +650,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Êtes-vous sûr de vouloir supprimer complètement la Bible « {bible} » d&apos;OpenLP ?
+        <translation>Êtes-vous sûr de vouloir supprimer complètement la Bible « {bible} » d&apos;OpenLP+ ?
 
 Vous devrez réimporter cette Bible pour l&apos;utiliser à nouveau.</translation>
     </message>
@@ -723,7 +723,7 @@ Seulement les versets trouvés dans les deux Bibles seront affichés.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>Le serveur mandataire {proxy} a été trouvé dans la bible {name}. Voulez-vous le définir comme serveur mandataire pour OpenLP ?</translation>
+        <translation>Le serveur mandataire {proxy} a été trouvé dans la bible {name}. Voulez-vous le définir comme serveur mandataire pour OpenLP+ ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -885,6 +885,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>Rechercher automatiquement lors de la saisie (la recherche de texte doit contenir un
 minimum de {count} caractères et un espace pour des raisons de performances)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>
@@ -1041,7 +1065,7 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP ne peut déterminer la langue de cette traduction de la Bible. Veillez sélectionner la langue dans la liste suivante.</translation>
+        <translation>OpenLP+ ne peut déterminer la langue de cette traduction de la Bible. Veillez sélectionner la langue dans la liste suivante.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1437,7 +1461,7 @@ Ce n&apos;est pas possible de personnaliser le nom des livres.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Pour utiliser les noms de livres personnalisés, &quot;Langue de bible&quot; doit être sélectionné à partir de l&apos;onglet Méta données ou, si &quot;Paramètres globales&quot; est sélectionné, dans la page Bible de la configuration d&apos;OpenLP.</translation>
+        <translation>Pour utiliser les noms de livres personnalisés, &quot;Langue de bible&quot; doit être sélectionné à partir de l&apos;onglet Méta données ou, si &quot;Paramètres globales&quot; est sélectionné, dans la page Bible de la configuration d&apos;OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -1601,7 +1625,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
         <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
-        <translation>Authentification échouée. Vérifiez vos informations d&apos;identification dans les paramètres OpenLP.</translation>
+        <translation>Authentification échouée. Vérifiez vos informations d&apos;identification dans les paramètres OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="289"/>
@@ -2693,7 +2717,7 @@ L&apos;extension du fichier n&apos;est pas supportée</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
         <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
-        <translation>Vous avez perdu le verrouillage du répertoire de données partagé OpenLP, qui a été réclamé par &quot;{user}&quot; sur &quot;{host}&quot; ! Vous devez fermer OpenLP immédiatement pour éviter la corruption des données ! Vous pouvez essayer de récupérer le verrouillage du répertoire de données en redémarrant OpenLP</translation>
+        <translation>Vous avez perdu le verrouillage du répertoire de données partagé OpenLP+, qui a été réclamé par &quot;{user}&quot; sur &quot;{host}&quot; ! Vous devez fermer OpenLP+ immédiatement pour éviter la corruption des données ! Vous pouvez essayer de récupérer le verrouillage du répertoire de données en redémarrant OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="148"/>
@@ -2703,7 +2727,7 @@ L&apos;extension du fichier n&apos;est pas supportée</translation>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
         <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
-        <translation>Le répertoire de données partagé OpenLP est utilisé par « {user} » sur « {host} ». Pour éviter la corruption des données, un seul utilisateur peut accéder aux données à la fois ! S&apos;il vous plait attendez quelques minutes et réessayez.</translation>
+        <translation>Le répertoire de données partagé OpenLP+ est utilisé par « {user} » sur « {host} ». Pour éviter la corruption des données, un seul utilisateur peut accéder aux données à la fois ! S&apos;il vous plait attendez quelques minutes et réessayez.</translation>
     </message>
 </context>
 <context>
@@ -3007,7 +3031,7 @@ L&apos;extension du fichier n&apos;est pas supportée</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
         <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
         <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Base de données de chant OpenLP 2 invalide.</translation>
+        <translation>Base de données de chant OpenLP+ 2 invalide.</translation>
     </message>
 </context>
 <context>
@@ -3189,7 +3213,7 @@ L&apos;extension du fichier n&apos;est pas supportée</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>La configuration de l&apos;écran a changé. OpenLP essaiera de sélectionner automatiquement un écran d&apos;affichage, mais vous devriez envisager de mettre à jour les paramètres de l&apos;écran.</translation>
+        <translation>La configuration de l&apos;écran a changé. OpenLP+ essaiera de sélectionner automatiquement un écran d&apos;affichage, mais vous devriez envisager de mettre à jour les paramètres de l&apos;écran.</translation>
     </message>
 </context>
 <context>
@@ -3570,18 +3594,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP</translation>
+        <translation>OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
         <source>OpenLP Song Database</source>
-        <translation>Base de Chants OpenLP</translation>
+        <translation>Base de Chants OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>OpenLP est déjà en cours d&apos;utilisation sur cette machine.
+        <translation>OpenLP+ est déjà en cours d&apos;utilisation sur cette machine.
 Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
@@ -6031,7 +6055,7 @@ Cette instance va s&apos;arrêter</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Ignorer les changements actuels et retourner à OpenLP</translation>
+        <translation>Ignorer les changements actuels et retourner à OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6046,7 +6070,7 @@ Cette instance va s&apos;arrêter</translation>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>Sauvegarder les changements et retourner à OpenLP</translation>
+        <translation>Sauvegarder les changements et retourner à OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6441,15 +6465,15 @@ The location of the data folder was previously changed from the OpenLP's default
 You may reset the data location back to the default location, or you can try to make the current location available.
 
 Do you want to reset to the default data location? If not, OpenLP will be closed so you can try to fix the problem.</source>
-        <translation>Le dossier de données OpenLP est introuvable dans :
+        <translation>Le dossier de données OpenLP+ est introuvable dans :
 
 {path}
 
-L&apos;emplacement du dossier de données a été précédemment modifié par rapport à l&apos;emplacement par défaut d&apos;OpenLP. Si les données ont été stockées sur un périphérique amovible, ce périphérique doit être mis à disposition.
+L&apos;emplacement du dossier de données a été précédemment modifié par rapport à l&apos;emplacement par défaut d&apos;OpenLP+. Si les données ont été stockées sur un périphérique amovible, ce périphérique doit être mis à disposition.
 
 Vous pouvez réinitialiser l&apos;emplacement des données à l&apos;emplacement par défaut ou essayer de rendre l&apos;emplacement actuel disponible.
 
-Voulez-vous réinitialiser l&apos;emplacement des données par défaut ? Sinon, OpenLP sera fermé afin que vous puissiez essayer de résoudre le problème.</translation>
+Voulez-vous réinitialiser l&apos;emplacement des données par défaut ? Sinon, OpenLP+ sera fermé afin que vous puissiez essayer de résoudre le problème.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="236"/>
@@ -6462,7 +6486,7 @@ Voulez-vous réinitialiser l&apos;emplacement des données par défaut ? Sinon, 
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>OpenLP a été mis à jour : voulez-vous sauvegarder l&apos;ancien répertoire de données ?</translation>
+        <translation>OpenLP+ a été mis à jour : voulez-vous sauvegarder l&apos;ancien répertoire de données ?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="249"/>
@@ -6490,7 +6514,7 @@ a backup of the old data folder?</source>
 {data_folder_backup_path}
 
 Do you want to continue?</source>
-        <translation>OpenLP a trouvé un fichier de configuration créé par une version plus récente d&apos;OpenLP. OpenLP démarrera avec une nouvelle installation car la rétrogradation des données n&apos;est pas prise en charge. Toutes les données existantes seront sauvegardées dans :
+        <translation>OpenLP+ a trouvé un fichier de configuration créé par une version plus récente d&apos;OpenLP+. OpenLP+ démarrera avec une nouvelle installation car la rétrogradation des données n&apos;est pas prise en charge. Toutes les données existantes seront sauvegardées dans :
 
 {data_folder_backup_path}
 
@@ -6514,12 +6538,12 @@ Voulez-vous continuer?</translation>
 OpenLP will attempt to continue.</source>
         <translation>La sauvegarde des paramètres a échoué.
 
-OpenLP tentera de continuer.</translation>
+OpenLP+ tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
         <source>OpenLP Backup</source>
-        <translation>Sauvegarde OpenLP</translation>
+        <translation>Sauvegarde OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6550,7 +6574,7 @@ OpenLP tentera de continuer.</translation>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Configuration d&apos;OpenLP</translation>
+        <translation>Configuration d&apos;OpenLP+</translation>
     </message>
 </context>
 <context>
@@ -7186,7 +7210,7 @@ OpenLP tentera de continuer.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>Veuillez consulter le manuel d&apos;OpenLP.</translation>
+        <translation>Veuillez consulter le manuel d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7483,7 +7507,7 @@ OpenLP tentera de continuer.</translation>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Choisir la traduction que vous voulez utiliser dans OpenLP.</translation>
+        <translation>Choisir la traduction que vous voulez utiliser dans OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7706,7 +7730,7 @@ OpenLP tentera de continuer.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>Fichier service OpenLP (*.osz *.oszl)</translation>
+        <translation>Fichier service OpenLP+ (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7749,17 +7773,17 @@ Ces fichiers seront supprimés si vous continuez à enregistrer.</translation>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
         <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>Fichiers de service OpenLP - allégé (*.oszl)</translation>
+        <translation>Fichiers de service OpenLP+ - allégé (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
         <source>OpenLP Service Files (*.osz)</source>
-        <translation>Fichier service OpenLP (*.osz)</translation>
+        <translation>Fichier service OpenLP+ (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
         <source>The service file {file_path} could not be loaded because it is either corrupt, inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.</source>
-        <translation>Le fichier de service {file_path} n&apos;a pas pu être chargé car il est corrompu, inaccessible ou n&apos;est pas un fichier de service OpenLP 2 ou OpenLP 3 valide.</translation>
+        <translation>Le fichier de service {file_path} n&apos;a pas pu être chargé car il est corrompu, inaccessible ou n&apos;est pas un fichier de service OpenLP+ 2 ou OpenLP+ 3 valide.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="979"/>
@@ -7995,7 +8019,7 @@ Ajoutez-y quelques éléments puis appuyez sur Enregistrer</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>Thèmes OpenLP (*.otz)</translation>
+        <translation>Thèmes OpenLP+ (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8358,7 +8382,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
         <source>Check for updates to OpenLP Remote UI</source>
-        <translation>Rechercher des mises à jour de l&apos;interface utilisateur distante OpenLP</translation>
+        <translation>Rechercher des mises à jour de l&apos;interface utilisateur distante OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="211"/>
@@ -8394,12 +8418,12 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
         <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
-        <translation>&lt;strong&gt;Oups, OpenLP a rencontré un problème et n&apos;a pas pu récupérer !&lt;br&gt;&lt;br&gt;Vous pouvez aider &lt;/strong&gt; les développeurs d&apos;OpenLP à &lt;strong&gt;résoudre ce problème&lt;/strong&gt; en&lt;br&gt; leur envoyant un &lt;strong &gt;rapport de bug à {email}&lt;/strong&gt;{newlines}</translation>
+        <translation>&lt;strong&gt;Oups, OpenLP+ a rencontré un problème et n&apos;a pas pu récupérer !&lt;br&gt;&lt;br&gt;Vous pouvez aider &lt;/strong&gt; les développeurs d&apos;OpenLP+ à &lt;strong&gt;résoudre ce problème&lt;/strong&gt; en&lt;br&gt; leur envoyant un &lt;strong &gt;rapport de bug à {email}&lt;/strong&gt;{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
         <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
-        <translation>{first_part}&lt;strong&gt;Pas d&apos;application de messagerie ? &lt;/strong&gt; Vous pouvez &lt;strong&gt;enregistrer&lt;/strong&gt; ces informations dans un &lt;strong&gt;fichier&lt;/strong&gt; et&lt;br&gt;l&apos;envoyer depuis votre &lt;strong&gt;mail sur votre navigateur&lt;/strong&gt; via une &lt;strong&gt;pièce jointe .&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Merci&lt;/strong&gt; de contribuer à l&apos;amélioration d&apos;OpenLP !&lt;br&gt;</translation>
+        <translation>{first_part}&lt;strong&gt;Pas d&apos;application de messagerie ? &lt;/strong&gt; Vous pouvez &lt;strong&gt;enregistrer&lt;/strong&gt; ces informations dans un &lt;strong&gt;fichier&lt;/strong&gt; et&lt;br&gt;l&apos;envoyer depuis votre &lt;strong&gt;mail sur votre navigateur&lt;/strong&gt; via une &lt;strong&gt;pièce jointe .&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Merci&lt;/strong&gt; de contribuer à l&apos;amélioration d&apos;OpenLP+ !&lt;br&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="112"/>
@@ -8575,7 +8599,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>Fermer OpenLP - Quitter le logiciel.</translation>
+        <translation>Fermer OpenLP+ - Quitter le logiciel.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8596,7 +8620,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Configuration d&apos;OpenLP...</translation>
+        <translation>&amp;Configuration d&apos;OpenLP+...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8612,7 +8636,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="405"/>
         <source>Import settings from a *.config file previously exported from this or another machine.</source>
-        <translation>Importe la configuration d&apos;OpenLP à partir d&apos;un fichier *.config précédemment exporté depuis un autre ordinateur.</translation>
+        <translation>Importe la configuration d&apos;OpenLP+ à partir d&apos;un fichier *.config précédemment exporté depuis un autre ordinateur.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="408"/>
@@ -8732,7 +8756,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>Plus d&apos;information à propos d&apos;OpenLP.</translation>
+        <translation>Plus d&apos;information à propos d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8839,7 +8863,7 @@ in slide controller:</source>
         <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
 
 You can download the latest version from https://openlp.org/.</source>
-        <translation>La version {new} d&apos;OpenLP est maintenant disponible au téléchargement (vous utiliser actuellement la version {current}). 
+        <translation>La version {new} d&apos;OpenLP+ est maintenant disponible au téléchargement (vous utiliser actuellement la version {current}). 
 
 Vous pouvez télécharger la dernière version depuis le site http://openlp.org.</translation>
     </message>
@@ -8896,9 +8920,9 @@ Re-running this wizard may make changes to your current OpenLP configuration and
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Êtes-vous sûr de vouloir importer la configuration ?
 
-Importer la configuration va changer de façon permanente votre configuration d&apos;OpenLP.
+Importer la configuration va changer de façon permanente votre configuration d&apos;OpenLP+.
 
-Importer une configuration incorrect peut provoquer des comportements imprévisible d&apos;OpenLP et le fermer anormalement.</translation>
+Importer une configuration incorrect peut provoquer des comportements imprévisible d&apos;OpenLP+ et le fermer anormalement.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8912,14 +8936,14 @@ Importer une configuration incorrect peut provoquer des comportements imprévisi
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>Fichier d&apos;export de la configuration d&apos;OpenLP (*.conf)</translation>
+        <translation>Fichier d&apos;export de la configuration d&apos;OpenLP+ (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
         <source>OpenLP cannot import settings from a newer version of OpenLP.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>OpenLP ne peut pas importer les paramètres d&apos;une version plus récente d&apos;OpenLP.
+        <translation>OpenLP+ ne peut pas importer les paramètres d&apos;une version plus récente d&apos;OpenLP+.
 
 Le traitement est terminé et aucune modification n&apos;a été apportée.</translation>
     </message>
@@ -8928,7 +8952,7 @@ Le traitement est terminé et aucune modification n&apos;a été apportée.</tra
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Le fichier que vous avez sélectionné ne semble pas être un fichier de configuration OpenLP valide.
+        <translation>Le fichier que vous avez sélectionné ne semble pas être un fichier de configuration OpenLP+ valide.
 
 L&apos;opération est terminée et aucun changement n&apos;a été fait.</translation>
     </message>
@@ -8955,17 +8979,17 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Quitter OpenLP</translation>
+        <translation>Quitter OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Êtes vous sur de vouloir quitter OpenLP ?</translation>
+        <translation>Êtes vous sur de vouloir quitter OpenLP+ ?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>&amp;Quitter OpenLP</translation>
+        <translation>&amp;Quitter OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -8996,14 +9020,14 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Copie des données OpenLP au nouvel emplacement - {path} - Veuillez attendre que la copie se termine</translation>
+        <translation>Copie des données OpenLP+ au nouvel emplacement - {path} - Veuillez attendre que la copie se termine</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>La copie du répertoire de données d&apos;OpenLP a échoué
+        <translation>La copie du répertoire de données d&apos;OpenLP+ a échoué
 
 {err}</translation>
     </message>
@@ -9113,17 +9137,17 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="120"/>
         <source>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Find out more about OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;OpenLP {{version}}{{revision}} - Projection de paroles Source Ouverte&lt;br&gt;Copyright {crs} 2004-{yr} Développeurs OpenLP&lt;/p&gt;&lt;p&gt;En savoir plus sur OpenLP : &lt;a href= &quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier selon les termes du Licence publique générale GNU telle que publiée par la Free Software Foundation, soit la version 3 de la licence, soit (à votre choix) toute version ultérieure.&lt;/p&gt;&lt;p&gt;Ce programme est distribué dans l&apos;espoir qu&apos;il sera utile, mais SANS AUCUNE GARANTIE ; sans même la garantie implicite de QUALITÉ MARCHANDE ou d’ADAPTATION À UN USAGE PARTICULIER. Consultez la licence publique générale GNU pour plus de détails.&lt;/p&gt;&lt;p&gt;Vous devriez avoir reçu une copie de la licence publique générale GNU avec ce programme. Sinon, consultez &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
+        <translation>&lt;p&gt;OpenLP+ {{version}}{{revision}} - Projection de paroles Source Ouverte&lt;br&gt;Copyright {crs} 2004-{yr} Développeurs OpenLP+&lt;/p&gt;&lt;p&gt;En savoir plus sur OpenLP+ : &lt;a href= &quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier selon les termes du Licence publique générale GNU telle que publiée par la Free Software Foundation, soit la version 3 de la licence, soit (à votre choix) toute version ultérieure.&lt;/p&gt;&lt;p&gt;Ce programme est distribué dans l&apos;espoir qu&apos;il sera utile, mais SANS AUCUNE GARANTIE ; sans même la garantie implicite de QUALITÉ MARCHANDE ou d’ADAPTATION À UN USAGE PARTICULIER. Consultez la licence publique générale GNU pour plus de détails.&lt;/p&gt;&lt;p&gt;Vous devriez avoir reçu une copie de la licence publique générale GNU avec ce programme. Sinon, consultez &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="134"/>
         <source>OpenLP is written and maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the &quot;contribute&quot; button below.</source>
-        <translation>OpenLP est conçu et maintenu par des bénévoles répartis aux quatre coins du monde, et qui consacrent beaucoup de leur temps libre à cela. Si vous souhaitez participer à cette aventure, pour que ce projet réussisse, rejoignez-nous en cliquant sur le bouton &quot;Contribuer&quot; ci-dessous.</translation>
+        <translation>OpenLP+ est conçu et maintenu par des bénévoles répartis aux quatre coins du monde, et qui consacrent beaucoup de leur temps libre à cela. Si vous souhaitez participer à cette aventure, pour que ce projet réussisse, rejoignez-nous en cliquant sur le bouton &quot;Contribuer&quot; ci-dessous.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
         <source>OpenLP would not be possible without the following software libraries:</source>
-        <translation>OpenLP ne pourrait fonctionner sans les bibliothèques suivantes :</translation>
+        <translation>OpenLP+ ne pourrait fonctionner sans les bibliothèques suivantes :</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="165"/>
@@ -9226,22 +9250,22 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Le téléchargement a été effectué avec succès. Cliquez sur le bouton &apos;{finish_button}&apos; pour retourner dans OpenLP.</translation>
+        <translation>Le téléchargement a été effectué avec succès. Cliquez sur le bouton &apos;{finish_button}&apos; pour retourner dans OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
         <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Le téléchargement a été effectué avec succès. Cliquez sur le bouton &apos;{finish_button}&apos; pour lancer OpenLP.</translation>
+        <translation>Le téléchargement a été effectué avec succès. Cliquez sur le bouton &apos;{finish_button}&apos; pour lancer OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
         <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Cliquez sur le bouton &apos;{finish_button}&apos; pour retourner dans OpenLP.</translation>
+        <translation>Cliquez sur le bouton &apos;{finish_button}&apos; pour retourner dans OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
         <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Cliquez sur le bouton &apos;{finish_button}&apos; pour lancer OpenLP.</translation>
+        <translation>Cliquez sur le bouton &apos;{finish_button}&apos; pour lancer OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
@@ -9282,7 +9306,7 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
         <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
-        <translation>OpenLP dispose d&apos;une télécommande Web qui vous permet de contrôler OpenLP depuis un autre ordinateur, téléphone ou tablette sur le même réseau que l&apos;ordinateur OpenLP. OpenLP peut télécharger cette télécommande Web pour vous maintenant, ou vous pouvez la télécharger plus tard via les paramètres de la télécommande.</translation>
+        <translation>OpenLP+ dispose d&apos;une télécommande Web qui vous permet de contrôler OpenLP+ depuis un autre ordinateur, téléphone ou tablette sur le même réseau que l&apos;ordinateur OpenLP+. OpenLP+ peut télécharger cette télécommande Web pour vous maintenant, ou vous pouvez la télécharger plus tard via les paramètres de la télécommande.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="78"/>
@@ -9312,7 +9336,7 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="318"/>
         <source>This wizard will help you to configure OpenLP for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
-        <translation>Cet assistant vous permet de configurer OpenLP pour sa première utilisation. Cliquez sur le bouton &apos;{next_button}&apos; pour démarrer.</translation>
+        <translation>Cet assistant vous permet de configurer OpenLP+ pour sa première utilisation. Cliquez sur le bouton &apos;{next_button}&apos; pour démarrer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
@@ -9332,7 +9356,7 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Merci de patienter pendant qu&apos;OpenLP télécharge le fichier d&apos;index des ressources...</translation>
+        <translation>Merci de patienter pendant qu&apos;OpenLP+ télécharge le fichier d&apos;index des ressources...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9352,7 +9376,7 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Choose the main display screen for OpenLP.</source>
-        <translation>Choisissez l&apos;écran d&apos;affichage principal pour OpenLP.</translation>
+        <translation>Choisissez l&apos;écran d&apos;affichage principal pour OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
@@ -9402,14 +9426,14 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
         <source>Can OpenLP download some resource data?</source>
-        <translation>OpenLP peut-il télécharger certaines données de ressources ?</translation>
+        <translation>OpenLP+ peut-il télécharger certaines données de ressources ?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="350"/>
         <source>OpenLP has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
-        <translation>OpenLP a collecté certaines ressources que nous sommes autorisés à distribuer.
+        <translation>OpenLP+ a collecté certaines ressources que nous sommes autorisés à distribuer.
 
 Si vous souhaitez télécharger certaines de ces ressources, cliquez sur le bouton « {next_button} », sinon cliquez sur le bouton « {finish_button} ».</translation>
     </message>
@@ -9432,13 +9456,13 @@ Please check your internet connection. If your church uses a proxy server click 
 Click the '{back_button}' button to try again.
 
 If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
-        <translation>OpenLP n&apos;a pas pu se connecter à Internet pour obtenir des informations sur les exemples de données disponibles.
+        <translation>OpenLP+ n&apos;a pas pu se connecter à Internet pour obtenir des informations sur les exemples de données disponibles.
 
 S&apos;il vous plait, vérifiez votre connexion internet. Si votre église utilise un serveur proxy, cliquez sur le bouton « Paramètres Internet » ci-dessous et entrez-y les détails du serveur.
 
 Cliquez sur le bouton « {back_button} » pour réessayer.
 
-Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger les données ultérieurement en sélectionnant « Réexécuter l&apos;assistant pour la première fois » dans le menu « Outils » d&apos;OpenLP.</translation>
+Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger les données ultérieurement en sélectionnant « Réexécuter l&apos;assistant pour la première fois » dans le menu « Outils » d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="366"/>
@@ -9493,7 +9517,7 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Merci de patienter pendant le téléchargement des ressources et la configuration d&apos;OpenLP.</translation>
+        <translation>Merci de patienter pendant le téléchargement des ressources et la configuration d&apos;OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -9621,7 +9645,7 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Annuler le changement d&apos;emplacement du dossier de données d&apos;OpenLP.</translation>
+        <translation>Annuler le changement d&apos;emplacement du dossier de données d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9631,7 +9655,7 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Copier les fichiers de données d&apos;OpenLP vers le nouvel emplacement.</translation>
+        <translation>Copier les fichiers de données d&apos;OpenLP+ vers le nouvel emplacement.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9641,12 +9665,12 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="157"/>
         <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when OpenLP is running.</source>
-        <translation>Protégez le répertoire de données avec un mécanisme de verrouillage pour éviter la corruption des données si plusieurs utilisateurs accèdent aux données en même temps. Utile pour les instances partagées via le réseau. &lt;strong&gt;REMARQUE :&lt;/strong&gt; Cela ne fonctionnera que si le partage réseau est disponible lorsque OpenLP est en cours d&apos;exécution.</translation>
+        <translation>Protégez le répertoire de données avec un mécanisme de verrouillage pour éviter la corruption des données si plusieurs utilisateurs accèdent aux données en même temps. Utile pour les instances partagées via le réseau. &lt;strong&gt;REMARQUE :&lt;/strong&gt; Cela ne fonctionnera que si le partage réseau est disponible lorsque OpenLP+ est en cours d&apos;exécution.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;ATTENTION:&lt;/strong&gt; Le nouveau dossier de données contient des fichiers de données OpenLP. Ces fichiers seront remplacés pendant la copie.</translation>
+        <translation>&lt;strong&gt;ATTENTION:&lt;/strong&gt; Le nouveau dossier de données contient des fichiers de données OpenLP+. Ces fichiers seront remplacés pendant la copie.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9710,11 +9734,11 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
 {path}
 
 Existing files in this directory could be overwritten. The data directory will be changed when OpenLP is closed.</source>
-        <translation>Êtes-vous sûr de vouloir modifier l&apos;emplacement du répertoire de données OpenLP pour :
+        <translation>Êtes-vous sûr de vouloir modifier l&apos;emplacement du répertoire de données OpenLP+ pour :
 
 {path}
 
-Les fichiers existants dans ce répertoire pourraient être écrasés. Le répertoire de données sera modifié à la fermeture d&apos;OpenLP.</translation>
+Les fichiers existants dans ce répertoire pourraient être écrasés. Le répertoire de données sera modifié à la fermeture d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="246"/>
@@ -9723,11 +9747,11 @@ Les fichiers existants dans ce répertoire pourraient être écrasés. Le réper
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Êtes-vous sûr de vouloir modifier l&apos;emplacement du répertoire de données OpenLP pour :
+        <translation>Êtes-vous sûr de vouloir modifier l&apos;emplacement du répertoire de données OpenLP+ pour :
 
 {path}
 
-Le répertoire de données sera modifié à la fermeture d&apos;OpenLP.</translation>
+Le répertoire de données sera modifié à la fermeture d&apos;OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9754,7 +9778,7 @@ L&apos;emplacement que vous avez sélectionné
 
 {path}
 
-semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fichiers par les fichiers de données actuels ?</translation>
+semble contenir des fichiers de données OpenLP+. Souhaitez-vous remplacer ces fichiers par les fichiers de données actuels ?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9764,7 +9788,7 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Cette modification ne prendra effet qu&apos;une fois OpenLP redémarré.</translation>
+        <translation>Cette modification ne prendra effet qu&apos;une fois OpenLP+ redémarré.</translation>
     </message>
 </context>
 <context>
@@ -9813,7 +9837,7 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Cette modification ne prendra effet qu&apos;une fois OpenLP redémarré.</translation>
+        <translation>Cette modification ne prendra effet qu&apos;une fois OpenLP+ redémarré.</translation>
     </message>
 </context>
 <context>
@@ -9998,7 +10022,7 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP ne peut pas charger votre base de données.
+        <translation>OpenLP+ ne peut pas charger votre base de données.
 
 Base de données: {db}</translation>
     </message>
@@ -10015,7 +10039,7 @@ Base de données: {db}</translation>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>La base de données utilisée a été créé avec une version plus récente d&apos;OpenLP. La base de données est en version {db_ver}, tandis que OpenLP attend la version {db_up}. La base de données ne peux pas être chargée.
+        <translation>La base de données utilisée a été créé avec une version plus récente d&apos;OpenLP+. La base de données est en version {db_ver}, tandis que OpenLP+ attend la version {db_up}. La base de données ne peux pas être chargée.
 
 Base de données: {db_name}</translation>
     </message>
@@ -10072,7 +10096,7 @@ Base de données: {db_name}</translation>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
         <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Il y a une incohérence entre les écrans et les paramètres de l&apos;écran. OpenLP essaiera de sélectionner automatiquement un écran d&apos;affichage, mais vous devriez envisager de mettre à jour les paramètres de l&apos;écran.</translation>
+        <translation>Il y a une incohérence entre les écrans et les paramètres de l&apos;écran. OpenLP+ essaiera de sélectionner automatiquement un écran d&apos;affichage, mais vous devriez envisager de mettre à jour les paramètres de l&apos;écran.</translation>
     </message>
 </context>
 <context>
@@ -10143,12 +10167,12 @@ Base de données: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>Chant exporté en OpenLyrics ou OpenLP 2.0</translation>
+        <translation>Chant exporté en OpenLyrics ou OpenLP+ 2.0</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>Base de données OpenLP 2</translation>
+        <translation>Base de données OpenLP+ 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -11527,7 +11551,7 @@ Vous pouvez désactiver ce message d&apos;avertissement dans les paramètres des
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="171"/>
         <source>OpenLP can only import simple lyrics or ChordPro</source>
-        <translation>OpenLP ne peut importer que des paroles simples ou ChordPro</translation>
+        <translation>OpenLP+ ne peut importer que des paroles simples ou ChordPro</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="196"/>

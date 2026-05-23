@@ -228,7 +228,8 @@ def test_get_library_stylesheet_automatic_ui_theme_dark(_mock_system_darkmode, m
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-def test_get_library_stylesheet_defaultlight_ui_theme(mock_settings):
+@patch('openlp.core.ui.style.is_macosx', return_value=False)
+def test_get_library_stylesheet_defaultlight_ui_theme(_mocked_is_macosx, mock_settings):
     """Test that the media manager stylesheet is returned for Default Light UI theme"""
     # GIVEN: UI theme is DefaultLight
     mock_settings.value.return_value = UiThemes.DefaultLight
@@ -241,7 +242,8 @@ def test_get_library_stylesheet_defaultlight_ui_theme(mock_settings):
 
 
 @patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-def test_get_library_stylesheet_defaultdark_ui_theme(mock_settings):
+@patch('openlp.core.ui.style.is_macosx', return_value=False)
+def test_get_library_stylesheet_defaultdark_ui_theme(_mocked_is_macosx, mock_settings):
     """Test that the media manager stylesheet is returned for Default Dark UI theme"""
     # GIVEN: UI theme is DefaultDark
     mock_settings.value.return_value = UiThemes.DefaultDark
@@ -251,6 +253,17 @@ def test_get_library_stylesheet_defaultdark_ui_theme(mock_settings):
 
     # THEN: the correct stylesheet should be returned
     assert result == MEDIA_MANAGER_DARK_STYLE
+
+
+@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('openlp.core.ui.style.is_macosx', return_value=True)
+def test_get_library_stylesheet_returns_empty_on_macos(_mocked_is_macosx, mock_settings):
+    """Test that macOS keeps native tab rendering for the media manager."""
+    mock_settings.value.return_value = UiThemes.DefaultDark
+
+    result = get_library_stylesheet()
+
+    assert result == ''
 
 
 @pytest.mark.skipif(not hasattr(openlp.core.ui.style, 'qdarkstyle'), reason='qdarkstyle is not installed')

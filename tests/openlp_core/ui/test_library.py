@@ -90,7 +90,7 @@ def test_folderlibrary_retranslate_ui(folder_library_item):
 
     # THEN: there should be no errors and the text should be correct
     folder_library_item.add_folder_action.setText.assert_called_once_with('Add folder')
-    folder_library_item.add_folder_action.setToolTip.assert_called_once_with('Add folder.')
+    folder_library_item.add_folder_action.setToolTip.assert_called_once_with('Add folder')
 
 
 def test_folderlibrary_add_custom_context_actions(folder_library_item):
@@ -98,7 +98,7 @@ def test_folderlibrary_add_custom_context_actions(folder_library_item):
     with patch('openlp.core.ui.library.create_widget_action') as mocked_create_widget_action, \
             patch('openlp.core.ui.library._add_library_context_menu_separator') as mocked_separator:
         folder_library_item.add_custom_context_actions()
-    assert mocked_create_widget_action.call_count == 2
+    assert mocked_create_widget_action.call_count == 1
     mocked_separator.assert_called_once_with(folder_library_item.list_view)
 
 

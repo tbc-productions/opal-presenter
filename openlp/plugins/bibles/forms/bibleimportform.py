@@ -36,6 +36,7 @@ except ImportError:
 from openlp.core.common import trace_error_handler
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, get_locale_key, translate
+from openlp.core.common.platform import is_macosx
 from openlp.core.db.helpers import delete_database
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.ui import critical_error_message_box
@@ -275,6 +276,8 @@ class BibleImportForm(OpenLPWizard):
         self.sword_layout.setContentsMargins(0, 0, 0, 0)
         self.sword_layout.setObjectName('SwordLayout')
         self.sword_tab_widget = QtWidgets.QTabWidget(self.sword_widget)
+        if is_macosx():
+            self.sword_tab_widget.setDocumentMode(True)
         self.sword_tab_widget.setObjectName('SwordTabWidget')
         self.sword_folder_tab = QtWidgets.QWidget(self.sword_tab_widget)
         self.sword_folder_tab.setObjectName('SwordFolderTab')

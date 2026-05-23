@@ -703,7 +703,7 @@ def test_paint_event_no_items():
         # THEN: The overridden paintEvnet should have been called, and some text should be drawn.
         mocked_paint_event.assert_called_once_with(mocked_event)
         mocked_qpainter.assert_called_once_with(widget.viewport())
-        mocked_painter_instance.drawText.assert_called_once_with(mocked_qrect, 4100, 'No Search Results')
+        mocked_painter_instance.drawText.assert_called_once_with(mocked_qrect.adjusted.return_value, 4100, 'No Search Results')
 
 
 def test_treewidgetwithdnd_constructor():

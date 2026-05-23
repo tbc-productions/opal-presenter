@@ -649,7 +649,7 @@
         <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>정말 OpenLP에서 &quot;{bible}&quot; 성경을 완전히 삭제하시겠습니까?
+        <translation>정말 OpenLP+에서 &quot;{bible}&quot; 성경을 완전히 삭제하시겠습니까?
 
 다시 사용하려면 이 성경을 다시 가져와야합니다.</translation>
     </message>
@@ -719,7 +719,7 @@ Only verses found in both Bibles will be shown.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>{proxy} 프록시 서버를 {name} 성경에서 찾았습니다.&lt;br&gt;OpenLP용 프록시로 설정할까요?</translation>
+        <translation>{proxy} 프록시 서버를 {name} 성경에서 찾았습니다.&lt;br&gt;OpenLP+용 프록시로 설정할까요?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -881,6 +881,30 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>입력하는 동안 자동 검색(원문 검색시 성능상 문제로
 최소 문자 {count}개와 공백 문자를 입력해야합니다)</translation>
     </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
+        <source>Bible Reference Format</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
+        <source>Template used to display Bible references in the footer.</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
+        <source>Mako variables:
+${bible_reference}
+${version}
+${copyright}
+${permission}</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
+        <source>Mako Syntax</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>
@@ -1037,7 +1061,7 @@ minimum of {count} characters and a space for performance reasons)</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
         <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP에서 성경 번역 언어를 확인할 수 없습니다. 아래 항목 중 언어를 선택하십시오.</translation>
+        <translation>OpenLP+에서 성경 번역 언어를 확인할 수 없습니다. 아래 항목 중 언어를 선택하십시오.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1433,7 +1457,7 @@ It is not possible to customize the Book Names.</source>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
         <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>서명을 임의대로 입력하여 사용하려면, 미디어 데이터 탭에서 &quot;성경 언어&quot;를 선택해야하며, &quot;전역 설정&quot;을 선택했다면 OpenLP 설정의 성경 페이지에서 선택해야 합니다.</translation>
+        <translation>서명을 임의대로 입력하여 사용하려면, 미디어 데이터 탭에서 &quot;성경 언어&quot;를 선택해야하며, &quot;전역 설정&quot;을 선택했다면 OpenLP+ 설정의 성경 페이지에서 선택해야 합니다.</translation>
     </message>
 </context>
 <context>
@@ -6026,7 +6050,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
         <source>Ignoring current changes and return to OpenLP</source>
-        <translation>현재 바뀐 내용을 무시하고 OpenLP로 복귀</translation>
+        <translation>현재 바뀐 내용을 무시하고 OpenLP+로 복귀</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6041,7 +6065,7 @@ Closing this instance</source>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
         <source>Save changes and return to OpenLP</source>
-        <translation>바꾸니 내용을 저장하고 OpenLP로 복귀</translation>
+        <translation>바꾸니 내용을 저장하고 OpenLP+로 복귀</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6529,7 +6553,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>OpenLP 설정</translation>
+        <translation>OpenLP+ 설정</translation>
     </message>
 </context>
 <context>
@@ -7165,7 +7189,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
         <source>Consult the OpenLP manual for usage.</source>
-        <translation>사용 방법은 OpenLP 설명서를 참고하십시오.</translation>
+        <translation>사용 방법은 OpenLP+ 설명서를 참고하십시오.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="186"/>
@@ -7460,7 +7484,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
         <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>OpenLP에서 사용할 번역 언어를 선택하십시오.</translation>
+        <translation>OpenLP+에서 사용할 번역 언어를 선택하십시오.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7683,7 +7707,7 @@ OpenLP will attempt to continue.</source>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
         <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>OpenLP 예배 파일 (*.osz *.oszl)</translation>
+        <translation>OpenLP+ 예배 파일 (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7967,7 +7991,7 @@ Add some items to it then press Save</source>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
         <source>OpenLP Themes (*.otz)</source>
-        <translation>OpenLP 테마 (*.otz)</translation>
+        <translation>OpenLP+ 테마 (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8320,7 +8344,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>OpenLP 최신 버전 확인</translation>
+        <translation>OpenLP+ 최신 버전 확인</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8563,7 +8587,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>OpenLP 설정(&amp;C)...</translation>
+        <translation>OpenLP+ 설정(&amp;C)...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8811,7 +8835,7 @@ You can download the latest version from https://openlp.org/.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>OpenLP 버전 업데이트함</translation>
+        <translation>OpenLP+ 버전 업데이트함</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8839,7 +8863,7 @@ Re-running this wizard may make changes to your current OpenLP configuration and
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
         <source>OpenLP Main Display Blanked</source>
-        <translation>OpenLP 주 화면 비움</translation>
+        <translation>OpenLP+ 주 화면 비움</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -8886,14 +8910,14 @@ Processing has terminated and no changes have been made.</source>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>선택하신 파일은 적절한 OpenLP 설정 파일이 아닌 것 같습니다.
+        <translation>선택하신 파일은 적절한 OpenLP+ 설정 파일이 아닌 것 같습니다.
 
 작업은 중단되었으며 아무 것도 변경되지 않았습니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>OpenLP를 닫습니다. 가져온 설정은 다음에 OpenLP를 시작할 때 반영합니다.</translation>
+        <translation>OpenLP+를 닫습니다. 가져온 설정은 다음에 OpenLP+를 시작할 때 반영합니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8913,17 +8937,17 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>OpenLP 나가기</translation>
+        <translation>OpenLP+ 나가기</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>정말로 OpenLP를 나가시겠습니까?</translation>
+        <translation>정말로 OpenLP+를 나가시겠습니까?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>OpenLP 나가기(&amp;E)</translation>
+        <translation>OpenLP+ 나가기(&amp;E)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -8954,14 +8978,14 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>OpenLP 데이터를 새 데이터 디렉터리 위치에 복사중 - {path} - 복사를 마칠 때까지 기다리십시오</translation>
+        <translation>OpenLP+ 데이터를 새 데이터 디렉터리 위치에 복사중 - {path} - 복사를 마칠 때까지 기다리십시오</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>OpenLP 데이터 디렉터리 복사에 실패
+        <translation>OpenLP+ 데이터 디렉터리 복사에 실패
 
 {err}</translation>
     </message>
@@ -9174,7 +9198,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
         <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>OpenLP를 설정하고 데이터를 다운로드하는 동안 기다리십시오.</translation>
+        <translation>OpenLP+를 설정하고 데이터를 다운로드하는 동안 기다리십시오.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
@@ -9290,7 +9314,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>OpenLP 에서 자원 색인 파일을 다운로드하는 동안 기다리십시오...</translation>
+        <translation>OpenLP+ 에서 자원 색인 파일을 다운로드하는 동안 기다리십시오...</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
@@ -9443,7 +9467,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>자원을 다운로드하고 OpenLP를 설정하는 동안 기다리십시오.</translation>
+        <translation>자원을 다운로드하고 OpenLP+를 설정하는 동안 기다리십시오.</translation>
     </message>
 </context>
 <context>
@@ -9571,7 +9595,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>OpenLP 데이터 디렉토리 변경을 취소합니다.</translation>
+        <translation>OpenLP+ 데이터 디렉토리 변경을 취소합니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9581,7 +9605,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>OpenLP 데이터를 새로운 위치로 복사합니다.</translation>
+        <translation>OpenLP+ 데이터를 새로운 위치로 복사합니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9596,7 +9620,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;경고:&lt;/strong&gt; 새로운 위치에 OpenLP 데이터 파일이 있습니다. 복사 하는 동안 해당 파일은 바뀝니다.</translation>
+        <translation>&lt;strong&gt;경고:&lt;/strong&gt; 새로운 위치에 OpenLP+ 데이터 파일이 있습니다. 복사 하는 동안 해당 파일은 바뀝니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9669,11 +9693,11 @@ Existing files in this directory could be overwritten. The data directory will b
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>OpenLP 데이터 디렉터리 위치를 다음 경로로 바꾸시겠습니까?
+        <translation>OpenLP+ 데이터 디렉터리 위치를 다음 경로로 바꾸시겠습니까?
 
 {path}
 
-이 데이터 디렉터리는 OpenLP를 닫았을 때 바뀝니다.</translation>
+이 데이터 디렉터리는 OpenLP+를 닫았을 때 바뀝니다.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9700,7 +9724,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
 
 {path}
 
-에 OpenLP 데이터 파일이 들어있습니다. 이 파일을 현재 데이터 파일로 바꾸시겠습니까?</translation>
+에 OpenLP+ 데이터 파일이 들어있습니다. 이 파일을 현재 데이터 파일로 바꾸시겠습니까?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9710,7 +9734,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>여기서 바꾼 설정은 OpenLP를 다시 시작했을 때 적용됩니다.</translation>
+        <translation>여기서 바꾼 설정은 OpenLP+를 다시 시작했을 때 적용됩니다.</translation>
     </message>
 </context>
 <context>
@@ -9759,7 +9783,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>여기서 바꾼 설정은 OpenLP를 다시 시작했을 때 적용됩니다.</translation>
+        <translation>여기서 바꾼 설정은 OpenLP+를 다시 시작했을 때 적용됩니다.</translation>
     </message>
 </context>
 <context>
@@ -9944,7 +9968,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
         <source>OpenLP cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP에서 데이터베이스를 불러올 수 없습니다.
+        <translation>OpenLP+에서 데이터베이스를 불러올 수 없습니다.
 
 데이터베이스: {db}</translation>
     </message>
@@ -9961,7 +9985,7 @@ Database: {db}</source>
         <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>기존에 불러온 데이터베이스는 OpenLP 최신 버전에서 만들었습니다. 데이터베이스 버전은 {db_ver}(이)지만, OpenLP에서 필요한 버전은 {db_up} 입니다. 데이터베이스를 불러오지 않았습니다.
+        <translation>기존에 불러온 데이터베이스는 OpenLP+ 최신 버전에서 만들었습니다. 데이터베이스 버전은 {db_ver}(이)지만, OpenLP+에서 필요한 버전은 {db_up} 입니다. 데이터베이스를 불러오지 않았습니다.
 
 데이터베이스: {db_name}</translation>
     </message>

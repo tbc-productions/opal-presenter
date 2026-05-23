@@ -198,7 +198,10 @@ class ServiceItem(RegistryProperties):
         elif self.name == 'presentations':
             self.icon = UiIcons().presentation
         elif self.name == 'images':
-            self.icon = UiIcons().picture
+            if len(self.slides) > 1:
+                self.icon = UiIcons().image_plus
+            else:
+                self.icon = UiIcons().picture
         elif self.name == 'media':
             self.icon = UiIcons().video
         else:
@@ -208,6 +211,11 @@ class ServiceItem(RegistryProperties):
         """
         Create frames for rendering and display
         """
+        if self.service_item_type != ServiceItemType.Text:
+            log.warning('_create_slides called on non-text service item (type=%s, name=%s)',
+                        self.service_item_type, self.name)
+            self._creating_slides = False
+            return
         wait_for(lambda: not self._creating_slides)
         self._creating_slides = True
         self._rendered_slides = []
@@ -228,7 +236,7 @@ class ServiceItem(RegistryProperties):
             bible_chapter_hint_from_row_tag = None
             row_label_from_raw_page_text = None
         for raw_slide in self.slides:
-            verse_tag = raw_slide['verse']
+            verse_tag = raw_slide.get('verse', str(index + 1))
             if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                 pages = previous_pages[verse_tag][1]
             else:
@@ -306,7 +314,7 @@ class ServiceItem(RegistryProperties):
             previous_pages = {}
             index = 0
             for raw_slide in self.slides:
-                verse_tag = raw_slide['verse']
+                verse_tag = raw_slide.get('verse', str(index + 1))
                 if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                     pages = previous_pages[verse_tag][1]
                 else:
@@ -330,6 +338,7 @@ class ServiceItem(RegistryProperties):
         :param title: A title for the slide in the service item.
         :param thumbnail: Optional alternative thumbnail, used for remote thumbnails.
         :param file_hash: Unique Reference to file .
+        :return: The file hash used for the slide.
         """
         self.service_item_type = ServiceItemType.Image
         if not file_hash:
@@ -339,6 +348,7 @@ class ServiceItem(RegistryProperties):
             slide['thumbnail'] = thumbnail
         self.slides.append(slide)
         self._new_item()
+        return file_hash
 
     def add_from_text(self, text, verse_tag=None, footer_html=None, metadata=None):
         """
@@ -767,6 +777,7 @@ class ServiceItem(RegistryProperties):
                         image_path = text_image['image']
                     self.add_from_command(Path(text_image['path']), str(text_image['title']), image_path)
         self._new_item()
+        self.add_icon()
 
     def get_display_title(self):
         """

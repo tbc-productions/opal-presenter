@@ -149,6 +149,7 @@ def _create_mock_action(parent, name, **kwargs):
     action.setEnabled(kwargs.get('enabled', True))
     action.setCheckable(kwargs.get('checkable', False))
     if 'checked' in kwargs:
+        action.setCheckable(True)
         action.setChecked(kwargs['checked'])
     if kwargs.get('triggers'):
         action.triggered.connect(kwargs.pop('triggers'))
@@ -941,6 +942,48 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
     assert main_window._left_dock_visibility_from_settings() == (True, False, True)
 
 
+def test_layout_preset_tab_bar_has_expected_tabs(main_window):
+    """Main window should include a left vertical tab bar for layout presets."""
+    assert main_window.layout_preset_tab_bar.count() == 3
+    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
+    assert main_window.layout_preset_tab_bar.tabText(1) == 'Setup'
+    assert main_window.layout_preset_tab_bar.tabText(2) == 'Live'
+
+
+def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):
+    """The left layout tab bar should reflect the currently selected layout mode."""
+    settings.setValue('core/view mode', 'setup')
+
+    main_window._sync_layout_preset_tab_from_settings()
+
+    assert main_window.layout_preset_tab_bar.currentIndex() == 1
+
+
+def test_layout_preset_tab_change_activates_mode(main_window):
+    """Selecting a layout preset tab should activate the corresponding layout preset."""
+    with patch.object(main_window, '_activate_layout_preset') as mock_activate:
+        main_window.on_layout_preset_tab_changed(2)
+
+    mock_activate.assert_called_once_with('live')
+
+
+def test_layout_preset_tabs_toggle_honours_enabled_setting(main_window, settings):
+    """Layout preset tabs should be visible when the toggle is enabled."""
+    main_window.on_toggle_layout_preset_tabs(True)
+
+    assert main_window.view_layout_preset_tabs_item.isChecked() is True
+    assert main_window.layout_preset_toolbar.isHidden() is False
+
+
+def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
+    """Turning layout preset tabs off should hide them and persist the preference."""
+    main_window.on_toggle_layout_preset_tabs(False)
+
+    assert settings.value('user interface/show layout preset tabs') is False
+    assert main_window.layout_preset_toolbar.isHidden() is True
+    assert main_window.view_layout_preset_tabs_item.isChecked() is False
+
+
 @patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
 def test_activate_layout_preset_saved_state_without_snapshot_applies_canonical(mock_sched, main_window, settings):
     """
@@ -992,7 +1035,7 @@ def test_activate_layout_preset_saved_state_with_snapshot_skips_canonical(mock_s
 @patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
 def test_deferred_left_column_setup_preset_uses_setup_dock_geometry(mock_sizes, main_window, settings):
     """
-    Setup mode without saved preset layout should build full-height Service | Library+Themes
+    Setup mode without saved preset layout should build full-height Library+Themes | Service
     (tabified), not the Default preset's Service-over-Library stack.
     """
     settings.setValue('core/view mode', 'setup')
@@ -1003,6 +1046,19 @@ def test_deferred_left_column_setup_preset_uses_setup_dock_geometry(mock_sizes, 
         main_window._deferred_apply_left_column_dock_layout()
     mock_setup.assert_called_once()
     mock_default.assert_not_called()
+
+
+def test_reapply_left_column_dock_layout_setup_places_library_before_service(main_window):
+    """Setup dock layout should position Library/Themes before Service."""
+    with patch.object(main_window, 'addDockWidget') as mock_add, \
+            patch.object(main_window, 'splitDockWidget') as mock_split:
+        main_window._reapply_left_column_dock_layout_setup()
+
+    mock_add.assert_called_once_with(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, main_window.media_manager_dock)
+    mock_split.assert_called_once_with(
+        main_window.media_manager_dock,
+        main_window.service_manager_dock,
+        QtCore.Qt.Orientation.Horizontal)
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
