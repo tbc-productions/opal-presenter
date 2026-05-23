@@ -7,7 +7,7 @@ on:
 jobs:
   release:
     name: Create release and notify packaging
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     steps:
       - name: Create Gitea release
         shell: bash
@@ -26,16 +26,9 @@ jobs:
           cat /tmp/release_response.json || true
           echo
           case "$HTTP_CODE" in
-            2??)
-              echo "Release created for ${TAG}."
-              ;;
-            409)
-              echo "Release for ${TAG} already exists; continuing."
-              ;;
-            *)
-              echo "Failed to create release (HTTP ${HTTP_CODE})." >&2
-              exit 1
-              ;;
+            2??)  echo "Release created for ${TAG}." ;;
+            409)  echo "Release for ${TAG} already exists; continuing." ;;
+            *)    echo "Failed to create release (HTTP ${HTTP_CODE})." >&2; exit 1 ;;
           esac
 
       - name: Trigger openlp-packaging build
