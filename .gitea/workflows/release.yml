@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Create Gitea release
-        shell: bash
+        shell: sh
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eu
           TAG="${GITHUB_REF_NAME}"
           BODY=$(printf '{"tag_name":"%s","name":"%s","body":"Automated release of %s","draft":false,"prerelease":false}' "$TAG" "$TAG" "$TAG")
           HTTP_CODE=$(curl -sS -o /tmp/release_response.json -w '%{http_code}' -X POST \
@@ -32,11 +32,11 @@ jobs:
           esac
 
       - name: Trigger openlp-packaging build
-        shell: bash
+        shell: sh
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eu
           TAG="${GITHUB_REF_NAME}"
           PAYLOAD=$(printf '{"ref":"main","inputs":{"openlp_tag":"%s","create_release":"true","build_macos":"true","build_windows":"true","build_flatpak":"false"}}' "$TAG")
           curl -fsSL -X POST \
