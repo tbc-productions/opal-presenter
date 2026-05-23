@@ -10,39 +10,37 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Create Gitea release
-        shell: python3 {0}
+        shell: bash
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          import json, os, urllib.request, sys
-          tag = os.environ['GITHUB_REF_NAME']
-          token = os.environ['CI_TOKEN']
-          server = os.environ['GITHUB_SERVER_URL']
-          repo = os.environ['GITHUB_REPOSITORY']
-          url = f'{server}/api/v1/repos/{repo}/releases'
-          body = json.dumps({'tag_name': tag, 'name': tag, 'body': f'Automated release of {tag}', 'draft': False, 'prerelease': False}).encode()
-          req = urllib.request.Request(url, data=body, headers={'Authorization': f'token {token}', 'Content-Type': 'application/json'})
-          try:
-            with urllib.request.urlopen(req) as r:
-              print(f'Release created for {tag}.')
-          except urllib.error.HTTPError as e:
-            if e.code == 409:
-              print(f'Release for {tag} already exists; continuing.')
-            else:
-              print(e.read().decode(), file=sys.stderr)
-              sys.exit(1)
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          BODY=$(printf '{"tag_name":"%s","name":"%s","body":"Automated release of %s","draft":false,"prerelease":false}' "$TAG" "$TAG" "$TAG")
+          HTTP_CODE=$(curl -sS -o /tmp/release_response.json -w '%{http_code}' -X POST \
+            -H "Authorization: token ${CI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases")
+          echo "HTTP ${HTTP_CODE}"
+          cat /tmp/release_response.json || true
+          echo
+          case "$HTTP_CODE" in
+            2??)  echo "Release created for ${TAG}." ;;
+            409)  echo "Release for ${TAG} already exists; continuing." ;;
+            *)    echo "Failed to create release (HTTP ${HTTP_CODE})." >&2; exit 1 ;;
+          esac
 
       - name: Trigger openlp-packaging build
-        shell: python3 {0}
+        shell: bash
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
-          import json, os, urllib.request
-          tag = os.environ['GITHUB_REF_NAME']
-          token = os.environ['CI_TOKEN']
-          server = os.environ['GITHUB_SERVER_URL']
-          url = f'{server}/api/v1/repos/tbcproductions/openlp-packaging/actions/workflows/build.yml/dispatches'
-          body = json.dumps({'ref': 'main', 'inputs': {'openlp_tag': tag, 'create_release': 'true', 'build_macos': 'true', 'build_windows': 'true', 'build_flatpak': 'false'}}).encode()
-          req = urllib.request.Request(url, data=body, headers={'Authorization': f'token {token}', 'Content-Type': 'application/json'})
-          with urllib.request.urlopen(req) as r:
-            print(f'Triggered openlp-packaging build for {tag}.')
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          PAYLOAD=$(printf '{"ref":"main","inputs":{"openlp_tag":"%s","create_release":"true","build_macos":"true","build_windows":"true","build_flatpak":"false"}}' "$TAG")
+          curl -fsSL -X POST \
+            -H "Authorization: token ${CI_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "${GITHUB_SERVER_URL}/api/v1/repos/tbcproductions/openlp-packaging/actions/workflows/build.yml/dispatches"
