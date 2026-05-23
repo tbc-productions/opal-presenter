@@ -97,7 +97,7 @@ odbc = [
     "pyodbc",
 ]
 postgresql = [
-    "psycopg2",
+    "psycopg2-binary",
 ]
 spellcheck = [
     "pyenchant >= 1.6",
