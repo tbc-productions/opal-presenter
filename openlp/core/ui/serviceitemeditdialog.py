@@ -21,7 +21,7 @@
 """
 The UI widgets for the service item edit dialog
 """
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button, create_button_box
@@ -39,6 +39,7 @@ class Ui_ServiceItemEditDialog(object):
         """
         serviceItemEditDialog.setObjectName('serviceItemEditDialog')
         serviceItemEditDialog.setWindowIcon(UiIcons().main_icon)
+        serviceItemEditDialog.resize(550, 450)
         self.dialog_layout = QtWidgets.QGridLayout(serviceItemEditDialog)
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
         self.dialog_layout.setSpacing(8)
@@ -46,6 +47,7 @@ class Ui_ServiceItemEditDialog(object):
         self.list_widget = QtWidgets.QListWidget(serviceItemEditDialog)
         self.list_widget.setAlternatingRowColors(use_alternate_rows())
         self.list_widget.setObjectName('list_widget')
+        self.list_widget.setIconSize(QtCore.QSize(124, 70))
         self.dialog_layout.addWidget(self.list_widget, 0, 0)
         self.button_layout = QtWidgets.QVBoxLayout()
         self.button_layout.setObjectName('button_layout')
