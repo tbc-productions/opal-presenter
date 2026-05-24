@@ -57,7 +57,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         glob_pattern = os.path.join('plugins', '*', '[!.]*plugin.py')
         extension_loader(AppLocation.get_directory(AppLocation.AppDir), glob_pattern)
         extension_loader(
-            AppLocation.get_directory(AppLocation.DataDir), glob_pattern, community=True
+            AppLocation.get_data_path(), glob_pattern, community=True
         )
         plugin_classes = Plugin.__subclasses__()
         for plugin in plugin_classes:
