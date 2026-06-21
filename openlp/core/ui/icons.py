@@ -68,6 +68,7 @@ class UiIcons(metaclass=Singleton):
             'back': {'icon': 'mdi.skip-previous'},
             'backspace': {'icon': 'mdi.close'},
             # 'backspace': {'icon': 'mdi.chevron-left-box-outline'},
+            'cancel': {'icon': 'mdi.cancel'},
             'bible': {'icon': 'mdi.book-open-variant'},
             'blank': {'icon': 'mdi.close-circle'},
             'blank_theme': {'icon': 'mdi.file-image-outline'},

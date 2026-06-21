@@ -394,7 +394,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Edit and reload song preview.'),
                                             triggers=self.on_edit_song)
-            self.toolbar.add_toolbar_action('clear', icon=UiIcons().delete,
+            self.toolbar.add_toolbar_action('clear', icon=UiIcons().cancel,
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Clear'),
                                             triggers=self.on_clear)
