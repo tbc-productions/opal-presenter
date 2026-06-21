@@ -41,14 +41,96 @@ class FirstTimePage(object):
     Welcome = 0
     Plugins = 1
     ScreenConfig = 2
-    SampleOption = 3
-    Download = 4
-    NoInternet = 5
-    Remote = 6
-    Songs = 7
-    Bibles = 8
-    Themes = 9
-    Progress = 10
+    ImportSettings = 3
+    SampleOption = 4
+    Download = 5
+    NoInternet = 6
+    Remote = 7
+    Songs = 8
+    Bibles = 9
+    Themes = 10
+    Progress = 11
+
+
+class ImportSettingsPage(QtWidgets.QWizardPage):
+    """
+    A page for importing settings from a backup file (.conf or .zip)
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName('ImportSettingsPage')
+        
+    def setup_ui(self):
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.layout.setContentsMargins(50, 20, 50, 20)
+        self.layout.setSpacing(15)
+        
+        self.info_label = QtWidgets.QLabel(self)
+        self.info_label.setWordWrap(True)
+        self.info_label.setObjectName('info_label')
+        self.layout.addWidget(self.info_label)
+        
+        self.import_group_box = QtWidgets.QGroupBox(self)
+        self.import_group_box.setObjectName('import_group_box')
+        self.group_layout = QtWidgets.QFormLayout(self.import_group_box)
+        
+        self.file_layout = QtWidgets.QHBoxLayout()
+        self.file_edit = QtWidgets.QLineEdit(self)
+        self.file_edit.setReadOnly(True)
+        self.file_edit.setObjectName('file_edit')
+        self.file_layout.addWidget(self.file_edit)
+        
+        self.browse_button = QtWidgets.QPushButton(self)
+        self.browse_button.setObjectName('browse_button')
+        self.file_layout.addWidget(self.browse_button)
+        
+        self.clear_button = QtWidgets.QPushButton(self)
+        self.clear_button.setObjectName('clear_button')
+        self.file_layout.addWidget(self.clear_button)
+        
+        self.file_label = QtWidgets.QLabel(self)
+        self.file_label.setObjectName('file_label')
+        self.group_layout.addRow(self.file_label, self.file_layout)
+        self.layout.addWidget(self.import_group_box)
+        
+        # Connect signals
+        self.browse_button.clicked.connect(self.on_browse_clicked)
+        self.clear_button.clicked.connect(self.on_clear_clicked)
+        
+        # Set initial states
+        self.file_edit.setEnabled(True)
+        self.browse_button.setEnabled(True)
+        
+    def retranslate_ui(self):
+        self.setTitle(translate('OpenLP.FirstTimeWizard', 'Import Settings'))
+        self.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Import settings from a previous backup.'))
+        self.info_label.setText(
+            translate('OpenLP.FirstTimeWizard',
+                      'If you have a previously exported settings file (.conf or .zip), you can select it now. '
+                      'This will restore your configuration, including plugins, theme selections, and other preferences. '
+                      'Alternatively, you can leave this blank to configure OpenLP+ manually.'))
+        self.browse_button.setText(translate('OpenLP.FirstTimeWizard', 'Browse...'))
+        self.clear_button.setText(translate('OpenLP.FirstTimeWizard', 'Clear'))
+        self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File:'))
+        
+    def on_browse_clicked(self):
+        from openlp.core.widgets.dialogs import FileDialog
+        file_path, filter_used = FileDialog.getOpenFileName(
+            self,
+            translate('OpenLP.FirstTimeWizard', 'Import settings'),
+            None,
+            translate('OpenLP.FirstTimeWizard', 'OpenLP+ Settings (*.conf *.zip)'))
+        if file_path:
+            self.file_edit.setText(str(file_path))
+            self.completeChanged.emit()
+
+    def on_clear_clicked(self):
+        self.file_edit.clear()
+        self.completeChanged.emit()
+
+    def isComplete(self):
+        # Optional, so always complete
+        return True
 
 
 class RemotePage(GridLayoutPage):
@@ -176,6 +258,10 @@ class UiFirstTimeWizard(object):
         self.screen_selection_widget.load()
         self.screen_page_layout.addRow(self.screen_selection_widget)
         first_time_wizard.setPage(FirstTimePage.ScreenConfig, self.screen_page)
+        # Import settings page
+        self.import_settings_page = ImportSettingsPage(first_time_wizard)
+        self.import_settings_page.setup_ui()
+        first_time_wizard.setPage(FirstTimePage.ImportSettings, self.import_settings_page)
         # Download Samples page
         self.resource_page = QtWidgets.QWizardPage()
         self.resource_page.setObjectName('resource_page')
@@ -362,6 +448,7 @@ class UiFirstTimeWizard(object):
         self.screen_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Displays'))
         self.screen_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
                                                'Choose the main display screen for OpenLP.'))
+        self.import_settings_page.retranslate_ui()
         self.songs_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Songs'))
         self.custom_check_box.setText(
             translate('OpenLP.FirstTimeWizard',

@@ -1067,7 +1067,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
     def on_settings_import_item_clicked(self):
         """
-        Import settings from an export INI file
+        Import settings from an export CONF or ZIP file
         """
         answer = QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings?'),
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to import '
@@ -1087,88 +1087,25 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self,
             translate('OpenLP.MainWindow', 'Import settings'),
             None,
-            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf)'))
+            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf *.zip)'))
         if import_file_path is None:
             return
-        setting_sections = []
-        # Add main sections.
-        setting_sections.extend(['core'])
-        setting_sections.extend(['advanced'])
-        setting_sections.extend(['user interface'])
-        setting_sections.extend(['shortcuts'])
-        setting_sections.extend(['servicemanager'])
-        setting_sections.extend(['themes'])
-        setting_sections.extend(['projector'])
-        setting_sections.extend(['players'])
-        setting_sections.extend(['displayTags'])
-        setting_sections.extend(['SettingsImport'])
-        setting_sections.extend(['crashreport'])
-        # Add plugin sections.
-        setting_sections.extend([plugin.name for plugin in State().list_plugins()])
-        # Copy the settings file to the tmp dir, because we do not want to change the original one.
-        temp_dir_path = Path(gettempdir(), 'openlp')
-        create_paths(temp_dir_path)
-        temp_config_path = temp_dir_path / import_file_path.name
-        shutil.copyfile(import_file_path, temp_config_path)
-        import_settings = Settings(str(temp_config_path), QtCore.QSettings.Format.IniFormat)
 
-        self.log_info('hook upgrade_plugin_settings')
-        self.plugin_manager.hook_upgrade_plugin_settings(import_settings)
-        # If settings are from the future, we can't import.
-        if import_settings.from_future():
-            QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings'),
-                                           translate('OpenLP.MainWindow', 'OpenLP+ cannot import settings '
-                                                                          'from a newer version of OpenLP+.\n\n'
-                                                                          'Processing has terminated and '
-                                                                          'no changes have been made.'),
-                                           QtWidgets.QMessageBox.StandardButton(
-                                               QtWidgets.QMessageBox.StandardButton.Ok))
-            return
-        # Upgrade settings to prepare the import.
-        if import_settings.version_mismatched():
-            import_settings.upgrade_settings()
-        # Lets do a basic sanity check. If it contains this string we can assume it was created by OpenLP and so we'll
-        # load what we can from it, and just silently ignore anything we don't recognise.
-        if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
+        self.application.set_busy_cursor()
+        success = self.settings.import_settings(import_file_path)
+        self.application.set_normal_cursor()
+
+        if not success:
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings'),
                                            translate('OpenLP.MainWindow', 'The file you have selected does not appear '
-                                                                          'to be a valid OpenLP+ settings file.\n\n'
+                                                                          'to be a valid OpenLP+ settings file, or is from '
+                                                                          'a newer version of OpenLP+.\n\n'
                                                                           'Processing has terminated and '
                                                                           'no changes have been made.'),
                                            QtWidgets.QMessageBox.StandardButton(
                                                QtWidgets.QMessageBox.StandardButton.Ok))
             return
-        import_keys = import_settings.allKeys()
-        for section_key in import_keys:
-            # We need to handle the really bad files.
-            try:
-                section, key = section_key.split('/')
-            except ValueError:
-                section = 'unknown'
-                key = ''
-            # Switch General back to lowercase.
-            if section == 'General' or section == '%General':
-                section = 'general'
-                section_key = section + "/" + key
-            # Make sure it's a valid section for us.
-            if section not in setting_sections:
-                continue
-        # We have a good file, import it.
-        for section_key in import_keys:
-            if 'eneral' in section_key:
-                section_key = section_key.lower()
-            try:
-                value = import_settings.value(section_key)
-            except KeyError:
-                value = None
-                self.log_warning('The key "{key}" does not exist (anymore), so it will be skipped.'.
-                                 format(key=section_key))
-            if value is not None:
-                self.settings.setValue('{key}'.format(key=section_key), value)
-        now = datetime.now()
-        self.settings.setValue('SettingsImport/file_imported', import_file_path)
-        self.settings.setValue('SettingsImport/file_date_imported', now.strftime("%Y-%m-%d %H:%M"))
-        self.settings.sync()
+
         # We must do an immediate restart or current configuration will overwrite what was just imported when
         # application terminates normally.   We need to exit without saving configuration.
         QtWidgets.QMessageBox.information(self, translate('OpenLP.MainWindow', 'Import settings'),
@@ -1181,20 +1118,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
     def on_settings_export_item_clicked(self):
         """
-        Export settings to a .conf file in INI format
+        Export settings to a ZIP file
         """
         export_file_path, filter_used = FileDialog.getSaveFileName(
             self,
             translate('OpenLP.MainWindow', 'Export Settings File'),
             None,
-            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf)'))
+            translate('OpenLP.MainWindow', 'OpenLP+ Settings Backup (*.zip)'))
         if not export_file_path:
             return
-        # Make sure it's a .conf file.
-        export_file_path = export_file_path.with_suffix('.conf')
+        # Make sure it's a .zip file.
+        export_file_path = export_file_path.with_suffix('.zip')
         self.save_settings()
+        self.application.set_busy_cursor()
         try:
-            self.settings.export(export_file_path)
+            self.settings.export_zip(export_file_path)
         except OSError as ose:
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Export setting error'),
                                            translate('OpenLP.MainWindow',
@@ -1202,6 +1140,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                                      ).format(err=ose.strerror),
                                            QtWidgets.QMessageBox.StandardButton(
                                                QtWidgets.QMessageBox.StandardButton.Ok))
+        finally:
+            self.application.set_normal_cursor()
 
     def on_formatting_tags_import_item_clicked(self):
         """

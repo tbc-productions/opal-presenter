@@ -714,3 +714,57 @@ def test_help(settings: Settings):
 
     # THEN: The Help function should be called
     mocked_help.assert_called_once()
+
+
+def test_accept_method_with_imported_settings(mock_settings):
+    """
+    Test the FirstTimeForm.accept method when settings file is specified and exists
+    """
+    # GIVEN: An instance of FirstTimeForm with a valid import file path
+    ftw = FirstTimeForm(None)
+    ftw.import_settings_page = MagicMock()
+    ftw.import_settings_page.file_edit.text.return_value = '/dummy/path/backup.zip'
+    
+    with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
+            patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget, \
+            patch('openlp.core.ui.firsttimeform.Path.exists', return_value=True), \
+            patch.object(ftw.settings, 'import_settings', return_value=True) as mocked_import_settings, \
+            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept') as mocked_qwizard_accept:
+        
+        # WHEN: Calling accept
+        ftw.accept()
+
+        # THEN: settings.import_settings should be called and plugin status NOT set
+        mocked_import_settings.assert_called_once_with(Path('/dummy/path/backup.zip'))
+        mocked_set_plugin_status.assert_not_called()
+        mocked_screen_selection_widget.save.assert_called_once()
+        mocked_qwizard_accept.assert_called_once()
+
+
+def test_accept_method_without_imported_settings(mock_settings):
+    """
+    Test the FirstTimeForm.accept method when settings file input is empty
+    """
+    # GIVEN: An instance of FirstTimeForm with an empty settings file path
+    ftw = FirstTimeForm(None)
+    ftw.import_settings_page = MagicMock()
+    ftw.import_settings_page.file_edit.text.return_value = ''
+    
+    with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
+            patch.multiple(ftw, songs_check_box=DEFAULT, bible_check_box=DEFAULT, presentation_check_box=DEFAULT,
+                           image_check_box=DEFAULT, media_check_box=DEFAULT, custom_check_box=DEFAULT,
+                           song_usage_check_box=DEFAULT, alert_check_box=DEFAULT, obs_studio_check_box=DEFAULT) \
+            as mocked_check_boxes, \
+            patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget, \
+            patch.object(ftw.settings, 'import_settings') as mocked_import_settings, \
+            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept') as mocked_qwizard_accept:
+        
+        # WHEN: Calling accept
+        ftw.accept()
+
+        # THEN: settings.import_settings should NOT be called and plugin status should be set
+        mocked_import_settings.assert_not_called()
+        assert mocked_set_plugin_status.call_count > 0
+        mocked_screen_selection_widget.save.assert_called_once()
+        mocked_qwizard_accept.assert_called_once()
+
