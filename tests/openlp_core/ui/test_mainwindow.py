@@ -1162,26 +1162,28 @@ def test_screen_changed_modal_sets_timestamp_after_blocking_on_modal(mocked_info
 
 @patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.critical')
 @patch('openlp.core.ui.mainwindow.FileDialog')
-@patch('openlp.core.ui.mainwindow.shutil')
-@patch('openlp.core.ui.mainwindow.Settings')
-def test_on_settings_import_item_clicked(mock_settings, mock_shutil, mock_dialog, mock_crit, main_window_reduced):
+def test_on_settings_import_item_clicked(mock_dialog, mock_crit, main_window_reduced):
     """
-    Check we don't attempt to import incompatible settings from the future
+    Check we don't attempt to import incompatible settings from the future.
+    import_settings() now encapsulates the from_future check; when it returns False
+    (e.g. the file is from a newer version), the error dialog should be shown and
+    no further processing should happen.
     """
-    # GIVEN: a
-    settings_instance = MagicMock()
-    mock_settings.return_value = settings_instance
-    mock_dialog.getOpenFileName.return_value = [MagicMock(name='bob'), '']
-    settings_instance.from_future.return_value = True
+    # GIVEN: A file dialog that returns a path, and import_settings returning False
+    mock_import_file = MagicMock()
+    mock_dialog.getOpenFileName.return_value = [mock_import_file, '']
     Registry().register('plugin_manager', MagicMock())
-    mock_crit.return_value = True
+    # First call is the confirmation dialog; returning Yes lets execution proceed
+    mock_crit.return_value = QtWidgets.QMessageBox.StandardButton.Yes
 
-    # WHEN: the function is called
-    main_window_reduced.on_settings_import_item_clicked()
+    with patch.object(main_window_reduced.settings, 'import_settings', return_value=False) as mock_import_settings:
+        # WHEN: the function is called
+        main_window_reduced.on_settings_import_item_clicked()
 
-    # THEN: The from_future should have been checked, but code should not have started to copy values
-    settings_instance.from_future.assert_called_once_with()
-    settings_instance.value.assert_not_called()
+    # THEN: import_settings should have been called with the chosen file path
+    mock_import_settings.assert_called_once_with(mock_import_file)
+    # AND: An error dialog should have been shown (import failed / from future)
+    assert mock_crit.call_count >= 2, 'Expected at least the confirmation and the failure dialog'
 
 
 @patch('openlp.core.ui.mainwindow.Path')

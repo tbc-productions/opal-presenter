@@ -53,6 +53,9 @@ class MockTreeParent:
     def removeChild(self, child):
         self.child = child
 
+    def data(self, column, role):
+        return None
+
 
 class MockTreeItem:
     def __init__(self, item, parent=None):
