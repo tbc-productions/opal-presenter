@@ -704,7 +704,7 @@ class BibleImportForm(OpenLPWizard):
         self.finish_button.setVisible(False)
         self.cancel_button.setVisible(True)
         # The PathEdit fields are not initialised since that does not work well with the UI Internals
-        self.setField('source_format', 0)
+        self.setField('source_format', BibleFormat.WebDownload)
         self.setField('web_location', WebDownload.Crosswalk)
         self.setField('web_biblename', self.web_translation_combo_box.currentIndex())
         self.setField('license_version', self.version_name_edit.text())
