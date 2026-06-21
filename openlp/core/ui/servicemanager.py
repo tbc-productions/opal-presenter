@@ -1229,80 +1229,83 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         file_path = self.file_name()
         self.log_debug('ServiceManager.save_file - {name}'.format(name=file_path))
         self.application.set_busy_cursor()
-
-        service = self.create_basic_service()
-
-        write_list = []
-        missing_list = []
-
-        if not self._save_lite:
-            try:
-                write_list, missing_list = self.get_write_file_list()
-            except PermissionError as pe:
-                self.main_window.error_message(UiStrings.PermissionError,
-                                               UiStrings.UnableToRead + '\n\n' + pe.filename)
-                return False
-            if missing_list:
-                self.application.set_normal_cursor()
-                title = translate('OpenLP.ServiceManager', 'Service File(s) Missing')
-                message = translate('OpenLP.ServiceManager',
-                                    'The following file(s) in the service are missing: {name}\n\n'
-                                    'These files will be removed if you continue to save.'
-                                    ).format(name='\n\t'.join(missing_list))
-                answer = QtWidgets.QMessageBox.critical(self, title, message,
-                                                        QtWidgets.QMessageBox.StandardButton(
-                                                            QtWidgets.QMessageBox.StandardButton.Ok |
-                                                            QtWidgets.QMessageBox.StandardButton.Cancel))
-                if answer == QtWidgets.QMessageBox.StandardButton.Cancel:
-                    return False
-        # Check if item contains a missing file.
-        for item in list(self.service_items):
-            if not self._save_lite:
-                item['service_item'].remove_invalid_frames(missing_list)
-                if item['service_item'].missing_frames():
-                    self.service_items.remove(item)
-                    continue
-            service_item = item['service_item'].get_service_repr(self._save_lite)
-            # Add the service item to the service.
-            service.append({'serviceitem': service_item})
-        self.repaint_service_list(-1, -1)
-        service_content = json.dumps(service, cls=OpenLPJSONEncoder)
-        service_content_size = len(bytes(service_content, encoding='utf-8'))
-        total_size = service_content_size
-        for local_file_item, zip_file_item in write_list:
-            try:
-                total_size += local_file_item.stat().st_size
-            except FileNotFoundError:
-                self.log_exception(f'Local file {local_file_item} not found')
-        self.log_debug('ServiceManager.save_file - ZIP contents size is %i bytes' % total_size)
-        self.main_window.display_progress_bar(1000)
         try:
-            tmp_file_path = str(file_path) + ".saving"
-            with zipfile.ZipFile(tmp_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                # First we add service contents..
-                zip_file.writestr('service_data.osj', service_content)
-                self.main_window.increment_progress_bar(service_content_size / total_size * 1000)
-                # Finally add all the listed media files.
-                for local_file_item, zip_file_item in write_list:
-                    zip_file.write(str(local_file_item), str(zip_file_item))
-                    self.main_window.increment_progress_bar(local_file_item.stat().st_size / total_size * 1000)
-                with suppress(FileNotFoundError):
-                    file_path.unlink()
-            # Move rather than copy to prevent writing another file if possible
-            shutil.move(tmp_file_path, file_path)
-            self.settings.setValue('servicemanager/last directory', file_path.parent)
-        except (PermissionError, OSError) as error:
-            self.log_exception('Failed to save service to disk: {name}'.format(name=file_path))
-            self.main_window.error_message(
-                translate('OpenLP.ServiceManager', 'Error Saving File'),
-                translate('OpenLP.ServiceManager',
-                          'There was an error saving your file.\n\n{error}').format(error=error))
-            return self.save_file_as()
-        self.main_window.finished_progress_bar()
-        self.application.set_normal_cursor()
-        self.main_window.add_recent_file(file_path)
-        self.set_modified(False)
-        return True
+            service = self.create_basic_service()
+
+            write_list = []
+            missing_list = []
+
+            if not self._save_lite:
+                try:
+                    write_list, missing_list = self.get_write_file_list()
+                except PermissionError as pe:
+                    self.main_window.error_message(UiStrings.PermissionError,
+                                                   UiStrings.UnableToRead + '\n\n' + pe.filename)
+                    return False
+                if missing_list:
+                    self.application.set_normal_cursor()
+                    title = translate('OpenLP.ServiceManager', 'Service File(s) Missing')
+                    message = translate('OpenLP.ServiceManager',
+                                        'The following file(s) in the service are missing: {name}\n\n'
+                                        'These files will be removed if you continue to save.'
+                                        ).format(name='\n\t'.join(missing_list))
+                    answer = QtWidgets.QMessageBox.critical(self, title, message,
+                                                            QtWidgets.QMessageBox.StandardButton(
+                                                                QtWidgets.QMessageBox.StandardButton.Ok |
+                                                                QtWidgets.QMessageBox.StandardButton.Cancel))
+                    if answer == QtWidgets.QMessageBox.StandardButton.Cancel:
+                        return False
+                    self.application.set_busy_cursor()
+            # Check if item contains a missing file.
+            for item in list(self.service_items):
+                if not self._save_lite:
+                    item['service_item'].remove_invalid_frames(missing_list)
+                    if item['service_item'].missing_frames():
+                        self.service_items.remove(item)
+                        continue
+                service_item = item['service_item'].get_service_repr(self._save_lite)
+                # Add the service item to the service.
+                service.append({'serviceitem': service_item})
+            self.repaint_service_list(-1, -1)
+            service_content = json.dumps(service, cls=OpenLPJSONEncoder)
+            service_content_size = len(bytes(service_content, encoding='utf-8'))
+            total_size = service_content_size
+            for local_file_item, zip_file_item in write_list:
+                try:
+                    total_size += local_file_item.stat().st_size
+                except FileNotFoundError:
+                    self.log_exception(f'Local file {local_file_item} not found')
+            self.log_debug('ServiceManager.save_file - ZIP contents size is %i bytes' % total_size)
+            self.main_window.display_progress_bar(1000)
+            try:
+                tmp_file_path = str(file_path) + ".saving"
+                with zipfile.ZipFile(tmp_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    # First we add service contents..
+                    zip_file.writestr('service_data.osj', service_content)
+                    self.main_window.increment_progress_bar(service_content_size / total_size * 1000)
+                    # Finally add all the listed media files.
+                    for local_file_item, zip_file_item in write_list:
+                        zip_file.write(str(local_file_item), str(zip_file_item))
+                        self.main_window.increment_progress_bar(local_file_item.stat().st_size / total_size * 1000)
+                    with suppress(FileNotFoundError):
+                        file_path.unlink()
+                # Move rather than copy to prevent writing another file if possible
+                shutil.move(tmp_file_path, file_path)
+                self.settings.setValue('servicemanager/last directory', file_path.parent)
+            except (PermissionError, OSError) as error:
+                self.log_exception('Failed to save service to disk: {name}'.format(name=file_path))
+                self.application.set_normal_cursor()
+                self.main_window.error_message(
+                    translate('OpenLP.ServiceManager', 'Error Saving File'),
+                    translate('OpenLP.ServiceManager',
+                              'There was an error saving your file.\n\n{error}').format(error=error))
+                return self.save_file_as()
+            self.main_window.finished_progress_bar()
+            self.main_window.add_recent_file(file_path)
+            self.set_modified(False)
+            return True
+        finally:
+            self.application.set_normal_cursor()
 
     def save_file_as(self):
         """
@@ -1354,7 +1357,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         else:
             file_path = file_path.with_suffix('.osz')
         self.set_file_name(file_path)
-        self.decide_save_method()
+        return self.decide_save_method()
 
     def decide_save_method(self):
         """

@@ -76,6 +76,7 @@ class OpenLP(QtCore.QObject, LogMixin):
     args = []
     worker_threads = {}
     settings = None
+    busy_cursor_count = 0
 
     def exec(self):
         """
@@ -208,7 +209,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         if not hasattr(self, 'exception_form'):
             self.exception_form = ExceptionForm()
         self.exception_form.exception_text_edit.setPlainText(''.join(format_exception(exc_type, value, traceback)))
-        self.set_normal_cursor()
+        self.set_normal_cursor(force=True)
         is_splash_visible = False
         if hasattr(self, 'splash') and self.splash.isVisible():
             is_splash_visible = True
@@ -270,16 +271,31 @@ class OpenLP(QtCore.QObject, LogMixin):
         """
         Sets the Busy Cursor for the Application
         """
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.BusyCursor)
-        QtWidgets.QApplication.processEvents()
+        if OpenLP.busy_cursor_count == 0:
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.BusyCursor)
+            QtWidgets.QApplication.processEvents()
+        OpenLP.busy_cursor_count += 1
 
     @staticmethod
-    def set_normal_cursor():
+    def set_normal_cursor(force=False):
         """
         Sets the Normal Cursor for the Application
         """
-        QtWidgets.QApplication.restoreOverrideCursor()
-        QtWidgets.QApplication.processEvents()
+        if force:
+            OpenLP.busy_cursor_count = 0
+            while QtWidgets.QApplication.overrideCursor() is not None:
+                QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QApplication.processEvents()
+            return
+
+        if OpenLP.busy_cursor_count > 0:
+            OpenLP.busy_cursor_count -= 1
+            if OpenLP.busy_cursor_count == 0:
+                QtWidgets.QApplication.restoreOverrideCursor()
+                QtWidgets.QApplication.processEvents()
+        else:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QApplication.processEvents()
 
 
 def parse_options():
