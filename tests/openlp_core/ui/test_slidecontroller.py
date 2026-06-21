@@ -1990,7 +1990,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
     slide_controller.displays = [live_display]
     slide_controller.preview_display = preview_display
     settings.setValue('themes/item transitions', True)
-    settings.setValue('themes/item transition speed', 1.2)
+    settings.setValue('themes/item transition speed', 'slow')
     settings.setValue('themes/item transition type', 'ease-in')
 
     # WHEN: Item transition settings are refreshed

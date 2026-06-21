@@ -541,7 +541,7 @@ class Settings(QtCore.QSettings):
         'themes/last directory import': None,
         'themes/theme level': ThemeLevel.Global,
         'themes/item transitions': False,
-        'themes/item transition speed': 0.8,
+        'themes/item transition speed': 'normal',
         'themes/item transition type': 'balanced',
         'themes/hot reload': False,
         'user interface/is preset layout': False,

@@ -1064,14 +1064,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
 
     def _get_item_transition_speed_seconds(self):
         value = self.settings.value('themes/item transition speed')
-        if isinstance(value, bool):
-            speed = 0.8
-        else:
-            try:
-                speed = float(value)
-            except (TypeError, ValueError):
-                speed = 0.8
-        return max(0.1, speed)
+        if value == 'fast':
+            return 0.4
+        elif value == 'slow':
+            return 1.2
+        return 0.8
 
     def _process_item(self, service_item, slide_no, is_reloading=False):
         """

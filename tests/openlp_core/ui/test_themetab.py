@@ -63,7 +63,7 @@ def test_save_triggers_processes_false(mock_settings):
 
 def test_item_transition_controls_disabled_when_unchecked(mock_settings):
     """
-    Test that transition speed/type controls are disabled when item transitions are off.
+    Test that transition speed controls are disabled when item transitions are off.
     """
     # GIVEN: A themes tab with item transitions disabled
     settings_form = SettingsForm(None)
@@ -75,14 +75,12 @@ def test_item_transition_controls_disabled_when_unchecked(mock_settings):
 
     # THEN: Transition controls should be disabled
     assert themes_tab.item_transition_speed_label.isEnabled() is False
-    assert themes_tab.item_transition_speed_spin_box.isEnabled() is False
-    assert themes_tab.item_transition_type_label.isEnabled() is False
-    assert themes_tab.item_transition_type_combo_box.isEnabled() is False
+    assert themes_tab.item_transition_speed_combo_box.isEnabled() is False
 
 
 def test_item_transition_controls_enabled_when_checked(mock_settings):
     """
-    Test that transition speed/type controls are enabled when item transitions are on.
+    Test that transition speed controls are enabled when item transitions are on.
     """
     # GIVEN: A themes tab with item transitions enabled
     settings_form = SettingsForm(None)
@@ -94,6 +92,4 @@ def test_item_transition_controls_enabled_when_checked(mock_settings):
 
     # THEN: Transition controls should be enabled
     assert themes_tab.item_transition_speed_label.isEnabled() is True
-    assert themes_tab.item_transition_speed_spin_box.isEnabled() is True
-    assert themes_tab.item_transition_type_label.isEnabled() is True
-    assert themes_tab.item_transition_type_combo_box.isEnabled() is True
+    assert themes_tab.item_transition_speed_combo_box.isEnabled() is True
