@@ -541,7 +541,7 @@ class Settings(QtCore.QSettings):
         'themes/last directory import': None,
         'themes/theme level': ThemeLevel.Global,
         'themes/item transitions': False,
-        'themes/item transition speed': 0.8,
+        'themes/item transition speed': 'normal',
         'themes/item transition type': 'balanced',
         'themes/hot reload': False,
         'user interface/is preset layout': False,
@@ -1011,6 +1011,14 @@ class Settings(QtCore.QSettings):
         if isinstance(default_value, int):
             if setting is None:
                 return 0
+            import enum
+            if isinstance(setting, enum.Enum):
+                return int(setting.value)
+            if hasattr(setting, 'value'):
+                try:
+                    return int(setting.value)
+                except (TypeError, ValueError):
+                    pass
             return int(setting)
         return setting
 
@@ -1029,8 +1037,8 @@ class Settings(QtCore.QSettings):
         if dest_path.exists():
             dest_path.unlink()
         self.remove('SettingsImport')
-        # Get the settings.
-        keys = self.allKeys()
+        # Get the settings keys from both custom settings and default settings
+        keys = set(self.allKeys()) | set(Settings.__default_settings__.keys())
         export_settings = QtCore.QSettings(str(temp_path), QtCore.QSettings.Format.IniFormat)
         # Add a header section.
         # This is to insure it's our conf file for import.
@@ -1043,7 +1051,14 @@ class Settings(QtCore.QSettings):
         # Write all the sections and keys.
         for section_key in keys:
             try:
-                key_value = super().value(section_key)
+                if self.contains(section_key):
+                    key_value = super().value(section_key)
+                else:
+                    key_value = Settings.__default_settings__.get(section_key)
+                    if is_serializable(key_value) or isinstance(key_value, dict) or \
+                            (isinstance(key_value, list) and key_value and is_serializable(key_value[0])):
+                        key_value = json.dumps(key_value, cls=OpenLPJSONEncoder)
+                
                 if key_value is not None:
                     export_settings.setValue(section_key, key_value)
             except TypeError:
@@ -1061,3 +1076,146 @@ class Settings(QtCore.QSettings):
                         export_conf_file.write(file_record)
         finally:
             temp_path.unlink()
+
+    def export_zip(self, dest_path):
+        """
+        Export settings and custom logo background image (if specified) as a ZIP file.
+
+        :param Path dest_path: The ZIP file path to create.
+        """
+        import zipfile
+        import shutil
+        temp_dir = Path(gettempdir(), 'openlp_export')
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        temp_conf_path = temp_dir / 'openlp.conf'
+        self.export(temp_conf_path)
+        
+        with zipfile.ZipFile(str(dest_path), 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.write(str(temp_conf_path), 'openlp.conf')
+            
+            # Check logo background image
+            logo_path = self.value('core/logo file')
+            if logo_path and isinstance(logo_path, Path) and not str(logo_path).startswith(':/'):
+                if logo_path.exists() and logo_path.is_file():
+                    zip_file.write(str(logo_path), logo_path.name)
+                    
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def import_settings(self, import_file_path):
+        """
+        Import settings from a .conf or .zip file.
+        Returns True if successful, False otherwise.
+
+        :param Path import_file_path: The file path to import settings from.
+        :return: True on success, False on failure.
+        :rtype: bool
+        """
+        import shutil
+        import zipfile
+        from openlp.core.common.applocation import AppLocation
+        
+        # 1. Create a temporary folder
+        temp_dir_path = Path(gettempdir(), 'openlp_import_temp')
+        if temp_dir_path.exists():
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
+        temp_dir_path.mkdir(parents=True, exist_ok=True)
+        
+        logo_imported_path = None
+        
+        try:
+            # 2. Extract ZIP or copy CONF
+            if import_file_path.suffix.lower() == '.zip':
+                with zipfile.ZipFile(str(import_file_path), 'r') as zip_ref:
+                    zip_ref.extractall(str(temp_dir_path))
+                conf_files = list(temp_dir_path.glob('*.conf'))
+                if not conf_files:
+                    log.error("ZIP file does not contain a .conf settings file.")
+                    return False
+                temp_config_path = conf_files[0]
+                
+                # Check for logo file in zip
+                logo_filename = None
+                with zipfile.ZipFile(str(import_file_path), 'r') as zip_ref:
+                    for name in zip_ref.namelist():
+                        if not name.endswith('.conf'):
+                            logo_filename = name
+                            break
+                if logo_filename:
+                    extracted_logo = temp_dir_path / logo_filename
+                    if extracted_logo.exists() and extracted_logo.is_file():
+                        data_dir = AppLocation.get_data_path()
+                        data_dir.mkdir(parents=True, exist_ok=True)
+                        dest_logo = data_dir / logo_filename
+                        shutil.copyfile(extracted_logo, dest_logo)
+                        logo_imported_path = dest_logo
+            else:
+                temp_config_path = temp_dir_path / import_file_path.name
+                shutil.copyfile(import_file_path, temp_config_path)
+                
+            # 3. Load from the temp config path
+            import_settings = Settings(str(temp_config_path), QtCore.QSettings.Format.IniFormat)
+            
+            # If settings are from the future, we can't import.
+            if import_settings.from_future():
+                log.error("Cannot import settings from a newer version.")
+                return False
+                
+            # Upgrade settings to prepare the import.
+            if import_settings.version_mismatched():
+                import_settings.upgrade_settings()
+                
+            # Basic sanity check
+            if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
+                log.error("Invalid OpenLP settings file.")
+                return False
+                
+            # Define allowed setting sections
+            setting_sections = [
+                'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager',
+                'themes', 'projector', 'players', 'displayTags', 'SettingsImport', 'crashreport',
+                'songs', 'bibles', 'presentations', 'images', 'media', 'custom',
+                'songusage', 'alerts', 'obs_studio', 'planningcenter'
+            ]
+            
+            # Import keys
+            import_keys = import_settings.allKeys()
+            for section_key in import_keys:
+                # Handle bad files
+                try:
+                    section, key = section_key.split('/')
+                except ValueError:
+                    section = 'unknown'
+                    key = ''
+                if section == 'General' or section == '%General':
+                    section = 'general'
+                    section_key = section + "/" + key
+                if section not in setting_sections:
+                    continue
+                    
+                if 'eneral' in section_key:
+                    section_key = section_key.lower()
+                try:
+                    value = import_settings.value(section_key)
+                except KeyError:
+                    value = None
+                if value is not None:
+                    self.setValue(section_key, value)
+            
+            # Set logo path if imported
+            if logo_imported_path:
+                self.setValue('core/logo file', logo_imported_path)
+                
+            now = datetime.datetime.now()
+            self.setValue('SettingsImport/file_imported', str(import_file_path))
+            self.setValue('SettingsImport/file_date_imported', now.strftime("%Y-%m-%d %H:%M"))
+            self.sync()
+            return True
+            
+        except Exception as e:
+            log.exception("Error during settings import")
+            return False
+        finally:
+            shutil.rmtree(temp_dir_path, ignore_errors=True)

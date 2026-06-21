@@ -91,6 +91,7 @@ class BibleDB(DBManager):
             self.name = kwargs['name']
             if not isinstance(self.name, str):
                 self.name = str(self.name, 'utf-8')
+            self.name = self.name.strip()
             self.file_path = Path(clean_filename(self.name) + '.sqlite')
         if 'file' in kwargs:
             self.file_path = kwargs['file']
@@ -170,7 +171,7 @@ class BibleDB(DBManager):
         Returns the version name of the Bible.
         """
         version_name = self.get_object(self.BibleMeta, 'name')
-        self.name = version_name.value if version_name else None
+        self.name = version_name.value.strip() if version_name and version_name.value else None
         return self.name
 
     def create_book(self, name: str, bk_ref_id: str, testament: int = 1):

@@ -263,7 +263,10 @@ def test_set_busy_cursor(mocked_processEvents, mocked_setOverrideCursor, qapp):
     """
     Test that the set_busy_cursor() method sets the cursor
     """
-    # GIVEN: An app
+    # GIVEN: An app and reset cursor count
+    from openlp.core.app import OpenLP
+    OpenLP.busy_cursor_count = 0
+
     # WHEN: set_busy_cursor() is called
     qapp.set_busy_cursor()
 
@@ -278,7 +281,10 @@ def test_set_normal_cursor(mocked_restoreOverrideCursor, mocked_processEvents, q
     """
     Test that the set_normal_cursor() method resets the cursor
     """
-    # GIVEN: An app
+    # GIVEN: An app and reset cursor count
+    from openlp.core.app import OpenLP
+    OpenLP.busy_cursor_count = 0
+
     # WHEN: set_normal_cursor() is called
     qapp.set_normal_cursor()
 

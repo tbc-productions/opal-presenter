@@ -702,15 +702,18 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                                        self.settings.value('themes/last directory export'),
                                        translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'),
                                        translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+        if not export_path:
+            return
         self.application.set_busy_cursor()
-        if export_path:
+        try:
             self.settings.setValue('themes/last directory export', export_path.parent)
             if self._export_theme(export_path.with_suffix('.otz'), theme_name):
                 QtWidgets.QMessageBox.information(self,
                                                   translate('OpenLP.ThemeManager', 'Theme Exported'),
                                                   translate('OpenLP.ThemeManager',
                                                             'Your theme has been successfully exported.'))
-        self.application.set_normal_cursor()
+        finally:
+            self.application.set_normal_cursor()
 
     def _export_theme(self, theme_path, theme_name):
         """
@@ -754,34 +757,38 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         if not file_paths:
             return
         self.application.set_busy_cursor()
-        new_themes = []
-        for file_path in file_paths:
-            new_themes.append(self.unzip_theme(file_path))
-        self.settings.setValue('themes/last directory import', file_path.parent)
-        self.update_preview_images(new_themes)
-        self.application.set_normal_cursor()
+        try:
+            new_themes = []
+            for file_path in file_paths:
+                new_themes.append(self.unzip_theme(file_path))
+            self.settings.setValue('themes/last directory import', file_path.parent)
+            self.update_preview_images(new_themes)
+        finally:
+            self.application.set_normal_cursor()
 
     def load_first_time_themes(self):
         """
         Imports any themes on start up and makes sure there is at least one theme
         """
         self.application.set_busy_cursor()
-        theme_paths = AppLocation.get_files('themes', '.otz')
-        new_themes = []
-        for theme_path in theme_paths:
-            theme_path = self.theme_path / theme_path
-            new_themes.append(self.unzip_theme(theme_path))
-            delete_file(theme_path)
-        # No themes have been found so create one
-        if not theme_paths:
-            theme = Theme()
-            theme.theme_name = UiStrings().Default
-            self.save_theme(theme)
-            self.settings.setValue('themes/global theme', theme.theme_name)
-            new_themes = [theme.theme_name]
-        if new_themes:
-            self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
-        self.application.set_normal_cursor()
+        try:
+            theme_paths = AppLocation.get_files('themes', '.otz')
+            new_themes = []
+            for theme_path in theme_paths:
+                theme_path = self.theme_path / theme_path
+                new_themes.append(self.unzip_theme(theme_path))
+                delete_file(theme_path)
+            # No themes have been found so create one
+            if not theme_paths:
+                theme = Theme()
+                theme.theme_name = UiStrings().Default
+                self.save_theme(theme)
+                self.settings.setValue('themes/global theme', theme.theme_name)
+                new_themes = [theme.theme_name]
+            if new_themes:
+                self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
+        finally:
+            self.application.set_normal_cursor()
 
     def load_themes(self):
         """

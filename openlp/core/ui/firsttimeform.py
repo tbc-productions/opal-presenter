@@ -1071,18 +1071,29 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
 
         :rtype: None
         """
-        self._set_plugin_status(self.songs_check_box, 'songs/status')
-        self._set_plugin_status(self.bible_check_box, 'bibles/status')
-        self._set_plugin_status(self.presentation_check_box, 'presentations/status')
-        self._set_plugin_status(self.image_check_box, 'images/status')
-        self._set_plugin_status(self.media_check_box, 'media/status')
-        self._set_plugin_status(self.custom_check_box, 'custom/status')
-        self._set_plugin_status(self.song_usage_check_box, 'songusage/status')
-        self._set_plugin_status(self.alert_check_box, 'alerts/status')
-        self._set_plugin_status(self.obs_studio_check_box, 'obs_studio/status')
+        imported_settings = False
+        if hasattr(self, 'import_settings_page') and self.import_settings_page.file_edit.text():
+            file_path = self.import_settings_page.file_edit.text()
+            if file_path and Path(file_path).exists():
+                imported_settings = self.settings.import_settings(Path(file_path))
+                if not imported_settings:
+                    QtWidgets.QMessageBox.critical(self, translate('OpenLP.FirstTimeWizard', 'Import settings'),
+                                                   translate('OpenLP.FirstTimeWizard', 'An error occurred while importing settings from the selected file.'))
+
+        if not imported_settings:
+            self._set_plugin_status(self.songs_check_box, 'songs/status')
+            self._set_plugin_status(self.bible_check_box, 'bibles/status')
+            self._set_plugin_status(self.presentation_check_box, 'presentations/status')
+            self._set_plugin_status(self.image_check_box, 'images/status')
+            self._set_plugin_status(self.media_check_box, 'media/status')
+            self._set_plugin_status(self.custom_check_box, 'custom/status')
+            self._set_plugin_status(self.song_usage_check_box, 'songusage/status')
+            self._set_plugin_status(self.alert_check_box, 'alerts/status')
+            self._set_plugin_status(self.obs_studio_check_box, 'obs_studio/status')
+            if self.theme_combo_box.currentIndex() != -1:
+                self.settings.setValue('themes/global theme', self.theme_combo_box.currentText())
+
         self.screen_selection_widget.save()
-        if self.theme_combo_box.currentIndex() != -1:
-            self.settings.setValue('themes/global theme', self.theme_combo_box.currentText())
         Registry().remove_function('config_screen_changed', self.screen_selection_widget.load)
         super().accept()
 

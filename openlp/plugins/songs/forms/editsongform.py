@@ -747,7 +747,9 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         # None at this point.
         log.debug('Validate Song')
         # Lets be nice and assume the data is correct.
-        if not self.title_edit.text():
+        title = self.title_edit.text().strip()
+        self.title_edit.setText(title)
+        if not title:
             self.song_tab_widget.setCurrentIndex(0)
             self.title_edit.setFocus()
             critical_error_message_box(
@@ -1582,8 +1584,8 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         # Song() is in a partially complete state.
         if not self.song:
             self.song = Song()
-        self.song.title = self.title_edit.text()
-        self.song.alternate_title = self.alternative_edit.text()
+        self.song.title = self.title_edit.text().strip()
+        self.song.alternate_title = self.alternative_edit.text().strip()
         self.song.copyright = self._sanitize_copyright_text(self.copyright_edit.toPlainText())
         # Values will be set when cleaning the song.
         self.song.search_title = ''

@@ -74,8 +74,8 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
         copyright = self.manager.get_meta_data(self.bible, 'copyright')
         permission = self.manager.get_meta_data(self.bible, 'permissions')
         full_license = self.manager.get_meta_data(self.bible, 'full_license')
-        if meta:
-            self.version_name_edit.setText(meta.value)
+        if meta and meta.value:
+            self.version_name_edit.setText(meta.value.strip())
         if copyright:
             self.copyright_edit.setText(copyright.value)
         if permission:
@@ -126,10 +126,10 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
         Exit Dialog and save data
         """
         log.debug('BibleEditForm.accept')
-        version = self.version_name_edit.text()
-        copyright = self.copyright_edit.text()
-        permissions = self.permissions_edit.text()
-        full_license = self.full_license_edit.toPlainText()
+        version = self.version_name_edit.text().strip()
+        copyright = self.copyright_edit.text().strip()
+        permissions = self.permissions_edit.text().strip()
+        full_license = self.full_license_edit.toPlainText().strip()
         book_name_language = self.language_selection_combo_box.currentIndex() - 1
         if book_name_language == -1:
             book_name_language = None
@@ -159,6 +159,8 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
         """
         Validate the Meta before saving.
         """
+        name = name.strip()
+        copyright = copyright.strip()
         if not name:
             self.version_name_edit.setFocus()
             critical_error_message_box(
@@ -173,7 +175,7 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
                           'You need to set a copyright for your Bible. Bibles in the Public Domain need to be marked '
                           'as such.'))
             return False
-        elif self.manager.exists(name) and self.manager.get_meta_data(self.bible, 'name').value != name:
+        elif self.manager.exists(name) and self.manager.get_meta_data(self.bible, 'name').value.strip() != name:
             self.version_name_edit.setFocus()
             critical_error_message_box(
                 translate('BiblesPlugin.BibleEditForm', 'Bible Exists'),

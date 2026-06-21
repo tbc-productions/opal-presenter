@@ -495,14 +495,12 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         item_transitions = self.settings.value('themes/item transitions')
         item_transition_speed = self.settings.value('themes/item transition speed')
-        if isinstance(item_transition_speed, bool):
-            item_transition_speed = 0.8
+        if item_transition_speed == 'fast':
+            item_transition_speed = 0.4
+        elif item_transition_speed == 'slow':
+            item_transition_speed = 1.2
         else:
-            try:
-                item_transition_speed = float(item_transition_speed)
-            except (TypeError, ValueError):
-                item_transition_speed = 0.8
-        item_transition_speed = max(0.1, item_transition_speed)
+            item_transition_speed = 0.8
         valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
         item_transition_type = self.settings.value('themes/item transition type')
         if item_transition_type not in valid_item_transition_types:

@@ -308,8 +308,10 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             default_export_path,
             translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'),
             translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+        if not export_path:
+            return
         self.application.set_busy_cursor()
-        if export_path:
+        try:
             self.settings.setValue('themes/last directory export', export_path.parent)
             if self.theme_manager._export_theme(export_path.with_suffix('.otz'), theme_name):
                 QtWidgets.QMessageBox.information(
@@ -317,7 +319,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
                     translate('OpenLP.ThemeManager', 'Theme Exported'),
                     translate('OpenLP.ThemeManager', '{name} theme has been successfully exported.')
                     .format(name=theme_name))
-        self.application.set_normal_cursor()
+        finally:
+            self.application.set_normal_cursor()
 
     def on_theme_name_changed(self, theme_name):
         """

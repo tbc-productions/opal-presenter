@@ -399,3 +399,63 @@ def test_settings_pyqt5_pyside6_migration_ini_missing():
 
     # THEN: The returned settings object should be the same as the original
     assert settings == ret_settings
+
+
+def test_settings_zip_export_import(settings):
+    """Test exporting and importing settings using ZIP format"""
+    from openlp.core.common import settings as modsettings
+    original_version = modsettings.__version__
+    modsettings.__version__ = 4
+    try:
+        # GIVEN: A Settings object with custom values
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir_path = Path(tmp_dir)
+            zip_path = tmp_dir_path / 'backup.zip'
+            logo_path = tmp_dir_path / 'my_logo.png'
+            # Create a dummy logo file
+            logo_path.write_text("dummy image content")
+
+            # Set some custom settings
+            settings.setValue('core/ccli number', '12345')
+            settings.setValue('core/logo file', logo_path)
+            settings.setValue('SettingsImport/type', 'OpenLP_settings_export')
+            settings.sync()
+
+            # WHEN: Exporting to ZIP
+            settings.export_zip(zip_path)
+
+            # THEN: The ZIP file should exist and contain openlp.conf and the logo
+            assert zip_path.exists()
+            import zipfile
+            with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
+                namelist = zip_ref.namelist()
+                assert 'openlp.conf' in namelist
+                assert 'my_logo.png' in namelist
+
+            # GIVEN: Clear current settings and import from ZIP
+            settings.setValue('core/ccli number', '0')
+            settings.setValue('core/logo file', Path(':/graphics/openlp-logo-background.svg'))
+            settings.sync()
+
+            # WHEN: Importing settings from the ZIP
+            success = settings.import_settings(zip_path)
+
+            # THEN: Import should be successful, settings restored, and logo file path updated
+            assert success is True
+            assert settings.value('core/ccli number') == '12345'
+            restored_logo_path = settings.value('core/logo file')
+            assert restored_logo_path.name == 'my_logo.png'
+            assert restored_logo_path.exists()
+    finally:
+        modsettings.__version__ = original_version
+
+
+def test_convert_value_with_enum(settings):
+    """Test that _convert_value handles QListView.ViewMode enums correctly"""
+    from PySide6.QtWidgets import QListView
+    # GIVEN: A settings object and a QListView.ViewMode enum
+    # WHEN: Calling _convert_value with int default_value
+    val = settings._convert_value(QListView.ViewMode.IconMode, 0)
+    # THEN: It should convert correctly to the enum's integer value (1)
+    assert val == 1
+
