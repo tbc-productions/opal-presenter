@@ -396,11 +396,12 @@ class BibleManager(LogMixin, RegistryProperties):
         """
         if not isinstance(name, str):
             name = str(name)
+        name = name.strip()
         for bible in list(self.db_cache.keys()):
             log.debug('Bible from cache in is_new_bible {bible}'.format(bible=bible))
             if not isinstance(bible, str):
                 bible = str(bible)
-            if bible == name:
+            if bible.strip() == name:
                 return True
         return False
 

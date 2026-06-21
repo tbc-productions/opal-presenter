@@ -64,14 +64,14 @@ def test_clean_title():
     """
     Test the clean_title() function
     """
-    # GIVEN: A "dirty" string
-    dirty_string = 'This\u0000 is a\u0014 dirty \u007Fstring\u009F'
+    # GIVEN: A "dirty" string with control chars and leading/trailing spaces
+    dirty_string = '  This\u0000 is a\u0014 dirty \u007Fstring\u009F   '
 
     # WHEN: We run the string through the function
     result = clean_title(dirty_string)
 
-    # THEN: The string should be cleaned up
-    assert result == 'This is a dirty string', 'The title should be cleaned up properly: "%s"' % result
+    # THEN: The string should be cleaned up and stripped
+    assert result == 'This is a dirty string', 'The title should be cleaned up and stripped properly: "%s"' % result
 
 
 def test_songs_probably_equal_same_song():

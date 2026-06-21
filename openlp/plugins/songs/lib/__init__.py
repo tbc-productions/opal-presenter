@@ -342,12 +342,12 @@ def clean_string(string):
 
 def clean_title(title):
     """
-    Cleans the song title by removing Unicode control chars groups C0 & C1, as well as any trailing spaces.
+    Cleans the song title by removing Unicode control chars groups C0 & C1, as well as any leading and trailing spaces.
 
     :param title: The song title to clean
     :return: A clean title
     """
-    return CONTROL_CHARS.sub('', title).rstrip()
+    return CONTROL_CHARS.sub('', title).strip()
 
 
 def clean_song(manager, song):

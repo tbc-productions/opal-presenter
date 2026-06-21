@@ -510,7 +510,7 @@ class BibleImportForm(OpenLPWizard):
                 if self.web_translation_combo_box.count() == 0:
                     return False
                 else:
-                    self.version_name_edit.setText(self.web_translation_combo_box.currentText())
+                    self.version_name_edit.setText(self.web_translation_combo_box.currentText().strip())
             elif self.field('source_format') == BibleFormat.SWORD:
                 # Test the SWORD tab that is currently active
                 if self.sword_tab_widget.currentIndex() == self.sword_tab_widget.indexOf(self.sword_folder_tab):
@@ -526,11 +526,11 @@ class BibleImportForm(OpenLPWizard):
                         self.sword_folder_path_edit.setFocus()
                         return False
                     if 'description' in self.pysword_folder_modules_json[key]:
-                        self.version_name_edit.setText(self.pysword_folder_modules_json[key]['description'])
+                        self.version_name_edit.setText(self.pysword_folder_modules_json[key]['description'].strip())
                     if 'distributionlicense' in self.pysword_folder_modules_json[key]:
-                        self.permissions_edit.setText(self.pysword_folder_modules_json[key]['distributionlicense'])
+                        self.permissions_edit.setText(self.pysword_folder_modules_json[key]['distributionlicense'].strip())
                     if 'copyright' in self.pysword_folder_modules_json[key]:
-                        self.copyright_edit.setText(self.pysword_folder_modules_json[key]['copyright'])
+                        self.copyright_edit.setText(self.pysword_folder_modules_json[key]['copyright'].strip())
                 elif self.sword_tab_widget.currentIndex() == self.sword_tab_widget.indexOf(self.sword_zip_tab):
                     if not self.field('sword_zip_path'):
                         critical_error_message_box(UiStrings().NFSs, WizardStrings.YouSpecifyFile % WizardStrings.SWORD)
@@ -538,13 +538,17 @@ class BibleImportForm(OpenLPWizard):
                         return False
                     key = self.sword_zipbible_combo_box.itemData(self.sword_zipbible_combo_box.currentIndex())
                     if 'description' in self.pysword_zip_modules_json[key]:
-                        self.version_name_edit.setText(self.pysword_zip_modules_json[key]['description'])
+                        self.version_name_edit.setText(self.pysword_zip_modules_json[key]['description'].strip())
                     if 'distributionlicense' in self.pysword_zip_modules_json[key]:
-                        self.permissions_edit.setText(self.pysword_zip_modules_json[key]['distributionlicense'])
+                        self.permissions_edit.setText(self.pysword_zip_modules_json[key]['distributionlicense'].strip())
             return True
         elif self.currentPage() == self.license_details_page:
-            license_version = self.field('license_version')
-            license_copyright = self.field('license_copyright')
+            license_version = self.version_name_edit.text().strip()
+            license_copyright = self.copyright_edit.text().strip()
+            license_permissions = self.permissions_edit.text().strip()
+            self.version_name_edit.setText(license_version)
+            self.copyright_edit.setText(license_copyright)
+            self.permissions_edit.setText(license_permissions)
             if not license_version:
                 critical_error_message_box(
                     UiStrings().EmptyField,
@@ -730,10 +734,10 @@ class BibleImportForm(OpenLPWizard):
         Perform the actual import.
         """
         bible_type = self.field('source_format')
-        license_version = self.field('license_version')
-        license_copyright = self.field('license_copyright')
-        license_permissions = self.field('license_permissions')
-        license_full_license = self.field('license_full_license')
+        license_version = self.field('license_version').strip()
+        license_copyright = self.field('license_copyright').strip()
+        license_permissions = self.field('license_permissions').strip()
+        license_full_license = self.field('license_full_license').strip()
         importer = None
         if bible_type == BibleFormat.OSIS:
             # Import an OSIS bible.
