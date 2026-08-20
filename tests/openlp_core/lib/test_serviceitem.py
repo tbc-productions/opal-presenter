@@ -254,8 +254,10 @@ def test_service_item_load_image_from_local_service(mocked_get_section_data_path
     image_name2 = 'image_2.jpg'
     test_file1 = Path('/home/openlp') / image_name1
     test_file2 = Path('/home/openlp') / image_name2
-    frame_array1 = {'path': test_file1, 'title': image_name1, 'file_hash': 'abcd'}
-    frame_array2 = {'path': test_file2, 'title': image_name2, 'file_hash': 'abcd'}
+    frame_array1 = {'path': test_file1, 'title': image_name1, 'file_hash': 'abcd',
+                    'thumbnail': Path('/path/thumbnails/abcd.jpg')}
+    frame_array2 = {'path': test_file2, 'title': image_name2, 'file_hash': 'abcd',
+                    'thumbnail': Path('/path/thumbnails/abcd.jpg')}
     service_item = ServiceItem(None)
     service_item.add_icon = MagicMock()
     service_item2 = ServiceItem(None)
