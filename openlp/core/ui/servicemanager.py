@@ -2632,10 +2632,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                             child_text_color.setAlpha(140)
                             child.setForeground(0, QtGui.QBrush(child_text_color))
                     except RuntimeError:
-                        # it's probably a "wrapped C/C++ object of type QTreeWidgetItem has been deleted" due to
-                        # consecutive/parallel repaint_service_list execution. We've added some mitigation to avoid this
-                        # to happen, but it for any reason it happens again, we'll silent it and try to repaint the list
-                        # again (to avoid a broken list presented to the user).
+                        # QTreeWidgetItem was deleted by a concurrent repaint.
                         self.service_manager_list.setUpdatesEnabled(True)
                         self.is_running_repaint = False
                         return True
