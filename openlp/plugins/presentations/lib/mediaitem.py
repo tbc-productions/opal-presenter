@@ -312,12 +312,7 @@ class PresentationMediaItem(FolderLibraryItem):
                 transition_enabled = bool(resolved_transition_settings.get('enabled', False))
                 transition_type = resolved_transition_settings.get('type', TransitionType.Fade)
                 transition_speed = resolved_transition_settings.get('speed', TransitionSpeed.Normal)
-                speed_seconds_lookup = {
-                    TransitionSpeed.Fast: 0.4,
-                    TransitionSpeed.Normal: 0.8,
-                    TransitionSpeed.Slow: 1.2
-                }
-                speed_seconds = speed_seconds_lookup.get(transition_speed, 0.8)
+                speed_seconds = TransitionSpeed.to_seconds(transition_speed)
                 service_item.slide_transition_settings = {
                     'enabled': transition_enabled,
                     'type': transition_type,

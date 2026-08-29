@@ -27,6 +27,7 @@ import json
 import logging
 import plistlib
 import os
+import re
 from enum import IntEnum
 from contextlib import suppress
 from pathlib import Path
@@ -194,8 +195,16 @@ def check_for_variant_migration(settings):
     # Strip leading 'v' prefix and build metadata (e.g. 'v3' -> '3', '3.1.2+abc' -> '3.1.2')
     clean_version = str(settings_version).lstrip('v').split('+')[0].split('-dev')[0]
     try:
-        version_parts = [int(p) for p in clean_version.split('.') if p.isdigit()]
-    except (ValueError, AttributeError):
+        version_parts = []
+        for p in clean_version.split('.'):
+            match = re.match(r'^(\d+)', p)
+            if not match:
+                # A non-numeric component (e.g. a pre-release suffix like '100-beta1' with no
+                # leading digits) means we can't reliably compare further components, so stop here
+                # rather than silently dropping it and miscounting the remaining version parts.
+                break
+            version_parts.append(int(match.group(1)))
+    except AttributeError:
         version_parts = []
     if len(version_parts) < 2:
         # Cannot determine enough version info to decide; skip migration
@@ -1082,6 +1091,8 @@ class Settings(QtCore.QSettings):
         Export settings and custom logo background image (if specified) as a ZIP file.
 
         :param Path dest_path: The ZIP file path to create.
+        :return: True on success, False on failure.
+        :rtype: bool
         """
         import zipfile
         import shutil
@@ -1089,20 +1100,24 @@ class Settings(QtCore.QSettings):
         if temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)
         temp_dir.mkdir(parents=True, exist_ok=True)
-        
-        temp_conf_path = temp_dir / 'openlp.conf'
-        self.export(temp_conf_path)
-        
-        with zipfile.ZipFile(str(dest_path), 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.write(str(temp_conf_path), 'openlp.conf')
-            
-            # Check logo background image
-            logo_path = self.value('core/logo file')
-            if logo_path and isinstance(logo_path, Path) and not str(logo_path).startswith(':/'):
-                if logo_path.exists() and logo_path.is_file():
-                    zip_file.write(str(logo_path), logo_path.name)
-                    
-        shutil.rmtree(temp_dir, ignore_errors=True)
+        try:
+            temp_conf_path = temp_dir / 'openlp.conf'
+            self.export(temp_conf_path)
+
+            with zipfile.ZipFile(str(dest_path), 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                zip_file.write(str(temp_conf_path), 'openlp.conf')
+
+                # Check logo background image
+                logo_path = self.value('core/logo file')
+                if logo_path and isinstance(logo_path, Path) and not str(logo_path).startswith(':/'):
+                    if logo_path.exists() and logo_path.is_file():
+                        zip_file.write(str(logo_path), logo_path.name)
+            return True
+        except Exception:
+            log.exception("Error during settings export")
+            return False
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def import_settings(self, import_file_path):
         """
@@ -1172,13 +1187,16 @@ class Settings(QtCore.QSettings):
                 log.error("Invalid OpenLP settings file.")
                 return False
                 
-            # Define allowed setting sections
+            # Define allowed setting sections: the fixed core sections plus every currently
+            # registered plugin, so a plugin's settings aren't silently dropped just because it
+            # isn't in a hardcoded list.
+            from openlp.core.state import State
             setting_sections = [
                 'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager',
                 'themes', 'projector', 'players', 'displayTags', 'SettingsImport', 'crashreport',
-                'songs', 'bibles', 'presentations', 'images', 'media', 'custom',
-                'songusage', 'alerts', 'obs_studio', 'planningcenter'
             ]
+            if hasattr(State(), 'modules'):
+                setting_sections.extend([plugin.name for plugin in State().list_plugins()])
             
             # Import keys
             import_keys = import_settings.allKeys()

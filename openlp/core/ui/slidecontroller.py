@@ -1064,11 +1064,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
 
     def _get_item_transition_speed_seconds(self):
         value = self.settings.value('themes/item transition speed')
-        if value == 'fast':
-            return 0.4
-        elif value == 'slow':
-            return 1.2
-        return 0.8
+        return TransitionSpeed.to_seconds(value)
 
     def _process_item(self, service_item, slide_no, is_reloading=False):
         """
@@ -1389,8 +1385,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         enabled = has_item and desktop_available and view_output_enabled and view_output_checked
         if hasattr(self, 'desktop_screen'):
             self.desktop_screen.setEnabled(enabled)
+            self.desktop_screen.setVisible(desktop_available)
         if hasattr(self, 'toolbar'):
             self.toolbar.set_widget_enabled('desktop_screen_button', enabled)
+            self.toolbar.set_widget_visible('desktop_screen_button', desktop_available)
         if not enabled and getattr(self, '_current_hide_mode', None) == HideMode.Screen:
             self.set_hide_mode(None)
 

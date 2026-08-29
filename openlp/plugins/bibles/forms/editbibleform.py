@@ -175,13 +175,17 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
                           'You need to set a copyright for your Bible. Bibles in the Public Domain need to be marked '
                           'as such.'))
             return False
-        elif self.manager.exists(name) and self.manager.get_meta_data(self.bible, 'name').value.strip() != name:
-            self.version_name_edit.setFocus()
-            critical_error_message_box(
-                translate('BiblesPlugin.BibleEditForm', 'Bible Exists'),
-                translate('BiblesPlugin.BibleEditForm', 'This Bible already exists. Please import '
-                          'a different Bible or first delete the existing one.'))
-            return False
+        elif self.manager.exists(name):
+            existing_name_meta = self.manager.get_meta_data(self.bible, 'name')
+            existing_name = existing_name_meta.value.strip() if existing_name_meta and existing_name_meta.value \
+                else None
+            if existing_name != name:
+                self.version_name_edit.setFocus()
+                critical_error_message_box(
+                    translate('BiblesPlugin.BibleEditForm', 'Bible Exists'),
+                    translate('BiblesPlugin.BibleEditForm', 'This Bible already exists. Please import '
+                              'a different Bible or first delete the existing one.'))
+                return False
         return True
 
     def validate_book(self, new_book_name, abbreviation):

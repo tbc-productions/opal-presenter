@@ -203,6 +203,30 @@ class TransitionSpeed(object):
         elif type_string == 'slow':
             return TransitionSpeed.Slow
 
+    @staticmethod
+    def to_seconds(transition_speed):
+        """
+        Return the transition duration, in seconds, for a transition speed. Accepts a TransitionSpeed
+        enum value, its string form ('fast'/'normal'/'slow'), or a legacy raw numeric speed (from
+        before the fast/normal/slow presets existed), which is passed through unchanged. Defaults to
+        the 'normal' duration for any other value.
+        """
+        if isinstance(transition_speed, bool):
+            return 0.8
+        if isinstance(transition_speed, str):
+            transition_speed = TransitionSpeed.from_string(transition_speed)
+            if transition_speed is None:
+                return 0.8
+        elif isinstance(transition_speed, (int, float)) and \
+                transition_speed not in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            # A legacy custom speed stored as raw seconds; keep the user's chosen value.
+            return max(0.1, float(transition_speed))
+        if transition_speed == TransitionSpeed.Fast:
+            return 0.4
+        elif transition_speed == TransitionSpeed.Slow:
+            return 1.2
+        return 0.8
+
 
 class TransitionDirection(object):
     """

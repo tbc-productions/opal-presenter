@@ -199,6 +199,45 @@ def test_create_action(mocked_log):
     mocked_log.warning.assert_called_once_with('Parameter test was not consumed in create_action().')
 
 
+def test_create_action_on_mac_osx():
+    """
+    Test creating an action on OS X calls the correct method
+    """
+    # GIVEN: A dialog and a mocked out is_macosx() method to always return True
+    with patch('openlp.core.lib.ui.is_macosx') as mocked_is_macosx, \
+            patch('openlp.core.lib.ui.QtGui.QAction') as MockedQAction:
+        mocked_is_macosx.return_value = True
+        mocked_action = MagicMock()
+        MockedQAction.return_value = mocked_action
+        dialog = QtWidgets.QDialog()
+
+        # WHEN: An action is created
+        create_action(dialog, 'my_action')
+
+        # THEN: setIconVisibleInMenu should be called
+        mocked_action.setIconVisibleInMenu.assert_called_with(False)
+
+
+def test_create_action_not_on_mac_osx():
+    """
+    Test creating an action on something other than OS X doesn't call the method
+    """
+    # GIVEN: A dialog and a mocked out is_macosx() method to always return True
+    with patch('openlp.core.lib.ui.is_macosx') as mocked_is_macosx, \
+            patch('openlp.core.lib.ui.QtGui.QAction') as MockedQAction:
+        mocked_is_macosx.return_value = False
+        mocked_action = MagicMock()
+        MockedQAction.return_value = mocked_action
+        dialog = QtWidgets.QDialog()
+
+        # WHEN: An action is created
+        create_action(dialog, 'my_action')
+
+        # THEN: setIconVisibleInMenu should not be called
+        assert 0 == mocked_action.setIconVisibleInMenu.call_count, \
+            'setIconVisibleInMenu should not have been called'
+
+
 def test_create_checked_disabled_invisible_action():
     """
     Test that an invisible, disabled, checked action is created correctly

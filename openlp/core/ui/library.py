@@ -255,7 +255,7 @@ class FolderLibraryItem(MediaManagerItem):
                 self.service_manager.service_manager_list.itemSelectionChanged.connect(
                     self._update_add_to_selected_service_action_state)
             except Exception:
-                pass
+                self.log_exception('Failed to connect service manager list selection change signal')
 
     def add_custom_context_actions(self):
         """

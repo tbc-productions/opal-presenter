@@ -313,6 +313,10 @@ class ImageMediaItem(FolderLibraryItem):
             thumbnail_path = self.generate_thumbnail_path(image)
             file_hash = service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
             if file_hash is None and Path(image.file_path).exists():
+                # The file exists but couldn't be hashed (e.g. a cloud-storage placeholder that isn't
+                # fully synced): drop the slide we just added rather than leaving a broken entry with
+                # a None file_hash in the service item.
+                service_item.slides.pop()
                 QtWidgets.QMessageBox.warning(
                     self.main_window,
                     translate('ImagesPlugin.MediaItem', 'File cannot be read'),

@@ -25,7 +25,6 @@ import html
 import json
 import shutil
 import os
-import time
 import zipfile
 from contextlib import suppress
 from datetime import datetime, timedelta
@@ -58,25 +57,6 @@ from openlp.core.ui.starttimeform import StartTimeForm
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
-
-DEBUG_LOG_PATH = Path('/Users/tyler/Developer/openlp/.cursor/debug-96a229.log')
-
-
-def _debug_log(run_id, hypothesis_id, location, message, data):
-    payload = {
-        'sessionId': '96a229',
-        'runId': run_id,
-        'hypothesisId': hypothesis_id,
-        'location': location,
-        'message': message,
-        'data': data,
-        'timestamp': int(time.time() * 1000)
-    }
-    try:
-        with DEBUG_LOG_PATH.open('a', encoding='utf-8') as log_file:
-            log_file.write(json.dumps(payload, ensure_ascii=True) + '\n')
-    except Exception:
-        pass
 
 
 class ServiceItemDelegate(QtWidgets.QStyledItemDelegate):
@@ -145,9 +125,13 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         if index.isValid() and index.column() == 1:
             item = self.itemFromIndex(index)
             tooltip = item.toolTip(1) if item else ''
-            if tooltip and self._last_notes_tooltip_item is not item:
-                QtWidgets.QToolTip.showText(self.viewport().mapToGlobal(event.pos()), tooltip, self.viewport())
-                self._last_notes_tooltip_item = item
+            if tooltip:
+                if self._last_notes_tooltip_item is not item:
+                    QtWidgets.QToolTip.showText(self.viewport().mapToGlobal(event.pos()), tooltip, self.viewport())
+                    self._last_notes_tooltip_item = item
+            elif self._last_notes_tooltip_item is not None:
+                self._last_notes_tooltip_item = None
+                QtWidgets.QToolTip.hideText()
             return True
         self._last_notes_tooltip_item = None
         QtWidgets.QToolTip.hideText()
@@ -1200,7 +1184,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     if item['service_item'].stored_filename:
                         sha256_file_name = Path(item['service_item'].stored_filename)
                     else:
-                        sha256_file_name = Path(sha256_file_hash(frame_path) + frame_path.suffix)
+                        file_hash = sha256_file_hash(frame_path)
+                        if file_hash is None:
+                            missing_list.append(str(frame_path))
+                            continue
+                        sha256_file_name = Path(file_hash + frame_path.suffix)
                     bundle = (frame_path, sha256_file_name)
                     if bundle in write_list or str(frame_path) in missing_list:
                         continue
@@ -1240,6 +1228,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             for (audio_path, audio_file_hash) in item['service_item'].background_audio:
                 if not audio_file_hash:
                     audio_file_hash = sha256_file_hash(audio_path)
+                if audio_file_hash is None:
+                    missing_list.append(str(audio_path))
+                    continue
                 service_path = audio_file_hash + audio_path.suffix
                 audio_path_tuple = (audio_path, service_path)
                 if audio_path_tuple in write_list:
@@ -2105,21 +2096,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.auto_play_slides_once.setChecked(False)
         if service_item.auto_play_slides_loop and service_item.timed_slide_interval == 0:
             service_item.timed_slide_interval = self.settings.value('core/loop delay')
-        # region agent log
-        _debug_log(
-            'run1',
-            'H1',
-            'servicemanager.py:toggle_auto_play_slides_loop',
-            'Auto-play loop toggled',
-            {
-                'item_index': item,
-                'title': service_item.get_display_title(),
-                'auto_play_slides_loop': bool(service_item.auto_play_slides_loop),
-                'auto_play_slides_once': bool(service_item.auto_play_slides_once),
-                'timed_slide_interval': service_item.timed_slide_interval
-            }
-        )
-        # endregion
         self.repaint_service_list(item, -1)
         self.set_modified()
 
@@ -2489,40 +2465,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_manager_list.setUpdatesEnabled(False)
         self.service_manager_list.clearSelection()
         self.service_manager_list.clear()
-        # region agent log
-        _debug_log(
-            'run2',
-            'H5',
-            'servicemanager.py:_repaint_service_list',
-            'Service list icon size',
-            {
-                'icon_size_width': int(self.service_manager_list.iconSize().width()),
-                'icon_size_height': int(self.service_manager_list.iconSize().height())
-            }
-        )
-        # endregion
         for _, item in enumerate(self.service_items):
             service_item_from_item = item['service_item']
             transition_settings = self._get_service_item_transition_settings(service_item_from_item)
             transition_enabled = self._service_item_supports_transition(service_item_from_item) and \
                 transition_settings.get('enabled', False)
             autoplay_loop_enabled = bool(service_item_from_item.auto_play_slides_loop)
-            # region agent log
-            _debug_log(
-                'run1',
-                'H2',
-                'servicemanager.py:_repaint_service_list',
-                'Service item repaint state',
-                {
-                    'title': service_item_from_item.get_display_title(),
-                    'is_valid': bool(service_item_from_item.is_valid),
-                    'autoplay_loop_enabled': autoplay_loop_enabled,
-                    'transition_enabled': bool(transition_enabled),
-                    'has_notes': bool(service_item_from_item.notes),
-                    'temporary_edit': bool(service_item_from_item.temporary_edit)
-                }
-            )
-            # endregion
             tree_widget_item = QtWidgets.QTreeWidgetItem(self.service_manager_list)
             self.tree_widget_items.append(tree_widget_item)
             is_dragged_item = item is self._internal_drag_item or item is self._external_drag_item
@@ -2542,18 +2490,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         painter.drawImage(50, 50, transition_overlay)
                     if autoplay_loop_enabled:
                         sync_pixmap = UiIcons().sync.pixmap(30, 30)
-                        # region agent log
-                        _debug_log(
-                            'run1',
-                            'H4',
-                            'servicemanager.py:_repaint_service_list:notes_branch',
-                            'Attempting sync icon overlay (notes branch)',
-                            {
-                                'title': service_item_from_item.get_display_title(),
-                                'sync_pixmap_is_null': bool(sync_pixmap.isNull())
-                            }
-                        )
-                        # endregion
                         sync_overlay = sync_pixmap.toImage()
                         sync_overlay = sync_overlay.scaled(
                             30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -2581,18 +2517,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         painter.drawImage(50, 50, transition_overlay)
                     if autoplay_loop_enabled:
                         sync_pixmap = UiIcons().sync.pixmap(30, 30)
-                        # region agent log
-                        _debug_log(
-                            'run1',
-                            'H4',
-                            'servicemanager.py:_repaint_service_list:temporary_edit_branch',
-                            'Attempting sync icon overlay (temporary edit branch)',
-                            {
-                                'title': service_item_from_item.get_display_title(),
-                                'sync_pixmap_is_null': bool(sync_pixmap.isNull())
-                            }
-                        )
-                        # endregion
                         sync_overlay = sync_pixmap.toImage()
                         sync_overlay = sync_overlay.scaled(
                             30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -2607,20 +2531,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     tree_widget_item.setIcon(0, build_icon(icon))
                 elif transition_enabled or autoplay_loop_enabled:
                     painter = QtGui.QPainter(icon)
-                    # region agent log
-                    _debug_log(
-                        'run4',
-                        'H11',
-                        'servicemanager.py:_repaint_service_list:base_branch',
-                        'Base icon canvas info',
-                        {
-                            'title': service_item_from_item.get_display_title(),
-                            'icon_width': int(icon.width()),
-                            'icon_height': int(icon.height()),
-                            'themed_icon_is_null': bool(themed_icon.isNull())
-                        }
-                    )
-                    # endregion
                     if transition_enabled:
                         transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
                         transition_overlay = transition_overlay.scaled(
@@ -2643,22 +2553,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                             for y in range(transition_image_for_count.height()):
                                 if transition_image_for_count.pixelColor(x, y).alpha() > 0:
                                     transition_non_transparent += 1
-                        # region agent log
-                        _debug_log(
-                            'run4',
-                            'H12',
-                            'servicemanager.py:_repaint_service_list:base_branch',
-                            'Icon availability and density',
-                            {
-                                'title': service_item_from_item.get_display_title(),
-                                'sync_pixmap_is_null': bool(sync_pixmap.isNull()),
-                                'transition_pixmap_is_null': bool(transition_pixmap.isNull()),
-                                'sync_non_transparent_pixels': sync_non_transparent,
-                                'transition_non_transparent_pixels': transition_non_transparent,
-                                'transition_enabled': bool(transition_enabled)
-                            }
-                        )
-                        # endregion
                         sync_overlay = sync_pixmap.toImage()
                         sync_overlay = sync_overlay.scaled(
                             30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -2671,38 +2565,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         painter.drawImage(20, 50, sync_overlay)
                     painter.end()
                     composed_icon = build_icon(icon)
-                    # region agent log
-                    sample_image = composed_icon.pixmap(80, 80).toImage()
-                    sample_pixel = sample_image.pixelColor(25, 55)
-                    transition_sample = sample_image.pixelColor(55, 55)
-                    region_non_transparent_count = 0
-                    for x in range(20, 50):
-                        for y in range(50, 80):
-                            if sample_image.pixelColor(x, y).alpha() > 0:
-                                region_non_transparent_count += 1
-                    _debug_log(
-                        'run3',
-                        'H8',
-                        'servicemanager.py:_repaint_service_list:base_branch',
-                        'Composed icon region sample',
-                        {
-                            'title': service_item_from_item.get_display_title(),
-                            'sync_sample_x': 25,
-                            'sync_sample_y': 55,
-                            'sync_sample_alpha': int(sample_pixel.alpha()),
-                            'sync_sample_rgb': [int(sample_pixel.red()), int(sample_pixel.green()), int(sample_pixel.blue())],
-                            'transition_sample_x': 55,
-                            'transition_sample_y': 55,
-                            'transition_sample_alpha': int(transition_sample.alpha()),
-                            'transition_sample_rgb': [
-                                int(transition_sample.red()),
-                                int(transition_sample.green()),
-                                int(transition_sample.blue())
-                            ],
-                            'sync_region_non_transparent_pixels': region_non_transparent_count
-                        }
-                    )
-                    # endregion
                     tree_widget_item.setIcon(0, composed_icon)
                 else:
                     tree_widget_item.setIcon(0, themed_icon)
@@ -2875,26 +2737,32 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         frames = service_item_from_item.get_frames()
         if not (service_item_from_item.name in ['images', 'media', 'presentations'] and len(frames) == 1):
             for slide_index, slide in enumerate(frames):
-                child = QtWidgets.QTreeWidgetItem(tree_widget_item)
-                if service_item_from_item.is_capable(ItemCapabilities.HasDisplayTitle) or \
-                        service_item_from_item.service_item_type is not ServiceItemType.Text:
-                    text = slide['title'].replace('\n', ' ')
-                else:
-                    text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
-                if service_item_from_item.name == 'presentations':
-                    text = f"Slide {slide_index + 1}"
-                if service_item_from_item.name == 'songs':
-                    text = slide['verse'] + ': ' + text
-                text = remove_tags(text)
-                text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
-                text = ' '.join(text.split())
-                child.setText(0, text)
-                child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
-                self._set_child_thumbnail(child, service_item_from_item, slide)
-                if is_dragged_item:
-                    child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
-                    child_text_color.setAlpha(140)
-                    child.setForeground(0, QtGui.QBrush(child_text_color))
+                try:
+                    child = QtWidgets.QTreeWidgetItem(tree_widget_item)
+                    if service_item_from_item.is_capable(ItemCapabilities.HasDisplayTitle) or \
+                            service_item_from_item.service_item_type is not ServiceItemType.Text:
+                        text = slide['title'].replace('\n', ' ')
+                    else:
+                        text = service_item_from_item.get_rendered_frame(slide_index, clean=True)
+                    if service_item_from_item.name == 'presentations':
+                        text = f"Slide {slide_index + 1}"
+                    if service_item_from_item.name == 'songs':
+                        text = slide['verse'] + ': ' + text
+                    text = remove_tags(text)
+                    text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
+                    text = ' '.join(text.split())
+                    child.setText(0, text)
+                    child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
+                    self._set_child_thumbnail(child, service_item_from_item, slide)
+                    if is_dragged_item:
+                        child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+                        child_text_color.setAlpha(140)
+                        child.setForeground(0, QtGui.QBrush(child_text_color))
+                except RuntimeError:
+                    # The underlying QTreeWidgetItem was deleted by a concurrent repaint; stop rendering
+                    # children for this row rather than crashing (see _repaint_service_list for the same
+                    # mitigation).
+                    return
         tree_widget_item.setExpanded(item_data['expanded'])
 
     def _set_child_thumbnail(self, child, service_item, slide):
