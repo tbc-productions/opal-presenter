@@ -39,6 +39,7 @@ from openlp.core.common.platform import is_win, is_macosx
 from openlp.core.common.registry import Registry
 from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
+from openlp.core.lib.theme import TransitionSpeed
 from openlp.core.ui import HideMode
 
 
@@ -253,7 +254,6 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.webview.page().setWebChannel(self.channel)
         self.display_watcher.initialised.connect(self.on_initialised)
         self.display_watcher.register_event_listener("runJavascriptCallback", self.handle_javascript_result, False)
-        self.display_watcher.register_event_listener('transition_debug', self.handle_transition_debug, False)
         self.openlp_splash_screen_path = 'openlp://display/openlp-splash-screen.png'
         # Using custom display if provided
         if Registry().has('display_custom_url') and Registry().get('display_custom_url') is not None:
@@ -494,13 +494,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Add stuff after page initialisation
         """
         item_transitions = self.settings.value('themes/item transitions')
-        item_transition_speed = self.settings.value('themes/item transition speed')
-        if item_transition_speed == 'fast':
-            item_transition_speed = 0.4
-        elif item_transition_speed == 'slow':
-            item_transition_speed = 1.2
-        else:
-            item_transition_speed = 0.8
+        item_transition_speed = TransitionSpeed.to_seconds(self.settings.value('themes/item transition speed'))
         valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
         item_transition_type = self.settings.value('themes/item transition type')
         if item_transition_type not in valid_item_transition_types:
@@ -598,21 +592,6 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             result = result.toVariant()
         self.__script_result = result
         self.__script_done = True
-
-    def handle_transition_debug(self, event_data):
-        """
-        Handle transition diagnostics dispatched from display.js.
-        """
-        if hasattr(event_data, 'toVariant'):
-            payload = event_data.toVariant()
-        else:
-            payload = event_data
-        try:
-            payload_text = json.dumps(payload, sort_keys=True)
-        except TypeError:
-            payload_text = str(payload)
-        source = 'DISPLAY' if self.is_display else 'preview'
-        log.warning('[{src}] transition debug: {data}'.format(src=source, data=payload_text))
 
     def go_to_slide(self, verse, raise_window=True):
         """

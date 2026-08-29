@@ -489,7 +489,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             if self.global_theme == new_name:
                 name = translate('OpenLP.ThemeManager', '{text} (default)').format(text=new_name)
                 self.theme_list_widget.item(count).setText(name)
-                self.delete_toolbar_action.setVisible(item not in self.theme_list_widget.selectedItems())
+                self.delete_toolbar_action.setEnabled(item not in self.theme_list_widget.selectedItems())
         Registry().execute('theme_change_global')
 
     def on_set_view_mode_list(self):

@@ -194,8 +194,6 @@ def remove_tags(text, can_remove_chords=False):
     # Remove ChordPro tags
     if can_remove_chords:
         text = remove_chords(text)
-    # Remove any remaining {tag}...{/tag} patterns
-    text = re.sub(r'\{([^}]+)\}(.*?)\{/(\1)\}', r'\2', text)
     return text
 
 

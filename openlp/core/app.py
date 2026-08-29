@@ -293,9 +293,6 @@ class OpenLP(QtCore.QObject, LogMixin):
             if OpenLP.busy_cursor_count == 0:
                 QtWidgets.QApplication.restoreOverrideCursor()
                 QtWidgets.QApplication.processEvents()
-        else:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QApplication.processEvents()
 
 
 def parse_options():

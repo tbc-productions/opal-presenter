@@ -402,7 +402,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 self.service_manager.service_manager_list.itemSelectionChanged.connect(
                     self.on_selection_change)
             except Exception:
-                pass
+                self.log_exception('Failed to connect service manager list selection change signal')
         self._update_common_header_actions_enabled_state()
         self._update_common_end_actions_enabled_state()
 

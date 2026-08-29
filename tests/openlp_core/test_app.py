@@ -279,18 +279,37 @@ def test_set_busy_cursor(mocked_processEvents, mocked_setOverrideCursor, qapp):
 @patch('openlp.core.app.QtWidgets.QApplication.processEvents')
 def test_set_normal_cursor(mocked_restoreOverrideCursor, mocked_processEvents, qapp):
     """
-    Test that the set_normal_cursor() method resets the cursor
+    Test that the set_normal_cursor() method resets the cursor after a matching set_busy_cursor()
     """
-    # GIVEN: An app and reset cursor count
+    # GIVEN: An app with a busy cursor pushed
+    from openlp.core.app import OpenLP
+    OpenLP.busy_cursor_count = 1
+
+    # WHEN: set_normal_cursor() is called
+    qapp.set_normal_cursor()
+
+    # THEN: The cursor should have been reset
+    mocked_restoreOverrideCursor.assert_called_once_with()
+    mocked_processEvents.assert_called_once_with()
+
+
+@patch('openlp.core.app.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('openlp.core.app.QtWidgets.QApplication.processEvents')
+def test_set_normal_cursor_without_busy_cursor_is_noop(mocked_processEvents, mocked_restoreOverrideCursor, qapp):
+    """
+    Test that set_normal_cursor() does nothing when no busy cursor was pushed, so it can't pop an
+    unrelated override cursor set by other code.
+    """
+    # GIVEN: An app with no busy cursor pushed
     from openlp.core.app import OpenLP
     OpenLP.busy_cursor_count = 0
 
     # WHEN: set_normal_cursor() is called
     qapp.set_normal_cursor()
 
-    # THEN: The cursor should have been set
-    mocked_restoreOverrideCursor.assert_called_once_with()
-    mocked_processEvents.assert_called_once_with()
+    # THEN: The cursor should not have been touched
+    mocked_restoreOverrideCursor.assert_not_called()
+    mocked_processEvents.assert_not_called()
 
 
 @patch('openlp.core.app.get_version')

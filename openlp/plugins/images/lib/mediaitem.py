@@ -313,6 +313,8 @@ class ImageMediaItem(FolderLibraryItem):
             thumbnail_path = self.generate_thumbnail_path(image)
             file_hash = service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
             if file_hash is None and Path(image.file_path).exists():
+                # File exists but couldn't be hashed (e.g. an unsynced cloud-storage placeholder).
+                service_item.slides.pop()
                 QtWidgets.QMessageBox.warning(
                     self.main_window,
                     translate('ImagesPlugin.MediaItem', 'File cannot be read'),
