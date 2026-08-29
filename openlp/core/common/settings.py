@@ -199,9 +199,7 @@ def check_for_variant_migration(settings):
         for p in clean_version.split('.'):
             match = re.match(r'^(\d+)', p)
             if not match:
-                # A non-numeric component (e.g. a pre-release suffix like '100-beta1' with no
-                # leading digits) means we can't reliably compare further components, so stop here
-                # rather than silently dropping it and miscounting the remaining version parts.
+                # Stop at the first non-numeric component to keep tuple positions aligned.
                 break
             version_parts.append(int(match.group(1)))
     except AttributeError:
@@ -1187,11 +1185,8 @@ class Settings(QtCore.QSettings):
                 log.error("Invalid OpenLP settings file.")
                 return False
                 
-            # Define allowed setting sections: the fixed core sections and built-in plugins, plus
-            # any additional plugin currently registered with State(). The built-in plugins are
-            # listed explicitly (rather than relying solely on State()) because this import can run
-            # from the First Time Wizard, before plugins have been registered with State() - relying
-            # on State() alone would silently drop every built-in plugin's settings in that case.
+            # Allowed setting sections: core sections and built-in plugins, plus any plugin
+            # currently registered with State() (may be empty during the First Time Wizard).
             from openlp.core.state import State
             setting_sections = [
                 'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager',

@@ -2759,9 +2759,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         child_text_color.setAlpha(140)
                         child.setForeground(0, QtGui.QBrush(child_text_color))
                 except RuntimeError:
-                    # The underlying QTreeWidgetItem was deleted by a concurrent repaint; stop rendering
-                    # children for this row rather than crashing (see _repaint_service_list for the same
-                    # mitigation).
+                    # QTreeWidgetItem was deleted by a concurrent repaint.
                     return
         tree_widget_item.setExpanded(item_data['expanded'])
 
