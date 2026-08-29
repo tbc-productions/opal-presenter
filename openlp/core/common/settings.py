@@ -1187,16 +1187,22 @@ class Settings(QtCore.QSettings):
                 log.error("Invalid OpenLP settings file.")
                 return False
                 
-            # Define allowed setting sections: the fixed core sections plus every currently
-            # registered plugin, so a plugin's settings aren't silently dropped just because it
-            # isn't in a hardcoded list.
+            # Define allowed setting sections: the fixed core sections and built-in plugins, plus
+            # any additional plugin currently registered with State(). The built-in plugins are
+            # listed explicitly (rather than relying solely on State()) because this import can run
+            # from the First Time Wizard, before plugins have been registered with State() - relying
+            # on State() alone would silently drop every built-in plugin's settings in that case.
             from openlp.core.state import State
             setting_sections = [
                 'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager',
                 'themes', 'projector', 'players', 'displayTags', 'SettingsImport', 'crashreport',
+                'songs', 'bibles', 'presentations', 'images', 'media', 'custom',
+                'songusage', 'alerts', 'obs_studio', 'planningcenter',
             ]
             if hasattr(State(), 'modules'):
-                setting_sections.extend([plugin.name for plugin in State().list_plugins()])
+                for plugin in State().list_plugins():
+                    if plugin.name not in setting_sections:
+                        setting_sections.append(plugin.name)
             
             # Import keys
             import_keys = import_settings.allKeys()
