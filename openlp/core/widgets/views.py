@@ -23,6 +23,7 @@ The :mod:`listpreviewwidget` is a widget that lists the slides in the slide cont
 It is based on a QTableWidget but represents its contents in list form.
 """
 import re
+from collections import Counter
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -164,6 +165,15 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         except (TypeError, ValueError):
             return 1
 
+    @staticmethod
+    def _custom_page_suffix(page_number):
+        """Return a, b, ..., z, aa, ... for a one-based page number."""
+        suffix = ''
+        while page_number:
+            page_number, letter = divmod(page_number - 1, 26)
+            suffix = chr(ord('a') + letter) + suffix
+        return suffix
+
     def _resolve_opacity(self, verse_number):
         """Resolve opacity from verse number using settings for min/max values."""
         minimum = int(self.settings.value('songs/section background opacity minimum'))
@@ -271,12 +281,22 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         text = []
         header_colors = []
         slides = self.service_item.display_slides if self.service_item.is_text() else self.service_item.slides
+        custom_page_counts = Counter(slide['verse'] for slide in slides) if self.service_item.name == 'custom' else {}
+        custom_page_positions = Counter()
         for slide_index, slide in enumerate(slides):
             self.setRowCount(self.slide_count() + 1)
             item = QtWidgets.QTableWidgetItem()
             slide_height = 0
             if self.service_item.is_text():
-                if slide['verse']:
+                if self.service_item.name == 'custom':
+                    # Split pages share a source slide tag, so append a letter only when needed.
+                    verse = slide['verse']
+                    row = str(verse)
+                    if custom_page_counts[verse] > 1:
+                        custom_page_positions[verse] += 1
+                        row += self._custom_page_suffix(custom_page_positions[verse])
+                    header_colors.append(None)
+                elif slide['verse']:
                     if self.service_item.name == 'bibles':
                         # Bible slide tags are chapter/verse references, not song section letters.
                         row = str(slide['verse'])
