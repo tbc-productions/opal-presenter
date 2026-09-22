@@ -207,6 +207,13 @@ class SongMediaItem(MediaManagerItem):
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
+    def on_export_presentation(self, suffix):
+        from openlp.core.lib.presentationexport import export_items_dialog
+
+        items = [self.build_service_item(item=item) for item in self.list_view.selectedItems()]
+        export_items_dialog(self, [item for item in items if item], suffix,
+                            self.service_manager.suggested_presentation_file_path(suffix))
+
     def add_list_view_to_toolbar(self):
         """
         Override the base-class list view with a two-column SongListWidget so
@@ -234,6 +241,15 @@ class SongMediaItem(MediaManagerItem):
         # Re-populate the context menu from the new widget's actions
         self.menu.clear()
         self.menu.addActions(self.list_view.actions())
+        self.export_presentation_menu = QtWidgets.QMenu(
+            translate('OpenLP.PresentationExport', 'Presentation'), self)
+        self.export_presentation_menu.setIcon(UiIcons().upload)
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        for label, suffix in formats:
+            action = self.export_presentation_menu.addAction(label)
+            action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        self.menu.addMenu(self.export_presentation_menu)
 
     def create_item_from_id(self, item_id):
         """Return a SongListWidgetItem pre-loaded with *item_id* as UserRole data."""

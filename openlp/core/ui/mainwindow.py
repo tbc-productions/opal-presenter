@@ -599,6 +599,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface
         self.setup_ui(self)
+        self.export_presentation_menu = QtWidgets.QMenu(self.file_export_menu)
+        self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
+        self.export_presentation_menu.setObjectName('export_presentation_menu')
+        self.export_powerpoint_item = self.export_presentation_menu.addAction(
+            translate('OpenLP.MainWindow', 'PowerPoint (pptx)'))
+        self.export_powerpoint_item.setObjectName('export_powerpoint_item')
+        self.export_powerpoint_item.triggered.connect(
+            lambda checked=False: self.service_manager_contents.on_export_presentation('.pptx'))
+        self.export_opendocument_item = self.export_presentation_menu.addAction(
+            translate('OpenLP.MainWindow', 'OpenDocument (odp)'))
+        self.export_opendocument_item.setObjectName('export_opendocument_item')
+        self.export_opendocument_item.triggered.connect(
+            lambda checked=False: self.service_manager_contents.on_export_presentation('.odp'))
+        self.file_export_menu.addMenu(self.export_presentation_menu)
         # Define the media Dock Manager
         self.media_dock_manager = MediaDockManager(self.media_tool_box)
         # Load settings after setup_ui so default UI sizes are overwritten

@@ -94,9 +94,25 @@ class CustomMediaItem(MediaManagerItem):
 
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
+        self.export_presentation_menu = QtWidgets.QMenu(
+            translate('OpenLP.PresentationExport', 'Presentation'), self.list_view)
+        self.export_presentation_menu.setIcon(UiIcons().upload)
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        for label, suffix in formats:
+            action = self.export_presentation_menu.addAction(label)
+            action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        self.list_view.addAction(self.export_presentation_menu.menuAction())
         create_widget_action(
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
+
+    def on_export_presentation(self, suffix):
+        from openlp.core.lib.presentationexport import export_items_dialog
+
+        items = [self.build_service_item(item=item) for item in self.list_view.selectedItems()]
+        export_items_dialog(self, [item for item in items if item], suffix,
+                            self.service_manager.suggested_presentation_file_path(suffix))
 
     def config_update(self):
         """
