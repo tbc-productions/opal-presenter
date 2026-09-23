@@ -19,13 +19,60 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtWidgets
+import re
+
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.edits import SpellTextEdit
 from openlp.plugins.songs.lib import VerseType
+
+
+PLAIN_VERSE_LINE_REGEX = re.compile(
+    r'^[ \t]*(Verse|Chorus|Bridge|Pre[- ]?Chorus|Intro|Ending)(?:[ \t]*(\d+))?[ \t]*:?[ \t]*$', re.IGNORECASE)
+SECTION_MARKER_REGEX = re.compile(r'---\[[^\n]+\]---')
+
+
+class SongLyricsTextEdit(SpellTextEdit):
+    """Convert section headings when lyrics are pasted into the bulk editor."""
+
+    def __init__(self, parent):
+        super().__init__(parent, visual_mode_only=True)
+        self.parse_section_labels = False
+
+    def insertFromMimeData(self, source):
+        if not self.parse_section_labels or not source.hasText():
+            return super().insertFromMimeData(source)
+
+        lines = []
+        found_heading = False
+        for line in source.text().replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+            match = PLAIN_VERSE_LINE_REGEX.fullmatch(line)
+            if match:
+                found_heading = True
+                verse_name = match.group(1).replace(' ', '-').lower()
+                verse_type = (VerseType.PreChorus if verse_name == 'prechorus' else
+                              VerseType.from_string(verse_name))
+                lines.append('---[{tag}:{number}]---'.format(
+                    tag=VerseType.names[verse_type], number=match.group(2) or '1'))
+            else:
+                lines.append(line)
+        if not found_heading:
+            return super().insertFromMimeData(source)
+
+        pasted_text = '\n'.join(lines)
+        # Replace the empty starter marker when a pasted song starts with a heading.
+        if (SECTION_MARKER_REGEX.fullmatch(self.toPlainText().strip()) and
+                pasted_text.lstrip('\n').startswith('---[')):
+            cursor = self.textCursor()
+            cursor.select(QtGui.QTextCursor.SelectionType.Document)
+            self.setTextCursor(cursor)
+            pasted_text = pasted_text.lstrip('\n')
+        converted_source = QtCore.QMimeData()
+        converted_source.setText(pasted_text)
+        super().insertFromMimeData(converted_source)
 
 
 class Ui_EditVerseDialog(object):
@@ -36,7 +83,7 @@ class Ui_EditVerseDialog(object):
         edit_verse_dialog.setModal(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(edit_verse_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
-        self.verse_text_edit = SpellTextEdit(edit_verse_dialog, visual_mode_only=True)
+        self.verse_text_edit = SongLyricsTextEdit(edit_verse_dialog)
         self.verse_text_edit.setObjectName('verse_text_edit')
         self.dialog_layout.addWidget(self.verse_text_edit)
         self.verse_type_layout = QtWidgets.QHBoxLayout()
