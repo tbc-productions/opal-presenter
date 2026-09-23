@@ -52,6 +52,7 @@ class MediaTab(SettingsTab):
         """
         self.setObjectName('MediaTab')
         super(MediaTab, self).setup_ui()
+        # Start live items automatically
         self.live_media_group_box = QtWidgets.QGroupBox(self.left_column)
         self.live_media_group_box.setObjectName('live_media_group_box')
         self.media_layout = QtWidgets.QVBoxLayout(self.live_media_group_box)

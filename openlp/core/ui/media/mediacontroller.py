@@ -33,7 +33,6 @@ from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import critical_error_message_box, warning_message_box
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
-from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.media import MediaState, MediaPlayItem, MediaType, \
     format_play_time, parse_stream_path, get_volume, toggle_looping_playback, saved_looping_playback, save_volume, \
     media_state
@@ -41,6 +40,7 @@ from openlp.core.ui.media.remote import register_views
 from openlp.core.ui.media.mediainfo import media_info
 from openlp.core.ui.media.audioplayer import AudioPlayer
 from openlp.core.ui.media.mediaplayer import MediaPlayer
+from openlp.core.ui.slidecontroller import SlideController
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +52,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
     The implementation of the Media Controller which manages how media is played.
     """
 
+    live_media_loaded = QtCore.Signal()
+    preview_media_loaded = QtCore.Signal()
     live_media_status_changed = QtCore.Signal()
     preview_media_status_changed = QtCore.Signal()
     live_media_tick = QtCore.Signal()
@@ -60,12 +62,22 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
     preview_media_stop = QtCore.Signal()
 
     def __init__(self, parent=None):
-        """ """
-        super(MediaController, self).__init__(parent)
+        """
+        Initialise the MediaController.
+        """
+        super().__init__(parent)
         self.log_info("MediaController Initialising")
+        self.live_hide_timer = None
+        self.live_kill_timer = None
+        self.preview_hide_timer = None
+        self.preview_kill_timer = None
+        self.has_started = False
 
     def setup(self):
-        # Timer for video state
+        """
+        Set up the MediaController.
+        """
+        # Timer for live video state
         self.live_hide_timer = QtCore.QTimer()
         self.live_hide_timer.setSingleShot(True)
         self.live_kill_timer = QtCore.QTimer()
@@ -109,6 +121,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         if State().check_preconditions("mediacontroller"):
             try:
+                self.live_media_loaded.connect(self._media_live_loaded)
+                self.preview_media_loaded.connect(self._media_preview_loaded)
                 self.live_media_status_changed.connect(self._media_status_changed_live)
                 self.preview_media_status_changed.connect(self._media_status_changed_preview)
                 self.live_media_tick.connect(self._media_state_live)
@@ -133,6 +147,26 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller_type == DisplayControllerType.Live:
             return self.live_controller
         return self.preview_controller
+
+    def _media_live_loaded(self) -> None:
+        """
+        If media has loaded so we can now autostart if required
+        """
+        if self.live_controller.media_play_item.media_autostart:
+            self.media_play(self.live_controller)
+            self._update_seek_ui(self.live_controller)
+            self.set_controls_visible(self.live_controller, True)
+        self.live_controller.media_play_item.media_autostart = False
+
+    def _media_preview_loaded(self) -> None:
+        """
+        If media has loaded so we can now autostart if required
+        """
+        if self.preview_controller.media_play_item.media_autostart:
+            self.media_play(self.preview_controller)
+            self._update_seek_ui(self.preview_controller)
+            self.set_controls_visible(self.preview_controller, True)
+        self.preview_controller.media_play_item.media_autostart = False
 
     def _media_state_live(self) -> None:
         """
@@ -217,18 +251,16 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         controller.media_player.resize()
 
-    def load_media(self, source, service_item, hidden: bool = False, is_theme_background: bool = False) -> bool:
+    def load_media(self, source, service_item, is_theme_background: bool = False) -> bool:
         """
         Loads and starts a video to run and sets the stored sound value.
 
         :param source: Where the call originated form
         :param service_item: The player which is doing the playing
-
-        :param hidden: The player which is doing the playing
         :param is_theme_background: Is the theme providing a background
         """
         controller = self._display_controllers(source)
-        log.debug(f"load_media is_live:{controller.is_live}")
+        log.debug(f"load_media is_live: {controller.is_live}")
         # stop running videos
         self.media_reset(controller)
         controller.media_play_item.is_theme_background = is_theme_background
@@ -277,7 +309,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
                           controller.media_play_item.media_file),
             )
             return False
-        self.log_debug("video media type: {tpe} ".format(tpe=str(controller.media_play_item.media_type)))
+        self.log_debug(f"video media type: {controller.media_play_item.media_type!s}")
         # If both the preview and live view have a device stream, make sure only the live view continues streaming
         if controller.media_play_item.media_type == MediaType.DeviceStream:
             if controller.is_live:
@@ -299,8 +331,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
                     return False
         self.decide_autostart(service_item, controller)
         self._media_bar(controller, "load")
-        self.media_play(controller, is_load=True)
-        self._update_seek_ui(controller)
+        self._media_set_visibility(controller, True)
         self.set_controls_visible(controller, True)
         return True
 
@@ -322,15 +353,13 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             or controller.media_play_item.is_theme_background \
                 or controller.media_play_item.media_type in [MediaType.DeviceStream, MediaType.NetworkStream]:
             controller.media_play_item.media_autostart = True
-        # TODO needs fixing
-        # elif self.settings.value("core/auto unblank"):
         if self.settings.value('songs/auto play audio'):
-            controller.media_play_item.audio_autostart = True
-            if not controller.media_play_item.media_type == MediaType.Dual:
-                controller.media_play_item.media_autostart = True
+            controller.media_play_item.media_autostart = True
+            if controller.media_play_item.media_type == MediaType.Dual:
+                controller.media_play_item.audio_autostart = True
 
     @staticmethod
-    def media_length(media_path: Union[str, Path]) -> int:
+    def media_length(media_path: str | Path) -> int:
         """
         Uses Media Info to obtain the media length
 
@@ -369,9 +398,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         if controller.media_play_item.media_type in [MediaType.DeviceStream, MediaType.NetworkStream]:
             self._resize(controller)
-            if controller.media_player.load_stream():
-                return True
-            return False
+            return controller.media_player.load_stream()
         loaded_m = True
         loaded_a = True
         if controller.media_play_item.media_file:
@@ -380,9 +407,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
                 self._resize(controller)
         if controller.media_play_item.audio_file:
             loaded_a = controller.audio_player.load()
-        if loaded_a is True and loaded_m is True:
-            return True
-        return False
+        return loaded_a is True and loaded_m is True
 
     def media_play_msg(self, msg: list):
         """

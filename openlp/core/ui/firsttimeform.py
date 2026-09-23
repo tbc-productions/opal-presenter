@@ -79,6 +79,23 @@ class _ThumbnailRelay(QtCore.QObject):
         self._ftw._on_theme_thumbnail_download_finished()
 
 
+class ThumbnailReceiver(QtCore.QObject):
+    """
+    Small QObject helper that owns the slots invoked when a thumbnail download finishes.
+    """
+    def __init__(self, item):
+        super().__init__()
+        self._item = item
+
+    @QtCore.Slot()
+    def on_failed(self):
+        self._item.setIcon(UiIcons().get_icon_variant('exception'))
+
+    @QtCore.Slot(Path)
+    def on_succeeded(self, thumbnail_path):
+        self._item.setIcon(build_icon(thumbnail_path))
+
+
 class ThemeListWidgetItem(QtWidgets.QListWidgetItem):
     """
     Subclass a QListWidgetItem to allow dynamic loading of thumbnails from an online resource

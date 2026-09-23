@@ -26,9 +26,9 @@ lint-python:
 lint-javascript:
   stage: test
   image: $IMAGE_BASE/angular
-  script:
-    - yarn install
-    - yarn lint
+  script: |
+    pnpm install
+    pnpm lint
   rules:
     - if: $CI_COMMIT_TAG == null
 
@@ -96,45 +96,15 @@ test-arch:
   rules:
     - if: $CI_COMMIT_TAG == null
 
-.pip_dependencies:
+.install_dependencies:
   script:
-    - "# Updating pip"
-    - python -m pip install --upgrade pip
-    - "# Installing generic dependencies from PyPI"
-    - >
-      pip install alembic
-      beautifulsoup4
-      chardet
-      flask
-      flask-cors
-      lxml
-      Mako
-      mock
-      mysql-connector-python
-      packaging
-      platformdirs
-      psycopg2-binary
-      pyenchant
-      PySide6
-      pysword
-      pytest
-      pytest-qt
-      QDarkStyle
-      qrcode
-      QtAwesome
-      requests
-      six
-      sqlalchemy
-      waitress
-      websocket-client
-      websockets
-      hatch
-      hatch-vcs
+    - "# Installing dependencies"
+    - uv sync --group test
 
 .run_tests:
   script:
     - "# Running tests"
-    - pytest --color=no --disable-warnings
+    - uv run pytest --color=no --disable-warnings
 
 .recompile_boot_loader_pyinstaller:
   # It is necessary to recompile the boot loader of PyInstaller to prevent antivirus false positives.
@@ -148,25 +118,19 @@ test-arch:
     - Expand-Archive -Path "$env:Temp\$zipFileName" -DestinationPath .
     - Set-Location ".\pyinstaller-$pyInstallerVersion\bootloader"
     - "# Building the boot loader"
-    - python ./waf all --target-arch=64bit
+    - uv python ./waf all --target-arch=64bit
     - Set-Location '..'
-    - pip install .
+    - uv install .
     - Set-Location '..'
 
 test-macos:
   stage: test
   tags:
     - saas-macos-medium-m1
-  image: macos-14-xcode-15
+  image: macos-15-xcode-16
   variables:
     # Set environment variable QT_QPA_PLATFORM to offscreen to avoid UI troubles
     QT_QPA_PLATFORM: "offscreen"
-    # Set the pip cache folder so that we can cache the content.
-    # See: https://pip.pypa.io/en/stable/topics/caching/
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
-  cache:
-    paths:
-      - pip-cache
   script:
     - export HOMEBREW_NO_AUTO_UPDATE=TRUE
     - export HOMEBREW_NO_INSTALL_CLEANUP=TRUE
@@ -190,10 +154,12 @@ test-macos:
     - brew install pkg-config icu4c
     - export PATH="$PATH:/opt/homebrew/opt/icu4c/bin:/opt/homebrew/opt/icu4c/sbin"
     - export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/homebrew/opt/icu4c/lib/pkgconfig"
-    - pip install pyicu
+    - "# Installing UV"
+    - curl --show-error --silent --fail --location https://astral.sh/uv/install.sh | sh
+    - source $HOME/.local/bin/env
+    - uv python pin $PYTHON_VERSION_WINDOWS_AND_MACOS
+    - !reference [.install_dependencies, script]
     - !reference [.run_tests, script]
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
 
 test-windows:
   stage: test
@@ -202,21 +168,13 @@ test-windows:
   variables:
     # Set environment variable QT_QPA_PLATFORM to offscreen to avoid UI troubles
     QT_QPA_PLATFORM: "offscreen"
-    # Set the pip cache folder so that we can cache the content.
-    # See: https://pip.pypa.io/en/stable/topics/caching/
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
-  cache:
-    paths:
-      - pip-cache
   script:
     - "# Enabling feature that doesn't let Chocolatey ask for confirmation"
     - choco feature enable --name='allowGlobalConfirmation'
-    - $pythonVersion = $env:PYTHON_VERSION_WINDOWS_AND_MACOS
-    - "# Installing Python $pythonVersion"
-    - $pythonVersion = $pythonVersion.Replace('.', '')
-    - choco install python$pythonVersion
     - "# Importing PowerShell module for the Chocolatey profile"
     - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+    - "# Installing UV"
+    - Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
     - "# Refreshing the environment"
     - refreshenv
     - "# Installing Windows Feature 'Server Media Foundation'"
@@ -224,17 +182,15 @@ test-windows:
     - "# Downloading the necessary files for PySide6 from OpenLP"
     - $zipFileName = 'requiredfiles.zip'
     - Invoke-WebRequest -OutFile "$env:Temp\$zipFileName" -Uri "https://get.openlp.org/win-sdk/$zipFileName"
+    - Unblock-File -Path "$env:Temp\$zipFileName"
     - "# Extracting the ZIP file"
-    - Expand-Archive -Path "$env:Temp\$zipFileName" -DestinationPath "C:\Windows\System32"
-    - !reference [.pip_dependencies, script]
-    - "# Installing Windows only dependencies from PyPI"
-    - >
-      pip install pyodbc
-      pypiwin32
-    - $pyIcuVersion = '2.14'
+    - Expand-Archive -Path "$env:Temp\$zipFileName" -DestinationPath "$env:WinDir\System32"
+    - !reference [.install_dependencies, script]
+    - $pyIcuVersion = '2.16.2'
+    - $pythonVersion = $env:PYTHON_VERSION_WINDOWS_AND_MACOS.Replace('.', '').Substring(0, 3)
     - $pyIcuPackageFileName = "PyICU-$pyIcuVersion-cp$pythonVersion-cp$pythonVersion-win_amd64.whl"
     - "# Installing PyICU for Windows from GitHub"
-    - pip install https://github.com/cgohlke/pyicu-build/releases/download/v$pyIcuVersion/$pyIcuPackageFileName
+    - uv add "https://github.com/cgohlke/pyicu-build/releases/download/v$pyIcuVersion/$pyIcuPackageFileName"
     - !reference [.run_tests, script]
   rules:
     - if: $CI_COMMIT_TAG == null
@@ -242,9 +198,9 @@ test-windows:
 test-display:
   stage: test
   image: $IMAGE_BASE/angular
-  script:
-    - yarn install
-    - yarn test --browsers ChromiumHeadlessCI
+  script: |
+    pnpm install
+    pnpm test --browsers ChromiumHeadlessCI
   rules:
     - if: $CI_COMMIT_TAG == null
 
@@ -329,7 +285,7 @@ build-windows:
     - Set-Location $env:PACKAGING_DIRECTORY_NAME
     - "# Creating Windows MSI and Portable"
     - echo -n "$CI_COMMIT_TAG" >! openlp/.version
-    - python builders/windows-builder.py --release $env:CI_COMMIT_TAG --skip-update --config windows/config-gitlab.ini --branch $env:CI_PROJECT_DIR --portable
+    - uv run python builders/windows-builder.py --release $env:CI_COMMIT_TAG --skip-update --config windows/config-gitlab.ini --branch $env:CI_PROJECT_DIR --portable
   artifacts:
     name: $CI_COMMIT_REF_SLUG
     paths:
@@ -342,7 +298,7 @@ build-macos:
   stage: build
   tags:
     - saas-macos-medium-m1
-  image: macos-14-xcode-15
+  image: macos-15-xcode-16
   variables:
     # Set environment variable QT_QPA_PLATFORM to offscreen to avoid UI troubles
     QT_QPA_PLATFORM: "offscreen"

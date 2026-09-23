@@ -183,6 +183,11 @@ class MediaPlayer(MediaBase, LogMixin):
                 Registry().get("media_controller").live_media_status_changed.emit()
             else:
                 Registry().get("media_controller").preview_media_status_changed.emit()
+        if event == QMediaPlayer.MediaStatus.LoadedMedia:
+            if self.controller.is_live:
+                Registry().get("media_controller").live_media_loaded.emit()
+            else:
+                Registry().get("media_controller").preview_media_loaded.emit()
 
     def _pause_on_last_frame_if_not_looping(self) -> None:
         """Keep the final video frame visible when playback reaches the end without looping."""

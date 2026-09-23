@@ -22,6 +22,7 @@
 Package to test the openlp.plugins.planningcenter.lib.planningcenter_api package.
 """
 import os
+from email.message import EmailMessage
 from urllib.error import HTTPError
 from unittest.mock import MagicMock, patch
 
@@ -119,3 +120,58 @@ def test_check_credentials_pass(mocked_open: MagicMock, mocked_opener: MagicMock
     result = api.check_credentials()
     # THEN: Check credentials returns our mocked value
     assert result == 'jpk', 'check_credentials returns correct value for pass'
+
+
+@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+def test_get_from_services_api_uses_default_auth_path(mocked_build_opener: MagicMock, api: PlanningCenterAPI):
+    """
+    Test that get_from_services_api uses the default opener auth path on success.
+    """
+    # GIVEN: opener auth succeeds directly
+    mocked_build_opener.return_value.open.return_value.read.return_value = '{"foo": "bar"}'.encode('utf8')
+    with patch.object(api, '_open_with_preemptive_basic_auth') as mocked_fallback:
+        # WHEN: get_from_services_api is called
+        result = api.get_from_services_api('test')
+    # THEN: fallback auth should not be used
+    assert result['foo'] == 'bar', 'default opener auth should return decoded payload'
+    mocked_fallback.assert_not_called()
+
+
+@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+def test_get_from_services_api_falls_back_without_basic_challenge(mocked_build_opener: MagicMock,
+                                                                  api: PlanningCenterAPI):
+    """
+    Test that get_from_services_api falls back to preemptive auth when 401 has no Basic challenge.
+    """
+    # GIVEN: opener auth returns HTTP 401 without a Basic challenge header
+    headers = EmailMessage()
+    headers.add_header('WWW-Authenticate', 'Bearer realm="PlanningCenter"')
+    http_error = HTTPError(api.api_url + 'test', 401, 'Unauthorized', headers, None)
+    mocked_build_opener.return_value.open.side_effect = http_error
+    fallback_response = MagicMock()
+    fallback_response.read.return_value = '{"foo": "bar"}'.encode('utf8')
+    with patch.object(api, '_open_with_preemptive_basic_auth', return_value=fallback_response) as mocked_fallback:
+        # WHEN: get_from_services_api is called
+        result = api.get_from_services_api('test')
+    # THEN: fallback auth should be used once
+    assert result['foo'] == 'bar', 'fallback auth should return decoded payload'
+    mocked_fallback.assert_called_once_with(api.api_url + 'test')
+
+
+@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+def test_get_from_services_api_raises_with_basic_challenge(mocked_build_opener: MagicMock, api: PlanningCenterAPI):
+    """
+    Test that get_from_services_api does not fallback when 401 includes Basic challenge.
+    """
+    # GIVEN: opener auth returns HTTP 401 with a Basic challenge header
+    headers = EmailMessage()
+    headers.add_header('WWW-Authenticate', 'Basic realm="PlanningCenter"')
+    http_error = HTTPError(api.api_url + 'test', 401, 'Unauthorized', headers, None)
+    mocked_build_opener.return_value.open.side_effect = http_error
+    with patch.object(api, '_open_with_preemptive_basic_auth') as mocked_fallback:
+        # WHEN: get_from_services_api is called
+        with pytest.raises(HTTPError) as exc:
+            api.get_from_services_api('test')
+    # THEN: original HTTP 401 should be raised and fallback should not be used
+    assert exc.value.code == 401, 'HTTP 401 should be re-raised for Basic auth challenge'
+    mocked_fallback.assert_not_called()
