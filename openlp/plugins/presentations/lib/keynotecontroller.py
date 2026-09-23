@@ -108,11 +108,45 @@ on create_thumbs(documentStem, outputPath)
         -- Export slides to png
         export front document as slide images to file outputPathHfs with properties ¬
             {image format:PNG, skipped slides:false}
-        -- close presentation
-        close front document
+        return my get_slide_metadata(documentStem)
     end tell
     end timeout
 end create_thumbs
+
+on get_slide_metadata(documentStem)
+    with timeout of 900 seconds
+    tell application "Keynote"
+        repeat with attempt from 1 to 4500
+            if (count of documents) > 0 then
+                if name of front document is documentStem then exit repeat
+            end if
+            delay 0.2
+        end repeat
+        if (count of documents) is 0 then error "Keynote did not open the requested presentation"
+        if name of front document is not documentStem then error "Keynote did not open the requested presentation"
+        set slideTitles to {}
+        set slideNotes to {}
+        set exportedSlideNumber to 0
+        tell the front document
+            repeat with presentationSlide in slides
+                tell presentationSlide
+                    if skipped is false then
+                        set exportedSlideNumber to exportedSlideNumber + 1
+                        set end of slideNotes to presenter notes of it
+                        if title showing is true then
+                            set end of slideTitles to object text of default title item
+                        else
+                            set end of slideTitles to "slide " & exportedSlideNumber
+                        end if
+                    end if
+                end tell
+            end repeat
+        end tell
+        close front document
+        return {slideTitles, slideNotes}
+    end tell
+    end timeout
+end get_slide_metadata
 
 on start_presentation(documentStem, new_top, new_left_pos, new_width, new_height, fullscreen, startingSlide)
     with timeout of 900 seconds
@@ -389,13 +423,22 @@ class KeynoteDocument(AppleScriptBaseDocument):
         if not any(thumbnail_folder.iterdir()):
             try:
                 _open_keynote_document(self.file_path, self.controller.keynote_app)
-                self.controller.applescript.call('create_thumbs', self.file_path.stem, str(thumbnail_folder))
+                titles, notes = self.controller.applescript.call(
+                    'create_thumbs', self.file_path.stem, str(thumbnail_folder))
+                self.save_titles_and_notes(titles, notes)
                 self.presentation_loaded = True
             except Exception:
                 log.exception('Could not export presentation slides from Keynote')
                 self.presentation_loaded = False
         else:
             self.presentation_loaded = True
+            if not (thumbnail_folder / 'titles.txt').is_file():
+                try:
+                    _open_keynote_document(self.file_path, self.controller.keynote_app)
+                    titles, notes = self.controller.applescript.call('get_slide_metadata', self.file_path.stem)
+                    self.save_titles_and_notes(titles, notes)
+                except Exception:
+                    log.exception('Could not recover Keynote slide titles and notes')
         ret = self.presentation_loaded
         if ret:
             # Keynote will name the thumbnails in the format: <sha256>.001.png, we need to convert to slide1.png

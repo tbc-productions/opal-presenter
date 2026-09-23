@@ -69,3 +69,45 @@ def test_keynote_applies_slide_selected_during_import(tmp_path, settings):
 
     assert document._slideshow_started
     document.goto_slide.assert_called_once_with(7)
+
+
+def test_keynote_export_saves_slide_titles_and_notes(tmp_path, settings):
+    controller = MagicMock(keynote_app=tmp_path / 'Keynote.app')
+    source = tmp_path / 'slides.key'
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+        document = KeynoteDocument(controller, source)
+    document.file_path = source
+    document.get_thumbnail_folder = MagicMock(return_value=tmp_path / 'thumbnails')
+    thumbnail_folder = document.get_thumbnail_folder()
+    thumbnail_folder.mkdir()
+
+    def export(handler, *_args):
+        assert handler == 'create_thumbs'
+        (thumbnail_folder / 'slides.001.png').write_bytes(b'image')
+        return ['Opening'], ['Presenter cue']
+
+    controller.applescript.call.side_effect = export
+    with patch('openlp.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
+        assert document.load_presentation()
+
+    assert (thumbnail_folder / 'slide1.png').is_file()
+    assert document.get_titles_and_notes() == (['Opening'], ['Presenter cue'])
+
+
+def test_keynote_recovers_metadata_for_cached_slide_images(tmp_path, settings):
+    controller = MagicMock(keynote_app=tmp_path / 'Keynote.app')
+    source = tmp_path / 'slides.key'
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+        document = KeynoteDocument(controller, source)
+    document.file_path = source
+    document.get_thumbnail_folder = MagicMock(return_value=tmp_path / 'thumbnails')
+    thumbnail_folder = document.get_thumbnail_folder()
+    thumbnail_folder.mkdir()
+    (thumbnail_folder / 'slide1.png').write_bytes(b'image')
+    controller.applescript.call.return_value = (['Opening'], ['Presenter cue'])
+
+    with patch('openlp.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
+        assert document.load_presentation()
+
+    controller.applescript.call.assert_called_once_with('get_slide_metadata', 'slides')
+    assert document.get_titles_and_notes() == (['Opening'], ['Presenter cue'])

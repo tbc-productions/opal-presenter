@@ -301,6 +301,37 @@ def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_p
         assert stored_path.read_bytes() == f'presentation {number}'.encode()
 
 
+@patch('openlp.core.ui.library.critical_error_message_box')
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_validate_and_load_rejects_reimport_of_managed_file(mocked_get_section_data_path, mocked_error,
+                                                            folder_library_item, tmp_path):
+    """Importing the same source again must not create another numbered library copy."""
+    source = tmp_path / 'slides.pptx'
+    source.write_bytes(b'presentation')
+    managed_root = tmp_path / 'managed'
+    mocked_get_section_data_path.return_value = managed_root
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
+        'advanced/copy library files to data folder': True
+    }.get(key, False))
+    folder_library_item.choose_folder_form = MagicMock(**{
+        'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected
+    })
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.load_list = MagicMock()
+
+    folder_library_item.validate_and_load([source])
+    imported_item = folder_library_item.manager.save_object.call_args.args[0]
+    folder_library_item.manager.get_all_objects.return_value = [imported_item]
+    folder_library_item.manager.save_object.reset_mock()
+
+    folder_library_item.validate_and_load([source])
+
+    folder_library_item.manager.save_object.assert_not_called()
+    mocked_error.assert_called_once()
+    assert not (managed_root / 'library' / 'slides (2).pptx').exists()
+
+
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')
 def test_delete_managed_library_file_only_inside_data_path(mocked_get_section_data_path, folder_library_item, tmp_path):
     """
