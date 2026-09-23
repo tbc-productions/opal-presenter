@@ -146,7 +146,7 @@ class SongSelectForm(QtWidgets.QDialog, Ui_SongSelectDialog, RegistryProperties)
             download_item.setDownloadDirectory(self.tmp_folder.name)
             download_item.accept()
             self.current_download_item = download_item
-            self.current_download_item.finished.connect(self.download_finished)
+            self.current_download_item.isFinishedChanged.connect(self.download_finished)
         else:
             download_item.cancel()
             QtWidgets.QMessageBox.information(self, translate('SongsPlugin.SongSelectForm', 'Unsupported format'),
