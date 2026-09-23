@@ -37,16 +37,26 @@ def _accessibility_drag_target():
     """Offer the owning app, including the IDE/terminal responsible for a source run."""
     bundle = _running_app_bundle()
     if bundle:
-        return bundle, bundle.name
+        return bundle, _app_display_name(bundle)
     launcher = _launching_app_bundle()
     if launcher:
-        return launcher, launcher.stem
+        return launcher, _app_display_name(launcher)
     executable = Path(sys.executable).resolve()
     if executable.is_file():
         label = translate('OpenLP.MacPermissions', 'Python {version}').format(
             version=f'{sys.version_info.major}.{sys.version_info.minor}')
         return executable, label
     return None, None
+
+
+def _app_display_name(bundle):
+    """Use the app's own display name instead of assuming its folder name."""
+    try:
+        with (bundle / 'Contents' / 'Info.plist').open('rb') as info_file:
+            info = plistlib.load(info_file)
+        return info.get('CFBundleDisplayName') or info.get('CFBundleName') or bundle.stem
+    except (OSError, ValueError):
+        return bundle.stem
 
 
 def _launching_app_bundle():
@@ -215,24 +225,13 @@ def request_presentation_permissions(parent):
         return
 
     dialog = QtWidgets.QDialog(parent)
-    dialog.setWindowTitle(translate('OpenLP.MacPermissions', 'Presentation permissions'))
-    dialog.setMinimumWidth(560)
+    dialog.setWindowTitle(translate('OpenLP.MacPermissions', 'PowerPoint permissions'))
+    dialog.setMinimumWidth(480)
     layout = QtWidgets.QVBoxLayout(dialog)
-    explanation = QtWidgets.QLabel(dialog)
-    explanation.setWordWrap(True)
-    explanation.setText(translate(
-        'OpenLP.MacPermissions',
-        'OpenLP+ needs Accessibility to send slide numbers to PowerPoint and Screen Recording to show the '
-        'presentation in its Live area. macOS may not show another alert if you denied access earlier. '
-        'You can enable the missing access in System Settings > Privacy & Security. '
-        'For development runs, macOS may require access for the IDE or terminal that started OpenLP+. '
-        'Restart OpenLP+ after changing permissions.'))
-    layout.addWidget(explanation)
-
     missing_label = QtWidgets.QLabel(dialog)
     missing_label.setWordWrap(True)
     missing_names = ', '.join(label for label, _, _, _ in missing)
-    missing_label.setText(translate('OpenLP.MacPermissions', 'Missing access: {names}').format(names=missing_names))
+    missing_label.setText(translate('OpenLP.MacPermissions', 'Access needed: {names}').format(names=missing_names))
     layout.addWidget(missing_label)
 
     status = QtWidgets.QLabel(dialog)
@@ -240,7 +239,7 @@ def request_presentation_permissions(parent):
     status.hide()
     layout.addWidget(status)
 
-    request_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Ask macOS for Access'), dialog)
+    request_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Request Access'), dialog)
 
     def ask_macos():
         for label, preflight, request, _ in missing:
@@ -249,8 +248,7 @@ def request_presentation_permissions(parent):
                     request()
                 except Exception:
                     log.exception('Could not request macOS %s permission', label)
-        status.setText(translate('OpenLP.MacPermissions',
-                                 'If no macOS alert appeared, use the System Settings buttons below.'))
+        status.setText(translate('OpenLP.MacPermissions', 'No prompt? Use the Settings buttons.'))
         request_button.hide()
         status.show()
 
@@ -272,23 +270,13 @@ def request_presentation_permissions(parent):
             target_details = QtWidgets.QVBoxLayout()
             drag_instruction = QtWidgets.QLabel(
                 translate('OpenLP.MacPermissions',
-                          'Drag {name} into the Accessibility list in System Settings, '
-                          'then switch its permission on.').format(name=target_name), dialog)
+                          'Drag {name} into Accessibility Settings, then enable it.').format(name=target_name), dialog)
             drag_instruction.setWordWrap(True)
             target_details.addWidget(drag_instruction)
-            if target.suffix == '.app' and target != _running_app_bundle():
-                launcher_note = QtWidgets.QLabel(translate(
-                    'OpenLP.MacPermissions',
-                    'OpenLP+ was launched by {name}. Enable access for {name}, then restart this OpenLP+ run. '
-                    'Permission for Python alone may not apply to an IDE or terminal launch.').format(
-                        name=target_name), dialog)
-                launcher_note.setWordWrap(True)
-                target_details.addWidget(launcher_note)
-            elif target.suffix != '.app':
+            if target.suffix != '.app':
                 source_note = QtWidgets.QLabel(
                     translate('OpenLP.MacPermissions',
-                              'This development run uses the Python executable at {path}. '
-                              'If dragging does not add it, use + and select this file.').format(path=target), dialog)
+                              'Or use + to add this file: {path}').format(path=target), dialog)
                 source_note.setWordWrap(True)
                 source_note.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
                 target_details.addWidget(source_note)
@@ -302,9 +290,9 @@ def request_presentation_permissions(parent):
         if not remaining:
             dialog.accept()
             return
-        missing_label.setText(translate('OpenLP.MacPermissions', 'Missing access: {names}').format(
+        missing_label.setText(translate('OpenLP.MacPermissions', 'Access needed: {names}').format(
             names=', '.join(remaining)))
-        status.setText(translate('OpenLP.MacPermissions', 'macOS has not granted this running process access yet.'))
+        status.setText(translate('OpenLP.MacPermissions', 'Still unavailable. Restart OpenLP+ after enabling access.'))
         status.show()
 
     check_button.clicked.connect(check_again)

@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock, patch
 import ctypes
+import plistlib
 import sys
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.mac_permissions import (
     _DraggableFileIcon, _accessibility_drag_target, _launching_app_bundle, _open_privacy_settings, _running_app_bundle,
@@ -43,7 +44,8 @@ def test_development_drag_target_resolves_the_actual_python_executable(tmp_path)
 def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
     ide = tmp_path / 'Example IDE.app'
     (ide / 'Contents').mkdir(parents=True)
-    (ide / 'Contents' / 'Info.plist').touch()
+    with (ide / 'Contents' / 'Info.plist').open('wb') as info_file:
+        plistlib.dump({'CFBundleDisplayName': 'Widget Workshop'}, info_file)
     helper = ide / 'Contents' / 'Frameworks' / 'IDE Helper.app' / 'Contents' / 'MacOS' / 'IDE Helper'
     parents = [MagicMock(stdout='12 /path/to/python3.14\n'), MagicMock(stdout='13 /bin/zsh\n'),
                MagicMock(stdout=f'14 {helper}\n')]
@@ -55,7 +57,7 @@ def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
         target, label = _accessibility_drag_target()
 
     assert target == ide
-    assert label == 'Example IDE'
+    assert label == 'Widget Workshop'
     assert [call.args[0][4] for call in run.call_args_list] == ['-o', '-o', '-o']
     assert [call.args[0][3] for call in run.call_args_list] == ['11', '12', '13']
 
@@ -64,7 +66,7 @@ def test_packaged_launch_uses_its_own_app(tmp_path):
     bundle = tmp_path / 'OpenLP+.app'
     with patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=bundle), \
             patch('openlp.core.common.mac_permissions._launching_app_bundle') as find_launcher:
-        assert _accessibility_drag_target() == (bundle, 'OpenLP+.app')
+        assert _accessibility_drag_target() == (bundle, 'OpenLP+')
     find_launcher.assert_not_called()
 
 
@@ -94,8 +96,15 @@ def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
     bundle = tmp_path / 'OpenLP+.app'
-    bundle.mkdir()
+    resources = bundle / 'Contents' / 'Resources'
+    resources.mkdir(parents=True)
+    with (bundle / 'Contents' / 'Info.plist').open('wb') as info_file:
+        plistlib.dump({'CFBundleIconFile': 'sample.png'}, info_file)
+    sample_icon = QtGui.QPixmap(64, 64)
+    sample_icon.fill(QtCore.Qt.GlobalColor.red)
+    sample_icon.save(str(resources / 'sample.png'))
     icon = _DraggableFileIcon(bundle, 'OpenLP+.app', None)
+    assert icon.pixmap().toImage().pixelColor(32, 32) == QtGui.QColor('red')
     icon._drag_start_pos = QtCore.QPoint(0, 0)
     event = MagicMock()
     event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
@@ -141,9 +150,10 @@ def test_missing_permissions_offer_native_request_and_system_settings():
                       if isinstance(widget, QtWidgets.QDialog))
         try:
             buttons = {button.text(): button for button in dialog.findChildren(QtWidgets.QPushButton)}
-            assert 'Missing access: Accessibility, Screen Recording' in dialog.findChildren(QtWidgets.QLabel)[1].text()
+            assert any('Access needed: Accessibility, Screen Recording' in label.text()
+                       for label in dialog.findChildren(QtWidgets.QLabel))
             graphics.CGRequestPostEventAccess.assert_not_called()
-            buttons['Ask macOS for Access'].click()
+            buttons['Request Access'].click()
             buttons['Open Accessibility Settings'].click()
             buttons['Open Screen Recording Settings'].click()
             buttons['Check Again'].click()
@@ -190,7 +200,7 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
                       if isinstance(widget, QtWidgets.QDialog))
         offered_icons.append(dialog.findChildren(_DraggableFileIcon))
         source_notes.append([label.text() for label in dialog.findChildren(QtWidgets.QLabel)
-                             if 'This development run' in label.text()])
+                             if 'Or use + to add this file' in label.text()])
         dialog.accept()
 
     with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
