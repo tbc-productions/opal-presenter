@@ -167,7 +167,8 @@ class GeneralTab(SettingsTab):
         self.slide_max_height_combo_box.setObjectName('slide_max_height_combo_box')
         self.slide_max_height_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
                                                       QtWidgets.QSizePolicy.Policy.Fixed)
-        self.slide_max_height_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.slide_max_height_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.ui_layout.addRow(self.slide_max_height_label)
         self.slide_max_height_row_widget = QtWidgets.QWidget(self.ui_group_box)
         self.slide_max_height_row_widget.setObjectName('slide_max_height_row_widget')
@@ -233,9 +234,9 @@ class GeneralTab(SettingsTab):
         self.logo_fit_combo_box.setItemText(2, translate('OpenLP.GeneralTab', 'Stretch'))
         self.logo_fit_combo_box.setItemText(3, translate('OpenLP.GeneralTab', 'Tile'))
         self.logo_hide_on_startup_check_box.setText(translate('OpenLP.GeneralTab', 'Don\'t show logo on startup'))
-        self.check_for_updates_check_box.setText(translate('OpenLP.GeneralTab', 'Check for updates to OpenLP'))
+        self.check_for_updates_check_box.setText(translate('OpenLP.GeneralTab', 'Check for updates to OpenLP+'))
         self.check_for_remote_updates_check_box.setText(translate('OpenLP.GeneralTab',
-                                                                  'Check for updates to OpenLP Remote UI'))
+                                                                  'Check for updates to OpenLP+ Remote UI'))
         # CCLI Details
         self.ccli_group_box.setTitle(translate('OpenLP.GeneralTab', 'CCLI Details'))
         self.number_label.setText(UiStrings().CCLINumberLabel)
@@ -257,7 +258,7 @@ class GeneralTab(SettingsTab):
         self.expand_service_item_check_box.setText(translate('OpenLP.AdvancedTab',
                                                              'Expand new service items on creation'))
         self.slide_max_height_label.setText(translate('OpenLP.AdvancedTab',
-                                  'Max height for non-text slides in slide controller:'))
+                                                      'Max height for non-text slides in slide controller:'))
         self.slide_max_height_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Disabled'))
         self.slide_max_height_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Automatic'))
         self.autoscroll_label.setText(translate('OpenLP.AdvancedTab', 'When changing slides:'))

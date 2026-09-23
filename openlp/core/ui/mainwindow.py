@@ -435,7 +435,7 @@ class Ui_MainWindow(object):
         self.import_language_item.setVisible(False)
         self.export_language_item.setVisible(False)
         self.set_lock_panel(panel_locked)
-        self.settings_imported = False
+        self.settings_replaced = False
 
     def retranslate_ui(self, main_window):
         """
@@ -599,6 +599,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface
         self.setup_ui(self)
+        self.export_presentation_menu = QtWidgets.QMenu(self.file_export_menu)
+        self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
+        self.export_presentation_menu.setObjectName('export_presentation_menu')
+        self.export_powerpoint_item = self.export_presentation_menu.addAction(
+            translate('OpenLP.MainWindow', 'PowerPoint (pptx)'))
+        self.export_powerpoint_item.setObjectName('export_powerpoint_item')
+        self.export_powerpoint_item.triggered.connect(
+            lambda checked=False: self.service_manager_contents.on_export_presentation('.pptx'))
+        self.export_opendocument_item = self.export_presentation_menu.addAction(
+            translate('OpenLP.MainWindow', 'OpenDocument (odp)'))
+        self.export_opendocument_item.setObjectName('export_opendocument_item')
+        self.export_opendocument_item.triggered.connect(
+            lambda checked=False: self.service_manager_contents.on_export_presentation('.odp'))
+        self.file_export_menu.addMenu(self.export_presentation_menu)
         # Define the media Dock Manager
         self.media_dock_manager = MediaDockManager(self.media_tool_box)
         # Load settings after setup_ui so default UI sizes are overwritten
@@ -1112,7 +1126,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                           translate('OpenLP.MainWindow',
                                                     'OpenLP+ will now close. Imported settings will '
                                                     'be applied the next time you start OpenLP+.'))
-        self.settings_imported = True
+        self.settings_replaced = True
         self.clean_up()
         QtCore.QCoreApplication.exit()
 
@@ -1316,8 +1330,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                         translate('OpenLP.MainWindow', 'Waiting for some things to finish...')):
                 # Wait for all the threads to complete
                 self._wait_for_threads()
-                # If we just did a settings import, close without saving changes.
-                self.clean_up(save_settings=not self.settings_imported)
+                # Keep imported or reset settings from being overwritten on exit.
+                self.clean_up(save_settings=not self.settings_replaced)
 
     def eventFilter(self, obj, event: QtCore.QEvent):
         if event.type() == QtCore.QEvent.Type.FileOpen:
@@ -1944,8 +1958,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Save the main window settings.
         """
-        # Exit if we just did a settings import.
-        if self.settings_imported:
+        # Keep imported or reset settings from being overwritten on exit.
+        if self.settings_replaced:
             return
         self.settings.setValue('core/recent files', self.recent_files)
         self.settings.setValue('user interface/main window position', self.pos())

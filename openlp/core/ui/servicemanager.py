@@ -748,6 +748,25 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_item_edit_form = ServiceItemEditForm()
         self.start_time_form = StartTimeForm()
 
+    def on_export_presentation(self, suffix):
+        """Export the current service, with the configured logo between items."""
+        from openlp.core.lib.presentationexport import export_items_dialog
+
+        export_items_dialog(self.main_window,
+                            [entry['service_item'] for entry in self.service_items],
+                            suffix, self.suggested_presentation_file_path(suffix), insert_logo=True)
+
+    def suggested_presentation_file_path(self, suffix):
+        """Use the current service filename or the configured Save As name pattern."""
+        if self.file_name():
+            return Path(self.file_name()).with_suffix(suffix)
+        if not self.settings.value('advanced/default service enabled') or \
+                not self.settings.value('advanced/default service name'):
+            directory = self.settings.value('servicemanager/last directory') or Path('.')
+            return Path(directory) / f"{translate('OpenLP.ServiceManager', 'Service')}{suffix}"
+        default_path = self._default_service_file_path()
+        return default_path.parent / f'{default_path.name}{suffix}'
+
     def _delete_confirmation_dialog(self):
         msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
                                         translate('OpenLP.ServiceManager', 'Delete item from service'),
@@ -1327,10 +1346,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         finally:
             self.application.set_normal_cursor()
 
-    def save_file_as(self):
-        """
-        Get a file name and then call :func:`ServiceManager.save_file` to save the file.
-        """
+    def _default_service_file_path(self):
+        """Build the default service path from the configured date and name pattern."""
         default_service_enabled = self.settings.value('advanced/default service enabled')
         if default_service_enabled:
             service_day = self.settings.value('advanced/default service day')
@@ -1353,6 +1370,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         directory_path = self.settings.value('servicemanager/last directory')
         if directory_path:
             default_file_path = directory_path / default_file_path
+        return default_file_path
+
+    def save_file_as(self):
+        """
+        Get a file name and then call :func:`ServiceManager.save_file` to save the file.
+        """
+        default_file_path = self._default_service_file_path()
         lite_filter = translate('OpenLP.ServiceManager', 'OpenLP Service Files - lite (*.oszl)')
         packaged_filter = translate('OpenLP.ServiceManager', 'OpenLP Service Files (*.osz)')
         if self._service_path and self._service_path.suffix == '.oszl':

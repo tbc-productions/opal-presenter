@@ -36,6 +36,7 @@ from openlp.core.common.i18n import UiStrings, get_natural_key, translate
 from openlp.core.common.path import create_paths
 from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, check_item_selected, create_separated_list
+from openlp.core.lib.itemexport import export_item_dialog, suggested_item_export_path
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.ui.style import use_alternate_rows
@@ -207,6 +208,31 @@ class SongMediaItem(MediaManagerItem):
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
+    def on_export_presentation(self, suffix):
+        from openlp.core.lib.presentationexport import export_items_dialog
+
+        items = [self.build_service_item(item=item) for item in self.list_view.selectedItems()]
+        items = [item for item in items if item]
+        default_path = (suggested_item_export_path(self.service_manager, items[0].title, suffix) if items else
+                        self.service_manager.suggested_presentation_file_path(suffix))
+        export_items_dialog(self, items, suffix, default_path)
+
+    def on_export_song(self):
+        """Export each selected song as an OpenLyrics file."""
+        selected = self.list_view.selectedItems()
+        if not selected:
+            QtWidgets.QMessageBox.information(self, translate('SongsPlugin.MediaItem', 'Export song'),
+                                              translate('SongsPlugin.MediaItem', 'Select a song to export.'))
+            return
+        for item in selected:
+            song = self.plugin.manager.get_object(Song, item.data(QtCore.Qt.ItemDataRole.UserRole))
+            if not song:
+                continue
+            default_path = suggested_item_export_path(self.service_manager, song.title, '.xml')
+            export_item_dialog(
+                self, default_path, '.xml', translate('SongsPlugin.MediaItem', 'OpenLyrics Song (*.xml)'),
+                lambda path, song=song: path.write_bytes(self.open_lyrics.song_to_xml(song).encode('utf-8')))
+
     def add_list_view_to_toolbar(self):
         """
         Override the base-class list view with a two-column SongListWidget so
@@ -234,6 +260,17 @@ class SongMediaItem(MediaManagerItem):
         # Re-populate the context menu from the new widget's actions
         self.menu.clear()
         self.menu.addActions(self.list_view.actions())
+        self.export_presentation_menu = QtWidgets.QMenu(
+            translate('OpenLP.PresentationExport', 'Export'), self)
+        self.export_presentation_menu.setIcon(UiIcons().upload)
+        native_action = self.export_presentation_menu.addAction(translate('SongsPlugin.MediaItem', 'Song'))
+        native_action.triggered.connect(self.on_export_song)
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        for label, suffix in formats:
+            action = self.export_presentation_menu.addAction(label)
+            action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        self.menu.addMenu(self.export_presentation_menu)
 
     def create_item_from_id(self, item_id):
         """Return a SongListWidgetItem pre-loaded with *item_id* as UserRole data."""

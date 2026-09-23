@@ -353,7 +353,7 @@ class ApiTab(SettingsTab):
         if self.settings.value('api/ip address') != self.address_edit.text():
             QtWidgets.QMessageBox.information(self, translate('OpenLP.RemoteTab', 'Restart Required'),
                                               translate('OpenLP.RemoteTab',
-                                                        'This change will only take effect once OpenLP '
+                                                        'This change will only take effect once OpenLP+ '
                                                         'has been restarted.'))
             self.settings_form.register_post_process('remotes_config_updated')
         self.settings.setValue('api/ip address', self.address_edit.text())

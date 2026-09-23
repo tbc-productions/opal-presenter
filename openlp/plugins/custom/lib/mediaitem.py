@@ -28,6 +28,7 @@ from openlp.core.common.enum import CustomSearch
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib import check_item_selected
+from openlp.core.lib.itemexport import export_item_dialog, suggested_item_export_path, write_item_service
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ItemCapabilities
@@ -94,9 +95,45 @@ class CustomMediaItem(MediaManagerItem):
 
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
+        self.export_presentation_menu = QtWidgets.QMenu(
+            translate('OpenLP.PresentationExport', 'Export'), self.list_view)
+        self.export_presentation_menu.setIcon(UiIcons().upload)
+        native_action = self.export_presentation_menu.addAction(translate('CustomPlugin.MediaItem', 'Custom Slides'))
+        native_action.triggered.connect(self.on_export_custom)
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        for label, suffix in formats:
+            action = self.export_presentation_menu.addAction(label)
+            action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        self.list_view.addAction(self.export_presentation_menu.menuAction())
         create_widget_action(
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
+
+    def on_export_presentation(self, suffix):
+        from openlp.core.lib.presentationexport import export_items_dialog
+
+        items = [self.build_service_item(item=item) for item in self.list_view.selectedItems()]
+        items = [item for item in items if item]
+        default_path = (suggested_item_export_path(self.service_manager, items[0].title, suffix) if items else
+                        self.service_manager.suggested_presentation_file_path(suffix))
+        export_items_dialog(self, items, suffix, default_path)
+
+    def on_export_custom(self):
+        """Export each selected custom slide in an OpenLP+ service file."""
+        selected = self.list_view.selectedItems()
+        if not selected:
+            QtWidgets.QMessageBox.information(self, translate('CustomPlugin.MediaItem', 'Export custom slides'),
+                                              translate('CustomPlugin.MediaItem', 'Select custom slides to export.'))
+            return
+        for item in selected:
+            service_item = self.build_service_item(item=item)
+            if not service_item:
+                continue
+            default_path = suggested_item_export_path(self.service_manager, service_item.title, '.osz')
+            export_item_dialog(
+                self, default_path, '.osz', translate('CustomPlugin.MediaItem', 'OpenLP+ Service (*.osz)'),
+                lambda path, service_item=service_item: write_item_service(path, service_item))
 
     def config_update(self):
         """

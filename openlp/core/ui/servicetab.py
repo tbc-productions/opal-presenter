@@ -248,7 +248,8 @@ class ServiceTab(SettingsTab):
         self.service_name_day.setItemText(7, translate('OpenLP.ServiceTab', 'Now'))
         self.service_name_time.setToolTip(translate('OpenLP.ServiceTab', 'Time service usually starts.'))
         self.service_name_label.setText(translate('OpenLP.ServiceTab', 'Name:'))
-        self.service_name_edit.setToolTip(translate('OpenLP.ServiceTab', 'Consult the OpenLP manual for usage.'))
+        self.service_name_edit.setToolTip(translate('OpenLP.ServiceTab',
+                                                  'Use date and time codes to build a suggested service filename.'))
         self.service_name_revert_button.setToolTip(
             translate('OpenLP.ServiceTab',
                       'Revert to the default service name "{name}".').format(name=UiStrings().DefaultServiceName))

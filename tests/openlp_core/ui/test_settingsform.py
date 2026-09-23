@@ -23,7 +23,7 @@ Package to test the openlp.core.ui.settingsform package.
 """
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtGui, QtWidgets, QtTest
+from PySide6 import QtGui, QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
@@ -174,20 +174,11 @@ def test_register_post_process(registry: Registry, mock_settings: MagicMock):
     assert fake_function in settings_form.processes
 
 
-def test_help(mock_settings: MagicMock):
-    """
-    Test the help button
-    """
-    # GIVEN: An initialised Settings form and a patched help function
+def test_help_button_removed(mock_settings: MagicMock):
+    """The settings dialog uses control tooltips instead of a Help button."""
     settings_form = SettingsForm(None)
 
-    # WHEN: The Help button is clicked
-    with patch.object(settings_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(settings_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert settings_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
 def test_insert_tab_normalises_input_control_heights(registry: Registry, settings: Settings):
@@ -237,7 +228,8 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
 
     # THEN: General should be first, Advanced last, and middle sorted A-Z by visible title
     ordered_titles = [tab.tab_title_visible for tab, _ in ordered_tabs]
-    assert ordered_titles == ['General', 'Alerts', 'API', 'Media', 'Projectors', 'Screens', 'Service', 'Songs', 'Themes',
-                              'Advanced']
+    assert ordered_titles == [
+        'General', 'Alerts', 'API', 'Media', 'Projectors', 'Screens', 'Service', 'Songs', 'Themes', 'Advanced'
+    ]
     assert ordered_tabs[0][1] is True
     assert ordered_tabs[-1][1] is True

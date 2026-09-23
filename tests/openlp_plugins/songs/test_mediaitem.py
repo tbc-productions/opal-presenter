@@ -77,7 +77,7 @@ ${title}<br/>
 %endif
 
 %if copyright:
-  &copy;&nbsp;${copyright}<br/>
+  ${copyright}<br/>
 %endif
 
 %if songbook_entries:
@@ -755,6 +755,8 @@ def test_build_song_footer_two_authors(media_item: SongMediaItem):
         'The array should be returned correctly with a song, two authors and copyright'
     assert author_list == ['another author', 'my author', 'translator'], \
         'The author list should be returned correctly with two authors'
+    assert 'My copyright<br/>' in service_item.footer_html
+    assert '&copy;&nbsp;' not in service_item.footer_html
 
 
 def test_build_song_footer_base_ccli(media_item: SongMediaItem):

@@ -198,6 +198,27 @@ def test_replace_service_item_text_uses_single_line_verse_header(mocked_parent: 
     assert list_preview_widget.verticalHeaderItem(0).textAlignment() == int(QtCore.Qt.AlignmentFlag.AlignCenter)
 
 
+def test_replace_service_item_numbers_custom_display_pages(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
+    """Split custom slides get page letters; single-page slides retain their source number."""
+    service_item = MagicMock()
+    service_item.name = 'custom'
+    service_item.is_text.return_value = True
+    service_item.display_slides = [
+        {'verse': '1', 'text': 'First page'},
+        {'verse': '1', 'text': 'Overflow page'},
+        {'verse': '1', 'text': 'Another overflow page'},
+        {'verse': '2', 'text': 'Single-page slide'},
+        {'verse': '3', 'text': 'First page'},
+        {'verse': '3', 'text': 'Overflow page'},
+    ]
+    list_preview_widget = ListPreviewWidget(mocked_parent, 1)
+
+    list_preview_widget.replace_service_item(service_item, 200, 0)
+
+    assert [list_preview_widget.verticalHeaderItem(index).text() for index in range(6)] == [
+        '1a', '1b', '1c', '2', '3a', '3b']
+
+
 def test_replace_recalculate_layout_text(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):
     """
     Test if "Max height for non-text slides..." enabled, txt slides unchanged in replace_service_item & __recalc...
