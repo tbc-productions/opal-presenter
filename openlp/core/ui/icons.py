@@ -101,6 +101,7 @@ class UiIcons(metaclass=Singleton):
             'folder': {'icon': 'mdi.folder'},
             'folder_plus': {'icon': 'mdi.folder-plus'},
             'group': {'icon': 'mdi.group'},
+            'help': {'icon': 'mdi.help-circle-outline'},
             'inactive': {'icon': 'mdi.human-handsup', 'attr': 'lightGray'},
             'info': {'icon': 'mdi.information-variant'},
             'italic': {'icon': 'mdi.format-italic'},

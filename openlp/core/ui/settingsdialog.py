@@ -21,7 +21,7 @@
 """
 The UI widgets of the settings dialog.
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
@@ -99,7 +99,9 @@ class Ui_SettingsDialog(object):
         self.scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.scroll_area.setWidget(self.content_widget)
         self.dialog_layout.addWidget(self.scroll_area, 0, 1, 1, 1)
-        self.button_box = create_button_box(settings_dialog, 'button_box', ['cancel', 'ok', 'help'])
+        self.button_box = create_button_box(settings_dialog, 'button_box', ['cancel', 'ok', 'defaults'])
+        self.reset_defaults_button = self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.RestoreDefaults)
+        self.reset_defaults_button.setObjectName('reset_defaults_button')
         self.dialog_layout.addWidget(self.button_box, 1, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
         self.retranslate_ui(settings_dialog)
 
@@ -107,4 +109,5 @@ class Ui_SettingsDialog(object):
         """
         Translate the UI on the fly
         """
-        settings_dialog.setWindowTitle(translate('OpenLP.SettingsForm', 'Configure OpenLP'))
+        settings_dialog.setWindowTitle(translate('OpenLP.SettingsForm', 'Configure OpenLP+'))
+        self.reset_defaults_button.setText(translate('OpenLP.SettingsForm', 'Reset to defaults'))

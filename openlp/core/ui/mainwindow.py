@@ -435,7 +435,7 @@ class Ui_MainWindow(object):
         self.import_language_item.setVisible(False)
         self.export_language_item.setVisible(False)
         self.set_lock_panel(panel_locked)
-        self.settings_imported = False
+        self.settings_replaced = False
 
     def retranslate_ui(self, main_window):
         """
@@ -1126,7 +1126,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                           translate('OpenLP.MainWindow',
                                                     'OpenLP+ will now close. Imported settings will '
                                                     'be applied the next time you start OpenLP+.'))
-        self.settings_imported = True
+        self.settings_replaced = True
         self.clean_up()
         QtCore.QCoreApplication.exit()
 
@@ -1330,8 +1330,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                         translate('OpenLP.MainWindow', 'Waiting for some things to finish...')):
                 # Wait for all the threads to complete
                 self._wait_for_threads()
-                # If we just did a settings import, close without saving changes.
-                self.clean_up(save_settings=not self.settings_imported)
+                # Keep imported or reset settings from being overwritten on exit.
+                self.clean_up(save_settings=not self.settings_replaced)
 
     def eventFilter(self, obj, event: QtCore.QEvent):
         if event.type() == QtCore.QEvent.Type.FileOpen:
@@ -1958,8 +1958,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Save the main window settings.
         """
-        # Exit if we just did a settings import.
-        if self.settings_imported:
+        # Keep imported or reset settings from being overwritten on exit.
+        if self.settings_replaced:
             return
         self.settings.setValue('core/recent files', self.recent_files)
         self.settings.setValue('user interface/main window position', self.pos())

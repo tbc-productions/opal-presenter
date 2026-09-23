@@ -19,14 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-The :mod:`settingsform` provides a user interface for the OpenLP settings
+The :mod:`settingsform` provides a user interface for the OpenLP+ settings
 """
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.state import State
 from openlp.core.api.tab import ApiTab
+from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.lib import build_icon
@@ -39,6 +40,7 @@ from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
 from openlp.core.ui.media.mediatab import MediaTab
 from openlp.core.ui.settingsdialog import Ui_SettingsDialog
+from openlp.core.ui.settingstooltips import apply_settings_tooltips
 
 
 log = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ log = logging.getLogger(__name__)
 
 class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
     """
-    Provide the form to manipulate the settings for OpenLP
+    Provide the form to manipulate the settings for OpenLP+
     """
     SERVICE_COLOR_ICON_MAP = {
         'songs': ('music', ServiceTab.ICON_THEME_COLOR_SETTINGS['song']),
@@ -56,6 +58,10 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         'media': ('video', ServiceTab.ICON_THEME_COLOR_SETTINGS['media']),
         'custom': ('custom', ServiceTab.ICON_THEME_COLOR_SETTINGS['custom_slide'])
     }
+    RESET_PRESERVED_KEYS = (
+        'settings/version', 'core/application version', 'core/has run wizard',
+        'advanced/data path', 'advanced/is portable'
+    )
 
     def __init__(self, parent=None):
         """
@@ -69,6 +75,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                                            QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.processes = []
         self.setup_ui(self)
+        self.reset_defaults_button.clicked.connect(self.reset_to_defaults)
         self._settings_tabs_ordered = []
         self.setting_list_widget.currentRowChanged.connect(self.list_item_changed)
         self.general_tab = None
@@ -165,10 +172,14 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self._normalise_settings_tab_layout(tab_widget)
         if is_visible:
             list_item = QtWidgets.QListWidgetItem(self._build_settings_tab_icon(tab_widget),
-                                                 tab_widget.tab_title_visible)
+                                                  tab_widget.tab_title_visible)
             list_item.setData(QtCore.Qt.ItemDataRole.UserRole, tab_widget.tab_title)
             self.setting_list_widget.addItem(list_item)
             tab_widget.load()
+            try:
+                apply_settings_tooltips(tab_widget)
+            except Exception:
+                log.exception('Could not add settings help icons for %s', tab_widget.tab_title)
 
     def _build_settings_tab_icon(self, tab_widget):
         """
@@ -195,8 +206,8 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             layout_attr = getattr(group_box, 'layout', None)
             group_layout = layout_attr() if callable(layout_attr) else layout_attr
             if group_layout is not None:
-                left, top, right, bottom = group_layout.contentsMargins().left(), group_layout.contentsMargins().top(), \
-                    group_layout.contentsMargins().right(), group_layout.contentsMargins().bottom()
+                margins = group_layout.contentsMargins()
+                left, top, right, bottom = margins.left(), margins.top(), margins.right(), margins.bottom()
                 if left == 0 and top == 0 and right == 0 and bottom == 0:
                     group_layout.setContentsMargins(12, 14, 12, 12)
                 if group_layout.spacing() < 12:
@@ -248,6 +259,44 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         for radio_button in tab_widget.findChildren(QtWidgets.QRadioButton):
             if radio_button.minimumHeight() < 24:
                 radio_button.setMinimumHeight(24)
+
+    def reset_to_defaults(self):
+        """Reset saved preferences while keeping the user's library location and setup state."""
+        title = translate('OpenLP.SettingsForm', 'Reset preferences')
+        warning = translate(
+            'OpenLP.SettingsForm',
+            'Reset preferences to their defaults? Your library data, its location, and enabled plugins will be kept. '
+            'Restart OpenLP+ to apply the changes.')
+        answer = QtWidgets.QMessageBox.warning(
+            self, title, warning,
+            QtWidgets.QMessageBox.StandardButton.Reset | QtWidgets.QMessageBox.StandardButton.Cancel,
+            QtWidgets.QMessageBox.StandardButton.Cancel)
+        if answer != QtWidgets.QMessageBox.StandardButton.Reset:
+            return
+
+        if self.advanced_tab is not None:
+            self.advanced_tab.cancel()
+        # Plugin activation is part of the installation state. Clearing it hides plugin settings tabs
+        # (including Songs) and disables their Library sections after the next restart.
+        preserved_keys = set(self.RESET_PRESERVED_KEYS)
+        preserved_keys.update(key for key in self.settings.allKeys() if key.endswith('/status'))
+        preserved = {key: self.settings.value(key) for key in preserved_keys if self.settings.contains(key)}
+        self.settings.clear()
+        for key, value in preserved.items():
+            self.settings.setValue(key, value)
+        self.settings.sync()
+        if self.settings.status() != QtCore.QSettings.Status.NoError:
+            QtWidgets.QMessageBox.critical(
+                self, title, translate('OpenLP.SettingsForm', 'The preferences could not be reset.'))
+            return
+
+        main_window = Registry().get('main_window')
+        if main_window is not None:
+            main_window.settings_replaced = True
+        self.processes = []
+        QtWidgets.QMessageBox.information(
+            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
+        QtWidgets.QDialog.reject(self)
 
     def accept(self):
         """
@@ -368,9 +417,3 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         """
         if function not in self.processes:
             self.processes.append(function)
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/configure.html"))

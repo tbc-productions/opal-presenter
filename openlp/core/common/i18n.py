@@ -410,9 +410,9 @@ class UiStrings(metaclass=Singleton):
         self.Live = translate('OpenLP.Ui', 'Live')
         self.LivePreviewShowsBlankScreen = translate('OpenLP.ServiceTab', 'Live preview shows blank screen')
         self.LivePreviewShowsPresentationScreen = translate('OpenLP.ServiceTab',
-                                    'Live preview always shows presentation screen')
+                                                            'Live preview always shows presentation screen')
         self.LivePreviewShowsSlideTransitions = translate('OpenLP.ServiceTab',
-                                    'Live preview shows slide transitions')
+                                                          'Live preview shows slide transitions')
         self.LiveStream = translate('OpenLP.Ui', 'Live Stream')
         self.LiveBGError = translate('OpenLP.Ui', 'Live Background Error')
         self.LiveToolbar = translate('OpenLP.Ui', 'Live Toolbar')
@@ -462,7 +462,7 @@ class UiStrings(metaclass=Singleton):
         self.SaveAndPreview = translate('OpenLP.Ui', 'Save && Preview')
         self.ScreenSetupHasChangedTitle = translate('OpenLP.MainWindow', 'Screen setup has changed')
         self.ScreenSetupHasChanged = translate('OpenLP.MainWindow',
-                                               'The screen setup has changed. OpenLP will try to '
+                                               'The screen setup has changed. OpenLP+ will try to '
                                                'automatically select a display screen, but '
                                                'you should consider updating the screen settings.')
         self.Search = translate('OpenLP.Ui', 'Search')

@@ -92,7 +92,7 @@ ${title}<br/>
 %endif
 
 %if copyright:
-  &copy;&nbsp;${copyright}<br/>
+  ${copyright}<br/>
 %endif
 
 %if songbook_entries:

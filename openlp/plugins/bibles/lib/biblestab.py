@@ -151,11 +151,11 @@ class BiblesTab(SettingsTab):
         self.reference_format_group_box = QtWidgets.QGroupBox(self.right_column)
         self.reference_format_group_box.setObjectName('reference_format_group_box')
         self.reference_format_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                  QtWidgets.QSizePolicy.Policy.Fixed)
+                                                      QtWidgets.QSizePolicy.Policy.Fixed)
         self.reference_format_layout = QtWidgets.QVBoxLayout(self.reference_format_group_box)
         self.reference_format_layout.setObjectName('reference_format_layout')
         self.reference_format_label = QtWidgets.QLabel(self.reference_format_group_box)
-        self.reference_format_label.setWordWrap(True)
+        self.reference_format_label.setWordWrap(False)
         self.reference_format_label.setObjectName('reference_format_label')
         self.reference_format_layout.addWidget(self.reference_format_label)
         self.reference_format_text_edit = QtWidgets.QTextEdit(self.reference_format_group_box)
@@ -163,7 +163,7 @@ class BiblesTab(SettingsTab):
         self.reference_format_text_edit.setAcceptRichText(False)
         self.reference_format_text_edit.setTabChangesFocus(True)
         self.reference_format_text_edit.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                  QtWidgets.QSizePolicy.Policy.Fixed)
+                                                      QtWidgets.QSizePolicy.Policy.Fixed)
         self.reference_format_text_edit.setMaximumHeight(90)
         self.reference_format_layout.addWidget(self.reference_format_text_edit)
         self.reference_format_help_label = QtWidgets.QLabel(self.reference_format_group_box)
@@ -257,7 +257,7 @@ class BiblesTab(SettingsTab):
                                                                    'space for performance reasons)').format(count='8'))
         self.reference_format_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Bible Reference Format'))
         self.reference_format_label.setText(
-            translate('BiblesPlugin.BiblesTab', 'Template used to display Bible references in the footer.'))
+            translate('BiblesPlugin.BiblesTab', 'Footer reference template:'))
         self.reference_format_text_edit.setToolTip(translate(
             'BiblesPlugin.BiblesTab',
             'Mako variables:\n${bible_reference}\n${version}\n${copyright}\n${permission}'))
