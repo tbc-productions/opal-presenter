@@ -698,7 +698,7 @@ class ServiceItem(RegistryProperties):
                         move(org_file_path, file_path)
                         # Check if (by chance) the thumbnails for this image is available on this machine
                         test_thumb = AppLocation.get_section_data_path(self.name) / 'thumbnails' / new_file
-                        if test_thumb.exists():
+                        if os.path.exists(test_thumb):
                             thumbnail = test_thumb
                     self.add_from_image(file_path, text, thumbnail=thumbnail, file_hash=file_hash)
             else:
@@ -717,7 +717,7 @@ class ServiceItem(RegistryProperties):
                         file_hash = sha256_file_hash(file_path)
                         new_file = '{hash}{ext}'.format(hash=file_hash, ext=os.path.splitext(file_path)[1])
                         test_thumb = AppLocation.get_section_data_path(self.name) / 'thumbnails' / new_file
-                        if test_thumb.exists():
+                        if os.path.exists(test_thumb):
                             thumbnail = test_thumb
                     self.add_from_image(file_path, text, thumbnail=thumbnail, file_hash=file_hash)
         elif self.service_item_type == ServiceItemType.Command:
