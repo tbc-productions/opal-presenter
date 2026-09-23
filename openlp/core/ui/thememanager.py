@@ -700,8 +700,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                                        translate('OpenLP.ThemeManager',
                                                  'Save Theme - ({name})').format(name=theme_name),
                                        self.settings.value('themes/last directory export'),
-                                       translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'),
-                                       translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+                                       translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'),
+                                       translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
         if not export_path:
             return
         self.application.set_busy_cursor()
@@ -752,7 +752,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             self,
             translate('OpenLP.ThemeManager', 'Select Theme Import File'),
             self.settings.value('themes/last directory import'),
-            translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
         self.log_info('New Themes {file_paths}'.format(file_paths=file_paths))
         if not file_paths:
             return

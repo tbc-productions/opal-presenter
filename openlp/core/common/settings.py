@@ -459,6 +459,8 @@ class Settings(QtCore.QSettings):
         'media/db password': '',
         'media/db hostname': '',
         'media/db database': '',
+        'media/live audio out': '',
+        'media/preview audio out': '',
         'players/background color': '#000000',
         'obs_studio/status': PluginStatus.Inactive,
         'obs_studio/host': 'localhost',
@@ -1182,7 +1184,7 @@ class Settings(QtCore.QSettings):
                 
             # Basic sanity check
             if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
-                log.error("Invalid OpenLP settings file.")
+                log.error("Invalid OpenLP+ settings file.")
                 return False
                 
             # Allowed setting sections: core sections and built-in plugins, plus any plugin

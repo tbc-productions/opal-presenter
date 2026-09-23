@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##########################################################################
 # OpenLP - Open Source Lyrics Projection                                 #
 # ---------------------------------------------------------------------- #
@@ -18,23 +16,24 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
+
 import logging
 import re
 import sqlite3
+import threading
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
 
 import chardet
 from PySide6 import QtCore
 from sqlalchemy import Column, ForeignKey, func, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, declarative_base, relationship
-from sqlalchemy.types import Unicode, UnicodeText, Integer
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 
 from openlp.core.common import clean_filename
-from openlp.core.common.enum import LanguageSelection
 from openlp.core.common.applocation import AppLocation
+from openlp.core.common.enum import LanguageSelection
 from openlp.core.common.i18n import translate
 from openlp.core.db.helpers import init_db
 from openlp.core.db.manager import DBManager
@@ -208,7 +207,7 @@ class BibleDB(DBManager):
             return True
         return False
 
-    def create_chapter(self, book_id: int, chapter: int, text_list: List[str]):
+    def create_chapter(self, book_id: int, chapter: int, text_list: list[str]):
         """
         Add a chapter and its verses to a book.
 
@@ -245,7 +244,7 @@ class BibleDB(DBManager):
         self.session.add(verse)
         return verse
 
-    def save_meta(self, key: str, value: Any):
+    def save_meta(self, key: str, value: any):
         """
         Utility method to save or update BibleMeta objects in a Bible database.
 
@@ -271,7 +270,7 @@ class BibleDB(DBManager):
         log.debug('BibleDB.get_book("{book}")'.format(book=book))
         return self.get_object_filtered(self.Book, self.Book.name.like(book + '%'))
 
-    def get_books(self, book: Optional[str] = None):
+    def get_books(self, book: str | None = None):
         """
         A wrapper so both local and web bibles have a get_books() method that
         manager can call. Used in the media manager advanced search tab.
@@ -321,7 +320,7 @@ class BibleDB(DBManager):
                         book_list = books
             return [value['id'] for value in book_list if self.get_book_by_book_ref_id(value['id'])]
 
-    def get_verses(self, reference_list: List[Tuple[str, int, int, int]], show_error: bool = True):
+    def get_verses(self, reference_list: list[tuple[str, int, int, int]], show_error: bool = True):
         """
         This is probably the most used function. It retrieves the list of
         verses based on the user's query.
@@ -451,22 +450,35 @@ class BiblesResourcesDB(QtCore.QObject):
     resources, a biblelist from the different download resources, the books,
     chapter counts and verse counts for the web download Bibles, a language
     reference, the testament reference and some alternative book names. This
-    class contains a singleton "cursor" so that only one connection to the
-    SQLite database is ever used.
+    class contains one cursor per thread, so connections are not shared across
+    Qt worker threads.
     """
-    cursor = None
+    _thread_local = threading.local()
+
+    @staticmethod
+    def get_connection():
+        """
+        Return the thread-local SQLite connection. Create one if needed.
+        """
+        connection = getattr(BiblesResourcesDB._thread_local, 'connection', None)
+        if connection is None:
+            file_path = (
+                AppLocation.get_directory(AppLocation.PluginsDir) / 'bibles' / 'resources' / 'bibles_resources.sqlite'
+            )
+            connection = sqlite3.connect(str(file_path))
+            BiblesResourcesDB._thread_local.connection = connection
+        return connection
 
     @staticmethod
     def get_cursor():
         """
         Return the cursor object. Instantiate one if it doesn't exist yet.
         """
-        if BiblesResourcesDB.cursor is None:
-            file_path = \
-                AppLocation.get_directory(AppLocation.PluginsDir) / 'bibles' / 'resources' / 'bibles_resources.sqlite'
-            conn = sqlite3.connect(str(file_path))
-            BiblesResourcesDB.cursor = conn.cursor()
-        return BiblesResourcesDB.cursor
+        cursor = getattr(BiblesResourcesDB._thread_local, 'cursor', None)
+        if cursor is None:
+            cursor = BiblesResourcesDB.get_connection().cursor()
+            BiblesResourcesDB._thread_local.cursor = cursor
+        return cursor
 
     @staticmethod
     def run_sql(query, parameters=()):
@@ -740,8 +752,25 @@ class AlternativeBookNamesDB(object):
     """
     This class represents a database-bound alternative book names system.
     """
-    cursor = None
-    conn = None
+    _thread_local = threading.local()
+
+    @staticmethod
+    def get_connection():
+        """
+        Return the thread-local SQLite connection. Create one if needed.
+        """
+        connection = getattr(AlternativeBookNamesDB._thread_local, 'connection', None)
+        if connection is None:
+            file_path = AppLocation.get_section_data_path('bibles') / 'alternative_book_names.sqlite'
+            exists = file_path.exists()
+            connection = sqlite3.connect(str(file_path))
+            if not exists:
+                # create new DB, create table alternative_book_names
+                connection.execute(
+                    'CREATE TABLE alternative_book_names(id INTEGER NOT NULL, '
+                    'book_reference_id INTEGER, language_id INTEGER, name VARCHAR(50), PRIMARY KEY (id))')
+            AlternativeBookNamesDB._thread_local.connection = connection
+        return connection
 
     @staticmethod
     def get_cursor():
@@ -749,17 +778,11 @@ class AlternativeBookNamesDB(object):
         Return the cursor object. Instantiate one if it doesn't exist yet.
         If necessary loads up the database and creates the tables if the database doesn't exist.
         """
-        if AlternativeBookNamesDB.cursor is None:
-            file_path = AppLocation.get_section_data_path('bibles') / 'alternative_book_names.sqlite'
-            exists = file_path.exists()
-            AlternativeBookNamesDB.conn = sqlite3.connect(str(file_path))
-            if not exists:
-                # create new DB, create table alternative_book_names
-                AlternativeBookNamesDB.conn.execute(
-                    'CREATE TABLE alternative_book_names(id INTEGER NOT NULL, '
-                    'book_reference_id INTEGER, language_id INTEGER, name VARCHAR(50), PRIMARY KEY (id))')
-            AlternativeBookNamesDB.cursor = AlternativeBookNamesDB.conn.cursor()
-        return AlternativeBookNamesDB.cursor
+        cursor = getattr(AlternativeBookNamesDB._thread_local, 'cursor', None)
+        if cursor is None:
+            cursor = AlternativeBookNamesDB.get_connection().cursor()
+            AlternativeBookNamesDB._thread_local.cursor = cursor
+        return cursor
 
     @staticmethod
     def run_sql(query, parameters=(), commit=None):
@@ -773,7 +796,7 @@ class AlternativeBookNamesDB(object):
         cursor = AlternativeBookNamesDB.get_cursor()
         cursor.execute(query, parameters)
         if commit:
-            AlternativeBookNamesDB.conn.commit()
+            AlternativeBookNamesDB.get_connection().commit()
         return cursor.fetchall()
 
     @staticmethod

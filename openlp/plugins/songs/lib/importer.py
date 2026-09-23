@@ -225,7 +225,7 @@ class SongFormat(object):
             'canDisable': True,
             'disabledLabelText': translate('SongsPlugin.ImportWizardForm',
                                            'The generic document/presentation importer has been disabled '
-                                           'because OpenLP cannot access OpenOffice or LibreOffice.'),
+                                           'because OpenLP+ cannot access OpenOffice or LibreOffice.'),
             'getFilesTitle': translate('SongsPlugin.ImportWizardForm', 'Select Document/Presentation Files')
         },
         CCLI: {
@@ -411,7 +411,7 @@ class SongFormat(object):
                                                              'Songs Of Fellowship Song Files')),
             'disabledLabelText': translate('SongsPlugin.ImportWizardForm',
                                            'The Songs of Fellowship importer has been disabled because '
-                                           'OpenLP cannot access OpenOffice or LibreOffice.')
+                                           'OpenLP+ cannot access OpenOffice or LibreOffice.')
         },
         SundayPlus: {
             'class': SundayPlusImport,

@@ -1,17 +1,15 @@
 OpenLP+
-======
+-------
 
-OpenLP+ is a forked version of OpenLP.
+OpenLP+ is a fork of the upstream OpenLP project.
 
 You're probably reading this because you've just downloaded the source code for
-OpenLP. If you are looking for the installer file, please go to the download
-page on the web site:
+OpenLP+. For builds and source code, visit:
 
-    https://openlp.org/#download
+    https://git.tbcproductions.net/tbcproductions/openlp-plus
 
-If you're looking for how to contribute to OpenLP, then please look at the
-OpenLP wiki:
+For upstream OpenLP documentation and community information, see:
 
     https://wiki.openlp.org/
 
-Thanks for downloading OpenLP!
+Thanks for downloading OpenLP+!

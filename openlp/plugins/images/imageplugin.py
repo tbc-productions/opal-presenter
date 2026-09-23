@@ -56,7 +56,7 @@ class ImagePlugin(Plugin):
                                'of the distinguishing features of this plugin is the ability to '
                                'group a number of images together in the service manager, making '
                                'the displaying of multiple images easier. This plugin can also '
-                               'make use of OpenLP\'s "timed looping" feature to create a slide '
+                               'make use of OpenLP+\'s "timed looping" feature to create a slide '
                                'show that runs automatically. In addition to this, images from '
                                'the plugin can be used to override the current theme\'s '
                                'background, which renders text-based items like songs with the '

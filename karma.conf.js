@@ -82,6 +82,22 @@ module.exports = function(config) {
 
     client: {
         captureConsole: true
-    }
+    },
+
+    // Make Karma work with pnpm.
+    // See: https://github.com/pnpm/pnpm/issues/720#issuecomment-954120387
+    plugins: Object.keys(require("./package.json").devDependencies).flatMap(
+      (packageName) => {
+        if (!packageName.startsWith("karma-")) return []
+        return [ require(packageName) ]
+      },
+    ),
+
+    // Make junit work with pnpm.
+    plugins: [
+        'karma-jasmine',
+        'karma-junit-reporter',
+        'karma-chrome-launcher'
+    ]
   })
 }

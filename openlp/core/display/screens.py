@@ -297,7 +297,7 @@ class ScreenList(metaclass=Singleton):
                                                               'Screen settings and screen setup is not the same'),
                                               translate('OpenLP.Screen',
                                                         'There is a mismatch between screens and screen settings. '
-                                                        'OpenLP will try to automatically select a display screen, but '
+                                                        'OpenLP+ will try to automatically select a display screen, but '
                                                         'you should consider updating the screen settings.'),
                                               QtWidgets.QMessageBox.StandardButton(
                                                   QtWidgets.QMessageBox.StandardButton.Ok))

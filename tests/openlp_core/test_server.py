@@ -116,7 +116,7 @@ def test_on_ready_read_giving_up(server: Server):
         server._on_ready_read()
 
     # THEN: the service will be loaded
-    mocked_log_error.assert_called_once_with('OpenLP is taking too long to start up, abandoning file load')
+    mocked_log_error.assert_called_once_with('OpenLP+ is taking too long to start up, abandoning file load')
 
 
 @patch('openlp.core.server.QtCore.QTextStream')

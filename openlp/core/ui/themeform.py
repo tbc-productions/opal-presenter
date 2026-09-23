@@ -306,8 +306,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             self,
             translate('OpenLP.ThemeManager', 'Save Theme - ({name})').format(name=theme_name),
             default_export_path,
-            translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'),
-            translate('OpenLP.ThemeManager', 'OpenLP Themes (*.otz)'))
+            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'),
+            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
         if not export_path:
             return
         self.application.set_busy_cursor()

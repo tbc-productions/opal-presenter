@@ -79,6 +79,23 @@ class _ThumbnailRelay(QtCore.QObject):
         self._ftw._on_theme_thumbnail_download_finished()
 
 
+class ThumbnailReceiver(QtCore.QObject):
+    """
+    Small QObject helper that owns the slots invoked when a thumbnail download finishes.
+    """
+    def __init__(self, item):
+        super().__init__()
+        self._item = item
+
+    @QtCore.Slot()
+    def on_failed(self):
+        self._item.setIcon(UiIcons().get_icon_variant('exception'))
+
+    @QtCore.Slot(Path)
+    def on_succeeded(self, thumbnail_path):
+        self._item.setIcon(build_icon(thumbnail_path))
+
+
 class ThemeListWidgetItem(QtWidgets.QListWidgetItem):
     """
     Subclass a QListWidgetItem to allow dynamic loading of thumbnails from an online resource
@@ -690,7 +707,7 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             self.progress_bar.setMaximum(self.max_progress)
             self.progress_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Setting Up And Downloading'))
             self.progress_page.setSubTitle(
-                translate('OpenLP.FirstTimeWizard', 'Please wait while OpenLP is set up and your data is downloaded.'))
+                translate('OpenLP.FirstTimeWizard', 'Please wait while OpenLP+ is set up and your data is downloaded.'))
         else:
             self.progress_bar.setVisible(False)
             self.progress_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Setting Up'))
@@ -844,7 +861,7 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         self.progress_bar.setVisible(True)
         self.progress_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Setting Up And Downloading'))
         self.progress_page.setSubTitle(
-            translate('OpenLP.FirstTimeWizard', 'Please wait while OpenLP is set up and your data is downloaded.'))
+            translate('OpenLP.FirstTimeWizard', 'Please wait while OpenLP+ is set up and your data is downloaded.'))
         self.download_setup_in_progress = True
         songs = []
         bibles = []
@@ -916,7 +933,7 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         # check to see if we have web access
         self.has_web_access = False
         self.config = ''
-        user_agent = 'OpenLP/' + QtWidgets.QApplication.applicationVersion()
+        user_agent = 'OpenLP+/' + QtWidgets.QApplication.applicationVersion()
         self.resource_index_downloaded = None
         self.resource_index_failed = False
         self.resource_index_thread = 'first_time_resource_index'
@@ -998,7 +1015,7 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             log.exception('Unable to parse sample config file %s', web_config)
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.FirstTimeWizard', 'Invalid index file'),
                                            translate('OpenLP.FirstTimeWizard',
-                                                     'OpenLP was unable to read the resource index file. '
+                                                     'OpenLP+ was unable to read the resource index file. '
                                                      'Please try again later.'))
             return False
         return True
@@ -1211,15 +1228,15 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             self.progress_bar.setValue(self.progress_bar.maximum())
             if self.has_run_wizard:
                 text = translate('OpenLP.FirstTimeWizard',
-                                 'Download complete. Click the \'{finish_button}\' button to return to OpenLP.')
+                                 'Download complete. Click the \'{finish_button}\' button to return to OpenLP+.')
             else:
                 text = translate('OpenLP.FirstTimeWizard',
-                                 'Download complete. Click the \'{finish_button}\' button to start OpenLP.')
+                                 'Download complete. Click the \'{finish_button}\' button to start OpenLP+.')
         else:
             if self.has_run_wizard:
-                text = translate('OpenLP.FirstTimeWizard', 'Click the \'{finish_button}\' button to return to OpenLP.')
+                text = translate('OpenLP.FirstTimeWizard', 'Click the \'{finish_button}\' button to return to OpenLP+.')
             else:
-                text = translate('OpenLP.FirstTimeWizard', 'Click the \'{finish_button}\' button to start OpenLP.')
+                text = translate('OpenLP.FirstTimeWizard', 'Click the \'{finish_button}\' button to start OpenLP+.')
         self.progress_label.setText(text.format(finish_button=self.finish_button_text))
         finish_button = self.button(QtWidgets.QWizard.WizardButton.FinishButton)
         finish_button.setEnabled(True)

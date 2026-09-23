@@ -21,7 +21,7 @@
 ##########################################################################
 
 """
-This script is used to check dependencies of OpenLP. It checks availability
+This script is used to check dependencies of OpenLP+. It checks availability
 of required python modules and their version. To verify availability of Python
 modules, simply run this script::
 

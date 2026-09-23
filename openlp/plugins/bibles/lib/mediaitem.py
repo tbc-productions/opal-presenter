@@ -530,7 +530,7 @@ class BibleMediaItem(MediaManagerItem):
             if QtWidgets.QMessageBox.question(
                 self, UiStrings().ConfirmDelete,
                 translate('BiblesPlugin.MediaItem',
-                          'Are you sure you want to completely delete "{bible}" Bible from OpenLP?\n\n'
+                          'Are you sure you want to completely delete "{bible}" Bible from OpenLP+?\n\n'
                           'You will need to re-import this Bible to use it again.').format(bible=self.bible.name),
                     defaultButton=QtWidgets.QMessageBox.StandardButton.No) == QtWidgets.QMessageBox.StandardButton.No:
                 return
@@ -712,7 +712,7 @@ class BibleMediaItem(MediaManagerItem):
             if (new_selection is None) ^ (self.second_bible is None):
                 if critical_error_message_box(
                     message=translate('BiblesPlugin.MediaItem',
-                                      'OpenLP cannot combine single and dual Bible verse search results. '
+                                      'OpenLP+ cannot combine single and dual Bible verse search results. '
                                       'Do you want to clear your saved results?'),
                         parent=self, question=True) == QtWidgets.QMessageBox.StandardButton.Yes:
                     self.saved_results = []

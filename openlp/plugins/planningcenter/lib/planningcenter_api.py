@@ -26,6 +26,7 @@ import logging
 import os
 import re
 import ssl
+import base64
 import urllib.error
 import urllib.request
 from json import loads, load, dump
@@ -61,6 +62,32 @@ class PlanningCenterAPI:
         if os.path.isdir(self.airplane_mode_directory):
             self.airplane_mode = True
 
+    @staticmethod
+    def _has_basic_auth_challenge(error):
+        """
+        Return True when the HTTP error exposes a Basic auth challenge.
+        """
+        headers = getattr(error, 'headers', None)
+        if headers is None:
+            return False
+        challenge_headers = headers.get_all('WWW-Authenticate', [])
+        return any(challenge.lower().startswith('basic') for challenge in challenge_headers)
+
+    def _open_with_preemptive_basic_auth(self, request_url):
+        """
+        Open the URL with an explicit Basic Authorization header.
+        """
+        auth_token = base64.b64encode(
+            '{0}:{1}'.format(self.application_id, self.secret).encode('utf-8')
+        ).decode('ascii')
+        request = urllib.request.Request(
+            request_url,
+            headers={
+                'Authorization': 'Basic {0}'.format(auth_token)
+            }
+        )
+        return urllib.request.urlopen(request, timeout=30)
+
     def get_from_services_api(self, url_suffix):
         """
         Gets the response from the API for the provided url_suffix and returns
@@ -91,13 +118,18 @@ class PlanningCenterAPI:
         handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
         # create "opener" (OpenerDirector instance)
         opener = urllib.request.build_opener(handler)
-        # use the opener to fetch a URL
-        opener.open(self.api_url + url_suffix)
-        # Install the opener.
-        # Now all calls to urllib.request.urlopen use our opener.
-        urllib.request.install_opener(opener)
-        api_response_string = urllib.request.urlopen(self.api_url + url_suffix,
-                                                     timeout=30).read()
+        request_url = self.api_url + url_suffix
+        try:
+            api_response = opener.open(request_url, timeout=30)
+        except urllib.error.HTTPError as error:
+            if error.code != 401 or self._has_basic_auth_challenge(error):
+                log.error("HTTPError: {code} {reason} for URL: {url}"
+                          .format(code=error.code, reason=error.reason, url=request_url))
+                raise
+            log.warning("Received 401 Unauthorized for URL: {url} without Basic auth challenge, "
+                        "retrying with preemptive Basic auth".format(url=request_url))
+            api_response = self._open_with_preemptive_basic_auth(request_url)
+        api_response_string = api_response.read()
         api_response_object = loads(api_response_string.decode('utf-8'))
         # write out the responses as json files for airplane mode...
         if self.airplane_mode:

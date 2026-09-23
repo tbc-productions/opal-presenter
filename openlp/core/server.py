@@ -112,7 +112,7 @@ class Server(QtCore.QObject, LogMixin):
         if service_manager:
             service_manager.load_service(Path(self.file_name))
         elif self._ms_waited > MAX_WAIT_TIME_MS:
-            self.log_error('OpenLP is taking too long to start up, abandoning file load')
+            self.log_error('OpenLP+ is taking too long to start up, abandoning file load')
         else:
             self.log_info('Service manager is not loaded yet, waiting 500ms')
             self._ms_waited += 500

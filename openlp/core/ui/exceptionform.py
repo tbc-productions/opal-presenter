@@ -52,7 +52,7 @@ class ExceptionForm(QtWidgets.QDialog, Ui_ExceptionDialog, RegistryProperties):
                                             QtCore.Qt.WindowType.WindowTitleHint)
         self.setup_ui(self)
         self.settings_section = 'crashreport'
-        self.report_text = '**OpenLP Bug Report**\n' \
+        self.report_text = '**OpenLP+ Bug Report**\n' \
             'Version: {version}\n\n' \
             '--- Details of the Exception. ---\n\n{description}\n\n ' \
             '--- Exception Traceback ---\n{traceback}\n' \

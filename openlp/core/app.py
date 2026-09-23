@@ -421,7 +421,7 @@ def backup_if_version_changed(settings):
             move(data_folder_path, data_folder_backup_path)
         except OSError:
             log.exception('Failed to backup data for downgrade')
-            QtWidgets.QMessageBox.critical(None, translate('OpenLP', 'OpenLP Backup'),
+            QtWidgets.QMessageBox.critical(None, translate('OpenLP', 'OpenLP+ Backup'),
                                            translate('OpenLP', 'Backup of the data folder failed during downgrade.'))
             return False
     # Reset all the settings if we're downgrading
@@ -496,7 +496,7 @@ def main():
     qt_args.extend(args.rargs)
     # Bug #1018855: Set the WM_CLASS property in X11
     if not is_win() and not is_macosx():
-        qt_args.append('OpenLP')
+        qt_args.append('openlp-plus')
     elif is_macosx() and getattr(sys, 'frozen', False) and not os.environ.get('QTWEBENGINEPROCESS_PATH'):
         # Set the location to the QtWebEngineProcess binary, normally set by PyInstaller, but it moves around...
         os.environ['QTWEBENGINEPROCESS_PATH'] = str((AppLocation.get_directory(AppLocation.AppDir) / 'PySide6' /
@@ -513,6 +513,7 @@ def main():
     Registry.create()
     QtWidgets.QApplication.setOrganizationName('tbcproductions')
     QtWidgets.QApplication.setApplicationName('OpenLPPlus')
+    QtWidgets.QApplication.setApplicationDisplayName('OpenLP+')
     QtWidgets.QApplication.setOrganizationDomain('tbcproductions.net')
     if args.portable:
         # This has to be done here so that we can load the settings before instantiating the application object

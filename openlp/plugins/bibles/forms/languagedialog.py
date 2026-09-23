@@ -68,6 +68,6 @@ class Ui_LanguageDialog(object):
         self.bible_label.setText(translate('BiblesPlugin.LanguageDialog', ''))
         self.info_label.setText(
             translate('BiblesPlugin.LanguageDialog',
-                      'OpenLP is unable to determine the language of this translation of the Bible. Please select '
+                      'OpenLP+ is unable to determine the language of this translation of the Bible. Please select '
                       'the language from the list below.'))
         self.language_label.setText(translate('BiblesPlugin.LanguageDialog', 'Language:'))

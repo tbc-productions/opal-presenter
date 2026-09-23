@@ -1,5 +1,121 @@
 <?xml version="1.0" ?><!DOCTYPE TS><TS version="2.1" language="cs">
 <context>
+    <name>PresentationPlugin</name>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="154"/>
+        <source>&lt;strong&gt;Presentation Plugin&lt;/strong&gt;&lt;br /&gt;The presentation plugin provides the ability to show presentations using a number of different programs. The choice of available presentation programs is available to the user in a drop down box.</source>
+        <translation>&lt;strong&gt;Modul prezentace&lt;/strong&gt;&lt;br /&gt;Modul prezentace dovoluje zobrazovat prezentace z několika různých programů. Výběr dostupných prezentačních programů je uživateli přístupný v rozbalovacím menu.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="167"/>
+        <source>Presentation</source>
+        <comment>name singular</comment>
+        <translation>Prezentace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="168"/>
+        <source>Presentations</source>
+        <comment>name plural</comment>
+        <translation>Prezentace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="172"/>
+        <source>Presentations</source>
+        <comment>container title</comment>
+        <translation>Prezentace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="176"/>
+        <source>Load a new presentation.</source>
+        <translation>Načíst novou prezentaci.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="180"/>
+        <source>Delete the selected presentation.</source>
+        <translation>Smazat vybranou prezentaci.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="181"/>
+        <source>Preview the selected presentation.</source>
+        <translation>Náhled vybrané prezentace.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="182"/>
+        <source>Send the selected presentation live.</source>
+        <translation>Zobrazit vybranou prezentaci naživo.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="183"/>
+        <source>Add the selected presentation to the service.</source>
+        <translation>Přidat vybranou prezentaci ke službě.</translation>
+    </message>
+</context>
+<context>
+    <name>BiblesPlugin</name>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="714"/>
+        <source>No Book Found</source>
+        <translation>Kniha nenalezena</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="715"/>
+        <source>No matching book could be found in this Bible. Check that you have spelled the name of the book correctly.</source>
+        <translation>V Bibli nebyla nalezena odpovídající kniha. Prověřte, že název knihy byl zadán správně.</translation>
+    </message>
+</context>
+<context>
+    <name>BiblesPlugin.HTTPBible</name>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="647"/>
+        <source>Registering Bible and loading books...</source>
+        <translation>Registruji Bibli a stahuji knihy...</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="663"/>
+        <source>Registering Language...</source>
+        <translation>Registruji jazyk...</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="670"/>
+        <source>Importing {book}...</source>
+        <comment>Importing &lt;book name&gt;...</comment>
+        <translation>Importuji {book}...</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="814"/>
+        <source>Download Error</source>
+        <translation>Chyba stahování</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="815"/>
+        <source>There was a problem downloading your verse selection. Please check your Internet connection, and if this error continues to occur, please consider reporting a bug.</source>
+        <translation>Při stahování překladů se vyskytl problém. Prosím prověřte své internetové připojení. Pokud se tato chyba stále objevuje, zvažte prosím nahlášení chyby vývojářům.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="820"/>
+        <source>Parse Error</source>
+        <translation>Chyba zpracování</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="821"/>
+        <source>There was a problem extracting your verse selection. If this error continues to occur please consider reporting a bug.</source>
+        <translation>Při rozbalování výběru veršů se vyskytl problém. Pokud se tato chyba stále objevuje, zvašte prosím nahlášení chyby.</translation>
+    </message>
+</context>
+<context>
+    <name>BiblesPlugin.WordProjectBible</name>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/wordproject.py" line="60"/>
+        <source>Incorrect Bible file type, not a Zip file.</source>
+        <translation>Nesprávný typ Bible souboru, nebyl zadán Zip soubor.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/bibles/lib/importers/wordproject.py" line="75"/>
+        <source>Incorrect Bible file type, files are missing.</source>
+        <translation>Nesprávný typ Bible souboru, chybějící soubory.</translation>
+    </message>
+</context>
+<context>
     <name>BiblesPlugin.Sword</name>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="89"/>
@@ -11,7 +127,7 @@
     <name>BiblesPlugin.SwordImport</name>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
-        <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
+        <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP+ developers.
 {error}</source>
         <translation>Při importu Bible typu SWORD se vyskytla chyba, oznamte prosím tuto skutečnost vývojářům OpenLP+:
 {error}</translation>
@@ -647,7 +763,7 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="462"/>
-        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
+        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP+?
 
 You will need to re-import this Bible to use it again.</source>
         <translation>Jste si jisti, že chcete zcela vymazat Bibli &quot;{bible}&quot; z OpenLP+?
@@ -666,7 +782,7 @@ Pro použití bude potřeba naimportovat Bibli znovu.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
-        <source>OpenLP cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
+        <source>OpenLP+ cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
         <translation>OpenLP+ nemůže kombinovat jednoduché a dvojité výsledky hledání veršů v Bibli. Přejete si smazat výsledky hledání a začít s novým vyhledáváním?</translation>
     </message>
     <message>
@@ -723,7 +839,7 @@ Zobrazí se pouze verše nalezené v obou Biblích.
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="66"/>
         <source>The proxy server {proxy} was found in the bible {name}.&lt;br&gt;Would you like to set it as the proxy for OpenLP?</source>
-        <translation>Proxy server {proxy} byl nalezen v bibli {name}. &lt;br&gt;Chcete jej nastavit jako proxy pro OpenLP+?</translation>
+        <translation>Proxy server {proxy} byl nalezen v bibli {name}. &lt;br&gt;Chcete jej nastavit jako proxy pro OpenLP?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/upgrade.py" line="71"/>
@@ -885,30 +1001,6 @@ minimum of {count} characters and a space for performance reasons)</source>
         <translation>Hledat během psaní (Hledaný text musí z důvodu 
 rychlosti hledání obsahovat alespoň {count} znaků a mezeru)</translation>
     </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="258"/>
-        <source>Bible Reference Format</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="259"/>
-        <source>Template used to display Bible references in the footer.</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="262"/>
-        <source>Mako variables:
-${bible_reference}
-${version}
-${copyright}
-${permission}</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="263"/>
-        <source>Mako Syntax</source>
-        <translation></translation>
-    </message>
 </context>
 <context>
     <name>BiblesPlugin</name>
@@ -921,6 +1013,99 @@ ${permission}</source>
         <location filename="../../openlp/plugins/bibles/lib/db.py" line="364"/>
         <source>No matching book could be found in this Bible. Check that you have spelled the name of the book correctly.</source>
         <translation>V Bibli nebyla nalezena odpovídající kniha. Prověřte, že název knihy byl zadán správně.</translation>
+    </message>
+</context>
+<context>
+    <name>SongsPlugin.SongImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="105"/>
+        <source>copyright</source>
+        <translation>autorská práva</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="120"/>
+        <source>The following songs could not be imported:</source>
+        <translation>Následující písně nemohly být importovány:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="239"/>
+        <source>music by</source>
+        <translation>hudbu napsal</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="240"/>
+        <source>music:</source>
+        <translation>hudba:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="241"/>
+        <source>arranged by</source>
+        <translation>aranže</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="242"/>
+        <source>arranged:</source>
+        <translation>aranže:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="243"/>
+        <source>composed by</source>
+        <translation>složil</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="244"/>
+        <source>composer:</source>
+        <translation>skladatel:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="245"/>
+        <source>words by</source>
+        <translation>slova napsal</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="246"/>
+        <source>words:</source>
+        <translation>text:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="247"/>
+        <source>lyrics by</source>
+        <translation>slova napsal</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="248"/>
+        <source>lyrics:</source>
+        <translation>slova:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="249"/>
+        <source>written by</source>
+        <translation>napsal(a)</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="250"/>
+        <source>writer:</source>
+        <translation>textař:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="251"/>
+        <source>authored by</source>
+        <translation>složil(a)</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="252"/>
+        <source>author:</source>
+        <translation>autor:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="253"/>
+        <source>translated by</source>
+        <translation>přeložil(a)</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="254"/>
+        <source>translation:</source>
+        <translation>překlad:</translation>
     </message>
 </context>
 <context>
@@ -1064,7 +1249,7 @@ ${permission}</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
-        <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
+        <source>OpenLP+ is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
         <translation>OpenLP+ není schopen určit jazyk tohoto překladu Bible. Vyberte prosím jazyk ze seznamu níže. </translation>
     </message>
     <message>
@@ -1310,99 +1495,6 @@ ${permission}</source>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.SongImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="105"/>
-        <source>copyright</source>
-        <translation>autorská práva</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="120"/>
-        <source>The following songs could not be imported:</source>
-        <translation>Následující písně nemohly být importovány:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="239"/>
-        <source>music by</source>
-        <translation>hudbu napsal</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="240"/>
-        <source>music:</source>
-        <translation>hudba:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="241"/>
-        <source>arranged by</source>
-        <translation>aranže</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="242"/>
-        <source>arranged:</source>
-        <translation>aranže:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="243"/>
-        <source>composed by</source>
-        <translation>složil</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="244"/>
-        <source>composer:</source>
-        <translation>skladatel:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="245"/>
-        <source>words by</source>
-        <translation>slova napsal</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="246"/>
-        <source>words:</source>
-        <translation>text:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="247"/>
-        <source>lyrics by</source>
-        <translation>slova napsal</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="248"/>
-        <source>lyrics:</source>
-        <translation>slova:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="249"/>
-        <source>written by</source>
-        <translation>napsal(a)</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="250"/>
-        <source>writer:</source>
-        <translation>textař:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="251"/>
-        <source>authored by</source>
-        <translation>složil(a)</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="252"/>
-        <source>author:</source>
-        <translation>autor:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="253"/>
-        <source>translated by</source>
-        <translation>přeložil(a)</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songimport.py" line="254"/>
-        <source>translation:</source>
-        <translation>překlad:</translation>
-    </message>
-</context>
-<context>
     <name>BiblesPlugin.BibleEditForm</name>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="166"/>
@@ -1460,7 +1552,7 @@ Není možné přizpůsobit si názvy knih.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
-        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
+        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP+.</source>
         <translation>Pro přizpůsobení názvů knih musí být vybrán &quot;Jazyk Bible&quot; v kartě Meta Data nebo na stránce Bible v Nastavení OpenLP+, pokud je vybráno &quot;Globální nastavení&quot;.</translation>
     </message>
 </context>
@@ -1553,6 +1645,14 @@ Není možné přizpůsobit si názvy knih.</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.MediaShoutImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/mediashout.py" line="62"/>
+        <source>Unable to open the MediaShout database.</source>
+        <translation>Není možno otevřít databázi MediaShout.</translation>
+    </message>
+</context>
+<context>
     <name>PlanningCenterPlugin.PlanningCenterAuthForm</name>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="115"/>
@@ -1624,7 +1724,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
-        <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
+        <source>Authentiation Failed. Check your credentials in OpenLP+ Settings.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1743,14 +1843,6 @@ boxes below. Personal Access Tokens are created by doing the following:
     </message>
 </context>
 <context>
-    <name>SongsPlugin.MediaShoutImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/mediashout.py" line="62"/>
-        <source>Unable to open the MediaShout database.</source>
-        <translation>Není možno otevřít databázi MediaShout.</translation>
-    </message>
-</context>
-<context>
     <name>ImagePlugin</name>
     <message>
         <location filename="../../openlp/plugins/images/lib/mediaitem.py" line="115"/>
@@ -1818,6 +1910,24 @@ Chcete přesto přidat ostatní obrázky?</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.SongImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="70"/>
+        <source>Cannot access OpenOffice or LibreOffice</source>
+        <translation>Nelze přistupovat k aplikacím OpenOffice nebo LibreOffice</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="83"/>
+        <source>Unable to open file</source>
+        <translation>Nelze otevřít soubor</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="85"/>
+        <source>File not found</source>
+        <translation>Soubor nenalezen</translation>
+    </message>
+</context>
+<context>
     <name>ImagePlugin.ChooseGroupForm</name>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="83"/>
@@ -1846,24 +1956,6 @@ Chcete přesto přidat ostatní obrázky?</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.SongImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="70"/>
-        <source>Cannot access OpenOffice or LibreOffice</source>
-        <translation>Nelze přistupovat k aplikacím OpenOffice nebo LibreOffice</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="83"/>
-        <source>Unable to open file</source>
-        <translation>Nelze otevřít soubor</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/openoffice.py" line="85"/>
-        <source>File not found</source>
-        <translation>Soubor nenalezen</translation>
-    </message>
-</context>
-<context>
     <name>ImagePlugin.AddGroupForm</name>
     <message>
         <location filename="../../openlp/plugins/images/forms/addgroupform.py" line="69"/>
@@ -1883,7 +1975,7 @@ Chcete přesto přidat ostatní obrázky?</translation>
     <name>ImagePlugin</name>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
-        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
+        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP+&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
         <translation>&lt;strong&gt;Modul obrázek&lt;/strong&gt;&lt;br /&gt;Modul obrázek se stará o zobrazování obrázků.&lt;br /&gt;Jedna z charakteristických funkcí tohoto modulu je schopnost ve správci služby seskupit několik obrázků dohromady. Tato vlastnost zjednodušuje zobrazení více obrázků. Tento modul také využívá vlastnosti &quot;časová smyčka&quot; aplikace OpenLP+ a je tudíž možno vytvořit prezentaci obrázků, která poběží samostatně. Nadto lze využitím obrázků z modulu překrýt pozadí současného motivu.</translation>
     </message>
     <message>
@@ -1956,6 +2048,14 @@ Chcete přesto přidat ostatní obrázky?</translation>
         <location filename="../../openlp/plugins/custom/lib/customtab.py" line="57"/>
         <source>Import missing custom slides from service files</source>
         <translation>Import chybějících uživatelských snímků ze souborů služby</translation>
+    </message>
+</context>
+<context>
+    <name>SongsPlugin.DatasoulImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/datasoul.py" line="65"/>
+        <source>Invalid Datasoul song file. Missing Song tag.</source>
+        <translation>Neplatný soubor Datasoul. Chybí tag Song. </translation>
     </message>
 </context>
 <context>
@@ -2034,14 +2134,6 @@ Chcete přesto přidat ostatní obrázky?</translation>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="113"/>
         <source>&amp;Credits:</source>
         <translation>&amp;Zásluhy:</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.DatasoulImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/datasoul.py" line="65"/>
-        <source>Invalid Datasoul song file. Missing Song tag.</source>
-        <translation>Neplatný soubor Datasoul. Chybí tag Song. </translation>
     </message>
 </context>
 <context>
@@ -2145,6 +2237,14 @@ Chcete přesto přidat ostatní obrázky?</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.ChordProFileImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/chordpro.py" line="66"/>
+        <source>The file contains unreadable characters.</source>
+        <translation>Soubor obsahuje znaky, které nelze přečíst.</translation>
+    </message>
+</context>
+<context>
     <name>MediaPlugin</name>
     <message>
         <location filename="../../openlp/plugins/media/lib/mediaitem.py" line="152"/>
@@ -2211,14 +2311,6 @@ Chcete přesto přidat ostatní obrázky?</translation>
         <location filename="../../openlp/plugins/media/forms/networkstreamselectorform.py" line="72"/>
         <source>Network URL</source>
         <translation>Síťové URL</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.ChordProFileImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/chordpro.py" line="66"/>
-        <source>The file contains unreadable characters.</source>
-        <translation>Soubor obsahuje znaky, které nelze přečíst.</translation>
     </message>
 </context>
 <context>
@@ -2359,6 +2451,39 @@ Chcete přesto přidat ostatní obrázky?</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.PowerSongImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="100"/>
+        <source>No songs to import.</source>
+        <translation>Žádné písně k importu.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="101"/>
+        <source>No {text} files found.</source>
+        <translation>Žádné {text} soubory nebyli nalezeny.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="119"/>
+        <source>Invalid {text} file. Unexpected byte value.</source>
+        <translation>Nesprávný {text} soubor. Neočekávaná bajtová hodnota.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="137"/>
+        <source>Invalid {text} file. Missing &quot;TITLE&quot; header.</source>
+        <translation>Nesprávný {text} soubor. Chybějící hlavička &quot;TITLE&quot;.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="143"/>
+        <source>Invalid {text} file. Missing &quot;COPYRIGHTLINE&quot; header.</source>
+        <translation>Neplatný soubor {text}. Chybějící hlavička &quot;COPYRIGHTLINE&quot;.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="149"/>
+        <source>Verses not found. Missing &quot;PART&quot; header.</source>
+        <translation>Sloky nenalezeny. Chybějící hlavička &quot;PART&quot;. </translation>
+    </message>
+</context>
+<context>
     <name>AlertsPlugin</name>
     <message>
         <location filename="../../openlp/plugins/alerts/alertsplugin.py" line="161"/>
@@ -2392,39 +2517,6 @@ Chcete přesto přidat ostatní obrázky?</translation>
         <source>Alerts</source>
         <comment>container title</comment>
         <translation>Upozornění</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.PowerSongImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="100"/>
-        <source>No songs to import.</source>
-        <translation>Žádné písně k importu.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="101"/>
-        <source>No {text} files found.</source>
-        <translation>Žádné {text} soubory nebyli nalezeny.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="119"/>
-        <source>Invalid {text} file. Unexpected byte value.</source>
-        <translation>Nesprávný {text} soubor. Neočekávaná bajtová hodnota.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="137"/>
-        <source>Invalid {text} file. Missing &quot;TITLE&quot; header.</source>
-        <translation>Nesprávný {text} soubor. Chybějící hlavička &quot;TITLE&quot;.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="143"/>
-        <source>Invalid {text} file. Missing &quot;COPYRIGHTLINE&quot; header.</source>
-        <translation>Neplatný soubor {text}. Chybějící hlavička &quot;COPYRIGHTLINE&quot;.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powersong.py" line="149"/>
-        <source>Verses not found. Missing &quot;PART&quot; header.</source>
-        <translation>Sloky nenalezeny. Chybějící hlavička &quot;PART&quot;. </translation>
     </message>
 </context>
 <context>
@@ -2600,12 +2692,12 @@ Chcete přesto pokračovat?</translation>
 <context>
     <name>OpenLP.PluginManager</name>
     <message>
-        <location filename="../../openlp/core/lib/pluginmanager.py" line="171"/>
+        <location filename="../../openlp/core/lib/pluginmanager.py" line="173"/>
         <source>Unable to initialise the following plugins:</source>
         <translation>Nelze načíst následující pluginy:</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/pluginmanager.py" line="177"/>
+        <location filename="../../openlp/core/lib/pluginmanager.py" line="179"/>
         <source>See the log file for more details</source>
         <translation>Více informací v log souboru</translation>
     </message>
@@ -2652,59 +2744,59 @@ Chcete přesto pokračovat?</translation>
 <context>
     <name>OpenLP.MediaManagerItem</name>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="272"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="273"/>
         <source>&amp;Add to selected Service Item</source>
         <translation>&amp;Přidat k vybrané Položce Služby</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="371"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="374"/>
         <source>Invalid File Type</source>
         <translation>Neplatný typ souboru</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="372"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="375"/>
         <source>Invalid File {file_path}.
 File extension not supported</source>
         <translation>Neplatný soubor {file_path}.
 Přípona souboru není podporována</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="420"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="454"/>
         <source>Duplicate files were found on import and were ignored.</source>
         <translation>Při importu byly nalezeny duplicitní soubory a byly ignorovány.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="523"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="557"/>
         <source>You must select one or more items to preview.</source>
         <translation>Pro náhled je třeba vybrat jednu nebo více položek.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="541"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="575"/>
         <source>You must select one or more items to send live.</source>
         <translation>Pro zobrazení naživo je potřeba vybrat jednu nebo více položek.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="590"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="624"/>
         <source>You must select one or more items to add.</source>
         <translation>Pro přidání Je třeba vybrat jednu nebo více položek.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="632"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="666"/>
         <source>You must select one or more items.</source>
         <translation>Je třeba vybrat jednu nebo více položek.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="640"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="674"/>
         <source>You must select an existing service item to add to.</source>
         <translation>K přidání Je třeba vybrat existující položku služby.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="647"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="681"/>
         <source>Invalid Service Item</source>
         <translation>Neplatná Položka služby</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/lib/mediamanageritem.py" line="648"/>
+        <location filename="../../openlp/core/lib/mediamanageritem.py" line="682"/>
         <source>You must select a {title} service item.</source>
         <translation>Je třeba vybrat {title} položku služby.</translation>
     </message>
@@ -2718,7 +2810,7 @@ Přípona souboru není podporována</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
-        <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
+        <source>You have lost OpenLP+s shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP+ immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP+</source>
         <translation>Ztratili jste zámek ke sdílené datové složce, který byl nárokován uživatelem &quot;{user}&quot; z &quot;{host}&quot;! Ukončete OpenLP+ abyste předešli poškození dat. Můžete se pokusit získat zpět zámek datové složky restartováním OpenLP+</translation>
     </message>
     <message>
@@ -2728,7 +2820,7 @@ Přípona souboru není podporována</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
-        <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
+        <source>OpenLP+s shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
         <translation>Sdílenou datovou složku používá &quot;{user}&quot; z &quot;{host}&quot;. Pouze jeden uživatel může přístupovat k datům ve stejném čase, aby se předešlo jejich poškození. Prosím, zkuste to znovu za pár minut.</translation>
     </message>
 </context>
@@ -2781,6 +2873,15 @@ Přípona souboru není podporována</translation>
         <location filename="../../openlp/core/lib/ui.py" line="466"/>
         <source>Shows the list in a grid view.</source>
         <translation>Zobrazit seznam v mřížce.</translation>
+    </message>
+</context>
+<context>
+    <name>SongsPlugin.OpenLPSongImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
+        <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
+        <source>Not a valid OpenLP 2 song database.</source>
+        <translation>Neplatná databáze písní OpenLP 2.</translation>
     </message>
 </context>
 <context>
@@ -3028,71 +3129,11 @@ Přípona souboru není podporována</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.OpenLPSongImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="83"/>
-        <location filename="../../openlp/plugins/songs/lib/importers/openlp.py" line="92"/>
-        <source>Not a valid OpenLP 2 song database.</source>
-        <translation>Neplatná databáze písní OpenLP+ 2.</translation>
-    </message>
-</context>
-<context>
     <name>OpenLP.RemotePlugin</name>
     <message>
         <location filename="../../openlp/core/widgets/dialogs.py" line="120"/>
         <source>Importing Website</source>
         <translation>Importuji webovou stránku</translation>
-    </message>
-</context>
-<context>
-    <name>OpenLP.ColorButton</name>
-    <message>
-        <location filename="../../openlp/core/widgets/buttons.py" line="48"/>
-        <source>Click to select a color.</source>
-        <translation>Klepnout pro výběr barvy.</translation>
-    </message>
-</context>
-<context>
-    <name>OpenLP.SlideController</name>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="159"/>
-        <source>Start playing media.</source>
-        <translation>Spustit přehrávání média.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="163"/>
-        <source>Pause playing media.</source>
-        <translation>Pozastavit přehrávání média.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="167"/>
-        <source>Stop playing media.</source>
-        <translation>Zastavit přehrávání média.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="172"/>
-        <source>Loop playing media.</source>
-        <translation>Přehrávání média ve smyčce.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="177"/>
-        <source>Media timer.</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="187"/>
-        <source>Video position.</source>
-        <translation>Umístění videa.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="195"/>
-        <source>Volume.</source>
-        <translation type="unfinished"/>
-    </message>
-    <message>
-        <location filename="../../openlp/core/widgets/toolbar.py" line="207"/>
-        <source>Audio Volume.</source>
-        <translation>Hlasitost zvuku.</translation>
     </message>
 </context>
 <context>
@@ -3179,11 +3220,62 @@ Přípona souboru není podporována</translation>
     </message>
 </context>
 <context>
-    <name>OpenLP</name>
+    <name>OpenLP.ColorButton</name>
     <message>
-        <location filename="../../openlp/core/common/__init__.py" line="418"/>
-        <source>Image Files</source>
-        <translation>Soubory s obrázky</translation>
+        <location filename="../../openlp/core/widgets/buttons.py" line="48"/>
+        <source>Click to select a color.</source>
+        <translation>Klepnout pro výběr barvy.</translation>
+    </message>
+</context>
+<context>
+    <name>OpenLP.SlideController</name>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="159"/>
+        <source>Start playing media.</source>
+        <translation>Spustit přehrávání média.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="163"/>
+        <source>Pause playing media.</source>
+        <translation>Pozastavit přehrávání média.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="167"/>
+        <source>Stop playing media.</source>
+        <translation>Zastavit přehrávání média.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="172"/>
+        <source>Loop playing media.</source>
+        <translation>Přehrávání média ve smyčce.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="177"/>
+        <source>Media timer.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="187"/>
+        <source>Video position.</source>
+        <translation>Umístění videa.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="195"/>
+        <source>Volume.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/widgets/toolbar.py" line="207"/>
+        <source>Audio Volume.</source>
+        <translation>Hlasitost zvuku.</translation>
+    </message>
+</context>
+<context>
+    <name>SongsPlugin.SongBeamerImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songbeamer.py" line="132"/>
+        <source>File is not a valid SongBeamer file.</source>
+        <translation>Soubor není ve formátu SongBeamer.</translation>
     </message>
 </context>
 <context>
@@ -3196,7 +3288,7 @@ Přípona souboru není podporována</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="302"/>
         <source>Please restart OpenLP to use your new language setting.</source>
-        <translation>Změny nastavení jazyka se projeví restartováním aplikace OpenLP+.</translation>
+        <translation>Změny nastavení jazyka se projeví restartováním aplikace OpenLP.</translation>
     </message>
 </context>
 <context>
@@ -3215,7 +3307,7 @@ Přípona souboru není podporována</translation>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Rozložení obrazovek bylo změněno. OpenLP+ se pokusí vybrat promítací obrazovku, ale pro jistotu si nastavení obrazovek ještě zkontrolujte.</translation>
+        <translation>Rozložení obrazovek bylo změněno. OpenLP se pokusí vybrat promítací obrazovku, ale pro jistotu si nastavení obrazovek ještě zkontrolujte.</translation>
     </message>
 </context>
 <context>
@@ -3596,18 +3688,18 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="426"/>
         <source>OpenLP</source>
-        <translation>OpenLP+</translation>
+        <translation>OpenLP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
-        <source>OpenLP Song Database</source>
+        <source>OpenLP+ Song Database</source>
         <translation>Databáze OpenLP+ písní</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
         <source>OpenLP is already running on this machine. 
 Closing this instance</source>
-        <translation>OpenLP+ je již spuštěna na tomto počítači.
+        <translation>OpenLP je již spuštěna na tomto počítači.
 Vypínám aplikaci</translation>
     </message>
     <message>
@@ -4906,11 +4998,11 @@ Vypínám aplikaci</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.SongBeamerImport</name>
+    <name>SongsPlugin.WorshipCenterProImport</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songbeamer.py" line="132"/>
-        <source>File is not a valid SongBeamer file.</source>
-        <translation>Soubor není ve formátu SongBeamer.</translation>
+        <location filename="../../openlp/plugins/songs/lib/importers/worshipcenterpro.py" line="59"/>
+        <source>Unable to connect the WorshipCenter Pro database.</source>
+        <translation>Nepodařilo se připojit k databázi WorshipCenter Pro.</translation>
     </message>
 </context>
 <context>
@@ -4980,14 +5072,6 @@ Vypínám aplikaci</translation>
         <location filename="../../openlp/core/projectors/tab.py" line="119"/>
         <source>Source select dialog interface</source>
         <translation>Rozhraní výběru zdroje</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.WorshipCenterProImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/worshipcenterpro.py" line="59"/>
-        <source>Unable to connect the WorshipCenter Pro database.</source>
-        <translation>Nepodařilo se připojit k databázi WorshipCenter Pro.</translation>
     </message>
 </context>
 <context>
@@ -6056,7 +6140,7 @@ Vypínám aplikaci</translation>
     <name>OpenLP.SourceSelectForm</name>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
-        <source>Ignoring current changes and return to OpenLP</source>
+        <source>Ignoring current changes and return to OpenLP+</source>
         <translation>Ignorovat současné změny a vrátit se do aplikace OpenLP+</translation>
     </message>
     <message>
@@ -6071,7 +6155,7 @@ Vypínám aplikaci</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
-        <source>Save changes and return to OpenLP</source>
+        <source>Save changes and return to OpenLP+</source>
         <translation>Uložit změny a vrátit se do aplikace OpenLP+</translation>
     </message>
     <message>
@@ -6467,15 +6551,15 @@ The location of the data folder was previously changed from the OpenLP's default
 You may reset the data location back to the default location, or you can try to make the current location available.
 
 Do you want to reset to the default data location? If not, OpenLP will be closed so you can try to fix the problem.</source>
-        <translation>Datová složka OpenLP+ nebyla nalezena v:
+        <translation>Datová složka OpenLP nebyla nalezena v:
 
 {path}
 
-Výchozí umístění OpenLP+ bylo dříve změněno na tuto složku. Pokud nové umístění bylo na výměnném zařízení, je nutno dané zařízení nejdříve připojit.
+Výchozí umístění OpenLP bylo dříve změněno na tuto složku. Pokud nové umístění bylo na výměnném zařízení, je nutno dané zařízení nejdříve připojit.
 
 Můžete obnovit výchozí umístění datové složky nebo se pokusit datovou složku zpřístupnit.
 
-Chcete obnovit výchozí umístění datové složky? Pokud ne, OpenLP+ se zavře abyste mohli problém vyřešit.</translation>
+Chcete obnovit výchozí umístění datové složky? Pokud ne, OpenLP se zavře abyste mohli problém vyřešit.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="236"/>
@@ -6488,7 +6572,7 @@ Chcete obnovit výchozí umístění datové složky? Pokud ne, OpenLP+ se zavř
         <location filename="../../openlp/core/app.py" line="237"/>
         <source>OpenLP has been upgraded, do you want to create
 a backup of the old data folder?</source>
-        <translation>Byla nainstalována nová verze aplikace OpenLP+,  
+        <translation>Byla nainstalována nová verze aplikace OpenLP,  
 přejete si vytvořit zálohu staré datové složky?</translation>
     </message>
     <message>
@@ -6517,7 +6601,7 @@ přejete si vytvořit zálohu staré datové složky?</translation>
 {data_folder_backup_path}
 
 Do you want to continue?</source>
-        <translation>Byl nalazen konfigurační soubor vytvořený novější verzi OpenLP+. OpenLP+ nastartuje s čistou instalací, protože downgrade dat není podporován. Všechna existující data budou zalohována do:
+        <translation>Byl nalazen konfigurační soubor vytvořený novější verzi OpenLP. OpenLP nastartuje s čistou instalací, protože downgrade dat není podporován. Všechna existující data budou zalohována do:
 
 {data_folder_backup_path}
 
@@ -6541,11 +6625,11 @@ Chcete pokračovat?</translation>
 OpenLP will attempt to continue.</source>
         <translation>Záloha nastavení selhala.
 
-OpenLP+ se pokusí pokračovat.</translation>
+OpenLP se pokusí pokračovat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
-        <source>OpenLP Backup</source>
+        <source>OpenLP+ Backup</source>
         <translation>Záloha OpenLP+</translation>
     </message>
     <message>
@@ -6573,11 +6657,19 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.SongProImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/songpro.py" line="93"/>
+        <source>File is not a valid SongPro file.</source>
+        <translation>Soubor není ve formátu SongPro.</translation>
+    </message>
+</context>
+<context>
     <name>OpenLP.SettingsForm</name>
     <message>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
-        <translation>Nastavení OpenLP+</translation>
+        <translation>Nastavení OpenLP</translation>
     </message>
 </context>
 <context>
@@ -6798,14 +6890,6 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.SongProImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/songpro.py" line="93"/>
-        <source>File is not a valid SongPro file.</source>
-        <translation>Soubor není ve formátu SongPro.</translation>
-    </message>
-</context>
-<context>
     <name>OpenLP.ServiceNoteForm</name>
     <message>
         <location filename="../../openlp/core/ui/servicenoteform.py" line="74"/>
@@ -6910,6 +6994,14 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.LiveWorshipImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/liveworship.py" line="62"/>
+        <source>Loading the extracting data</source>
+        <translation>Načítám získaná data</translation>
+    </message>
+</context>
+<context>
     <name>OpenLP.FormattingTagForm</name>
     <message>
         <location filename="../../openlp/core/ui/formattingtagform.py" line="96"/>
@@ -6923,17 +7015,17 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/formattingtagform.py" line="138"/>
-        <location filename="../../openlp/core/ui/formattingtagform.py" line="224"/>
+        <location filename="../../openlp/core/ui/formattingtagform.py" line="225"/>
         <source>Validation Error</source>
         <translation>Chyba ověřování</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/formattingtagform.py" line="204"/>
+        <location filename="../../openlp/core/ui/formattingtagform.py" line="205"/>
         <source>Description is missing</source>
         <translation>Chybějící popis</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/formattingtagform.py" line="207"/>
+        <location filename="../../openlp/core/ui/formattingtagform.py" line="208"/>
         <source>Tag is missing</source>
         <translation>Chybějící značka</translation>
     </message>
@@ -7344,14 +7436,6 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.LiveWorshipImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/liveworship.py" line="62"/>
-        <source>Loading the extracting data</source>
-        <translation>Načítám získaná data</translation>
-    </message>
-</context>
-<context>
     <name>OpenLP.AddFolderForm</name>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="91"/>
@@ -7501,6 +7585,14 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.DreamBeamImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/dreambeam.py" line="112"/>
+        <source>Invalid DreamBeam song file. Missing DreamSong tag.</source>
+        <translation>Neplatný DreamBeam soubor s písní. Chybějící značka DreamSong.</translation>
+    </message>
+</context>
+<context>
     <name>OpenLP.FirstTimeLanguageForm</name>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="68"/>
@@ -7509,7 +7601,7 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
-        <source>Choose the translation you&apos;d like to use in OpenLP.</source>
+        <source>Choose the translation you&apos;d like to use in OpenLP+.</source>
         <translation>Vyberte překlad, který bude používat aplikace OpenLP+.</translation>
     </message>
     <message>
@@ -7732,7 +7824,7 @@ OpenLP+ se pokusí pokračovat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
-        <source>OpenLP Service Files (*.osz *.oszl)</source>
+        <source>OpenLP+ Service Files (*.osz *.oszl)</source>
         <translation>OpenLP+ soubory služby (*.osz *.oszl)</translation>
     </message>
     <message>
@@ -7775,18 +7867,18 @@ Tyto souby se vymažou, pokud službu uložíte.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
-        <source>OpenLP Service Files - lite (*.oszl)</source>
+        <source>OpenLP+ Service Files - lite (*.oszl)</source>
         <translation>Soubory služby OpenLP+ - lite (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
-        <source>OpenLP Service Files (*.osz)</source>
+        <source>OpenLP+ Service Files (*.osz)</source>
         <translation>Soubory služby OpenLP+ (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
         <source>The service file {file_path} could not be loaded because it is either corrupt, inaccessible, or not a valid OpenLP 2 or OpenLP 3 service file.</source>
-        <translation>Soubor služby {file_path} nebylo možné načíst, je buďto poškozený, nedostupný nebo nevalidní OpenLP+ 2 nebo OpenLP+ 3 soubor.</translation>
+        <translation>Soubor služby {file_path} nebylo možné načíst, je buďto poškozený, nedostupný nebo nevalidní OpenLP 2 nebo OpenLP 3 soubor.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="979"/>
@@ -7873,14 +7965,6 @@ Tyto souby se vymažou, pokud službu uložíte.</translation>
 Add some items to it then press Save</source>
         <translation>Vaše služba je prázdná.
 Vložte do ni položky a klikněte na Uložit.</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.DreamBeamImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/dreambeam.py" line="112"/>
-        <source>Invalid DreamBeam song file. Missing DreamSong tag.</source>
-        <translation>Neplatný DreamBeam soubor s písní. Chybějící značka DreamSong.</translation>
     </message>
 </context>
 <context>
@@ -8021,7 +8105,7 @@ Vložte do ni položky a klikněte na Uložit.</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="477"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
-        <source>OpenLP Themes (*.otz)</source>
+        <source>OpenLP+ Themes (*.otz)</source>
         <translation>OpenLP+ motivy (*.otz)</translation>
     </message>
     <message>
@@ -8379,7 +8463,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="207"/>
         <source>Check for updates to OpenLP</source>
-        <translation>Kontrola aktualizací aplikace OpenLP+</translation>
+        <translation>Kontrola aktualizací aplikace OpenLP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="208"/>
@@ -8406,6 +8490,19 @@ in slide controller:</source>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.OPSProImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/opspro.py" line="65"/>
+        <source>Unable to connect the OPS Pro database.</source>
+        <translation>Nepodařilo se připojit k databázi OPS Pro.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/opspro.py" line="88"/>
+        <source>&quot;{title}&quot; could not be imported. {error}</source>
+        <translation>&quot;{title}&quot; nemohlo být importováno. {error}</translation>
+    </message>
+</context>
+<context>
     <name>OpenLP.ExceptionDialog</name>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="94"/>
@@ -8419,12 +8516,12 @@ in slide controller:</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
-        <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
+        <source>&lt;strong&gt;Oops, OpenLP+ hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP+ developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
         <translation>&lt;strong&gt;Jejda, OpenLP+ narazil na problém, ze kterého se nedokáže vzpamatovat! &lt;br&gt;&lt;br&gt;Můžete pomoci &lt;/strong&gt; vývojářům OpenLP+ chybu &lt;strong&gt;opravit&lt;/strong&gt; tím,&lt;br&gt; že jim pošlete &lt;strong&gt;chybové hlášení na {email}&lt;/strong&gt;{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
-        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
+        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP+ better!&lt;br&gt;</source>
         <translation>{first_part}&lt;strong&gt;Nemáte emailového klienta?&lt;/strong&gt; Můžete &lt;strong&gt;uložit&lt;/strong&gt; tuto informaci do &lt;strong&gt;souboru&lt;/strong&gt; a poslat z &lt;strong&gt;webového emailu&lt;/strong&gt; jako &lt;strong&gt;přílohu&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Děkujeme&lt;/strong&gt;, že pomáháte vylepšit OpenLP+! </translation>
     </message>
     <message>
@@ -8601,7 +8698,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="393"/>
         <source>Close OpenLP - Shut down the program.</source>
-        <translation>Zavřít OpenLP+ - Vypnout program.</translation>
+        <translation>Zavřít OpenLP - Vypnout program.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="394"/>
@@ -8622,7 +8719,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="400"/>
         <source>&amp;Configure OpenLP...</source>
-        <translation>&amp;Nastavení OpenLP+</translation>
+        <translation>&amp;Nastavení OpenLP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="402"/>
@@ -8758,7 +8855,7 @@ in slide controller:</source>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="437"/>
         <source>More information about OpenLP.</source>
-        <translation>Více informací o OpenLP+.</translation>
+        <translation>Více informací o OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="438"/>
@@ -8865,14 +8962,14 @@ in slide controller:</source>
         <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
 
 You can download the latest version from https://openlp.org/.</source>
-        <translation>Ke stažení je dostupná verze {new} aplikace OpenLP+ (v současné době používáte verzi {current}). 
+        <translation>Ke stažení je dostupná verze {new} aplikace OpenLP (v současné době používáte verzi {current}). 
 
 Nejnovější verzi lze stáhnout z https://openlp.org/.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="635"/>
         <source>OpenLP Version Updated</source>
-        <translation>Verze OpenLP+ aktualizována</translation>
+        <translation>Verze OpenLP aktualizována</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="646"/>
@@ -8895,14 +8992,14 @@ Pro stažení jděte do Nastavení - Vzdálené ovládání a klikněte na tlač
         <location filename="../../openlp/core/ui/mainwindow.py" line="714"/>
         <source>Are you sure you want to re-run the First Time Wizard?
 
-Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
+Re-running this wizard may make changes to your current OpenLP+ configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Jste si jist, že chcete znovu spustit Průvodce prvním spuštění?
 
 Znovuspuštěním tohoto průvodce může dojít ke změně současného nastavení aplikace OpenLP+ a pravděpodobně budou přidány písně k existujícímu seznamu a změněn výchozí motiv. </translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
-        <source>OpenLP Main Display Blanked</source>
+        <source>OpenLP+ Main Display Blanked</source>
         <translation>Hlavní zobrazení OpenLP+ je prázdné</translation>
     </message>
     <message>
@@ -8924,9 +9021,9 @@ Znovuspuštěním tohoto průvodce může dojít ke změně současného nastave
  Importing incorrect settings may cause erratic behaviour or OpenLP to terminate abnormally.</source>
         <translation>Jste si jist, že chcete importovat nastavení?
 
-Importováním nastavení dojde k trvalým změnám současného nastavení aplikace OpenLP+.
+Importováním nastavení dojde k trvalým změnám současného nastavení aplikace OpenLP.
 
-Importování nesprávných nastavení může zapříčinit náladové chování nebo nenormální ukončení aplikace OpenLP+.</translation>
+Importování nesprávných nastavení může zapříčinit náladové chování nebo nenormální ukončení aplikace OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="874"/>
@@ -8940,14 +9037,14 @@ Importování nesprávných nastavení může zapříčinit náladové chování
         <location filename="../../openlp/core/ui/mainwindow.py" line="876"/>
         <location filename="../../openlp/core/ui/mainwindow.py" line="976"/>
         <source>OpenLP Settings (*.conf)</source>
-        <translation>Nastavení OpenLP+ (*.conf)</translation>
+        <translation>Nastavení OpenLP (*.conf)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="906"/>
         <source>OpenLP cannot import settings from a newer version of OpenLP.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>OpenLP+ nedokáže naimportovat nastavení z novější verze OpenLP+.
+        <translation>OpenLP nedokáže naimportovat nastavení z novější verze OpenLP.
 
 Zpracování bylo zastaveno, žádné změny nebyly provedeny.</translation>
     </message>
@@ -8956,14 +9053,14 @@ Zpracování bylo zastaveno, žádné změny nebyly provedeny.</translation>
         <source>The file you have selected does not appear to be a valid OpenLP settings file.
 
 Processing has terminated and no changes have been made.</source>
-        <translation>Vybraný soubor nevypadá jako formát souboru s nastavením OpenLP+.
+        <translation>Vybraný soubor nevypadá jako formát souboru s nastavením OpenLP.
 
 Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="961"/>
         <source>OpenLP will now close.  Imported settings will be applied the next time you start OpenLP.</source>
-        <translation>Aplikace OpenLP+ se nyní zavře. Importovaná nastavení se použijí při příštim spuštění.</translation>
+        <translation>Aplikace OpenLP se nyní zavře. Importovaná nastavení se použijí při příštim spuštění.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="974"/>
@@ -8983,17 +9080,17 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1087"/>
         <source>Exit OpenLP</source>
-        <translation>Ukončit OpenLP+</translation>
+        <translation>Ukončit OpenLP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1088"/>
         <source>Are you sure you want to exit OpenLP?</source>
-        <translation>Jste si jist, že chcete ukončit aplikaci OpenLP+?</translation>
+        <translation>Jste si jist, že chcete ukončit aplikaci OpenLP?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1094"/>
         <source>&amp;Exit OpenLP</source>
-        <translation>&amp;Ukončit OpenLP+</translation>
+        <translation>&amp;Ukončit OpenLP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1103"/>
@@ -9024,14 +9121,14 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1472"/>
         <source>Copying OpenLP data to new data directory location - {path} - Please wait for copy to finish</source>
-        <translation>Kopíruji OpenLP+ data do nového umístění datové složky - {path} - Počkejte prosím na dokončení kopírování</translation>
+        <translation>Kopíruji OpenLP data do nového umístění datové složky - {path} - Počkejte prosím na dokončení kopírování</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="1479"/>
         <source>OpenLP Data directory copy failed
 
 {err}</source>
-        <translation>Kopírování datové složky OpenLP+ selhalo
+        <translation>Kopírování datové složky OpenLP selhalo
 
 {err}</translation>
     </message>
@@ -9108,19 +9205,6 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.OPSProImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/opspro.py" line="65"/>
-        <source>Unable to connect the OPS Pro database.</source>
-        <translation>Nepodařilo se připojit k databázi OPS Pro.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/opspro.py" line="88"/>
-        <source>&quot;{title}&quot; could not be imported. {error}</source>
-        <translation>&quot;{title}&quot; nemohlo být importováno. {error}</translation>
-    </message>
-</context>
-<context>
     <name>OpenLP.FileRenameForm</name>
     <message>
         <location filename="../../openlp/core/ui/filerenamedialog.py" line="61"/>
@@ -9141,16 +9225,16 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="120"/>
         <source>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source Lyrics Projection&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP Developers&lt;/p&gt;&lt;p&gt;Find out more about OpenLP: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;OpenLP+ {{version}}{{revision}} - Open Source projekce písní&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP+ vývojáři&lt;/p&gt;&lt;p&gt;Více informací o OpenLP+ naleznete na: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Tento program je svobodný software: můžete jej šířit a upravovat podle ustanovení Obecné veřejné licence GNU General Public Licence, vydávané nadací Free Software Foundation, a to buď podle 3. verze této Licence anebo (podle vašeho uvážení) kterékoli pozdější verze.&lt;/p&gt;&lt;p&gt;Tento program je šířen v naději, že bude užitečný, avšak BEZ JAKÉKOLI ZÁRUKY. Neposkytují se ani odvozené záruky OBCHODOVATELNOSTI anebo VHODNOSTI PRO URČITÝ ÚČEL. Další podrobnosti hledejte v Obecné veřejné licenci GNU.&lt;/p&gt;&lt;p&gt;Kopii Obecné veřejné licence GNU jste měli obdržet spolu s tímto programem. Pokud se tak nestalo, jděte na &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
+        <translation>&lt;p&gt;OpenLP {{version}}{{revision}} - Open Source projekce písní&lt;br&gt;Copyright {crs} 2004-{yr} OpenLP vývojáři&lt;/p&gt;&lt;p&gt;Více informací o OpenLP naleznete na: &lt;a href=&quot;https://openlp.org/&quot;&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Tento program je svobodný software: můžete jej šířit a upravovat podle ustanovení Obecné veřejné licence GNU General Public Licence, vydávané nadací Free Software Foundation, a to buď podle 3. verze této Licence anebo (podle vašeho uvážení) kterékoli pozdější verze.&lt;/p&gt;&lt;p&gt;Tento program je šířen v naději, že bude užitečný, avšak BEZ JAKÉKOLI ZÁRUKY. Neposkytují se ani odvozené záruky OBCHODOVATELNOSTI anebo VHODNOSTI PRO URČITÝ ÚČEL. Další podrobnosti hledejte v Obecné veřejné licenci GNU.&lt;/p&gt;&lt;p&gt;Kopii Obecné veřejné licence GNU jste měli obdržet spolu s tímto programem. Pokud se tak nestalo, jděte na &lt;a href=&quot;https://www.gnu.org/licenses/&quot;&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="134"/>
         <source>OpenLP is written and maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the &quot;contribute&quot; button below.</source>
-        <translation>OpenLP+ je vytvořen a spravován dobrovolníky z celého světa v jejich volném čase. Pokud chcete, aby byl tento projekt úspěšný, zvažte jej podpořit kliknutím na tlačítko „přispět“ níže.</translation>
+        <translation>OpenLP je vytvořen a spravován dobrovolníky z celého světa v jejich volném čase. Pokud chcete, aby byl tento projekt úspěšný, zvažte jej podpořit kliknutím na tlačítko „přispět“ níže.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
-        <source>OpenLP would not be possible without the following software libraries:</source>
+        <source>OpenLP+ would not be possible without the following software libraries:</source>
         <translation>OpenLP+ by nemohl existovat bez těchto knihoven:</translation>
     </message>
     <message>
@@ -9200,86 +9284,104 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.SingingTheFaithImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="194"/>
+        <source>Unknown hint {hint}</source>
+        <translation>Neznámý tip {hint}</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="287"/>
+        <source>File {file}</source>
+        <translation>Soubor {file}</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="288"/>
+        <source>Error: {error}</source>
+        <translation>Chyba: {error}</translation>
+    </message>
+</context>
+<context>
     <name>OpenLP.FirstTimeWizard</name>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="192"/>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="555"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="197"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="562"/>
         <source>Network Error</source>
         <translation>Chyba sítě</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="193"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="198"/>
         <source>There was a network error attempting to connect to retrieve initial configuration information</source>
         <translation>Při pokusu o získání počátečních informací o nastavení vznikla chyba sítě.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="199"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="204"/>
         <source>Downloading {name}...</source>
         <translation>Stahování {name}...</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="232"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="237"/>
         <source>Invalid index file</source>
         <translation>Nesprávný indexový soubor</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="233"/>
-        <source>OpenLP was unable to read the resource index file. Please try again later.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="238"/>
+        <source>OpenLP+ was unable to read the resource index file. Please try again later.</source>
         <translation>Nepodařilo se načíst soubor se seznamem zdrojů. Prosím zkuste později.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="443"/>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="496"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="450"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="503"/>
         <source>Download Error</source>
         <translation>Chyba stahování</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="444"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="451"/>
         <source>There was a connection problem during download, so further downloads will be skipped. Try to re-run the First Time Wizard later.</source>
         <translation>Během stahování došlo k chybě se spojením a další stahování bude přeskočeno. Zkuste spustit Průvodce prvním spuštění později.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="455"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="462"/>
         <source>Setting Up And Downloading</source>
         <translation>Nastavuji a stahuji</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="457"/>
-        <source>Please wait while OpenLP is set up and your data is downloaded.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="464"/>
+        <source>Please wait while OpenLP+ is set up and your data is downloaded.</source>
         <translation>Počkejte prosím, než bude aplikace OpenLP+ nastavena a data stáhnuta.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="460"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="467"/>
         <source>Setting Up</source>
         <translation>Nastavuji</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="474"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
         <translation>Stahování dokončeno. Klikněte na tlačítko {finish_button} pro návrat do OpenLP+.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="477"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="484"/>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
         <translation>Stahování dokončeno. Klikněte na tlačítko &quot;{finish_button}&quot; pro spuštění OpenLP+.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
-        <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="488"/>
+        <source>Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
         <translation>Klikněte na tlačítko {finish_button} pro návrat do OpenLP+.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="483"/>
-        <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="490"/>
+        <source>Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
         <translation>Klikněte na tlačítko {finish_button} pro spuštění OpenLP+.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="497"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="504"/>
         <source>There was a connection problem while downloading, so further downloads will be skipped. Try to re-run the First Time Wizard later.</source>
         <translation>Během stahování došlo k chybě se spojením a další stahování bude přeskočeno. Zkuste spustit Průvodce prvním spuštění později.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimeform.py" line="556"/>
+        <location filename="../../openlp/core/ui/firsttimeform.py" line="563"/>
         <source>Unable to download some files</source>
         <translation>Nelze stáhnout některé soubory</translation>
     </message>
@@ -9311,7 +9413,7 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
     <name>OpenLP.FirstTimeWizard</name>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
-        <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
+        <source>OpenLP+ has a web remote, which enables you to control OpenLP+ from another computer, phone or tablet on the same network as the OpenLP+ computer. OpenLP+ can download this web remote for you now, or you can download it later via the remote settings.</source>
         <translation>OpenLP+ podporuje webové ovládání. To vám umožní ovládat OpenLP+ z jiného počítače, mobilu nebo tabletu uvnitř stejné sítě jako je počítač s OpenLP+. OpenLP+ může stáhnout tento modul pro dálkové ovládání nyní, nebo můžete jej stáhnout později v Nastavení.</translation>
     </message>
     <message>
@@ -9330,113 +9432,118 @@ Zpracování bylo přerušeno a žádná změna se neprovedla.</translation>
         <translation>Prosím potvrďte, zda-li chcete stáhnout dálkové ovládání.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="314"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="318"/>
         <source>First Time Wizard</source>
         <translation>Průvodce prvním spuštění</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="315"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="319"/>
         <source>Welcome to the First Time Wizard</source>
         <translation>Vítá Vás Průvodce prvním spuštění</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="318"/>
-        <source>This wizard will help you to configure OpenLP for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
+        <source>This wizard will help you to configure OpenLP+ for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
         <translation>Tento průvodce vám pomuže nastavit OpenLP+ pro jeho první použití. Pro spuštění stiskněte tlačítko {next_button} níže.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
         <source>Internet Settings</source>
         <translation>Nastavení Internetu</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="323"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="327"/>
         <source>Downloading Resource Index</source>
         <translation>Stahuji zdrojový index</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="324"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
         <source>Please wait while the resource index is downloaded.</source>
         <translation>Počkejte prosím, než se stáhne zdrojový index.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="330"/>
         <source>Please wait while OpenLP downloads the resource index file...</source>
-        <translation>Počkejte prosím, než aplikace OpenLP+ stáhne soubor zdrojového indexu...</translation>
+        <translation>Počkejte prosím, než aplikace OpenLP stáhne soubor zdrojového indexu...</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="328"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
         <source>Select parts of the program you wish to use</source>
         <translation>Vyberte části programu, které chcete používat</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="329"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="333"/>
         <source>You can also change these settings after the Wizard.</source>
         <translation>Toto nastavení můžete změnit i po ukončení průvodce.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="331"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="335"/>
         <source>Displays</source>
         <translation>Obrazovky</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="332"/>
-        <source>Choose the main display screen for OpenLP.</source>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="336"/>
+        <source>Choose the main display screen for OpenLP+.</source>
         <translation>Vyberte hlavní obrazovku pro OpenLP+</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="334"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="338"/>
         <source>Songs</source>
         <translation>Písně</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="336"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="340"/>
         <source>Custom Slides – Easier to manage than songs and they have their own list of slides</source>
         <translation>Uživatelské snímky - Jednodušší než správa písní, obsahují vlastní seznam snímků</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="338"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="342"/>
         <source>Bibles – Import and show Bibles</source>
         <translation>Bible - Načtení a zobrazení Biblí</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="339"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="343"/>
         <source>Images – Show images or replace background with them</source>
         <translation>Obrázky - Prohlížení nebo nastavení obrázků na pozadí</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="341"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="345"/>
         <source>Presentations – Show .ppt, .odp and .pdf files</source>
         <translation>Prezentace - Zobrazení souborů .ppt, .odp a .pdf</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="343"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="347"/>
         <source>Media – Playback of Audio and Video files</source>
         <translation>Média - Přehrávání Audio a Video souborů</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="344"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
         <source>Song Usage Monitor</source>
         <translation>Sledování používání písní</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="345"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="349"/>
         <source>Alerts – Display informative messages while showing other slides</source>
         <translation>Upozornění - Zobrazí informační zprávy nad ostatními snímky</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="347"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="352"/>
+        <source>OBS Studio - Control scenes directly from OpenLP+</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="354"/>
         <source>Resource Data</source>
         <translation>Zdroje dat</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="348"/>
-        <source>Can OpenLP download some resource data?</source>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="355"/>
+        <source>Can OpenLP+ download some resource data?</source>
         <translation>Může OpenLP+ stáhnout nějaké zdroje dat?</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="350"/>
-        <source>OpenLP has collected some resources that we have permission to distribute.
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="357"/>
+        <source>OpenLP+ has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
         <translation>OpenLP+ má k dispozici zdroje, které může distribuovat.
@@ -9444,24 +9551,24 @@ If you would like to download some of these resources click the &apos;{next_butt
 Pokud si přejete stáhnout některé tyto zdroje klikněte na tlačítko &apos;{next_button}&apos;, v opačném případě na &apos;{finish_button}&apos;.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="355"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="362"/>
         <source>No Internet Connection</source>
         <translation>Žádné připojení k Internetu</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="356"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="363"/>
         <source>Cannot connect to the internet.</source>
         <translation>Nelze se připojit k Internetu.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="358"/>
-        <source>OpenLP could not connect to the internet to get information about the sample data available.
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="365"/>
+        <source>OpenLP+ could not connect to the internet to get information about the sample data available.
 
 Please check your internet connection. If your church uses a proxy server click the 'Internet Settings' button below and enter the server details there.
 
 Click the '{back_button}' button to try again.
 
-If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
+If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP+.</source>
         <translation>Nelze se připojit k Internetu a stáhnout ukázková data.  
 
 Prosím zkontrolujte připojení k Internetu. Pokud váš sbor používá proxy server klikněte níže na tlačítko &quot;Nastavení Internetu&quot; a zadejte detaily serveru.
@@ -9471,58 +9578,58 @@ Klikněte na tlačítko &quot;{back_button}&quot; a zkuste to znova.
 Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli později stáhnout data kliknutím na &quot;Průvodce prvním spuštěním&quot; v menu &quot;Nástroje&quot;.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="366"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="373"/>
         <source>Sample Songs</source>
         <translation>Ukázky písní</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="367"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="374"/>
         <source>Select and download public domain songs.</source>
         <translation>Vybrat a stáhnout písně s nechráněnými autorskými právy.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="368"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="375"/>
         <source>Sample Bibles</source>
         <translation>Ukázky Biblí</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="369"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="376"/>
         <source>Select and download free Bibles.</source>
         <translation>Vybrat a stáhnout volně dostupné Bible.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="371"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
         <source>Sample Themes</source>
         <translation>Ukázky motivů</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="372"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="379"/>
         <source>Select and download sample themes.</source>
         <translation>Vybrat a stáhnout ukázky motivů.</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="373"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="380"/>
         <source>Default theme:</source>
         <translation>Výchozí motiv:</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="374"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="381"/>
         <source>Select all</source>
         <translation>Vybrat vše</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="375"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="382"/>
         <source>Deselect all</source>
         <translation>Zrušit výběr</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="376"/>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="383"/>
         <source>Downloading and Configuring</source>
         <translation>Stahování a nastavení</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/firsttimewizard.py" line="378"/>
-        <source>Please wait while resources are downloaded and OpenLP is configured.</source>
+        <location filename="../../openlp/core/ui/firsttimewizard.py" line="385"/>
+        <source>Please wait while resources are downloaded and OpenLP+ is configured.</source>
         <translation>Počkejte prosím, než budou zdroje stažené a aplikace OpenLP+ nakonfigurovaná.</translation>
     </message>
 </context>
@@ -9552,47 +9659,29 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
     </message>
 </context>
 <context>
-    <name>SongsPlugin.SingingTheFaithImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="194"/>
-        <source>Unknown hint {hint}</source>
-        <translation>Neznámý tip {hint}</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="287"/>
-        <source>File {file}</source>
-        <translation>Soubor {file}</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/singingthefaith.py" line="288"/>
-        <source>Error: {error}</source>
-        <translation>Chyba: {error}</translation>
-    </message>
-</context>
-<context>
     <name>MediaPlugin.MediaItem</name>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="264"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="288"/>
         <source>Unsupported File</source>
         <translation>Nepodporovaný soubor</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="276"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="300"/>
         <source>Unable to Preview Stream</source>
         <translation>Nelze zobrazit náhled streamu</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="277"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="301"/>
         <source>Closing Preview to allow Live Stream</source>
         <translation>Zavírání náhledu kvůli Živě streamu</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="284"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="308"/>
         <source>Unable to Preview Stream </source>
         <translation>Nelze zobrazit náhled streamu</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="285"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="309"/>
         <source>Unable to preview when live is currently streaming</source>
         <translation>Nelze zobrazit náhled, když se streamuje Živě</translation>
     </message>
@@ -9600,28 +9689,59 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
 <context>
     <name>OpenLP.MediaController</name>
     <message>
-        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="118"/>
+        <location filename="../../openlp/core/ui/media/mediacontroller.py" line="122"/>
         <source>No Displays have been configured, so Live Media has been disabled</source>
         <translation>Nejsou nakonfigurovány žádné obrazovky, proto byla funkce Média Nažívo vypnuta</translation>
     </message>
 </context>
 <context>
+    <name>SongsPlugin.WordsofWorshipSongImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/wordsofworship.py" line="178"/>
+        <source>Invalid Words of Worship song file. Missing {text!r} header.</source>
+        <translation>Neplatný Words of Worship soubor. Chybějící {text!r} hlavička.</translation>
+    </message>
+</context>
+<context>
     <name>MediaPlugin.MediaTab</name>
     <message>
-        <location filename="../../openlp/core/ui/media/mediatab.py" line="69"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="99"/>
         <source>Live Media</source>
         <translation>Média v Naživo</translation>
     </message>
     <message>
-        <location filename="../../openlp/core/ui/media/mediatab.py" line="70"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="100"/>
         <source>Start Live items automatically</source>
         <translation>Automaticky spouštět položky Naživo</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="101"/>
+        <source>Audio output (requires restart)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="102"/>
+        <source>Live audio output device</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="103"/>
+        <source>Preview audio output device</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="114"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="115"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="135"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="140"/>
+        <source>System default audio output</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
     <name>OpenLP.MediaTab</name>
     <message>
-        <location filename="../../openlp/core/ui/media/mediatab.py" line="45"/>
+        <location filename="../../openlp/core/ui/media/mediatab.py" line="46"/>
         <source>Media</source>
         <translation>Média</translation>
     </message>
@@ -9651,7 +9771,7 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="151"/>
         <source>Cancel OpenLP data directory location change.</source>
-        <translation>Zrušit změnu umístění datové složky OpenLP+.</translation>
+        <translation>Zrušit změnu umístění datové složky OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="152"/>
@@ -9661,7 +9781,7 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="153"/>
         <source>Copy the OpenLP data files to the new location.</source>
-        <translation>Kopírovat datové soubory OpenLP+ do nového umístění.</translation>
+        <translation>Kopírovat datové soubory OpenLP do nového umístění.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="155"/>
@@ -9671,12 +9791,12 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="157"/>
         <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when OpenLP is running.</source>
-        <translation>Chranit složku s daty pomocí zamykacího mechanismu, aby se zabránilo poškození dat, pokud k datům přistupuje více uživatelů současně. Užitečné pro instance sdílené přes síť. &lt;strong&gt;Poznámka:&lt;/strong&gt;Toto bude fungovat pouze v případě, že je síťové sdílení dostupné za běhu OpenLP+.</translation>
+        <translation>Chranit složku s daty pomocí zamykacího mechanismu, aby se zabránilo poškození dat, pokud k datům přistupuje více uživatelů současně. Užitečné pro instance sdílené přes síť. &lt;strong&gt;Poznámka:&lt;/strong&gt;Toto bude fungovat pouze v případě, že je síťové sdílení dostupné za běhu OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="163"/>
         <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains OpenLP data files.  These files WILL be replaced during a copy.</source>
-        <translation>&lt;strong&gt;VAROVÁNÍ:&lt;/strong&gt; Nové umístnění datové složky už obsahuje datové soubory OpenLP+. Tyto soubory BUDOU nahrazeny během kopírování.</translation>
+        <translation>&lt;strong&gt;VAROVÁNÍ:&lt;/strong&gt; Nové umístnění datové složky už obsahuje datové soubory OpenLP. Tyto soubory BUDOU nahrazeny během kopírování.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="165"/>
@@ -9740,11 +9860,11 @@ Pokud kliknete na tlačítko &quot;{finish_button}&quot; můžete kdykoli pozdě
 {path}
 
 Existing files in this directory could be overwritten. The data directory will be changed when OpenLP is closed.</source>
-        <translation>Opravdu chcete změnit umístění složky s daty OpenLP+ na:
+        <translation>Opravdu chcete změnit umístění složky s daty OpenLP na:
 
 {path}
 
-Existující soubory můžou být přepsány. Datová složka bude změněna po zavření OpenLP+.</translation>
+Existující soubory můžou být přepsány. Datová složka bude změněna po zavření OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="246"/>
@@ -9753,11 +9873,11 @@ Existující soubory můžou být přepsány. Datová složka bude změněna po 
 {path}
 
 The data directory will be changed when OpenLP is closed.</source>
-        <translation>Jste si jisti, že chcete změnit umístění datové složky OpenLP+ na:
+        <translation>Jste si jisti, že chcete změnit umístění datové složky OpenLP na:
 
 {path}
 
-Toto umístění se použije po zavření aplikace OpenLP+.</translation>
+Toto umístění se použije po zavření aplikace OpenLP.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="250"/>
@@ -9784,7 +9904,7 @@ Zdá se, že vámi vybrané umístění
 
 {path}
 
-již obsahuje složku s OpenLP+ daty. Přejete si tyto soubory nahradit současnými?</translation>
+již obsahuje složku s OpenLP daty. Přejete si tyto soubory nahradit současnými?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="322"/>
@@ -9794,15 +9914,23 @@ již obsahuje složku s OpenLP+ daty. Přejete si tyto soubory nahradit současn
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="323"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Tato změna se projeví až po opětovném spuštění aplikace OpenLP+.</translation>
+        <translation>Tato změna se projeví až po opětovném spuštění aplikace OpenLP.</translation>
     </message>
 </context>
 <context>
-    <name>SongsPlugin.WordsofWorshipSongImport</name>
+    <name>SongsPlugin.PowerPraiseImport</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/wordsofworship.py" line="178"/>
-        <source>Invalid Words of Worship song file. Missing {text!r} header.</source>
-        <translation>Neplatný Words of Worship soubor. Chybějící {text!r} hlavička.</translation>
+        <location filename="../../openlp/plugins/songs/lib/importers/powerpraise.py" line="113"/>
+        <source>Invalid PowerPraise song file. Missing needed tag.</source>
+        <translation>Nesprávný soubor písně PowerPraise. Chybí očekávané značky.</translation>
+    </message>
+</context>
+<context>
+    <name>SongsPlugin.EasySlidesImport</name>
+    <message>
+        <location filename="../../openlp/plugins/songs/lib/importers/easyslides.py" line="74"/>
+        <source>Invalid EasySlides song file. Missing Item tag.</source>
+        <translation>Nesprávný soubor EasySlides písně. Chybějící značka Item.</translation>
     </message>
 </context>
 <context>
@@ -9843,7 +9971,7 @@ již obsahuje složku s OpenLP+ daty. Přejete si tyto soubory nahradit současn
     <message>
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
-        <translation>Tato změna se projeví až po opětovném spuštění aplikace OpenLP+.</translation>
+        <translation>Tato změna se projeví až po opětovném spuštění aplikace OpenLP.</translation>
     </message>
 </context>
 <context>
@@ -10001,22 +10129,6 @@ již obsahuje složku s OpenLP+ daty. Přejete si tyto soubory nahradit současn
     </message>
 </context>
 <context>
-    <name>SongsPlugin.PowerPraiseImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/powerpraise.py" line="113"/>
-        <source>Invalid PowerPraise song file. Missing needed tag.</source>
-        <translation>Nesprávný soubor písně PowerPraise. Chybí očekávané značky.</translation>
-    </message>
-</context>
-<context>
-    <name>SongsPlugin.EasySlidesImport</name>
-    <message>
-        <location filename="../../openlp/plugins/songs/lib/importers/easyslides.py" line="74"/>
-        <source>Invalid EasySlides song file. Missing Item tag.</source>
-        <translation>Nesprávný soubor EasySlides písně. Chybějící značka Item.</translation>
-    </message>
-</context>
-<context>
     <name>OpenLP.Manager</name>
     <message>
         <location filename="../../openlp/core/db/helpers.py" line="107"/>
@@ -10025,7 +10137,7 @@ již obsahuje složku s OpenLP+ daty. Přejete si tyto soubory nahradit současn
     </message>
     <message>
         <location filename="../../openlp/core/db/helpers.py" line="108"/>
-        <source>OpenLP cannot load your database.
+        <source>OpenLP+ cannot load your database.
 
 Database: {db}</source>
         <translation>OpenLP+ nemůže načíst  databázi..
@@ -10042,7 +10154,7 @@ Databáze: {db}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/db/manager.py" line="83"/>
-        <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
+        <source>The database being loaded was created in a more recent version of OpenLP+. The database is version {db_ver}, while OpenLP+ expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
         <translation>Databáze k načtení byla vytvořena v novější verzi aplikace OpenLP+. Verze databáze je {db_ver}, zatímco OpenLP+ očekává verzi {db_up}. Databáze nebude načtena.
@@ -10101,7 +10213,7 @@ Databáze: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
-        <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
+        <source>There is a mismatch between screens and screen settings. OpenLP+ will try to automatically select a display screen, but you should consider updating the screen settings.</source>
         <translation>Nastavení obrazovek bylo změněno. OpenLP+ se pokusí přiřadit obrazovky, ověřte nastavení obrazovek v menu Nastavení.</translation>
     </message>
 </context>
@@ -10173,12 +10285,12 @@ Databáze: {db_name}</translation>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="213"/>
         <source>OpenLyrics or OpenLP 2 Exported Song</source>
-        <translation>OpenLyrics nebo písně exportované z OpenLP+ 2</translation>
+        <translation>OpenLyrics nebo písně exportované z OpenLP 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="220"/>
         <source>OpenLP 2 Databases</source>
-        <translation>Databáze OpenLP+ 2</translation>
+        <translation>Databáze OpenLP 2</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="223"/>
@@ -10187,7 +10299,7 @@ Databáze: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
-        <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
+        <source>The generic document/presentation importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
         <translation>Import obecných dokumentů/prezentaci byl zakázán, protože aplikace OpenLP+ nemůže přistupovat k aplikacím OpenOffice nebo LibreOffice.</translation>
     </message>
     <message>
@@ -10342,7 +10454,7 @@ Databáze: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
-        <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
+        <source>The Songs of Fellowship importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
         <translation>Import z aplikace Songs of Fellowship byl zakázán, protože aplikace OpenLP+ nemůže přistupovat k aplikacím OpenOffice nebo LibreOffice.</translation>
     </message>
     <message>
@@ -10509,7 +10621,7 @@ Kódování zodpovídá za správnou reprezentaci znaků.</translation>
 <context>
     <name>OpenLP.MediaManagerItem</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="116"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="117"/>
         <source>&amp;Clone</source>
         <translation>&amp;Klonovat</translation>
     </message>
@@ -10517,7 +10629,7 @@ Kódování zodpovídá za správnou reprezentaci znaků.</translation>
 <context>
     <name>OpenLP.SongsPlugin</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="120"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="121"/>
         <source>Toggle Favourite</source>
         <translation type="unfinished"/>
     </message>
@@ -10525,8 +10637,8 @@ Kódování zodpovídá za správnou reprezentaci znaků.</translation>
 <context>
     <name>OpenLP.Ui</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="790"/>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="846"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="791"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="847"/>
         <source>Written by</source>
         <translation>Napsal</translation>
     </message>
@@ -10534,108 +10646,108 @@ Kódování zodpovídá za správnou reprezentaci znaků.</translation>
 <context>
     <name>SongsPlugin.MediaItem</name>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="142"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="143"/>
         <source>Maintain the lists of authors, topics and books.</source>
         <translation>Spravovat seznamy autorů, témat a zpěvníků.</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="144"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="145"/>
         <source>Show only favourites</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="156"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="157"/>
         <source>Entire Song</source>
         <translation>Celá píseň</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="157"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="158"/>
         <source>Search Entire Song...</source>
         <translation>Hledat celou píseň...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="159"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="160"/>
         <source>Titles</source>
         <translation>Názvy</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="160"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="161"/>
         <source>Search Titles...</source>
         <translation>Hledat název...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="162"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="163"/>
         <source>Lyrics</source>
         <translation>Text písně</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="163"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="164"/>
         <source>Search Lyrics...</source>
         <translation>Hledat text písně...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="165"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="166"/>
         <source>Search Authors...</source>
         <translation>Hledat autory...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="167"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="168"/>
         <source>Search Topics...</source>
         <translation>Hledat témata...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="169"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="170"/>
         <source>Search Songbooks...</source>
         <translation>Hledat zpěvníky...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="172"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="173"/>
         <source>Copyright</source>
         <translation>Autorská práva</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="173"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="174"/>
         <source>Search Copyright...</source>
         <translation>Hledat autorská práva...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="175"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="176"/>
         <source>CCLI number</source>
         <translation>CCLI číslo</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="176"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="177"/>
         <source>Search CCLI number...</source>
         <translation>Hledat CCLI číslo...</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="546"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="547"/>
         <source>Are you sure you want to delete these songs?</source>
         <translation>Opravdu chcete odstranit tyto písně?</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="572"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="573"/>
         <source>copy</source>
         <comment>For song cloning</comment>
         <translation>kopírovat</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="771"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="772"/>
         <source>Media</source>
         <translation>Média</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="814"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="815"/>
         <source>CCLI License: </source>
         <translation>CCLI Licence:</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="861"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="862"/>
         <source>CCLI License</source>
         <translation>CCLI Licence</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="874"/>
+        <location filename="../../openlp/plugins/songs/lib/mediaitem.py" line="875"/>
         <source>Failed to render Song footer html.
 See log for details</source>
         <translation>Nepodařilo se vykreslit HTML zápatí písně.
@@ -11543,47 +11655,47 @@ Toto varování lze vypnout v nastavení písní.</translation>
 <context>
     <name>SongsPlugin.SongSelectForm</name>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="145"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="127"/>
         <source>Song Imported</source>
         <translation>Písně naimportovány</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="146"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="128"/>
         <source>Your song has been imported</source>
         <translation>Píseň byla naimportována.</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="170"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="152"/>
         <source>Unsupported format</source>
         <translation>Nepodporovaný formát</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="171"/>
-        <source>OpenLP can only import simple lyrics or ChordPro</source>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="153"/>
+        <source>OpenLP+ can only import simple lyrics or ChordPro</source>
         <translation>OpenLP+ dokáže načíst pouze jednoduché písně nebo ChordPro</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="196"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="178"/>
         <source>Import songs by clicking the &quot;Download&quot; in the Lyrics tab or &quot;Download ChordPro&quot; in the Chords tabs.</source>
         <translation>Importujte skladby kliknutím na &quot;Stáhnout&quot; na záložce Texty nebo &quot;Stáhnout ChordPro&quot; na záložce Akordy.</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="219"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="201"/>
         <source>Incomplete song</source>
         <translation>Neúplná píseň</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="220"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="202"/>
         <source>This song is missing some information, like the lyrics, and cannot be imported.</source>
         <translation>U písně chybí některé informace jako například text a tudíž import není možný.</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="277"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="259"/>
         <source>Song Duplicate Warning</source>
         <translation>Upozornění na zdvojenou píseň</translation>
     </message>
     <message>
-        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="279"/>
+        <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="261"/>
         <source>A song with the same CCLI number is already in your database.
 
 Are you sure you want to import this song?</source>
@@ -12320,65 +12432,90 @@ byl úspěšně vytvořen.</translation>
     </message>
 </context>
 <context>
+    <name>ObsStudioPlugin.ObsStudioTab</name>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="82"/>
+        <source>Network Settings</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="84"/>
+        <source>Host:</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="85"/>
+        <source>Port:</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="87"/>
+        <source>Authentication Settings</source>
+        <translation>Nastavení autentizace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="89"/>
+        <source>Password:</source>
+        <translation>Heslo:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="90"/>
+        <source>Test</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="91"/>
+        <source>Message:</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="92"/>
+        <source>Send</source>
+        <translation>Odeslat</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="130"/>
+        <source>OBS Studio Connection Test</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="137"/>
+        <source>Message was sent successfully.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="146"/>
+        <source>Message was not sent successfully: {exception}</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>ObsStudioPlugin</name>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/obs_studio_plugin.py" line="74"/>
+        <source>OBS Studio</source>
+        <comment>name singular</comment>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/obs_studio_plugin.py" line="76"/>
+        <source>OBS Studio</source>
+        <comment>name plural</comment>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/obs_studio/obs_studio_plugin.py" line="81"/>
+        <source>OBS Studio</source>
+        <comment>container title</comment>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
     <name>PresentationPlugin.PowerpointDocument</name>
     <message>
-        <location filename="../../openlp/plugins/presentations/lib/powerpointcontroller.py" line="739"/>
+        <location filename="../../openlp/plugins/presentations/lib/powerpointcontroller.py" line="741"/>
         <source>An error occurred in the PowerPoint integration and the presentation will be stopped. Restart the presentation if you wish to present it.</source>
         <translation>Vznikla chyba se začlenění PowerPoint prezentace a prezentace bude zastavena. Pokud si přejete prezentaci zobrazit, spusťte ji znovu.</translation>
-    </message>
-</context>
-<context>
-    <name>PresentationPlugin.MediaItem</name>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="64"/>
-        <source>Select Presentation(s)</source>
-        <translation>Vybrat prezentace</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="65"/>
-        <source>Automatic</source>
-        <translation>Automaticky</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="66"/>
-        <source>Present using:</source>
-        <translation>Nyní používající:</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="149"/>
-        <source>Presentations ({text})</source>
-        <translation>Prezentace ({text})</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="208"/>
-        <source>This type of presentation is not supported.</source>
-        <translation>Tento typ prezentace není podporován.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="319"/>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="367"/>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="376"/>
-        <source>Missing Presentation</source>
-        <translation>Chybějící prezentace</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="320"/>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="377"/>
-        <source>The presentation {name} no longer exists.</source>
-        <translation>Prezentace {name} už neexistuje.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="369"/>
-        <source>The presentation {name} is incomplete, please reload.</source>
-        <translation>Prezentace {name} není úplná, prosím načtěte jí znovu.</translation>
-    </message>
-</context>
-<context>
-    <name>PresentationsPlugin</name>
-    <message>
-        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="112"/>
-        <source>Add new presentation</source>
-        <translation>Přidat novou prezentaci</translation>
     </message>
 </context>
 <context>
@@ -12392,6 +12529,68 @@ byl úspěšně vytvořen.</translation>
         <location filename="../../openlp/plugins/songs/lib/importers/lyrix.py" line="105"/>
         <source>Error: {error}</source>
         <translation>Chyba: {error}</translation>
+    </message>
+</context>
+<context>
+    <name>PresentationPlugin.MediaItem</name>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="65"/>
+        <source>Select Presentation(s)</source>
+        <translation>Vybrat prezentace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="66"/>
+        <source>Automatic</source>
+        <translation>Automaticky</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="67"/>
+        <source>Present using:</source>
+        <translation>Nyní používající:</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="152"/>
+        <source>Presentations ({file_type_string})</source>
+        <translation>Prezentace ({file_type_string})</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="211"/>
+        <source>This type of presentation is not supported.</source>
+        <translation>Tento typ prezentace není podporován.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="302"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="334"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="384"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="394"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="403"/>
+        <source>Missing Presentation</source>
+        <translation>Chybějící prezentace</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="303"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="395"/>
+        <source>The presentation {name} is inaccessible.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="335"/>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="404"/>
+        <source>The presentation {name} no longer exists.</source>
+        <translation>Prezentace {name} už neexistuje.</translation>
+    </message>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="386"/>
+        <source>The presentation {name} is incomplete, please reload.</source>
+        <translation>Prezentace {name} není úplná, prosím načtěte jí znovu.</translation>
+    </message>
+</context>
+<context>
+    <name>PresentationsPlugin</name>
+    <message>
+        <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="113"/>
+        <source>Add new presentation</source>
+        <translation>Přidat novou prezentaci</translation>
     </message>
 </context>
 <context>
@@ -12437,122 +12636,6 @@ byl úspěšně vytvořen.</translation>
         <location filename="../../openlp/plugins/presentations/lib/presentationtab.py" line="122"/>
         <source>{name} (unavailable)</source>
         <translation>{name} (nedostupné)</translation>
-    </message>
-</context>
-<context>
-    <name>PresentationPlugin</name>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="153"/>
-        <source>&lt;strong&gt;Presentation Plugin&lt;/strong&gt;&lt;br /&gt;The presentation plugin provides the ability to show presentations using a number of different programs. The choice of available presentation programs is available to the user in a drop down box.</source>
-        <translation>&lt;strong&gt;Modul prezentace&lt;/strong&gt;&lt;br /&gt;Modul prezentace dovoluje zobrazovat prezentace z několika různých programů. Výběr dostupných prezentačních programů je uživateli přístupný v rozbalovacím menu.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="166"/>
-        <source>Presentation</source>
-        <comment>name singular</comment>
-        <translation>Prezentace</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="167"/>
-        <source>Presentations</source>
-        <comment>name plural</comment>
-        <translation>Prezentace</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="171"/>
-        <source>Presentations</source>
-        <comment>container title</comment>
-        <translation>Prezentace</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="175"/>
-        <source>Load a new presentation.</source>
-        <translation>Načíst novou prezentaci.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="179"/>
-        <source>Delete the selected presentation.</source>
-        <translation>Smazat vybranou prezentaci.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="180"/>
-        <source>Preview the selected presentation.</source>
-        <translation>Náhled vybrané prezentace.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="181"/>
-        <source>Send the selected presentation live.</source>
-        <translation>Zobrazit vybranou prezentaci naživo.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/presentations/presentationplugin.py" line="182"/>
-        <source>Add the selected presentation to the service.</source>
-        <translation>Přidat vybranou prezentaci ke službě.</translation>
-    </message>
-</context>
-<context>
-    <name>BiblesPlugin</name>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="714"/>
-        <source>No Book Found</source>
-        <translation>Kniha nenalezena</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="715"/>
-        <source>No matching book could be found in this Bible. Check that you have spelled the name of the book correctly.</source>
-        <translation>V Bibli nebyla nalezena odpovídající kniha. Prověřte, že název knihy byl zadán správně.</translation>
-    </message>
-</context>
-<context>
-    <name>BiblesPlugin.HTTPBible</name>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="647"/>
-        <source>Registering Bible and loading books...</source>
-        <translation>Registruji Bibli a stahuji knihy...</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="663"/>
-        <source>Registering Language...</source>
-        <translation>Registruji jazyk...</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="670"/>
-        <source>Importing {book}...</source>
-        <comment>Importing &lt;book name&gt;...</comment>
-        <translation>Importuji {book}...</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="814"/>
-        <source>Download Error</source>
-        <translation>Chyba stahování</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="815"/>
-        <source>There was a problem downloading your verse selection. Please check your Internet connection, and if this error continues to occur, please consider reporting a bug.</source>
-        <translation>Při stahování překladů se vyskytl problém. Prosím prověřte své internetové připojení. Pokud se tato chyba stále objevuje, zvažte prosím nahlášení chyby vývojářům.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="820"/>
-        <source>Parse Error</source>
-        <translation>Chyba zpracování</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/http.py" line="821"/>
-        <source>There was a problem extracting your verse selection. If this error continues to occur please consider reporting a bug.</source>
-        <translation>Při rozbalování výběru veršů se vyskytl problém. Pokud se tato chyba stále objevuje, zvašte prosím nahlášení chyby.</translation>
-    </message>
-</context>
-<context>
-    <name>BiblesPlugin.WordProjectBible</name>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/wordproject.py" line="60"/>
-        <source>Incorrect Bible file type, not a Zip file.</source>
-        <translation>Nesprávný typ Bible souboru, nebyl zadán Zip soubor.</translation>
-    </message>
-    <message>
-        <location filename="../../openlp/plugins/bibles/lib/importers/wordproject.py" line="75"/>
-        <source>Incorrect Bible file type, files are missing.</source>
-        <translation>Nesprávný typ Bible souboru, chybějící soubory.</translation>
     </message>
 </context>
 <context>

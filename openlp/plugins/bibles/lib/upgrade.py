@@ -64,7 +64,7 @@ def upgrade_2(session, metadata):
         name, = session.execute(select(metadata_table.c.value).where(metadata_table.c.key == 'name')).first()
         msg_box = QtWidgets.QMessageBox()
         msg_box.setText(translate('BiblesPlugin', f'The proxy server {proxy} was found in the bible {name}.<br>'
-                                                  f'Would you like to set it as the proxy for OpenLP?'))
+                                                  f'Would you like to set it as the proxy for OpenLP+?'))
         msg_box.setIcon(QtWidgets.QMessageBox.Icon.Question)
         msg_box.addButton(QtWidgets.QMessageBox.StandardButton.No)
         http_button = msg_box.addButton('http', QtWidgets.QMessageBox.ButtonRole.ActionRole)

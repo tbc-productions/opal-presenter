@@ -1020,7 +1020,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.main_window,
                 translate('OpenLP.ServiceManager', 'Open File'),
                 self.settings.value('servicemanager/last directory'),
-                translate('OpenLP.ServiceManager', 'OpenLP Service Files (*.osz *.oszl)'))
+                translate('OpenLP.ServiceManager', 'OpenLP+ Service Files (*.osz *.oszl)'))
             if not file_path:
                 return False
         self.settings.setValue('servicemanager/last directory', file_path.parent)
@@ -1377,8 +1377,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Get a file name and then call :func:`ServiceManager.save_file` to save the file.
         """
         default_file_path = self._default_service_file_path()
-        lite_filter = translate('OpenLP.ServiceManager', 'OpenLP Service Files - lite (*.oszl)')
-        packaged_filter = translate('OpenLP.ServiceManager', 'OpenLP Service Files (*.osz)')
+        lite_filter = translate('OpenLP.ServiceManager', 'OpenLP+ Service Files - lite (*.oszl)')
+        packaged_filter = translate('OpenLP.ServiceManager', 'OpenLP+ Service Files (*.osz)')
         if self._service_path and self._service_path.suffix == '.oszl':
             default_filter = lite_filter
         else:

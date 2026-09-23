@@ -96,7 +96,7 @@ class VersionWorker(ThreadWorker):
         else:
             download_url += VERSION_STABLE
         headers = {
-            'User-Agent': 'OpenLP/{version} {system}/{release}; '.format(version=self.current_version['full'],
+            'User-Agent': 'OpenLP+/{version} {system}/{release}; '.format(version=self.current_version['full'],
                                                                          system=platform.system(),
                                                                          release=platform.release())
         }
@@ -137,11 +137,11 @@ def check_for_update(main_window):
         log.debug('Version check skipped, last checked today')
         return
     worker = VersionWorker(last_check_date, get_version())
-    worker.new_version.connect(main_window.on_new_version)
     worker.quit.connect(update_check_date)
     # TODO: Use this to figure out if there's an Internet connection?
     # worker.no_internet.connect(parent.on_no_internet)
-    run_thread(worker, 'version')
+    run_thread(worker, 'version',
+               queued_connections=[(worker.new_version, main_window.on_new_version)])
 
 
 def _get_version_from_hatch():
@@ -209,10 +209,10 @@ def get_version():
         'build': build_number
     }
     if APPLICATION_VERSION['build']:
-        log.info('OpenLP version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
+        log.info('OpenLP+ version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
                                                                  build=APPLICATION_VERSION['build']))
     else:
-        log.info('OpenLP version {version}'.format(version=APPLICATION_VERSION['version']))
+        log.info('OpenLP+ version {version}'.format(version=APPLICATION_VERSION['version']))
     return APPLICATION_VERSION
 
 

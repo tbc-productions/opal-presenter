@@ -45,6 +45,7 @@ coverage.xml
 dist
 env
 htmlcov
+justfile
 list
 node_modules
 openlp-test-projectordb.sqlite

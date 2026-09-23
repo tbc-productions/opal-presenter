@@ -357,7 +357,7 @@ def test__parse_config_invalid_config(mocked_message_box, mock_settings):
     assert result is False
     mocked_message_box.critical.assert_called_once_with(
         first_time_form, 'Invalid index file',
-        'OpenLP was unable to read the resource index file. Please try again later.')
+        'OpenLP+ was unable to read the resource index file. Please try again later.')
 
 
 @patch('openlp.core.ui.firsttimeform.run_thread')
@@ -674,6 +674,8 @@ def test_failed_download(mocked_set_icon):
 
     # WHEN: `DownloadWorker` emits the `download_failed` signal
     worker.download_failed.emit()
+    # The signal is wired with Qt.QueuedConnection so we have to spin the event loop to deliver it.
+    QtCore.QCoreApplication.processEvents()
 
     # THEN: Then the initial loading icon should have been replaced by the exception icon
     mocked_set_icon.assert_has_calls([call(UiIcons().get_icon_variant('picture')),
@@ -695,6 +697,8 @@ def test_successful_download(mocked_build_icon, mocked_set_icon):
 
     # WHEN: `DownloadWorker` emits the `download_succeeded` signal
     worker.download_succeeded.emit(test_path)
+    # The signal is wired with Qt.QueuedConnection so we have to spin the event loop to deliver it.
+    QtCore.QCoreApplication.processEvents()
 
     # THEN: An icon should have been built from the downloaded file and used to replace the loading icon
     mocked_build_icon.assert_called_once_with(test_path)

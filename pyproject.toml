@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OpenLPPlus"
+name = "openlp-plus"
 dynamic = ["version"]
 description = "Open-source church presentation and lyrics projection application."
 readme = "README.rst"
@@ -63,7 +63,7 @@ dependencies = [
     "alembic",
     "beautifulsoup4",
     "chardet",
-    "distro; platform_system==\"Linux\"",
+    "distro; platform_system == 'Linux'",
     "flask",
     "flask-cors",
     "lxml",
@@ -71,11 +71,14 @@ dependencies = [
     "pillow",
     "platformdirs",
     "python-pptx",
-    "PyICU",
-    "PySide6",
-    "Pyro5; platform_system==\"Darwin\"",
-    "pywin32; platform_system==\"Windows\"",
     "odfpy",
+    "PyICU; platform_system != 'Windows'",
+    "pyobjc-framework-Cocoa; platform_system == 'Darwin'",
+    "pyobjc; platform_system == 'Darwin'",
+    "PySide6 == 6.10.3; platform_system == 'Windows' or platform_system == 'Darwin'",
+    "PySide6; platform_system == 'Linux'",
+    "Pyro5; platform_system == 'Darwin'",
+    "pywin32; platform_system == 'Windows'",
     "qrcode",
     "QtAwesome",
     "requests",
@@ -121,9 +124,9 @@ test = [
 openlp = "openlp.__main__:start"
 
 [project.urls]
-Homepage = "https://openlp.org/"
-Source = "https://gitlab.com/openlp/openlp"
-Issues = "https://gitlab.com/openlp/openlp/-/issues"
+Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
+Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
+Issues = "https://git.tbcproductions.net/tbcproductions/openlp-plus/issues"
 Documentation = "https://manual.openlp.org"
 
 [tool.hatch.version]
@@ -169,3 +172,9 @@ run_selected = "pytest {args}"
 cov = "pytest tests --cov openlp --cov-report html {args}"
 debug = "pytest tests --pudb {args}"
 ci = "pytest tests --color=no --disable-warnings {args}"
+
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-qt",
+]

@@ -4,6 +4,7 @@ Exec=openlp %F
 GenericName=Church lyrics projection
 Comment=OpenLP+ (fork of OpenLP): project lyrics, Bible verses, media and more.
 Icon=openlp
+StartupWMClass=openlp-plus
 MimeType=application/x-openlp-service;
 Name=OpenLP+
 StartupNotify=true

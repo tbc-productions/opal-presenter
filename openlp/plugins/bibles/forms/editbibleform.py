@@ -100,7 +100,7 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
             self.book_name_notice.setText(
                 translate('BiblesPlugin.EditBibleForm',
                           'To use the customized book names, "Bible language" must be selected on the Meta Data tab '
-                          'or, if "Global settings" is selected, on the Bible page in Configure OpenLP.'))
+                          'or, if "Global settings" is selected, on the Bible page in Configure OpenLP+.'))
             for book in BiblesResourcesDB.get_books():
                 self.books[book['abbreviation']] = self.manager.get_book_by_id(self.bible, book['id'])
                 if self.books[book['abbreviation']] and not self.web_bible:
