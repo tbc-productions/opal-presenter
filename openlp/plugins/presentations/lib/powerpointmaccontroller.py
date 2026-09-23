@@ -51,6 +51,7 @@ from openlp.core.display.screens import ScreenList
 from openlp.core.ui import HideMode
 
 log = logging.getLogger(__name__)
+_post_event_access_requested = False
 
 
 def _open_powerpoint_document(document_path):
@@ -330,6 +331,13 @@ on get_slide_show_window_title(documentName)
     end tell
 end get_slide_show_window_title
 
+on is_slide_show_window_active(documentName)
+    tell application "Microsoft PowerPoint"
+        set presentationIndex to my find_presentation_index(documentName)
+        return active of slide show window of presentation presentationIndex
+    end tell
+end is_slide_show_window_active
+
 on set_slide_timings(documentName, useTimings)
     tell application "Microsoft PowerPoint"
         set presentationIndex to my find_presentation_index(documentName)
@@ -427,38 +435,6 @@ on get_current_slide(documentName)
     end tell
 end get_current_slide
 
-on goto_slide(documentName, targetNumber)
-    tell application "Microsoft PowerPoint"
-        set presentationIndex to my find_presentation_index(documentName)
-        set showView to slide show view of slide show window of presentation presentationIndex
-        -- PowerPoint's "go to slide" command only accepts an editor view.
-        -- When macOS blocks the number-and-Return shortcut, use the native
-        -- slideshow commands so the selection still works.
-        set currentNumber to current show position of showView
-        if targetNumber is 1 then
-            go to first slide showView
-            return current show position of showView is targetNumber
-        end if
-        if targetNumber is count of slides of presentation presentationIndex then
-            go to last slide showView
-            return current show position of showView is targetNumber
-        end if
-        repeat while currentNumber < targetNumber
-            go to next slide showView
-            set nextNumber to current show position of showView
-            if nextNumber is currentNumber then return false
-            set currentNumber to nextNumber
-        end repeat
-        repeat while currentNumber > targetNumber
-            go to previous slide showView
-            set nextNumber to current show position of showView
-            if nextNumber is currentNumber then return false
-            set currentNumber to nextNumber
-        end repeat
-        return current show position of showView is targetNumber
-    end tell
-end goto_slide
-
 on blank()
     tell application "Microsoft PowerPoint"
         --activate
@@ -478,13 +454,9 @@ end unblank
 """
 
 
-def _send_slide_number_to_powerpoint(window_title, slide_no):
-    """Send PowerPoint's number-and-Return shortcut only to its focused slide-show window.
-
-    CoreGraphics targets the PowerPoint process, so a focus race cannot type a
-    slide number into OpenLP or another application. The accessibility check
-    prevents typing into PowerPoint's editor if its slide show lost focus.
-    """
+def _send_slide_number_to_powerpoint(slide_no):
+    """Send PowerPoint's number-and-Return shortcut to its process."""
+    global _post_event_access_requested
     try:
         from AppKit import NSRunningApplication
 
@@ -493,58 +465,17 @@ def _send_slide_number_to_powerpoint(window_title, slide_no):
             return False
         process_id = applications[0].processIdentifier()
         foundation = ctypes.CDLL('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
-        accessibility = ctypes.CDLL('/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices')
         graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
-        foundation.CFRelease.argtypes = [ctypes.c_void_p]
-        foundation.CFStringCreateWithCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
-        foundation.CFStringCreateWithCString.restype = ctypes.c_void_p
-        foundation.CFStringGetCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_uint32]
-        foundation.CFStringGetCString.restype = ctypes.c_bool
-        accessibility.AXUIElementCreateApplication.argtypes = [ctypes.c_int]
-        accessibility.AXUIElementCreateApplication.restype = ctypes.c_void_p
-        accessibility.AXUIElementCopyAttributeValue.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
-                                                                ctypes.POINTER(ctypes.c_void_p)]
-        accessibility.AXUIElementCopyAttributeValue.restype = ctypes.c_int
-        application = accessibility.AXUIElementCreateApplication(process_id)
-        if not application:
-            return False
-        try:
-            focused_key = foundation.CFStringCreateWithCString(None, b'AXFocusedWindow', 0x08000100)
-            try:
-                focused_window = ctypes.c_void_p()
-                error = accessibility.AXUIElementCopyAttributeValue(application, focused_key,
-                                                                    ctypes.byref(focused_window))
-            finally:
-                foundation.CFRelease(focused_key)
-            if error or not focused_window.value:
-                return False
-            try:
-                title_key = foundation.CFStringCreateWithCString(None, b'AXTitle', 0x08000100)
-                try:
-                    title = ctypes.c_void_p()
-                    error = accessibility.AXUIElementCopyAttributeValue(focused_window, title_key,
-                                                                        ctypes.byref(title))
-                finally:
-                    foundation.CFRelease(title_key)
-                if error or not title.value:
-                    return False
-                try:
-                    title_buffer = ctypes.create_string_buffer(1024)
-                    if not foundation.CFStringGetCString(title, title_buffer, len(title_buffer), 0x08000100):
-                        return False
-                    if title_buffer.value.decode('utf-8') != window_title:
-                        return False
-                finally:
-                    foundation.CFRelease(title)
-            finally:
-                foundation.CFRelease(focused_window)
-        finally:
-            foundation.CFRelease(application)
-
         graphics.CGPreflightPostEventAccess.restype = ctypes.c_bool
         if not graphics.CGPreflightPostEventAccess():
-            log.warning('PowerPoint slide selection needs macOS Accessibility permission for OpenLP')
-            return False
+            if not _post_event_access_requested:
+                _post_event_access_requested = True
+                graphics.CGRequestPostEventAccess.restype = ctypes.c_bool
+                graphics.CGRequestPostEventAccess()
+            if not graphics.CGPreflightPostEventAccess():
+                log.warning('PowerPoint slide selection needs macOS Accessibility permission for OpenLP+')
+                return False
+        foundation.CFRelease.argtypes = [ctypes.c_void_p]
         graphics.CGEventCreateKeyboardEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_bool]
         graphics.CGEventCreateKeyboardEvent.restype = ctypes.c_void_p
         graphics.CGEventKeyboardSetUnicodeString.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
@@ -962,21 +893,23 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         self._qt_capture_has_frame = False
         try:
             try:
-                window_title = self.controller.applescript.call('get_slide_show_window_title', self.file_path.name)
-                moved = _send_slide_number_to_powerpoint(window_title, slide_no)
+                show_active = self.controller.applescript.call('is_slide_show_window_active', self.file_path.name)
+                moved = bool(show_active) and _send_slide_number_to_powerpoint(slide_no)
             except Exception:
                 log.exception('Could not target the PowerPoint slide-show window')
                 moved = False
             if not moved:
-                log.warning('PowerPoint number shortcut unavailable; using slideshow navigation for slide %s', slide_no)
-                try:
-                    moved = bool(self.controller.applescript.call('goto_slide', self.file_path.name, slide_no))
-                except Exception:
-                    log.exception('Could not navigate the PowerPoint slide show')
-                    moved = False
-                if not moved:
-                    self._schedule_automatic_slide(current_slide)
-                    return False
+                log.warning('PowerPoint could not select slide %s directly; leaving the show on slide %s',
+                            slide_no, current_slide)
+                self.ui_slidenumber = current_slide
+                self.slide_number = 0
+                main_window = Registry().get('main_window')
+                if main_window:
+                    main_window.show_status_message(translate(
+                        'PresentationPlugin.PowerPointMac',
+                        'Could not select a PowerPoint slide. Allow OpenLP+ in macOS Accessibility settings.'), 10000)
+                self._schedule_automatic_slide(current_slide)
+                return False
             self.ui_slidenumber = slide_no
             deadline = time.monotonic() + 1.5
             while time.monotonic() < deadline:
@@ -985,6 +918,8 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
                     return True
                 time.sleep(0.04)
             log.warning('PowerPoint did not navigate to slide %s', slide_no)
+            self.ui_slidenumber = current_slide
+            self.slide_number = 0
             self._schedule_automatic_slide(current_slide)
             return False
         finally:

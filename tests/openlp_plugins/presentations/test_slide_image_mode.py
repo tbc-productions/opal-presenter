@@ -336,10 +336,7 @@ def test_powerpoint_mac_keeps_the_full_slide_range_available():
     assert 'set starting slide of slide show settings of targetPresentation to startingSlide' not in handler
     assert 'run slide show slide show settings of targetPresentation' in handler
     assert 'current show position of slide show view of showWindow' in handler
-    goto_handler = POWERPOINT_MAC_APPLESCRIPT.split('on goto_slide(', 1)[1].split('end goto_slide', 1)[0]
-    assert 'go to next slide showView' in goto_handler
-    assert 'go to previous slide showView' in goto_handler
-    assert 'if nextNumber is currentNumber then return false' in goto_handler
+    assert 'on goto_slide(' not in POWERPOINT_MAC_APPLESCRIPT
 
 
 def test_powerpoint_mac_opens_through_launch_services(tmp_path):
@@ -482,7 +479,7 @@ def test_powerpoint_mac_starts_on_selected_slide(settings, tmp_path):
     assert controller.applescript.call.call_args_list[0].args == (
         'start_presentation', 'slides.pptx', 10, 20, 1200, 700, 3, False, True)
     assert not any(call.args[0] == 'position_slide_show' for call in controller.applescript.call.call_args_list)
-    send_slide_number.assert_called_once_with('PowerPoint Slide Show – [slides]', 3)
+    send_slide_number.assert_called_once_with(3)
     assert not any(call.args[0] == 'goto_slide' for call in controller.applescript.call.call_args_list)
     assert document._slideshow_started
     assert document._starting_slide == 1
@@ -619,8 +616,8 @@ def test_powerpoint_mac_jumps_back_without_restarting(settings, tmp_path):
                return_value=True) as send_slide_number:
         assert document.goto_slide(2)
 
-    controller.applescript.call.assert_called_once_with('get_slide_show_window_title', 'slides.pptx')
-    send_slide_number.assert_called_once_with('PowerPoint Slide Show – [slides]', 2)
+    controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
+    send_slide_number.assert_called_once_with(2)
     assert document.ui_slidenumber == 2
 
 
@@ -639,30 +636,52 @@ def test_powerpoint_mac_jumps_to_distant_slide_without_restarting(settings, tmp_
                return_value=True) as send_slide_number:
         assert document.goto_slide(80)
 
-    controller.applescript.call.assert_called_once_with('get_slide_show_window_title', 'slides.pptx')
-    send_slide_number.assert_called_once_with('PowerPoint Slide Show – [slides]', 80)
+    controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
+    send_slide_number.assert_called_once_with(80)
     document.start_presentation.assert_not_called()
     assert document.ui_slidenumber == 80
 
 
-def test_powerpoint_mac_uses_native_slideshow_when_number_shortcut_is_unavailable(settings, tmp_path):
+def test_powerpoint_mac_does_not_walk_slides_when_number_shortcut_is_unavailable(settings, tmp_path):
     from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
-    controller.applescript.call.side_effect = ['PowerPoint Slide Show – [slides]', True]
+    controller.applescript.call.return_value = 'PowerPoint Slide Show – [slides]'
     with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
-    document.get_slide_number = MagicMock(side_effect=[1, 80])
+    document.get_slide_number = MagicMock(return_value=1)
+    document.ui_slidenumber = 80
+    document.slide_number = 80
 
     with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
-               return_value=False) as send_slide_number:
-        assert document.goto_slide(80)
+               return_value=False) as send_slide_number, \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.Registry') as registry:
+        assert not document.goto_slide(80)
+        registry.return_value.get.return_value.show_status_message.assert_called_once()
 
-    assert controller.applescript.call.call_args_list == [
-        call('get_slide_show_window_title', 'slides.pptx'),
-        call('goto_slide', 'slides.pptx', 80)]
-    send_slide_number.assert_called_once_with('PowerPoint Slide Show – [slides]', 80)
+    controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
+    send_slide_number.assert_called_once_with(80)
+    assert document.ui_slidenumber == 1
+    assert document.slide_number == 0
+
+
+def test_powerpoint_mac_does_not_type_into_inactive_slideshow(settings, tmp_path):
+    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+
+    controller = MagicMock()
+    controller.applescript.call.return_value = False
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+        document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
+    document.file_path = tmp_path / 'slides.pptx'
+    document.get_slide_number = MagicMock(return_value=1)
+
+    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint') as send, \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.Registry'):
+        assert not document.goto_slide(4)
+
+    controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
+    send.assert_not_called()
 
 
 def test_powerpoint_mac_jumps_past_builds_without_restarting(settings, tmp_path):
@@ -679,7 +698,7 @@ def test_powerpoint_mac_jumps_past_builds_without_restarting(settings, tmp_path)
                return_value=True):
         assert document.goto_slide(2)
 
-    controller.applescript.call.assert_called_once_with('get_slide_show_window_title', 'slides.pptx')
+    controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
     assert document.ui_slidenumber == 2
 
 
