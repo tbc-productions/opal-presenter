@@ -37,6 +37,8 @@ def test_opensong_file_import(registry: Registry, settings: Settings):
     """
     Test that loading an OpenSong file works correctly on various files
     """
+    # The expected verses include guitar chords, which are disabled by default.
+    settings.setValue('songs/enable chords', True)
     with SongImportTestHelper('OpenSongImport', 'opensong') as helper:
         helper.file_import([TEST_PATH / 'Amazing Grace'],
                            helper.load_external_result_data(TEST_PATH / 'Amazing Grace.json'))
