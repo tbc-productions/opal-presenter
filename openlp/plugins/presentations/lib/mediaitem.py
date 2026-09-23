@@ -169,7 +169,7 @@ class PresentationMediaItem(FolderLibraryItem):
                 self.controllers[item].check_available()
             # load the drop down selection
             if self.controllers[item].enabled():
-                self.display_type_combo_box.addItem(item)
+                self.display_type_combo_box.addItem(self.controllers[item].display_name, userData=item)
         if self.display_type_combo_box.count() > 1:
             self.display_type_combo_box.insertItem(0, self.automatic, userData='automatic')
             self.display_type_combo_box.setCurrentIndex(0)
@@ -177,6 +177,29 @@ class PresentationMediaItem(FolderLibraryItem):
             self.presentation_widget.show()
         else:
             self.presentation_widget.hide()
+
+    def _selected_controller_name(self):
+        """Return the controller key stored with the selected display label."""
+        selected = self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex())
+        return selected if isinstance(selected, str) else self.display_type_combo_box.currentText()
+
+    def validate_and_load(self, file_paths, target_folder=None):
+        """Reject unsupported presentations before adding them to the library."""
+        supported_paths = []
+        unsupported_paths = []
+        for file_path in file_paths:
+            if self.find_controller_by_type(Path(file_path)):
+                supported_paths.append(file_path)
+            else:
+                unsupported_paths.append(file_path)
+        if unsupported_paths:
+            names = '\n'.join(str(path) for path in unsupported_paths)
+            critical_error_message_box(
+                UiStrings().UnsupportedFile,
+                translate('PresentationPlugin.MediaItem',
+                          'These presentations could not be imported:\n{names}').format(names=names))
+        if supported_paths:
+            super().validate_and_load(supported_paths, target_folder)
 
     def load_item(self, item, is_initial_load=False):
         """
@@ -209,13 +232,7 @@ class PresentationMediaItem(FolderLibraryItem):
                     else:
                         icon = create_thumb(preview_path, thumbnail_path)
             else:
-                if is_initial_load:
-                    icon = UiIcons().delete
-                else:
-                    critical_error_message_box(UiStrings().UnsupportedFile,
-                                               translate('PresentationPlugin.MediaItem',
-                                                         'This type of presentation is not supported.'))
-                    return None
+                icon = UiIcons().delete
             tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
@@ -252,7 +269,7 @@ class PresentationMediaItem(FolderLibraryItem):
             if not self.controllers[cidx].enabled():
                 # skip presentation controllers that are not enabled
                 continue
-            file_ext = file_path.suffix[1:]
+            file_ext = file_path.suffix[1:].lower()
             if file_ext in self.controllers[cidx].supports or file_ext in self.controllers[cidx].also_supports:
                 doc = self.controllers[cidx].add_document(file_path)
                 if clean_for_update:
@@ -309,13 +326,13 @@ class PresentationMediaItem(FolderLibraryItem):
         source_name = (source_data.name if source_data is not None else None) or file_path.name
         display_name = Path(source_name).stem
         file_type = file_path.suffix.lower()[1:]
-        if not self.display_type_combo_box.currentText():
+        selected_display_type = self._selected_controller_name()
+        if not selected_display_type:
             return False
         service_item.add_capability(ItemCapabilities.CanEditTitle)
         selected_processor = item.processor if isinstance(item, ServiceItem) else None
-        if not selected_processor and self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex()) \
-                != 'automatic':
-            selected_processor = self.display_type_combo_box.currentText()
+        if not selected_processor and selected_display_type != 'automatic':
+            selected_processor = selected_display_type
         render_as_images = self.should_render_as_images(file_path, selected_processor)
         if render_as_images:
             service_item.add_capability(ItemCapabilities.CanMaintain)
@@ -442,7 +459,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                                              ).format(name=file_path))
                     return False
         else:
-            service_item.processor = self.display_type_combo_box.currentText()
+            service_item.processor = selected_display_type
             service_item.add_capability(ItemCapabilities.ProvidesOwnDisplay)
             for bitem in items:
                 file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
@@ -453,8 +470,7 @@ class PresentationMediaItem(FolderLibraryItem):
                 service_item.title = display_file_name
                 if file_path.exists():
                     if os.access(file_path, os.R_OK):
-                        if (self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex())
-                                == 'automatic'):
+                        if selected_display_type == 'automatic':
                             service_item.processor = self.find_controller_by_type(file_path)
                             if not service_item.processor:
                                 return False
@@ -592,12 +608,12 @@ class PresentationMediaItem(FolderLibraryItem):
         :return: The default application controller for this file type, or None if not supported
         :rtype: PresentationController
         """
-        file_type = file_path.suffix[1:]
+        file_type = file_path.suffix[1:].lower()
         if not file_type:
             return None
         for controller in self.controllers:
             if self.controllers[controller].enabled():
-                if file_type.lower() in self.controllers[controller].supports:
+                if file_type in self.controllers[controller].supports:
                     return controller
         for controller in self.controllers:
             if self.controllers[controller].enabled():

@@ -100,8 +100,8 @@ class CustomMediaItem(MediaManagerItem):
         self.export_presentation_menu.setIcon(UiIcons().upload)
         native_action = self.export_presentation_menu.addAction(translate('CustomPlugin.MediaItem', 'Custom Slides'))
         native_action.triggered.connect(self.on_export_custom)
-        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
-                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (PPTX)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (ODP)'), '.odp'))
         for label, suffix in formats:
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))

@@ -245,9 +245,8 @@ def test_validate_and_load(folder_library_item):
 @patch('openlp.core.ui.library.copy2')
 @patch('openlp.core.ui.library.create_paths')
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')
-@patch('openlp.core.ui.library.sha256_file_hash')
-def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, mocked_get_section_data_path,
-                                                    mocked_create_paths, mocked_copy2, folder_library_item, tmp_path):
+def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path, mocked_create_paths,
+                                                    mocked_copy2, folder_library_item, tmp_path):
     """
     Test that library files are copied to managed storage when enabled.
     """
@@ -255,7 +254,6 @@ def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, moc
     source_file.write_bytes(b'media')
     managed_root = tmp_path / 'managed'
     mocked_get_section_data_path.return_value = managed_root
-    mocked_sha256_file_hash.return_value = 'abc123'
     folder_library_item.settings_section = 'tests'
     folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
         'advanced/copy library files to data folder': True
@@ -263,10 +261,44 @@ def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, moc
 
     result = folder_library_item._prepare_library_file(source_file)
 
-    expected_destination = managed_root / 'library' / 'abc123.mp4'
+    expected_destination = managed_root / 'library' / 'clip.mp4'
     assert result == expected_destination
     mocked_create_paths.assert_called_once_with(managed_root / 'library')
     mocked_copy2.assert_called_once_with(source_file, expected_destination)
+
+
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_path, folder_library_item, tmp_path):
+    """Imported files with the same name keep distinct copies and library names."""
+    sources = []
+    for number in range(3):
+        source_dir = tmp_path / f'source{number}'
+        source_dir.mkdir()
+        source = source_dir / 'My file.pptx'
+        source.write_bytes(f'presentation {number}'.encode())
+        sources.append(source)
+
+    managed_root = tmp_path / 'managed'
+    mocked_get_section_data_path.return_value = managed_root
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
+        'advanced/copy library files to data folder': True
+    }.get(key, False))
+    folder_library_item.choose_folder_form = MagicMock(**{
+        'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected
+    })
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.load_list = MagicMock()
+
+    folder_library_item.validate_and_load(sources)
+
+    saved_items = [call.args[0] for call in folder_library_item.manager.save_object.call_args_list]
+    assert [item.name for item in saved_items] == ['My file.pptx', 'My file (2).pptx', 'My file (3).pptx']
+    for number, item in enumerate(saved_items):
+        stored_path = Path(item.file_path)
+        assert stored_path.parent == managed_root / 'library'
+        assert stored_path.name == item.name
+        assert stored_path.read_bytes() == f'presentation {number}'.encode()
 
 
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')

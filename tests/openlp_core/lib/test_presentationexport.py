@@ -275,7 +275,7 @@ def test_export_menu_has_separate_presentation_formats(request):
     main_window = request.getfixturevalue('presentation_main_window')
     menu = main_window.export_presentation_menu
     assert menu.title() == '&Presentation'
-    assert [action.text() for action in menu.actions()] == ['PowerPoint (pptx)', 'OpenDocument (odp)']
+    assert [action.text() for action in menu.actions()] == ['PowerPoint (PPTX)', 'OpenDocument (ODP)']
     assert menu.menuAction() in main_window.file_export_menu.actions()
     main_window.export_powerpoint_item.trigger()
     main_window.export_opendocument_item.trigger()

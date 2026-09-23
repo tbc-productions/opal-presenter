@@ -567,6 +567,7 @@ class PowerPointMacController(AppleScriptBaseController):
         """
         log.debug('Initialising')
         super(PowerPointMacController, self).__init__(plugin, 'PowerPointMac', PowerPointMacDocument)
+        self.display_name = translate('PresentationPlugin.Controller', 'PowerPoint (macOS)')
         if APPLESCRIPT_AVAILABLE:
             # Compiled script expected to be set by subclasses
             try:

@@ -514,8 +514,13 @@ class FolderLibraryItem(MediaManagerItem):
         existing_files = [item.file_path for item in self.manager.get_all_objects(self.item_class)]
         # Convert file paths to items
         for file_path in file_paths:
+            if file_paths.count(file_path) > 1:
+                critical_error_message_box(translate('OpenLP.FolderLibraryItem', 'File Exists'),
+                                           translate('OpenLP.FolderLibraryItem',
+                                                     'An item with that filename already exists.'))
+                continue
             stored_path = self._prepare_library_file(file_path)
-            if file_paths.count(file_path) > 1 or existing_files.count(str(stored_path)) > 0:
+            if existing_files.count(str(stored_path)) > 0:
                 # If a file already exists in the items or has been selected twice, show an error message
                 critical_error_message_box(translate('OpenLP.FolderLibraryItem', 'File Exists'),
                                            translate('OpenLP.FolderLibraryItem',
@@ -523,7 +528,7 @@ class FolderLibraryItem(MediaManagerItem):
                 continue
 
             self.log_debug('Adding new item: {name}'.format(name=stored_path))
-            display_name = file_path.name if isinstance(file_path, Path) else str(file_path)
+            display_name = stored_path.name if isinstance(stored_path, Path) else str(file_path)
             item = self.item_class(name=display_name, file_path=str(stored_path))
             if isinstance(stored_path, Path) and stored_path.exists():
                 item.file_hash = sha256_file_hash(stored_path)
@@ -554,12 +559,14 @@ class FolderLibraryItem(MediaManagerItem):
         """
         library_dir = AppLocation.get_section_data_path(self.settings_section) / 'library'
         create_paths(library_dir)
-        file_hash = sha256_file_hash(file_path)
-        destination = library_dir / '{hash}{ext}'.format(hash=file_hash, ext=file_path.suffix)
+        destination = library_dir / file_path.name
         if destination == file_path:
             return destination
-        if not destination.exists():
-            copy2(file_path, destination)
+        number = 2
+        while destination.exists():
+            destination = library_dir / f'{file_path.stem} ({number}){file_path.suffix}'
+            number += 1
+        copy2(file_path, destination)
         return destination
 
     @staticmethod

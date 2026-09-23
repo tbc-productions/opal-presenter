@@ -613,12 +613,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
         self.export_presentation_menu.setObjectName('export_presentation_menu')
         self.export_powerpoint_item = self.export_presentation_menu.addAction(
-            translate('OpenLP.MainWindow', 'PowerPoint (pptx)'))
+            translate('OpenLP.MainWindow', 'PowerPoint (PPTX)'))
         self.export_powerpoint_item.setObjectName('export_powerpoint_item')
         self.export_powerpoint_item.triggered.connect(
             lambda checked=False: self.service_manager_contents.on_export_presentation('.pptx'))
         self.export_opendocument_item = self.export_presentation_menu.addAction(
-            translate('OpenLP.MainWindow', 'OpenDocument (odp)'))
+            translate('OpenLP.MainWindow', 'OpenDocument (ODP)'))
         self.export_opendocument_item.setObjectName('export_opendocument_item')
         self.export_opendocument_item.triggered.connect(
             lambda checked=False: self.service_manager_contents.on_export_presentation('.odp'))
