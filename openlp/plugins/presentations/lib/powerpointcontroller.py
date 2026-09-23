@@ -66,6 +66,7 @@ class PowerpointController(PresentationController):
         self.also_supports = ['odp']
         self.process = None
         self.com_obj_name = None
+        self.supports_slide_images = True
 
     def check_available(self):
         """
@@ -214,6 +215,34 @@ class PowerpointDocument(PresentationDocument):
         except Exception:
             log.exception('Caught exception while creating thumbnails')
             trace_error_handler(log)
+
+    def create_slide_images(self):
+        """Export visible slides at display resolution for OpenLP's image mode."""
+        if not self.presentation:
+            return False
+        if not self.index_map:
+            self.export_presentation_data()
+        if not self.index_map:
+            return False
+        try:
+            size = ScreenList().current.display_geometry.size()
+            ratio = self.presentation.PageSetup.SlideWidth / self.presentation.PageSetup.SlideHeight
+            width = min(size.width(), round(size.height() * ratio))
+            height = min(size.height(), round(size.width() / ratio))
+            if width < 1 or height < 1:
+                return False
+            self.invalidate_slide_images()
+            folder = self.get_temp_folder()
+            folder.mkdir(parents=True, exist_ok=True)
+            for number in range(1, len(self.index_map) + 1):
+                slide_index = self.index_map.get(str(number), self.index_map.get(number))
+                self.presentation.Slides(slide_index).Export(
+                    str(folder / f'mainslide{number:03d}.png'), 'png', width, height)
+            self.save_slide_image_manifest(len(self.index_map))
+            return True
+        except Exception:
+            log.exception('Failed to export full-size PowerPoint slides')
+            return False
 
     def check_exported_presentation_data_exists(self):
         """
@@ -390,6 +419,23 @@ class PowerpointDocument(PresentationDocument):
             trace_error_handler(log)
             self.show_error_msg()
 
+    def set_slide_timings(self, enabled):
+        """Restart the Windows slide show at its current slide with the new advance mode."""
+        enabled = bool(enabled)
+        if getattr(self, 'use_slide_timings', None) == enabled:
+            return
+        self.use_slide_timings = enabled
+        if not is_win() or not self.is_active():
+            return
+        current_slide = self.get_slide_number()
+        try:
+            self.presentation.SlideShowWindow.View.Exit()
+            self.start_presentation()
+            if current_slide > 1:
+                self.goto_slide(current_slide)
+        except (AttributeError, pywintypes.com_error):
+            log.exception('Could not apply PowerPoint slide timings')
+
     if is_win():
         def start_presentation(self):
             """
@@ -412,6 +458,8 @@ class PowerpointDocument(PresentationDocument):
                         self.presentation.SlideShowSettings.ShowType = 2
                         self.presentation.SlideShowSettings.ShowScrollbar = 0
                 self.presentation.SlideShowSettings.ShowPresenterView = 0
+                use_timings = getattr(self, 'use_slide_timings', False)
+                self.presentation.SlideShowSettings.AdvanceMode = 2 if use_timings else 1
                 ppt_window = self.presentation.SlideShowSettings.Run()
                 if change_powerpoint_display_monitor:
                     if is_fullscreen:

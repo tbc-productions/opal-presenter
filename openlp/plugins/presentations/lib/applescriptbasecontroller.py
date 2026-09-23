@@ -98,6 +98,7 @@ class AppleScriptBaseController(PresentationController):
         except Exception:
             log.exception('script execution failed')
 
+
 class AppleScriptBaseDocument(PresentationDocument):
     """
     Class which holds information and controls a single presentation.
@@ -116,6 +117,7 @@ class AppleScriptBaseDocument(PresentationDocument):
         self.presentation_loaded = False
         self.is_blanked = False
         self.slide_count = 0
+        self._slideshow_started = False
 
     def load_presentation(self):
         """
@@ -148,12 +150,13 @@ class AppleScriptBaseDocument(PresentationDocument):
         OpenLP being shut down.
         """
         log.debug('close_presentation')
-        if self.presentation_loaded:
+        if self._slideshow_started:
             try:
                 self.controller.applescript.call('close_presentation')
             except Exception:
                 log.exception('script execution failed')
         self.presentation_loaded = False
+        self._slideshow_started = False
         self.controller.remove_doc(self)
 
     def is_loaded(self):
@@ -199,6 +202,7 @@ class AppleScriptBaseDocument(PresentationDocument):
         log.debug('blank_screen')
         try:
             self.controller.applescript.call('blank')
+            self.is_blanked = True
         except Exception:
             log.exception('script execution failed')
 
@@ -215,6 +219,8 @@ class AppleScriptBaseDocument(PresentationDocument):
         """
         try:
             self.controller.applescript.call('stop_presentation')
+            self._slideshow_started = False
+            self.presentation_loaded = False
         except Exception:
             log.exception('script execution failed')
 
@@ -228,6 +234,8 @@ class AppleScriptBaseDocument(PresentationDocument):
             size = ScreenList().current.display_geometry
             self.controller.applescript.call('start_presentation', str(self.file_path), size.top(), size.left(),
                                              size.width(), size.height(), fullscreen)
+            self._slideshow_started = True
+            self.presentation_loaded = True
         except Exception:
             log.exception('script execution failed')
 

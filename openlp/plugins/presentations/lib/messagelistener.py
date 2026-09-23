@@ -50,7 +50,7 @@ class Controller(object):
         self.hide_mode = None
         log.info('{name} controller loaded'.format(name=live))
 
-    def add_handler(self, controller, file, hide_mode, slide_no, unique_id):
+    def add_handler(self, controller, file, hide_mode, slide_no, unique_id, file_hash=None):
         """
         Add a handler, which is an instance of a presentation and slidecontroller combination. If the slidecontroller
         has a display then load the presentation.
@@ -58,18 +58,21 @@ class Controller(object):
         log.debug('Live = {live}, add_handler {handler}'.format(live=self.is_live, handler=file))
         self.controller = controller
         self.doc = self.controller.add_document(file)
+        if file_hash and controller.name in ('Powerpoint', 'PowerPointMac'):
+            settings = Registry().get('settings')
+            choices = settings.value('presentations/powerpoint slide timings by file')
+            self.doc.use_slide_timings = bool(choices.get(file_hash, False))
         if not self.doc.load_presentation():
             # Display error message to user
             # Inform slidecontroller that the action failed?
             self.doc.ui_slidenumber = 0
             return
         PresentationList().add(self.doc, f'{unique_id}_is_live_{self.is_live}')
-        self.doc.ui_slidenumber = slide_no
+        # SlideController uses zero-based rows; presentation controllers use one-based slide numbers.
+        self.doc.ui_slidenumber = max(1, int(slide_no) + 1)
         self.hide_mode = hide_mode
         log.debug('add_handler, slide_number: {slide:d}'.format(slide=slide_no))
         if self.is_live:
-            if self.doc.ui_slidenumber == 0:
-                self.doc.ui_slidenumber = 1
             if hide_mode == HideMode.Screen:
                 Registry().execute('live_display_hide', HideMode.Screen)
                 self.stop()
@@ -82,8 +85,10 @@ class Controller(object):
             else:
                 self.doc.start_presentation()
                 Registry().execute('live_display_hide', HideMode.Screen)
-                if slide_no > 0:
-                    self.slide(slide_no)
+                if slide_no > 0 and not getattr(self.doc, 'starts_at_selected_slide', False):
+                    # Some backends report inactive just after starting. Calling slide() here
+                    # would start the show a second time instead of selecting the requested slide.
+                    self.doc.goto_slide(int(slide_no) + 1)
 
     def activate(self):
         """
@@ -91,6 +96,8 @@ class Controller(object):
         """
         log.debug('Live = {live}, activate'.format(live=self.is_live))
         if not self.doc:
+            return False
+        if getattr(self.doc, '_opening', False):
             return False
         if self.doc.is_active():
             return True
@@ -100,7 +107,7 @@ class Controller(object):
                 return False
         if self.is_live:
             self.doc.start_presentation()
-            if self.doc.ui_slidenumber > 1:
+            if self.doc.ui_slidenumber > 1 and not getattr(self.doc, 'starts_at_selected_slide', False):
                 if self.doc.ui_slidenumber > self.doc.get_slide_count():
                     self.doc.ui_slidenumber = self.doc.get_slide_count()
                 self.doc.goto_slide(self.doc.ui_slidenumber)
@@ -121,11 +128,17 @@ class Controller(object):
             return
         self.doc.ui_slidenumber = int(slide) + 1
         if self.hide_mode:
+            # A native show can still be running while its output is blanked.
+            # Keep that show on the operator's selected slide without revealing it.
+            if self.doc.is_active():
+                self.doc.goto_slide(int(slide) + 1)
             self.poll()
             return
+        was_active = self.doc.is_active()
         if not self.activate():
             return
-        self.doc.goto_slide(int(slide) + 1)
+        if was_active or not getattr(self.doc, 'starts_at_selected_slide', False):
+            self.doc.goto_slide(int(slide) + 1)
         self.poll()
 
     def first(self):
@@ -139,11 +152,18 @@ class Controller(object):
             return
         self.doc.ui_slidenumber = 1
         if self.hide_mode:
+            if self.doc.is_active():
+                self.doc.goto_slide(1)
             self.poll()
             return
+        was_active = self.doc.is_active()
         if not self.activate():
             return
-        self.doc.start_presentation()
+        if getattr(self.doc, 'starts_at_selected_slide', False):
+            if was_active:
+                self.doc.goto_slide(1)
+        else:
+            self.doc.start_presentation()
         self.poll()
 
     def last(self):
@@ -157,6 +177,8 @@ class Controller(object):
             return
         self.doc.ui_slidenumber = self.doc.get_slide_count()
         if self.hide_mode:
+            if self.doc.is_active():
+                self.doc.goto_slide(self.doc.ui_slidenumber)
             self.poll()
             return
         if not self.activate():
@@ -228,27 +250,28 @@ class Controller(object):
         """
         log.debug('Live = {live}, blank'.format(live=self.is_live))
         self.hide_mode = hide_mode
-        if not self.doc:
-            return
         if not self.is_live:
             return
-        if hide_mode == HideMode.Theme:
-            if not self.doc.is_loaded():
-                return
-            if not self.doc.is_active():
-                return
-            Registry().execute('live_display_hide', HideMode.Theme)
-        elif hide_mode == HideMode.Logo:
-            if not self.doc.is_loaded():
-                return
-            if not self.doc.is_active():
-                return
-            Registry().execute('live_display_hide', HideMode.Logo)
-        elif hide_mode == HideMode.Blank:
-            if not self.activate():
+        if hide_mode in (HideMode.Theme, HideMode.Logo):
+            Registry().execute('live_display_hide', hide_mode)
+            if self.doc and self.doc.is_loaded() and self.doc.is_active():
+                hide_for_overlay = getattr(self.doc, 'hide_for_overlay', None)
+                if callable(hide_for_overlay):
+                    hide_for_overlay()
+            return
+        if not self.doc:
+            return
+        if hide_mode == HideMode.Blank:
+            if not getattr(self.doc, '_hidden_for_overlay', False) and \
+                    not self.doc.is_active() and not self.activate():
                 return
             self.doc.blank_screen()
+            show_after_overlay = getattr(self.doc, 'show_after_overlay', None)
+            if callable(show_after_overlay):
+                show_after_overlay()
+            Registry().execute('live_display_hide', HideMode.Screen)
         elif hide_mode == HideMode.Screen:
+            Registry().execute('live_display_hide', HideMode.Screen)
             self.stop()
 
     def stop(self):
@@ -284,6 +307,9 @@ class Controller(object):
             return
         if not self.is_live:
             return
+        show_after_overlay = getattr(self.doc, 'show_after_overlay', None)
+        if callable(show_after_overlay):
+            show_after_overlay()
         if not self.activate():
             return
         # if a different slide has been selected while blank, this will transfer to the correct slide
@@ -292,7 +318,7 @@ class Controller(object):
         Registry().execute('live_display_hide', HideMode.Screen)
 
     def poll(self):
-        if not self.doc:
+        if not self.doc or getattr(self.doc, '_opening', False):
             return
         self.doc.poll_slidenumber(self.is_live, self.hide_mode)
 
@@ -335,6 +361,8 @@ class MessageListener(object):
         Registry().register_function('presentations_next', self.next)
         Registry().register_function('presentations_last', self.last)
         Registry().register_function('presentations_slide', self.slide)
+        Registry().register_function('presentations_set_slide_timings', self.set_slide_timings)
+        Registry().register_function('presentations_has_slide_timings', self.has_slide_timings)
         Registry().register_function('presentations_blank', self.blank)
         Registry().register_function('presentations_unblank', self.unblank)
         Registry().register_function('presentations_attempt_screenshot', self.attempt_live_screenshot)
@@ -355,33 +383,39 @@ class MessageListener(object):
         # When starting presentation from the servicemanager we convert
         # PDF/XPS/OXPS-serviceitems into image-serviceitems. When started from the mediamanager
         # the conversion has already been done at this point.
-        file_type = file_path.suffix.lower()[1:]
-        if file_type in PDF_CONTROLLER_FILETYPES:
-            log.debug('Converting from pdf/xps/oxps/epub/cbz/fb2 to images for serviceitem with file {name}'
-                      .format(name=file_path))
+        render_as_images = self.media_item.should_render_as_images(file_path, self.handler)
+        if render_as_images:
+            log.debug('Converting presentation to images for serviceitem with file %s', file_path)
             # Create a copy of the original item, and then clear the original item so it can be filled with images
             item_cpy = copy.copy(item)
             item.__init__(None)
             context = ServiceItemContext.Live if is_live else ServiceItemContext.Preview
-            self.media_item.generate_slide_data(item, item=item_cpy, context=context, file_path=file_path)
-            # Some of the original serviceitem attributes is needed in the new serviceitem
-            item.footer = item_cpy.footer
-            item.from_service = item_cpy.from_service
-            item.iconic_representation = item_cpy.icon
-            item.main = item_cpy.main
-            item.theme = item_cpy.theme
-            item.unique_identifier = item_cpy.unique_identifier
-            # When presenting PDF/XPS/OXPS, we are using the image presentation code,
-            # so handler & processor is set to None, and we skip adding the handler.
-            self.handler = None
-        else:
+            if self.media_item.generate_slide_data(item, item=item_cpy, context=context, file_path=file_path):
+                # Keep the service identity when replacing a command item with images.
+                item.footer = item_cpy.footer
+                item.from_service = item_cpy.from_service
+                item.from_plugin = item_cpy.from_plugin
+                item.name = item_cpy.name
+                item.icon = item_cpy.icon
+                item.iconic_representation = item_cpy.icon
+                item.main = item_cpy.main
+                item.theme = item_cpy.theme
+                item.unique_identifier = item_cpy.unique_identifier
+                self.handler = None
+            else:
+                log.warning('Could not render presentation slides for %s', file_path)
+                item.__dict__.clear()
+                item.__dict__.update(item_cpy.__dict__)
+                if file_path.suffix.lower()[1:] in PDF_CONTROLLER_FILETYPES:
+                    return
+        if self.handler is not None:
             if self.handler == self.media_item.automatic:
                 self.handler = self.media_item.find_controller_by_type(file_path)
                 if not self.handler:
                     return
             else:
                 # the saved handler is not present so need to use one based on file_path suffix.
-                if not self.controllers[self.handler].available:
+                if self.handler not in self.controllers or not self.controllers[self.handler].available:
                     self.handler = self.media_item.find_controller_by_type(file_path)
                     if not self.handler:
                         return
@@ -395,8 +429,30 @@ class MessageListener(object):
             self.controller = controller
         else:
             controller.add_handler(self.controllers[self.handler], file_path, hide_mode, message[3],
-                                   message[0].unique_identifier)
+                                   message[0].unique_identifier, message[0].sha256_file_hash)
             self.timer.start()
+
+    def set_slide_timings(self, message):
+        """Apply the Live toolbar's timing state to its current PowerPoint show."""
+        item, enabled = message
+        doc = self.live_handler.doc
+        if not doc or item.processor not in ('Powerpoint', 'PowerPointMac'):
+            return
+        if Path(item.get_frame_path()) != doc.file_path:
+            return
+        if hasattr(doc, 'set_slide_timings'):
+            doc.set_slide_timings(bool(enabled))
+        else:
+            doc.use_slide_timings = bool(enabled)
+        return bool(doc.use_slide_timings)
+
+    def has_slide_timings(self, message):
+        """Report whether the current PowerPoint show has controllable timed slides."""
+        item = message[0]
+        doc = self.live_handler.doc
+        if not doc or item.processor != 'PowerPointMac' or Path(item.get_frame_path()) != doc.file_path:
+            return False
+        return bool(getattr(doc, '_use_openlp_timing', False))
 
     def slide(self, message):
         """

@@ -31,6 +31,7 @@ from openlp.plugins.presentations.lib.presentationtab import PresentationTab
 __default_settings__ = {
     'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,
     'presentations/powerpoint control window': QtCore.Qt.CheckState.Unchecked,
+    'presentations/powerpoint use slide timings': QtCore.Qt.CheckState.Checked,
     'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,
 }
 

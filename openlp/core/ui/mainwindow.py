@@ -777,8 +777,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.restore_current_media_manager_item()
         Registry().execute('theme_change_global')
         self._sync_view_display_output_menu_action()
+        # Escape has one dedicated hide action. Older shortcut settings may
+        # also bind it to Show Desktop, which makes Qt treat the key as ambiguous.
+        desktop_action = getattr(self.live_controller, 'desktop_screen', None)
+        escape_key = QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape)
+        if desktop_action is not None:
+            desktop_action.setShortcuts([shortcut for shortcut in desktop_action.shortcuts()
+                                         if shortcut != escape_key])
+            mapped_actions = ActionList.shortcut_map.get(escape_key.toString(), [])
+            if desktop_action in mapped_actions:
+                mapped_actions.remove(desktop_action)
+                if not mapped_actions:
+                    del ActionList.shortcut_map[escape_key.toString()]
         esc_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape), self)
         esc_shortcut.setContext(QtCore.Qt.ShortcutContext.WindowShortcut)
+        esc_shortcut.setAutoRepeat(False)
         esc_shortcut.activated.connect(self._on_escape_hide_presentation_from_main)
 
     def _on_escape_hide_presentation_from_main(self):
@@ -796,7 +809,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         live = self.live_controller
         if not live or not live.display:
             return
-        if not live.display.isVisible() or live.current_hide_mode == HideMode.Screen:
+        if live.current_hide_mode == HideMode.Screen:
             return
         live.set_hide_mode(HideMode.Screen)
 

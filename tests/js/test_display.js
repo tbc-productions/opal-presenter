@@ -1280,7 +1280,7 @@ describe("Display.setFullscreenImage", function () {
     Display.setFullscreenImage(bg_color, image);
 
     expect($(".slides > section > img").length).toEqual(0);
-    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("file:///openlp1.jpg");
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("openlp-library://local-file//openlp1.jpg");
     expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#000");
     expect($(".slides > section")[0].getAttribute("data-background-size")).toEqual("cover");
     expect($(".slides > section")[0].getAttribute("data-background-repeat")).toEqual("no-repeat");
@@ -1297,6 +1297,8 @@ describe("Display.setFullscreenImage", function () {
     var img = document.createElement("img");
     img.src = "file:///openlp1.jpg";
     section.appendChild(img);
+    section.slideBackgroundElement = document.createElement("div");
+    section.slideBackgroundContentElement = document.createElement("div");
     Display._slidesContainer.appendChild(section);
     Display._slides = {'0': 0};
 
@@ -1306,8 +1308,10 @@ describe("Display.setFullscreenImage", function () {
     Display.setFullscreenImage(bg_color, image);
 
     expect($(".slides > section > img").length).toEqual(0);
-    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("file:///openlp2.jpg");
+    expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("openlp-library://local-file//openlp2.jpg");
     expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#111");
+    expect(section.slideBackgroundContentElement.style.backgroundImage).toContain("openlp-library://local-file//openlp2.jpg");
+    expect(section.slideBackgroundElement.style.backgroundColor).toEqual("rgb(17, 17, 17)");
     expect(Reveal.sync).not.toHaveBeenCalled();
     expect(Reveal.slide).not.toHaveBeenCalled();
   });
@@ -1340,6 +1344,8 @@ describe("Display.setFullscreenImageFromData", function () {
     var img = document.createElement("img");
     img.src = "data:image/jpeg;base64,old";
     section.appendChild(img);
+    section.slideBackgroundElement = document.createElement("div");
+    section.slideBackgroundContentElement = document.createElement("div");
     Display._slidesContainer.appendChild(section);
     Display._slides = {'0': 0};
     spyOn(Display, "replaceSlides");
@@ -1351,6 +1357,7 @@ describe("Display.setFullscreenImageFromData", function () {
     expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("data:image/jpeg;base64,new-data");
     expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#222");
     expect($(".slides > section")[0].getAttribute("data-background-position")).toEqual("50% 50%");
+    expect(section.slideBackgroundContentElement.style.backgroundImage).toContain("data:image/jpeg;base64,new-data");
   });
 });
 

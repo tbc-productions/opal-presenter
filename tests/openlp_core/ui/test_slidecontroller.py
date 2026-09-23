@@ -25,7 +25,7 @@ from collections import namedtuple
 import datetime
 from time import perf_counter
 
-from unittest.mock import MagicMock, patch, sentinel
+from unittest.mock import MagicMock, call, patch, sentinel
 
 from PySide6 import QtCore, QtGui
 from pytest import mark
@@ -122,6 +122,25 @@ def test_slide_selected(settings: Settings):
 
     # THEN: The display is updated with the slide number
     mocked_display.go_to_slide.assert_called_once_with(4, raise_window=True)
+
+
+def test_preview_presentation_next_previous_select_cached_slide(settings: Settings):
+    """The Preview arrow actions select slides without controlling a native show."""
+    controller = SlideController(None)
+    controller.service_item = MagicMock()
+    controller.service_item.is_command.return_value = True
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 3
+    controller.preview_widget.current_slide_number.side_effect = [1, 2]
+    controller.slide_selected = MagicMock()
+
+    with patch.object(Registry, 'execute') as execute:
+        controller.on_slide_selected_next()
+        controller.on_slide_selected_previous()
+
+    assert controller.preview_widget.change_slide.call_args_list == [call(2), call(1)]
+    assert controller.slide_selected.call_count == 2
+    execute.assert_not_called()
 
 
 def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(settings: Settings):
@@ -678,6 +697,52 @@ def test_update_slide_action_enabled_state_preview(settings: Settings):
     slide_controller.next_item.setEnabled.assert_called_with(True)
     slide_controller.go_live_action.setEnabled.assert_called_with(True)
     slide_controller.add_to_service_action.setEnabled.assert_called_with(True)
+
+
+def test_powerpoint_timing_action_remembers_each_presentation(settings: Settings):
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.powerpoint_timings_action = MagicMock()
+    item = MagicMock()
+    item.is_command.return_value = True
+    item.processor = 'PowerPointMac'
+    item.slides = [{}]
+    item.sha256_file_hash = 'first-file'
+    controller.service_item = item
+
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller.on_toggle_powerpoint_timings(False)
+        controller._sync_powerpoint_timings_action(item)
+
+    choices = settings.value('presentations/powerpoint slide timings by file')
+    assert choices['first-file'] is False
+    controller.powerpoint_timings_action.setChecked.assert_called_with(False)
+
+    item.sha256_file_hash = 'second-file'
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller._sync_powerpoint_timings_action(item)
+    controller.powerpoint_timings_action.setChecked.assert_called_with(False)
+    choices['second-file'] = True
+    settings.setValue('presentations/powerpoint slide timings by file', choices)
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller._sync_powerpoint_timings_action(item)
+    controller.powerpoint_timings_action.setChecked.assert_called_with(True)
+
+
+def test_powerpoint_timing_action_is_hidden_without_timed_slides(settings: Settings):
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.powerpoint_timings_action = MagicMock()
+    item = MagicMock()
+    item.is_command.return_value = True
+    item.processor = 'PowerPointMac'
+    item.slides = [{}]
+
+    with patch.object(Registry, 'execute', return_value=[False]):
+        controller._sync_powerpoint_timings_action(item)
+
+    controller.powerpoint_timings_action.setVisible.assert_called_once_with(False)
+    controller.powerpoint_timings_action.setChecked.assert_not_called()
 
 
 def test_update_slide_action_enabled_state_live(settings: Settings):
@@ -1589,6 +1654,53 @@ def test_process_item_provides_own_theme(mocked_execute: MagicMock, registry: Re
     slide_controller._set_theme.assert_called_once()
 
 
+@patch.object(Registry, 'execute')
+def test_sending_current_presentation_live_selects_requested_slide(mocked_execute, registry, settings):
+    item = MagicMock()
+    item.name = 'presentations'
+    item.title = 'Slides'
+    item.processor = 'PowerPointMac'
+    item.sha256_file_hash = 'same-presentation'
+    item.slides = [{'image': '/tmp/slide.png'} for _ in range(5)]
+    item.is_command.return_value = True
+    item.is_media.return_value = False
+    item.is_text.return_value = False
+    item.is_image.return_value = False
+    item.is_capable.return_value = False
+    item.requires_media.return_value = False
+    item.from_service = False
+    main_window = MagicMock()
+    main_window.control_splitter.sizes.return_value = [600]
+    registry.register('main_window', main_window)
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.service_item = item
+    controller.selected_row = 0
+    controller.split = 0
+    controller.type_prefix = 'live'
+    controller._current_hide_mode = None
+    controller.preview_widget = MagicMock()
+    controller.preview_display = MagicMock()
+    controller.info_label = MagicMock()
+    controller.displays = []
+    controller.on_stop_loop = MagicMock()
+    controller.on_media_close = MagicMock()
+    controller.enable_tool_bar = MagicMock()
+    controller.slide_selected = MagicMock()
+    controller._reset_blank = MagicMock()
+    controller.on_controller_size_changed = MagicMock()
+    controller._update_slide_action_enabled_state = MagicMock()
+    controller.set_hide_mode = MagicMock()
+
+    controller._process_item(item, 3)
+
+    calls = [call for call in mocked_execute.call_args_list if call.args[0] == 'presentations_slide']
+    assert len(calls) == 1
+    assert calls[0].args[1][1:] == [True, 3]
+    assert not any(call.args[0] == 'presentations_start' for call in mocked_execute.call_args_list)
+    assert not any(call.args[0] == 'presentations_stop' for call in mocked_execute.call_args_list)
+
+
 def test_set_theme_applies_pdf_transition_settings(settings: Settings):
     """
     Test that PDF presentation transition settings override theme transition values.
@@ -2020,6 +2132,25 @@ def test_display_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry
     # THEN: Should have grabbed the maindisplay and set to placeholder with a black background
     slide_controller._capture_maindisplay.assert_called_once()
     slide_controller.preview_display.set_single_image_data.assert_called_once_with('#000', 'placeholder bytified')
+
+
+def test_live_preview_capture_failure_keeps_cached_slide(settings: Settings, tmp_path):
+    """A missing native frame must not reload the same slide or flash an older frame."""
+    image_path = tmp_path / 'slide.png'
+    image_path.touch()
+    controller = SlideController(None)
+    controller.service_item = MagicMock()
+    controller.service_item.is_capable.return_value = True
+    controller.service_item.get_rendered_frame.return_value = image_path
+    controller.selected_row = 1
+    controller.screen_capture = image_path
+    controller._capture_maindisplay = MagicMock(return_value=None)
+    controller.preview_display = MagicMock()
+
+    controller.display_maindisplay()
+
+    controller.preview_display.set_single_image.assert_not_called()
+    assert controller.screen_capture == image_path
 
 
 CaptureMainDisplayMockReturn = namedtuple('CaptureMainDisplayMockReturn', ['slide_controller', 'mocked_primary_screen',

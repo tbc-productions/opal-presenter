@@ -22,7 +22,11 @@
 This module is for controlling keynote.
 """
 import logging
+import plistlib
 import shutil
+import subprocess
+from pathlib import Path
+from PySide6 import QtCore
 try:
     import applescript
     APPLESCRIPT_AVAILABLE = True
@@ -31,23 +35,40 @@ except ImportError:
 
 from openlp.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseController, \
     AppleScriptBaseDocument
+from openlp.core.common.platform import is_macosx
+from openlp.core.display.screens import ScreenList
 
 
 log = logging.getLogger(__name__)
 
-KEYNOTE_APPLESCRIPT = """
-on check_available()
-    try
-        set appID to "com.apple.iWork.Keynote"
-        if exists application id appID then
-            return true
-        end if
-        return false
-    on error
-        return false
-    end try
-end check_available
+KEYNOTE_BUNDLE_IDS = {'com.apple.iWork.Keynote', 'com.apple.Keynote'}
 
+
+def _open_keynote_document(document_path, application_path):
+    """Import through Launch Services so Keynote receives access to the file."""
+    subprocess.run(['/usr/bin/open', '-g', '-a', str(application_path), str(document_path)],
+                   check=True, capture_output=True, text=True)
+
+
+def find_keynote_application(application_folders=None):
+    """Find both the classic Keynote app and the renamed Creator Studio app."""
+    if application_folders is None:
+        application_folders = (Path('/Applications'), Path.home() / 'Applications', Path('/System/Applications'))
+    for folder in application_folders:
+        if not folder.is_dir():
+            continue
+        for app in folder.glob('*.app'):
+            try:
+                with (app / 'Contents' / 'Info.plist').open('rb') as info_file:
+                    bundle_id = plistlib.load(info_file).get('CFBundleIdentifier')
+            except (OSError, ValueError):
+                continue
+            if bundle_id in KEYNOTE_BUNDLE_IDS:
+                return app
+    return None
+
+
+KEYNOTE_APPLESCRIPT = """
 on get_version()
     return (version of application "Keynote")
 end get_version
@@ -67,12 +88,19 @@ on close_presentation()
     end try
 end close_presentation
 
-on create_thumbs(documentName, outputPath)
+on create_thumbs(documentStem, outputPath)
     set outputPathHfs to POSIX file outputPath
+    with timeout of 900 seconds
     tell application "Keynote"
         if playing is true then tell the front document to stop
-        -- Open document
-        open documentName
+        repeat with attempt from 1 to 4500
+            if (count of documents) > 0 then
+                if name of front document is documentStem then exit repeat
+            end if
+            delay 0.2
+        end repeat
+        if (count of documents) is 0 then error "Keynote did not import the requested presentation"
+        if name of front document is not documentStem then error "Keynote did not import the requested presentation"
         -- hide keynote
         tell application "System Events"
             set visible of application process "Keynote" to false
@@ -80,72 +108,35 @@ on create_thumbs(documentName, outputPath)
         -- Export slides to png
         export front document as slide images to file outputPathHfs with properties ¬
             {image format:PNG, skipped slides:false}
-        -- Get the Presentation Notes and slide title
-        set the slideTitles to ""
-        tell the front document
-            repeat with i from 1 to the count of slides
-                tell slide i
-                    set noteFilename to outputPath & "/slideNotes" & (slide number as string) & ".txt"
-                    if skipped is false then
-                        -- Save the notes to file
-                        set noteText to presenter notes of it
-                        set noteFile to open for access noteFilename with write permission
-                        write noteText to noteFile
-                        close access noteFile
-                        -- if title is available, save it
-                        if title showing is true then
-                            set the slideTitle to object text of default title item
-                            set the slideTitles to slideTitles & slideTitle & return
-                        else
-                            set the slideTitles to "slide " & (slide number as string) & return
-                        end if
-                    end if
-                end tell
-            end repeat
-        end tell
-        -- Save the titles to file
-        set titlesFilename to outputPath & "/titles.txt"
-        set titlesFile to open for access titlesFilename with write permission
-        write slideTitles to titlesFile
-        close access titlesFile
         -- close presentation
         close front document
     end tell
+    end timeout
 end create_thumbs
---create_thumbs("/Users/tgc/Downloads/keynote-pres.key", "/Users/tgc/Downloads/tmp/")
 
-on start_presentation(documentName, new_top, new_left_pos, new_width, new_height, fullscreen)
+on start_presentation(documentStem, new_top, new_left_pos, new_width, new_height, fullscreen, startingSlide)
+    with timeout of 900 seconds
     tell application "Keynote"
-        if playing is true then tell the front document to stop
-        -- Open document
-        open documentName
-        --start front document from the first slide of front document
-        --activate
-    end tell
-    -- There seems to be no applescript command to start presentation in window mode
-    -- so we that by faking mouse clicks (requires accessability rights)
-    tell application "System Events"
-        tell process "Keynote"
-            click (menu bar item 10 of menu bar 1)
-            click menu item 2 of menu 1 of menu bar item 10 of menu bar 1
-        end tell
-    end tell
-    tell application "Keynote"
-    -- set the size and postion on presentation window
-        if fullscreen is true then
-            -- move window to right screen
-            set bounds of front window to {new_top, new_left_pos, new_width, new_height}
-            -- put it in fullscreen mode
-            tell application "System Events" to tell process "Keynote"
-                set value of attribute "AXFullScreen" of front window to true
-            end tell
-        else
-            set bounds of front window to {new_top, new_left_pos, new_width, new_height}
+        if playing is true then
+            if name of front document is documentStem then
+                set current slide of front document to slide startingSlide of front document
+                return
+            end if
+            tell the front document to stop
         end if
+        repeat with attempt from 1 to 4500
+            if (count of documents) > 0 then
+                if name of front document is documentStem then exit repeat
+            end if
+            delay 0.2
+        end repeat
+        if (count of documents) is 0 then error "Keynote did not import the requested presentation"
+        if name of front document is not documentStem then error "Keynote did not import the requested presentation"
+        start front document from slide startingSlide of front document
         activate
     end tell
+    end timeout
 end start_presentation
---start_presentation("Users:solva_a:Downloads:tomas:applescript:keynote-pres.key", 10, 10, 640, 480, false)
 
 on stop_presentation()
     tell application "Keynote"
@@ -161,10 +152,10 @@ on stop_presentation()
     end tell
 end stop_presentation
 
-on is_loaded(documentPath)
-    set documentOldStylePath to POSIX file documentPath as alias
+on is_loaded(documentStem)
     tell application "Keynote"
-        return (file of front document as string is (documentOldStylePath as string))
+        if (count of documents) is 0 then return false
+        return name of front document is documentStem
     end tell
 end is_loaded
 
@@ -181,8 +172,6 @@ on next_slide()
         --activate
         if playing is false then start front document from the first slide of front document
         show next
-        -- Print(?) slide number
-        slide number
     end tell
 end next_slide
 
@@ -190,8 +179,6 @@ on previous_slide()
     tell application "Keynote"
         if playing is false then start front document from the first slide of front document
         show previous
-        -- Print(?) slide number
-        slide number
     end tell
 end previous_slide
 
@@ -200,15 +187,21 @@ on goto_slide(slideNumber)
         if playing is false then
             start front document from slide slideNumber of front document
         else
-            set the current slide to the first slide whose slide number is slideNumber
+            set current slide of front document to slide slideNumber of front document
         end if
     end tell
 end goto_slide
 
 on get_current_slide()
     tell application "Keynote"
-        -- Print(?) slide number
-        slide number
+        repeat with attempt from 1 to 5
+            try
+                return slide number of current slide of front document
+            on error
+                delay 0.1
+            end try
+        end repeat
+        return 0
     end tell
 end get_current_slide
 
@@ -226,6 +219,35 @@ end blank
 """
 
 
+class _KeynoteStartWorker(QtCore.QThread):
+    """Let large PowerPoint imports finish without blocking OpenLP's UI."""
+
+    def __init__(self, script_source, file_path, stem, application_path, geometry, fullscreen, start_slide):
+        super().__init__()
+        self.script_source = script_source
+        self.file_path = file_path
+        self.stem = stem
+        self.application_path = application_path
+        self.geometry = geometry
+        self.fullscreen = fullscreen
+        self.start_slide = start_slide
+        self.error = None
+
+    def run(self):
+        try:
+            import objc
+            with objc.autorelease_pool():
+                script = applescript.AppleScript(self.script_source)
+                if not script.call('is_loaded', self.stem):
+                    _open_keynote_document(self.file_path, self.application_path)
+                top, left, width, height = self.geometry
+                script.call('start_presentation', self.stem,
+                            top, left, width, height, self.fullscreen, self.start_slide)
+        except Exception as error:
+            self.error = error
+            log.exception('Could not start the Keynote slideshow')
+
+
 class KeynoteController(AppleScriptBaseController):
     """
     Class to control interactions with Keynote.
@@ -240,22 +262,28 @@ class KeynoteController(AppleScriptBaseController):
         """
         log.debug('Initialising')
         super(KeynoteController, self).__init__(plugin, 'Keynote', KeynoteDocument)
+        self.keynote_app = find_keynote_application() if is_macosx() else None
         if APPLESCRIPT_AVAILABLE:
             # Compiled script expected to be set by subclasses
             try:
-                self.applescript = applescript.AppleScript(KEYNOTE_APPLESCRIPT)
+                source = KEYNOTE_APPLESCRIPT
+                if self.keynote_app:
+                    app_path = str(self.keynote_app).replace('\\', '\\\\').replace('"', '\\"')
+                    source = source.replace('application "Keynote"', f'application "{app_path}"')
+                self.applescript = applescript.AppleScript(source)
             except applescript.ScriptError:
                 log.exception('Compilation of Keynote applescript failed')
             self.supports = ['key']
             self.also_supports = ['ppt', 'pps', 'pptx', 'ppsx', 'pptm']
+            self.supports_slide_images = True
 
     def check_available(self):
         """
         Program is able to run on this machine.
         """
-        ret = super().check_available()
+        ret = bool(self.keynote_app and APPLESCRIPT_AVAILABLE)
         if ret:
-            # Powerpoint is available! now check if the version is 10.1 or above
+            # Check that this Keynote version supports the scripting interface.
             try:
                 version = self.applescript.call('get_version')
             except Exception:
@@ -290,16 +318,91 @@ class KeynoteDocument(AppleScriptBaseDocument):
         """
         log.debug('Init Presentation KeynoteDocument')
         super().__init__(controller, document_path)
+        self.starts_at_selected_slide = True
+        self._opening = False
+        self._cancelled = False
+        self._start_worker = None
+
+    def is_loaded(self):
+        """Imported PPTX documents have no file property; Keynote keeps their basename."""
+        if self._opening:
+            return False
+        try:
+            self.presentation_loaded = bool(self.controller.applescript.call('is_loaded', self.file_path.stem))
+        except Exception:
+            log.exception('Could not check whether Keynote opened the presentation')
+            self.presentation_loaded = False
+        return self.presentation_loaded
+
+    def start_presentation(self):
+        """Open and start a native show at the selected slide without freezing OpenLP."""
+        if self._opening:
+            return
+        self._slideshow_started = False
+        size = ScreenList().current.display_geometry
+        fullscreen = ScreenList().current.custom_geometry is None
+        source = KEYNOTE_APPLESCRIPT
+        if self.controller.keynote_app:
+            app_path = str(self.controller.keynote_app).replace('\\', '\\\\').replace('"', '\\"')
+            source = source.replace('application "Keynote"', f'application "{app_path}"')
+        self._cancelled = False
+        self._opening = True
+        self._start_worker = _KeynoteStartWorker(
+            source, str(self.file_path), self.file_path.stem, self.controller.keynote_app,
+            (size.top(), size.left(), size.width(), size.height()), fullscreen,
+            max(1, int(self.ui_slidenumber)))
+        self._start_worker.finished.connect(self._finish_start_presentation)
+        self._start_worker.start()
+
+    def _finish_start_presentation(self):
+        worker = self._start_worker
+        self._opening = False
+        self._start_worker = None
+        if worker.error:
+            self.presentation_loaded = False
+            return
+        if self._cancelled:
+            try:
+                if self.controller.applescript.call('is_loaded', self.file_path.stem):
+                    self.controller.applescript.call('stop_presentation')
+            except Exception:
+                log.exception('Could not close a cancelled Keynote slideshow')
+            return
+        self._slideshow_started = True
+        self.presentation_loaded = True
+        if self.ui_slidenumber != worker.start_slide:
+            self.goto_slide(self.ui_slidenumber)
+
+    def is_active(self):
+        if self._opening:
+            return False
+        return super().is_active()
+
+    def close_presentation(self):
+        self._cancelled = True
+        super().close_presentation()
         self.presentation_loaded = False
-        self.is_blank = False
+        self.is_blanked = False
 
     def load_presentation(self):
-        ret = super().load_presentation()
+        thumbnail_folder = self.get_thumbnail_folder()
+        if not any(thumbnail_folder.iterdir()):
+            try:
+                _open_keynote_document(self.file_path, self.controller.keynote_app)
+                self.controller.applescript.call('create_thumbs', self.file_path.stem, str(thumbnail_folder))
+                self.presentation_loaded = True
+            except Exception:
+                log.exception('Could not export presentation slides from Keynote')
+                self.presentation_loaded = False
+        else:
+            self.presentation_loaded = True
+        ret = self.presentation_loaded
         if ret:
             # Keynote will name the thumbnails in the format: <sha256>.001.png, we need to convert to slide1.png
             old_images = list(self.get_thumbnail_folder().glob('*.png'))
             # if the convertion was already done, don't do it again
             if self.get_thumbnail_folder() / 'slide1.png' in old_images:
+                self.slide_count = len(list(self.get_thumbnail_folder().glob('slide[0-9]*.png')))
                 return True
             self.slide_count = len(old_images)
             for old_image in old_images:
@@ -310,3 +413,15 @@ class KeynoteDocument(AppleScriptBaseDocument):
                 new_name = 'slide' + number_name
                 shutil.move(old_image, self.get_thumbnail_folder() / new_name)
         return ret
+
+    def create_slide_images(self):
+        """Use Keynote's exported slide images as OpenLP display images."""
+        sources = []
+        number = 1
+        while True:
+            source = self.get_thumbnail_path(number, True)
+            if source is None:
+                break
+            sources.append(source)
+            number += 1
+        return self.save_slide_images_from_sources(sources)

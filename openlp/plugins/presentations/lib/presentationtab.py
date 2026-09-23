@@ -24,6 +24,7 @@ from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.settingstab import SettingsTab
 
+
 class PresentationTab(SettingsTab):
     """
     PresentationsTab is the Presentations settings tab in the settings dialog.
@@ -62,6 +63,9 @@ class PresentationTab(SettingsTab):
         self.override_app_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
         self.override_app_check_box.setObjectName('override_app_check_box')
         self.advanced_layout.addWidget(self.override_app_check_box)
+        self.render_slide_images_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
+        self.render_slide_images_check_box.setObjectName('render_slide_images_check_box')
+        self.advanced_layout.addWidget(self.render_slide_images_check_box)
         self.left_layout.addWidget(self.advanced_group_box)
         # PowerPoint
         self.powerpoint_group_box = QtWidgets.QGroupBox(self.left_column)
@@ -102,6 +106,9 @@ class PresentationTab(SettingsTab):
         self.powerpoint_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'PowerPoint options'))
         self.override_app_check_box.setText(
             translate('PresentationPlugin.PresentationTab', 'Allow presentation application to be overridden'))
+        self.render_slide_images_check_box.setText(
+            translate('PresentationPlugin.PresentationTab',
+                      'Show presentation slides in OpenLP+ (animations and videos will not play)'))
         self.ppt_slide_click_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Clicking on the current slide advances to the next effect'))
@@ -126,6 +133,7 @@ class PresentationTab(SettingsTab):
         Load the settings.
         """
         powerpoint_available = False
+        powerpoint_mac_available = False
         impress_available = False
         for key in self.controllers:
             controller = self.controllers[key]
@@ -133,10 +141,14 @@ class PresentationTab(SettingsTab):
             checkbox.setChecked(self.settings.value('presentations/' + controller.name) == QtCore.Qt.CheckState.Checked)
             if controller.name == 'Powerpoint' and controller.is_available():
                 powerpoint_available = True
+            if controller.name == 'PowerPointMac' and controller.is_available():
+                powerpoint_mac_available = True
             if controller.name == 'Impress' and controller.is_available():
                 impress_available = True
         self.override_app_check_box.setChecked(
             self.settings.value('presentations/override app') == QtCore.Qt.CheckState.Checked)
+        self.render_slide_images_check_box.setChecked(
+            self.settings.value('presentations/render slide images') == QtCore.Qt.CheckState.Checked)
         # Load PowerPoint settings
         self.ppt_slide_click_check_box.setChecked(
             self.settings.value('presentations/powerpoint slide click advance') == QtCore.Qt.CheckState.Checked)
@@ -172,6 +184,10 @@ class PresentationTab(SettingsTab):
         setting_key = 'presentations/override app'
         if self.settings.value(setting_key) != self.override_app_check_box.checkState():
             self.settings.setValue(setting_key, self.override_app_check_box.checkState())
+            changed = True
+        setting_key = 'presentations/render slide images'
+        if self.settings.value(setting_key) != self.render_slide_images_check_box.checkState():
+            self.settings.setValue(setting_key, self.render_slide_images_check_box.checkState())
             changed = True
         # Save powerpoint settings
         setting_key = 'presentations/powerpoint slide click advance'

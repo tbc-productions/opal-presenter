@@ -19,6 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 import logging
+import json
 import shutil
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from openlp.core.common import Singleton, sha256_file_hash
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.path import create_paths
 from openlp.core.common.registry import Registry
+from openlp.core.display.screens import ScreenList
 from openlp.core.lib import create_thumb
 
 
@@ -293,6 +295,53 @@ class PresentationDocument(object):
         else:
             return None
 
+    def get_slide_image_paths(self):
+        """Return a complete screen-sized image cache, or an empty list.
+
+        The manifest is written last so an interrupted export is never mistaken for
+        a usable presentation. The source hash is already part of the folder path.
+        """
+        folder = self.get_temp_folder()
+        try:
+            manifest = json.loads((folder / 'slide_images.json').read_text(encoding='utf-8'))
+            size = ScreenList().current.display_geometry.size()
+            if manifest['size'] != [size.width(), size.height()]:
+                return []
+            count = manifest['count']
+            if not isinstance(count, int) or count < 1:
+                return []
+            paths = [folder / f'mainslide{number:03d}.png' for number in range(1, count + 1)]
+            return paths if all(path.is_file() for path in paths) else []
+        except (OSError, ValueError, KeyError, TypeError):
+            return []
+
+    def invalidate_slide_images(self):
+        (self.get_temp_folder() / 'slide_images.json').unlink(missing_ok=True)
+
+    def save_slide_images_from_sources(self, sources):
+        """Copy already exported slide PNGs into the OpenLP image cache."""
+        if not sources or not all(path.is_file() for path in sources):
+            return False
+        self.invalidate_slide_images()
+        folder = self.get_temp_folder()
+        folder.mkdir(parents=True, exist_ok=True)
+        for number, source in enumerate(sources, 1):
+            shutil.copyfile(source, folder / f'mainslide{number:03d}.png')
+        self.save_slide_image_manifest(len(sources))
+        return True
+
+    def save_slide_image_manifest(self, count):
+        """Publish a finished set of full-size slide images."""
+        size = ScreenList().current.display_geometry.size()
+        folder = self.get_temp_folder()
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / 'slide_images.json').write_text(
+            json.dumps({'count': count, 'size': [size.width(), size.height()]}), encoding='utf-8')
+
+    def create_slide_images(self):
+        """Export full-size slides for OpenLP's own display. Native controllers override this."""
+        return False
+
     def poll_slidenumber(self, is_live, hide_mode):
         """
         Check the current slide number
@@ -505,6 +554,7 @@ class PresentationController(object):
         self.temp_folder = AppLocation.get_section_data_path('presentations') / name
         self.thumbnail_folder = AppLocation.get_section_data_path('presentations') / 'thumbnails'
         self.thumbnail_prefix = 'slide'
+        self.supports_slide_images = False
         create_paths(self.thumbnail_folder, self.temp_folder)
 
     def enabled(self):

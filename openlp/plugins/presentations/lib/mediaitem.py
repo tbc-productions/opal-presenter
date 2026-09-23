@@ -29,7 +29,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, build_icon, create_thumb, validate_thumb
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, create_widget_action, critical_error_message_box
+from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
 from openlp.core.widgets.views import FileTreeWidgetItem
@@ -264,6 +264,17 @@ class PresentationMediaItem(FolderLibraryItem):
                     doc.presentation_deleted()
                 doc.close_presentation()
 
+    def should_render_as_images(self, file_path, processor=None):
+        """Whether a presentation should use OpenLP's image display."""
+        if file_path.suffix.lower()[1:] in PDF_CONTROLLER_FILETYPES:
+            return True
+        if self.settings.value('presentations/render slide images') != QtCore.Qt.CheckState.Checked:
+            return False
+        if not processor or processor == self.automatic:
+            processor = self.find_controller_by_type(file_path)
+        controller = self.controllers.get(processor)
+        return bool(controller and controller.supports_slide_images)
+
     def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
                             file_path=None, **kwargs):
         """
@@ -301,7 +312,12 @@ class PresentationMediaItem(FolderLibraryItem):
         if not self.display_type_combo_box.currentText():
             return False
         service_item.add_capability(ItemCapabilities.CanEditTitle)
-        if file_type in PDF_CONTROLLER_FILETYPES:
+        selected_processor = item.processor if isinstance(item, ServiceItem) else None
+        if not selected_processor and self.display_type_combo_box.itemData(self.display_type_combo_box.currentIndex()) \
+                != 'automatic':
+            selected_processor = self.display_type_combo_box.currentText()
+        render_as_images = self.should_render_as_images(file_path, selected_processor)
+        if render_as_images:
             service_item.add_capability(ItemCapabilities.CanMaintain)
             service_item.add_capability(ItemCapabilities.CanPreview)
             service_item.add_capability(ItemCapabilities.CanLoop)
@@ -364,40 +380,59 @@ class PresentationMediaItem(FolderLibraryItem):
                             )
                         return False
 
-                    processor = self.find_controller_by_type(file_path)
+                    processor = selected_processor if selected_processor in self.controllers else \
+                        self.find_controller_by_type(file_path)
                     if not processor:
                         return False
                     controller = self.controllers[processor]
                     service_item.processor = None
                     doc = controller.add_document(file_path)
-                    if doc.get_thumbnail_path(1, True) is None or \
-                            not (doc.get_temp_folder() / 'mainslide001.png').is_file():
-                        doc.load_presentation()
-                    i = 1
-                    image_path = doc.get_temp_folder() / 'mainslide{number:0>3d}.png'.format(number=i)
-                    thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
-                    while image_path.is_file():
-                        service_item.add_from_image(image_path, display_name, thumbnail=thumbnail_path)
-                        # Hint the display layer to use Reveal background images so fade transitions cross-fade natively.
-                        service_item.slides[-1]['use_background_image'] = True
-                        service_item.slides[-1]['pdf_transition_enabled'] = bool(
-                            service_item.pdf_transition_settings.get('enabled', False)
-                        )
-                        service_item.slides[-1]['pdf_transition_effect'] = service_item.pdf_transition_settings.get(
-                            'effect', TransitionType.Fade
-                        )
-                        service_item.slides[-1]['pdf_transition_speed_seconds'] = \
-                            service_item.pdf_transition_settings.get('speed_seconds', 0.8)
-                        service_item.slides[-1]['pdf_transition_easing'] = service_item.pdf_transition_settings.get(
-                            'easing', 'balanced'
-                        )
-                        i += 1
-                        image_path = doc.get_temp_folder() / 'mainslide{number:0>3d}.png'.format(number=i)
-                        thumbnail_path = doc.get_thumbnail_folder() / 'slide{number:d}.png'.format(number=i)
-                    service_item.add_capability(ItemCapabilities.HasThumbnails)
-                    doc.close_presentation()
-                    service_item.validate_item()
-                    return True
+                    try:
+                        if file_type in PDF_CONTROLLER_FILETYPES:
+                            if doc.get_thumbnail_path(1, True) is None or \
+                                    not (doc.get_temp_folder() / 'mainslide001.png').is_file():
+                                if not doc.load_presentation():
+                                    return False
+                            image_paths = []
+                            i = 1
+                            while (doc.get_temp_folder() / f'mainslide{i:03d}.png').is_file():
+                                image_paths.append(doc.get_temp_folder() / f'mainslide{i:03d}.png')
+                                i += 1
+                        else:
+                            image_paths = doc.get_slide_image_paths()
+                            if not image_paths:
+                                if not doc.load_presentation() or not doc.create_slide_images():
+                                    return False
+                                image_paths = doc.get_slide_image_paths()
+                        if not image_paths:
+                            return False
+                        titles, notes = ([], []) if file_type in PDF_CONTROLLER_FILETYPES else \
+                            doc.get_titles_and_notes()
+                        for i, image_path in enumerate(image_paths, 1):
+                            thumbnail_path = doc.get_thumbnail_path(i, True) or image_path
+                            service_item.add_from_image(image_path, display_name, thumbnail=thumbnail_path)
+                            if i <= len(titles):
+                                service_item.slides[-1]['display_title'] = titles[i - 1]
+                            if i <= len(notes):
+                                service_item.slides[-1]['notes'] = notes[i - 1]
+                            # Use Reveal background images so fade transitions cross-fade natively.
+                            service_item.slides[-1]['use_background_image'] = True
+                            service_item.slides[-1]['pdf_transition_enabled'] = bool(
+                                service_item.pdf_transition_settings.get('enabled', False)
+                            )
+                            service_item.slides[-1]['pdf_transition_effect'] = service_item.pdf_transition_settings.get(
+                                'effect', TransitionType.Fade
+                            )
+                            service_item.slides[-1]['pdf_transition_speed_seconds'] = \
+                                service_item.pdf_transition_settings.get('speed_seconds', 0.8)
+                            service_item.slides[-1]['pdf_transition_easing'] = service_item.pdf_transition_settings.get(
+                                'easing', 'balanced'
+                            )
+                        service_item.add_capability(ItemCapabilities.HasThumbnails)
+                        service_item.validate_item()
+                        return True
+                    finally:
+                        doc.close_presentation()
                 else:
                     # File is no longer present
                     if not remote:
@@ -411,8 +446,9 @@ class PresentationMediaItem(FolderLibraryItem):
             service_item.add_capability(ItemCapabilities.ProvidesOwnDisplay)
             for bitem in items:
                 file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
-                source_file_name = bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
-                display_file_name = Path(source_file_name).stem
+                library_name = bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).name or file_path.name
+                display_file_name = Path(library_name).stem
+                source_file_name = file_path.name
                 path = file_path.parent
                 service_item.title = display_file_name
                 if file_path.exists():
@@ -433,6 +469,7 @@ class PresentationMediaItem(FolderLibraryItem):
                             if notes.count('') != len(notes):
                                 service_item.add_capability(ItemCapabilities.HasNotes)
                             service_item.add_capability(ItemCapabilities.HasThumbnails)
+                            file_hash = doc.get_sha256_file_hash()
                             while thumbnail_path:
                                 # Use title and note if available
                                 title = ''
@@ -442,11 +479,11 @@ class PresentationMediaItem(FolderLibraryItem):
                                 if notes and len(notes) >= i:
                                     note = notes[i - 1]
                                 service_item.add_from_command(str(path), source_file_name, thumbnail_path, title, note,
-                                                              doc.get_sha256_file_hash())
+                                                              file_hash, validate=False)
                                 i += 1
                                 thumbnail_path = doc.get_thumbnail_path(i, True)
                             doc.close_presentation()
-                            service_item.validate_item()
+                            service_item._new_item()
                             return True
                         else:
                             # File is no longer present

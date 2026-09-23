@@ -71,6 +71,7 @@ class MacLOController(PresentationController, LogMixin):
         self.also_supports = ['ppt', 'pps', 'pptx', 'ppsx', 'pptm']
         self.server_process = None
         self._client = None
+        self.supports_slide_images = True
         self._start_server()
 
     def _start_server(self):
@@ -159,6 +160,15 @@ class MacLODocument(PresentationDocument):
             temp_thumb = Path(temp_thumb)
             self.convert_thumbnail(temp_thumb, index + 1)
             delete_file(temp_thumb)
+
+    def create_slide_images(self):
+        """Use LibreOffice's PNG export for OpenLP's image display."""
+        sources = [Path(path) for path in self.client.extract_thumbnails(str(self.get_temp_folder()))]
+        try:
+            return self.save_slide_images_from_sources(sources)
+        finally:
+            for source in sources:
+                delete_file(source)
 
     def create_titles_and_notes(self):
         """

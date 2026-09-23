@@ -321,6 +321,18 @@ function _applyFullscreenBackgroundImage(section, backgroundColor, imageUrl, fit
   section.setAttribute("data-background-repeat", fit.repeat);
   section.setAttribute("data-background-position", fit.position);
   section.removeAttribute("data-background");
+  // Reveal copies these attributes into a separate background element during
+  // sync. Reused sections need that element updated too, or the old image
+  // (often the startup splash) remains visible until another sync occurs.
+  var background = section.slideBackgroundElement;
+  var content = section.slideBackgroundContentElement;
+  if (background && content) {
+    background.style.backgroundColor = backgroundColor || "#000";
+    content.style.backgroundImage = imageUrl ? "url(" + JSON.stringify(imageUrl) + ")" : "";
+    content.style.backgroundSize = fit.size;
+    content.style.backgroundRepeat = fit.repeat;
+    content.style.backgroundPosition = fit.position;
+  }
 }
 
 /**
@@ -996,17 +1008,18 @@ var Display = {
   setFullscreenImage: function(bg_color, image) {
     Display._setPresentationSlideTransition(false);
     var fit = _resolveBackgroundFit((Display._theme && Display._theme.background_fit) || "cover");
+    var imageUrl = Display._getFileUrl(image);
     var existingSection = Display._getReusableFullscreenSection();
     if (existingSection) {
       existingSection.setAttribute("data-background", bg_color);
-      _applyFullscreenBackgroundImage(existingSection, bg_color, image, fit);
+      _applyFullscreenBackgroundImage(existingSection, bg_color, imageUrl, fit);
       return;
     }
     Display.clearSlides();
     var section = document.createElement("section");
     section.setAttribute("id", 0);
     section.setAttribute("data-background", bg_color);
-    _applyFullscreenBackgroundImage(section, bg_color, image, fit);
+    _applyFullscreenBackgroundImage(section, bg_color, imageUrl, fit);
     Display._slides['0'] = 0;
     Display.replaceSlides(section);
   },

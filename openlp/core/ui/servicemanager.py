@@ -3076,10 +3076,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.preview_controller.add_service_manager_item(
                     self.service_items[item]['service_item'], child, service_list_index=item)
             else:
-                critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),
+                critical_error_message_box(translate('OpenLP.ServiceManager', 'Unavailable Service Item'),
                                            translate('OpenLP.ServiceManager',
-                                                     'Your item cannot be displayed as there is no handler to display '
-                                                     'it'))
+                                                     'This item cannot be displayed because its source file is missing '
+                                                     'or its display handler is unavailable.'))
         finally:
             self.application.set_normal_cursor()
 
@@ -3147,10 +3147,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         self.service_items[item]['service_item'], 0, service_list_index=item)
                     self.live_controller.preview_widget.setFocus()
         else:
-            critical_error_message_box(translate('OpenLP.ServiceManager', 'Missing Display Handler'),
+            critical_error_message_box(translate('OpenLP.ServiceManager', 'Unavailable Service Item'),
                                        translate('OpenLP.ServiceManager',
-                                                 'Your item cannot be displayed as the plugin required to display it '
-                                                 'is missing or inactive'))
+                                                 'This item cannot be displayed because its source file is missing '
+                                                 'or its display handler is unavailable.'))
         self.application.set_normal_cursor()
 
     def remote_edit(self):

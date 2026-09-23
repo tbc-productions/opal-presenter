@@ -495,6 +495,20 @@ def test_mainwindow_configuration(main_window):
     assert 'settings' in Registry().service_list, 'The settings should have been registered.'
 
 
+def test_escape_hides_native_show_even_when_openlp_display_is_hidden():
+    from openlp.core.ui import HideMode
+
+    main_window = MagicMock()
+    live = main_window.live_controller
+    live.display.isVisible.return_value = False
+    live.current_hide_mode = None
+    with patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
+            patch.object(QtWidgets.QApplication, 'focusWidget', return_value=None):
+        MainWindow._on_escape_hide_presentation_from_main(main_window)
+
+    live.set_hide_mode.assert_called_once_with(HideMode.Screen)
+
+
 def test_projector_manager_hidden_on_startup(main_window):
     """
     Test that the projector manager is hidden on startup
