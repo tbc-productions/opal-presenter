@@ -3,6 +3,8 @@
 import ctypes
 import logging
 import subprocess
+import sys
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -17,6 +19,64 @@ _PERMISSIONS = (
     ('Screen Recording', 'CGPreflightScreenCaptureAccess', 'CGRequestScreenCaptureAccess',
      'Privacy_ScreenCapture'),
 )
+
+
+def _running_app_bundle():
+    """Find the app bundle containing this process, if OpenLP+ was launched as an app."""
+    executable = Path(sys.executable).absolute()
+    for parent in executable.parents:
+        if (parent.name == 'OpenLP+.app' and executable.parent == parent / 'Contents' / 'MacOS' and
+                (parent / 'Contents' / 'Info.plist').is_file()):
+            return parent
+    return None
+
+
+class _DraggableAppIcon(QtWidgets.QLabel):
+    """Provide the running app bundle as a Finder-compatible file drag."""
+
+    def __init__(self, bundle, parent):
+        super().__init__(parent)
+        self.bundle = bundle
+        self._drag_start_pos = None
+        icon_file = bundle / 'Contents' / 'Resources' / 'OpenLP.icns'
+        icon = (QtGui.QIcon(str(icon_file)) if icon_file.is_file() else
+                QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(str(bundle))))
+        self.setPixmap(icon.pixmap(64, 64))
+        self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setFixedSize(92, 92)
+        self.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+        self.setToolTip(translate('OpenLP.MacPermissions', 'Drag OpenLP+ into Accessibility Settings'))
+        self.setAccessibleName(translate('OpenLP.MacPermissions', 'Drag OpenLP+ app'))
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (self._drag_start_pos is None or
+                not event.buttons() & QtCore.Qt.MouseButton.LeftButton or
+                (event.pos() - self._drag_start_pos).manhattanLength() <
+                QtWidgets.QApplication.startDragDistance()):
+            super().mouseMoveEvent(event)
+            return
+        self._drag_start_pos = None
+        drag = QtGui.QDrag(self)
+        mime_data = QtCore.QMimeData()
+        mime_data.setUrls([QtCore.QUrl.fromLocalFile(str(self.bundle))])
+        drag.setMimeData(mime_data)
+        drag.setPixmap(self.pixmap())
+        drag.setHotSpot(QtCore.QPoint(self.pixmap().width() // 2, self.pixmap().height() // 2))
+        self.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
+        try:
+            drag.exec(QtCore.Qt.DropAction.CopyAction)
+        finally:
+            self.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
 
 
 def _open_privacy_settings(anchor):
@@ -91,6 +151,21 @@ def request_presentation_permissions(parent):
             translate('OpenLP.MacPermissions', 'Open {name} Settings').format(name=label), dialog)
         button.clicked.connect(lambda checked=False, anchor=anchor: _open_privacy_settings(anchor))
         layout.addWidget(button)
+
+    if any(label == 'Accessibility' for label, _, _, _ in missing):
+        bundle = _running_app_bundle()
+        if bundle:
+            drag_instruction = QtWidgets.QLabel(
+                translate('OpenLP.MacPermissions',
+                          'Drag this OpenLP+ icon into the Accessibility list in System Settings, '
+                          'then switch its permission on.'), dialog)
+            drag_instruction.setWordWrap(True)
+            layout.addWidget(drag_instruction)
+            icon_row = QtWidgets.QHBoxLayout()
+            icon_row.addStretch()
+            icon_row.addWidget(_DraggableAppIcon(bundle, dialog))
+            icon_row.addStretch()
+            layout.addLayout(icon_row)
 
     done_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Done'), dialog)
     done_button.clicked.connect(dialog.accept)
