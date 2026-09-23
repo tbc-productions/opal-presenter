@@ -1,9 +1,11 @@
 from unittest.mock import MagicMock, patch
+import sys
 
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.mac_permissions import (
-    _DraggableAppIcon, _open_privacy_settings, _running_app_bundle, request_presentation_permissions)
+    _DraggableFileIcon, _accessibility_drag_target, _open_privacy_settings, _running_app_bundle,
+    request_presentation_permissions)
 
 
 def test_running_app_bundle_uses_the_current_executable(tmp_path):
@@ -14,17 +16,34 @@ def test_running_app_bundle_uses_the_current_executable(tmp_path):
 
     with patch('openlp.core.common.mac_permissions.sys.executable', str(executable)):
         assert _running_app_bundle() == bundle
-    python_executable = tmp_path / 'Python.app' / 'Contents' / 'MacOS' / 'Python'
+    python_bundle = tmp_path / 'Python.app'
+    (python_bundle / 'Contents' / 'MacOS').mkdir(parents=True)
+    (python_bundle / 'Contents' / 'Info.plist').touch()
+    python_executable = python_bundle / 'Contents' / 'MacOS' / 'Python'
     with patch('openlp.core.common.mac_permissions.sys.executable', str(python_executable)):
-        assert _running_app_bundle() is None
+        assert _running_app_bundle() == python_bundle
 
 
-def test_app_icon_drag_contains_the_app_bundle_file_url(tmp_path):
+def test_development_drag_target_resolves_the_actual_python_executable(tmp_path):
+    executable = tmp_path / 'python3.14'
+    executable.touch()
+    launcher = tmp_path / 'venv' / 'bin' / 'python'
+    launcher.parent.mkdir(parents=True)
+    launcher.symlink_to(executable)
+
+    with patch('openlp.core.common.mac_permissions.sys.executable', str(launcher)):
+        target, label = _accessibility_drag_target()
+
+    assert target == executable
+    assert label == f'Python {sys.version_info.major}.{sys.version_info.minor}'
+
+
+def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
     bundle = tmp_path / 'OpenLP+.app'
     bundle.mkdir()
-    icon = _DraggableAppIcon(bundle, None)
+    icon = _DraggableFileIcon(bundle, 'OpenLP+.app', None)
     icon._drag_start_pos = QtCore.QPoint(0, 0)
     event = MagicMock()
     event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
@@ -93,7 +112,7 @@ def test_missing_permissions_offer_native_request_and_system_settings():
     parent.close()
 
 
-def test_accessibility_dialog_offers_drag_only_when_running_as_app(tmp_path):
+def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     graphics = MagicMock()
     graphics.CGPreflightPostEventAccess.return_value = False
     graphics.CGPreflightScreenCaptureAccess.return_value = True
@@ -102,25 +121,34 @@ def test_accessibility_dialog_offers_drag_only_when_running_as_app(tmp_path):
     parent = QtWidgets.QWidget()
     bundle = tmp_path / 'OpenLP+.app'
     bundle.mkdir()
+    interpreter = tmp_path / 'python3.14'
+    interpreter.touch()
     offered_icons = []
+    source_notes = []
 
     def inspect_dialog():
         dialog = next(widget for widget in QtWidgets.QApplication.topLevelWidgets()
                       if isinstance(widget, QtWidgets.QDialog))
-        offered_icons.append(dialog.findChildren(_DraggableAppIcon))
+        offered_icons.append(dialog.findChildren(_DraggableFileIcon))
+        source_notes.append([label.text() for label in dialog.findChildren(QtWidgets.QLabel)
+                             if 'This development run' in label.text()])
         dialog.accept()
 
     with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
             patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
-            patch('openlp.core.common.mac_permissions._running_app_bundle', side_effect=[bundle, None]):
+            patch('openlp.core.common.mac_permissions._accessibility_drag_target',
+                  side_effect=[(bundle, 'OpenLP+.app'), (interpreter, 'Python 3.14')]):
         QtCore.QTimer.singleShot(0, inspect_dialog)
         request_presentation_permissions(parent)
         QtCore.QTimer.singleShot(0, inspect_dialog)
         request_presentation_permissions(parent)
 
     assert len(offered_icons[0]) == 1
-    assert offered_icons[0][0].bundle == bundle
-    assert offered_icons[1] == []
+    assert offered_icons[0][0].file_path == bundle
+    assert len(offered_icons[1]) == 1
+    assert offered_icons[1][0].file_path == interpreter
+    assert source_notes[0] == []
+    assert str(interpreter) in source_notes[1][0]
     parent.close()
 
 

@@ -22,32 +22,46 @@ _PERMISSIONS = (
 
 
 def _running_app_bundle():
-    """Find the app bundle containing this process, if OpenLP+ was launched as an app."""
+    """Find the app bundle containing the current executable, if there is one."""
     executable = Path(sys.executable).absolute()
     for parent in executable.parents:
-        if (parent.name == 'OpenLP+.app' and executable.parent == parent / 'Contents' / 'MacOS' and
+        if (parent.suffix == '.app' and executable.parent == parent / 'Contents' / 'MacOS' and
                 (parent / 'Contents' / 'Info.plist').is_file()):
             return parent
     return None
 
 
-class _DraggableAppIcon(QtWidgets.QLabel):
-    """Provide the running app bundle as a Finder-compatible file drag."""
+def _accessibility_drag_target():
+    """Return the app bundle or the real interpreter used for a source launch."""
+    bundle = _running_app_bundle()
+    if bundle:
+        return bundle, bundle.name
+    executable = Path(sys.executable).resolve()
+    if executable.is_file():
+        label = translate('OpenLP.MacPermissions', 'Python {version}').format(
+            version=f'{sys.version_info.major}.{sys.version_info.minor}')
+        return executable, label
+    return None, None
 
-    def __init__(self, bundle, parent):
+
+class _DraggableFileIcon(QtWidgets.QLabel):
+    """Provide the current app or interpreter as a Finder-compatible file drag."""
+
+    def __init__(self, file_path, label, parent):
         super().__init__(parent)
-        self.bundle = bundle
+        self.file_path = file_path
         self._drag_start_pos = None
-        icon_file = bundle / 'Contents' / 'Resources' / 'OpenLP.icns'
+        icon_file = file_path / 'Contents' / 'Resources' / 'OpenLP.icns'
         icon = (QtGui.QIcon(str(icon_file)) if icon_file.is_file() else
-                QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(str(bundle))))
+                QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(str(file_path))))
         self.setPixmap(icon.pixmap(64, 64))
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.setFixedSize(92, 92)
         self.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
-        self.setToolTip(translate('OpenLP.MacPermissions', 'Drag OpenLP+ into Accessibility Settings'))
-        self.setAccessibleName(translate('OpenLP.MacPermissions', 'Drag OpenLP+ app'))
+        self.setToolTip(translate('OpenLP.MacPermissions', 'Drag {name} into Accessibility Settings').format(
+            name=label))
+        self.setAccessibleName(translate('OpenLP.MacPermissions', 'Drag {name}').format(name=label))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -64,7 +78,7 @@ class _DraggableAppIcon(QtWidgets.QLabel):
         self._drag_start_pos = None
         drag = QtGui.QDrag(self)
         mime_data = QtCore.QMimeData()
-        mime_data.setUrls([QtCore.QUrl.fromLocalFile(str(self.bundle))])
+        mime_data.setUrls([QtCore.QUrl.fromLocalFile(str(self.file_path))])
         drag.setMimeData(mime_data)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(QtCore.QPoint(self.pixmap().width() // 2, self.pixmap().height() // 2))
@@ -108,7 +122,7 @@ def request_presentation_permissions(parent):
 
     dialog = QtWidgets.QDialog(parent)
     dialog.setWindowTitle(translate('OpenLP.MacPermissions', 'Presentation permissions'))
-    dialog.setMinimumWidth(440)
+    dialog.setMinimumWidth(560)
     layout = QtWidgets.QVBoxLayout(dialog)
     explanation = QtWidgets.QLabel(dialog)
     explanation.setWordWrap(True)
@@ -117,7 +131,7 @@ def request_presentation_permissions(parent):
         'OpenLP+ needs Accessibility to send slide numbers to PowerPoint and Screen Recording to show the '
         'presentation in its Live area. macOS may not show another alert if you denied access earlier. '
         'You can enable the missing access in System Settings > Privacy & Security. '
-        'If OpenLP+ is not listed, use the + button to add the app or the launcher you use to run it. '
+        'If the program shown below is not listed, use the + button to add it. '
         'Restart OpenLP+ after changing permissions.'))
     layout.addWidget(explanation)
 
@@ -129,6 +143,7 @@ def request_presentation_permissions(parent):
 
     status = QtWidgets.QLabel(dialog)
     status.setWordWrap(True)
+    status.hide()
     layout.addWidget(status)
 
     request_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Ask macOS for Access'), dialog)
@@ -142,6 +157,8 @@ def request_presentation_permissions(parent):
                     log.exception('Could not request macOS %s permission', label)
         status.setText(translate('OpenLP.MacPermissions',
                                  'If no macOS alert appeared, use the System Settings buttons below.'))
+        request_button.hide()
+        status.show()
 
     request_button.clicked.connect(ask_macos)
     layout.addWidget(request_button)
@@ -153,19 +170,25 @@ def request_presentation_permissions(parent):
         layout.addWidget(button)
 
     if any(label == 'Accessibility' for label, _, _, _ in missing):
-        bundle = _running_app_bundle()
-        if bundle:
+        target, target_name = _accessibility_drag_target()
+        if target:
             drag_instruction = QtWidgets.QLabel(
                 translate('OpenLP.MacPermissions',
-                          'Drag this OpenLP+ icon into the Accessibility list in System Settings, '
-                          'then switch its permission on.'), dialog)
+                          'Drag {name} into the Accessibility list in System Settings, '
+                          'then switch its permission on.').format(name=target_name), dialog)
             drag_instruction.setWordWrap(True)
             layout.addWidget(drag_instruction)
-            icon_row = QtWidgets.QHBoxLayout()
-            icon_row.addStretch()
-            icon_row.addWidget(_DraggableAppIcon(bundle, dialog))
-            icon_row.addStretch()
-            layout.addLayout(icon_row)
+            layout.addWidget(_DraggableFileIcon(target, target_name, dialog),
+                             alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
+            layout.addSpacing(12)
+            if target.suffix != '.app':
+                source_note = QtWidgets.QLabel(
+                    translate('OpenLP.MacPermissions',
+                              'This development run uses the Python executable at {path}. '
+                              'If dragging does not add it, use + and select this file.').format(path=target), dialog)
+                source_note.setWordWrap(True)
+                source_note.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
+                layout.addWidget(source_note)
 
     done_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Done'), dialog)
     done_button.clicked.connect(dialog.accept)
