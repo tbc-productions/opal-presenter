@@ -33,7 +33,7 @@ from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtCore import QUrl
 
 from openlp.core.common.mixins import LogMixin
-from openlp.core.common.platform import is_macosx, is_win
+from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.display.window import DisplayWindow
 from openlp.core.ui.slidecontroller import SlideController
@@ -93,19 +93,14 @@ class MediaPlayer(MediaBase, LogMixin):
         self.controller = controller
         self.display = display
         if controller.is_live:
-            # Create media widget as a top-level window with tool window flags
-            # This ensures it renders on the presentation display and stays visible
-            # when OpenLP loses focus (due to WindowStaysOnTopHint)
+            # Keep video independent of the main window, with the same stacking policy as the live display.
             controller.media_widget = QtWidgets.QWidget(None)
-            controller.media_widget.setWindowFlags(
-                QtCore.Qt.WindowType.FramelessWindowHint
-                | QtCore.Qt.WindowType.Tool
-                | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-            controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_X11NetWmWindowTypeDialog)
-            # On macOS, Tool windows are hidden when the app is deactivated unless this is set.
-            # Matches the same attribute used on DisplayWindow.
-            if is_macosx():
-                controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+            flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Window
+            main_window = Registry().get('main_window')
+            if self.settings.value('core/always on top') and \
+                    not getattr(main_window, '_projection_topmost_suspended', False):
+                flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
+            controller.media_widget.setWindowFlags(flags)
             # Prevent the media widget from stealing focus when shown
             controller.media_widget.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         else:

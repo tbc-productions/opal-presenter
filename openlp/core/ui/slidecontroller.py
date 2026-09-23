@@ -31,7 +31,7 @@ from openlp.core.common import SlideLimits
 from openlp.core.common.actions import ActionList, CategoryOrder
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
-from openlp.core.common.platform import is_wayland_compositor
+from openlp.core.common.platform import is_macosx, is_wayland_compositor
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
@@ -152,9 +152,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         for screen in self.screens:
             if screen.is_display:
                 will_start_hidden = self._current_hide_mode == HideMode.Screen
-                display = DisplayWindow(self, screen, start_hidden=will_start_hidden,
+                display = DisplayWindow(None, screen, start_hidden=will_start_hidden,
                                         after_loaded_callback=self._display_after_loaded_callback,
                                         window_title='Live Screen' if self.is_live else 'Preview Screen')
+                switch_action = getattr(self.main_window, 'view_switch_projection_item', None)
+                if isinstance(switch_action, QtGui.QAction):
+                    display.addAction(switch_action)
                 self.displays.append(display)
                 self._reset_blank(False)
         if self.display:
@@ -276,6 +279,14 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        can_shortcuts=True, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut,
                                        category=self.category, triggers=self.on_slide_selected_next_action)
         self.toolbar.addAction(self.next_item)
+        if self.is_live:
+            self.powerpoint_timings_action = create_action(
+                self, 'powerpointTimings',
+                text=translate('OpenLP.SlideController', 'PowerPoint automatic timings'),
+                icon=UiIcons().clock,
+                tooltip=translate('OpenLP.SlideController', 'Use automatic slide timings for this PowerPoint'),
+                checked=False, visible=False, triggers=self.on_toggle_powerpoint_timings)
+            self.toolbar.addAction(self.powerpoint_timings_action)
         self.toolbar.addSeparator()
         self.controller_type = DisplayControllerType.Preview
         self._current_hide_mode = None
@@ -476,6 +487,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.__add_actions_to_widget(self.controller)
         else:
             self.preview_widget.doubleClicked.connect(self.on_preview_double_click)
+            self.preview_widget.keyboard_slide_changed.connect(self.on_slide_selected)
             self.toolbar.set_widget_visible('editSong', False)
             self.toolbar.set_widget_visible('clear', False)
             self.controller.addActions([self.next_item, self.previous_item])
@@ -519,6 +531,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.previous_item.setEnabled(has_slides)
         if hasattr(self, 'next_item'):
             self.next_item.setEnabled(has_slides)
+        if self.is_live and hasattr(self, 'powerpoint_timings_action'):
+            self.powerpoint_timings_action.setEnabled(has_slides and self.powerpoint_timings_action.isVisible())
         if not self.is_live:
             if hasattr(self, 'go_live_action'):
                 self.go_live_action.setEnabled(has_slides)
@@ -875,9 +889,55 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.mediabar.show()
         self.previous_item.setVisible(not item.is_media())
         self.next_item.setVisible(not item.is_media())
+        self._sync_powerpoint_timings_action(item)
         # Work-around for OS X, hide and then show the toolbar
         # See bug #791050
         self.toolbar.show()
+
+    def _sync_powerpoint_timings_action(self, item):
+        """Show the timing control beside Next for a native PowerPoint presentation."""
+        action = getattr(self, 'powerpoint_timings_action', None)
+        if action is None:
+            return
+        is_powerpoint = bool(item and item.is_command() and
+                             item.processor in ('Powerpoint', 'PowerPointMac'))
+        if is_powerpoint and item.processor == 'PowerPointMac':
+            timing_results = Registry().execute('presentations_has_slide_timings', [item])
+            has_timings = any(timing_results or [])
+        else:
+            has_timings = is_powerpoint
+        action.setVisible(has_timings)
+        action.setEnabled(has_timings and bool(item.slides))
+        if has_timings:
+            file_settings = self.settings.value('presentations/powerpoint slide timings by file')
+            action.blockSignals(True)
+            action.setChecked(bool(file_settings.get(item.sha256_file_hash, False)))
+            action.blockSignals(False)
+            action.setToolTip(translate('OpenLP.SlideController',
+                                        'Use automatic slide timings for this PowerPoint'))
+
+    def on_toggle_powerpoint_timings(self, checked):
+        """Save the timing choice for this file and apply it to the running slide show."""
+        item = self.service_item
+        if not item or item.processor not in ('Powerpoint', 'PowerPointMac'):
+            return
+        file_hash = item.sha256_file_hash
+        if not file_hash:
+            return
+        file_settings = dict(self.settings.value('presentations/powerpoint slide timings by file'))
+        file_settings[file_hash] = bool(checked)
+        self.settings.setValue('presentations/powerpoint slide timings by file', file_settings)
+        self.settings.sync()
+        results = Registry().execute('presentations_set_slide_timings', [item, bool(checked)])
+        if results and isinstance(results[0], bool) and results[0] != bool(checked):
+            # Some native formats can only change their timing mode when the
+            # next show starts. Keep the clock honest while saving the choice.
+            action = self.powerpoint_timings_action
+            action.blockSignals(True)
+            action.setChecked(results[0])
+            action.blockSignals(False)
+            action.setToolTip(translate('OpenLP.SlideController',
+                                        'Timing choice saved for the next slideshow'))
 
     def enable_preview_tool_bar(self, item):
         """
@@ -1090,12 +1150,23 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 item_transition_delay = self._get_item_transition_speed_seconds()
                 if transition_delay < item_transition_delay:
                     self.slide_changed_time += datetime.timedelta(seconds=item_transition_delay - transition_delay)
+        same_presentation = False
         if self.service_item.is_command() and not self.service_item.is_media():
             # Prevent that the same presentation is started multiple times.
-            if (old_item is None or old_item.sha256_file_hash != self.service_item.sha256_file_hash):
+            same_presentation = (old_item is not None and
+                                 old_item.sha256_file_hash == self.service_item.sha256_file_hash and
+                                 old_item.processor == self.service_item.processor and
+                                 old_item.unique_identifier == self.service_item.unique_identifier)
+            if not same_presentation:
                 Registry().execute(
                     '{text}_start'.format(text=self.service_item.name.lower()),
                     [self.service_item, self.is_live, self._current_hide_mode, slide_no])
+            elif self.is_live and not is_reloading:
+                # Sending the current deck Live again must still select the requested
+                # slide, even though its native slideshow is already running.
+                Registry().execute(
+                    '{text}_slide'.format(text=self.service_item.name.lower()),
+                    [self.service_item, True, slide_no])
             if self.service_item.is_capable(ItemCapabilities.ProvidesOwnTheme):
                 self._set_theme(self.service_item)
         else:
@@ -1118,6 +1189,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Prepare the new slides for text / image items
         row = 0
         width = self.main_window.control_splitter.sizes()[self.split]
+        self._presentation_preview_images_loaded = False
         if self.service_item.is_text():
             self.preview_display.load_verses(self.service_item.rendered_slides)
             self.preview_display.show()
@@ -1146,6 +1218,16 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.preview_display.load_images(self.service_item.slides)
                 for display in self.displays:
                     display.load_images(self.service_item.slides)
+            elif not self.is_live and self.service_item.is_command() and \
+                    self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay):
+                # Native shows do not run in Preview. Load their cached slide images
+                # as a navigable stack instead of repeatedly replacing one image.
+                image_paths = [self.service_item.get_rendered_frame(index)
+                               for index in range(len(self.service_item.slides))]
+                if image_paths and all(isinstance(path, (str, Path)) and Path(path).is_file()
+                                       for path in image_paths):
+                    self.preview_display.load_images([{'path': Path(path)} for path in image_paths])
+                    self._presentation_preview_images_loaded = True
             for _, _ in enumerate(self.service_item.slides):
                 row += 1
                 self.slide_list[str(row)] = row - 1
@@ -1161,7 +1243,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             if not self.service_item.is_media() and (not self.service_item.requires_media() or
                                                      is_unsupported_preview_background):
                 self.on_media_close()
-            if old_item.is_command() and not old_item.is_media():
+            if old_item.is_command() and not old_item.is_media() and not same_presentation:
                 Registry().execute('{name}_stop'.format(name=old_item.name.lower()), [old_item, self.is_live])
             # if the old item was media which hid the main display then need to reset it if new service item uses it
             if self.is_live and self._current_hide_mode is None and old_item.is_media() and not \
@@ -1182,9 +1264,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             # is not loaded by the time _raise_displays is run, lyrics (web display)
             # will be under the media window (not good).
             self._raise_displays()
-            QtCore.QTimer.singleShot(100, self._raise_displays)
-            QtCore.QTimer.singleShot(500, self._raise_displays)
-            QtCore.QTimer.singleShot(1000, self._raise_displays)
+            if not self.is_live or len(self.screens) > 1 or self.settings.value('core/always on top'):
+                QtCore.QTimer.singleShot(100, self._raise_displays)
+                QtCore.QTimer.singleShot(500, self._raise_displays)
+                QtCore.QTimer.singleShot(1000, self._raise_displays)
         self.slide_selected(True)
         if self.service_item.from_service:
             self.preview_widget.setFocus()
@@ -1195,7 +1278,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.application.process_events()
             self.ignore_toolbar_resize_events = False
             self.on_controller_size_changed()
-            if not is_reloading and self.settings.value('core/auto unblank'):
+            if not is_reloading and getattr(self, '_current_hide_mode', None) != HideMode.Screen and \
+                    self.settings.value('core/auto unblank'):
                 self.set_hide_mode(None)
         self.log_debug('_process_item end')
 
@@ -1211,8 +1295,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if self.service_item.is_command():
             Registry().execute('{name}_slide'.format(name=self.service_item.name.lower()),
                                [self.service_item, self.is_live, index])
-            self.update_preview()
             self.selected_row = index
+            self.update_preview()
         else:
             self.preview_widget.change_slide(index)
             self.slide_selected()
@@ -1357,6 +1441,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.update_preview()
         # Update loop state
         self.on_toggle_loop()
+        if self.is_live:
+            main_window = self.main_window
+            if main_window and hasattr(main_window, '_sync_view_display_output_menu_action'):
+                main_window._sync_view_display_output_menu_action()
 
     def is_desktop_hide_available(self):
         """
@@ -1370,25 +1458,19 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if not self.is_live:
             return
-        # Desktop hide is only available when the platform supports it and the main
-        # window 'Display output' is currently enabled (checked). If the View menu
-        # has display output unselected, 'Show Desktop' should be disabled.
+        # Keep Show Desktop available while output is hidden so the user can turn it back on.
         desktop_available = self.is_desktop_hide_available()
-        view_output_checked = True
         view_output_enabled = True
         if getattr(self, 'main_window', None) and hasattr(self.main_window, 'view_display_output_item'):
             view_display_output_item = self.main_window.view_display_output_item
-            view_output_checked = view_display_output_item.isChecked()
             view_output_enabled = view_display_output_item.isEnabled()
-        enabled = has_item and desktop_available and view_output_enabled and view_output_checked
+        enabled = has_item and desktop_available and view_output_enabled
         if hasattr(self, 'desktop_screen'):
             self.desktop_screen.setEnabled(enabled)
             self.desktop_screen.setVisible(desktop_available)
         if hasattr(self, 'toolbar'):
             self.toolbar.set_widget_enabled('desktop_screen_button', enabled)
             self.toolbar.set_widget_visible('desktop_screen_button', desktop_available)
-        if not enabled and getattr(self, '_current_hide_mode', None) == HideMode.Screen:
-            self.set_hide_mode(None)
 
     def on_slide_selected(self):
         """
@@ -1443,7 +1525,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        [self.service_item, self.is_live, row])
             else:
                 for display in self.displays:
-                    display.go_to_slide(row, raise_window=restore_focus)
+                    raise_window = restore_focus and (not self.is_live or len(self.screens) > 1 or
+                                                      self.settings.value('core/always on top'))
+                    display.go_to_slide(row, raise_window=raise_window)
                 if not self.service_item.is_text():
                     # reset the store used to display first image
                     self.service_item.bg_image_bytes = None
@@ -1461,52 +1545,82 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         :param row: Row to be selected
         """
         self.preview_widget.change_slide(row)
-        self.update_preview()
         self.selected_row = row
+        self.update_preview()
 
     def update_preview(self):
         """
         This updates the preview frame, for example after changing a slide or using *Blank to Theme*.
         """
         self.log_debug('update_preview {text}'.format(text=self.screens.current))
+        native_mac_powerpoint = bool(self.is_live and self.service_item and is_macosx() and
+                                     self.service_item.processor == 'PowerPointMac')
         if self.is_live:
-            self.screen_capture = None
+            # Hold the previous PowerPoint capture until a frame from the new
+            # slide is ready. Its aspect ratio matches the actual output window.
+            if not native_mac_powerpoint:
+                self.screen_capture = None
             self.slide_changed_time = max(self.slide_changed_time, datetime.datetime.now())
+        native_mac_presentation = bool(self.is_live and self.service_item and is_macosx() and
+                                       self.service_item.processor in ('PowerPointMac', 'Keynote'))
         if self.service_item:
-            mirror_live_preview = self.is_live and self.settings.value('core/live preview shows presentation screen')
+            mirror_live_preview = (self.is_live and not native_mac_presentation and
+                                   self.settings.value('core/live preview shows presentation screen'))
             if mirror_live_preview:
                 self._schedule_live_preview_capture()
             preview_hide_mode = None
-            if (
+            if native_mac_powerpoint and self.current_hide_mode in (HideMode.Blank, HideMode.Logo,
+                                                                     HideMode.Theme):
+                preview_hide_mode = self.current_hide_mode
+            elif (
                 self.is_live and
                 self.current_hide_mode and
-                not mirror_live_preview
+                not mirror_live_preview and
+                not native_mac_presentation
             ):
                 preview_hide_mode = self.current_hide_mode
             if preview_hide_mode:
-                self.preview_display.hide_display(preview_hide_mode)
+                if not native_mac_powerpoint or self.preview_display.hide_mode != preview_hide_mode:
+                    self.preview_display.hide_display(preview_hide_mode)
             if not mirror_live_preview and self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay):
                 if self.is_live and not preview_hide_mode:
-                    # If live and not hidden grab screen-cap of main display in case the service item
-                    # provides it's own display.
+                    if not native_mac_powerpoint:
+                        rendered_frame = self.service_item.get_rendered_frame(self.selected_row)
+                        if isinstance(rendered_frame, (str, Path)) and Path(rendered_frame).is_file():
+                            image_path = Path(rendered_frame)
+                            self.screen_capture = image_path
+                            self.preview_display.set_single_image('#000', image_path)
                     self._schedule_live_preview_capture()
                 elif not self.is_live:
                     # For preview controllers, use the slide thumbnail/icon for items that
                     # provide their own display.
-                    rendered_frame = self.service_item.get_rendered_frame(self.selected_row)
-                    image_path = Path(rendered_frame)
-                    self.screen_capture = image_path
-                    self.preview_display.set_single_image('#000', image_path)
+                    if getattr(self, '_presentation_preview_images_loaded', False):
+                        self.screen_capture = Path(self.service_item.get_rendered_frame(self.selected_row))
+                        self.preview_display.go_to_slide(self.selected_row)
+                    else:
+                        rendered_frame = self.service_item.get_rendered_frame(self.selected_row)
+                        image_path = Path(rendered_frame)
+                        self.screen_capture = image_path
+                        self.preview_display.set_single_image('#000', image_path)
             elif not mirror_live_preview and not preview_hide_mode:
-                restored_from_hide = bool(self.preview_display.hide_mode)
-                if restored_from_hide:
+                restored_hide_mode = self.preview_display.hide_mode
+                if self.is_live and restored_hide_mode == HideMode.Screen:
+                    # Desktop capture replaces the preview's slides. Rebuild them before
+                    # returning to the current song, custom slide, or image.
+                    if self.service_item.is_text():
+                        self.preview_display.load_verses(self.service_item.rendered_slides)
+                    elif self.service_item.is_image():
+                        self.preview_display.load_images(self.service_item.slides)
+                if restored_hide_mode:
                     self.preview_display.show_display()
-                else:
+                if not restored_hide_mode or restored_hide_mode == HideMode.Screen:
                     self.preview_display.go_to_slide(self.selected_row)
-            if not preview_hide_mode and self.preview_display.hide_mode:
+            if not preview_hide_mode and self.preview_display.hide_mode and not native_mac_powerpoint:
                 self.preview_display.show_display()
         if self.is_live:
-            mirror = self.settings.value('core/live preview shows presentation screen')
+            mirror = native_mac_presentation or self.settings.value('core/live preview shows presentation screen')
+            if native_mac_powerpoint and preview_hide_mode:
+                mirror = False
             self._update_desktop_capture_timer(mirror)
         # Used for updating the main view in Web Remote.
         self.output_has_changed()
@@ -1545,6 +1659,18 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Gets an image of the display screen and updates the preview frame.
         """
         display_image = self._capture_maindisplay()
+        if display_image is None or (hasattr(display_image, 'isNull') and display_image.isNull()):
+            # A missing PowerPoint frame must leave the previous live capture in
+            # place; its cached slide image has a different aspect ratio.
+            if (self.service_item and is_macosx() and self.service_item.processor == 'PowerPointMac'):
+                return
+            if (self.service_item and self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) and
+                    getattr(self, 'screen_capture', None) is None):
+                image_path = self.service_item.get_rendered_frame(self.selected_row)
+                if isinstance(image_path, (str, Path)) and Path(image_path).is_file():
+                    self.screen_capture = Path(image_path)
+                    self.preview_display.set_single_image('#000', self.screen_capture)
+            return
         if display_image and hasattr(display_image, 'scaled'):
             # Scale to physical pixel size to stay sharp on HiDPI displays.
             dpr = self.preview_display.devicePixelRatioF()
@@ -1562,12 +1688,34 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             base64_image = image_to_byte(display_image)
         self.screen_capture = base64_image
         self.preview_display.set_single_image_data('#000', base64_image)
+        service_item = getattr(self, 'service_item', None)
+        if (service_item and is_macosx() and service_item.processor == 'PowerPointMac' and
+                self.current_hide_mode is None and self.preview_display.hide_mode):
+            self.preview_display.show_display()
 
     def _capture_maindisplay(self):
         """
         Creates an image of the current screen.
         """
         self.log_debug('_capture_maindisplay {text}'.format(text=self.screens.current))
+        if (self.service_item and self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) and
+                self.service_item.is_command()):
+            event_name = '{name}_attempt_screenshot'.format(name=self.service_item.name.lower())
+            if Registry().has_function(event_name):
+                results = Registry().execute(event_name, [self.service_item, self.selected_row])
+                if results:
+                    succeeded, capture = results[0]
+                    if succeeded and capture is not None and not (hasattr(capture, 'isNull') and capture.isNull()):
+                        return capture
+            if is_macosx() and self.service_item.processor in ('PowerPointMac', 'Keynote'):
+                # A desktop grab can show OpenLP or another Space instead of PowerPoint.
+                # Let display_maindisplay use the current slide thumbnail if window capture failed.
+                return None
+        if (self.service_item and getattr(self, '_current_hide_mode', None) != HideMode.Screen and
+                (self.service_item.is_text() or self.service_item.is_image())):
+            # OpenLP renders these items itself. Capturing its display window avoids
+            # stale or misaligned desktop frames, particularly on macOS.
+            return self._capture_maindisplay_window()
         # Wayland needs screenshot fallback even when OpenLP is running on X11/xcb mode.
         fallback_to_windowed = is_wayland_compositor() or \
             self.settings.value('advanced/prefer windowed screen capture')
@@ -1593,18 +1741,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if fallback_to_windowed:
             if self.service_item and (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                       self.service_item.is_media() or self.service_item.is_command()):
-                if self.service_item.is_command():
-                    # Attempting to get screenshot from command handler
-                    service_item_name = self.service_item.name.lower()
-                    event_name = '{text}_attempt_screenshot'.format(text=service_item_name)
-                    if Registry().has_function(event_name):
-                        results = Registry().execute(event_name, [self.service_item, self.selected_row])
-                        if len(results):
-                            succedded, binary_data = results[0]
-                            if succedded and binary_data:
-                                self.log_debug('_capture_maindisplay using window capture from {name}'
-                                               .format(name=service_item_name))
-                                return binary_data
                 # Falling back to desktop capture, maybe it works
                 self.log_debug('_capture_maindisplay cannot do window capture, trying to get screenshot from screen'
                                ' anyway')
@@ -1642,7 +1778,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
 
     def _on_desktop_capture_timer(self):
         """Periodic timer callback: refresh the live preview with a fresh desktop capture."""
-        mirror = self.settings.value('core/live preview shows presentation screen')
+        service_item = getattr(self, 'service_item', None)
+        native_mac_powerpoint = bool(service_item and is_macosx() and
+                                     service_item.processor == 'PowerPointMac')
+        mirror = native_mac_powerpoint or self.settings.value('core/live preview shows presentation screen')
+        if native_mac_powerpoint and self._current_hide_mode in (HideMode.Blank, HideMode.Logo, HideMode.Theme):
+            mirror = False
         if not mirror and self._current_hide_mode != HideMode.Screen:
             self.desktop_capture_timer.stop()
             return
@@ -1654,15 +1795,18 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """Start or stop the desktop capture timer based on whether live mirroring is needed."""
         if not hasattr(self, 'desktop_capture_timer'):
             return
-        fps_options = [5, 15, 24, 30]
+        service_item = getattr(self, 'service_item', None)
+        native_mac_powerpoint = bool(service_item and is_macosx() and
+                                     service_item.processor == 'PowerPointMac')
+        capture_interval = 200 if native_mac_powerpoint else DESKTOP_CAPTURE_INTERVAL_MS
         media_is_playing = (hasattr(self, 'media_play_item') and
                              self.media_play_item.is_playing == MediaState.Playing and
                              not self.media_play_item.is_background)
         needs_timer = mirror_live_preview or self._current_hide_mode == HideMode.Screen or media_is_playing
         if needs_timer:
             if not self.desktop_capture_timer.isActive() or \
-                    self.desktop_capture_timer.interval() != DESKTOP_CAPTURE_INTERVAL_MS:
-                self.desktop_capture_timer.start(DESKTOP_CAPTURE_INTERVAL_MS)
+                    self.desktop_capture_timer.interval() != capture_interval:
+                self.desktop_capture_timer.start(capture_interval)
         else:
             self.desktop_capture_timer.stop()
 
@@ -1727,7 +1871,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if not self.service_item:
             return
-        if self.service_item.is_command():
+        if self.service_item.is_command() and not self.is_live:
+            row = self.preview_widget.current_slide_number()
+            if row < self.preview_widget.slide_count() - 1:
+                self.preview_widget.change_slide(row + 1)
+                self.slide_selected(restore_focus=restore_focus)
+        elif self.service_item.is_command():
             past_end = Registry().execute(
                 '{text}_next'.format(text=self.service_item.name.lower()),
                 [self.service_item, self.is_live, {'restore_focus': restore_focus}]
@@ -1767,7 +1916,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if not self.service_item:
             return
-        if self.service_item.is_command():
+        if self.service_item.is_command() and not self.is_live:
+            row = self.preview_widget.current_slide_number()
+            if row > 0:
+                self.preview_widget.change_slide(row - 1)
+                self.slide_selected()
+        elif self.service_item.is_command():
             before_start = Registry().execute('{text}_previous'.format(text=self.service_item.name.lower()),
                                               [self.service_item, self.is_live])
             # Check id we have tried to go before that start slide

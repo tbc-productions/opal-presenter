@@ -50,7 +50,7 @@ class PdfController(PresentationController):
         :param plugin: The plugin that creates the controller.
         """
         log.debug('Initialising')
-        super(PdfController, self).__init__(plugin, 'Pdf', PdfDocument)
+        super(PdfController, self).__init__(plugin, 'Pdf', PdfDocument, display_name='PDF')
         self.process = None
         self.supports = ['pdf']
         self.also_supports = []

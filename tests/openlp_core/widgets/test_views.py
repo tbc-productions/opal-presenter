@@ -26,7 +26,7 @@ import pytest
 from types import GeneratorType
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
@@ -138,6 +138,26 @@ def test_new_list_preview_widget(mocked_parent: QtWidgets.QWidget, mock_settings
     # THEN: The object is not None, and the _setup() method was called.
     assert list_preview_widget is not None, 'The ListPreviewWidget object should not be None'
     assert list_preview_widget.screen_ratio == 1, 'Should not be called'
+
+
+def test_preview_widget_arrow_keys_signal_slide_change(preview_widget):
+    """Keyboard row changes must notify the slide controller."""
+    preview_widget.setRowCount(3)
+    for row in range(3):
+        preview_widget.setItem(row, 0, QtWidgets.QTableWidgetItem(str(row)))
+    preview_widget.selectRow(1)
+    changed = MagicMock()
+    preview_widget.keyboard_slide_changed.connect(changed)
+
+    preview_widget.keyPressEvent(QtGui.QKeyEvent(QtCore.QEvent.Type.KeyPress, QtCore.Qt.Key.Key_Down,
+                                                QtCore.Qt.KeyboardModifier.NoModifier))
+    assert preview_widget.currentRow() == 2
+    assert changed.call_count == 1
+
+    preview_widget.keyPressEvent(QtGui.QKeyEvent(QtCore.QEvent.Type.KeyPress, QtCore.Qt.Key.Key_Up,
+                                                QtCore.Qt.KeyboardModifier.NoModifier))
+    assert preview_widget.currentRow() == 1
+    assert changed.call_count == 2
 
 
 def test_replace_service_item_thumbs(mocked_parent: QtWidgets.QWidget, mock_settings: MagicMock):

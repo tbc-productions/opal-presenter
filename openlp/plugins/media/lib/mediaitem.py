@@ -27,7 +27,7 @@ from pathlib import Path
 from PySide6 import QtCore, QtGui, QtWidgets
 from sqlalchemy.sql.expression import or_
 
-from openlp.core.common import delete_file
+from openlp.core.common import delete_file, sha256_file_hash
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.path import create_paths
@@ -268,6 +268,10 @@ class MediaMediaItem(FolderLibraryItem):
             service_item.title = name
         else:
             if not os.path.exists(filename):
+                recovered_path = self._recover_managed_media(media_item)
+                if recovered_path:
+                    filename = str(recovered_path)
+            if not os.path.exists(filename):
                 if not remote:
                     # File is no longer present
                     critical_error_message_box(
@@ -287,8 +291,8 @@ class MediaMediaItem(FolderLibraryItem):
                                                                                             details=details))
                 return False
             (path, name) = os.path.split(filename)
-            file_name = media_item.name or name
-            service_item.title = Path(file_name).stem
+            display_name = media_item.name or name
+            service_item.title = Path(display_name).stem
             service_item.processor = 'qt6'
             managed_library_dir = (AppLocation.get_section_data_path('media') / 'library').resolve()
             media_path = Path(filename).resolve()
@@ -298,12 +302,13 @@ class MediaMediaItem(FolderLibraryItem):
                 is_managed_file = True
             except ValueError:
                 is_managed_file = False
-            if is_managed_file and media_item.file_hash:
-                # Managed files are stored as <hash><ext>; keep friendly names in UI while playing the stored file.
+            if is_managed_file and media_item.file_hash and Path(name).stem == media_item.file_hash:
+                # Older managed imports use hash-named files and a separate display name.
                 service_item.has_original_file_path = False
-                service_item.add_from_command(path, file_name, self.clapperboard, file_hash=media_item.file_hash)
+                service_item.add_from_command(path, display_name, self.clapperboard, file_hash=media_item.file_hash)
             else:
-                service_item.add_from_command(path, file_name, self.clapperboard)
+                # The frame title is also used to locate the source file.
+                service_item.add_from_command(path, name, self.clapperboard, file_hash=media_item.file_hash)
             # Only get start and end times if going to a service
             if context == ServiceItemContext.Service:
                 self._queue_media_length_probe(service_item, filename)
@@ -315,6 +320,28 @@ class MediaMediaItem(FolderLibraryItem):
         # validate the item after all capabilities has been added
         service_item.validate_item()
         return True
+
+    def _recover_managed_media(self, media_item):
+        """Find a renamed managed file by its recorded hash and repair the database path."""
+        if not media_item.file_hash:
+            return None
+        library_dir = (AppLocation.get_section_data_path('media') / 'library').resolve()
+        missing_path = Path(media_item.file_path)
+        try:
+            missing_path.resolve().relative_to(library_dir)
+        except ValueError:
+            return None
+        if not library_dir.is_dir():
+            return None
+        for candidate in library_dir.iterdir():
+            if candidate.is_file() and candidate.suffix.lower() == missing_path.suffix.lower() and \
+                    sha256_file_hash(candidate) == media_item.file_hash:
+                media_item.file_path = str(candidate)
+                if not media_item.name or media_item.name == missing_path.name:
+                    media_item.name = candidate.name
+                self.manager.save_object(media_item)
+                return candidate
+        return None
 
     def _queue_media_length_probe(self, service_item, filename):
         """

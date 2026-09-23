@@ -265,8 +265,8 @@ class SongMediaItem(MediaManagerItem):
         self.export_presentation_menu.setIcon(UiIcons().upload)
         native_action = self.export_presentation_menu.addAction(translate('SongsPlugin.MediaItem', 'Song'))
         native_action.triggered.connect(self.on_export_song)
-        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (pptx)'), '.pptx'),
-                   (translate('OpenLP.PresentationExport', 'OpenDocument (odp)'), '.odp'))
+        formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (PPTX)'), '.pptx'),
+                   (translate('OpenLP.PresentationExport', 'OpenDocument (ODP)'), '.odp'))
         for label, suffix in formats:
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))

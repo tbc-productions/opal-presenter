@@ -151,6 +151,10 @@ class OpenLP(QtCore.QObject, LogMixin):
         QtWidgets.QApplication.processEvents()
         if not has_run_wizard:
             self.main_window.first_time()
+        if is_macosx() and any(plugin and plugin.name == 'presentations' and plugin.is_active()
+                             for plugin in State().list_plugins()):
+            from openlp.core.common.mac_permissions import request_presentation_permissions
+            request_presentation_permissions(self.main_window)
         if self.settings.value('core/update check'):
             check_for_update(self.main_window)
         if self.settings.value('api/update check'):

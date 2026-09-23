@@ -105,6 +105,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
     :param screen_ratio:
     """
     resize_event = QtCore.Signal()
+    keyboard_slide_changed = QtCore.Signal()
 
     def __init__(self, parent, screen_ratio):
         """
@@ -399,6 +400,15 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         # Scroll to item if possible.
         self.scrollToItem(self.item(scroll_to_slide, 0), SCROLL_HINT[auto_scrolling['pos']])
         self.selectRow(slide)
+
+    def keyPressEvent(self, event):
+        """
+        Update the displayed Preview slide when keyboard navigation changes the selected row.
+        """
+        previous_row = self.currentRow()
+        super().keyPressEvent(event)
+        if event.key() in (QtCore.Qt.Key.Key_Up, QtCore.Qt.Key.Key_Down) and self.currentRow() != previous_row:
+            self.keyboard_slide_changed.emit()
 
     def current_slide_number(self):
         """

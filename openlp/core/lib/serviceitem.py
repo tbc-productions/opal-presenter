@@ -400,7 +400,8 @@ class ServiceItem(RegistryProperties):
             slide['metadata'] = metadata
         return slide
 
-    def add_from_command(self, path, file_name, image, display_title=None, notes=None, file_hash=None):
+    def add_from_command(self, path, file_name, image, display_title=None, notes=None, file_hash=None,
+                         validate=True):
         """
         Add a slide from a command.
 
@@ -410,6 +411,7 @@ class ServiceItem(RegistryProperties):
         :param display_title: Title to show in gui/webinterface, optional.
         :param notes: Notes to show in the webinteface, optional.
         :param file_hash: Sha256 hash checksum of the file.
+        :param validate: Defer validation when adding a batch of slides; call ``_new_item`` once afterward.
         """
         self.service_item_type = ServiceItemType.Command
         # If the item should have a display title but this frame doesn't have one, we make one up
@@ -429,7 +431,8 @@ class ServiceItem(RegistryProperties):
                 ntpath.basename(image)
         self.slides.append({'title': file_name, 'image': image, 'path': path, 'display_title': display_title,
                             'notes': notes, 'thumbnail': image})
-        self._new_item()
+        if validate:
+            self._new_item()
 
     def get_service_repr(self, lite_save):
         """
@@ -1003,6 +1006,26 @@ class ServiceItem(RegistryProperties):
         """
         return not bool(self.slides)
 
+    def _recover_presentation_file(self, missing_path):
+        """Find the original file for an older presentation item named with its library label.
+
+        Such items stored the correct file hash but used the display label as the
+        command filename. Only accept a file in the same folder with that hash.
+        """
+        file_hash = self.sha256_file_hash
+        if self.name != 'presentations' or not self.has_original_file_path or \
+                not isinstance(file_hash, str) or len(file_hash) != 64:
+            return None
+        presentation_suffixes = {'.ppt', '.pps', '.pptx', '.ppsx', '.pptm', '.odp', '.key', '.pdf'}
+        try:
+            for candidate in sorted(missing_path.parent.iterdir()):
+                if candidate.is_file() and candidate.suffix.lower() in presentation_suffixes and \
+                        sha256_file_hash(candidate) == file_hash:
+                    return candidate
+        except OSError:
+            log.exception('Could not look for the original presentation in %s', missing_path.parent)
+        return None
+
     def validate_item(self, suffixes=None):
         """
         Validates a service item to make sure it is valid
@@ -1037,8 +1060,17 @@ class ServiceItem(RegistryProperties):
                     else:
                         file_name = Path(slide['path']) / self.stored_filename
                     if not file_name.exists():
-                        self.is_valid = False
-                        break
+                        recovered = self._recover_presentation_file(file_name)
+                        if recovered:
+                            old_title = slide['title']
+                            for frame in self.slides:
+                                if frame['path'] == slide['path'] and frame['title'] == old_title:
+                                    frame['title'] = recovered.name
+                            self.stored_filename = f'{self.sha256_file_hash}{recovered.suffix}'
+                            file_name = recovered
+                        else:
+                            self.is_valid = False
+                            break
                     if suffixes and not self.is_text():
                         file_suffix = "{suffx}".format(suffx=slide['title'].split('.')[-1])
                         if file_suffix.lower() not in suffixes:

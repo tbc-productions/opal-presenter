@@ -48,47 +48,6 @@ TRANSITION_END_EVENT_NAME = 'transparent_transition_end'
 log = logging.getLogger(__name__)
 VALID_LOGO_FITS = {'cover', 'contain', 'stretch', 'repeat'}
 
-# Minimum live output size when sharing one physical screen with the main OpenLP window.
-_SINGLE_SCREEN_AVOID_MAIN_MIN_WIDTH = 320
-_SINGLE_SCREEN_AVOID_MAIN_MIN_HEIGHT = 200
-
-
-def largest_rect_on_screen_avoiding_rect(screen_rect: QtCore.QRect, obstacle_rect: QtCore.QRect,
-                                         min_width=_SINGLE_SCREEN_AVOID_MAIN_MIN_WIDTH,
-                                         min_height=_SINGLE_SCREEN_AVOID_MAIN_MIN_HEIGHT):
-    """
-    Return the largest axis-aligned rectangle inside ``screen_rect`` that does not overlap ``obstacle_rect``,
-    preferring the candidate with the greatest area. Returns ``None`` if no candidate meets the minimum size.
-    """
-    obstacle = obstacle_rect.intersected(screen_rect)
-    if obstacle.isEmpty():
-        return screen_rect
-    s = screen_rect
-    o = obstacle
-    candidates = []
-    # Top strip (full width)
-    h_top = o.top() - s.top()
-    if h_top > 0:
-        candidates.append(QtCore.QRect(s.left(), s.top(), s.width(), h_top))
-    # Bottom strip (full width)
-    y_below = o.top() + o.height()
-    h_bottom = s.top() + s.height() - y_below
-    if h_bottom > 0:
-        candidates.append(QtCore.QRect(s.left(), y_below, s.width(), h_bottom))
-    # Left of obstacle (middle band only — top/bottom already covered by strips)
-    w_left = o.left() - s.left()
-    if w_left > 0:
-        candidates.append(QtCore.QRect(s.left(), o.top(), w_left, o.height()))
-    # Right of obstacle (middle band)
-    x_right = o.left() + o.width()
-    w_right = s.left() + s.width() - x_right
-    if w_right > 0:
-        candidates.append(QtCore.QRect(x_right, o.top(), w_right, o.height()))
-    viable = [r for r in candidates if r.width() >= min_width and r.height() >= min_height]
-    if not viable:
-        return None
-    return max(viable, key=lambda r: r.width() * r.height())
-
 
 def _path_to_file_uri(image_path):
     """
@@ -214,19 +173,21 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Create the display window
         """
         super(DisplayWindow, self).__init__(parent)
-        self._partial_screen_layout = False
         self.screen_number = None
         self.after_loaded_callback = after_loaded_callback
-        # Gather all flags for the display window. Keep non-display renderer windows out of always-on-top.
-        flags = QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.Tool
-        if screen and screen.is_display:
+        # The live output is an independent window so the main window can cover it when topmost is disabled.
+        # Embedded preview renderers still use a tool window.
+        is_live_display = bool(screen and screen.is_display)
+        window_type = QtCore.Qt.WindowType.Window if is_live_display else QtCore.Qt.WindowType.Tool
+        flags = QtCore.Qt.WindowType.FramelessWindowHint | window_type
+        if is_live_display and self.settings.value('core/always on top'):
             flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
         if self.settings.value('advanced/x11 bypass wm'):
             flags |= QtCore.Qt.WindowType.X11BypassWindowManagerHint
-        else:
+        elif not is_live_display:
             # This helps the window not being hidden by KDE's "Hide utility windows for inactive applications" option
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_X11NetWmWindowTypeDialog)
-        if is_macosx():
+        if is_macosx() and not is_live_display:
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
         self._is_initialised = False
         self._is_manual_close = False
@@ -280,8 +241,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.update_from_screen(screen)
             # Only make visible on single monitor setup if setting enabled.
             if not start_hidden and (len(ScreenList()) > 1 or self.settings.value('core/display on monitor')):
-                use_windowed = screen.custom_geometry is not None or self._partial_screen_layout
-                self.auto_show(use_windowed)
+                self.auto_show(screen.custom_geometry is not None)
             esc_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape), self)
             esc_shortcut.setContext(QtCore.Qt.ShortcutContext.WindowShortcut)
             esc_shortcut.activated.connect(self._on_escape_hide_presentation_live)
@@ -354,67 +314,16 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         self.setGeometry(screen.display_geometry)
         self.screen_number = screen.number
-        self._partial_screen_layout = self._try_apply_main_window_avoidance(screen)
-
-    def _try_apply_main_window_avoidance(self, screen):
-        """
-        On a single physical screen with "Display if a single screen", shrink the live output so it does not
-        cover the main OpenLP window. Respects user-defined custom display geometry (no automatic change).
-
-        :return: True if the window uses a reduced geometry (must not use showFullScreen).
-        :rtype: bool
-        """
-        if not self.is_display:
-            return False
-        if len(ScreenList()) != 1:
-            return False
-        if not self.settings.value('core/display on monitor'):
-            return False
-        # In always-on-top mode, the output is expected to fully cover the main window.
-        if self.settings.value('core/always on top'):
-            return False
-        if screen.custom_geometry is not None:
-            return False
-        main_window = Registry().get('main_window')
-        if main_window is None or not main_window.isVisible():
-            return False
-        full_rect = screen.display_geometry
-        main_rect = main_window.frameGeometry()
-        placed = largest_rect_on_screen_avoiding_rect(full_rect, main_rect)
-        if placed is None or placed == full_rect:
-            if placed is None:
-                log.warning('Could not place live display beside the main window; no rectangle met the minimum size.')
-            return False
-        self.setGeometry(placed)
-        return True
-
-    def _deferred_sync_geometry_avoid_main_window(self):
-        """
-        Re-run output placement after the main window has a valid frame (first show / layout).
-        """
-        if not self.is_display:
-            return
-        if self.screen_number is None:
-            return
-        try:
-            screen = ScreenList()[self.screen_number]
-        except (IndexError, KeyError):
-            return
-        was_fullscreen = self.isFullScreen()
-        self.update_from_screen(screen)
-        if was_fullscreen and self._partial_screen_layout:
-            self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowFullScreen)
-        if not self.isHidden():
-            self.show()
 
     def auto_show(self, has_custom_geometry: bool):
         """
-        Displays the window using the fullscreen function if using the whole screen (allows drawing over system UI)
+        Show a normal window for custom geometry or normal stacking. Use native fullscreen where supported
+        when topmost output covers the screen.
 
         :param bool has_custom_geometry: Whether the display a custom geometry
         """
 
-        if has_custom_geometry:
+        if has_custom_geometry or not self.settings.value('core/always on top'):
             self.show()
         elif is_macosx():
             # On macOS, showFullScreen() creates a native fullscreen Space whose compositing
@@ -518,8 +427,6 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.set_startup_screen()
         if self.after_loaded_callback:
             self.after_loaded_callback()
-        if self.is_display:
-            QtCore.QTimer.singleShot(0, self._deferred_sync_geometry_avoid_main_window)
 
     def run_in_display(self, action, *parameters, raw_parameters=None, is_sync=False, return_event_name=None,
                        raise_window=False):
@@ -715,10 +622,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             except (IndexError, KeyError):
                 screen = None
             if screen is not None and isinstance(getattr(screen, 'display_geometry', None), QtCore.QRect):
-                was_fullscreen = self.isFullScreen()
                 self.update_from_screen(screen)
-                if was_fullscreen and self._partial_screen_layout:
-                    self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowFullScreen)
         # Aborting setVisible(False) call in case the display modes are changed quickly
         self.display_watcher.unregister_event_listener(TRANSITION_END_EVENT_NAME)
         if self.isHidden():

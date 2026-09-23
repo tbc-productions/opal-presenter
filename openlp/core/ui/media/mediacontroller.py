@@ -440,7 +440,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller.mediabar.seek_slider.blockSignals(True)
         controller.mediabar.volume_slider.blockSignals(True)
         controller.media_play_item.request_play = False
-        self._media_set_visibility(controller, True)
+        output_hidden = controller.is_live and controller.current_hide_mode == HideMode.Screen
+        self._media_set_visibility(controller, not output_hidden)
         if is_load:
             if controller.media_play_item.media_file:
                 if controller.media_play_item.media_autostart:
@@ -470,7 +471,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if not controller.media_play_item.is_background:
             display = self._define_display(controller)
             if controller.is_live:
-                controller.set_hide_mode(None)
+                if not output_hidden:
+                    controller.set_hide_mode(None)
                 controller._set_theme(controller.service_item)
                 display.hide_display(HideMode.Screen)
             else:
@@ -658,7 +660,9 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller.is_live:
             self.live_hide_timer.start(HIDE_DELAY_TIME)
             if not controller.media_play_item.is_background:
-                if blank_on_stop:
+                if controller.current_hide_mode == HideMode.Screen:
+                    self._media_set_visibility(controller, False)
+                elif blank_on_stop:
                     controller.set_hide_mode(HideMode.Blank)
                 else:
                     display = self._define_display(controller)

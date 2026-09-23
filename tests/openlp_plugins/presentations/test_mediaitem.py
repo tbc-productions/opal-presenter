@@ -87,6 +87,93 @@ def test_build_file_mask_string(media_item):
         'The file mask should contain the fb2 extension'
 
 
+def test_controller_display_names_keep_internal_keys(settings, mock_plugin):
+    """Visible controller names may change without changing saved identifiers."""
+    from openlp.plugins.presentations.lib.pdfcontroller import PdfController
+    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacController
+
+    pdf_controller = PdfController(mock_plugin)
+    with patch('openlp.plugins.presentations.lib.applescriptbasecontroller.APPLESCRIPT_AVAILABLE', False), \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.APPLESCRIPT_AVAILABLE', False):
+        mac_controller = PowerPointMacController(mock_plugin)
+
+    assert (pdf_controller.name, pdf_controller.display_name) == ('Pdf', 'PDF')
+    assert (mac_controller.name, mac_controller.display_name) == ('PowerPointMac', 'PowerPoint (macOS)')
+
+
+def test_display_type_combo_uses_controller_keys(media_item):
+    """The selector shows friendly names while returning saved controller keys."""
+    pdf_controller = MagicMock()
+    pdf_controller.name = 'Pdf'
+    pdf_controller.display_name = 'PDF'
+    pdf_controller.enabled.return_value = True
+    mac_controller = MagicMock()
+    mac_controller.name = 'PowerPointMac'
+    mac_controller.display_name = 'PowerPoint (macOS)'
+    mac_controller.enabled.return_value = True
+    media_item.controllers = {'Pdf': pdf_controller, 'PowerPointMac': mac_controller}
+    media_item.automatic = 'Automatic'
+    media_item.display_type_combo_box = QtWidgets.QComboBox()
+    media_item.presentation_widget = MagicMock()
+
+    media_item.populate_display_types()
+
+    combo = media_item.display_type_combo_box
+    assert [combo.itemText(index) for index in range(combo.count())] == \
+        ['Automatic', 'PDF', 'PowerPoint (macOS)']
+    assert [combo.itemData(index) for index in range(combo.count())] == \
+        ['automatic', 'Pdf', 'PowerPointMac']
+    combo.setCurrentIndex(2)
+    assert media_item._selected_controller_name() == 'PowerPointMac'
+
+
+def test_validate_and_load_reports_only_unsupported_imports(media_item, tmp_path):
+    """Only unsupported inputs should be reported or excluded from import."""
+    controller = MagicMock()
+    controller.enabled.return_value = True
+    controller.supports = ['odp']
+    controller.also_supports = []
+    media_item.controllers = {'Impress': controller}
+    supported = tmp_path / 'new.odp'
+    unsupported = tmp_path / 'old.xyz'
+    supported.write_bytes(b'presentation')
+    unsupported.write_bytes(b'unsupported')
+
+    with patch('openlp.plugins.presentations.lib.mediaitem.FolderLibraryItem.validate_and_load') as load, \
+            patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+        media_item.validate_and_load([supported, unsupported])
+
+    load.assert_called_once_with([supported], None)
+    error.assert_called_once()
+    assert str(unsupported) in error.call_args.args[1]
+    assert str(supported) not in error.call_args.args[1]
+
+
+def test_load_item_with_unsupported_type_does_not_show_import_error(media_item, tmp_path):
+    """Refreshing the library should display an unsupported item without an import alert."""
+    file_path = tmp_path / 'old.xyz'
+    file_path.write_bytes(b'unsupported')
+    media_item.controllers = {}
+
+    with patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+        result = media_item.load_item(Item(name=file_path.name, file_path=str(file_path)))
+
+    assert result is not None
+    assert result.text(0) == 'old'
+    error.assert_not_called()
+
+
+def test_find_controller_by_type_accepts_uppercase_fallback_extension(media_item):
+    """A fallback presentation controller should accept uppercase extensions."""
+    controller = MagicMock()
+    controller.enabled.return_value = True
+    controller.supports = ['odp']
+    controller.also_supports = ['pptx']
+    media_item.controllers = {'Impress': controller}
+
+    assert media_item.find_controller_by_type(Path('Slides.PPTX')) == 'Impress'
+
+
 def test_clean_up_thumbnails(media_item):
     """
     Test that the clean_up_thumbnails method works as expected when files exist.

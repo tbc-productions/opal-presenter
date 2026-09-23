@@ -567,3 +567,28 @@ def test_update_section_tag_highlighting_uses_verse_opacity_step(edit_verse_form
         selection = mocked_set_extra_selections.call_args.args[0][0]
         alpha = selection.format.background().color().alphaF()
         assert alpha == pytest.approx(0.30, rel=0.05)
+
+
+def test_paste_converts_headings_immediately(edit_verse_form: EditVerseForm):
+    """Bulk lyric paste exposes separate sections before the dialog is saved."""
+    edit_verse_form.set_verse('')
+    clipboard = QtCore.QMimeData()
+    clipboard.setText('Verse 1\nFirst line\n\nChorus 2\nSecond line')
+
+    edit_verse_form.verse_text_edit.insertFromMimeData(clipboard)
+
+    assert edit_verse_form.verse_text_edit.toPlainText() == (
+        '---[Verse:1]---\nFirst line\n\n---[Chorus:2]---\nSecond line')
+    edit_verse_form.verse_text_edit.undo()
+    assert edit_verse_form.verse_text_edit.toPlainText() == '---[Verse:1]---\n'
+
+
+def test_single_verse_paste_keeps_plain_headings(edit_verse_form: EditVerseForm):
+    """The single section editor leaves pasted text under its selected verse tag."""
+    edit_verse_form.set_verse('', single=True)
+    clipboard = QtCore.QMimeData()
+    clipboard.setText('Verse 1\nFirst line')
+
+    edit_verse_form.verse_text_edit.insertFromMimeData(clipboard)
+
+    assert edit_verse_form.verse_text_edit.toPlainText() == 'Verse 1\nFirst line'

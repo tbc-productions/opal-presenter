@@ -31,6 +31,7 @@ from openlp.core.common.settings import Settings
 from openlp.plugins.songs.forms.editsongform import EditSongForm
 from openlp.plugins.songs.lib import VerseType
 from openlp.plugins.songs.lib.db import Author
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 
 @pytest.fixture
@@ -206,3 +207,32 @@ def test_validate_song_one_audio(edit_song_form_with_ui: EditSongForm):
 
     # THEN: It should be valid
     assert song_valid is True
+
+
+def test_edit_all_parses_pasted_section_headings(edit_song_form_with_ui: EditSongForm, settings: Settings):
+    """Plain headings in a pasted song become separate, correctly tagged slides."""
+    settings.extend_default_settings({'songs/section color {key}'.format(key=key): color
+                                      for key, color in DEFAULT_SECTION_COLORS.items()})
+    settings.extend_default_settings({'songs/section background opacity minimum': 10,
+                                      'songs/section background opacity maximum': 60})
+    form = edit_song_form_with_ui
+    lyrics = ('Verse 1\nFirst verse\n\nChorus 1\nFirst chorus\n\n'
+              'Ending\nFinal line\n\nChorus 2\nSecond chorus\n\n'
+              'Bridge\nBridge line\n\nVerse 4\nFourth verse')
+
+    def paste_lyrics():
+        clipboard = QtCore.QMimeData()
+        clipboard.setText(lyrics)
+        form.verse_form.verse_text_edit.insertFromMimeData(clipboard)
+        assert form.verse_form.verse_text_edit.toPlainText().startswith('---[Verse:1]---\nFirst verse')
+        assert '---[Chorus:2]---\nSecond chorus' in form.verse_form.verse_text_edit.toPlainText()
+        return 1
+
+    with patch.object(form.verse_form, 'exec', side_effect=paste_lyrics):
+        form.on_verse_edit_all_button_clicked()
+
+    assert [(form.verse_list_widget.item(row, 0).data(QtCore.Qt.ItemDataRole.UserRole),
+             form.verse_list_widget.item(row, 0).text())
+            for row in range(form.verse_list_widget.rowCount())] == [
+                ('v1', 'First verse'), ('c1', 'First chorus'), ('e1', 'Final line'),
+                ('c2', 'Second chorus'), ('b1', 'Bridge line'), ('v4', 'Fourth verse')]
