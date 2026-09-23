@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, QTimer
 from PySide6.QtGui import QImage
 
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
@@ -583,7 +583,9 @@ def test_powerpoint_mac_timed_deck_starts_with_manual_advance(settings, tmp_path
     controller = MagicMock()
     controller.applescript.call.side_effect = lambda name, *args: (
         1 if name == 'start_presentation' else 'PowerPoint Slide Show – [slides]')
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    # Other tests may import this module while QtCore.QTimer is patched. Use the real timer here.
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'), \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QTimer', QTimer):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.slide_count = 1
