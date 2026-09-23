@@ -357,7 +357,7 @@ def test__parse_config_invalid_config(mocked_message_box, mock_settings):
     assert result is False
     mocked_message_box.critical.assert_called_once_with(
         first_time_form, 'Invalid index file',
-        'OpenLP was unable to read the resource index file. Please try again later.')
+        'OpenLP+ was unable to read the resource index file. Please try again later.')
 
 
 @patch('openlp.core.ui.firsttimeform.run_thread')

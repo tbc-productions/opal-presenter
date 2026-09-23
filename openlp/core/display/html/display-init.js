@@ -72,11 +72,11 @@ class CommunicationBridge {
 
 function initNativeHandlerIfAvailable() {
     if (window.QWebChannel) {
-        // Means we're running inside OpenLP
+        // Means we're running inside OpenLP+
         new window.QWebChannel(window.qt.webChannelTransport, (channel) => {
             window.displayWatcher = channel.objects.displayWatcher;
 
-            // Defining window title as exposed by OpenLP
+            // Defining window title as exposed by OpenLP+
             (window.displayWatcher.getWindowTitle || (() => Promise.resolve('')))()
                 .then((windowTitle) => {
                     if (windowTitle) {

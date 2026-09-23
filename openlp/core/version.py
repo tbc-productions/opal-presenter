@@ -96,7 +96,7 @@ class VersionWorker(ThreadWorker):
         else:
             download_url += VERSION_STABLE
         headers = {
-            'User-Agent': 'OpenLP/{version} {system}/{release}; '.format(version=self.current_version['full'],
+            'User-Agent': 'OpenLP+/{version} {system}/{release}; '.format(version=self.current_version['full'],
                                                                          system=platform.system(),
                                                                          release=platform.release())
         }
@@ -209,10 +209,10 @@ def get_version():
         'build': build_number
     }
     if APPLICATION_VERSION['build']:
-        log.info('OpenLP version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
+        log.info('OpenLP+ version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
                                                                  build=APPLICATION_VERSION['build']))
     else:
-        log.info('OpenLP version {version}'.format(version=APPLICATION_VERSION['version']))
+        log.info('OpenLP+ version {version}'.format(version=APPLICATION_VERSION['version']))
     return APPLICATION_VERSION
 
 

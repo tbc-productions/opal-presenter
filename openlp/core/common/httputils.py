@@ -117,7 +117,7 @@ def get_openlp_user_agent():
     """
     Return the OpenLP user agent
     """
-    return 'OpenLP/' + Registry().get('application-qt').applicationVersion()
+    return 'OpenLP+/' + Registry().get('application-qt').applicationVersion()
 
 
 def get_web_page(url, headers=None, update_openlp=False, proxy=None, timeout=None, retries=None, session=None):

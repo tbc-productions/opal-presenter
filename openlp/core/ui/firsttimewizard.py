@@ -153,9 +153,9 @@ class RemotePage(GridLayoutPage):
         """
         Translate the interface
         """
-        self.remote_label.setText(translate('OpenLP.FirstTimeWizard', 'OpenLP has a web remote, which enables you to '
-                                            'control OpenLP from another computer, phone or tablet on the same network '
-                                            'as the OpenLP computer. OpenLP can download this web remote for you now, '
+        self.remote_label.setText(translate('OpenLP.FirstTimeWizard', 'OpenLP+ has a web remote, which enables you to '
+                                            'control OpenLP+ from another computer, phone or tablet on the same network '
+                                            'as the OpenLP+ computer. OpenLP+ can download this web remote for you now, '
                                             'or you can download it later via the remote settings.'))
         self.download_checkbox.setText(translate('OpenLP.FirstTimeWizard', 'Yes, download the remote now'))
         self.setTitle(translate('OpenLP.FirstTimeWizard', 'Web-based Remote Interface'))
@@ -431,7 +431,7 @@ class UiFirstTimeWizard(object):
         text = translate('OpenLP.FirstTimeWizard', 'Welcome to the First Time Wizard')
         self.title_label.setText('<span style="font-size:14pt; font-weight:600;">{text}</span>'.format(text=text))
         self.information_label.setText(
-            translate('OpenLP.FirstTimeWizard', 'This wizard will help you to configure OpenLP for initial use. '
+            translate('OpenLP.FirstTimeWizard', 'This wizard will help you to configure OpenLP+ for initial use. '
                                                 'Click the \'{next_button}\' button below to start.'
                       ).format(next_button=next_button_text))
         self.setButtonText(
@@ -440,14 +440,14 @@ class UiFirstTimeWizard(object):
         self.download_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
                                                  'Please wait while the resource index is downloaded.'))
         self.download_label.setText(translate('OpenLP.FirstTimeWizard',
-                                              'Please wait while OpenLP retrieves available resources...'))
+                                              'Please wait while OpenLP+ retrieves available resources...'))
         self.download_status_label.setText(translate('OpenLP.FirstTimeWizard', 'Preparing to retrieve resources...'))
         self.plugin_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Select parts of the program you wish to use'))
         self.plugin_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
                                                'You can also change these settings after the Wizard.'))
         self.screen_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Displays'))
         self.screen_page.setSubTitle(translate('OpenLP.FirstTimeWizard',
-                                               'Choose the main display screen for OpenLP.'))
+                                               'Choose the main display screen for OpenLP+.'))
         self.import_settings_page.retranslate_ui()
         self.songs_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Songs'))
         self.custom_check_box.setText(
@@ -463,13 +463,13 @@ class UiFirstTimeWizard(object):
         self.alert_check_box.setText(translate('OpenLP.FirstTimeWizard',
                                                'Alerts – Display informative messages while showing other slides'))
         self.obs_studio_check_box.setText(
-            translate('OpenLP.FirstTimeWizard', 'OBS Studio - Control scenes directly from OpenLP')
+            translate('OpenLP.FirstTimeWizard', 'OBS Studio - Control scenes directly from OpenLP+')
         )
         self.resource_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Resource Data'))
-        self.resource_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Can OpenLP download some resource data?'))
+        self.resource_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Can OpenLP+ download some resource data?'))
         self.resource_label.setText(
             translate('OpenLP.FirstTimeWizard',
-                      'OpenLP has collected some resources that we have permission to distribute.\n\n'
+                      'OpenLP+ has collected some resources that we have permission to distribute.\n\n'
                       'If you would like to download some of these resources click the \'{next_button}\' button, '
                       'otherwise click the \'{finish_button}\' button.'
                       ).format(next_button=next_button_text, finish_button=self.finish_button_text))
@@ -477,12 +477,12 @@ class UiFirstTimeWizard(object):
         self.no_internet_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Cannot connect to the internet.'))
         self.no_internet_label.setText(
             translate('OpenLP.FirstTimeWizard',
-                      'OpenLP could not connect to the internet to get information about the sample data available.\n\n'
+                      'OpenLP+ could not connect to the internet to get information about the sample data available.\n\n'
                       'Please check your internet connection. If your church uses a proxy server click the '
                       '\'Internet Settings\' button below and enter the server details there.\n\nClick the '
                       '\'{back_button}\' button to try again.\n\nIf you click the \'{finish_button}\' '
                       'button you can download the data at a later time by selecting \'Re-run First Time Wizard\' '
-                      'from the \'Tools\' menu in OpenLP.'
+                      'from the \'Tools\' menu in OpenLP+.'
                       ).format(back_button=back_button_text, finish_button=self.finish_button_text))
         self.songs_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Sample Songs'))
         self.songs_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Select and download public domain songs.'))
@@ -498,4 +498,4 @@ class UiFirstTimeWizard(object):
         self.themes_deselect_all_button.setToolTip(translate('OpenLP.FirstTimeWizard', 'Deselect all'))
         self.progress_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Downloading and Configuring'))
         self.progress_page.setSubTitle(
-            translate('OpenLP.FirstTimeWizard', 'Please wait while resources are downloaded and OpenLP is configured.'))
+            translate('OpenLP.FirstTimeWizard', 'Please wait while resources are downloaded and OpenLP+ is configured.'))

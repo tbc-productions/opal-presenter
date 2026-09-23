@@ -252,7 +252,7 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
             self,
             translate('OpenLP.FormattingTagForm', 'Export Formatting Tags'),
             last_export_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP Formatting Tags (*.json)'))
+            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Tags (*.json)'))
         if not export_file_path:
             return
         export_file_path = export_file_path.with_suffix('.json')
@@ -281,7 +281,7 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
             self,
             translate('OpenLP.FormattingTagForm', 'Import Formatting Tags'),
             last_import_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP Formatting Tags (*.json)'))
+            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Tags (*.json)'))
         if import_file_path is None:
             return
         try:

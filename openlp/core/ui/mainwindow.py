@@ -941,7 +941,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                                                translate('OpenLP.MainWindow',
                                                          'Are you sure you want to re-run the First '
                                                          'Time Wizard?\n\nRe-running this wizard may make changes to '
-                                                         'your current OpenLP configuration and possibly add songs to '
+                                                         'your current OpenLP+ configuration and possibly add songs to '
                                                          'your existing songs list and change your default theme.'),
                                                QtWidgets.QMessageBox.StandardButton(
                                                    QtWidgets.QMessageBox.StandardButton.Yes |
@@ -982,7 +982,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         if self.settings.value('core/screen blank'):
             if self.settings.value('core/blank warning'):
-                QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP Main Display Blanked'),
+                QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP+ Main Display Blanked'),
                                                translate('OpenLP.MainWindow', 'The Main Display has been blanked out'))
 
     def error_message(self, title: str, message: str):

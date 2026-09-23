@@ -1,13 +1,13 @@
 {
-  "name": "openlp",
+  "name": "openlp-plus",
   "version": "4.0.0",
-  "description": "OpenLP is free church worship presentation software",
-  "homepage": "https://openlp.org/",
+  "description": "OpenLP+ is free church worship presentation software",
+  "homepage": "https://git.tbcproductions.net/tbcproductions/openlp-plus",
   "license": "GPL-3.0-or-later",
-  "author": "OpenLP Developers",
+  "author": "OpenLP+ Developers and OpenLP contributors",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/openlp/openlp.git"
+    "url": "https://git.tbcproductions.net/tbcproductions/openlp-plus.git"
   },
   "directories": {
     "test": "tests"

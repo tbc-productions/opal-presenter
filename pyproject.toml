@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OpenLPPlus"
+name = "openlp-plus"
 dynamic = ["version"]
 description = "Open-source church presentation and lyrics projection application."
 readme = "README.rst"
@@ -124,9 +124,9 @@ test = [
 openlp = "openlp.__main__:start"
 
 [project.urls]
-Homepage = "https://openlp.org/"
-Source = "https://gitlab.com/openlp/openlp"
-Issues = "https://gitlab.com/openlp/openlp/-/issues"
+Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
+Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
+Issues = "https://git.tbcproductions.net/tbcproductions/openlp-plus/issues"
 Documentation = "https://manual.openlp.org"
 
 [tool.hatch.version]

@@ -97,8 +97,8 @@ class Ui_ExceptionDialog(object):
             translate('OpenLP.ExceptionDialog', '<strong>Please describe what you were trying to do.</strong> '
                                                 '&nbsp;If possible, write in English.'))
         exception_part1 = (translate('OpenLP.ExceptionDialog',
-                                     '<strong>Oops, OpenLP hit a problem and couldn\'t recover!<br><br>'
-                                     'You can help </strong> the OpenLP developers to <strong>fix this</strong>'
+                                     '<strong>Oops, OpenLP+ hit a problem and couldn\'t recover!<br><br>'
+                                     'You can help </strong> the OpenLP+ developers to <strong>fix this</strong>'
                                      ' by<br> sending them a <strong>bug report to {email}</strong>{newlines}'
                                      ).format(email='<a href = "mailto:developer@tbcproductions.net" > developer@tbcproductions.net</a>',
                                               newlines='<br><br>'))
@@ -107,7 +107,7 @@ class Ui_ExceptionDialog(object):
                       '<strong>No email app? </strong> You can <strong>save</strong> this '
                       'information to a <strong>file</strong> and<br>'
                       'send it from your <strong>mail on browser</strong> via an <strong>attachment.</strong><br><br>'
-                      '<strong>Thank you</strong> for being part of making OpenLP better!<br>'
+                      '<strong>Thank you</strong> for being part of making OpenLP+ better!<br>'
                       ).format(first_part=exception_part1))
         self.send_report_button.setText(translate('OpenLP.ExceptionDialog', 'Send E-Mail'))
         self.save_report_button.setText(translate('OpenLP.ExceptionDialog', 'Save to File'))

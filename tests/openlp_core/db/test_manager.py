@@ -148,7 +148,7 @@ def test_manager_init_upgrade_version_mismatch(mocked_critical_error_message_box
     mocked_critical_error_message_box.assert_called_once_with(
         'Database Error',
         'The database being loaded was created in a more recent version of '
-        'OpenLP. The database is version 2, while OpenLP expects version 1. '
+        'OpenLP+. The database is version 2, while OpenLP+ expects version 1. '
         f'The database will not be loaded.\n\nDatabase: {mocked_db_url}'
     )
 

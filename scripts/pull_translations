@@ -20,11 +20,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 #
-# This script automates the update of the translations on OpenLP.
+# This script automates the update of the translations on OpenLP+.
 #
 # It uses the tx client from Transifex for all the heavy lifting
 # All download *.ts files are converted to *.qm files which are used by
-# OpenLP.
+# OpenLP+.
 #
 ###############################################################################
 pwd=`pwd`

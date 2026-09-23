@@ -403,6 +403,7 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
     mock_sys.exit.assert_called_once()
     mocked_qapp.setOrganizationName.assert_called_once_with('tbcproductions')
     mocked_qapp.setApplicationName.assert_called_once_with('OpenLPPlus')
+    mocked_qapp.setApplicationDisplayName.assert_called_once_with('OpenLP+')
     mocked_qapp.setOrganizationDomain.assert_called_once_with('tbcproductions.net')
 
 

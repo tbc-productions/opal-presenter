@@ -106,7 +106,7 @@ def handle_db_error(plugin_name: str, db_file_path: Union[Path, str]):
     log.exception('Error loading database: {db}'.format(db=db_path))
     critical_error_message_box(translate('OpenLP.Manager', 'Database Error'),
                                translate('OpenLP.Manager',
-                                         'OpenLP cannot load your database.\n\nDatabase: {db}').format(db=db_path))
+                                         'OpenLP+ cannot load your database.\n\nDatabase: {db}').format(db=db_path))
 
 
 def database_exists(url: str) -> bool:

@@ -96,7 +96,7 @@ def trace_error_handler(logger):
 
     :param logger: logger to use so traceback is logged to correct class
     """
-    log_string = "OpenLP Error trace"
+    log_string = "OpenLP+ Error trace"
     for tb in traceback.extract_stack():
         log_string += '\n   File {file} at line {line} \n\t called {data}'.format(file=tb[0], line=tb[1], data=tb[3])
     logger.error(log_string)

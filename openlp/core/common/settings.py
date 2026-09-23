@@ -1184,7 +1184,7 @@ class Settings(QtCore.QSettings):
                 
             # Basic sanity check
             if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
-                log.error("Invalid OpenLP settings file.")
+                log.error("Invalid OpenLP+ settings file.")
                 return False
                 
             # Allowed setting sections: core sections and built-in plugins, plus any plugin

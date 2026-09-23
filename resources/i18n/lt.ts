@@ -127,9 +127,9 @@
     <name>BiblesPlugin.SwordImport</name>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
-        <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP developers.
+        <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP+ developers.
 {error}</source>
-        <translation>Importuojant SWORD Bibliją, įvyko netikėta klaida, prašome pranešti apie šią klaidą OpenLP kūrėjams.
+        <translation>Importuojant SWORD Bibliją, įvyko netikėta klaida, prašome pranešti apie šią klaidą OpenLP+ kūrėjams.
 {error}</translation>
     </message>
 </context>
@@ -763,10 +763,10 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="462"/>
-        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP?
+        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP+?
 
 You will need to re-import this Bible to use it again.</source>
-        <translation>Ar tikrai norite visiškai ištrinti „{bible}“ Bibliją iš OpenLP?
+        <translation>Ar tikrai norite visiškai ištrinti „{bible}“ Bibliją iš OpenLP+?
 
 Norėdami vėl ją naudoti, turėsite iš naujo ją importuoti.</translation>
     </message>
@@ -782,8 +782,8 @@ Norėdami vėl ją naudoti, turėsite iš naujo ją importuoti.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
-        <source>OpenLP cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
-        <translation>OpenLP negali derinti vienos dalies ir dviejų dalių Biblijos eilučių paieškos rezultatų. Ar norite išvalyti savo įrašytus rezultatus?</translation>
+        <source>OpenLP+ cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
+        <translation>OpenLP+ negali derinti vienos dalies ir dviejų dalių Biblijos eilučių paieškos rezultatų. Ar norite išvalyti savo įrašytus rezultatus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="626"/>
@@ -1250,8 +1250,8 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
-        <source>OpenLP is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP nepavyko nustatyti šio Biblijos vertimo kalbos. Prašome pasirinkti kalbą iš apačioje esančio sąrašo.</translation>
+        <source>OpenLP+ is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
+        <translation>OpenLP+ nepavyko nustatyti šio Biblijos vertimo kalbos. Prašome pasirinkti kalbą iš apačioje esančio sąrašo.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1553,8 +1553,8 @@ Neįmanoma nustatyti pasirinktinus knygų pavadinimus.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
-        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP.</source>
-        <translation>Norint naudoti pasirinktinus knygų pavadinimus, Metaduomenų kortelėje arba, jeigu pasirinkti „Visuotiniai nustatymai“, OpenLP konfigūracijoje, Biblijos skiltyje, privalo būti pasirinkta „Biblijos kalba“.</translation>
+        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP+.</source>
+        <translation>Norint naudoti pasirinktinus knygų pavadinimus, Metaduomenų kortelėje arba, jeigu pasirinkti „Visuotiniai nustatymai“, OpenLP+ konfigūracijoje, Biblijos skiltyje, privalo būti pasirinkta „Biblijos kalba“.</translation>
     </message>
 </context>
 <context>
@@ -1734,8 +1734,8 @@ Asmeninius prieigos raktus galima susikurti atlikus šiuos veiksmus:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
-        <source>Authentiation Failed. Check your credentials in OpenLP Settings.</source>
-        <translation>Nepavyko nustatyti tapatybės. Patikrinkite OpenLP nustatymuose savo prisijungimo duomenis.</translation>
+        <source>Authentiation Failed. Check your credentials in OpenLP+ Settings.</source>
+        <translation>Nepavyko nustatyti tapatybės. Patikrinkite OpenLP+ nustatymuose savo prisijungimo duomenis.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="289"/>
@@ -1985,8 +1985,8 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     <name>ImagePlugin</name>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
-        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
-        <translation>&lt;strong&gt;Paveikslo papildinys&lt;/strong&gt;&lt;br /&gt;Paveikslo papildinys suteikia paveikslų rodymo galimybę.&lt;br /&gt;Vienas iš šio papildinio išskirtinių bruožų yra galimybė Pamaldų Programos Tvarkytuvėje kartu grupuoti tam tikrą paveikslų skaičių, taip padarant kelių paveikslų rodymą dar lengvesnį. Šis papildinys taip pat naudojasi OpenLP „laiko ciklo“ funkcija, kad sukurtų prezentaciją, kuri yra automatiškai paleidžiama. Be to, paveikslai iš papildinio gali būti naudojami esamo apipavidalinimo fono nustelbimui, kas savo ruožtu sukuria tekstu pagrįstus elementus, tokius kaip giesmė su pasirinktu paveikslu, naudojamu kaip fonas, vietoj fono pateikiamo kartu su apipavidalinimu.</translation>
+        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP+&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
+        <translation>&lt;strong&gt;Paveikslo papildinys&lt;/strong&gt;&lt;br /&gt;Paveikslo papildinys suteikia paveikslų rodymo galimybę.&lt;br /&gt;Vienas iš šio papildinio išskirtinių bruožų yra galimybė Pamaldų Programos Tvarkytuvėje kartu grupuoti tam tikrą paveikslų skaičių, taip padarant kelių paveikslų rodymą dar lengvesnį. Šis papildinys taip pat naudojasi OpenLP+ „laiko ciklo“ funkcija, kad sukurtų prezentaciją, kuri yra automatiškai paleidžiama. Be to, paveikslai iš papildinio gali būti naudojami esamo apipavidalinimo fono nustelbimui, kas savo ruožtu sukuria tekstu pagrįstus elementus, tokius kaip giesmė su pasirinktu paveikslu, naudojamu kaip fonas, vietoj fono pateikiamo kartu su apipavidalinimu.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="79"/>
@@ -2820,8 +2820,8 @@ Failo prievardis nėra palaikomas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
-        <source>You have lost OpenLPs shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP</source>
-        <translation>Jūs praradote OpenLP bendrinamo duomenų katalogo užraktą, kurį perėmė naudotojas „{user}“, esantis ties „{host}“! Jūs turėtumėte nedelsiant užverti OpenLP, kad išvengtumėte duomenų sugadinimo! Galite bandyti iš naujo perimti duomenų katalogo užraktą, paleisdami OpenLP iš naujo</translation>
+        <source>You have lost OpenLP+s shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP+ immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP+</source>
+        <translation>Jūs praradote OpenLP+ bendrinamo duomenų katalogo užraktą, kurį perėmė naudotojas „{user}“, esantis ties „{host}“! Jūs turėtumėte nedelsiant užverti OpenLP+, kad išvengtumėte duomenų sugadinimo! Galite bandyti iš naujo perimti duomenų katalogo užraktą, paleisdami OpenLP+ iš naujo</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="148"/>
@@ -2830,8 +2830,8 @@ Failo prievardis nėra palaikomas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
-        <source>OpenLPs shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
-        <translation>OpenLP bendrinamą duomenų katalogą naudoja naudotojas „{user}“, esantis ties „{host}“. Tam, kad būtų išvengta duomenų sugadinimo, vienu metu yra leidžiama tik vienam naudotojui pasiekti duomenis! Palaukite keletą minučių ir bandykite dar kartą.</translation>
+        <source>OpenLP+s shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
+        <translation>OpenLP+ bendrinamą duomenų katalogą naudoja naudotojas „{user}“, esantis ties „{host}“. Tam, kad būtų išvengta duomenų sugadinimo, vienu metu yra leidžiama tik vienam naudotojui pasiekti duomenis! Palaukite keletą minučių ir bandykite dar kartą.</translation>
     </message>
 </context>
 <context>
@@ -3702,8 +3702,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
-        <source>OpenLP Song Database</source>
-        <translation>OpenLP giesmių duomenų bazė</translation>
+        <source>OpenLP+ Song Database</source>
+        <translation>OpenLP+ giesmių duomenų bazė</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
@@ -6150,8 +6150,8 @@ Užveriamas šis egzempliorius</translation>
     <name>OpenLP.SourceSelectForm</name>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
-        <source>Ignoring current changes and return to OpenLP</source>
-        <translation>Nepaisyti esamų pakeitimų ir grįžti į OpenLP</translation>
+        <source>Ignoring current changes and return to OpenLP+</source>
+        <translation>Nepaisyti esamų pakeitimų ir grįžti į OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="153"/>
@@ -6165,8 +6165,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
-        <source>Save changes and return to OpenLP</source>
-        <translation>Įrašyti pakeitimus ir grįžti į OpenLP</translation>
+        <source>Save changes and return to OpenLP+</source>
+        <translation>Įrašyti pakeitimus ir grįžti į OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="244"/>
@@ -6639,8 +6639,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
-        <source>OpenLP Backup</source>
-        <translation>OpenLP atsarginė kopija</translation>
+        <source>OpenLP+ Backup</source>
+        <translation>OpenLP+ atsarginė kopija</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -7611,8 +7611,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
-        <source>Choose the translation you&apos;d like to use in OpenLP.</source>
-        <translation>Pasirinkite vertimą, kurį norėtumėte naudoti OpenLP.</translation>
+        <source>Choose the translation you&apos;d like to use in OpenLP+.</source>
+        <translation>Pasirinkite vertimą, kurį norėtumėte naudoti OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7834,8 +7834,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
-        <source>OpenLP Service Files (*.osz *.oszl)</source>
-        <translation>OpenLP pamaldų programos failai (*.osz *.oszl)</translation>
+        <source>OpenLP+ Service Files (*.osz *.oszl)</source>
+        <translation>OpenLP+ pamaldų programos failai (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7877,13 +7877,13 @@ Jei tęsite įrašymą, šie failai bus pašalinti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
-        <source>OpenLP Service Files - lite (*.oszl)</source>
-        <translation>OpenLP pamaldų programos failai - mažieji (*.oszl)</translation>
+        <source>OpenLP+ Service Files - lite (*.oszl)</source>
+        <translation>OpenLP+ pamaldų programos failai - mažieji (*.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
-        <source>OpenLP Service Files (*.osz)</source>
-        <translation>OpenLP pamaldų programos failai (*.osz)</translation>
+        <source>OpenLP+ Service Files (*.osz)</source>
+        <translation>OpenLP+ pamaldų programos failai (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -8116,8 +8116,8 @@ paspauskite „Įrašyti“</translation>
         <location filename="../../openlp/core/ui/thememanager.py" line="477"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
-        <source>OpenLP Themes (*.otz)</source>
-        <translation>OpenLP apipavidalinimai (*.otz)</translation>
+        <source>OpenLP+ Themes (*.otz)</source>
+        <translation>OpenLP+ apipavidalinimai (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8529,13 +8529,13 @@ aukštis skaidrių valdiklyje:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
-        <source>&lt;strong&gt;Oops, OpenLP hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
-        <translation>&lt;strong&gt;Oi, OpenLP susidūrė su problema ir negalėjo būti atkurta!&lt;br&gt;&lt;br&gt;Jūs galite padėti &lt;/strong&gt; OpenLP kūrėjams &lt;strong&gt;tai pataisyti&lt;/strong&gt;,&lt;br&gt; išsiųsdami jiems &lt;strong&gt;klaidos ataskaitą į {email}&lt;/strong&gt;{newlines}</translation>
+        <source>&lt;strong&gt;Oops, OpenLP+ hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP+ developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
+        <translation>&lt;strong&gt;Oi, OpenLP+ susidūrė su problema ir negalėjo būti atkurta!&lt;br&gt;&lt;br&gt;Jūs galite padėti &lt;/strong&gt; OpenLP+ kūrėjams &lt;strong&gt;tai pataisyti&lt;/strong&gt;,&lt;br&gt; išsiųsdami jiems &lt;strong&gt;klaidos ataskaitą į {email}&lt;/strong&gt;{newlines}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
-        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP better!&lt;br&gt;</source>
-        <translation>{first_part}&lt;strong&gt;Nėra el. pašto programos? &lt;/strong&gt; Galite &lt;strong&gt;įrašyti&lt;/strong&gt; šią informaciją į &lt;strong&gt;failą&lt;/strong&gt; ir&lt;br&gt;išsiųsti jį iš savo &lt;strong&gt;pašto per naršyklę&lt;/strong&gt;, pridėję šį failą kaip &lt;strong&gt;priedą.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Dėkojame&lt;/strong&gt;, kad esate geresnės OpenLP programos kūrimo dalimi!&lt;br&gt;</translation>
+        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP+ better!&lt;br&gt;</source>
+        <translation>{first_part}&lt;strong&gt;Nėra el. pašto programos? &lt;/strong&gt; Galite &lt;strong&gt;įrašyti&lt;/strong&gt; šią informaciją į &lt;strong&gt;failą&lt;/strong&gt; ir&lt;br&gt;išsiųsti jį iš savo &lt;strong&gt;pašto per naršyklę&lt;/strong&gt;, pridėję šį failą kaip &lt;strong&gt;priedą.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Dėkojame&lt;/strong&gt;, kad esate geresnės OpenLP+ programos kūrimo dalimi!&lt;br&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="112"/>
@@ -9005,15 +9005,15 @@ Norėdami atsisiųsti šią versiją, pereikite į nuotolinio valdymo pulto nust
         <location filename="../../openlp/core/ui/mainwindow.py" line="714"/>
         <source>Are you sure you want to re-run the First Time Wizard?
 
-Re-running this wizard may make changes to your current OpenLP configuration and possibly add songs to your existing songs list and change your default theme.</source>
+Re-running this wizard may make changes to your current OpenLP+ configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>Ar tikrai norite paleisti pirmojo karto vediklį iš naujo?
 
-Šio vediklio paleidimas iš naujo, gali pakeisti jūsų dabartinę OpenLP konfigūraciją ir, galbūt, į esančių giesmių sąrašą, pridėti giesmių bei pakeisti jūsų numatytąjį apipavidalinimą.</translation>
+Šio vediklio paleidimas iš naujo, gali pakeisti jūsų dabartinę OpenLP+ konfigūraciją ir, galbūt, į esančių giesmių sąrašą, pridėti giesmių bei pakeisti jūsų numatytąjį apipavidalinimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
-        <source>OpenLP Main Display Blanked</source>
-        <translation>OpenLP pagrindinis ekranas uždengtas</translation>
+        <source>OpenLP+ Main Display Blanked</source>
+        <translation>OpenLP+ pagrindinis ekranas uždengtas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -9247,8 +9247,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
-        <source>OpenLP would not be possible without the following software libraries:</source>
-        <translation>OpenLP nebūtų įmanoma be šių programinės įrangos bibliotekų:</translation>
+        <source>OpenLP+ would not be possible without the following software libraries:</source>
+        <translation>OpenLP+ nebūtų įmanoma be šių programinės įrangos bibliotekų:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="165"/>
@@ -9337,8 +9337,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="238"/>
-        <source>OpenLP was unable to read the resource index file. Please try again later.</source>
-        <translation>Programai OpenLP nepavyko perskaityti ištekliaus failo. Vėliau bandykite dar kartą.</translation>
+        <source>OpenLP+ was unable to read the resource index file. Please try again later.</source>
+        <translation>Programai OpenLP+ nepavyko perskaityti ištekliaus failo. Vėliau bandykite dar kartą.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="450"/>
@@ -9358,8 +9358,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="464"/>
-        <source>Please wait while OpenLP is set up and your data is downloaded.</source>
-        <translation>Prašome palaukti, kol OpenLP bus nustatyta ir jūsų duomenys atsiųsti.</translation>
+        <source>Please wait while OpenLP+ is set up and your data is downloaded.</source>
+        <translation>Prašome palaukti, kol OpenLP+ bus nustatyta ir jūsų duomenys atsiųsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="467"/>
@@ -9368,23 +9368,23 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Atsiuntimas užbaigtas. Spustelėkite mygtuką „{finish_button}“, norėdami grįžti į OpenLP.</translation>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
+        <translation>Atsiuntimas užbaigtas. Spustelėkite mygtuką „{finish_button}“, norėdami grįžti į OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="484"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Atsiuntimas užbaigtas. Spustelėkite mygtuką „{finish_button}“, norėdami paleisti OpenLP.</translation>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
+        <translation>Atsiuntimas užbaigtas. Spustelėkite mygtuką „{finish_button}“, norėdami paleisti OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="488"/>
-        <source>Click the &apos;{finish_button}&apos; button to return to OpenLP.</source>
-        <translation>Spustelėkite mygtuką „{finish_button}“, norėdami grįžti į OpenLP.</translation>
+        <source>Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
+        <translation>Spustelėkite mygtuką „{finish_button}“, norėdami grįžti į OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="490"/>
-        <source>Click the &apos;{finish_button}&apos; button to start OpenLP.</source>
-        <translation>Spustelėkite mygtuką „{finish_button}“, norėdami paleisti OpenLP.</translation>
+        <source>Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
+        <translation>Spustelėkite mygtuką „{finish_button}“, norėdami paleisti OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="504"/>
@@ -9424,8 +9424,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     <name>OpenLP.FirstTimeWizard</name>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
-        <source>OpenLP has a web remote, which enables you to control OpenLP from another computer, phone or tablet on the same network as the OpenLP computer. OpenLP can download this web remote for you now, or you can download it later via the remote settings.</source>
-        <translation>OpenLP turi internetinį nuotolinio valdymo pultą, kuris leidžia jums valdyti OpenLP iš kito, tame pačiame tinkle kaip ir OpenLP kompiuteris esančio, kompiuterio, telefono ar planšetės. OpenLP gali jums dabar atsiųsti šį internetinį nuotolinio valdymo pultą arba galite jį atsisiųsti vėliau per nuotolinio valdymo nustatymus.</translation>
+        <source>OpenLP+ has a web remote, which enables you to control OpenLP+ from another computer, phone or tablet on the same network as the OpenLP+ computer. OpenLP+ can download this web remote for you now, or you can download it later via the remote settings.</source>
+        <translation>OpenLP+ turi internetinį nuotolinio valdymo pultą, kuris leidžia jums valdyti OpenLP+ iš kito, tame pačiame tinkle kaip ir OpenLP+ kompiuteris esančio, kompiuterio, telefono ar planšetės. OpenLP+ gali jums dabar atsiųsti šį internetinį nuotolinio valdymo pultą arba galite jį atsisiųsti vėliau per nuotolinio valdymo nustatymus.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="78"/>
@@ -9454,8 +9454,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
-        <source>This wizard will help you to configure OpenLP for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
-        <translation>Šis vediklis padės jums sukonfigūruoti OpenLP pradiniam naudojimui. Norėdami pradėti, spustelėkite apačioje esantį mygtuką „{next_button}“.</translation>
+        <source>This wizard will help you to configure OpenLP+ for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
+        <translation>Šis vediklis padės jums sukonfigūruoti OpenLP+ pradiniam naudojimui. Norėdami pradėti, spustelėkite apačioje esantį mygtuką „{next_button}“.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="326"/>
@@ -9494,8 +9494,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="336"/>
-        <source>Choose the main display screen for OpenLP.</source>
-        <translation>Pasirinkite pagrindinį rodymo ekraną, skirtą OpenLP.</translation>
+        <source>Choose the main display screen for OpenLP+.</source>
+        <translation>Pasirinkite pagrindinį rodymo ekraną, skirtą OpenLP+.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="338"/>
@@ -9539,8 +9539,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="352"/>
-        <source>OBS Studio - Control scenes directly from OpenLP</source>
-        <translation>OBS Studio – Valdyti scenas tiesiogiai iš OpenLP</translation>
+        <source>OBS Studio - Control scenes directly from OpenLP+</source>
+        <translation>OBS Studio – Valdyti scenas tiesiogiai iš OpenLP+</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="354"/>
@@ -9549,15 +9549,15 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="355"/>
-        <source>Can OpenLP download some resource data?</source>
-        <translation>Ar OpenLP gali atsisiųsti kai kuriuos ištekliaus duomenis?</translation>
+        <source>Can OpenLP+ download some resource data?</source>
+        <translation>Ar OpenLP+ gali atsisiųsti kai kuriuos ištekliaus duomenis?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="357"/>
-        <source>OpenLP has collected some resources that we have permission to distribute.
+        <source>OpenLP+ has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
-        <translation>Programa OpenLP surinko kai kuriuos išteklius, kuriuos ji turi leidimą platinti.
+        <translation>Programa OpenLP+ surinko kai kuriuos išteklius, kuriuos ji turi leidimą platinti.
 
 Jei norėtumėte atsisiųsti kai kuriuos iš šių išteklių, spustelėkite ant mygtuko „{next_button}“, priešingu atveju spustelėkite ant mygtuko „{finish_button}“.</translation>
     </message>
@@ -9573,14 +9573,14 @@ Jei norėtumėte atsisiųsti kai kuriuos iš šių išteklių, spustelėkite ant
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="365"/>
-        <source>OpenLP could not connect to the internet to get information about the sample data available.
+        <source>OpenLP+ could not connect to the internet to get information about the sample data available.
 
 Please check your internet connection. If your church uses a proxy server click the 'Internet Settings' button below and enter the server details there.
 
 Click the '{back_button}' button to try again.
 
-If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP.</source>
-        <translation>OpenLP nepavyko prisijungti prie interneto, kad gautų informaciją apie prieinamus pavyzdinius duomenis.
+If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP+.</source>
+        <translation>OpenLP+ nepavyko prisijungti prie interneto, kad gautų informaciją apie prieinamus pavyzdinius duomenis.
 
 Patikrinkite savo interneto ryšį. Jeigu jūsų bažnyčia naudoja įgaliotąjį serverį, žemiau spustelėkite mygtuką „Interneto nustatymai“ ir ten įveskite įgaliotojo serverio informaciją.
 
@@ -9640,8 +9640,8 @@ Jei spustelėsite ant mygtuko „{finish_button}“, vėliau galėsite atsisiųs
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="385"/>
-        <source>Please wait while resources are downloaded and OpenLP is configured.</source>
-        <translation>Prašome palaukti, kol bus atsiųsti ištekliai ir konfigūruota OpenLP.</translation>
+        <source>Please wait while resources are downloaded and OpenLP+ is configured.</source>
+        <translation>Prašome palaukti, kol bus atsiųsti ištekliai ir konfigūruota OpenLP+.</translation>
     </message>
 </context>
 <context>
@@ -10148,10 +10148,10 @@ yra OpenLP duomenų failai. Ar norėtumėte pakeisti tuos failus esamais duomen�
     </message>
     <message>
         <location filename="../../openlp/core/db/helpers.py" line="108"/>
-        <source>OpenLP cannot load your database.
+        <source>OpenLP+ cannot load your database.
 
 Database: {db}</source>
-        <translation>OpenLP nepavyksta įkelti jūsų duomenų bazės.
+        <translation>OpenLP+ nepavyksta įkelti jūsų duomenų bazės.
 
 Duomenų bazė: {db}</translation>
     </message>
@@ -10165,10 +10165,10 @@ Duomenų bazė: {db}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/db/manager.py" line="83"/>
-        <source>The database being loaded was created in a more recent version of OpenLP. The database is version {db_ver}, while OpenLP expects version {db_up}. The database will not be loaded.
+        <source>The database being loaded was created in a more recent version of OpenLP+. The database is version {db_ver}, while OpenLP+ expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
-        <translation>Įkeliama duomenų bazė buvo sukurta naujesnėje OpenLP versijoje. Duomenų bazės versija yra {db_ver}, tuo tarpu OpenLP tikisi versijos {db_up}. Duomenų bazė nebus įkelta.
+        <translation>Įkeliama duomenų bazė buvo sukurta naujesnėje OpenLP+ versijoje. Duomenų bazės versija yra {db_ver}, tuo tarpu OpenLP+ tikisi versijos {db_up}. Duomenų bazė nebus įkelta.
 
 Duomenų bazė: {db_name}</translation>
     </message>
@@ -10224,8 +10224,8 @@ Duomenų bazė: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
-        <source>There is a mismatch between screens and screen settings. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
-        <translation>Yra neatitikimas tarp ekranų ir ekranų nustatymų. OpenLP bandys automatiškai pasirinkti rodymo ekraną, bet turėtumėte apsvarstyti galimybę atnaujinti ekrano nustatymus.</translation>
+        <source>There is a mismatch between screens and screen settings. OpenLP+ will try to automatically select a display screen, but you should consider updating the screen settings.</source>
+        <translation>Yra neatitikimas tarp ekranų ir ekranų nustatymų. OpenLP+ bandys automatiškai pasirinkti rodymo ekraną, bet turėtumėte apsvarstyti galimybę atnaujinti ekrano nustatymus.</translation>
     </message>
 </context>
 <context>
@@ -10310,8 +10310,8 @@ Duomenų bazė: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
-        <source>The generic document/presentation importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>Bendrinis dokumento/pateikties importavimo įrankis buvo išjungtas, nes OpenLP negali pasiekti OpenOffice ar LibreOffice.</translation>
+        <source>The generic document/presentation importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
+        <translation>Bendrinis dokumento/pateikties importavimo įrankis buvo išjungtas, nes OpenLP+ negali pasiekti OpenOffice ar LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="229"/>
@@ -10465,8 +10465,8 @@ Duomenų bazė: {db_name}</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
-        <source>The Songs of Fellowship importer has been disabled because OpenLP cannot access OpenOffice or LibreOffice.</source>
-        <translation>The Songs of Fellowship importavimo įrankis buvo išjungtas, nes OpenLP negali pasiekti OpenOffice ar LibreOffice.</translation>
+        <source>The Songs of Fellowship importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
+        <translation>The Songs of Fellowship importavimo įrankis buvo išjungtas, nes OpenLP+ negali pasiekti OpenOffice ar LibreOffice.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="420"/>
@@ -11682,8 +11682,8 @@ Giesmių nustatymuose galite išjungti šį įspėjimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="153"/>
-        <source>OpenLP can only import simple lyrics or ChordPro</source>
-        <translation>OpenLP gali importuoti tik paprastus giesmės žodžius arba ChordPro</translation>
+        <source>OpenLP+ can only import simple lyrics or ChordPro</source>
+        <translation>OpenLP+ gali importuoti tik paprastus giesmės žodžius arba ChordPro</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="178"/>
