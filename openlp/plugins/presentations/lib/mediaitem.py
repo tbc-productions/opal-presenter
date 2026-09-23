@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##########################################################################
 # OpenLP - Open Source Lyrics Projection                                 #
 # ---------------------------------------------------------------------- #
@@ -25,6 +23,7 @@ from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
+from openlp.core.common import get_file_type_glob
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, build_icon, create_thumb, validate_thumb
@@ -66,7 +65,8 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         self.icon_path = 'presentations/presentation'
         self.controllers = controllers
-        super(PresentationMediaItem, self).__init__(parent, plugin, Folder, Item)
+        self.on_new_file_masks = ''
+        super().__init__(parent, plugin, Folder, Item)
 
     def retranslate_ui(self):
         """
@@ -143,17 +143,19 @@ class PresentationMediaItem(FolderLibraryItem):
         """
         Build the list of file extensions to be used in the Open file dialog.
         """
-        file_type_string = ''
+        file_type_list = []
+        seen_file_types = set()
         for controller in self.controllers:
             if self.controllers[controller].enabled():
                 file_types = self.controllers[controller].supports + self.controllers[controller].also_supports
                 for file_type in file_types:
-                    if file_type not in file_type_string:
-                        file_type_string += '*.{text} '.format(text=file_type)
-        file_type_string = file_type_string.strip()
-        self.service_manager.supported_suffixes(file_type_string.split(' '))
+                    if file_type not in seen_file_types:
+                        seen_file_types.add(file_type)
+                        file_type_list.append(f'*.{file_type}')
+        self.service_manager.supported_suffixes(file_type_list)
+        file_type_string = ' '.join(get_file_type_glob(file_type[2:]) for file_type in file_type_list)
         self.on_new_file_masks = translate('PresentationPlugin.MediaItem',
-                                           'Presentations ({text})').format(text=file_type_string)
+                                           f'Presentations ({file_type_string})')
 
     def populate_display_types(self):
         """
@@ -558,7 +560,7 @@ class PresentationMediaItem(FolderLibraryItem):
             return None
         for controller in self.controllers:
             if self.controllers[controller].enabled():
-                if file_type in self.controllers[controller].supports:
+                if file_type.lower() in self.controllers[controller].supports:
                     return controller
         for controller in self.controllers:
             if self.controllers[controller].enabled():
