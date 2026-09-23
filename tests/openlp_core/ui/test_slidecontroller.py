@@ -166,6 +166,28 @@ def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(setti
     mocked_display.go_to_slide.assert_called_once_with(4, raise_window=False)
 
 
+@mark.parametrize('always_on_top', [False, True])
+def test_single_screen_slide_selected_follows_stacking_setting(always_on_top, settings: Settings):
+    """Advancing a slide must not cover the controls when normal window stacking is selected."""
+    settings.setValue('core/always on top', always_on_top)
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.screens = [object()]
+    slide_controller.update_preview = MagicMock()
+    slide_controller.slide_selected_lock = MagicMock()
+    slide_controller.service_item = MagicMock()
+    slide_controller.service_item.is_command.return_value = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.preview_widget.slide_count.return_value = 10
+    slide_controller.preview_widget.current_slide_number.return_value = 4
+    mocked_display = MagicMock()
+    slide_controller.displays = [mocked_display]
+
+    slide_controller.slide_selected(True)
+
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=always_on_top)
+
+
 def test_slide_selected_defers_when_lock_busy(settings: Settings):
     """
     Test that slide_selected() defers a retry instead of dropping input when lock is busy.
@@ -604,6 +626,23 @@ def test_set_hide_mode_screen_falls_back_when_desktop_unavailable(settings: Sett
 
     # THEN: Hide mode should fall back to showing presentation
     assert slide_controller._current_hide_mode is None
+
+
+@mark.parametrize('hide_mode', [None, HideMode.Screen])
+def test_live_hide_mode_refreshes_display_output_actions(hide_mode, settings: Settings, registry: Registry):
+    """Live toolbar changes immediately update the View menu and its switch shortcut."""
+    main_window = MagicMock()
+    registry.register('main_window', main_window)
+    live_controller = LiveController(None)
+    live_controller.service_item = None
+    live_controller._sync_live_hide_action_state = MagicMock()
+    live_controller.update_preview = MagicMock()
+    live_controller.on_toggle_loop = MagicMock()
+
+    with patch.object(Registry, 'execute'):
+        live_controller.set_hide_mode(hide_mode)
+
+    main_window._sync_view_display_output_menu_action.assert_called_once_with()
 
 
 def test_on_go_live_live_controller(registry: Registry):
@@ -2563,6 +2602,24 @@ def test_initial_preview_controller(registry: Registry):
     # WHEN: the default controller is built.
     # THEN: The controller should not be a live controller.
     assert preview_controller.is_live is False, 'The slide controller should be a Preview controller'
+
+
+@patch('openlp.core.ui.slidecontroller.DisplayWindow')
+def test_live_display_receives_switch_action(mocked_display_class, registry: Registry):
+    """The switch shortcut remains active when the independent projection window has focus."""
+    main_window = MagicMock()
+    main_window.view_switch_projection_item = QtGui.QAction()
+    registry.register('main_window', main_window)
+    live_controller = LiveController(None)
+    live_controller._current_hide_mode = None
+    live_controller.screens = [MagicMock(is_display=True)]
+    live_controller.close_displays = MagicMock()
+    live_controller._reset_blank = MagicMock()
+
+    with patch.object(live_controller, '_SlideController__add_actions_to_widget'):
+        live_controller.setup_displays()
+
+    mocked_display_class.return_value.addAction.assert_called_once_with(main_window.view_switch_projection_item)
 
 
 def test_close_displays(registry: Registry):

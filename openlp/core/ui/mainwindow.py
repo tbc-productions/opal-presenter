@@ -283,6 +283,11 @@ class Ui_MainWindow(object):
             context=QtCore.Qt.ShortcutContext.ApplicationShortcut,
             category=UiStrings().View,
             triggers=self.on_view_display_output_toggled)
+        self.view_switch_projection_item = create_action(
+            main_window, 'viewSwitchProjectionItem', can_shortcuts=True, visible=False,
+            context=QtCore.Qt.ShortcutContext.ApplicationShortcut,
+            category=UiStrings().View, triggers=self.on_switch_projection_window)
+        self.view_switch_projection_item.setAutoRepeat(False)
         self.lock_panel = create_action(main_window, 'lockPanel', icon=UiIcons().lock, can_shortcuts=True,
                                         checked=panel_locked, category=UiStrings().View,
                                         triggers=self.set_lock_panel)
@@ -400,7 +405,8 @@ class Ui_MainWindow(object):
                                           self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
                     self.view_projector_manager_item, self.view_service_manager_item, self.view_theme_manager_item,
-                    None, self.view_preview_panel, self.view_live_panel, self.view_display_output_item, None,
+                    None, self.view_preview_panel, self.view_live_panel, self.view_display_output_item,
+                    self.view_switch_projection_item, None,
                     self.lock_panel))
         # i18n add Language Actions
         add_actions(self.settings_language_menu, (self.auto_language_item, None))
@@ -524,6 +530,10 @@ class Ui_MainWindow(object):
         self.view_display_output_item.setStatusTip(translate(
             'OpenLP.MainWindow', 'Toggle display output (same as Show Presentation / Show Desktop on the Live '
                                 'toolbar).'))
+        self.view_switch_projection_item.setText(translate(
+            'OpenLP.MainWindow', 'Toggle display output'))
+        self.view_switch_projection_item.setStatusTip(translate(
+            'OpenLP.MainWindow', 'Bring the projection forward. Use the shortcut again to return to OpenLP+.'))
         self.settings_plugin_list_item.setText(translate('OpenLP.MainWindow', '&Manage Plugins'))
         self.settings_plugin_list_item.setStatusTip(translate('OpenLP.MainWindow', 'You can enable and disable plugins '
                                                                                    'from here.'))
@@ -659,35 +669,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.http_server = HttpServer(self)
         self.ws_server = WebSocketServer()
         self.screen_updating_lock = Lock()
-        self._live_display_geometry_timer = QtCore.QTimer(self)
-        self._live_display_geometry_timer.setSingleShot(True)
-        self._live_display_geometry_timer.timeout.connect(self._refresh_live_display_geometry_for_single_screen)
-
-    def moveEvent(self, event: QtGui.QMoveEvent):
-        super().moveEvent(event)
-        self._schedule_live_display_geometry_refresh()
-
-    def resizeEvent(self, event: QtGui.QResizeEvent):
-        super().resizeEvent(event)
-        self._schedule_live_display_geometry_refresh()
-
-    def _schedule_live_display_geometry_refresh(self):
-        if len(ScreenList()) != 1:
-            return
-        if not self.settings.value('core/display on monitor'):
-            return
-        self._live_display_geometry_timer.start(75)
-
-    def _refresh_live_display_geometry_for_single_screen(self):
-        if len(ScreenList()) != 1:
-            return
-        if not self.settings.value('core/display on monitor'):
-            return
-        live = self.live_controller
-        if not live or not live.displays:
-            return
-        for display in live.displays:
-            display.update_from_screen(live.screens[display.screen_number])
+        self._projection_topmost_suspended = False
 
     @contextmanager
     def _mute_left_dock_visibility_signals(self):
@@ -1286,8 +1268,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.application.set_busy_cursor()
             self.renderer.resize(self.live_controller.screens.current.display_geometry.size())
             self.preview_controller.screen_size_changed()
+            self._projection_topmost_suspended = False
             self.live_controller.setup_displays()
             self.live_controller.screen_size_changed()
+            self._sync_view_display_output_menu_action()
             self.setFocus()
             self.activateWindow()
             self.application.set_normal_cursor()
@@ -1872,6 +1856,57 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         else:
             live.set_hide_mode(HideMode.Screen)
 
+    def _set_projection_windows_topmost(self, enabled: bool):
+        """Temporarily release topmost stacking while the operator works in the main window."""
+        live = self.live_controller
+        display = live.display
+        topmost_hint = QtCore.Qt.WindowType.WindowStaysOnTopHint
+        for window in (getattr(live, 'media_widget', None), display):
+            if not isinstance(window, QtWidgets.QWidget):
+                continue
+            if bool(window.windowFlags() & topmost_hint) == enabled:
+                continue
+            was_visible = window.isVisible()
+            geometry = window.geometry()
+            window.setWindowFlag(topmost_hint, enabled)
+            if not enabled:
+                window.setWindowState(window.windowState() & ~QtCore.Qt.WindowState.WindowFullScreen)
+            window.setGeometry(geometry)
+            if was_visible:
+                if enabled and window is display and not is_macosx() and \
+                        live.screens[display.screen_number].custom_geometry is None:
+                    window.showFullScreen()
+                else:
+                    window.show()
+        self._projection_topmost_suspended = not enabled
+
+    def on_switch_projection_window(self):
+        """Switch focus on a single screen without changing the presentation hide mode."""
+        if len(ScreenList()) != 1 or QtWidgets.QApplication.activeModalWidget():
+            return
+        live = self.live_controller
+        if not live or live.current_hide_mode == HideMode.Screen:
+            return
+        display = live.display
+        if display is None or not display.isVisible():
+            return
+        active_window = QtWidgets.QApplication.activeWindow()
+        media_widget = getattr(live, 'media_widget', None)
+        if active_window is display or active_window is media_widget:
+            if self.settings.value('core/always on top'):
+                self._set_projection_windows_topmost(False)
+            if self.isMinimized():
+                self.showNormal()
+            self.raise_()
+            self.activateWindow()
+            self.setFocus()
+        else:
+            if self._projection_topmost_suspended:
+                self._set_projection_windows_topmost(True)
+            display.raise_()
+            display.activateWindow()
+            display.setFocus()
+
     def _sync_view_display_output_menu_action(self):
         """
         Keep the View menu check state aligned with the live output mode.
@@ -1891,6 +1926,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.view_display_output_item.setEnabled(True)
         self.view_display_output_item.setChecked(showing)
         self.view_display_output_item.blockSignals(False)
+        self.view_switch_projection_item.setVisible(len(ScreenList()) == 1)
+        self.view_switch_projection_item.setEnabled(self.view_display_output_item.isChecked())
 
     def set_live_panel_visibility(self, is_visible: bool, *, update_preset_layout_flag: bool = True):
         """

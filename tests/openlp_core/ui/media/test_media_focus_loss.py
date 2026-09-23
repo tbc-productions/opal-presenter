@@ -47,13 +47,13 @@ def test_media_widget_positioned_on_display_screen():
 
     The key fix is that the media_widget is created as a true top-level window:
     - Parent is None (not controller, not display) - makes it independent
-    - Has WindowStaysOnTopHint flag set - keeps it on top when OpenLP loses focus
-    - This ensures video rendering continues regardless of main window state
+    - Uses the same stacking preference as the live projection window
+    - Remains an independent window when OpenLP loses focus
     
     When resizing for live playback:
     - Media widget is positioned at the display screen's full geometry
     - Uses absolute screen coordinates (via ScreenList.current.display_geometry)
-    - WindowStaysOnTopHint ensures it stays visible when OpenLP is not focused
+    - WindowStaysOnTopHint is used only when the user enables Always on top
     """
     # GIVEN: A MediaBase with display and controller
     media_base = MediaBase(parent=None)
@@ -91,11 +91,10 @@ def test_media_widget_window_flags_keep_rendering():
     
     This makes the widget independent with proper flags:
     - Parent: None (true top-level window, independent from OpenLP main window)
-    - WindowFlags: FramelessWindowHint | Tool | WindowStaysOnTopHint
-    - Attribute: WA_X11NetWmWindowTypeDialog (Linux platform support)
+    - WindowFlags: FramelessWindowHint | Window, with an optional WindowStaysOnTopHint
     
     This ensures the presentation display renders independently
-    and stays visible on its screen regardless of OpenLP's focus state.
+    and follows the same stacking preference as the projection window.
     
     Verified by:
     1. All media controller tests passing

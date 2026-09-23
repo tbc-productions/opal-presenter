@@ -737,6 +737,12 @@ class Settings(QtCore.QSettings):
             if is_macosx() else
             [QtGui.QKeySequence(QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Space)]
         )
+        _switch_projection_shortcut = (
+            [QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.MetaModifier |
+                                QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Space)]
+            if is_macosx() else
+            [QtGui.QKeySequence(QtCore.Qt.Modifier.CTRL | QtCore.Qt.Modifier.SHIFT | QtCore.Qt.Key.Key_Space)]
+        )
         Settings.__default_settings__.update({
             'shortcuts/aboutItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Control + QtCore.Qt.Key.Key_F1)],
             'shortcuts/addToService': [],
@@ -883,6 +889,7 @@ class Settings(QtCore.QSettings):
             'shortcuts/viewPreviewPanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F11)],
             'shortcuts/viewLivePanel': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F12)],
             'shortcuts/viewDisplayOutputItem': _display_output_shortcut,
+            'shortcuts/viewSwitchProjectionItem': _switch_projection_shortcut,
             'shortcuts/viewServiceManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F9)],
             'shortcuts/webSiteItem': []
         })

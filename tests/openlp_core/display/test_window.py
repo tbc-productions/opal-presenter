@@ -98,6 +98,56 @@ def test_x11_override_off(display_window_env, mock_settings):
     assert x11_bit != QtCore.Qt.WindowType.X11BypassWindowManagerHint
 
 
+@pytest.mark.parametrize('always_on_top', [False, True])
+def test_live_display_stacking_follows_setting(always_on_top, display_window_env, mock_settings):
+    """A live output is an independent window and only requests topmost stacking when enabled."""
+    mock_settings.value.side_effect = lambda key: {
+        'advanced/x11 bypass wm': False,
+        'core/always on top': always_on_top
+    }.get(key, False)
+    screen = Screen(0, QtCore.QRect(0, 0, 800, 600), is_display=True)
+
+    display_window = DisplayWindow(screen=screen, start_hidden=True)
+
+    assert display_window.parentWidget() is None
+    assert display_window.windowFlags() & QtCore.Qt.WindowType.WindowType_Mask == QtCore.Qt.WindowType.Window
+    assert bool(display_window.windowFlags() & QtCore.Qt.WindowType.WindowStaysOnTopHint) is always_on_top
+
+
+@pytest.mark.parametrize('always_on_top, expected_method', [(False, 'show'), (True, 'showFullScreen')])
+@patch('openlp.core.display.window.is_macosx', return_value=False)
+def test_auto_show_respects_stacking_setting(mocked_is_macosx, always_on_top, expected_method,
+                                             display_window_env, mock_settings):
+    """Normal stacking uses a screen-sized window instead of a native fullscreen window."""
+    mock_settings.value.side_effect = lambda key: {'core/always on top': always_on_top}.get(key, False)
+    display_window = DisplayWindow()
+    display_window.show = MagicMock()
+    display_window.showFullScreen = MagicMock()
+
+    display_window.auto_show(False)
+
+    getattr(display_window, expected_method).assert_called_once_with()
+    other_method = 'showFullScreen' if expected_method == 'show' else 'show'
+    getattr(display_window, other_method).assert_not_called()
+
+
+def test_live_geometry_uses_screen_configuration_even_with_main_window_visible(display_window_env, mock_settings,
+                                                                               registry):
+    """The projection no longer moves to avoid the main window."""
+    main_window = MagicMock()
+    main_window.isVisible.return_value = True
+    main_window.frameGeometry.return_value = QtCore.QRect(100, 100, 500, 400)
+    registry.register('main_window', main_window)
+    display_window = DisplayWindow()
+    display_window.is_display = True
+    screen = Screen(0, QtCore.QRect(0, 0, 800, 600), is_display=True)
+
+    display_window.update_from_screen(screen)
+
+    assert display_window.geometry() == screen.display_geometry
+    main_window.frameGeometry.assert_not_called()
+
+
 @patch('openlp.core.display.window.is_macosx')
 def test_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, display_window_env):
     """

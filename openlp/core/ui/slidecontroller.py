@@ -152,9 +152,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         for screen in self.screens:
             if screen.is_display:
                 will_start_hidden = self._current_hide_mode == HideMode.Screen
-                display = DisplayWindow(self, screen, start_hidden=will_start_hidden,
+                display = DisplayWindow(None, screen, start_hidden=will_start_hidden,
                                         after_loaded_callback=self._display_after_loaded_callback,
                                         window_title='Live Screen' if self.is_live else 'Preview Screen')
+                switch_action = getattr(self.main_window, 'view_switch_projection_item', None)
+                if isinstance(switch_action, QtGui.QAction):
+                    display.addAction(switch_action)
                 self.displays.append(display)
                 self._reset_blank(False)
         if self.display:
@@ -1261,9 +1264,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             # is not loaded by the time _raise_displays is run, lyrics (web display)
             # will be under the media window (not good).
             self._raise_displays()
-            QtCore.QTimer.singleShot(100, self._raise_displays)
-            QtCore.QTimer.singleShot(500, self._raise_displays)
-            QtCore.QTimer.singleShot(1000, self._raise_displays)
+            if not self.is_live or len(self.screens) > 1 or self.settings.value('core/always on top'):
+                QtCore.QTimer.singleShot(100, self._raise_displays)
+                QtCore.QTimer.singleShot(500, self._raise_displays)
+                QtCore.QTimer.singleShot(1000, self._raise_displays)
         self.slide_selected(True)
         if self.service_item.from_service:
             self.preview_widget.setFocus()
@@ -1436,6 +1440,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.update_preview()
         # Update loop state
         self.on_toggle_loop()
+        if self.is_live:
+            main_window = self.main_window
+            if main_window and hasattr(main_window, '_sync_view_display_output_menu_action'):
+                main_window._sync_view_display_output_menu_action()
 
     def is_desktop_hide_available(self):
         """
@@ -1522,7 +1530,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        [self.service_item, self.is_live, row])
             else:
                 for display in self.displays:
-                    display.go_to_slide(row, raise_window=restore_focus)
+                    raise_window = restore_focus and (not self.is_live or len(self.screens) > 1 or
+                                                      self.settings.value('core/always on top'))
+                    display.go_to_slide(row, raise_window=raise_window)
                 if not self.service_item.is_text():
                     # reset the store used to display first image
                     self.service_item.bg_image_bytes = None

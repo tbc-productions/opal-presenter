@@ -84,6 +84,37 @@ def test_setup_live(MockedQtWidgets, settings):
     assert media_player.video_widget.isVisible() is False
 
 
+@pytest.mark.parametrize('always_on_top', [False, True])
+@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+def test_live_media_stacking_follows_setting(mocked_qt_widgets, always_on_top, settings):
+    """Video output uses the same topmost setting as the live display window."""
+    settings.setValue('core/always on top', always_on_top)
+    controller = MagicMock()
+    controller.is_live = True
+
+    MediaPlayer().setup(controller, MagicMock())
+
+    flags = controller.media_widget.setWindowFlags.call_args.args[0]
+    assert flags & QtCore.Qt.WindowType.WindowType_Mask == QtCore.Qt.WindowType.Window
+    assert bool(flags & QtCore.Qt.WindowType.WindowStaysOnTopHint) is always_on_top
+
+
+@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+def test_live_media_respects_temporary_main_window_focus(mocked_qt_widgets, settings, registry):
+    """A newly created video window stays below the controls during a one-screen focus switch."""
+    settings.setValue('core/always on top', True)
+    main_window = MagicMock()
+    main_window._projection_topmost_suspended = True
+    registry.register('main_window', main_window)
+    controller = MagicMock()
+    controller.is_live = True
+
+    MediaPlayer().setup(controller, MagicMock())
+
+    flags = controller.media_widget.setWindowFlags.call_args.args[0]
+    assert not flags & QtCore.Qt.WindowType.WindowStaysOnTopHint
+
+
 @patch('openlp.core.ui.media.mediaplayer.QtWidgets')
 def test_setup_preview(MockedQtWidgets, settings):
     """
