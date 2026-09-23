@@ -2,6 +2,8 @@
 
 import ctypes
 import logging
+import os
+import plistlib
 import subprocess
 import sys
 from pathlib import Path
@@ -32,16 +34,93 @@ def _running_app_bundle():
 
 
 def _accessibility_drag_target():
-    """Return the app bundle or the real interpreter used for a source launch."""
+    """Offer the owning app, including the IDE/terminal responsible for a source run."""
     bundle = _running_app_bundle()
     if bundle:
         return bundle, bundle.name
+    launcher = _launching_app_bundle()
+    if launcher:
+        return launcher, launcher.stem
     executable = Path(sys.executable).resolve()
     if executable.is_file():
         label = translate('OpenLP.MacPermissions', 'Python {version}').format(
             version=f'{sys.version_info.major}.{sys.version_info.minor}')
         return executable, label
     return None, None
+
+
+def _launching_app_bundle():
+    """Follow source-run parents through shells/debuggers to their containing GUI app.
+
+    TCC attributes IDE and terminal launches to that app. In particular, a
+    debugger's interpreter path alone is not the permission identity. Do not
+    read process arguments, which can contain debugger credentials.
+    """
+    if not is_macosx():
+        return None
+    pid = os.getppid()
+    seen = set()
+    try:
+        while pid > 1 and pid not in seen and len(seen) < 32:
+            seen.add(pid)
+            result = subprocess.run(['/bin/ps', '-ww', '-p', str(pid), '-o', 'ppid=,comm='],
+                                    check=True, capture_output=True, text=True, timeout=2)
+            parent_pid, executable = result.stdout.strip().split(maxsplit=1)
+            # Electron helpers are nested inside the app the user actually launches.
+            for candidate in reversed(Path(executable).parents):
+                if candidate.suffix == '.app' and (candidate / 'Contents' / 'Info.plist').is_file():
+                    return candidate
+            pid = int(parent_pid)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        log.debug('Could not identify the app that launched OpenLP+', exc_info=True)
+    return None
+
+
+def has_post_event_access():
+    """Check the permission required for sending PowerPoint's slide shortcut."""
+    try:
+        graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+        graphics.CGPreflightPostEventAccess.argtypes = []
+        graphics.CGPreflightPostEventAccess.restype = ctypes.c_bool
+        return bool(graphics.CGPreflightPostEventAccess())
+    except (OSError, AttributeError):
+        log.exception('Could not check macOS event-posting access')
+        return False
+
+
+def request_post_event_access():
+    """Use the Accessibility prompt API, then request event access if still needed."""
+    services = ctypes.CDLL('/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices')
+    foundation = ctypes.CDLL('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
+    services.AXIsProcessTrustedWithOptions.argtypes = [ctypes.c_void_p]
+    services.AXIsProcessTrustedWithOptions.restype = ctypes.c_bool
+    foundation.CFDictionaryCreate.argtypes = [
+        ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_long, ctypes.c_void_p, ctypes.c_void_p]
+    foundation.CFDictionaryCreate.restype = ctypes.c_void_p
+    foundation.CFRelease.argtypes = [ctypes.c_void_p]
+    prompt_key = ctypes.c_void_p.in_dll(services, 'kAXTrustedCheckOptionPrompt')
+    true_value = ctypes.c_void_p.in_dll(foundation, 'kCFBooleanTrue')
+    options = foundation.CFDictionaryCreate(None, (ctypes.c_void_p * 1)(prompt_key.value),
+                                            (ctypes.c_void_p * 1)(true_value.value), 1, None, None)
+    if not options:
+        return False
+    try:
+        trusted = services.AXIsProcessTrustedWithOptions(options)
+    finally:
+        foundation.CFRelease(options)
+    if not trusted:
+        # The native permission prompt is asynchronous.
+        return False
+    graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+    graphics.CGRequestPostEventAccess.argtypes = []
+    graphics.CGRequestPostEventAccess.restype = ctypes.c_bool
+    return bool(graphics.CGRequestPostEventAccess())
+
+
+def accessibility_target_name():
+    """Name the same permission entry in startup guidance and slide errors."""
+    return _accessibility_drag_target()[1] or translate('OpenLP.MacPermissions', 'the app that launched OpenLP+')
 
 
 class _DraggableFileIcon(QtWidgets.QLabel):
@@ -51,9 +130,19 @@ class _DraggableFileIcon(QtWidgets.QLabel):
         super().__init__(parent)
         self.file_path = file_path
         self._drag_start_pos = None
-        icon_file = file_path / 'Contents' / 'Resources' / 'OpenLP.icns'
-        icon = (QtGui.QIcon(str(icon_file)) if icon_file.is_file() else
-                QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(str(file_path))))
+        icon = QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(str(file_path)))
+        if file_path.suffix == '.app':
+            try:
+                with (file_path / 'Contents' / 'Info.plist').open('rb') as info_file:
+                    icon_name = plistlib.load(info_file).get('CFBundleIconFile', '')
+                if icon_name:
+                    icon_file = file_path / 'Contents' / 'Resources' / icon_name
+                    if not icon_file.suffix:
+                        icon_file = icon_file.with_suffix('.icns')
+                    if icon_file.is_file():
+                        icon = QtGui.QIcon(str(icon_file))
+            except (OSError, ValueError):
+                log.debug('Could not load the app icon from %s', file_path)
         self.setPixmap(icon.pixmap(64, 64))
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.setFixedSize(92, 92)
@@ -62,6 +151,9 @@ class _DraggableFileIcon(QtWidgets.QLabel):
         self.setToolTip(translate('OpenLP.MacPermissions', 'Drag {name} into Accessibility Settings').format(
             name=label))
         self.setAccessibleName(translate('OpenLP.MacPermissions', 'Drag {name}').format(name=label))
+
+    def heightForWidth(self, width):
+        return 92
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -113,6 +205,8 @@ def request_presentation_permissions(parent):
             preflight.restype = ctypes.c_bool
             request.restype = ctypes.c_bool
             if not preflight():
+                if label == 'Accessibility':
+                    request = request_post_event_access
                 missing.append((label, preflight, request, anchor))
     except (AttributeError, OSError):
         log.exception('Could not check macOS presentation permissions')
@@ -131,7 +225,7 @@ def request_presentation_permissions(parent):
         'OpenLP+ needs Accessibility to send slide numbers to PowerPoint and Screen Recording to show the '
         'presentation in its Live area. macOS may not show another alert if you denied access earlier. '
         'You can enable the missing access in System Settings > Privacy & Security. '
-        'If the program shown below is not listed, use the + button to add it. '
+        'For development runs, macOS may require access for the IDE or terminal that started OpenLP+. '
         'Restart OpenLP+ after changing permissions.'))
     layout.addWidget(explanation)
 
@@ -172,24 +266,49 @@ def request_presentation_permissions(parent):
     if any(label == 'Accessibility' for label, _, _, _ in missing):
         target, target_name = _accessibility_drag_target()
         if target:
+            target_row = QtWidgets.QHBoxLayout()
+            target_row.addWidget(_DraggableFileIcon(target, target_name, dialog),
+                                 alignment=QtCore.Qt.AlignmentFlag.AlignTop)
+            target_details = QtWidgets.QVBoxLayout()
             drag_instruction = QtWidgets.QLabel(
                 translate('OpenLP.MacPermissions',
                           'Drag {name} into the Accessibility list in System Settings, '
                           'then switch its permission on.').format(name=target_name), dialog)
             drag_instruction.setWordWrap(True)
-            layout.addWidget(drag_instruction)
-            layout.addWidget(_DraggableFileIcon(target, target_name, dialog),
-                             alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
-            layout.addSpacing(12)
-            if target.suffix != '.app':
+            target_details.addWidget(drag_instruction)
+            if target.suffix == '.app' and target != _running_app_bundle():
+                launcher_note = QtWidgets.QLabel(translate(
+                    'OpenLP.MacPermissions',
+                    'OpenLP+ was launched by {name}. Enable access for {name}, then restart this OpenLP+ run. '
+                    'Permission for Python alone may not apply to an IDE or terminal launch.').format(
+                        name=target_name), dialog)
+                launcher_note.setWordWrap(True)
+                target_details.addWidget(launcher_note)
+            elif target.suffix != '.app':
                 source_note = QtWidgets.QLabel(
                     translate('OpenLP.MacPermissions',
                               'This development run uses the Python executable at {path}. '
                               'If dragging does not add it, use + and select this file.').format(path=target), dialog)
                 source_note.setWordWrap(True)
                 source_note.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
-                layout.addWidget(source_note)
+                target_details.addWidget(source_note)
+            target_row.addLayout(target_details, 1)
+            layout.addLayout(target_row)
 
+    check_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Check Again'), dialog)
+
+    def check_again():
+        remaining = [label for label, preflight, _, _ in missing if not preflight()]
+        if not remaining:
+            dialog.accept()
+            return
+        missing_label.setText(translate('OpenLP.MacPermissions', 'Missing access: {names}').format(
+            names=', '.join(remaining)))
+        status.setText(translate('OpenLP.MacPermissions', 'macOS has not granted this running process access yet.'))
+        status.show()
+
+    check_button.clicked.connect(check_again)
+    layout.addWidget(check_button)
     done_button = QtWidgets.QPushButton(translate('OpenLP.MacPermissions', 'Done'), dialog)
     done_button.clicked.connect(dialog.accept)
     layout.addWidget(done_button)

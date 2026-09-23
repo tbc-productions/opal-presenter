@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock, patch
+import ctypes
 import sys
 
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.mac_permissions import (
-    _DraggableFileIcon, _accessibility_drag_target, _open_privacy_settings, _running_app_bundle,
-    request_presentation_permissions)
+    _DraggableFileIcon, _accessibility_drag_target, _launching_app_bundle, _open_privacy_settings, _running_app_bundle,
+    request_post_event_access, request_presentation_permissions)
 
 
 def test_running_app_bundle_uses_the_current_executable(tmp_path):
@@ -31,11 +32,62 @@ def test_development_drag_target_resolves_the_actual_python_executable(tmp_path)
     launcher.parent.mkdir(parents=True)
     launcher.symlink_to(executable)
 
-    with patch('openlp.core.common.mac_permissions.sys.executable', str(launcher)):
+    with patch('openlp.core.common.mac_permissions.sys.executable', str(launcher)), \
+            patch('openlp.core.common.mac_permissions._launching_app_bundle', return_value=None):
         target, label = _accessibility_drag_target()
 
     assert target == executable
     assert label == f'Python {sys.version_info.major}.{sys.version_info.minor}'
+
+
+def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
+    ide = tmp_path / 'Example IDE.app'
+    (ide / 'Contents').mkdir(parents=True)
+    (ide / 'Contents' / 'Info.plist').touch()
+    helper = ide / 'Contents' / 'Frameworks' / 'IDE Helper.app' / 'Contents' / 'MacOS' / 'IDE Helper'
+    parents = [MagicMock(stdout='12 /path/to/python3.14\n'), MagicMock(stdout='13 /bin/zsh\n'),
+               MagicMock(stdout=f'14 {helper}\n')]
+
+    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('openlp.core.common.mac_permissions.os.getppid', return_value=11), \
+            patch('openlp.core.common.mac_permissions.subprocess.run', side_effect=parents) as run, \
+            patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=None):
+        target, label = _accessibility_drag_target()
+
+    assert target == ide
+    assert label == 'Example IDE'
+    assert [call.args[0][4] for call in run.call_args_list] == ['-o', '-o', '-o']
+    assert [call.args[0][3] for call in run.call_args_list] == ['11', '12', '13']
+
+
+def test_packaged_launch_uses_its_own_app(tmp_path):
+    bundle = tmp_path / 'OpenLP+.app'
+    with patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=bundle), \
+            patch('openlp.core.common.mac_permissions._launching_app_bundle') as find_launcher:
+        assert _accessibility_drag_target() == (bundle, 'OpenLP+.app')
+    find_launcher.assert_not_called()
+
+
+def test_launcher_detection_stops_if_parent_lookup_fails():
+    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('openlp.core.common.mac_permissions.subprocess.run', side_effect=OSError):
+        assert _launching_app_bundle() is None
+
+
+def test_native_accessibility_request_sets_prompt_option_and_releases_dictionary():
+    services, foundation = MagicMock(), MagicMock()
+    services.AXIsProcessTrustedWithOptions.return_value = False
+    foundation.CFDictionaryCreate.return_value = 123
+    with patch('openlp.core.common.mac_permissions.ctypes.CDLL', side_effect=[services, foundation]), \
+            patch('openlp.core.common.mac_permissions.ctypes.c_void_p.in_dll',
+                  side_effect=[ctypes.c_void_p(456), ctypes.c_void_p(789)]):
+        assert not request_post_event_access()
+
+    arguments = foundation.CFDictionaryCreate.call_args.args
+    assert arguments[1][0] == 456
+    assert arguments[2][0] == 789
+    services.AXIsProcessTrustedWithOptions.assert_called_once_with(123)
+    foundation.CFRelease.assert_called_once_with(123)
 
 
 def test_app_icon_drag_contains_the_target_file_url(tmp_path):
@@ -94,17 +146,24 @@ def test_missing_permissions_offer_native_request_and_system_settings():
             buttons['Ask macOS for Access'].click()
             buttons['Open Accessibility Settings'].click()
             buttons['Open Screen Recording Settings'].click()
-            buttons['Done'].click()
+            buttons['Check Again'].click()
+            assert dialog.isVisible()
+            graphics.CGPreflightPostEventAccess.return_value = True
+            graphics.CGPreflightScreenCaptureAccess.return_value = True
+            buttons['Check Again'].click()
+            assert not dialog.isVisible()
         finally:
             dialog.accept()
 
     QtCore.QTimer.singleShot(0, use_dialog)
     with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
             patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
+            patch('openlp.core.common.mac_permissions.request_post_event_access') as request_access, \
+            patch('openlp.core.common.mac_permissions._launching_app_bundle', return_value=None), \
             patch('openlp.core.common.mac_permissions.QtGui.QDesktopServices.openUrl', return_value=True) as open_url:
         request_presentation_permissions(parent)
 
-    graphics.CGRequestPostEventAccess.assert_called_once_with()
+    request_access.assert_called_once_with()
     graphics.CGRequestScreenCaptureAccess.assert_called_once_with()
     assert [call.args[0].toString() for call in open_url.call_args_list] == [
         'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',

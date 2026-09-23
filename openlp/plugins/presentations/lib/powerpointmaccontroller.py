@@ -46,6 +46,8 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtMultimedia import QMediaCaptureSession, QVideoSink, QWindowCapture
 
 from openlp.core.common.i18n import translate
+from openlp.core.common.mac_permissions import (
+    accessibility_target_name, has_post_event_access, request_post_event_access)
 from openlp.core.common.registry import Registry
 from openlp.core.display.screens import ScreenList
 from openlp.core.ui import HideMode
@@ -466,14 +468,13 @@ def _send_slide_number_to_powerpoint(slide_no):
         process_id = applications[0].processIdentifier()
         foundation = ctypes.CDLL('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
         graphics = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
-        graphics.CGPreflightPostEventAccess.restype = ctypes.c_bool
-        if not graphics.CGPreflightPostEventAccess():
+        if not has_post_event_access():
             if not _post_event_access_requested:
                 _post_event_access_requested = True
-                graphics.CGRequestPostEventAccess.restype = ctypes.c_bool
-                graphics.CGRequestPostEventAccess()
-            if not graphics.CGPreflightPostEventAccess():
-                log.warning('PowerPoint slide selection needs macOS Accessibility permission for OpenLP+')
+                request_post_event_access()
+            if not has_post_event_access():
+                log.warning('PowerPoint slide selection needs macOS Accessibility permission for %s',
+                            accessibility_target_name())
                 return False
         foundation.CFRelease.argtypes = [ctypes.c_void_p]
         graphics.CGEventCreateKeyboardEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_bool]
@@ -808,7 +809,7 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         use_timings = getattr(self, 'use_slide_timings', False)
         self._slide_advance_times = _read_slide_advance_times(self.file_path)
         self._use_openlp_timing = bool(len(self._slide_advance_times) == self.slide_count and
-                                      any(delay is not None for delay in self._slide_advance_times))
+                                       any(delay is not None for delay in self._slide_advance_times))
         # Keep the native show manual. Only OpenLP's parsed timer can be toggled
         # while a slideshow is already running.
         self.use_slide_timings = bool(use_timings and self._use_openlp_timing)
@@ -892,6 +893,7 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         self._captured_image = None
         self._qt_capture_has_frame = False
         try:
+            show_active = False
             try:
                 show_active = self.controller.applescript.call('is_slide_show_window_active', self.file_path.name)
                 moved = bool(show_active) and _send_slide_number_to_powerpoint(slide_no)
@@ -905,9 +907,18 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
                 self.slide_number = 0
                 main_window = Registry().get('main_window')
                 if main_window:
-                    main_window.show_status_message(translate(
-                        'PresentationPlugin.PowerPointMac',
-                        'Could not select a PowerPoint slide. Allow OpenLP+ in macOS Accessibility settings.'), 10000)
+                    if not show_active:
+                        message = translate('PresentationPlugin.PowerPointMac',
+                                            'Could not select a PowerPoint slide. Activate its slideshow window.')
+                    elif not has_post_event_access():
+                        message = translate(
+                            'PresentationPlugin.PowerPointMac',
+                            'Could not select a PowerPoint slide. '
+                            'Allow {name} in macOS Accessibility settings.').format(name=accessibility_target_name())
+                    else:
+                        message = translate('PresentationPlugin.PowerPointMac',
+                                            'Could not send a slide number to the PowerPoint slideshow window.')
+                    main_window.show_status_message(message, 10000)
                 self._schedule_automatic_slide(current_slide)
                 return False
             self.ui_slidenumber = slide_no

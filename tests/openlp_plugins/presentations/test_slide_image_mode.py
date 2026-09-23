@@ -437,8 +437,8 @@ def test_powerpoint_mac_reexports_when_cache_has_no_slide(settings, tmp_path):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     document.get_thumbnail_folder = MagicMock(return_value=tmp_path)
     document.get_thumbnail_path = MagicMock(side_effect=lambda number, exists:
-                                           tmp_path / f'slide{number}.png'
-                                           if (tmp_path / f'slide{number}.png').is_file() else None)
+                                            tmp_path / f'slide{number}.png'
+                                            if (tmp_path / f'slide{number}.png').is_file() else None)
 
     def export():
         (tmp_path / 'slide1.png').write_bytes(b'cached image')
@@ -464,7 +464,8 @@ def test_powerpoint_mac_starts_on_selected_slide(settings, tmp_path):
     document.use_slide_timings = True
     document.get_slide_number = MagicMock(side_effect=[1, 3, 3])
     with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') as open_document, \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') \
+            as open_document, \
             patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                   return_value=True) as send_slide_number:
         screen = screens.return_value.current.display_geometry
@@ -656,9 +657,14 @@ def test_powerpoint_mac_does_not_walk_slides_when_number_shortcut_is_unavailable
 
     with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                return_value=False) as send_slide_number, \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.has_post_event_access',
+                  return_value=False), \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.accessibility_target_name',
+                  return_value='Example IDE'), \
             patch('openlp.plugins.presentations.lib.powerpointmaccontroller.Registry') as registry:
         assert not document.goto_slide(80)
-        registry.return_value.get.return_value.show_status_message.assert_called_once()
+        registry.return_value.get.return_value.show_status_message.assert_called_once_with(
+            'Could not select a PowerPoint slide. Allow Example IDE in macOS Accessibility settings.', 10000)
 
     controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
     send_slide_number.assert_called_once_with(80)
