@@ -891,8 +891,8 @@ def test_sync_live_hide_action_state_is_neutral_without_live_item(settings: Sett
     slide_controller.hide_menu.setDefaultAction.assert_called_once_with(slide_controller.neutral_hide_action)
 
 
-def test_update_desktop_hide_action_state_respects_view_display_output(settings: Settings):
-    """Show Desktop should be disabled when View > Display output is unchecked or disabled."""
+def test_update_desktop_hide_action_state_keeps_hidden_output(settings: Settings):
+    """Refreshing the toolbar must not clear Show Desktop when output is hidden."""
     slide_controller = SlideController(None)
     slide_controller.is_live = True
     slide_controller.desktop_screen = MagicMock()
@@ -902,12 +902,15 @@ def test_update_desktop_hide_action_state_respects_view_display_output(settings:
     mocked_main_window.view_display_output_item.isChecked.return_value = False
     mocked_main_window.view_display_output_item.isEnabled.return_value = True
     Registry().register('main_window', mocked_main_window)
-    slide_controller._current_hide_mode = None
+    slide_controller._current_hide_mode = HideMode.Screen
+    slide_controller.set_hide_mode = MagicMock()
 
     slide_controller._update_desktop_hide_action_state(has_item=True)
 
-    slide_controller.desktop_screen.setEnabled.assert_called_with(False)
-    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
+    slide_controller.desktop_screen.setEnabled.assert_called_with(True)
+    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', True)
+    slide_controller.set_hide_mode.assert_not_called()
+    assert slide_controller.current_hide_mode == HideMode.Screen
 
     mocked_main_window.view_display_output_item.isChecked.return_value = True
     mocked_main_window.view_display_output_item.isEnabled.return_value = False
@@ -916,6 +919,8 @@ def test_update_desktop_hide_action_state_respects_view_display_output(settings:
 
     slide_controller.desktop_screen.setEnabled.assert_called_with(False)
     slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
+    slide_controller.set_hide_mode.assert_not_called()
+    assert slide_controller.current_hide_mode == HideMode.Screen
 
 
 def test_service_previous(settings: Settings):
@@ -1582,11 +1587,12 @@ def test_process_item_song_no_media(mocked_execute: MagicMock, registry: Registr
     assert 2 == slide_controller.preview_display.load_verses.call_count, 'Execute should have been called 2 times'
 
 
+@mark.parametrize('is_reloading', [False, True])
 @patch.object(Registry, 'execute')
-def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute: MagicMock, registry: Registry,
-                                                                 state_media: State):
+def test_process_item_keeps_desktop_hide_mode(mocked_execute: MagicMock, registry: Registry,
+                                              state_media: State, is_reloading: bool):
     """
-    Test if the display's hide mode is not changed when using is_reloading parameter
+    Auto unblank must leave output hidden when the operator selected Show Desktop.
     """
     # GIVEN: A mocked presentation service item, a mocked media service item, a mocked Registry.execute
     #        and a slide controller with many mocks.
@@ -1612,6 +1618,7 @@ def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute:
     slide_controller = SlideController(None)
     slide_controller.service_item = None
     slide_controller.is_live = True
+    slide_controller._current_hide_mode = HideMode.Screen
     slide_controller._reset_blank = MagicMock()
     slide_controller.preview_widget = MagicMock()
     slide_controller.preview_display = MagicMock()
@@ -1638,8 +1645,8 @@ def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute:
     slide_controller.hide_menu = MagicMock()
     slide_controller.neutral_hide_action = MagicMock()
 
-    # WHEN: _process_item is called with is_reloading=True
-    slide_controller._process_item(mocked_media_item, 0, is_reloading=True)
+    # WHEN: _process_item is called while Display output is off
+    slide_controller._process_item(mocked_media_item, 0, is_reloading=is_reloading)
 
     # THEN: set_hide_mode should not be called
     slide_controller.set_hide_mode.assert_not_called()

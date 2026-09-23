@@ -1278,7 +1278,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.application.process_events()
             self.ignore_toolbar_resize_events = False
             self.on_controller_size_changed()
-            if not is_reloading and self.settings.value('core/auto unblank'):
+            if not is_reloading and getattr(self, '_current_hide_mode', None) != HideMode.Screen and \
+                    self.settings.value('core/auto unblank'):
                 self.set_hide_mode(None)
         self.log_debug('_process_item end')
 
@@ -1457,25 +1458,19 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if not self.is_live:
             return
-        # Desktop hide is only available when the platform supports it and the main
-        # window 'Display output' is currently enabled (checked). If the View menu
-        # has display output unselected, 'Show Desktop' should be disabled.
+        # Keep Show Desktop available while output is hidden so the user can turn it back on.
         desktop_available = self.is_desktop_hide_available()
-        view_output_checked = True
         view_output_enabled = True
         if getattr(self, 'main_window', None) and hasattr(self.main_window, 'view_display_output_item'):
             view_display_output_item = self.main_window.view_display_output_item
-            view_output_checked = view_display_output_item.isChecked()
             view_output_enabled = view_display_output_item.isEnabled()
-        enabled = has_item and desktop_available and view_output_enabled and view_output_checked
+        enabled = has_item and desktop_available and view_output_enabled
         if hasattr(self, 'desktop_screen'):
             self.desktop_screen.setEnabled(enabled)
             self.desktop_screen.setVisible(desktop_available)
         if hasattr(self, 'toolbar'):
             self.toolbar.set_widget_enabled('desktop_screen_button', enabled)
             self.toolbar.set_widget_visible('desktop_screen_button', desktop_available)
-        if not enabled and getattr(self, '_current_hide_mode', None) == HideMode.Screen:
-            self.set_hide_mode(None)
 
     def on_slide_selected(self):
         """
