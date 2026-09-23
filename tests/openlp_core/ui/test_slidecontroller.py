@@ -2091,6 +2091,37 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
     assert slide_controller.preview_display.go_to_slide.call_count == 0
 
 
+@mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
+def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type):
+    """Leaving Show Desktop restores the current slide in the live preview."""
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._current_hide_mode = None
+    controller.service_item = ServiceItem(None)
+    controller.service_item.service_item_type = item_type
+    controller.service_item._rendered_slides = [{'verse': 'V1', 'text': 'First'},
+                                                {'verse': 'V2', 'text': 'Second'}]
+    controller.service_item.slides = [{'path': 'first.png'}, {'path': 'second.png'}]
+    controller.selected_row = 1
+    controller.slide_changed_time = datetime.datetime.now()
+    controller.preview_display = MagicMock()
+    controller.preview_display.hide_mode = HideMode.Screen
+    controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
+    controller._update_desktop_capture_timer = MagicMock()
+    controller.output_has_changed = MagicMock()
+
+    controller.update_preview()
+
+    if item_type == ServiceItemType.Text:
+        controller.preview_display.load_verses.assert_called_once_with(controller.service_item.rendered_slides)
+        controller.preview_display.load_images.assert_not_called()
+    else:
+        controller.preview_display.load_images.assert_called_once_with(controller.service_item.slides)
+        controller.preview_display.load_verses.assert_not_called()
+    controller.preview_display.go_to_slide.assert_called_once_with(1)
+    controller.preview_display.show_display.assert_called_once_with()
+
+
 def test_on_live_preview_capture_timer_runs_pending_capture(settings: Settings):
     """
     Test that deferred live preview capture executes when pending.
@@ -2252,6 +2283,27 @@ def test__capture_maindisplay(mocked_is_wayland_compositor: MagicMock, mocked_ap
 
     # THEN: Screenshot should have been taken with correct winId and dimensions
     mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_called_once()
+
+
+@patch('openlp.core.ui.slidecontroller.ScreenList')
+@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
+def test_capture_rendered_item_uses_display_window(mocked_is_wayland_compositor: MagicMock,
+                                                   mocked_application: MagicMock,
+                                                   mocked_screenlist: MagicMock, item_type,
+                                                   settings: Settings):
+    """A rendered Live item is captured from OpenLP's output, not the desktop."""
+    mocks = _init__capture_maindisplay_mocks([[34, 67, 77, 42], [0, 0, 800, 600]],
+                                             mocked_screenlist, mocked_application,
+                                             mocked_is_wayland_compositor)
+    mocks.slide_controller.service_item.service_item_type = item_type
+    mocks.slide_controller._current_hide_mode = None
+
+    photo = mocks.slide_controller._capture_maindisplay()
+
+    assert photo == mocks.windowed_screenshot_mock
+    mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_not_called()
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')

@@ -1608,10 +1608,17 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                         self.screen_capture = image_path
                         self.preview_display.set_single_image('#000', image_path)
             elif not mirror_live_preview and not preview_hide_mode:
-                restored_from_hide = bool(self.preview_display.hide_mode)
-                if restored_from_hide:
+                restored_hide_mode = self.preview_display.hide_mode
+                if self.is_live and restored_hide_mode == HideMode.Screen:
+                    # Desktop capture replaces the preview's slides. Rebuild them before
+                    # returning to the current song, custom slide, or image.
+                    if self.service_item.is_text():
+                        self.preview_display.load_verses(self.service_item.rendered_slides)
+                    elif self.service_item.is_image():
+                        self.preview_display.load_images(self.service_item.slides)
+                if restored_hide_mode:
                     self.preview_display.show_display()
-                else:
+                if not restored_hide_mode or restored_hide_mode == HideMode.Screen:
                     self.preview_display.go_to_slide(self.selected_row)
             if not preview_hide_mode and self.preview_display.hide_mode and not native_mac_powerpoint:
                 self.preview_display.show_display()
@@ -1709,6 +1716,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 # A desktop grab can show OpenLP or another Space instead of PowerPoint.
                 # Let display_maindisplay use the current slide thumbnail if window capture failed.
                 return None
+        if (self.service_item and getattr(self, '_current_hide_mode', None) != HideMode.Screen and
+                (self.service_item.is_text() or self.service_item.is_image())):
+            # OpenLP renders these items itself. Capturing its display window avoids
+            # stale or misaligned desktop frames, particularly on macOS.
+            return self._capture_maindisplay_window()
         # Wayland needs screenshot fallback even when OpenLP is running on X11/xcb mode.
         fallback_to_windowed = is_wayland_compositor() or \
             self.settings.value('advanced/prefer windowed screen capture')
