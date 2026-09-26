@@ -80,6 +80,8 @@ def test_setup_live(MockedQtWidgets, settings):
     assert mocked_controller.media_widget.setAttribute.call_count >= 1
     assert media_player.media_player is not None
     assert media_player.audio_output is not None
+    assert media_player.media_player.audioOutput() is media_player.audio_output
+    assert media_player.media_capture_session.audioOutput() is None
     assert media_player.video_widget is not None
     assert media_player.video_widget.isVisible() is False
 
@@ -136,6 +138,8 @@ def test_setup_preview(MockedQtWidgets, settings):
     mocked_controller.media_widget.setAttribute.assert_not_called()
     assert media_player.media_player is not None
     assert media_player.audio_output is not None
+    assert media_player.media_player.audioOutput() is media_player.audio_output
+    assert media_player.media_capture_session.audioOutput() is None
     assert media_player.video_widget is not None
 
 
@@ -181,6 +185,8 @@ def test_load_network_stream(base_media_player):
     result = base_media_player.load_stream()
     # THEN: The video should be loaded
     base_media_player.media_capture_session.setVideoOutput.assert_called_once()
+    base_media_player.media_capture_session.setAudioOutput.assert_called_once_with(None)
+    base_media_player.media_player.setAudioOutput.assert_called_once_with(base_media_player.audio_output)
     base_media_player.media_player.setAudioInput.assert_not_called()
     base_media_player.media_player.setVideoOutput.assert_called_with(base_media_player.video_widget)
     base_media_player.media_player.setPlaybackRate.assert_called_once_with(1.0)
@@ -621,9 +627,10 @@ def test_apply_audio_output_setting_preview(mocked_media_devices, mock_settings,
     base_media_player.audio_output.setDevice.assert_called_once_with(output_device)
 
 
-def test_apply_audio_output_setting_system_default(mock_settings, base_media_player):
+@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+def test_apply_audio_output_setting_system_default(mocked_media_devices, mock_settings, base_media_player):
     """
-    Test that no explicit device is applied when System default is selected.
+    Test that selecting System default replaces a previously selected device.
     """
     # GIVEN: No configured output device name (system default)
     base_media_player.audio_output = MagicMock()
@@ -632,8 +639,8 @@ def test_apply_audio_output_setting_system_default(mock_settings, base_media_pla
     # WHEN: the audio setting is applied
     base_media_player._apply_audio_output_setting()
 
-    # THEN: no explicit device should be set
-    base_media_player.audio_output.setDevice.assert_not_called()
+    # THEN: the current system default replaces any previous device.
+    base_media_player.audio_output.setDevice.assert_called_once_with(mocked_media_devices.defaultAudioOutput())
 
 
 def test_set_visible_safe_when_controller_is_none(base_media_player):
@@ -647,3 +654,15 @@ def test_set_visible_safe_when_controller_is_none(base_media_player):
     base_media_player.set_visible(False)
 
     # THEN: No exception should be raised
+
+
+@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+def test_missing_audio_output_falls_back_to_default(devices, mock_settings, base_media_player):
+    """An unplugged configured output must not leave media attached to a stale device."""
+    mock_settings.value.return_value = 'Unplugged speakers'
+    devices.audioOutputs.return_value = []
+    base_media_player.audio_output = MagicMock()
+
+    base_media_player._apply_audio_output_setting()
+
+    base_media_player.audio_output.setDevice.assert_called_once_with(devices.defaultAudioOutput())

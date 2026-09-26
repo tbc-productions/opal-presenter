@@ -147,7 +147,7 @@ def test_missing_permissions_offer_native_request_and_system_settings():
 
     def use_dialog():
         dialog = next(widget for widget in QtWidgets.QApplication.topLevelWidgets()
-                      if isinstance(widget, QtWidgets.QDialog))
+                      if isinstance(widget, QtWidgets.QDialog) and widget.isVisible())
         try:
             buttons = {button.text(): button for button in dialog.findChildren(QtWidgets.QPushButton)}
             assert any('Access needed: Accessibility, Screen Recording' in label.text()
@@ -197,7 +197,7 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
 
     def inspect_dialog():
         dialog = next(widget for widget in QtWidgets.QApplication.topLevelWidgets()
-                      if isinstance(widget, QtWidgets.QDialog))
+                      if isinstance(widget, QtWidgets.QDialog) and widget.isVisible())
         offered_icons.append(dialog.findChildren(_DraggableFileIcon))
         source_notes.append([label.text() for label in dialog.findChildren(QtWidgets.QLabel)
                              if 'Or use + to add this file' in label.text()])

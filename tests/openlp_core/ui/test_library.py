@@ -221,25 +221,88 @@ def test_file_to_item_as_str(folder_library_item):
 
 
 def test_validate_and_load(folder_library_item):
-    """
-    Test that the validate_and_load() method when called with a folder
-    """
-    # GIVEN: A list of files, and a mocked out load_list
+    """Adding files updates only the new entries rather than reloading the library."""
     file_list = ['path1/image1.jpg', 'path2/image2.jpg']
-    expected_list = [MagicMock(file_path=fp) for fp in file_list]
-    folder_library_item.manager.get_all_objects.return_value = expected_list
+    folder_library_item.manager.get_all_objects.return_value = [MockItem(file_path='existing.jpg')]
+    folder_library_item._insert_saved_items = MagicMock()
     folder_library_item.load_list = MagicMock()
-    folder_library_item.list_view.selectedItems.return_value = None
     folder_library_item.settings_section = 'tests'
     folder_library_item.choose_folder_form = MagicMock(**{'exec.return_value': QtWidgets.QDialog.Accepted,
-                                                          'folder': None})
+                                                          'folder': None, 'is_new_folder': False})
 
-    # WHEN: Calling validate_and_load with the list of files and a group
     folder_library_item.validate_and_load(file_list)
 
-    # THEN: load_list should have been called with the file list and the group name,
-    #       the directory should have been saved to the settings
-    folder_library_item.load_list.assert_called_once_with(expected_list, target_folder=None)
+    folder_library_item.load_list.assert_not_called()
+    folder_library_item.manager.get_all_objects.assert_called_once()
+    added, folder = folder_library_item._insert_saved_items.call_args.args
+    assert folder is None
+    assert [item.file_path for item in added] == file_list
+
+
+def test_add_one_image_keeps_existing_tree_rows(folder_library_item, tmp_path):
+    """Importing into a folder retains its expanded state, selection and existing thumbnail rows."""
+    image = tmp_path / 'new.jpg'
+    image.write_bytes(b'image')
+    folder_library_item.settings.value = MagicMock(return_value=False)
+    folder_library_item.list_view = QtWidgets.QTreeWidget()
+    folder_library_item.list_view.setSortingEnabled(True)
+    folder = MockFolder(id=7, name='Images')
+    folder_row = QtWidgets.QTreeWidgetItem(['Images (1)'])
+    folder_row.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
+    existing = QtWidgets.QTreeWidgetItem(['old.jpg'])
+    folder_row.addChild(existing)
+    folder_library_item.list_view.addTopLevelItem(folder_row)
+    folder_row.setExpanded(True)
+    existing.setSelected(True)
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.manager.save_object.return_value = True
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
+    folder_library_item.load_list = MagicMock()
+    folder_library_item.settings_section = 'tests'
+
+    folder_library_item.validate_and_load([image], target_folder=folder_row)
+
+    folder_library_item.load_list.assert_not_called()
+    folder_library_item.load_item.assert_called_once()
+    assert folder_row.childCount() == 2
+    assert any(folder_row.child(i) is existing for i in range(2))
+    assert existing.isSelected()
+    assert folder_row.isExpanded()
+    assert folder_row.text(0) == 'Images (2)'
+
+
+def test_adding_image_to_new_folder_keeps_existing_rows(folder_library_item, tmp_path):
+    image = tmp_path / 'new.jpg'
+    image.write_bytes(b'image')
+    folder_library_item.settings.value = MagicMock(return_value=False)
+    folder_library_item._get_proportional_folder_icon = MagicMock(
+        return_value=QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_DirIcon))
+    folder_library_item.list_view = QtWidgets.QTreeWidget()
+    old_folder = QtWidgets.QTreeWidgetItem(['Old folder'])
+    folder_library_item.list_view.addTopLevelItem(old_folder)
+    folder = MockFolder(id=8, name='New folder', parent_id=None)
+    folder.items = []
+    folder.folders = []
+    folder_library_item.choose_folder_form = MagicMock(**{
+        'exec.return_value': QtWidgets.QDialog.DialogCode.Accepted,
+        'folder': folder,
+        'is_new_folder': True
+    })
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.manager.save_object.return_value = True
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
+    folder_library_item.load_list = MagicMock()
+    folder_library_item.settings_section = 'tests'
+
+    folder_library_item.validate_and_load([image])
+
+    folder_library_item.load_list.assert_not_called()
+    assert folder_library_item.list_view.topLevelItemCount() == 2
+    assert any(folder_library_item.list_view.topLevelItem(i) is old_folder for i in range(2))
+    new_folder_row = folder_library_item._find_folder_tree_item(8)
+    assert new_folder_row is not None
+    assert new_folder_row.text(0) == 'New folder (1)'
+    assert new_folder_row.childCount() == 1
 
 
 @patch('openlp.core.ui.library.copy2')
@@ -289,6 +352,7 @@ def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_p
     })
     folder_library_item.manager.get_all_objects.return_value = []
     folder_library_item.load_list = MagicMock()
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
 
     folder_library_item.validate_and_load(sources)
 
@@ -319,6 +383,7 @@ def test_validate_and_load_rejects_reimport_of_managed_file(mocked_get_section_d
     })
     folder_library_item.manager.get_all_objects.return_value = []
     folder_library_item.load_list = MagicMock()
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
 
     folder_library_item.validate_and_load([source])
     imported_item = folder_library_item.manager.save_object.call_args.args[0]

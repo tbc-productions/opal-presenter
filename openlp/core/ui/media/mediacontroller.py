@@ -152,21 +152,27 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         If media has loaded so we can now autostart if required
         """
-        if self.live_controller.media_play_item.media_autostart:
-            self.media_play(self.live_controller)
+        play_item = self.live_controller.media_play_item
+        should_start = play_item.media_autostart
+        # Consume this one-shot request before playback can emit further status signals.
+        play_item.media_autostart = False
+        if should_start:
+            self.media_play(self.live_controller, is_load=True)
             self._update_seek_ui(self.live_controller)
             self.set_controls_visible(self.live_controller, True)
-        self.live_controller.media_play_item.media_autostart = False
 
     def _media_preview_loaded(self) -> None:
         """
         If media has loaded so we can now autostart if required
         """
-        if self.preview_controller.media_play_item.media_autostart:
-            self.media_play(self.preview_controller)
+        play_item = self.preview_controller.media_play_item
+        should_start = play_item.media_autostart
+        # Consume this one-shot request before playback can emit further status signals.
+        play_item.media_autostart = False
+        if should_start:
+            self.media_play(self.preview_controller, is_load=True)
             self._update_seek_ui(self.preview_controller)
             self.set_controls_visible(self.preview_controller, True)
-        self.preview_controller.media_play_item.media_autostart = False
 
     def _media_state_live(self) -> None:
         """
@@ -430,6 +436,13 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
 
         :param controller: The controller to be played
         """
+        output_covered = controller.current_hide_mode in (HideMode.Blank, HideMode.Logo, HideMode.Screen) or (
+            controller.current_hide_mode == HideMode.Theme and not controller.media_play_item.is_theme_background)
+        if is_load and controller.is_live and output_covered:
+            # Loading an item is not an instruction to take it to the audience.
+            controller.media_play_item.request_play = True
+            self._media_bar(controller, "load")
+            return True
         self.log_debug(f"media_play is_live:{controller.is_live}")
         if controller.media_play_item.media_file:
             supported, error_text = self.is_media_supported(controller.media_play_item.media_file)
@@ -440,29 +453,20 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller.mediabar.seek_slider.blockSignals(True)
         controller.mediabar.volume_slider.blockSignals(True)
         controller.media_play_item.request_play = False
+        controller.media_play_item._stop_after_hide = False
         output_hidden = controller.is_live and controller.current_hide_mode == HideMode.Screen
-        self._media_set_visibility(controller, not output_hidden)
-        if is_load:
-            if controller.media_play_item.media_file:
-                if controller.media_play_item.media_autostart:
-                    controller.media_player.play()
-                else:
-                    controller.media_play_item.request_play = True
-            if controller.media_play_item.audio_file:
-                if controller.media_play_item.audio_autostart:
-                    controller.audio_player.play()
-                else:
-                    controller.media_play_item.request_play = True
-        else:
-            # This comes from the buttons so we have started the started media
-            if controller.media_play_item.audio_file:
-                controller.audio_player.play()
-            if controller.media_play_item.media_file:
-                controller.media_player.play()
+        was_hidden = controller.is_live and controller.current_hide_mode in (
+            HideMode.Blank, HideMode.Logo, HideMode.Screen, HideMode.Theme)
+        self._media_set_visibility(controller, not was_hidden)
+        # Set the saved output level before playback starts to avoid a full-volume burst.
+        self.media_volume(controller, get_volume(controller))
+        if controller.media_play_item.audio_file:
+            controller.audio_player.play()
+        if controller.media_play_item.media_file:
+            controller.media_player.play()
         # TODO to be tested my need a different play function
         if controller.media_player and controller.media_play_item.external_stream:
             controller.media_player.play()
-        self.media_volume(controller, get_volume(controller))
         self._media_bar(controller, "play")
         # Start Timer for ui updates
         controller.mediabar.seek_slider.blockSignals(False)
@@ -478,6 +482,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             else:
                 controller._set_theme(controller.service_item)
             #  display.load_verses(media_empty_song)
+        if was_hidden and not output_hidden:
+            self._media_set_visibility(controller, True)
         controller.output_has_changed()
         return True
 
@@ -585,14 +591,12 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         :return bool
         """
         self.log_debug(f"media_stop is_live:{controller.is_live}")
-        # lets save current playing state for restart
-        controller.media_play_item.media_autostart = controller.media_player.status()
-        controller.media_play_item.audio_autostart = controller.audio_player.status()
         if controller.media_play_item.media_type == MediaType.Dual:
             if controller.audio_player and controller.media_play_item.audio_file:
                 controller.audio_player.pause()
         else:
-            if controller.media_player and controller.media_play_item.media_file:
+            if controller.media_player and (controller.media_play_item.media_file or
+                                            controller.media_play_item.external_stream):
                 controller.media_player.pause()
         self._media_bar(controller, "pause")
         controller.media_play_item.is_playing = MediaState.Paused
@@ -650,9 +654,14 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         stop_after_hide = (controller.is_live and blank_on_stop and not controller.media_play_item.is_background and
                            bool(controller.media_play_item.media_file))
         controller.media_play_item._stop_after_hide = stop_after_hide
+        controller.media_play_item.media_autostart = False
+        controller.media_play_item.audio_autostart = False
+        controller.media_play_item._resume_media_after_seek = False
+        controller.media_play_item.is_playing = MediaState.Stopped
         if controller.audio_player and controller.media_play_item.audio_file:
             controller.audio_player.stop()
-        if controller.media_player and controller.media_play_item.media_file:
+        if controller.media_player and (controller.media_play_item.media_file or
+                                        controller.media_play_item.external_stream):
             if stop_after_hide:
                 controller.media_player.pause()
             else:
@@ -674,8 +683,10 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             self._media_set_visibility(controller, False)
         self._media_bar(controller, "stop")
         controller.media_play_item.is_playing = MediaState.Stopped
-        controller.media_play_item.timer = controller.media_play_item.start_time
-        controller.mediabar.seek_slider.setSliderPosition(controller.media_play_item.start_time)
+        controller.media_play_item.timer = 0
+        controller.mediabar.seek_slider.blockSignals(True)
+        controller.mediabar.seek_slider.setSliderPosition(0)
+        controller.mediabar.seek_slider.blockSignals(False)
         self._update_seek_ui(controller)
         controller.output_has_changed()
         return True
@@ -701,6 +712,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         save_volume(controller, volume)
         if controller.media_play_item.media_type == MediaType.Dual:
             controller.media_player.volume(0)
+            controller.audio_player.volume(volume)
+        elif controller.media_play_item.media_type == MediaType.Audio:
             controller.audio_player.volume(volume)
         else:
             controller.media_player.volume(volume)
@@ -784,7 +797,13 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         self.log_debug("media_reset")
         self.set_controls_visible(controller, False)
+        controller.media_play_item.media_autostart = False
+        controller.media_play_item.audio_autostart = False
+        if controller.is_live:
+            self.live_hide_timer.stop()
+            self.live_kill_timer.stop()
         controller.media_player.reset()
+        controller.audio_player.reset()
         if controller.is_live and delayed:
             self.live_kill_timer.start(HIDE_DELAY_TIME)
         else:
@@ -831,7 +850,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             if self.live_controller.media_player and self.live_controller.media_play_item.media_file:
                 self.live_controller.media_player.stop()
         else:
-            self.media_pause(self.live_controller)
+            if self.live_controller.media_play_item.is_playing == MediaState.Playing:
+                self.media_pause(self.live_controller)
             self._media_set_visibility(self.live_controller, False)
 
     def _on_media_kill_live(self):
@@ -847,6 +867,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         if controller.is_live:
             self.live_hide_timer.stop()
+        if controller.is_live and controller.current_hide_mode in (HideMode.Blank, HideMode.Logo, HideMode.Screen):
+            visible = False
         visible = visible and controller.media_play_item.media_type is not MediaType.Audio
         controller.media_player.set_visible(visible)
         if controller.is_live and visible:

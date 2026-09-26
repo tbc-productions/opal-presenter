@@ -1013,6 +1013,7 @@ var Display = {
     if (existingSection) {
       existingSection.setAttribute("data-background", bg_color);
       _applyFullscreenBackgroundImage(existingSection, bg_color, imageUrl, fit);
+      Reveal.syncSlide(existingSection);
       return;
     }
     Display.clearSlides();
@@ -1036,6 +1037,7 @@ var Display = {
     if (existingSection) {
       existingSection.setAttribute("data-background", bg_color);
       _applyFullscreenBackgroundImage(existingSection, bg_color, dataUri, fit);
+      Reveal.syncSlide(existingSection);
       return;
     }
     Display.clearSlides();
@@ -1805,6 +1807,18 @@ var Display = {
       var useDisableTransitions = !!disableTransitions;
       if (useDisableTransitions) {
         body.classList.add('disable-transitions');
+      }
+      // Settings can refresh the logo while it is already covering the output.
+      // Keep that cover in place throughout the refresh.
+      if (Display._logoBackgroundOverrideActive) {
+        Display._slidesContainer.style.opacity = 0;
+        Display._footerContainer.style.opacity = 0;
+        Display._setLogoScreenBackground(bg_color, image, logo_fit);
+        Display._logoScreen.classList.add("show");
+        Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
+        body.classList.remove('disable-transitions');
+        resolve();
+        return;
       }
       var wasSlideLayerVisible = parseFloat(getComputedStyle(Display._slidesContainer).opacity || "1") > 0.01;
       documentBody.style.opacity = 1;

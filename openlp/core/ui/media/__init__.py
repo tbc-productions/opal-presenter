@@ -111,7 +111,16 @@ def get_volume(controller) -> int:
     if controller.is_live:
         return Registry().get('settings').value('media/live volume')
     else:
-        return Registry().get('settings').value('media/preview volume')
+        settings = Registry().get('settings')
+        volume = settings.value('media/preview volume')
+        if not settings.value('media/preview volume migrated'):
+            # Earlier releases started Preview at zero and saved that value on playback,
+            # so merely changing the default would leave existing installations silent.
+            if volume == 0:
+                volume = 50
+                settings.setValue('media/preview volume', volume)
+            settings.setValue('media/preview volume migrated', True)
+        return volume
 
 
 def save_volume(controller, volume: int) -> None:

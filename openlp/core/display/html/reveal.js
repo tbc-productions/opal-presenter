@@ -3854,7 +3854,11 @@
 
 				// Images
 				if( backgroundImage ) {
-					backgroundContent.style.backgroundImage = 'url('+ encodeURI( backgroundImage ) +')';
+					// OpenLP supplies encoded file/library URLs. Encoding them again turns
+					// %20 into %2520 and prevents local thumbnails from loading. Quote the
+					// CSS URL so spaces and parentheses in paths are also safe.
+					backgroundContent.style.backgroundImage = 'url("' +
+						backgroundImage.replace( /\\/g, '\\\\' ).replace( /"/g, '\\"' ) + '")';
 				}
 				// Videos
 				else if ( backgroundVideo && !isSpeakerNotes() ) {

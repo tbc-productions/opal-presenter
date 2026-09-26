@@ -338,6 +338,40 @@ class FolderLibraryItem(MediaManagerItem):
             count = folder_tree_item.childCount()
             folder_tree_item.setText(0, f'{folder.name} ({count})' if count > 0 else folder.name)
 
+    def _make_folder_tree_item(self, folder):
+        item_count = len(folder.items) + len(folder.folders)
+        folder_item = QtWidgets.QTreeWidgetItem()
+        folder_item.setText(0, f'{folder.name} ({item_count})' if item_count else folder.name)
+        folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
+        folder_item.setIcon(0, self._get_proportional_folder_icon())
+        folder_font = QtGui.QFont(self.list_view.font())
+        folder_font.setWeight(QtGui.QFont.Weight.DemiBold)
+        folder_item.setFont(0, folder_font)
+        return folder_item
+
+    def _find_folder_tree_item(self, folder_id):
+        iterator = QtWidgets.QTreeWidgetItemIterator(self.list_view)
+        while iterator.value():
+            candidate = iterator.value()
+            folder_data = candidate.data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(folder_data, self.folder_class) and folder_data.id == folder_id:
+                return candidate
+            iterator += 1
+        return None
+
+    def _insert_saved_folder(self, folder):
+        parent_item = self._find_folder_tree_item(folder.parent_id) if folder.parent_id is not None else None
+        if folder.parent_id is not None and parent_item is None:
+            return False
+        folder_item = self._make_folder_tree_item(folder)
+        if parent_item is None:
+            self.list_view.addTopLevelItem(folder_item)
+        else:
+            parent_item.addChild(folder_item)
+            self._update_folder_count(parent_item)
+            parent_item.setExpanded(True)
+        return True
+
     def add_sub_folders(self, folder_list: List[QtWidgets.QTreeWidgetItem], parent_id: Optional[int] = None):
         """
         Recursively add subfolders to the given parent folder in a QTreeWidget.
@@ -350,17 +384,8 @@ class FolderLibraryItem(MediaManagerItem):
 
         folders = self.manager.get_all_objects(Folder, Folder.parent_id == parent_id)
         folders.sort(key=lambda folder_object: get_natural_key(folder_object.name))
-        folder_icon = self._get_proportional_folder_icon()
-        folder_font = QtGui.QFont(self.list_view.font())
-        folder_font.setWeight(QtGui.QFont.Weight.DemiBold)
         for folder in folders:
-            folder_item = QtWidgets.QTreeWidgetItem()
-            item_count = len(folder.items) + len(folder.folders)
-            folder_text = f'{folder.name} ({item_count})' if item_count > 0 else folder.name
-            folder_item.setText(0, folder_text)
-            folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
-            folder_item.setIcon(0, folder_icon)
-            folder_item.setFont(0, folder_font)
+            folder_item = self._make_folder_tree_item(folder)
             if parent_id is None:
                 self.list_view.addTopLevelItem(folder_item)
             else:
@@ -494,6 +519,33 @@ class FolderLibraryItem(MediaManagerItem):
         items = self.manager.get_all_objects(self.item_class, self.item_class.file_path.ilike('%' + string + '%'))
         return [self.format_search_result(item) for item in items]
 
+    def _insert_saved_items(self, items, folder):
+        """Insert imported files without rebuilding existing folders and thumbnails."""
+        if not items:
+            return
+        parent_item = self._find_folder_tree_item(folder.id) if folder is not None else None
+        if folder is not None:
+            if parent_item is None:
+                # A folder was added outside this tree; a full load is needed to represent it.
+                self.load_list(self.manager.get_all_objects(self.item_class, order_by_ref=self.item_class.file_path),
+                               target_folder=folder)
+                return
+        self.list_view.setUpdatesEnabled(False)
+        try:
+            for item in items:
+                tree_item = self.load_item(item)
+                if tree_item is None:
+                    continue
+                if parent_item is None:
+                    self.list_view.addTopLevelItem(tree_item)
+                else:
+                    parent_item.addChild(tree_item)
+            if parent_item is not None:
+                self._update_folder_count(parent_item)
+                self.expand_folder(folder.id)
+        finally:
+            self.list_view.setUpdatesEnabled(True)
+
     def validate_and_load(self, file_paths: List[Path], target_folder: Optional[QtWidgets.QTreeWidgetItem] = None):
         """
         Process a list for files either from the File Dialog or from Drag and Drop.
@@ -507,15 +559,18 @@ class FolderLibraryItem(MediaManagerItem):
             target_folder = target_folder.data(0, QtCore.Qt.ItemDataRole.UserRole)
         elif self.current_folder:
             target_folder = self.current_folder
+        added_folder = False
         if not target_folder and self.choose_folder_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             target_folder = self.choose_folder_form.folder
             if self.choose_folder_form.is_new_folder:
                 self.manager.save_object(target_folder)
+                added_folder = True
         existing_items = self.manager.get_all_objects(self.item_class)
         existing_files = {item.file_path for item in existing_items}
         existing_hashes = {item.file_hash for item in existing_items
                            if isinstance(getattr(item, 'file_hash', None), str) and item.file_hash}
         copy_to_library = self.settings.value('advanced/copy library files to data folder')
+        saved_items = []
         # Convert file paths to items
         for file_path in file_paths:
             if file_paths.count(file_path) > 1:
@@ -531,6 +586,7 @@ class FolderLibraryItem(MediaManagerItem):
                 continue
             stored_path = self._prepare_library_file(file_path)
             if str(stored_path) in existing_files:
+                # An item with this stored path already exists.
                 critical_error_message_box(translate('OpenLP.FolderLibraryItem', 'File Exists'),
                                            translate('OpenLP.FolderLibraryItem',
                                                      'An item with that filename already exists.'))
@@ -543,13 +599,17 @@ class FolderLibraryItem(MediaManagerItem):
                 item.file_hash = source_hash
             if target_folder:
                 item.folder_id = target_folder.id
-            self.manager.save_object(item)
-            existing_files.add(str(stored_path))
-            if source_hash:
-                existing_hashes.add(source_hash)
-            self.main_window.increment_progress_bar()
-        self.load_list(self.manager.get_all_objects(self.item_class, order_by_ref=self.item_class.file_path),
-                       target_folder=target_folder)
+            if self.manager.save_object(item):
+                existing_files.add(str(stored_path))
+                if source_hash:
+                    existing_hashes.add(source_hash)
+                saved_items.append(item)
+                self.main_window.increment_progress_bar()
+        if added_folder and not self._insert_saved_folder(target_folder):
+            self.load_list(self.manager.get_all_objects(self.item_class, order_by_ref=self.item_class.file_path),
+                           target_folder=target_folder)
+        else:
+            self._insert_saved_items(saved_items, target_folder)
         last_dir = Path(file_paths[0]).parent
         self.settings.setValue(self.settings_section + '/last directory', last_dir)
 

@@ -1288,7 +1288,7 @@ describe("Display.setFullscreenImage", function () {
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
-  it("should update existing fullscreen image without calling Reveal sync/slide", function () {
+  it("should refresh the existing fullscreen background without rebuilding or navigating slides", function () {
     var image = "file:///openlp2.jpg";
     let bg_color = "#111";
     var section = document.createElement("section");
@@ -1304,6 +1304,7 @@ describe("Display.setFullscreenImage", function () {
 
     spyOn(Reveal, "sync");
     spyOn(Reveal, "slide");
+    spyOn(Reveal, "syncSlide");
 
     Display.setFullscreenImage(bg_color, image);
 
@@ -1314,6 +1315,7 @@ describe("Display.setFullscreenImage", function () {
     expect(section.slideBackgroundElement.style.backgroundColor).toEqual("rgb(17, 17, 17)");
     expect(Reveal.sync).not.toHaveBeenCalled();
     expect(Reveal.slide).not.toHaveBeenCalled();
+    expect(Reveal.syncSlide).toHaveBeenCalledWith(section);
   });
 });
 
@@ -1349,10 +1351,12 @@ describe("Display.setFullscreenImageFromData", function () {
     Display._slidesContainer.appendChild(section);
     Display._slides = {'0': 0};
     spyOn(Display, "replaceSlides");
+    spyOn(Reveal, "syncSlide");
 
     Display.setFullscreenImageFromData("#222", "new-data");
 
     expect(Display.replaceSlides).not.toHaveBeenCalled();
+    expect(Reveal.syncSlide).toHaveBeenCalledWith(section);
     expect($(".slides > section > img").length).toEqual(0);
     expect($(".slides > section")[0].getAttribute("data-background-image")).toEqual("data:image/jpeg;base64,new-data");
     expect($(".slides > section")[0].getAttribute("data-background-color")).toEqual("#222");

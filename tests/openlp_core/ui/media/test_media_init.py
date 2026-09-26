@@ -60,7 +60,7 @@ def test_get_volume(mock_settings, live, result):
     controller = MagicMock()
     controller.is_live = live
     get_volume(controller)
-    mock_settings.value.assert_called_with(result)
+    mock_settings.value.assert_any_call(result)
 
 
 @pytest.mark.parametrize("live, result", [(False, 'media/preview volume'), (True, 'media/live volume')])
@@ -86,3 +86,20 @@ def test_is_looping_playback(mock_settings, live, result):
     controller.is_live = live
     saved_looping_playback(controller)
     mock_settings.value.assert_called_with(result)
+
+
+def test_preview_volume_is_audible_for_existing_installation(settings):
+    controller = MagicMock(is_live=False)
+    settings.setValue('media/preview volume', 0)
+
+    assert get_volume(controller) == 50
+    assert settings.value('media/preview volume') == 50
+    assert settings.value('media/preview volume migrated') is True
+
+    # A deliberate mute after the one-time migration remains in effect.
+    save_volume(controller, 0)
+    assert get_volume(controller) == 0
+
+
+def test_preview_volume_default_is_audible(settings):
+    assert settings.value('media/preview volume') == 50

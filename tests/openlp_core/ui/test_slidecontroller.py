@@ -2698,3 +2698,81 @@ def test_close_displays(registry: Registry):
     mocked_display.setParent.assert_called_once_with(None)
     mocked_display.close.assert_called_once()
     assert live_controller.displays == []
+
+
+@mark.parametrize('hide_mode', [HideMode.Logo, HideMode.Blank])
+@mark.parametrize('new_media', [False, True])
+def test_process_item_preserves_cover_after_video(settings, registry, hide_mode, new_media):
+    """Going live from a covered video must not make the display transparent or unblank it."""
+    registry.register('main_window', MagicMock())
+    registry.register('media_controller', MagicMock())
+    settings.setValue('core/auto unblank', False)
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._current_hide_mode = hide_mode
+    controller.service_item = MagicMock()
+    controller.service_item.is_media.return_value = True
+    controller.service_item.is_command.return_value = True
+    controller.service_item.is_capable.return_value = False
+    controller.displays = [MagicMock()]
+    for name in ('preview_widget', 'preview_display', 'enable_tool_bar', 'on_controller_size_changed',
+                 'on_media_start', 'on_media_close', 'slide_selected', 'on_stop_loop', 'info_label',
+                 'song_menu', 'toolbar', '_update_slide_action_enabled_state', '_reset_blank', 'set_hide_mode'):
+        setattr(controller, name, MagicMock())
+    controller.split = 0
+    controller.type_prefix = 'live'
+    item = MagicMock()
+    item.is_text.return_value = not new_media
+    item.is_command.return_value = new_media
+    item.is_media.return_value = new_media
+    item.is_image.return_value = False
+    item.requires_media.return_value = False
+    item.is_capable.return_value = False
+    item.display_slides = []
+    item.from_service = False
+
+    controller._process_item(item, 0)
+
+    assert controller.current_hide_mode == hide_mode
+    controller.set_hide_mode.assert_not_called()
+    controller.display.show_display.assert_not_called()
+    controller.display.hide_display.assert_not_called()
+    controller.toolbar.remove_widget.assert_not_called()
+    controller.toolbar.add_toolbar_widget.assert_not_called()
+
+
+@mark.parametrize('is_media', [False, True])
+def test_live_toolbar_does_not_hide_or_force_compact_layout(settings, is_media):
+    """Changing an item should update the existing controls without collapsing the toolbar."""
+    controller = SlideController(None)
+    for name in ('toolbar', 'mediabar', 'song_menu', 'play_slides_once', 'play_slides_loop',
+                 'previous_item', 'next_item', 'set_hide_mode_menu'):
+        setattr(controller, name, MagicMock())
+    item = MagicMock()
+    item.is_media.return_value = is_media
+
+    controller.enable_live_tool_bar(item)
+
+    controller.toolbar.hide.assert_not_called()
+    controller.toolbar.show.assert_not_called()
+    controller.mediabar.hide.assert_not_called()
+    controller.set_hide_mode_menu.assert_not_called()
+    controller.previous_item.setVisible.assert_not_called()
+    controller.next_item.setVisible.assert_not_called()
+    controller.previous_item.setEnabled.assert_called_once_with(not is_media)
+
+
+@mark.parametrize('is_text', [False, True])
+def test_wide_hide_controls_are_not_temporarily_hidden(settings, is_text):
+    """Logo and Show must keep their positions while the current item's controls change."""
+    controller = SlideController(None)
+    controller.toolbar = MagicMock()
+    controller.service_item = MagicMock()
+    controller.service_item.is_text.return_value = is_text
+
+    controller.set_hide_mode_menu(narrow=False)
+
+    for args, kwargs in controller.toolbar.set_widget_visible.call_args_list:
+        if len(args) > 1 and args[1] is False:
+            assert 'logo_screen_button' not in args[0]
+            assert 'show_screen_button' not in args[0]

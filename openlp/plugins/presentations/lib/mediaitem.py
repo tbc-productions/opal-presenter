@@ -494,6 +494,7 @@ class PresentationMediaItem(FolderLibraryItem):
                                 note = ''
                                 if notes and len(notes) >= i:
                                     note = notes[i - 1]
+                                # The library name is editable; commands must reference the actual stored file.
                                 service_item.add_from_command(str(path), source_file_name, thumbnail_path, title, note,
                                                               file_hash, validate=False)
                                 i += 1

@@ -22,7 +22,7 @@
 Package to test the openlp.core.ui.media.mediaplayer package.
 This class is for playing Media within OpenLP.
 """
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 import pytest
@@ -70,6 +70,14 @@ def test_setup(base_audio_player, settings):
     # THEN: The live media widget should be set up correctly
     assert base_audio_player.media_player is not None
     assert base_audio_player.audio_output is not None
+
+
+def test_preview_setup_uses_configured_output_setting(base_audio_player, settings):
+    """Audio-only Preview items use the same output selection as videos."""
+    controller = MagicMock(is_live=False)
+    with patch.object(settings, 'value', wraps=settings.value) as read_setting:
+        base_audio_player.setup(controller, MagicMock())
+    read_setting.assert_any_call('media/preview audio output')
 
 
 def test_load_audio(base_audio_player):
