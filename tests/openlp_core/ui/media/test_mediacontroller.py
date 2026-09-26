@@ -287,14 +287,16 @@ def test_media_play_msg(media_env):
     mocked_media_play.assert_called_with(1)
 
 
-def test_media_play_sets_visibility_before_play(media_env, settings):
+@pytest.mark.parametrize('hide_mode, visible', [(None, True), (HideMode.Screen, False)])
+def test_media_play_respects_display_output(media_env, settings, hide_mode, visible):
     """
-    Test that media_play shows the media widget before starting playback.
+    Test that media_play sets video visibility before playback without turning hidden output back on.
     """
     # GIVEN: A live controller playing a local video file
     call_order = []
     mocked_slide_controller = MagicMock()
     mocked_slide_controller.is_live = True
+    mocked_slide_controller.current_hide_mode = hide_mode
     mocked_slide_controller.media_play_item = MediaPlayItem()
     mocked_slide_controller.media_play_item.media_file = Path('video.mp4')
     mocked_slide_controller.media_play_item.media_type = MediaType.Video
@@ -338,6 +340,31 @@ def test_media_play_sets_visibility_before_play(media_env, settings):
 
     # THEN: Visibility should be set before playback starts
     assert call_order.index('visible') < call_order.index('play')
+    media_env.media_controller._media_set_visibility.assert_called_once_with(mocked_slide_controller, visible)
+    if hide_mode == HideMode.Screen:
+        mocked_slide_controller.set_hide_mode.assert_not_called()
+    else:
+        mocked_slide_controller.set_hide_mode.assert_called_once_with(None)
+
+
+@patch.object(Registry, 'execute')
+def test_media_blank_hides_playing_video(mocked_execute, media_env, registry):
+    """Switching Display output off hides the live video widget immediately."""
+    controller = MagicMock()
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.is_playing = MediaState.Playing
+    controller.media_play_item.is_background = False
+    registry.register('live_controller', controller)
+    media_env.media_controller.live_kill_timer = MagicMock()
+    media_env.media_controller.live_kill_timer.isActive.return_value = False
+    media_env.media_controller.media_pause = MagicMock()
+    media_env.media_controller._media_set_visibility = MagicMock()
+
+    media_env.media_controller.media_blank([None, True, HideMode.Screen])
+
+    mocked_execute.assert_called_once_with('live_display_hide', HideMode.Screen)
+    media_env.media_controller.media_pause.assert_called_once_with(controller)
+    media_env.media_controller._media_set_visibility.assert_called_once_with(controller, False)
 
 
 def test_media_pause_msg(media_env):
@@ -474,6 +501,25 @@ def test_media_stop_blanks_live_screen_when_triggered(media_env, settings):
     mocked_media_player.stop.assert_not_called()
     media_env.media_controller.live_hide_timer.start.assert_called_once()
     mocked_slide_controller.set_hide_mode.assert_called_once_with(HideMode.Blank)
+
+
+@pytest.mark.parametrize('blank_on_stop', [False, True])
+def test_media_stop_keeps_display_output_off(media_env, settings, blank_on_stop):
+    """Ending or stopping a video must leave an explicitly hidden output hidden."""
+    controller = MagicMock()
+    controller.is_live = True
+    controller.current_hide_mode = HideMode.Screen
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('video.mp4')
+    controller.media_play_item.is_background = False
+    media_env.media_controller.live_hide_timer = MagicMock()
+    media_env.media_controller._media_set_visibility = MagicMock()
+
+    result = media_env.media_controller.media_stop(controller, blank_on_stop=blank_on_stop)
+
+    assert result is True
+    controller.set_hide_mode.assert_not_called()
+    media_env.media_controller._media_set_visibility.assert_called_once_with(controller, False)
 
 
 def test_on_media_hide_live_stops_deferred_media_after_hiding(media_env, registry: Registry):

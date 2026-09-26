@@ -495,6 +495,105 @@ def test_mainwindow_configuration(main_window):
     assert 'settings' in Registry().service_list, 'The settings should have been registered.'
 
 
+def test_escape_hides_native_show_even_when_openlp_display_is_hidden():
+    from openlp.core.ui import HideMode
+
+    main_window = MagicMock()
+    live = main_window.live_controller
+    live.display.isVisible.return_value = False
+    live.current_hide_mode = None
+    with patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
+            patch.object(QtWidgets.QApplication, 'focusWidget', return_value=None):
+        MainWindow._on_escape_hide_presentation_from_main(main_window)
+
+    live.set_hide_mode.assert_called_once_with(HideMode.Screen)
+
+
+@pytest.mark.parametrize('always_on_top', [False, True])
+def test_switch_projection_to_main_keeps_output_visible(always_on_top):
+    """The switch action brings the controls forward without changing the hide mode."""
+    main_window = MagicMock()
+    main_window.isMinimized.return_value = False
+    main_window.settings.value.return_value = always_on_top
+    main_window.live_controller.current_hide_mode = None
+    main_window.live_controller.display.isVisible.return_value = True
+    main_window._projection_topmost_suspended = False
+    display = main_window.live_controller.display
+    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]), \
+            patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
+            patch.object(QtWidgets.QApplication, 'activeWindow', return_value=display):
+        MainWindow.on_switch_projection_window(main_window)
+
+    main_window.raise_.assert_called_once_with()
+    main_window.activateWindow.assert_called_once_with()
+    main_window.live_controller.set_hide_mode.assert_not_called()
+    display.hide.assert_not_called()
+    if always_on_top:
+        main_window._set_projection_windows_topmost.assert_called_once_with(False)
+    else:
+        main_window._set_projection_windows_topmost.assert_not_called()
+
+
+def test_switch_main_to_projection_restores_topmost_setting():
+    """Switching back to projection restores its configured stacking when it was suspended."""
+    main_window = MagicMock()
+    main_window.live_controller.current_hide_mode = None
+    main_window.live_controller.display.isVisible.return_value = True
+    main_window._projection_topmost_suspended = True
+    display = main_window.live_controller.display
+    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]), \
+            patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
+            patch.object(QtWidgets.QApplication, 'activeWindow', return_value=main_window):
+        MainWindow.on_switch_projection_window(main_window)
+
+    main_window._set_projection_windows_topmost.assert_called_once_with(True)
+    display.raise_.assert_called_once_with()
+    display.activateWindow.assert_called_once_with()
+    main_window.live_controller.set_hide_mode.assert_not_called()
+
+
+def test_projection_topmost_can_be_temporarily_suspended(qapp):
+    """The switch action changes Qt stacking without changing the saved preference."""
+    main_window = MagicMock()
+    display = QtWidgets.QWidget()
+    display.setWindowFlags(QtCore.Qt.WindowType.Window | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+    main_window.live_controller.display = display
+    main_window.live_controller.media_widget = None
+
+    MainWindow._set_projection_windows_topmost(main_window, False)
+    assert not display.windowFlags() & QtCore.Qt.WindowType.WindowStaysOnTopHint
+    assert main_window._projection_topmost_suspended is True
+
+    MainWindow._set_projection_windows_topmost(main_window, True)
+    assert display.windowFlags() & QtCore.Qt.WindowType.WindowStaysOnTopHint
+    assert main_window._projection_topmost_suspended is False
+
+
+def test_projection_switch_action_is_available_from_view_menu(main_window, settings):
+    from openlp.core.ui import HideMode
+
+    action = main_window.view_switch_projection_item
+
+    assert action in main_window.view_menu.actions()
+    assert action.text() == 'Toggle display output'
+    assert settings.get_default_value('shortcuts/viewSwitchProjectionItem')
+    live = MagicMock()
+    live.is_live = True
+    live.current_hide_mode = None
+    live.is_desktop_hide_available.return_value = True
+    main_window._live_controller = live
+    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]):
+        main_window._sync_view_display_output_menu_action()
+        assert action.isEnabled()
+        live.current_hide_mode = HideMode.Screen
+        main_window._sync_view_display_output_menu_action()
+        assert not action.isEnabled()
+    assert action.isVisible()
+    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object(), object()]):
+        main_window._sync_view_display_output_menu_action()
+    assert not action.isVisible()
+
+
 def test_projector_manager_hidden_on_startup(main_window):
     """
     Test that the projector manager is hidden on startup

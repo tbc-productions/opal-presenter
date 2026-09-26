@@ -454,10 +454,10 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller.mediabar.volume_slider.blockSignals(True)
         controller.media_play_item.request_play = False
         controller.media_play_item._stop_after_hide = False
+        output_hidden = controller.is_live and controller.current_hide_mode == HideMode.Screen
         was_hidden = controller.is_live and controller.current_hide_mode in (
             HideMode.Blank, HideMode.Logo, HideMode.Screen, HideMode.Theme)
-        if not was_hidden:
-            self._media_set_visibility(controller, True)
+        self._media_set_visibility(controller, not was_hidden)
         # Set the saved output level before playback starts to avoid a full-volume burst.
         self.media_volume(controller, get_volume(controller))
         if controller.media_play_item.audio_file:
@@ -475,13 +475,14 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if not controller.media_play_item.is_background:
             display = self._define_display(controller)
             if controller.is_live:
-                controller.set_hide_mode(None)
+                if not output_hidden:
+                    controller.set_hide_mode(None)
                 controller._set_theme(controller.service_item)
                 display.hide_display(HideMode.Screen)
             else:
                 controller._set_theme(controller.service_item)
             #  display.load_verses(media_empty_song)
-        if was_hidden:
+        if was_hidden and not output_hidden:
             self._media_set_visibility(controller, True)
         controller.output_has_changed()
         return True
@@ -668,7 +669,9 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller.is_live:
             self.live_hide_timer.start(HIDE_DELAY_TIME)
             if not controller.media_play_item.is_background:
-                if blank_on_stop:
+                if controller.current_hide_mode == HideMode.Screen:
+                    self._media_set_visibility(controller, False)
+                elif blank_on_stop:
                     controller.set_hide_mode(HideMode.Blank)
                 else:
                     display = self._define_display(controller)

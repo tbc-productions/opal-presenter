@@ -243,6 +243,7 @@ def test_add_one_image_keeps_existing_tree_rows(folder_library_item, tmp_path):
     """Importing into a folder retains its expanded state, selection and existing thumbnail rows."""
     image = tmp_path / 'new.jpg'
     image.write_bytes(b'image')
+    folder_library_item.settings.value = MagicMock(return_value=False)
     folder_library_item.list_view = QtWidgets.QTreeWidget()
     folder_library_item.list_view.setSortingEnabled(True)
     folder = MockFolder(id=7, name='Images')
@@ -273,6 +274,9 @@ def test_add_one_image_keeps_existing_tree_rows(folder_library_item, tmp_path):
 def test_adding_image_to_new_folder_keeps_existing_rows(folder_library_item, tmp_path):
     image = tmp_path / 'new.jpg'
     image.write_bytes(b'image')
+    folder_library_item.settings.value = MagicMock(return_value=False)
+    folder_library_item._get_proportional_folder_icon = MagicMock(
+        return_value=QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_DirIcon))
     folder_library_item.list_view = QtWidgets.QTreeWidget()
     old_folder = QtWidgets.QTreeWidgetItem(['Old folder'])
     folder_library_item.list_view.addTopLevelItem(old_folder)
@@ -304,9 +308,8 @@ def test_adding_image_to_new_folder_keeps_existing_rows(folder_library_item, tmp
 @patch('openlp.core.ui.library.copy2')
 @patch('openlp.core.ui.library.create_paths')
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')
-@patch('openlp.core.ui.library.sha256_file_hash')
-def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, mocked_get_section_data_path,
-                                                    mocked_create_paths, mocked_copy2, folder_library_item, tmp_path):
+def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path, mocked_create_paths,
+                                                    mocked_copy2, folder_library_item, tmp_path):
     """
     Test that library files are copied to managed storage when enabled.
     """
@@ -314,7 +317,6 @@ def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, moc
     source_file.write_bytes(b'media')
     managed_root = tmp_path / 'managed'
     mocked_get_section_data_path.return_value = managed_root
-    mocked_sha256_file_hash.return_value = 'abc123'
     folder_library_item.settings_section = 'tests'
     folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
         'advanced/copy library files to data folder': True
@@ -322,10 +324,77 @@ def test_prepare_library_file_copies_to_data_folder(mocked_sha256_file_hash, moc
 
     result = folder_library_item._prepare_library_file(source_file)
 
-    expected_destination = managed_root / 'library' / 'abc123.mp4'
+    expected_destination = managed_root / 'library' / 'clip.mp4'
     assert result == expected_destination
     mocked_create_paths.assert_called_once_with(managed_root / 'library')
     mocked_copy2.assert_called_once_with(source_file, expected_destination)
+
+
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_path, folder_library_item, tmp_path):
+    """Imported files with the same name keep distinct copies and library names."""
+    sources = []
+    for number in range(3):
+        source_dir = tmp_path / f'source{number}'
+        source_dir.mkdir()
+        source = source_dir / 'My file.pptx'
+        source.write_bytes(f'presentation {number}'.encode())
+        sources.append(source)
+
+    managed_root = tmp_path / 'managed'
+    mocked_get_section_data_path.return_value = managed_root
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
+        'advanced/copy library files to data folder': True
+    }.get(key, False))
+    folder_library_item.choose_folder_form = MagicMock(**{
+        'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected
+    })
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.load_list = MagicMock()
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
+
+    folder_library_item.validate_and_load(sources)
+
+    saved_items = [call.args[0] for call in folder_library_item.manager.save_object.call_args_list]
+    assert [item.name for item in saved_items] == ['My file.pptx', 'My file (2).pptx', 'My file (3).pptx']
+    for number, item in enumerate(saved_items):
+        stored_path = Path(item.file_path)
+        assert stored_path.parent == managed_root / 'library'
+        assert stored_path.name == item.name
+        assert stored_path.read_bytes() == f'presentation {number}'.encode()
+
+
+@patch('openlp.core.ui.library.critical_error_message_box')
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_validate_and_load_rejects_reimport_of_managed_file(mocked_get_section_data_path, mocked_error,
+                                                            folder_library_item, tmp_path):
+    """Importing the same source again must not create another numbered library copy."""
+    source = tmp_path / 'slides.pptx'
+    source.write_bytes(b'presentation')
+    managed_root = tmp_path / 'managed'
+    mocked_get_section_data_path.return_value = managed_root
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.settings.value = MagicMock(side_effect=lambda key: {
+        'advanced/copy library files to data folder': True
+    }.get(key, False))
+    folder_library_item.choose_folder_form = MagicMock(**{
+        'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected
+    })
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.load_list = MagicMock()
+    folder_library_item.load_item = MagicMock(side_effect=lambda item: QtWidgets.QTreeWidgetItem([item.name]))
+
+    folder_library_item.validate_and_load([source])
+    imported_item = folder_library_item.manager.save_object.call_args.args[0]
+    folder_library_item.manager.get_all_objects.return_value = [imported_item]
+    folder_library_item.manager.save_object.reset_mock()
+
+    folder_library_item.validate_and_load([source])
+
+    folder_library_item.manager.save_object.assert_not_called()
+    mocked_error.assert_called_once()
+    assert not (managed_root / 'library' / 'slides (2).pptx').exists()
 
 
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')

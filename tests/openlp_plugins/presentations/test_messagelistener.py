@@ -21,8 +21,10 @@
 """
 This module contains tests for the lib submodule of the Presentations plugin.
 """
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
 
+from openlp.core.common.registry import Registry
 from openlp.core.ui import HideMode
 from openlp.plugins.presentations.lib.mediaitem import MessageListener
 from openlp.plugins.presentations.lib.messagelistener import Controller
@@ -55,6 +57,132 @@ def test_start_presentation(media_mock, media_item):
 
     # THEN: The controllers will be setup.
     assert len(controllers) > 0, 'We have loaded a controller'
+
+
+@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+def test_timing_toggle_updates_only_the_current_powerpoint(media_mock, media_item):
+    listener = MessageListener(media_item)
+    listener.live_handler = MagicMock()
+    listener.live_handler.doc.file_path = Path('/tmp/current.pptx')
+    item = MagicMock()
+    item.processor = 'PowerPointMac'
+    item.get_frame_path.return_value = Path('/tmp/current.pptx')
+
+    listener.set_slide_timings([item, False])
+    listener.live_handler.doc.set_slide_timings.assert_called_once_with(False)
+
+    item.get_frame_path.return_value = Path('/tmp/other.pptx')
+    listener.set_slide_timings([item, True])
+    listener.live_handler.doc.set_slide_timings.assert_called_once_with(False)
+
+
+@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+def test_timing_control_only_reports_usable_timings_for_current_mac_show(media_mock, media_item):
+    listener = MessageListener(media_item)
+    listener.live_handler = MagicMock()
+    listener.live_handler.doc.file_path = Path('/tmp/current.pptx')
+    listener.live_handler.doc._use_openlp_timing = True
+    item = MagicMock()
+    item.processor = 'PowerPointMac'
+    item.get_frame_path.return_value = Path('/tmp/current.pptx')
+
+    assert listener.has_slide_timings([item])
+    listener.live_handler.doc._use_openlp_timing = False
+    assert not listener.has_slide_timings([item])
+    listener.live_handler.doc._use_openlp_timing = True
+    item.get_frame_path.return_value = Path('/tmp/other.pptx')
+    assert not listener.has_slide_timings([item])
+
+
+def test_keynote_import_does_not_block_poll_or_restart():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc._opening = True
+
+    assert controller.activate() is False
+    controller.poll()
+
+    controller.doc.is_active.assert_not_called()
+    controller.doc.poll_slidenumber.assert_not_called()
+
+
+def test_first_slide_keeps_native_slideshow_open():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc.starts_at_selected_slide = True
+    controller.doc._opening = False
+    controller.doc.is_active.return_value = True
+
+    controller.first()
+
+    controller.doc.goto_slide.assert_called_once_with(1)
+    controller.doc.start_presentation.assert_not_called()
+
+
+def test_selecting_slide_moves_running_show_while_logo_is_active():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc.is_active.return_value = True
+    controller.hide_mode = HideMode.Logo
+    controller.poll = MagicMock()
+
+    controller.slide(4)
+
+    assert controller.doc.ui_slidenumber == 5
+    controller.doc.goto_slide.assert_called_once_with(5)
+    controller.doc.start_presentation.assert_not_called()
+    controller.poll.assert_called_once_with()
+
+
+def test_logo_overlay_restores_running_presentation_on_selected_slide():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc._opening = False
+    controller.doc.is_loaded.return_value = True
+    controller.doc.is_active.return_value = True
+    controller.doc.ui_slidenumber = 3
+    with patch.object(Registry, 'execute') as execute:
+        controller.blank(HideMode.Logo)
+        controller.unblank()
+
+    controller.doc.hide_for_overlay.assert_called_once_with()
+    controller.doc.show_after_overlay.assert_called_once_with()
+    controller.doc.goto_slide.assert_called_once_with(3)
+    controller.doc.unblank_screen.assert_called_once_with()
+    controller.doc.start_presentation.assert_not_called()
+    assert execute.call_args_list == [call('live_display_hide', HideMode.Logo),
+                                     call('live_display_hide', HideMode.Screen)]
+
+
+def test_black_from_logo_blanks_native_show_before_revealing_it():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc._hidden_for_overlay = True
+    controller.activate = MagicMock()
+    with patch.object(Registry, 'execute') as execute:
+        controller.blank(HideMode.Blank)
+
+    controller.doc.blank_screen.assert_called_once_with()
+    controller.doc.show_after_overlay.assert_called_once_with()
+    controller.activate.assert_not_called()
+    execute.assert_called_once_with('live_display_hide', HideMode.Screen)
+
+
+def test_black_screen_returns_to_same_running_presentation():
+    controller = Controller(True)
+    controller.doc = MagicMock()
+    controller.doc._opening = False
+    controller.doc._hidden_for_overlay = False
+    controller.doc.is_active.return_value = True
+    controller.doc.ui_slidenumber = 4
+    with patch.object(Registry, 'execute'):
+        controller.blank(HideMode.Blank)
+        controller.unblank()
+
+    controller.doc.blank_screen.assert_called_once_with()
+    controller.doc.unblank_screen.assert_called_once_with()
+    controller.doc.goto_slide.assert_called_once_with(4)
+    controller.doc.start_presentation.assert_not_called()
 
 
 @patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
@@ -203,7 +331,7 @@ def test_add_handler_hide_mode_blank(mocked_presentation_list: MagicMock):
 @patch('openlp.plugins.presentations.lib.messagelistener.Registry')
 def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presentation_list: MagicMock):
     """
-    Test that add_handler calls slide(), start_presentation(), and Registry().execute() when slide_no = 1.
+    Test that add_handler starts once and jumps to the selected slide when slide_no = 1.
     """
     # GIVEN: A Controller, a mocked document controller, and dependencies
     controller = Controller(True)
@@ -211,6 +339,7 @@ def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presenta
     mocked_doc = MagicMock()
     mocked_doc.load_presentation.return_value = True
     mocked_doc.start_presentation = MagicMock()
+    mocked_doc.starts_at_selected_slide = False
     mocked_doc_controller.add_document.return_value = mocked_doc
     mocked_registry_instance = mocked_registry.return_value
 
@@ -218,10 +347,29 @@ def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presenta
     with patch.object(controller, 'slide') as mocked_slide:
         controller.add_handler(mocked_doc_controller, MagicMock(), None, 1, "uuid")
 
-    # THEN: slide(), start_presentation(), and Registry.execute() should have been called
-    mocked_slide.assert_called_once_with(1)
+    # THEN: avoid calling slide(), which can restart the show before it reports active.
+    mocked_slide.assert_not_called()
+    assert mocked_doc.ui_slidenumber == 2
     mocked_doc.start_presentation.assert_called_once()
+    mocked_doc.goto_slide.assert_called_once_with(2)
     mocked_registry_instance.execute.assert_called_with('live_display_hide', HideMode.Screen)
+
+
+@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('openlp.plugins.presentations.lib.messagelistener.Registry')
+def test_add_handler_native_show_starts_at_selected_slide(mocked_registry, mocked_presentation_list):
+    controller = Controller(True)
+    document = MagicMock()
+    document.load_presentation.return_value = True
+    document.starts_at_selected_slide = True
+    presentation_controller = MagicMock()
+    presentation_controller.add_document.return_value = document
+
+    controller.add_handler(presentation_controller, MagicMock(), None, 3, 'uuid')
+
+    assert document.ui_slidenumber == 4
+    document.start_presentation.assert_called_once_with()
+    document.goto_slide.assert_not_called()
 
 
 @patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')

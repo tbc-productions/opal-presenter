@@ -96,6 +96,7 @@ class ImpressController(PresentationController):
         self.manager = None
         self.conf_provider = None
         self.presenter_screen_disabled_by_openlp = False
+        self.supports_slide_images = True
 
     def check_available(self):
         """
@@ -373,6 +374,32 @@ class ImpressDocument(PresentationDocument):
                 log.exception('ERROR! ErrorCodeIOException {error:d}'.format(error=exception.ErrCode))
             except Exception:
                 log.exception('{path} - Unable to store openoffice preview'.format(path=path))
+
+    def create_slide_images(self):
+        """Export Impress draw pages for OpenLP's image display."""
+        if not self.document:
+            return False
+        pages = self.document.getDrawPages()
+        if not pages or pages.getCount() < 1:
+            return False
+        folder = self.get_temp_folder()
+        folder.mkdir(parents=True, exist_ok=True)
+        folder_url = folder.as_uri()
+        properties = (self.controller.create_property('FilterName', 'impress_png_Export'),)
+        sources = []
+        try:
+            for index in range(pages.getCount()):
+                self.document.getCurrentController().setCurrentPage(pages.getByIndex(index))
+                source = folder / f'{index + 1}.png'
+                self.document.storeToURL(f'{folder_url}/{index + 1}.png', properties)
+                sources.append(source)
+            return self.save_slide_images_from_sources(sources)
+        except Exception:
+            log.exception('Failed to export Impress slides for OpenLP display')
+            return False
+        finally:
+            for source in sources:
+                delete_file(source)
 
     def close_presentation(self):
         """

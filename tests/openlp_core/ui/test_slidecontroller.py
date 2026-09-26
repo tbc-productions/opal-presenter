@@ -25,7 +25,7 @@ from collections import namedtuple
 import datetime
 from time import perf_counter
 
-from unittest.mock import MagicMock, patch, sentinel
+from unittest.mock import MagicMock, call, patch, sentinel
 
 from PySide6 import QtCore, QtGui
 from pytest import mark
@@ -124,6 +124,25 @@ def test_slide_selected(settings: Settings):
     mocked_display.go_to_slide.assert_called_once_with(4, raise_window=True)
 
 
+def test_preview_presentation_next_previous_select_cached_slide(settings: Settings):
+    """The Preview arrow actions select slides without controlling a native show."""
+    controller = SlideController(None)
+    controller.service_item = MagicMock()
+    controller.service_item.is_command.return_value = True
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 3
+    controller.preview_widget.current_slide_number.side_effect = [1, 2]
+    controller.slide_selected = MagicMock()
+
+    with patch.object(Registry, 'execute') as execute:
+        controller.on_slide_selected_next()
+        controller.on_slide_selected_previous()
+
+    assert controller.preview_widget.change_slide.call_args_list == [call(2), call(1)]
+    assert controller.slide_selected.call_count == 2
+    execute.assert_not_called()
+
+
 def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(settings: Settings):
     """
     Test that slide_selected() can update a slide without raising the display window.
@@ -145,6 +164,28 @@ def test_slide_selected_does_not_raise_display_when_restore_focus_disabled(setti
 
     # THEN: The display slide changes without requesting a window raise
     mocked_display.go_to_slide.assert_called_once_with(4, raise_window=False)
+
+
+@mark.parametrize('always_on_top', [False, True])
+def test_single_screen_slide_selected_follows_stacking_setting(always_on_top, settings: Settings):
+    """Advancing a slide must not cover the controls when normal window stacking is selected."""
+    settings.setValue('core/always on top', always_on_top)
+    slide_controller = SlideController(None)
+    slide_controller.is_live = True
+    slide_controller.screens = [object()]
+    slide_controller.update_preview = MagicMock()
+    slide_controller.slide_selected_lock = MagicMock()
+    slide_controller.service_item = MagicMock()
+    slide_controller.service_item.is_command.return_value = False
+    slide_controller.preview_widget = MagicMock()
+    slide_controller.preview_widget.slide_count.return_value = 10
+    slide_controller.preview_widget.current_slide_number.return_value = 4
+    mocked_display = MagicMock()
+    slide_controller.displays = [mocked_display]
+
+    slide_controller.slide_selected(True)
+
+    mocked_display.go_to_slide.assert_called_once_with(4, raise_window=always_on_top)
 
 
 def test_slide_selected_defers_when_lock_busy(settings: Settings):
@@ -587,6 +628,23 @@ def test_set_hide_mode_screen_falls_back_when_desktop_unavailable(settings: Sett
     assert slide_controller._current_hide_mode is None
 
 
+@mark.parametrize('hide_mode', [None, HideMode.Screen])
+def test_live_hide_mode_refreshes_display_output_actions(hide_mode, settings: Settings, registry: Registry):
+    """Live toolbar changes immediately update the View menu and its switch shortcut."""
+    main_window = MagicMock()
+    registry.register('main_window', main_window)
+    live_controller = LiveController(None)
+    live_controller.service_item = None
+    live_controller._sync_live_hide_action_state = MagicMock()
+    live_controller.update_preview = MagicMock()
+    live_controller.on_toggle_loop = MagicMock()
+
+    with patch.object(Registry, 'execute'):
+        live_controller.set_hide_mode(hide_mode)
+
+    main_window._sync_view_display_output_menu_action.assert_called_once_with()
+
+
 def test_on_go_live_live_controller(registry: Registry):
     """
     Test that when the on_go_live() method is called the message is sent to the live controller and focus is
@@ -678,6 +736,52 @@ def test_update_slide_action_enabled_state_preview(settings: Settings):
     slide_controller.next_item.setEnabled.assert_called_with(True)
     slide_controller.go_live_action.setEnabled.assert_called_with(True)
     slide_controller.add_to_service_action.setEnabled.assert_called_with(True)
+
+
+def test_powerpoint_timing_action_remembers_each_presentation(settings: Settings):
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.powerpoint_timings_action = MagicMock()
+    item = MagicMock()
+    item.is_command.return_value = True
+    item.processor = 'PowerPointMac'
+    item.slides = [{}]
+    item.sha256_file_hash = 'first-file'
+    controller.service_item = item
+
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller.on_toggle_powerpoint_timings(False)
+        controller._sync_powerpoint_timings_action(item)
+
+    choices = settings.value('presentations/powerpoint slide timings by file')
+    assert choices['first-file'] is False
+    controller.powerpoint_timings_action.setChecked.assert_called_with(False)
+
+    item.sha256_file_hash = 'second-file'
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller._sync_powerpoint_timings_action(item)
+    controller.powerpoint_timings_action.setChecked.assert_called_with(False)
+    choices['second-file'] = True
+    settings.setValue('presentations/powerpoint slide timings by file', choices)
+    with patch.object(Registry, 'execute', return_value=[True]):
+        controller._sync_powerpoint_timings_action(item)
+    controller.powerpoint_timings_action.setChecked.assert_called_with(True)
+
+
+def test_powerpoint_timing_action_is_hidden_without_timed_slides(settings: Settings):
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.powerpoint_timings_action = MagicMock()
+    item = MagicMock()
+    item.is_command.return_value = True
+    item.processor = 'PowerPointMac'
+    item.slides = [{}]
+
+    with patch.object(Registry, 'execute', return_value=[False]):
+        controller._sync_powerpoint_timings_action(item)
+
+    controller.powerpoint_timings_action.setVisible.assert_called_once_with(False)
+    controller.powerpoint_timings_action.setChecked.assert_not_called()
 
 
 def test_update_slide_action_enabled_state_live(settings: Settings):
@@ -787,8 +891,8 @@ def test_sync_live_hide_action_state_is_neutral_without_live_item(settings: Sett
     slide_controller.hide_menu.setDefaultAction.assert_called_once_with(slide_controller.neutral_hide_action)
 
 
-def test_update_desktop_hide_action_state_respects_view_display_output(settings: Settings):
-    """Show Desktop should be disabled when View > Display output is unchecked or disabled."""
+def test_update_desktop_hide_action_state_keeps_hidden_output(settings: Settings):
+    """Refreshing the toolbar must not clear Show Desktop when output is hidden."""
     slide_controller = SlideController(None)
     slide_controller.is_live = True
     slide_controller.desktop_screen = MagicMock()
@@ -798,12 +902,15 @@ def test_update_desktop_hide_action_state_respects_view_display_output(settings:
     mocked_main_window.view_display_output_item.isChecked.return_value = False
     mocked_main_window.view_display_output_item.isEnabled.return_value = True
     Registry().register('main_window', mocked_main_window)
-    slide_controller._current_hide_mode = None
+    slide_controller._current_hide_mode = HideMode.Screen
+    slide_controller.set_hide_mode = MagicMock()
 
     slide_controller._update_desktop_hide_action_state(has_item=True)
 
-    slide_controller.desktop_screen.setEnabled.assert_called_with(False)
-    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
+    slide_controller.desktop_screen.setEnabled.assert_called_with(True)
+    slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', True)
+    slide_controller.set_hide_mode.assert_not_called()
+    assert slide_controller.current_hide_mode == HideMode.Screen
 
     mocked_main_window.view_display_output_item.isChecked.return_value = True
     mocked_main_window.view_display_output_item.isEnabled.return_value = False
@@ -812,6 +919,8 @@ def test_update_desktop_hide_action_state_respects_view_display_output(settings:
 
     slide_controller.desktop_screen.setEnabled.assert_called_with(False)
     slide_controller.toolbar.set_widget_enabled.assert_called_with('desktop_screen_button', False)
+    slide_controller.set_hide_mode.assert_not_called()
+    assert slide_controller.current_hide_mode == HideMode.Screen
 
 
 def test_service_previous(settings: Settings):
@@ -1478,11 +1587,12 @@ def test_process_item_song_no_media(mocked_execute: MagicMock, registry: Registr
     assert 2 == slide_controller.preview_display.load_verses.call_count, 'Execute should have been called 2 times'
 
 
+@mark.parametrize('is_reloading', [False, True])
 @patch.object(Registry, 'execute')
-def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute: MagicMock, registry: Registry,
-                                                                 state_media: State):
+def test_process_item_keeps_desktop_hide_mode(mocked_execute: MagicMock, registry: Registry,
+                                              state_media: State, is_reloading: bool):
     """
-    Test if the display's hide mode is not changed when using is_reloading parameter
+    Auto unblank must leave output hidden when the operator selected Show Desktop.
     """
     # GIVEN: A mocked presentation service item, a mocked media service item, a mocked Registry.execute
     #        and a slide controller with many mocks.
@@ -1508,6 +1618,7 @@ def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute:
     slide_controller = SlideController(None)
     slide_controller.service_item = None
     slide_controller.is_live = True
+    slide_controller._current_hide_mode = HideMode.Screen
     slide_controller._reset_blank = MagicMock()
     slide_controller.preview_widget = MagicMock()
     slide_controller.preview_display = MagicMock()
@@ -1534,8 +1645,8 @@ def test_process_item_is_reloading_wont_change_display_hide_mode(mocked_execute:
     slide_controller.hide_menu = MagicMock()
     slide_controller.neutral_hide_action = MagicMock()
 
-    # WHEN: _process_item is called with is_reloading=True
-    slide_controller._process_item(mocked_media_item, 0, is_reloading=True)
+    # WHEN: _process_item is called while Display output is off
+    slide_controller._process_item(mocked_media_item, 0, is_reloading=is_reloading)
 
     # THEN: set_hide_mode should not be called
     slide_controller.set_hide_mode.assert_not_called()
@@ -1587,6 +1698,53 @@ def test_process_item_provides_own_theme(mocked_execute: MagicMock, registry: Re
 
     # THEN: _set_theme should be called once
     slide_controller._set_theme.assert_called_once()
+
+
+@patch.object(Registry, 'execute')
+def test_sending_current_presentation_live_selects_requested_slide(mocked_execute, registry, settings):
+    item = MagicMock()
+    item.name = 'presentations'
+    item.title = 'Slides'
+    item.processor = 'PowerPointMac'
+    item.sha256_file_hash = 'same-presentation'
+    item.slides = [{'image': '/tmp/slide.png'} for _ in range(5)]
+    item.is_command.return_value = True
+    item.is_media.return_value = False
+    item.is_text.return_value = False
+    item.is_image.return_value = False
+    item.is_capable.return_value = False
+    item.requires_media.return_value = False
+    item.from_service = False
+    main_window = MagicMock()
+    main_window.control_splitter.sizes.return_value = [600]
+    registry.register('main_window', main_window)
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.service_item = item
+    controller.selected_row = 0
+    controller.split = 0
+    controller.type_prefix = 'live'
+    controller._current_hide_mode = None
+    controller.preview_widget = MagicMock()
+    controller.preview_display = MagicMock()
+    controller.info_label = MagicMock()
+    controller.displays = []
+    controller.on_stop_loop = MagicMock()
+    controller.on_media_close = MagicMock()
+    controller.enable_tool_bar = MagicMock()
+    controller.slide_selected = MagicMock()
+    controller._reset_blank = MagicMock()
+    controller.on_controller_size_changed = MagicMock()
+    controller._update_slide_action_enabled_state = MagicMock()
+    controller.set_hide_mode = MagicMock()
+
+    controller._process_item(item, 3)
+
+    calls = [call for call in mocked_execute.call_args_list if call.args[0] == 'presentations_slide']
+    assert len(calls) == 1
+    assert calls[0].args[1][1:] == [True, 3]
+    assert not any(call.args[0] == 'presentations_start' for call in mocked_execute.call_args_list)
+    assert not any(call.args[0] == 'presentations_stop' for call in mocked_execute.call_args_list)
 
 
 def test_set_theme_applies_pdf_transition_settings(settings: Settings):
@@ -1940,6 +2098,37 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
     assert slide_controller.preview_display.go_to_slide.call_count == 0
 
 
+@mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
+def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type):
+    """Leaving Show Desktop restores the current slide in the live preview."""
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._current_hide_mode = None
+    controller.service_item = ServiceItem(None)
+    controller.service_item.service_item_type = item_type
+    controller.service_item._rendered_slides = [{'verse': 'V1', 'text': 'First'},
+                                                {'verse': 'V2', 'text': 'Second'}]
+    controller.service_item.slides = [{'path': 'first.png'}, {'path': 'second.png'}]
+    controller.selected_row = 1
+    controller.slide_changed_time = datetime.datetime.now()
+    controller.preview_display = MagicMock()
+    controller.preview_display.hide_mode = HideMode.Screen
+    controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
+    controller._update_desktop_capture_timer = MagicMock()
+    controller.output_has_changed = MagicMock()
+
+    controller.update_preview()
+
+    if item_type == ServiceItemType.Text:
+        controller.preview_display.load_verses.assert_called_once_with(controller.service_item.rendered_slides)
+        controller.preview_display.load_images.assert_not_called()
+    else:
+        controller.preview_display.load_images.assert_called_once_with(controller.service_item.slides)
+        controller.preview_display.load_verses.assert_not_called()
+    controller.preview_display.go_to_slide.assert_called_once_with(1)
+    controller.preview_display.show_display.assert_called_once_with()
+
+
 def test_on_live_preview_capture_timer_runs_pending_capture(settings: Settings):
     """
     Test that deferred live preview capture executes when pending.
@@ -2022,6 +2211,25 @@ def test_display_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry
     slide_controller.preview_display.set_single_image_data.assert_called_once_with('#000', 'placeholder bytified')
 
 
+def test_live_preview_capture_failure_keeps_cached_slide(settings: Settings, tmp_path):
+    """A missing native frame must not reload the same slide or flash an older frame."""
+    image_path = tmp_path / 'slide.png'
+    image_path.touch()
+    controller = SlideController(None)
+    controller.service_item = MagicMock()
+    controller.service_item.is_capable.return_value = True
+    controller.service_item.get_rendered_frame.return_value = image_path
+    controller.selected_row = 1
+    controller.screen_capture = image_path
+    controller._capture_maindisplay = MagicMock(return_value=None)
+    controller.preview_display = MagicMock()
+
+    controller.display_maindisplay()
+
+    controller.preview_display.set_single_image.assert_not_called()
+    assert controller.screen_capture == image_path
+
+
 CaptureMainDisplayMockReturn = namedtuple('CaptureMainDisplayMockReturn', ['slide_controller', 'mocked_primary_screen',
                                                                            'windowed_screenshot_mock',
                                                                            'mocked_screenlist_instance'])
@@ -2082,6 +2290,27 @@ def test__capture_maindisplay(mocked_is_wayland_compositor: MagicMock, mocked_ap
 
     # THEN: Screenshot should have been taken with correct winId and dimensions
     mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_called_once()
+
+
+@patch('openlp.core.ui.slidecontroller.ScreenList')
+@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
+def test_capture_rendered_item_uses_display_window(mocked_is_wayland_compositor: MagicMock,
+                                                   mocked_application: MagicMock,
+                                                   mocked_screenlist: MagicMock, item_type,
+                                                   settings: Settings):
+    """A rendered Live item is captured from OpenLP's output, not the desktop."""
+    mocks = _init__capture_maindisplay_mocks([[34, 67, 77, 42], [0, 0, 800, 600]],
+                                             mocked_screenlist, mocked_application,
+                                             mocked_is_wayland_compositor)
+    mocks.slide_controller.service_item.service_item_type = item_type
+    mocks.slide_controller._current_hide_mode = None
+
+    photo = mocks.slide_controller._capture_maindisplay()
+
+    assert photo == mocks.windowed_screenshot_mock
+    mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_not_called()
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
@@ -2432,6 +2661,24 @@ def test_initial_preview_controller(registry: Registry):
     # WHEN: the default controller is built.
     # THEN: The controller should not be a live controller.
     assert preview_controller.is_live is False, 'The slide controller should be a Preview controller'
+
+
+@patch('openlp.core.ui.slidecontroller.DisplayWindow')
+def test_live_display_receives_switch_action(mocked_display_class, registry: Registry):
+    """The switch shortcut remains active when the independent projection window has focus."""
+    main_window = MagicMock()
+    main_window.view_switch_projection_item = QtGui.QAction()
+    registry.register('main_window', main_window)
+    live_controller = LiveController(None)
+    live_controller._current_hide_mode = None
+    live_controller.screens = [MagicMock(is_display=True)]
+    live_controller.close_displays = MagicMock()
+    live_controller._reset_blank = MagicMock()
+
+    with patch.object(live_controller, '_SlideController__add_actions_to_widget'):
+        live_controller.setup_displays()
+
+    mocked_display_class.return_value.addAction.assert_called_once_with(main_window.view_switch_projection_item)
 
 
 def test_close_displays(registry: Registry):

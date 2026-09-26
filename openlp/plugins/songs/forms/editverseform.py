@@ -210,6 +210,7 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         :param tag: The tag
         """
         self.has_single_verse = single
+        self.verse_text_edit.parse_section_labels = not single
         if single:
             verse_type_index = VerseType.from_tag(tag[0], None)
             verse_number = tag[1:]

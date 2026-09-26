@@ -53,7 +53,9 @@ def test_presentation_paths_survive_service_save_and_reload(tmp_path, monkeypatc
     media_item = SimpleNamespace(
         display_type_combo_box=MagicMock(currentText=lambda: 'Powerpoint', itemData=lambda index: 'Powerpoint'),
         controllers={'Powerpoint': controller},
-        _ensure_first_thumbnail=PresentationMediaItem._ensure_first_thumbnail)
+        _ensure_first_thumbnail=PresentationMediaItem._ensure_first_thumbnail,
+        _selected_controller_name=lambda: 'Powerpoint',
+        should_render_as_images=lambda file_path, processor: False)
     library_item = QtWidgets.QTreeWidgetItem()
     library_item.setData(0, QtCore.Qt.ItemDataRole.UserRole,
                          Item(name='Sunday sermon.pptx', file_path=str(file_path), file_hash=file_hash))
