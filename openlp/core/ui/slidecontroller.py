@@ -402,6 +402,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.mediabar.identification_label.setText(translate('OpenLP.SlideController', 'Media'))
         self.mediabar.on_action = lambda sender_name, *args: Registry().execute(sender_name, [self, args])
         self.controller_layout.addWidget(self.mediabar)
+        if self.is_live:
+            media_size_policy = self.mediabar.sizePolicy()
+            media_size_policy.setRetainSizeWhenHidden(True)
+            self.mediabar.setSizePolicy(media_size_policy)
         self.mediabar.setVisible(False)
         if self.is_live:
             self.new_song_menu()
@@ -783,11 +787,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         :param compact: Use the narrow menu?
         """
         self.toolbar.set_widget_visible(NARROW_MENU, narrow)
-        self.toolbar.set_widget_visible(WIDE_MENU, False)
-        if self.service_item and self.service_item.is_text():
-            self.toolbar.set_widget_visible(WIDE_MENU, not narrow)
+        if narrow:
+            self.toolbar.set_widget_visible(WIDE_MENU, False)
+            self.toolbar.set_widget_visible(NON_TEXT_MENU, False)
         else:
-            self.toolbar.set_widget_visible(NON_TEXT_MENU, not narrow)
+            visible_menu = WIDE_MENU if self.service_item and self.service_item.is_text() else NON_TEXT_MENU
+            # Leave shared buttons in place instead of hiding and showing the whole row.
+            hidden_menu = [name for name in dict.fromkeys(WIDE_MENU + NON_TEXT_MENU) if name not in visible_menu]
+            self.toolbar.set_widget_visible(hidden_menu, False)
+            self.toolbar.set_widget_visible(visible_menu, True)
         # Apply desktop-action visibility last so toolbar layout updates do not override it.
         self._update_desktop_hide_action_state()
 
@@ -850,15 +858,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
 
         :param item: The current service item
         """
-        # Work-around for OS X, hide and then show the toolbar
-        # See bug #791050
-        self.toolbar.hide()
-        self.mediabar.hide()
-        self.song_menu.hide()
-        self.toolbar.set_widget_visible(LOOP_LIST, False)
-        self.toolbar.set_widget_visible('song_menu', False)
-        # Set to narrow menu so we don't push the panel wider than it needs to be when adding new buttons
-        self.set_hide_mode_menu(narrow=True)
+        # Keep the toolbar and its current width mode stable while changing items.
         # Reset the button
         self.play_slides_once.setChecked(False)
         self.play_slides_once.setIcon(UiIcons().play_slides)
@@ -866,18 +866,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.play_slides_loop.setChecked(False)
         self.play_slides_loop.setIcon(UiIcons().loop)
         self.play_slides_loop.setText(UiStrings().PlaySlidesInLoop)
-        if item.is_text():
-            if self.settings.value('songs/display songbar') and not self.song_menu.menu().isEmpty():
-                self.toolbar.set_widget_visible('song_menu', True)
-        if item.is_capable(ItemCapabilities.CanLoop) and len(item.slides) > 1:
-            self.toolbar.set_widget_visible(LOOP_LIST)
-        if item.is_media() or item.is_capable(ItemCapabilities.HasBackgroundAudio):
-            self.mediabar.show()
-        self.previous_item.setVisible(not item.is_media())
-        self.next_item.setVisible(not item.is_media())
-        # Work-around for OS X, hide and then show the toolbar
-        # See bug #791050
-        self.toolbar.show()
+        self.toolbar.set_widget_visible('song_menu', bool(
+            item.is_text() and self.settings.value('songs/display songbar') and not self.song_menu.menu().isEmpty()))
+        self.toolbar.set_widget_visible(LOOP_LIST, item.is_capable(ItemCapabilities.CanLoop) and len(item.slides) > 1)
+        self.mediabar.setVisible(item.is_media() or item.is_capable(ItemCapabilities.HasBackgroundAudio))
+        self.previous_item.setEnabled(not item.is_media())
+        self.next_item.setEnabled(not item.is_media())
 
     def enable_preview_tool_bar(self, item):
         """
@@ -1109,7 +1103,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                       old_item.is_media())
         new_item_provides_own_display = (self.service_item.is_capable(ItemCapabilities.ProvidesOwnDisplay) or
                                          self.service_item.is_media())
-        if self.is_live and self.service_item.is_media():
+        if self.is_live and self.service_item.is_media() and self._current_hide_mode is None:
             for display in self.displays:
                 display.hide_display(HideMode.Screen)
         if self.is_live and not old_item_provides_own_display and new_item_provides_own_display:
@@ -1125,9 +1119,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 display.load_verses(self.service_item.rendered_slides)
             # Replace the song menu so the verses match the song and are not cumulative
             if self.is_live:
-                self.toolbar.remove_widget('song_menu')
-                self.new_song_menu()
-                self.toolbar.add_toolbar_widget(self.song_menu)
+                self.song_menu.menu().clear()
             for slide_index, slide in enumerate(self.service_item.display_slides):
                 if not slide['verse'].isdigit():
                     # These tags are already translated.

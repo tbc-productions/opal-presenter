@@ -9,18 +9,23 @@
 ##########################################################################
 """Export rendered service pages as editable PPTX or ODP presentations."""
 import html
+import mimetypes
 from dataclasses import dataclass, replace
 from io import BytesIO
+from os import PathLike
 from pathlib import Path
 from uuid import uuid4
+from zipfile import BadZipFile
 
 from bs4 import BeautifulSoup, NavigableString
 from PySide6 import QtCore, QtGui, QtSvg
 
 from openlp.core.common.enum import ServiceItemType
+from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.formattingtags import FormattingTags
+from openlp.core.lib import ItemCapabilities
 
 
 @dataclass
@@ -35,6 +40,11 @@ class PresentationPage:
     title: str = ''
     section_index: int = None
     section_name: str = ''
+    media: Path = None
+    media_auto_start: bool = False
+    media_start_time: int = 0
+    presentation: object = None
+    slide_index: int = None
 
 
 @dataclass(frozen=True)
@@ -190,12 +200,42 @@ def _expand_footer_tags(value):
     return value
 
 
-def service_pages(items, insert_logo=False):
+def _progress(callback, message, completed=0, total=0, title=''):
+    if callback:
+        message = translate('OpenLP.PresentationExport', message)
+        callback(message + ('\n' + title if title else ''), completed, total)
+
+
+def service_pages(items, insert_logo=False, *, native_pptx=False, progress=None):
     """Use the same renderer and theme resolution as the live service."""
     pages = []
+    items = list(items)
+    presentations = {}
     for section_index, item in enumerate(items):
+        _progress(progress, 'Preparing slides', section_index, len(items), item.title)
         item_pages = []
-        if item.service_item_type == ServiceItemType.Text:
+        source = None
+        plugin = getattr(item, 'name', '')
+        if item.service_item_type == ServiceItemType.Command and item.slides and plugin in ('media', 'presentations'):
+            if not item.is_capable(ItemCapabilities.CanStream):
+                source = Path(item.get_frame_path())
+        if source and plugin == 'media':
+            if not source.is_file():
+                raise FileNotFoundError(f'The media file is missing: {source}')
+            item_pages.append(PresentationPage(media=source, title=item.title,
+                                               media_auto_start=item.will_auto_start,
+                                               media_start_time=getattr(item, 'start_time', 0)))
+        elif source and native_pptx and source.suffix.lower() == '.pptx':
+            from openlp.core.lib.pptxmerge import PptxSource
+
+            if source not in presentations:
+                presentations[source] = PptxSource(source)
+            presentation = presentations[source]
+            if not presentation.slides:
+                raise ValueError(f'The presentation has no slides: {source}')
+            item_pages = [PresentationPage(presentation=presentation, slide_index=index, title=item.title)
+                          for index in range(len(presentation.slides))]
+        elif item.service_item_type == ServiceItemType.Text:
             theme = item.get_theme_data()
             for rendered, displayed in zip(item.rendered_slides, item.display_slides):
                 footer_html = _expand_footer_tags(rendered.get('footer') or '')
@@ -207,11 +247,12 @@ def service_pages(items, insert_logo=False):
         elif item.service_item_type in (ServiceItemType.Image, ServiceItemType.Command):
             for frame in item.slides:
                 image = frame.get('path') if item.service_item_type == ServiceItemType.Image else frame.get('image')
-                image = Path(image) if image else None
+                # Media commands use a QIcon for the UI, not a static thumbnail file.
+                image = Path(image) if isinstance(image, (str, PathLike)) and image else None
                 if image and image.is_file():
                     item_pages.append(PresentationPage(image=image, title=item.title))
         if not item_pages:
-            # Video, stream and unavailable presentation thumbnails have no static frame.
+            # Streams and unavailable presentation thumbnails have no static frame.
             item_pages.append(PresentationPage(theme=item.get_theme_data(), text=item.title, title=item.title))
         for page in item_pages:
             page.section_index = section_index
@@ -220,6 +261,7 @@ def service_pages(items, insert_logo=False):
         if insert_logo:
             pages.append(PresentationPage(logo=True, section_index=section_index,
                                           section_name=item.title))
+        _progress(progress, 'Preparing slides', section_index + 1, len(items), item.title)
     return pages
 
 
@@ -270,13 +312,44 @@ def _fit_image(painter, image, width, height, fit='cover'):
     painter.drawImage(rect, image)
 
 
-def _background(theme, width, height, logo=False):
+def _media_poster(page, aspect_ratio):
+    """Use a video frame at presentation resolution, with a smooth fallback for unreadable media."""
+    from openlp.core.lib.mediaposter import video_frame
+
+    mime_type = mimetypes.guess_type(str(page.media))[0] or ''
+    frame = QtGui.QImage()
+    if not mime_type.startswith('audio/'):
+        frame = video_frame(page.media, position_ms=page.media_start_time or 1000)
+    width = max(1920, frame.width())
+    height = max(1, round(width / aspect_ratio))
+    poster = QtGui.QImage(width, height, QtGui.QImage.Format.Format_RGB32)
+    poster.fill(QtGui.QColor('#000000'))
+    painter = QtGui.QPainter(poster)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+    if not frame.isNull():
+        _fit_image(painter, frame, width, height, fit='contain')
+    else:
+        size = min(width, height) * 0.06
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.setBrush(QtGui.QColor('#dddddd'))
+        painter.drawPolygon(QtGui.QPolygonF([
+            QtCore.QPointF(width / 2 - size / 2, height / 2 - size),
+            QtCore.QPointF(width / 2 - size / 2, height / 2 + size),
+            QtCore.QPointF(width / 2 + size, height / 2)]))
+    painter.end()
+    return _image_bytes(poster)
+
+
+def _background(theme, width, height, logo=False, logo_settings=None):
     """Rasterize non-solid fills once while keeping foreground text editable."""
     if logo:
-        settings = Registry().get('settings')
-        color = settings.value('core/logo background color')
-        filename = settings.value('core/logo file')
-        fit = settings.value('core/logo fit')
+        if logo_settings is None:
+            settings = Registry().get('settings')
+            logo_settings = {key: settings.value('core/logo ' + key) for key in ('background color', 'file', 'fit')}
+        color = logo_settings['background color']
+        filename = logo_settings['file']
+        fit = logo_settings['fit']
         kind = 'image'
     else:
         color = theme.background_color
@@ -317,22 +390,34 @@ def _hex_color(value):
     return color.name().lstrip('#') if color.isValid() else '000000'
 
 
-def export_presentation(items, destination, insert_logo=False):
+def export_presentation(items, destination, insert_logo=False, *, progress=None):
     """Write a presentation for service items. The suffix selects the format."""
-    pages = service_pages(items, insert_logo)
+    destination = Path(destination)
+    pages = service_pages(items, insert_logo, native_pptx=destination.suffix.lower() == '.pptx', progress=progress)
     if not pages:
         raise ValueError('There are no items to export')
     geometry = ScreenList().current.display_geometry
     width, height = geometry.width(), geometry.height()
     if width <= 0 or height <= 0:
         raise ValueError('The display geometry is not configured')
-    destination = Path(destination)
     if destination.suffix.lower() == '.pptx':
-        _write_pptx(pages, destination, width, height)
+        writer = _write_pptx
     elif destination.suffix.lower() == '.odp':
-        _write_odp(pages, destination, width, height)
+        writer = _write_odp
     else:
         raise ValueError('Choose a .pptx or .odp file')
+    # Resolve settings on the GUI thread before starting the writer.
+    logo_settings = None
+    if progress and any(page.logo for page in pages):
+        settings = Registry().get('settings')
+        logo_settings = {key: settings.value('core/logo ' + key) for key in ('background color', 'file', 'fit')}
+    if progress:
+        from openlp.core.ui.presentationexportdialog import write_with_progress
+
+        write_with_progress(lambda report: writer(pages, destination, width, height,
+                                                  progress=report, logo_settings=logo_settings), progress)
+    else:
+        writer(pages, destination, width, height, logo_settings=logo_settings)
 
 
 def export_items_dialog(parent, items, suffix, default_path, insert_logo=False):
@@ -341,6 +426,7 @@ def export_items_dialog(parent, items, suffix, default_path, insert_logo=False):
 
     from openlp.core.common.i18n import translate
     from openlp.core.widgets.dialogs import FileDialog
+    from openlp.core.ui.presentationexportdialog import ExportProgressDialog
 
     items = list(items)
     if not items:
@@ -360,17 +446,29 @@ def export_items_dialog(parent, items, suffix, default_path, insert_logo=False):
         return
     if path.suffix.lower() != suffix:
         path = path.with_suffix(suffix)
+    dialog = ExportProgressDialog(parent)
+    dialog.show()
+    error_message = None
     try:
-        export_presentation(items, path, insert_logo)
-    except (OSError, ValueError, RuntimeError, ImportError) as error:
-        QtWidgets.QMessageBox.critical(parent, translate('OpenLP.PresentationExport', 'Export failed'), str(error))
+        export_presentation(items, path, insert_logo, progress=dialog.update_progress)
+    except (OSError, ValueError, RuntimeError, ImportError, BadZipFile) as error:
+        error_message = str(error)
+    finally:
+        dialog.finish()
+    if error_message is not None:
+        QtWidgets.QMessageBox.critical(parent, translate('OpenLP.PresentationExport', 'Export failed'), error_message)
+    elif parent is not None and hasattr(parent, 'statusBar'):
+        parent.statusBar().showMessage(
+            translate('OpenLP.PresentationExport', 'Presentation exported to {path}').format(path=path), 10000)
 
 
-def _write_pptx(pages, destination, width, height):
+def _write_pptx(pages, destination, width, height, *, progress=None, logo_settings=None):
     from lxml import etree
     from pptx import Presentation
     from pptx.dml.color import RGBColor
     from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.oxml.ns import qn
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
     from pptx.util import Inches, Pt
 
     presentation = Presentation()
@@ -380,8 +478,13 @@ def _write_pptx(pages, destination, width, height):
     presentation.core_properties.comments = 'Exported from OpenLP+'
     presentation.slide_width = Inches(13.333)
     presentation.slide_height = round(presentation.slide_width * height / width)
+    source = next((page.presentation for page in pages if page.presentation is not None), None)
+    if source is not None:
+        # Keep original slide geometry exact for the first source deck. Generated pages adapt to it.
+        presentation.slide_width, presentation.slide_height = source.size
     blank = presentation.slide_layouts[6]
     backgrounds = {}
+    posters = {}
 
     def add_text(slide, markup, theme, part):
         if not markup:
@@ -417,15 +520,39 @@ def _write_pptx(pages, destination, width, height):
                     baseline = '30000' if run_style.baseline == 'super' else '-25000'
                     run._r.get_or_add_rPr().set('baseline', baseline)
 
-    for page in pages:
+    for page_index, page in enumerate(pages):
+        _progress(progress, 'Embedding media' if page.media else 'Building presentation',
+                  page_index, len(pages), page.title or page.section_name)
         slide = presentation.slides.add_slide(blank)
+        if page.presentation is not None:
+            # Replaced with the original slide and its full dependency graph after writing generated slides.
+            continue
+        if page.media:
+            mime_type = mimetypes.guess_type(str(page.media))[0] or 'video/unknown'
+            poster_key = (page.media, page.media_start_time)
+            if poster_key not in posters:
+                posters[poster_key] = _media_poster(page, presentation.slide_width / presentation.slide_height)
+            movie = slide.shapes.add_movie(str(page.media), 0, 0, presentation.slide_width, presentation.slide_height,
+                                           poster_frame_image=BytesIO(posters[poster_key]), mime_type=mime_type)
+            if mime_type.startswith('audio/'):
+                audio_file = movie._element.xpath('.//a:videoFile')[0]
+                video_rid = audio_file.get(qn('r:link'))
+                media_part = slide.part.related_part(video_rid)
+                audio_file.tag = qn('a:audioFile')
+                audio_file.set(qn('r:link'), slide.part.relate_to(media_part, RT.AUDIO))
+                slide.part.drop_rel(video_rid)
+                slide._element.xpath('.//p:video')[0].tag = qn('p:audio')
+            if page.media_auto_start:
+                for condition in slide._element.xpath('.//p:cMediaNode/p:cTn/p:stCondLst/p:cond'):
+                    condition.set('delay', '0')
+            continue
         if page.image:
             slide.shapes.add_picture(BytesIO(_image_bytes(_load_image(page.image))), 0, 0,
                                      presentation.slide_width, presentation.slide_height)
             continue
         key = 'logo' if page.logo else id(page.theme)
         if key not in backgrounds:
-            backgrounds[key] = _background(page.theme, width, height, page.logo)
+            backgrounds[key] = _background(page.theme, width, height, page.logo, logo_settings)
         color, image = backgrounds[key]
         if image:
             slide.shapes.add_picture(BytesIO(image), 0, 0, presentation.slide_width, presentation.slide_height)
@@ -436,6 +563,7 @@ def _write_pptx(pages, destination, width, height):
         if page.theme:
             add_text(slide, page.html_text or html.escape(page.text).replace('\n', '<br>'), page.theme, 'main')
             add_text(slide, page.html_footer or html.escape(page.footer).replace('\n', '<br>'), page.theme, 'footer')
+    _progress(progress, 'Building presentation', len(pages), len(pages))
     sections = _page_sections(pages)
     if sections:
         presentation_ns = 'http://schemas.openxmlformats.org/presentationml/2006/main'
@@ -455,10 +583,33 @@ def _write_pptx(pages, destination, width, height):
             id_list = etree.SubElement(section, f'{{{section_ns}}}sldIdLst')
             for index in indices:
                 etree.SubElement(id_list, f'{{{section_ns}}}sldId', id=str(slide_ids[index].id))
-    presentation.save(str(destination))
+    if source is None:
+        _progress(progress, 'Writing file', title=destination.name)
+        presentation.save(str(destination))
+    else:
+        from openlp.core.lib.pptxmerge import PptxSlideImporter
+
+        generated = BytesIO()
+        _progress(progress, 'Packaging presentation')
+        presentation.save(generated)
+        importer = PptxSlideImporter(generated.getvalue())
+        groups = {}
+        for index, page in enumerate(pages):
+            if page.presentation is not None:
+                key = (page.presentation, page.section_index)
+                groups.setdefault(key, []).append((page.slide_index, index))
+        for occurrence, ((source, _), indices) in enumerate(groups.items(), 1):
+            _progress(progress, 'Copying original slides', occurrence - 1, len(groups),
+                      pages[indices[0][1]].title)
+            try:
+                importer.import_slides(source, indices, occurrence)
+            except (KeyError, etree.XMLSyntaxError) as error:
+                raise ValueError(f'Unable to copy the source PowerPoint slides: {error}') from error
+        _progress(progress, 'Writing file', title=destination.name)
+        importer.save(destination)
 
 
-def _write_odp(pages, destination, width, height):
+def _write_odp(pages, destination, width, height, *, progress=None, logo_settings=None):
     from odf import dc, draw, style, text
     from odf.element import Element
     from odf.namespaces import LOEXTNS
@@ -537,9 +688,12 @@ def _write_odp(pages, destination, width, height):
         page.addElement(frame)
 
     for index, source in enumerate(pages):
-        key = 'logo' if source.logo else ('image', index) if source.image else id(source.theme)
+        _progress(progress, 'Embedding media' if source.media else 'Building presentation',
+                  index, len(pages), source.title or source.section_name)
+        key = 'logo' if source.logo else ('image', index) if source.image or source.media else id(source.theme)
         if key not in backgrounds:
-            backgrounds[key] = _background(source.theme, width, height, source.logo) if not source.image else None
+            backgrounds[key] = (_background(source.theme, width, height, source.logo, logo_settings)
+                                if not source.image and not source.media else None)
         if key not in masters:
             fill_style = style.Style(name=f'OpenLPPage{index}', family='drawing-page')
             color = backgrounds[key][0] if backgrounds[key] else '#000000'
@@ -553,6 +707,16 @@ def _write_odp(pages, destination, width, height):
                          stylename=fill_style)
         page_names.append(page.getAttribute('name'))
         document.presentation.addElement(page)
+        if source.media:
+            mime_type = mimetypes.guess_type(str(source.media))[0] or 'video/unknown'
+            media_path = f'Media/{index}{source.media.suffix}'
+            document.addPicture(media_path, mediatype=mime_type, content=source.media.read_bytes())
+            frame = draw.Frame(x='0cm', y='0cm', width=f'{slide_width:.3f}cm', height=f'{slide_height:.3f}cm')
+            player = draw.Plugin(href=media_path, mimetype='application/vnd.sun.star.media')
+            player.addElement(draw.Param(name='Loop', value='false'))
+            frame.addElement(player)
+            page.addElement(frame)
+            continue
         image = None
         if source.image:
             image = _image_bytes(_load_image(source.image))
@@ -568,6 +732,7 @@ def _write_odp(pages, destination, width, height):
             add_text(page, source.html_text or html.escape(source.text).replace('\n', '<br>'), source.theme, 'main')
             add_text(page, source.html_footer or html.escape(source.footer).replace('\n', '<br>'),
                      source.theme, 'footer')
+    _progress(progress, 'Building presentation', len(pages), len(pages))
     sections = _page_sections(pages)
     if sections:
         section_list = Element(qname=(LOEXTNS, 'section-list'), check_grammar=False)
@@ -581,4 +746,5 @@ def _write_odp(pages, destination, width, height):
                 section.addElement(section_slide, check_grammar=False)
             section_list.addElement(section, check_grammar=False)
         document.presentation.addElement(section_list, check_grammar=False)
+    _progress(progress, 'Writing file', title=destination.name)
     document.save(str(destination))

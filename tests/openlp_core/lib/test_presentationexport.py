@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from zipfile import ZipFile
 
+import pytest
 from PySide6 import QtGui
 
 from openlp.core.common.enum import ServiceItemType
@@ -14,6 +15,7 @@ from openlp.core.lib.presentationexport import PresentationPage, _styled_lines, 
 from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.widgets.dialogs import FileDialog
 from tests.openlp_core.ui.test_mainwindow import main_window_reduced as _main_window_reduced
+from tests.utils.constants import RESOURCE_PATH
 
 
 presentation_main_window = _main_window_reduced
@@ -77,6 +79,311 @@ def test_service_pages_end_each_section_with_logo():
     assert pages[0].html_text == '<strong>Verse one</strong>'
 
 
+@pytest.mark.parametrize('thumbnail', ['icon', None, '', 'missing-thumbnail.png'])
+def test_service_pages_without_thumbnail_use_title(thumbnail):
+    if thumbnail == 'icon':
+        pixmap = QtGui.QPixmap(16, 16)
+        pixmap.fill(QtGui.QColor('#ff0000'))
+        thumbnail = QtGui.QIcon(pixmap)
+    theme = _theme()
+    item = SimpleNamespace(service_item_type=ServiceItemType.Command, title='Welcome video',
+                           get_theme_data=lambda: theme, slides=[{'image': thumbnail}])
+
+    pages = service_pages([item], insert_logo=True)
+
+    assert len(pages) == 2
+    assert pages[0].image is None
+    assert pages[0].theme is theme
+    assert pages[0].text == 'Welcome video'
+    assert pages[1].logo
+    assert [page.section_index for page in pages] == [0, 0]
+    assert [page.section_name for page in pages] == ['Welcome video', 'Welcome video']
+
+
+@pytest.mark.parametrize('item_type, image_key', [
+    (ServiceItemType.Image, 'path'), (ServiceItemType.Command, 'image')])
+@pytest.mark.parametrize('path_type', [str, Path])
+def test_service_pages_keep_thumbnail_files(tmp_path, item_type, image_key, path_type):
+    thumbnail = tmp_path / 'thumbnail.png'
+    image = QtGui.QImage(16, 16, QtGui.QImage.Format.Format_RGB32)
+    image.fill(QtGui.QColor('#ff0000'))
+    assert image.save(str(thumbnail))
+    item = SimpleNamespace(service_item_type=item_type, title='Slide',
+                           slides=[{image_key: path_type(thumbnail)}])
+
+    pages = service_pages([item])
+
+    assert len(pages) == 1
+    assert pages[0].image == thumbnail
+
+
+def test_command_without_source_uses_title_in_both_formats(tmp_path):
+    from pptx import Presentation
+
+    pixmap = QtGui.QPixmap(16, 16)
+    pixmap.fill(QtGui.QColor('#ff0000'))
+    item = SimpleNamespace(service_item_type=ServiceItemType.Command, title='Welcome video',
+                           get_theme_data=_theme, slides=[{'image': QtGui.QIcon(pixmap)}])
+    pages = service_pages([item])
+    pptx = tmp_path / 'media.pptx'
+    odp = tmp_path / 'media.odp'
+
+    _write_pptx(pages, pptx, 1024, 768)
+    _write_odp(pages, odp, 1024, 768)
+
+    presentation = Presentation(str(pptx))
+    assert len(presentation.slides) == 1
+    assert presentation.slides[0].shapes[0].text == 'Welcome video'
+    with ZipFile(odp) as package:
+        assert b'Welcome video' in package.read('content.xml')
+
+
+def _file_item(path, name, title, auto_start=False):
+    return SimpleNamespace(name=name, title=title, service_item_type=ServiceItemType.Command,
+                           slides=[{'image': QtGui.QIcon()}], get_frame_path=lambda: path,
+                           is_capable=lambda capability: False, will_auto_start=auto_start)
+
+
+@pytest.mark.parametrize('auto_start', [True, False])
+def test_video_is_embedded_in_both_export_formats(tmp_path, auto_start):
+    from pptx import Presentation
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    video = RESOURCE_PATH / 'media' / 'mp4_file.mp4'
+    item = _file_item(video, 'media', 'Welcome video', auto_start)
+    pages = service_pages([item], native_pptx=True)
+    target = tmp_path / 'video.pptx'
+    _write_pptx(pages, target, 1024, 768)
+    slide = Presentation(target).slides[0]
+    media = slide.part.part_related_by(RT.MEDIA)
+    assert media.blob == video.read_bytes()
+    assert media.content_type == 'video/mp4'
+    assert slide.part.part_related_by(RT.VIDEO) is media
+    conditions = slide._element.xpath('.//p:video/p:cMediaNode/p:cTn/p:stCondLst/p:cond')
+    assert conditions[0].get('delay') == ('0' if auto_start else 'indefinite')
+
+    target = tmp_path / 'video.odp'
+    _write_odp(pages, target, 1024, 768)
+    with ZipFile(target) as archive:
+        assert archive.read('Media/0.mp4') == video.read_bytes()
+        assert b'application/vnd.sun.star.media' in archive.read('content.xml')
+        assert b'Media/0.mp4' in archive.read('content.xml')
+        assert b'video/mp4' in archive.read('META-INF/manifest.xml')
+
+
+def _source_pptx(tmp_path):
+    from lxml import etree
+    from pptx import Presentation
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+    from pptx.util import Inches, Pt
+
+    source = Presentation()
+    source.slide_width, source.slide_height = Inches(10), Inches(5.625)
+    first = source.slides.add_slide(source.slide_layouts[6])
+    second = source.slides.add_slide(source.slide_layouts[6])
+    text = first.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1))
+    run = text.text_frame.paragraphs[0].add_run()
+    run.text, run.font.bold, run.font.size = 'Editable original text', True, Pt(32)
+    text.click_action.target_slide = second
+    second.shapes.add_textbox(0, 0, Inches(4), Inches(1)).text = 'Second original slide'
+    first.notes_slide.notes_text_frame.text = 'Original speaker notes'
+    image_path = tmp_path / 'original.png'
+    image = QtGui.QImage(640, 360, QtGui.QImage.Format.Format_RGB32)
+    image.fill(QtGui.QColor('#ff1234'))
+    image.save(str(image_path))
+    first.shapes.add_picture(str(image_path), Inches(1), Inches(2), Inches(2), Inches(1))
+    chart_data = CategoryChartData()
+    chart_data.categories = ['One', 'Two']
+    chart_data.add_series('Original data', (1, 2))
+    first.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(5), Inches(1), Inches(4), Inches(3), chart_data)
+    second.shapes.add_movie(str(RESOURCE_PATH / 'media' / 'mp4_file.mp4'), 0, Inches(2), Inches(4), Inches(2),
+                            mime_type='video/mp4')
+    transition = etree.SubElement(first._element,
+                                  '{http://schemas.openxmlformats.org/presentationml/2006/main}transition', spd='slow')
+    etree.SubElement(transition, '{http://schemas.openxmlformats.org/presentationml/2006/main}fade')
+    path = tmp_path / 'original.pptx'
+    source.save(path)
+    return path
+
+
+def test_native_pptx_slides_keep_editable_content_assets_and_internal_links(tmp_path, monkeypatch):
+    import posixpath
+    from lxml import etree
+    from pptx import Presentation
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    path = _source_pptx(tmp_path)
+    original = Presentation(path)
+    item = _file_item(path, 'presentations', 'Sermon')
+    monkeypatch.setattr('openlp.core.lib.presentationexport._background',
+                        lambda *args: ('#000000', None))
+    # A stale cache lists only one thumbnail, but both original slides must be exported.
+    pages = service_pages([item, item], insert_logo=True, native_pptx=True)
+    assert len(pages) == 6
+    target = tmp_path / 'service.pptx'
+    _write_pptx(pages, target, 1024, 768)
+    exported = Presentation(target)
+    assert (exported.slide_width, exported.slide_height) == (original.slide_width, original.slide_height)
+    assert len(exported.slides) == 6
+    for first_index in (0, 3):
+        first, second = exported.slides[first_index], exported.slides[first_index + 1]
+        assert first.shapes[0].text == 'Editable original text'
+        assert first.shapes[0].text_frame.paragraphs[0].runs[0].font.bold
+        assert first.shapes[0].click_action.target_slide == second
+        assert first.shapes[1].image.blob == original.slides[0].shapes[1].image.blob
+        assert first.shapes[2].chart.series[0].values == (1.0, 2.0)
+        assert first.notes_slide.notes_text_frame.text == 'Original speaker notes'
+        assert first._element.xpath('./p:transition/p:fade')
+        assert second.part.part_related_by(RT.MEDIA).blob == (RESOURCE_PATH / 'media' / 'mp4_file.mp4').read_bytes()
+        original_master = etree.fromstring(original.slides[0].slide_layout.slide_master.part.blob)
+        copied_master = etree.fromstring(first.slide_layout.slide_master.part.blob)
+        for master in (original_master, copied_master):
+            for layout in master.xpath('//*[local-name()="sldLayoutId"]'):
+                layout.attrib.pop('id')
+        assert etree.tostring(copied_master) == etree.tostring(original_master)
+    assert exported.slides[0].part is not exported.slides[3].part
+    with ZipFile(target) as archive:
+        names = archive.namelist()
+        assert len(names) == len(set(names))
+        for name in names:
+            if not name.endswith('.rels'):
+                continue
+            for rel in etree.fromstring(archive.read(name)):
+                if rel.get('TargetMode') != 'External':
+                    base = posixpath.dirname(posixpath.dirname(name))
+                    dependency = posixpath.normpath(posixpath.join(base, rel.get('Target'))).lstrip('/')
+                    assert dependency in names, (name, dependency)
+        sections = etree.fromstring(archive.read('ppt/presentation.xml')).xpath(
+            '//*[local-name()="section"]')
+        assert [section.get('name') for section in sections] == ['Sermon', 'Sermon']
+        assert [len(section[0]) for section in sections] == [3, 3]
+        master_ids = etree.fromstring(archive.read('ppt/presentation.xml')).xpath(
+            '//*[local-name()="sldMasterId"]/@id')
+        for name in names:
+            if 'slideMaster' in name and name.endswith('.xml'):
+                master_ids.extend(etree.fromstring(archive.read(name)).xpath('//*[local-name()="sldLayoutId"]/@id'))
+        assert len(master_ids) == len(set(master_ids))
+
+
+def test_missing_media_fails_instead_of_silently_exporting_a_title(tmp_path):
+    item = _file_item(tmp_path / 'missing.mp4', 'media', 'Missing video')
+    with pytest.raises(FileNotFoundError, match='media file is missing'):
+        service_pages([item], native_pptx=True)
+
+
+def test_audio_media_is_packaged_as_audio(tmp_path):
+    from pptx import Presentation
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    source = RESOURCE_PATH / 'media' / 'mp3_file.mp3'
+    pages = service_pages([_file_item(source, 'media', 'Music', auto_start=True)], native_pptx=True)
+    target = tmp_path / 'audio.pptx'
+    _write_pptx(pages, target, 1024, 768)
+    slide = Presentation(target).slides[0]
+    assert slide.part.part_related_by(RT.AUDIO).blob == source.read_bytes()
+    assert slide._element.xpath('.//a:audioFile')
+    assert slide._element.xpath('.//p:audio/p:cMediaNode/p:cTn/p:stCondLst/p:cond')[0].get('delay') == '0'
+
+
+def test_video_poster_uses_decoded_frame_and_service_start_time(tmp_path, monkeypatch):
+    from pptx import Presentation
+    from openlp.core.lib import mediaposter
+
+    decoded = QtGui.QImage(1920, 1080, QtGui.QImage.Format.Format_RGB32)
+    decoded.fill(QtGui.QColor('#247b39'))
+    calls = []
+
+    def capture(path, position_ms):
+        calls.append((path, position_ms))
+        return decoded
+
+    monkeypatch.setattr(mediaposter, 'video_frame', capture)
+    media_path = RESOURCE_PATH / 'media' / 'mp4_file.mp4'
+    item = _file_item(media_path, 'media', 'Video')
+    item.start_time = 5000
+    pages = service_pages([item, item], native_pptx=True)
+    target = tmp_path / 'poster.pptx'
+    _write_pptx(pages, target, 1920, 1080)
+
+    assert calls == [(media_path, 5000)]  # Repeated media reuse the poster within this export.
+    for slide in Presentation(target).slides:
+        image = QtGui.QImage.fromData(slide.shapes[0].poster_frame.blob)
+        assert (image.width(), image.height()) == (1920, 1080)
+        assert image.pixelColor(960, 540).name() == '#247b39'
+        assert image.pixelColor(200, 200).name() == '#247b39'
+
+
+def test_video_poster_preserves_aspect_ratio_and_has_high_resolution_fallback(monkeypatch):
+    from openlp.core.lib import mediaposter, presentationexport
+
+    page = PresentationPage(media=Path('video.mp4'))
+    portrait = QtGui.QImage(600, 1200, QtGui.QImage.Format.Format_RGB32)
+    portrait.fill(QtGui.QColor('#abcdef'))
+    monkeypatch.setattr(mediaposter, 'video_frame', lambda *args, **kwargs: portrait)
+    poster = QtGui.QImage.fromData(presentationexport._media_poster(page, 16 / 9))
+    assert poster.pixelColor(960, 540).name() == '#abcdef'
+    assert poster.pixelColor(200, 540).name() == '#000000'
+
+    monkeypatch.setattr(mediaposter, 'video_frame', lambda *args, **kwargs: QtGui.QImage())
+    fallback = QtGui.QImage.fromData(presentationexport._media_poster(page, 16 / 9))
+    assert (fallback.width(), fallback.height()) == (1920, 1080)
+    assert fallback.pixelColor(960, 540).name() == '#dddddd'
+    assert fallback.pixelColor(960, 300).name() == '#000000'
+
+
+def test_export_mixed_service_keeps_native_slides_video_and_logo_order(tmp_path, monkeypatch):
+    from PySide6 import QtCore
+    from pptx import Presentation
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+    from openlp.core.lib import presentationexport
+
+    song = SimpleNamespace(service_item_type=ServiceItemType.Text, title='Song', get_theme_data=_theme,
+                           rendered_slides=[{'text': 'Editable lyrics'}], display_slides=[{'text': 'Editable lyrics'}])
+    media = _file_item(RESOURCE_PATH / 'media' / 'mp4_file.mp4', 'media', 'Video')
+    source = _file_item(_source_pptx(tmp_path), 'presentations', 'Sermon')
+    screen = SimpleNamespace(display_geometry=QtCore.QRect(0, 0, 1920, 1080))
+    monkeypatch.setattr(presentationexport, 'ScreenList',
+                        lambda: SimpleNamespace(current=screen))
+    monkeypatch.setattr(presentationexport, '_background', lambda *args: ('#000000', None))
+    target = tmp_path / 'mixed.pptx'
+    presentationexport.export_presentation([song, media, source], target, insert_logo=True)
+    slides = Presentation(target).slides
+    assert len(slides) == 7
+    assert slides[0].shapes[0].text == 'Editable lyrics'
+    assert slides[2].part.part_related_by(RT.MEDIA).blob == media.get_frame_path().read_bytes()
+    assert slides[4].shapes[0].text == 'Editable original text'
+    assert slides[5].shapes[0].text == 'Second original slide'
+    assert all(len(slides[index].shapes) == 0 for index in (1, 3, 6))
+
+
+def test_different_source_slide_sizes_are_fitted_without_rasterising(tmp_path):
+    from pptx import Presentation
+    from pptx.util import Inches, Pt
+
+    paths = []
+    for index, size in enumerate(((10, 5), (5, 5))):
+        source = Presentation()
+        source.slide_width, source.slide_height = (Inches(value) for value in size)
+        slide = source.slides.add_slide(source.slide_layouts[6])
+        box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(2), Inches(1))
+        box.text = 'Native text'
+        box.text_frame.paragraphs[0].runs[0].font.size = Pt(24)
+        path = tmp_path / f'source{index}.pptx'
+        source.save(path)
+        paths.append(path)
+    pages = service_pages([_file_item(path, 'presentations', path.stem) for path in paths], native_pptx=True)
+    target = tmp_path / 'mixed-sizes.pptx'
+    _write_pptx(pages, target, 1920, 1080)
+    result = Presentation(target)
+    box = result.slides[1].shapes[0]
+    assert box.text == 'Native text'
+    assert box.left == Inches(3.5)
+    assert box.top == Inches(1)
+    assert box.width == Inches(2)
+    assert box.text_frame.paragraphs[0].runs[0].font.size == Pt(24)
+
+
 def test_service_sections_are_exported_to_pptx_and_odp(tmp_path, monkeypatch):
     from lxml import etree
 
@@ -89,7 +396,7 @@ def test_service_sections_are_exported_to_pptx_and_odp(tmp_path, monkeypatch):
                                display_slides=[{'text': title}])
 
     monkeypatch.setattr('openlp.core.lib.presentationexport._background',
-                        lambda theme, width, height, logo: ('#000000', None))
+                        lambda theme, width, height, logo, logo_settings=None: ('#000000', None))
     pages = service_pages([item('Pre-Service'), item('How Great Thou Art'),
                            item('How Great Thou Art')], insert_logo=True)
     pptx = tmp_path / 'sections.pptx'
@@ -264,11 +571,129 @@ def test_export_dialog_uses_requested_format_and_suggested_path(monkeypatch, tmp
 
     monkeypatch.setattr(FileDialog, 'getSaveFileName', choose_file)
     monkeypatch.setattr(presentationexport, 'export_presentation',
-                        lambda items, path, insert_logo: saved.append((path, insert_logo)))
+                        lambda items, path, insert_logo, **kwargs: saved.append((path, insert_logo)))
     presentationexport.export_items_dialog(None, [SimpleNamespace(title='Song')], '.odp', suggested)
     assert saved == [(suggested, False)]
     assert dialogs[0][2] == suggested
     assert dialogs[0][3] == 'OpenDocument Presentation (*.odp)'
+
+
+@pytest.mark.parametrize('fails', [False, True])
+def test_export_progress_dialog_is_modal_and_closes_before_errors(tmp_path, monkeypatch, fails):
+    from PySide6 import QtCore, QtWidgets
+    from openlp.core.lib import presentationexport
+    from openlp.core.ui import presentationexportdialog
+
+    dialogs = []
+    errors = []
+    original_dialog = presentationexportdialog.ExportProgressDialog
+
+    def create_dialog(parent):
+        dialog = original_dialog(parent)
+        dialogs.append(dialog)
+        return dialog
+
+    def export(items, path, insert_logo, *, progress):
+        dialog = dialogs[0]
+        assert dialog.isVisible()
+        assert dialog.windowModality() == QtCore.Qt.WindowModality.ApplicationModal
+        progress('Embedding media\nWelcome video', 1, 3)
+        assert dialog.value() == 1
+        assert dialog.maximum() == 3
+        assert dialog.labelText() == 'Embedding media\nWelcome video'
+        dialog.reject()
+        assert dialog.isVisible()
+        progress('Writing file', 0, 0)
+        assert dialog.minimum() == dialog.maximum() == 0
+        if fails:
+            raise OSError('Disk full')
+
+    def show_error(parent, title, message):
+        assert not dialogs[0].isVisible()
+        errors.append(message)
+
+    monkeypatch.setattr(presentationexportdialog, 'ExportProgressDialog', create_dialog)
+    monkeypatch.setattr(FileDialog, 'getSaveFileName', lambda *args: (tmp_path / 'service.pptx', ''))
+    monkeypatch.setattr(presentationexport, 'export_presentation', export)
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'critical', show_error)
+    presentationexport.export_items_dialog(None, [SimpleNamespace(title='Song')], '.pptx', tmp_path)
+    assert not dialogs[0].isVisible()
+    assert errors == (['Disk full'] if fails else [])
+
+
+def test_cancelled_save_dialog_does_not_start_progress(tmp_path, monkeypatch):
+    from openlp.core.lib import presentationexport
+    from openlp.core.ui import presentationexportdialog
+
+    def unexpected(*args):
+        pytest.fail('Cancelling the file chooser must not start an export')
+
+    monkeypatch.setattr(FileDialog, 'getSaveFileName', lambda *args: (None, ''))
+    monkeypatch.setattr(presentationexportdialog, 'ExportProgressDialog', unexpected)
+    presentationexport.export_items_dialog(None, [SimpleNamespace(title='Song')], '.pptx', tmp_path)
+
+
+def test_export_worker_keeps_gui_responsive_and_returns_errors():
+    import threading
+    from PySide6 import QtCore
+    from openlp.core.ui.presentationexportdialog import write_with_progress
+
+    gui_thread = threading.get_ident()
+    tick = threading.Event()
+    updates = []
+
+    def action(progress):
+        assert threading.get_ident() != gui_thread
+        progress('Writing file', 0, 0)
+        assert tick.wait(2), 'The GUI timer must run while the writer is busy'
+        raise OSError('Write failed')
+
+    timer = QtCore.QTimer()
+    timer.timeout.connect(tick.set)
+    timer.start(10)
+    try:
+        with pytest.raises(OSError, match='Write failed'):
+            write_with_progress(action, lambda *args: updates.append((threading.get_ident(), args)))
+    finally:
+        timer.stop()
+    assert updates == [(gui_thread, ('Writing file', 0, 0))]
+
+
+@pytest.mark.parametrize('suffix', ['.pptx', '.odp'])
+def test_export_with_progress_writes_real_output_on_worker(tmp_path, monkeypatch, registry, suffix):
+    import threading
+    from PySide6 import QtCore
+    from openlp.core.lib import presentationexport
+
+    gui_thread = threading.get_ident()
+    updates = []
+    registry.register('settings', SimpleNamespace(value=lambda key: {
+        'core/logo background color': '#000000', 'core/logo file': None, 'core/logo fit': 'contain'}[key]))
+    screen = SimpleNamespace(display_geometry=QtCore.QRect(0, 0, 1920, 1080))
+    monkeypatch.setattr(presentationexport, 'ScreenList', lambda: SimpleNamespace(current=screen))
+    media = _file_item(RESOURCE_PATH / 'media' / 'mp4_file.mp4', 'media', 'Video')
+    items = [media]
+    if suffix == '.pptx':
+        items.append(_file_item(_source_pptx(tmp_path), 'presentations', 'Sermon'))
+    target = tmp_path / ('service' + suffix)
+
+    def progress(*args):
+        assert threading.get_ident() == gui_thread
+        updates.append(args)
+
+    presentationexport.export_presentation(items, target, insert_logo=True, progress=progress)
+
+    assert target.is_file()
+    assert updates[0] == ('Preparing slides\nVideo', 0, len(items))
+    assert any(message.startswith('Embedding media') for message, _, _ in updates)
+    assert updates[-1] == ('Writing file\n' + target.name, 0, 0)
+    with ZipFile(target) as archive:
+        assert archive.testzip() is None
+    if suffix == '.pptx':
+        from pptx import Presentation
+
+        assert any(message.startswith('Copying original slides') for message, _, _ in updates)
+        assert len(Presentation(target).slides) == 5
 
 
 def test_export_menu_has_separate_presentation_formats(request):

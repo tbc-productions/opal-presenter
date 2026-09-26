@@ -134,7 +134,6 @@ class MediaPlayer(MediaBase, LogMixin):
         # device stream objects. setVideoOutput is called when loading stream, video_widget can't be used by both
         # QMediaCaptureSession and QMediaPlayer
         self.media_capture_session = QMediaCaptureSession()
-        self.media_capture_session.setAudioOutput(self.audio_output)
         self.device_video_input = None
         self.device_audio_input = None
         self.set_visible(False)  # Hide player till needed
@@ -154,12 +153,13 @@ class MediaPlayer(MediaBase, LogMixin):
         if not settings:
             return
         output_name = settings.value(setting_key)
-        if not output_name:
-            return
-        for output_device in QMediaDevices.audioOutputs():
-            if output_device.description() == output_name:
-                self.audio_output.setDevice(output_device)
-                break
+        output_device = QMediaDevices.defaultAudioOutput()
+        if output_name:
+            for candidate in QMediaDevices.audioOutputs():
+                if candidate.description() == output_name:
+                    output_device = candidate
+                    break
+        self.audio_output.setDevice(output_device)
 
     def media_status_changed_event(self, event):
         """
@@ -289,6 +289,7 @@ class MediaPlayer(MediaBase, LogMixin):
         if self.controller.media_play_item.media_file:
             self._apply_audio_output_setting()
             self.media_capture_session.setVideoOutput(None)
+            self.media_capture_session.setAudioOutput(None)
             self.media_player.setAudioOutput(self.audio_output)
             self.media_player.setVideoOutput(self.video_widget)
             self.media_player.setPlaybackRate(1.0)
@@ -308,6 +309,8 @@ class MediaPlayer(MediaBase, LogMixin):
             mrl = self.controller.media_play_item.external_stream[0]
             if self.controller.media_play_item.media_type == MediaType.DeviceStream:
                 self.media_player.setVideoOutput(None)
+                self.media_player.setAudioOutput(None)
+                self.media_capture_session.setAudioOutput(self.audio_output)
                 self.media_capture_session.setVideoOutput(self.video_widget)
                 vdev_name = re.search(r'qt6video=(.+);', mrl)
                 self.device_video_input = None
@@ -330,6 +333,8 @@ class MediaPlayer(MediaBase, LogMixin):
                 return True
             elif self.controller.media_play_item.media_type == MediaType.NetworkStream:
                 self.media_capture_session.setVideoOutput(None)
+                self.media_capture_session.setAudioOutput(None)
+                self.media_player.setAudioOutput(self.audio_output)
                 self.media_player.setVideoOutput(self.video_widget)
                 self.media_player.setPlaybackRate(1.0)
                 self.media_player.setSource(QUrl(mrl))

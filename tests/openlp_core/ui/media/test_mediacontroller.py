@@ -807,6 +807,7 @@ def test_media_play(media_env, settings):
     mocked_controller = MagicMock()
     mocked_controller.media_play_item.is_background = False
     mocked_controller.media_play_item.media_file = None
+    mocked_controller.media_play_item._stop_after_hide = True
     media_env.is_theme_background = False
 
     # WHEN: media_play is called
@@ -815,8 +816,42 @@ def test_media_play(media_env, settings):
     # THEN: The web display should become transparent (only tests that the theme is reset here)
     # And the function should return true to indicate success
     assert result is True
+    assert mocked_controller.media_play_item._stop_after_hide is False
     media_env.live_hide_timer.stop.assert_called_once_with()
     mocked_controller._set_theme.assert_called_once()
+
+
+def test_preview_volume_is_set_before_play(media_env, settings):
+    """The first decoded audio samples must use Preview's saved volume."""
+    controller = MagicMock(is_live=False)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('video.mp4')
+    controller.media_play_item.media_type = MediaType.Video
+    controller.media_play_item.is_background = True
+    media_env.media_controller.is_media_supported = MagicMock(return_value=(True, ''))
+    media_env.media_controller._media_bar = MagicMock()
+    calls = []
+    controller.media_player.set_visible.side_effect = lambda visible: calls.append(('visible', visible))
+    controller.media_player.audio_output = MagicMock()
+    controller.media_player.volume.side_effect = lambda volume: calls.append(('volume', volume))
+    controller.media_player.play.side_effect = lambda: calls.append(('play',))
+    settings.setValue('media/preview volume', 0)
+
+    media_env.media_controller.media_play(controller)
+
+    assert ('volume', 50) in calls
+    assert calls.index(('volume', 50)) < calls.index(('play',))
+
+
+def test_audio_only_preview_volume_controls_audio_player(media_env, settings):
+    """The Preview slider must change the player that carries audio-only media."""
+    controller = MagicMock(is_live=False)
+    controller.media_play_item.media_type = MediaType.Audio
+
+    media_env.media_controller.media_volume(controller, 35)
+
+    controller.audio_player.volume.assert_called_once_with(35)
+    controller.media_player.volume.assert_not_called()
 
 
 @patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
@@ -1102,3 +1137,87 @@ def test_media_pause_dual(media_env):
     mocked_controller.audio_player.pause.assert_called_once()
     mocked_controller.media_player.pause.assert_not_called()
     mocked_controller.output_has_changed.assert_called_once()
+
+
+@pytest.mark.parametrize('hide_mode', [HideMode.Logo, HideMode.Blank, HideMode.Screen])
+def test_loaded_media_preserves_output_cover(media_env, settings, registry, hide_mode):
+    """An asynchronous load may not take a queued service video to the audience."""
+    controller = MagicMock(is_live=True, current_hide_mode=hide_mode)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('video.mp4')
+    controller.media_play_item.media_autostart = True
+    controller.media_play_item.media_type = MediaType.Video
+    registry.register('live_controller', controller)
+    media_env.media_controller._media_bar = MagicMock()
+    media_env.media_controller.live_hide_timer = MagicMock()
+
+    media_env.media_controller._media_live_loaded()
+    media_env.media_controller._media_set_visibility(controller, True)
+
+    controller.set_hide_mode.assert_not_called()
+    controller.media_player.play.assert_not_called()
+    controller.media_player.set_visible.assert_called_once_with(False)
+    assert controller.media_play_item.media_autostart is False
+    assert controller.media_play_item.request_play is True
+
+
+def test_stop_does_not_restart_on_loaded_status(media_env, settings, registry):
+    """Qt can report LoadedMedia again after stopping; it must remain stopped at zero."""
+    controller = MagicMock(is_live=True, current_hide_mode=None)
+    controller.media_play_item = MediaPlayItem()
+    item = controller.media_play_item
+    item.media_file = Path('video.mp4')
+    item.media_type = MediaType.Video
+    item.is_playing = MediaState.Playing
+    item.start_time = 5000
+    item.media_autostart = True
+    item._resume_media_after_seek = True
+    registry.register('live_controller', controller)
+    media_env.media_controller.live_hide_timer = MagicMock()
+    media_env.media_controller._media_bar = MagicMock()
+    controller.media_player.stop.side_effect = media_env.media_controller._media_live_loaded
+    # Exercise the real blank callback too, as it used to re-arm autostart via pause.
+    controller.set_hide_mode.side_effect = lambda mode: media_env.media_controller.media_blank([None, True, mode])
+    media_env.media_controller.live_kill_timer = MagicMock()
+    media_env.media_controller.live_kill_timer.isActive.return_value = False
+
+    media_env.media_controller.media_stop(controller, blank_on_stop=True)
+    media_env.media_controller._on_media_hide_live()
+    media_env.media_controller.media_seek_released(controller)
+
+    controller.media_player.stop.assert_called_once()
+    controller.media_player.play.assert_not_called()
+    assert item.is_playing == MediaState.Stopped
+    assert item.timer == 0
+    controller.mediabar.seek_slider.setSliderPosition.assert_called_with(0)
+    assert item.media_autostart is False
+
+
+def test_pause_does_not_arm_autostart(media_env, settings):
+    """Pausing and choosing Logo must not make a later Qt status event restart playback."""
+    controller = MagicMock(is_live=True)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('video.mp4')
+    controller.media_play_item.media_type = MediaType.Video
+    media_env.media_controller._media_bar = MagicMock()
+
+    media_env.media_controller.media_pause(controller)
+
+    assert controller.media_play_item.media_autostart is False
+    assert controller.media_play_item.audio_autostart is False
+
+
+def test_loading_new_media_cancels_previous_delayed_hide(media_env, settings):
+    """An old video's hide timer must not stop or replace the new service item's media."""
+    controller = MagicMock(is_live=True)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_autostart = True
+    media_env.media_controller.live_hide_timer = MagicMock()
+    media_env.media_controller.live_kill_timer = MagicMock()
+    media_env.media_controller._media_bar = MagicMock()
+
+    media_env.media_controller.media_reset(controller)
+
+    media_env.media_controller.live_hide_timer.stop.assert_called_once()
+    media_env.media_controller.live_kill_timer.stop.assert_called()
+    assert controller.media_play_item.media_autostart is False

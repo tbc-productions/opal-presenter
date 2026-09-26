@@ -61,9 +61,9 @@ class AudioPlayer(MediaBase, LogMixin):
         self.media_player = QMediaPlayer(None)
         self.audio_output = QAudioOutput()
         if controller.is_live:
-            audio_out_set = self.settings.value('media/live audio out')
+            audio_out_set = self.settings.value('media/live audio output')
         else:
-            audio_out_set = self.settings.value('media/preview audio out')
+            audio_out_set = self.settings.value('media/preview audio output')
         if audio_out_set:
             for au_dev in QMediaDevices().audioOutputs():
                 if audio_out_set == au_dev.description():

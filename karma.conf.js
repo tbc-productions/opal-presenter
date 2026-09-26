@@ -14,6 +14,7 @@ module.exports = function(config) {
       "openlp/core/display/html/reveal.js",
       "openlp/core/display/html/display-init.js",
       "openlp/core/display/html/display.js",
+      { pattern: "tests/js/fixtures/**/*", included: false },
       "tests/js/test_*.js"
     ],
 

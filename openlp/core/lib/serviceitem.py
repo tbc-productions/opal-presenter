@@ -435,7 +435,9 @@ class ServiceItem(RegistryProperties):
         """
         This method returns some text which can be saved into the service file to represent this item.
         """
-        if self.sha256_file_hash:
+        if self.stored_filename:
+            stored_filename = self.stored_filename
+        elif self.sha256_file_hash:
             stored_filename = '{hash}{ext}'.format(hash=self.sha256_file_hash, ext=os.path.splitext(self.title)[1])
         else:
             stored_filename = None
