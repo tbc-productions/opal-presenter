@@ -24,8 +24,8 @@ The :mod:`~openlp.core.ui.media.mediaplayer` module for media playing.
 import logging
 import os
 import re
-import sysconfig
 import time
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtMultimedia import QAudioInput, QAudioOutput, QCamera, QMediaDevices, QMediaCaptureSession, QMediaPlayer
@@ -43,8 +43,12 @@ from openlp.core.ui.media import MediaType
 log = logging.getLogger(__name__)
 
 # A workaround for https://bugreports.qt.io/browse/PYSIDE-2935
+_pyside6_dll_directory = None
 if is_win():
-    os.add_dll_directory(sysconfig.get_path('purelib') + '/PySide6/')
+    # QtCore's extension module lives beside the Qt DLLs in both site-packages
+    # and PyInstaller's _internal/PySide6 directory. Keep the handle alive so
+    # Windows can also find DLLs loaded later by multimedia plugins.
+    _pyside6_dll_directory = os.add_dll_directory(str(Path(QtCore.__file__).parent))
 
 
 class MediaPlayer(MediaBase, LogMixin):

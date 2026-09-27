@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [master, '4.0.2']
+    branches: [master, '4.0.3']
   pull_request:
     branches: [master]
   workflow_call:
@@ -26,7 +26,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe -m pip install pyinstaller "PySide6==6.10.3"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          .venv/Scripts/python.exe -m pip install --no-deps -e .
+          .venv/Scripts/python.exe -m pip install -e .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test packaging guards and freeze Qt probe
