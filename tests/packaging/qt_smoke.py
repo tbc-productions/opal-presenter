@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-import openlp.core  # noqa: F401 -- exercises the application's packaging hook
+import openlp.core.app  # noqa: F401 -- exercise the application's full startup imports
 from PySide6 import QtCore, QtGui, QtMultimedia, QtWebEngineWidgets, QtWidgets
 
 
