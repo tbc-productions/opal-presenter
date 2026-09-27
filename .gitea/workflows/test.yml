@@ -2,12 +2,51 @@ name: Tests
 
 on:
   push:
-    branches: [master]
+    branches: [master, '4.0.2']
   pull_request:
     branches: [master]
   workflow_call:
 
 jobs:
+  windows-qt-packaging:
+    runs-on: windows
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install packaging test dependencies
+        shell: powershell
+        run: |
+          python -m venv .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe -m pip install pyinstaller "PySide6==6.10.3"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe -m pip install --no-deps -e .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test packaging guards and freeze Qt probe
+        shell: powershell
+        run: |
+          .venv/Scripts/python.exe -m unittest discover -s tests/packaging -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Avoid collecting unrelated DLLs from developer tools on PATH.
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          .venv/Scripts/python.exe -m PyInstaller --clean --noconfirm --noupx --name qt-smoke tests/packaging/qt_smoke.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run frozen Qt probe without build tools on PATH
+        shell: powershell
+        run: |
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:PYTHONPATH, Env:QT_PLUGIN_PATH, Env:QT_QPA_PLATFORM_PLUGIN_PATH, Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
+          & .\dist\qt-smoke\qt-smoke.exe
+          exit $LASTEXITCODE
+
   pytest:
     runs-on: macos
     env:

@@ -123,6 +123,9 @@ test = [
 [project.scripts]
 openlp = "openlp.__main__:start"
 
+[project.entry-points.pyinstaller40]
+hook-dirs = "openlp.__pyinstaller:get_hook_dirs"
+
 [project.urls]
 Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
 Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
