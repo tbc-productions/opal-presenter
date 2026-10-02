@@ -156,12 +156,3 @@ class SongFirstSlideMode(IntEnum):
     Default = 0  # No cover
     Songbook = 1
     Footer = 2
-
-
-@unique
-class HiDPIMode(IntEnum):
-    Default = 0,
-    # Legacy HiDPI mode is the default Qt behavior, without any OpenLP-specific HiDPI modifications
-    Legacy = 1,
-    # (Windows only) Make the OpenLP run unaware of any screen scaling.
-    Windows_Unaware = 2

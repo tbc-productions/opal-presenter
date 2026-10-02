@@ -36,7 +36,7 @@ from tempfile import gettempdir
 from PySide6 import QtCore, QtGui
 
 from openlp.core.common import SlideLimits, ThemeLevel
-from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, HiDPIMode, ImageThemeMode, LayoutStyle, \
+from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, ImageThemeMode, LayoutStyle, \
     DisplayStyle, LanguageSelection, SongFirstSlideMode, SongSearch, PluginStatus
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder, is_serializable
 from openlp.core.common.path import files_to_paths, str_to_path
@@ -342,7 +342,6 @@ class Settings(QtCore.QSettings):
         'advanced/search as type': True,
         'advanced/ui_theme_name': UiThemes.Automatic,
         'advanced/delete service item confirmation': False,
-        'advanced/hidpi mode': HiDPIMode.Default,
         'alerts/font face': QtGui.QFont().family(),
         'alerts/font size': 40,
         'alerts/db type': 'sqlite',
@@ -418,6 +417,7 @@ class Settings(QtCore.QSettings):
         'core/loop delay': 5,
         'core/recent files': [],
         'core/screens': '{}',
+        'core/layout startup pending': False,
         'core/screen blank': False,
         'core/show splash': True,
         'core/logo background color': '#ffffff',

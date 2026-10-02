@@ -127,22 +127,6 @@ class AdvancedTab(SettingsTab):
         self.prefer_windowed_capture_check_box.setObjectName('prefer_windowed_capture_check_box')
         self.display_workaround_layout.addWidget(self.prefer_windowed_capture_check_box)
         self.left_layout.addWidget(self.display_workaround_group_box)
-        # Misc Workarounds
-        self.misc_workaround_group_box = QtWidgets.QGroupBox(self.left_column)
-        self.misc_workaround_group_box.setObjectName('misc_workaround_group_box')
-        self.misc_workaround_layout = QtWidgets.QVBoxLayout(self.misc_workaround_group_box)
-        self.misc_workaround_layout.setObjectName('misc_workaround_layout')
-        self.hidpi_mode_widget = QtWidgets.QWidget(self.misc_workaround_group_box)
-        self.hidpi_mode_layout = QtWidgets.QHBoxLayout(self.hidpi_mode_widget)
-        self.hidpi_mode_layout.setContentsMargins(0, 0, 0, 0)
-        self.hidpi_mode_label = QtWidgets.QLabel(self.hidpi_mode_widget)
-        self.hidpi_mode_combobox = QtWidgets.QComboBox(self.hidpi_mode_widget)
-        self.hidpi_mode_combobox.addItems(['', '', ''])
-        self.hidpi_mode_layout.addWidget(self.hidpi_mode_label)
-        self.hidpi_mode_layout.addWidget(self.hidpi_mode_combobox)
-        self.hidpi_mode_widget.setLayout(self.hidpi_mode_layout)
-        self.misc_workaround_layout.addWidget(self.hidpi_mode_widget)
-        self.left_layout.addWidget(self.misc_workaround_group_box)
         # Proxies
         self.proxy_widget = ProxyWidget(self.right_column)
         self.right_layout.addWidget(self.proxy_widget)
@@ -154,7 +138,6 @@ class AdvancedTab(SettingsTab):
         self.data_directory_cancel_button.clicked.connect(self.on_data_directory_cancel_button_clicked)
         self.data_directory_copy_check_box.toggled.connect(self.on_data_directory_copy_check_box_toggled)
         self.migrate_library_files_button.clicked.connect(self.on_migrate_library_files_button_clicked)
-        self.hidpi_mode_combobox.currentIndexChanged.connect(self.on_restart_needed)
 
     def retranslate_ui(self):
         """
@@ -195,11 +178,6 @@ class AdvancedTab(SettingsTab):
             translate('OpenLP.AdvancedTab', 'Disable display transparency'))
         self.prefer_windowed_capture_check_box.setText(
             translate('OpenLP.AdvancedTab', 'Prefer window capture instead of screen capture'))
-        self.misc_workaround_group_box.setTitle(translate('OpenLP.AdvancedTab', 'Miscellaneous Workarounds'))
-        self.hidpi_mode_label.setText(translate('OpenLP.AdvancedTab', 'HiDPI Mode:'))
-        self.hidpi_mode_combobox.setItemText(0, translate('OpenLP.AdvancedTab', 'Default'))
-        self.hidpi_mode_combobox.setItemText(1, translate('OpenLP.AdvancedTab', 'Legacy'))
-        self.hidpi_mode_combobox.setItemText(2, translate('OpenLP.AdvancedTab', 'DPI Unaware (Windows only)'))
         self.proxy_widget.retranslate_ui()
 
     def load(self):
@@ -226,7 +204,6 @@ class AdvancedTab(SettingsTab):
             self.data_directory_path_edit.hide()
         self.data_directory_protect_check_box.setChecked(self.settings.value('advanced/protect data directory'))
         self.copy_library_files_check_box.setChecked(self.settings.value('advanced/copy library files to data folder'))
-        self.hidpi_mode_combobox.setCurrentIndex(self.settings.value('advanced/hidpi mode'))
 
     def save(self):
         """
@@ -247,7 +224,6 @@ class AdvancedTab(SettingsTab):
         self.settings.setValue('advanced/protect data directory', self.data_directory_protect_check_box.isChecked())
         self.settings.setValue('advanced/copy library files to data folder',
                                self.copy_library_files_check_box.isChecked())
-        self.settings.setValue('advanced/hidpi mode', self.hidpi_mode_combobox.currentIndex())
         self.proxy_widget.save()
 
     def cancel(self):
@@ -342,18 +318,6 @@ class AdvancedTab(SettingsTab):
         self.data_directory_copy_check_box.hide()
         self.data_directory_cancel_button.hide()
         self.new_data_directory_has_files_label.hide()
-
-    def on_restart_needed(self, _):
-        """
-        Notify user about required restart.
-
-        :param checked: The state of the check box (boolean).
-        """
-        if self.isVisible():
-            QtWidgets.QMessageBox.information(self, translate('OpenLP.AdvancedTab', 'Restart Required'),
-                                              translate('OpenLP.AdvancedTab',
-                                                        'This change will only take effect once OpenLP+ '
-                                                        'has been restarted.'))
 
     @staticmethod
     def _is_path_in_directory(path: Path, directory: Path) -> bool:

@@ -73,7 +73,7 @@ def app_main_env(mocked_qapp):
         openlp_instance = MagicMock()
         mock_openlp.return_value = openlp_instance
         openlp_instance.is_data_path_missing.return_value = False
-        yield
+        yield mock_settings
 
 
 def test_parse_options_basic():
@@ -366,6 +366,8 @@ def test_backup_on_upgrade(mocked_question, mocked_get_version, qapp, settings):
     qapp.splash.show.assert_called_once_with()
 
 
+@pytest.mark.parametrize('device_pixel_ratio', [1.0, 1.25, 1.5, 2.0, 3.0])
+@pytest.mark.parametrize('saved_hidpi_mode', [0, 1, 2])
 @patch('openlp.core.app.FirstTimeLanguageForm')
 @patch('openlp.core.app.OpenLP')
 @patch('openlp.core.app.sys')
@@ -377,7 +379,8 @@ def test_backup_on_upgrade(mocked_question, mocked_get_version, qapp, settings):
 @patch('openlp.core.app.is_ui_theme_dark')
 def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, mock_chk_var_migr: MagicMock,
               mock_logging: MagicMock, mock_web_cache: MagicMock, mock_backup: MagicMock, mock_sys: MagicMock,
-              mock_openlp: MagicMock, mock_ftlang_form: MagicMock, mocked_qapp: MagicMock, app_main_env: None):
+              mock_openlp: MagicMock, mock_ftlang_form: MagicMock, mocked_qapp: MagicMock, app_main_env: MagicMock,
+              device_pixel_ratio: float, saved_hidpi_mode: int):
     """
     Test the main method performs primary actions
     """
@@ -392,9 +395,13 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
     mock_ftlang_form.return_value = mock_ftlang_form_exec
     mock_is_ui_theme.side_effect = lambda theme: theme == UiThemes.DefaultLight
     mock_is_ui_theme_dark.return_value = False
+    mocked_qapp.return_value.devicePixelRatio.return_value = device_pixel_ratio
+    app_main_env.return_value.value.side_effect = lambda key: (
+        saved_hidpi_mode if key == 'advanced/hidpi mode' else MagicMock())
 
     # WHEN: the main method is run
-    app_main()
+    with patch('openlp.core.app.is_win', return_value=True):
+        app_main()
 
     # THEN: Check the application is run and exited with logging and web cache path set
     openlp_instance.run.assert_called_once()
@@ -405,6 +412,11 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
     mocked_qapp.setApplicationName.assert_called_once_with('OpenLPPlus')
     mocked_qapp.setApplicationDisplayName.assert_called_once_with('OpenLP+')
     mocked_qapp.setOrganizationDomain.assert_called_once_with('tbcproductions.net')
+    # Qt already scales point-sized fonts. Startup must not enlarge the application font again.
+    mocked_qapp.return_value.setFont.assert_not_called()
+    # Obsolete saved modes must not disable Qt's automatic scaling.
+    assert all(call.args[0] != 'advanced/hidpi mode' for call in app_main_env.return_value.value.call_args_list)
+    assert not any('dpiawareness=' in arg for arg in mocked_qapp.call_args.args[0])
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on windows')

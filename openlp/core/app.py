@@ -39,7 +39,6 @@ from PySide6 import QtCore, QtGui, QtWebEngineCore, QtWidgets  # noqa
 
 from openlp.core.api.deploy import check_for_remote_update
 from openlp.core.common.applocation import AppLocation
-from openlp.core.common.enum import HiDPIMode
 from openlp.core.common.i18n import LanguageManager, UiStrings, translate
 from openlp.core.common.mixins import LogMixin
 from openlp.core.common.path import create_paths, resolve
@@ -57,6 +56,7 @@ from openlp.core.ui.exceptionform import ExceptionForm
 from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
+from openlp.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
 from openlp.core.ui.splashscreen import SplashScreen
 from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
                                    set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
@@ -131,6 +131,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         Registry().toggle_suppressing()
         # Set the darkmode based on theme
         set_default_theme(app)
+        layout_recovered = begin_layout_startup(self.settings, screens)
         self.main_window = MainWindow()
         self.main_window.installEventFilter(self.main_window)
         # Correct stylesheet bugs
@@ -161,6 +162,12 @@ class OpenLP(QtCore.QObject, LogMixin):
             check_for_remote_update(self.main_window)
         self.main_window.is_display_blank()
         Registry().execute('bootstrap_completion')
+        if layout_recovered:
+            self.main_window.show_status_message(
+                translate('OpenLP', 'The saved window layout was reset to allow OpenLP+ to start.'), 15000)
+        # Queue this after the deferred dock rebuild. Clearing it before processEvents/show
+        # would miss the native layout crash that this marker is intended to recover from.
+        QtCore.QTimer.singleShot(0, lambda: complete_layout_startup(self.settings, screens))
         return self.exec()
 
     @staticmethod
@@ -435,35 +442,6 @@ def backup_if_version_changed(settings):
     return True
 
 
-def apply_dpi_adjustments_stage_qt(hidpi_mode, qt_args):
-    if hidpi_mode == HiDPIMode.Windows_Unaware:
-        os.environ['QT_SCALE_FACTOR'] = '1'
-        os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
-        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'
-        if is_win():
-            try:
-                platform_index = qt_args.index('-platform')
-                qt_args[platform_index + 1] += ' windows:dpiawareness=0'
-            except ValueError:
-                qt_args.extend(['-platform', 'windows:dpiawareness=0'])
-
-
-def apply_dpi_adjustments_stage_application(hidpi_mode: HiDPIMode, application: QtWidgets.QApplication):
-    """
-    Apply OpenLP DPI adjustments to bypass Windows and QT bugs (unless disabled on settings)
-
-    :param args: OpenLP startup arguments
-    :param settings: The settings object
-    :param stage: The stage of app
-    """
-    if hidpi_mode == HiDPIMode.Default and is_win() and application.devicePixelRatio() > 1.0:
-        # Increasing font size to match pixel ratio (Windows only)
-        # TODO: Review on Qt6 migration
-        font = application.font()
-        font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
-        application.setFont(font)
-
-
 def setup_portable_settings(portable_path: Path | str | None) -> Settings:
     """Set up the portable settings"""
     Settings.setDefaultFormat(Settings.IniFormat)
@@ -538,15 +516,11 @@ def main():
             qt_args.extend(['-platform', 'windows:darkmode=0'])
         else:
             qt_args.extend(['-platform', 'windows:darkmode=2'])
-    # Doing HiDPI adjustments that need to be done before QCoreApplication instantiation.
-    hidpi_mode = settings.value('advanced/hidpi mode')
-    apply_dpi_adjustments_stage_qt(hidpi_mode, qt_args)
     # Instantiating QCoreApplication
     init_webview_custom_schemes()
     application = QtWidgets.QApplication([sys.argv[0]] + qt_args)
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
-    # Doing HiDPI adjustments that need to be done after QCoreApplication instantiation.
-    apply_dpi_adjustments_stage_application(hidpi_mode, application)
+    # Qt 6 scales fonts per monitor. Keep their logical sizes unchanged to avoid double scaling.
     verbose = getattr(args, 'verbose', False)
     cache_path = portable_path / 'Other' if args.portable else AppLocation.get_directory(AppLocation.CacheDir)
     set_up_logging(cache_path, verbose)
