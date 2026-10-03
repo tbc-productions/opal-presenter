@@ -425,6 +425,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 self.content_tabs_layout.addWidget(tab_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop)
                 tab_widget.show()
                 tab_widget.tab_visible()
+                self.scroll_area.verticalScrollBar().setValue(0)
 
     def register_post_process(self, function):
         """

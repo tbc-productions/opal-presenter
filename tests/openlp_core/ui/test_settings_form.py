@@ -137,3 +137,30 @@ def test_reopening_preferences_resets_scroll_position(form, qtbot):
     form.show()
     QtWidgets.QApplication.processEvents()
     assert scrollbar.value() == 0
+
+
+def test_switching_settings_pages_resets_scroll_position(form, qtbot):
+    """Reset when moving between two tall pages, including returning to a page."""
+    from openlp.core.lib.settingstab import SettingsTab
+
+    qtbot.addWidget(form)
+    for title, height in (('First', 2000), ('Second', 2600)):
+        with patch.object(SettingsTab, '_setup'):
+            page = SettingsTab(form.content_widget, title, title)
+        page.setMinimumHeight(height)
+        page.hide()
+        form._settings_tabs_ordered.append(page)
+        item = QtWidgets.QListWidgetItem(title)
+        item.setData(QtCore.Qt.ItemDataRole.UserRole, title)
+        form.setting_list_widget.addItem(item)
+    form.setting_list_widget.setCurrentRow(0)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    scrollbar = form.scroll_area.verticalScrollBar()
+    for destination in (1, 0):
+        assert scrollbar.maximum() > 0
+        scrollbar.setValue(scrollbar.maximum())
+        assert scrollbar.value() > 0
+        form.setting_list_widget.setCurrentRow(destination)
+        QtWidgets.QApplication.processEvents()
+        assert scrollbar.value() == 0
