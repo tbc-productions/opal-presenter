@@ -29,6 +29,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
+from openlp.core.common.platform import is_win
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.ui import HideMode
 from openlp.core.ui.style import UiThemes, has_ui_theme
@@ -207,6 +208,15 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
+        self.interface_style_label = QtWidgets.QLabel(self.ui_group_box)
+        self.interface_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
+        self.interface_style_combo_box.setObjectName('interface_style_combo_box')
+        self.interface_style_combo_box.addItem('', 'classic')
+        self.interface_style_combo_box.addItem('', 'modern')
+        self.ui_layout.addRow(self.interface_style_label)
+        self.ui_layout.addRow(self.interface_style_combo_box)
+        self.interface_style_label.setVisible(is_win())
+        self.interface_style_combo_box.setVisible(is_win())
         self.right_layout.addWidget(self.ui_group_box)
         # Push everything in both columns to the top
         self.left_layout.addStretch()
@@ -292,6 +302,9 @@ class GeneralTab(SettingsTab):
                                                              'Alert if New clicked on blank service'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
         self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
+        self.interface_style_label.setText(translate('OpenLP.GeneralTab', 'Interface appearance (needs restart):'))
+        self.interface_style_combo_box.setItemText(0, translate('OpenLP.GeneralTab', 'Classic'))
+        self.interface_style_combo_box.setItemText(1, translate('OpenLP.GeneralTab', 'Modern'))
         self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
         self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
         self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
@@ -342,6 +355,8 @@ class GeneralTab(SettingsTab):
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
         ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
+        style_index = self.interface_style_combo_box.findData(self.settings.value('advanced/interface style'))
+        self.interface_style_combo_box.setCurrentIndex(max(0, style_index))
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
         self.new_service_message_check_box.setChecked(self.settings.value('advanced/new service message'))
         self.hide_mouse_check_box.setChecked(self.settings.value('advanced/hide mouse'))
@@ -421,6 +436,7 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('advanced/search as type', self.is_search_as_you_type_enabled)
         theme_name = GeneralTab.get_ui_theme_name(self.ui_theme_style_combo_box.currentIndex())
         self.settings.setValue('advanced/ui_theme_name', theme_name)
+        self.settings.setValue('advanced/interface style', self.interface_style_combo_box.currentData())
         self.settings.sync()
         self.post_set_up()
 

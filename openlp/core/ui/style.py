@@ -27,6 +27,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
+from openlp.core.ui.modernstyle import is_modern_style, set_modern_palette, get_modern_stylesheet
 
 try:
     import qdarkstyle
@@ -176,7 +177,7 @@ def get_dock_panel_header_stylesheet():
     """
     Return stylesheet used to make dock panel headers easier to read.
     """
-    return DOCK_PANEL_HEADER_STYLE
+    return '' if is_modern_style() else DOCK_PANEL_HEADER_STYLE
 
 PROGRESSBAR_STYLE = """
 QProgressBar{
@@ -352,11 +353,18 @@ def set_default_theme(app):
         app.setFont(get_native_system_font())
         # Ensure any previously-customized palette is reset when using the native theme.
         app.setPalette(app.style().standardPalette())
+        if is_modern_style():
+            set_modern_palette(app)
         return
     if is_ui_theme(UiThemes.DefaultDark) or (is_ui_theme(UiThemes.Automatic) and is_ui_theme_dark()):
         set_default_darkmode(app)
     elif is_ui_theme(UiThemes.DefaultLight) or is_ui_theme(UiThemes.Automatic):
         set_default_lightmode(app)
+    if is_modern_style():
+        # Modern supplies its own palette even when a legacy QDarkStyle scheme is selected.
+        if is_ui_theme(UiThemes.QDarkStyle):
+            set_default_darkmode(app)
+        set_modern_palette(app)
 
 
 def set_default_lightmode(app):
@@ -451,6 +459,8 @@ def get_application_stylesheet():
     :return str: The correct stylesheet as a string
     """
     stylesheet = ''
+    if is_modern_style():
+        return FORM_CONTROL_STYLE_REPAIR + BUTTON_HOVER_STYLE_REPAIR + get_modern_stylesheet()
     ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
     use_alternate_rows_enabled = use_alternate_rows()
     is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
@@ -500,6 +510,8 @@ def get_library_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
+    if is_modern_style():
+        return ''
     if is_macosx():
         return ''
     if is_ui_theme(UiThemes.Automatic) or is_ui_theme(UiThemes.QDarkStyle):

@@ -58,6 +58,7 @@ from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
 from openlp.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
 from openlp.core.ui.splashscreen import SplashScreen
+from openlp.core.ui.modernstyle import apply_mica, refine_modern_layout
 from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
                                    set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
 from openlp.core.version import check_for_update, get_version
@@ -141,6 +142,8 @@ class OpenLP(QtCore.QObject, LogMixin):
         State().flush_preconditions()
         Registry().execute('bootstrap_post_set_up')
         self.main_window.show()
+        refine_modern_layout(self.main_window)
+        apply_mica(self.main_window)
         if can_show_splash:
             # now kill the splashscreen
             log.debug('Splashscreen closing')

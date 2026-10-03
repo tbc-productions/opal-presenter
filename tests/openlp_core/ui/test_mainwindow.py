@@ -51,6 +51,28 @@ QT_QPA_PLATFORM = os.environ.get("QT_QPA_PLATFORM", "")
 _MAIN_WINDOWS = []
 
 
+@pytest.fixture
+def modern_appearance(settings):
+    settings.setValue('advanced/interface style', 'modern')
+    with patch('openlp.core.ui.modernstyle.is_win', return_value=True):
+        yield
+
+
+def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
+    from openlp.core.ui.modernstyle import ModernPresetTabBar
+    assert isinstance(main_window.layout_preset_tab_bar, ModernPresetTabBar)
+    assert main_window.layout_preset_tab_bar.tabText(0) == 'Default'
+    assert not main_window.layout_preset_tab_bar.tabIcon(0).isNull()
+    assert main_window.main_content_layout.contentsMargins().left() == 6
+
+
+def test_classic_keeps_original_navigation_and_spacing(main_window):
+    from openlp.core.ui.modernstyle import ModernPresetTabBar
+    assert not isinstance(main_window.layout_preset_tab_bar, ModernPresetTabBar)
+    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
+    assert main_window.main_content_layout.contentsMargins().left() == 0
+
+
 class _DummyRenderer:
     def __init__(self, *args, **kwargs):
         pass

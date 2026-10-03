@@ -47,6 +47,7 @@ from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.media import MediaPlayItem, MediaState, media_empty_song
 from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
+from openlp.core.ui.modernstyle import is_modern_style
 from openlp.core.widgets.views import ListPreviewWidget
 
 # Threshold which has to be trespassed to toggle.
@@ -207,6 +208,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.slide_limits = None
         self.update_slide_limits()
         self.panel = QtWidgets.QWidget(self.main_window.control_splitter)
+        modern = is_modern_style()
+        if modern:
+            self.panel.setProperty('modernPanel', True)
         self.slide_list = {}
         self.slide_count = 0
         self.ignore_toolbar_resize_events = False
@@ -214,6 +218,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.panel_layout = QtWidgets.QVBoxLayout(self.panel)
         self.panel_layout.setSpacing(0)
         self.panel_layout.setContentsMargins(0, 0, 0, 0)
+        if modern:
+            self.panel_layout.setContentsMargins(4, 4, 4, 4)
+            self.panel_layout.setSpacing(4)
         # Type label at the top of the slide controller with icon
         self.top_label_horizontal = QtWidgets.QHBoxLayout()
         self.top_label_horizontal.setContentsMargins(0, 4, 0, 4)
@@ -240,9 +247,23 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.top_label_horizontal.addWidget(self.top_icon)
         self.top_label_horizontal.addWidget(self.type_label)
         self.top_label_horizontal.addWidget(self.info_label, stretch=1)
+        if modern:
+            self.top_icon.setStyleSheet('padding: 0;')
+            self.top_label_horizontal.addStrut(28)
+            if self.is_live:
+                self.output_status_label = QtWidgets.QLabel(self.panel)
+                self.output_status_label.setObjectName('output_status')
+                self.output_status_label.setText(translate('OpenLP.SlideController', 'Ready'))
+                self.output_status_label.setProperty('onAir', False)
+                self.output_status_label.setToolTip(translate('OpenLP.SlideController',
+                                                              'OpenLP output state; not a projector connection status.'))
+                self.top_label_horizontal.addWidget(self.output_status_label)
         # Splitter
         self.splitter = QtWidgets.QSplitter(self.panel)
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
+        if modern:
+            self.splitter.setHandleWidth(8)
+            self.splitter.setChildrenCollapsible(False)
         self.panel_layout.addWidget(self.splitter)
         # Actual controller section
         self.controller = QtWidgets.QWidget(self.splitter)
@@ -258,6 +279,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Build the full toolbar
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.setObjectName('slide_controller_toolbar')
+        if modern:
+            self.toolbar.setFixedHeight(30)
         size_toolbar_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                 QtWidgets.QSizePolicy.Policy.Fixed)
         size_toolbar_policy.setHorizontalStretch(0)
@@ -394,6 +417,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                                   tooltip=translate('OpenLP.SlideController',
                                                                                     'Move to live.'),
                                                                   triggers=self.on_go_live)
+            if modern:
+                self.go_live_action.setText(translate('OpenLP.SlideController', 'Go live'))
+                self.go_live_action.setIcon(UiIcons().get_icon_variant('live', color='white'))
+                self.go_live_button = QtWidgets.QToolButton(self.panel)
+                self.go_live_button.setProperty('primaryAction', True)
+                self.go_live_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+                self.go_live_button.setDefaultAction(self.go_live_action)
+                self.top_label_horizontal.addWidget(self.go_live_button)
+                self.toolbar.removeAction(self.go_live_action)
             self.add_to_service_action = self.toolbar.add_toolbar_action('addToService', icon=UiIcons().add,
                                                                           tooltip=translate('OpenLP.SlideController',
                                                                                             'Add to Service.'),
@@ -413,7 +445,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.mediabar.identification_label.setText(translate('OpenLP.SlideController', 'Media'))
         self.mediabar.on_action = lambda sender_name, *args: Registry().execute(sender_name, [self, args])
         self.controller_layout.addWidget(self.mediabar)
-        if self.is_live:
+        if self.is_live and not modern:
             media_size_policy = self.mediabar.sizePolicy()
             media_size_policy.setRetainSizeWhenHidden(True)
             self.mediabar.setSizePolicy(media_size_policy)
@@ -432,6 +464,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.preview_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.preview_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.preview_frame.setObjectName('preview_frame')
+        if modern:
+            # Slide lists stay above the screen preview; retain the adjustable splitter.
+            self.preview_frame.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+            self.splitter.setStretchFactor(0, 3)
+            self.splitter.setStretchFactor(1, 2)
         self.slide_layout = AspectRatioLayout(self.preview_frame, self.ratio)
         self.slide_layout.margin = 8
         self.slide_layout.setSpacing(0)
@@ -563,6 +600,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if not self.is_live:
             return
+        self._update_output_status(has_item)
         hide_mode_actions = {
             None: self.show_screen,
             HideMode.Blank: self.blank_screen,
@@ -582,6 +620,26 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.theme_screen.setChecked(active_action is self.theme_screen)
         self.logo_screen.setChecked(active_action is self.logo_screen)
         self.desktop_screen.setChecked(active_action is self.desktop_screen)
+
+    def _update_output_status(self, has_item):
+        """Reflect controller state without implying that a projector is connected."""
+        label = getattr(self, 'output_status_label', None)
+        if label is None:
+            return
+        hide_mode = getattr(self, '_current_hide_mode', None)
+        on_air = has_item and hide_mode is None and bool(self.displays)
+        labels = {
+            HideMode.Blank: translate('OpenLP.SlideController', 'Blank'),
+            HideMode.Theme: translate('OpenLP.SlideController', 'Theme'),
+            HideMode.Logo: translate('OpenLP.SlideController', 'Logo'),
+            HideMode.Screen: translate('OpenLP.SlideController', 'Desktop'),
+        }
+        text = translate('OpenLP.SlideController', 'Live') if on_air else labels.get(
+            hide_mode, translate('OpenLP.SlideController', 'Ready'))
+        label.setText(text)
+        label.setProperty('onAir', on_air)
+        label.style().unpolish(label)
+        label.style().polish(label)
 
     def new_song_menu(self):
         """

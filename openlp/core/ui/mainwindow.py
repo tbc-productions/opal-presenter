@@ -60,6 +60,7 @@ from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.shortcutlistform import ShortcutListForm
 from openlp.core.ui import HideMode
 from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
+from openlp.core.ui.modernstyle import is_modern_style, ModernPresetTabBar
 from openlp.core.ui.thememanager import ThemeManager
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
@@ -110,25 +111,32 @@ class Ui_MainWindow(object):
         self.layout_preset_toolbar.setFloatable(False)
         self.layout_preset_toolbar.setIconSize(QtCore.QSize(1, 1))
         main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.layout_preset_toolbar)
-        self.layout_preset_tab_bar = QtWidgets.QTabBar(self.layout_preset_toolbar)
+        tab_bar_class = ModernPresetTabBar if is_modern_style() else QtWidgets.QTabBar
+        self.layout_preset_tab_bar = tab_bar_class(self.layout_preset_toolbar)
         self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')
         self.layout_preset_tab_bar.setShape(QtWidgets.QTabBar.Shape.RoundedWest)
         if is_macosx():
             self.layout_preset_tab_bar.setDocumentMode(True)
         self.layout_preset_tab_bar.setDrawBase(False)
         self.layout_preset_tab_bar.setMovable(False)
-        self.layout_preset_tab_bar.setExpanding(True)
+        self.layout_preset_tab_bar.setExpanding(not is_modern_style())
         self.layout_preset_tab_bar.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.Expanding)
         self.layout_preset_tab_bar.addTab('')
         self.layout_preset_tab_bar.addTab('')
         self.layout_preset_tab_bar.addTab('')
+        if is_modern_style():
+            for index, icon in enumerate((UiIcons().dashboard, UiIcons().settings, UiIcons().live)):
+                self.layout_preset_tab_bar.setTabIcon(index, icon)
         self.layout_preset_toolbar.addWidget(self.layout_preset_tab_bar)
         self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
         self.control_splitter = QtWidgets.QSplitter(self.main_content)
         self.control_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.control_splitter.setObjectName('control_splitter')
+        if is_modern_style():
+            self.main_content_layout.setContentsMargins(6, 6, 6, 6)
+            self.control_splitter.setHandleWidth(8)
         self.main_content_layout.addWidget(self.control_splitter)
         preview_visible = self.settings.value('user interface/preview panel')
         live_visible = self.settings.value('user interface/live panel')
@@ -566,7 +574,8 @@ class Ui_MainWindow(object):
         self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Show all'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
-        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow', 'Show all'))
+        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow',
+                                                        'Default' if is_modern_style() else 'Show all'))
         self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -1835,6 +1844,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.theme_manager_dock.setVisible(show_thm)
             self._sync_left_dock_menu_checks_from_settings()
             self._ensure_left_column_dock_sizes()
+            if (is_modern_style() and mode in ('default', 'live') and not skip_for_saved_preset
+                    and not self.settings.value('user interface/main window splitter geometry')):
+                self.control_splitter.setSizes([600, 600])
         except Exception:
             self.log_exception('Failed to rebuild left column dock layout')
 
