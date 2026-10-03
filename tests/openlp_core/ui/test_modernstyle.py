@@ -152,7 +152,7 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
     window.preview_controller = SimpleNamespace(splitter=splitters[0])
     window.live_controller = SimpleNamespace(splitter=splitters[1])
     toolbar = QtWidgets.QToolBar(window)
-    window.addToolBar(toolbar)
+    layout.addWidget(toolbar)
     window.resize(600, 400)
     window.show()
     QtWidgets.QApplication.processEvents()

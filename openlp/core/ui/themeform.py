@@ -81,12 +81,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             except ZeroDivisionError:
                 self.preview_area_layout.set_aspect_ratio(1)
             self.preview_area_layout.resize.connect(self._on_preview_area_resized)
-        self.layout_guide_button.clicked.connect(self.on_toggle_layout_guide_clicked)
+        self.layout_guide_button.triggered.connect(self.on_toggle_layout_guide_clicked)
         self._update_layout_guide_button_tooltip(False)
         if hasattr(self, 'refresh_preview_button'):
-            self.refresh_preview_button.clicked.connect(self.on_refresh_preview_clicked)
+            self.refresh_preview_button.triggered.connect(self.on_refresh_preview_clicked)
         if hasattr(self, 'play_transition_button'):
-            self.play_transition_button.clicked.connect(self.preview_transition)
+            self.play_transition_button.triggered.connect(self.preview_transition)
             self._set_play_transition_button_visible(False)
         if hasattr(self, 'preview_box'):
             self.preview_box.allow_theme_transitions = False

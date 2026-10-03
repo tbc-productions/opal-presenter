@@ -107,8 +107,7 @@ class OpenLPToolbar(QtWidgets.QToolBar):
                 action.triggered.connect(args[0])
         if isinstance(action, QtWidgets.QWidgetAction) or action.isSeparator():
             return super().addAction(action)
-        self._add_action_widget(action, QtWidgets.QToolButton(self))
-        return action
+        return super().addAction(action)
 
     def widgetForAction(self, action):
         if action in self._fluent_actions:
@@ -226,11 +225,7 @@ class OpenLPToolbar(QtWidgets.QToolBar):
             log.warning(f'No handle {name} in actions list.')
 
     def add_spacer(self):
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                            QtWidgets.QSizePolicy.Policy.Preferred)
-        separator = QtWidgets.QWidget()
-        separator.setSizePolicy(size_policy)
-        self.addWidget(separator)
+        """CommandBar keeps commands together and owns responsive overflow."""
         pass
 
 

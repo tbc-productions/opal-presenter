@@ -132,7 +132,7 @@ class Ui_MainWindow(object):
         self.layout_preset_toolbar.setMovable(False)
         self.layout_preset_toolbar.setFloatable(False)
         self.layout_preset_toolbar.setIconSize(QtCore.QSize(1, 1))
-        main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.layout_preset_toolbar)
+        self.main_content_layout.addWidget(self.layout_preset_toolbar)
         tab_bar_class = ModernPresetTabBar if is_modern_style() else QtWidgets.QTabBar
         self.layout_preset_tab_bar = tab_bar_class(self.layout_preset_toolbar)
         self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')

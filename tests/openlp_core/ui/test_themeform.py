@@ -83,9 +83,9 @@ def test_setup(settings):
         theme_form = ThemeForm(None)
     theme_form.setup_ui = MagicMock()
     theme_form.layout_guide_button = MagicMock()
-    theme_form.layout_guide_button.clicked = MagicMock()
+    theme_form.layout_guide_button.triggered = MagicMock()
     theme_form.play_transition_button = MagicMock()
-    theme_form.play_transition_button.clicked = MagicMock()
+    theme_form.play_transition_button.triggered = MagicMock()
     theme_form.page_list_widget = MagicMock()
     theme_form.page_list_widget.currentRowChanged = MagicMock()
     theme_form.area_position_page = MagicMock()
@@ -100,9 +100,9 @@ def test_setup(settings):
     theme_form.setup_ui.assert_called_once_with(theme_form)
     assert theme_form.can_update_theme is True
     assert theme_form.temp_background_filename is None
-    theme_form.layout_guide_button.clicked.connect.assert_called_once_with(
+    theme_form.layout_guide_button.triggered.connect.assert_called_once_with(
         theme_form.on_toggle_layout_guide_clicked)
-    theme_form.play_transition_button.clicked.connect.assert_called_once_with(theme_form.preview_transition)
+    theme_form.play_transition_button.triggered.connect.assert_called_once_with(theme_form.preview_transition)
     theme_form.page_list_widget.currentRowChanged.connect.assert_called_once_with(theme_form.on_current_id_changed)
     theme_form.main_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)

@@ -28,6 +28,7 @@ from typing import Any
 import mako
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from openlp.core.common.enum import BibleSearch, DisplayStyle, LayoutStyle
 from openlp.core.common.i18n import UiStrings, get_locale_key, translate
@@ -186,7 +187,7 @@ class BibleMediaItem(MediaManagerItem):
         self.search_tab = QtWidgets.QWidget()
         self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.search_layout = QtWidgets.QFormLayout(self.search_tab)
-        self.search_layout.setContentsMargins(8, 8, 8, 8)
+        self.search_layout.setContentsMargins(4, 4, 4, 4)
         self.search_layout.setSpacing(8)
         self.search_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.search_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -202,13 +203,14 @@ class BibleMediaItem(MediaManagerItem):
         self.search_button.setIcon(UiIcons().search)
         self.search_button.setText('')
         self.search_row_layout.addWidget(self.search_button)
-        self.search_layout.addRow(translate('BiblesPlugin.MediaItem', 'Find:'), self.search_row_widget)
+        self.search_edit.setAccessibleName(translate('BiblesPlugin.MediaItem', 'Text or reference'))
+        self.search_layout.addRow(self.search_row_widget)
         self.search_tab_bar.addTab(self.search_tab, translate('BiblesPlugin.MediaItem', 'Find'))
         # Add the Select tab.
         self.select_tab = QtWidgets.QWidget()
         self.select_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.select_layout = QtWidgets.QFormLayout(self.select_tab)
-        self.select_layout.setContentsMargins(8, 8, 8, 8)
+        self.select_layout.setContentsMargins(4, 4, 4, 4)
         self.select_layout.setSpacing(8)
         self.select_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.book_layout = QtWidgets.QHBoxLayout()
@@ -220,22 +222,22 @@ class BibleMediaItem(MediaManagerItem):
         self.book_order_button.setToolTip(translate('BiblesPlugin.MediaItem', 'Sort bible books alphabetically.'))
         self.book_layout.addWidget(self.book_order_button)
         self.select_layout.addRow(translate('BiblesPlugin.MediaItem', 'Book:'), self.book_layout)
-        self.verse_title_layout = QtWidgets.QHBoxLayout()
         self.chapter_label = QtWidgets.QLabel(self.select_tab)
-        self.verse_title_layout.addWidget(self.chapter_label)
         self.verse_label = QtWidgets.QLabel(self.select_tab)
-        self.verse_title_layout.addWidget(self.verse_label)
-        self.select_layout.addRow('', self.verse_title_layout)
+        self.chapter_label.hide()
+        self.verse_label.hide()
         self.from_layout = QtWidgets.QHBoxLayout()
         self.from_chapter = QtWidgets.QComboBox(self.select_tab)
         self.from_layout.addWidget(self.from_chapter)
         self.from_verse = QtWidgets.QComboBox(self.select_tab)
+        self.from_layout.insertWidget(1, QtWidgets.QLabel(':', self.select_tab))
         self.from_layout.addWidget(self.from_verse)
         self.select_layout.addRow(translate('BiblesPlugin.MediaItem', 'From:'), self.from_layout)
         self.to_layout = QtWidgets.QHBoxLayout()
         self.to_chapter = QtWidgets.QComboBox(self.select_tab)
         self.to_layout.addWidget(self.to_chapter)
         self.to_verse = QtWidgets.QComboBox(self.select_tab)
+        self.to_layout.insertWidget(1, QtWidgets.QLabel(':', self.select_tab))
         self.to_layout.addWidget(self.to_verse)
         self.select_layout.addRow(translate('BiblesPlugin.MediaItem', 'To:'), self.to_layout)
         self.search_tab_bar.addTab(self.select_tab, translate('BiblesPlugin.MediaItem', 'Select'))
@@ -243,7 +245,7 @@ class BibleMediaItem(MediaManagerItem):
         self.options_tab = QtWidgets.QWidget()
         self.options_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.general_bible_layout = QtWidgets.QFormLayout(self.options_tab)
-        self.general_bible_layout.setContentsMargins(8, 8, 8, 8)
+        self.general_bible_layout.setContentsMargins(4, 4, 4, 4)
         self.general_bible_layout.setSpacing(8)
         self.general_bible_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.version_combo_box = create_horizontal_adjusting_combo_box(self, 'version_combo_box')
@@ -254,25 +256,13 @@ class BibleMediaItem(MediaManagerItem):
         self.style_combo_box.addItems(['', '', '', ''])
         self.general_bible_layout.addRow(UiStrings().LayoutStyle, self.style_combo_box)
         self.search_tab_bar.addTab(self.options_tab, translate('BiblesPlugin.MediaItem', 'Options'))
-        # This widget is the easier way to reset the spacing of search_button_layout. (Because page_layout has had its
-        # spacing set to 0)
-        self.search_button_widget = QtWidgets.QWidget()
-        self.search_button_layout = QtWidgets.QHBoxLayout(self.search_button_widget)
-        self.search_button_layout.setContentsMargins(0, 0, 0, 0)
-        self.search_button_layout.setSpacing(6)
-        self.search_button_layout.addStretch()
-        # Note: If we use QPushButton instead of the QToolButton, the icon will be larger than the Lock icon.
-        self.clear_button = QtWidgets.QToolButton()
-        self.clear_button.setIcon(self.clear_icon)
-        self.clear_button.setAutoRaise(True)
-        self.save_results_button = QtWidgets.QToolButton()
-        self.save_results_button.setIcon(self.save_results_icon)
-        self.save_results_button.setAutoRaise(True)
-        self.search_button_layout.addWidget(self.clear_button)
-        self.search_button_layout.addWidget(self.save_results_button)
-        self.search_button_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                            QtWidgets.QSizePolicy.Policy.Fixed)
-        header_layout.addWidget(self.search_button_widget)
+        # Keep result actions beside the result tabs instead of spending a row
+        # on two icon buttons and an expanding spacer.
+        self.search_button_widget = OpenLPToolbar(self)
+        self.clear_button = self.search_button_widget.add_toolbar_action(
+            'clear_bible_results', icon=self.clear_icon)
+        self.save_results_button = self.search_button_widget.add_toolbar_action(
+            'save_bible_results', icon=self.save_results_icon)
         self.results_view_tab = QtWidgets.QTabBar(self)
         self.results_view_tab.addTab('')
         self.results_view_tab.addTab('')
@@ -283,13 +273,17 @@ class BibleMediaItem(MediaManagerItem):
         self.results_view_tab_container_layout = QtWidgets.QHBoxLayout(self.results_view_tab_container)
         self.results_view_tab_container_layout.setContentsMargins(0, 0, 0, 0)
         self.results_view_tab_container_layout.setSpacing(0)
-        self.results_view_tab_container_layout.addWidget(self.results_view_tab)
+        self.results_view_tab_container_layout.addWidget(self.results_view_tab, 1)
+        self.results_view_tab_container_layout.addWidget(self.search_button_widget)
         header_layout.addWidget(self.results_view_tab_container)
 
     def setup_ui(self):
         super().setup_ui()
         # Let the tab bars span the full library width in the Bibles panel.
         self.panel_layout.setContentsMargins(0, 0, 0, 0)
+        self.panel_layout.setSpacing(4)
+        self.search_tab_bar._pages.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                QtWidgets.QSizePolicy.Policy.Ignored)
         # Keep the header compact and let the results list consume available height.
         self.panel_widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         self.page_layout.setStretchFactor(self.panel_widget, 0)
@@ -317,8 +311,8 @@ class BibleMediaItem(MediaManagerItem):
         self.search_edit.searchTypeChanged.connect(self.update_auto_completer)
         # Buttons
         self.book_order_button.toggled.connect(self.on_book_order_button_toggled)
-        self.clear_button.clicked.connect(self.on_clear_button_clicked)
-        self.save_results_button.clicked.connect(self.on_save_results_button_clicked)
+        self.clear_button.triggered.connect(self.on_clear_button_clicked)
+        self.save_results_button.triggered.connect(self.on_save_results_button_clicked)
         self.search_button.clicked.connect(self.on_search_button_clicked)
         # Other stuff
         self.search_edit.returnPressed.connect(self.on_search_button_clicked)
@@ -340,6 +334,11 @@ class BibleMediaItem(MediaManagerItem):
         self.save_results_button.setToolTip(
             translate('BiblesPlugin.MediaItem', 'Add the search results to the saved list.'))
         self.search_button.setToolTip(UiStrings().Search)
+        for control, name in ((self.from_chapter, 'From chapter'), (self.from_verse, 'From verse'),
+                              (self.to_chapter, 'To chapter'), (self.to_verse, 'To verse')):
+            label = translate('BiblesPlugin.MediaItem', name)
+            control.setAccessibleName(label)
+            control.setToolTip(label)
 
     def on_focus(self):
         """
@@ -357,6 +356,7 @@ class BibleMediaItem(MediaManagerItem):
             self.select_book_combo_box.setFocus()
         elif current_tab == SearchTabs.Options:
             self.version_combo_box.setFocus()
+
 
     def config_update(self):
         """

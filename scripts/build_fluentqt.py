@@ -12,7 +12,7 @@ import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.1'
+VERSION = '1.9.2+openlp.2'
 QT_VERSION = '6.11.1'
 
 
@@ -27,6 +27,28 @@ def replace(path, old, new):
             return
         raise RuntimeError(f'Pinned source changed: expected text is missing in {path}')
     path.write_text(text.replace(old, new))
+
+
+def patch_disabled_icons(source):
+    """Native Button and overflow commands must request QIcon.Disabled."""
+    replace(source / 'src/compatibility/QtCompat.h',
+            'QWindow* targetWindow = nullptr)\n{\n    const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);',
+            'QWindow* targetWindow = nullptr, QIcon::Mode mode = QIcon::Normal)\n{\n'
+            '    const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);')
+    replace(source / 'src/compatibility/QtCompat.h',
+            'targetWindow ? icon.pixmap(targetWindow, logicalExtent) : icon.pixmap(logicalExtent);',
+            'targetWindow ? icon.pixmap(targetWindow, logicalExtent, mode) : icon.pixmap(logicalExtent, mode);')
+    replace(source / 'src/compatibility/QtCompat.h',
+            'return icon.pixmap(logicalExtent, dpr);',
+            'return icon.pixmap(logicalExtent, dpr, mode);')
+    replace(source / 'src/components/basicinput/Button.cpp',
+            'fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow);',
+            'fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow,\n'
+            '                                                isEnabled() ? QIcon::Normal : QIcon::Disabled);')
+    replace(source / 'src/components/menus_toolbars/private/CommandPresenter_p.cpp',
+            'window() ? window()->windowHandle() : nullptr);',
+            'window() ? window()->windowHandle() : nullptr,\n'
+            '            isEnabled() ? QIcon::Normal : QIcon::Disabled);')
 
 
 def relocate_macos(extension):
@@ -61,6 +83,7 @@ def main():
         if args.source:
             raise RuntimeError('The provided source is not the pinned FluentQt revision')
         run('git', '-C', source, 'checkout', '--detach', SOURCE_REVISION)
+    patch_disabled_icons(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.

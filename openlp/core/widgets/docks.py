@@ -225,6 +225,11 @@ class MediaToolBox(QtWidgets.QWidget):
         for index, item in enumerate(self._items):
             tab_bar = self._top_tab_bar if index < top_count else self._bottom_tab_bar
             row_index = tab_bar.addTab(item['icon'], item['label'])
+            plugin_name = getattr(getattr(item['widget'], 'plugin', None), 'name', '')
+            glyphs = {'songs': 'Music', 'bibles': 'Document', 'presentations': 'Document',
+                      'images': 'Document', 'media': 'Video', 'custom': 'Document'}
+            glyph = getattr(QtWidgets.fluentqt.Typography.Icons, glyphs.get(plugin_name, 'Document'))
+            tab_bar.setTabGlyph(row_index, glyph)
             tab_bar.setTabData(row_index, index)
             tab_bar.setTabEnabled(row_index, item['enabled'])
 

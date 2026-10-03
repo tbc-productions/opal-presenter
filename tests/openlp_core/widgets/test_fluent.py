@@ -138,7 +138,7 @@ def test_adapters_use_safe_accessibility_interfaces(qapp):
 
 
 def test_library_tab_clicks_and_accessibility_after_reflow(qapp):
-    """Both rows remain accessible while actual Fluent button clicks switch pages."""
+    """Both native TabView rows remain accessible after reflow and overflow."""
     from PySide6 import QtTest
     from openlp.core.widgets.docks import MediaToolBox
     box = MediaToolBox()
@@ -156,13 +156,23 @@ def test_library_tab_clicks_and_accessibility_after_reflow(qapp):
         for index, page in enumerate(pages):
             row = box._top_tab_bar if index < box._top_count else box._bottom_tab_bar
             row_index = index + 1 if row is box._top_tab_bar else index - box._top_count + 1
-            button = row._items[row_index]['button']
-            QtTest.QTest.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
+            assert isinstance(row._tabs, fluent.fluentqt.TabView)
+            physical = row._visible_indexes.index(row_index)
+            for _ in range(row.count()):
+                visible = row._tabs.visibleTabIndexes()
+                if physical in visible:
+                    break
+                control = (row._tabs.overflowForwardGeometry() if physical > max(visible)
+                           else row._tabs.overflowBackGeometry())
+                QtTest.QTest.mouseClick(row._tabs, QtCore.Qt.MouseButton.LeftButton, pos=control.center())
+                qapp.process_events()
+            QtTest.QTest.mouseClick(row._tabs, QtCore.Qt.MouseButton.LeftButton,
+                                    pos=row.tabRect(row_index).center() - row._tabs.pos())
             qapp.process_events()
             assert box.currentWidget() is page
-            interface = QtGui.QAccessible.queryAccessibleInterface(row)
+            interface = QtGui.QAccessible.queryAccessibleInterface(row._tabs)
             assert interface.childCount() > 0
-            centre = button.mapToGlobal(button.rect().center())
+            centre = row.mapToGlobal(row.tabRect(row_index).center())
             child = interface.childAt(centre.x(), centre.y())
             assert child is not None and child.isValid()
     box.close()
@@ -299,3 +309,74 @@ def test_file_tree_chevron_click_expands_and_row_click_selects(qapp, qtbot):
                      pos=QtCore.QPoint(rect.left() + 22, rect.center().y()))
     qtbot.waitUntil(lambda: not view.isExpanded(index))
     view.close()
+
+
+
+def test_commandbar_actions_keep_activation_state_and_overflow(qapp, qtbot):
+    parent = QtWidgets.QWidget()
+    toolbar = OpenLPToolbar(parent)
+    action = toolbar.add_toolbar_action('command', text='Run command', icon=QtGui.QIcon())
+    fired = []
+    action.triggered.connect(lambda: fired.append(True))
+    toolbar.resize(400, 60)
+    toolbar.show()
+    QtWidgets.QApplication.processEvents()
+    assert isinstance(toolbar._command_groups[0], fluent.fluentqt.CommandBar)
+    assert toolbar._command_groups[0].primaryActions() == [action]
+    qtbot.mouseClick(toolbar.widgetForAction(action), QtCore.Qt.MouseButton.LeftButton)
+    assert fired == [True]
+    action.setEnabled(False)
+    assert not toolbar.widgetForAction(action).isEnabled()
+    action.setEnabled(True)
+    for index in range(5):
+        toolbar.add_toolbar_action(str(index), text='Additional command ' + str(index))
+    toolbar.resize(100, 60)
+    QtWidgets.QApplication.processEvents()
+    assert toolbar._command_groups[0].overflowedPrimaryActions()
+    toolbar.close()
+
+
+def test_commandbar_paints_disabled_icon_and_blocks_activation(qapp, qtbot):
+    """Native primary and overflow commands must request the disabled icon mode."""
+    parent = QtWidgets.QWidget()
+    toolbar = OpenLPToolbar(parent)
+    toolbar.setGeometry(0, 0, 180, 60)
+    icon = QtGui.QIcon()
+    for mode, colour in ((QtGui.QIcon.Mode.Normal, '#e60000'), (QtGui.QIcon.Mode.Disabled, '#0033ee')):
+        pixmap = QtGui.QPixmap(20, 20)
+        pixmap.fill(QtGui.QColor(colour))
+        icon.addPixmap(pixmap, mode)
+    action = toolbar.add_toolbar_action('disabled_rendering', text='Disabled rendering', icon=icon)
+    fired = []
+    action.triggered.connect(lambda: fired.append(True))
+    parent.show()
+    qtbot.wait(50)
+
+    def pixels(widget, colour):
+        image = widget.grab().toImage()
+        return sum(image.pixelColor(x, y).name() == colour
+                   for y in range(image.height()) for x in range(image.width()))
+
+    button = toolbar.widgetForAction(action)
+    assert pixels(button, '#e60000') >= 100
+    action.setEnabled(False)
+    assert not button.isEnabled()
+    assert pixels(button, '#0033ee') >= 100
+    assert pixels(button, '#e60000') == 0
+    qtbot.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
+    assert fired == []
+    group = toolbar._command_groups[0]
+    for index in range(5):
+        toolbar.add_toolbar_action(str(index), text='Overflow command ' + str(index))
+    toolbar.resize(60, 60)
+    QtWidgets.QApplication.processEvents()
+    assert group.isPrimaryActionOverflowed(action)
+    group.setOverflowOpen(True)
+    qtbot.wait(200)
+    overflow = next(widget for widget in QtWidgets.QApplication.allWidgets()
+                    if widget.isVisible() and widget.property('commandAction') is action)
+    assert not overflow.isEnabled()
+    assert pixels(overflow, '#0033ee') >= 100
+    assert pixels(overflow, '#e60000') == 0
+    group.setOverflowOpen(False)
+    parent.close()

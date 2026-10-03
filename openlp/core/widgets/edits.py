@@ -562,15 +562,12 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._toolbar.setIconSize(QtCore.QSize(20, 20))
         self._toolbar.setMovable(False)
         self._toolbar.setFloatable(False)
-        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
 
         self._undo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Undo'))
         self._undo_action.setIcon(self._mdi_icon_or_fallback('mdi.undo', UiIcons().undo))
         self._undo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Undo last edit.'))
         self._undo_action.setEnabled(False)
-        undo_button = self._toolbar.widgetForAction(self._undo_action)
-        if undo_button:
-            undo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._undo_action.triggered.connect(self.undo)
 
         self._redo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Redo'))
@@ -578,9 +575,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             'mdi.redo', QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_ArrowForward)))
         self._redo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Redo last undone edit.'))
         self._redo_action.setEnabled(False)
-        redo_button = self._toolbar.widgetForAction(self._redo_action)
-        if redo_button:
-            redo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._redo_action.triggered.connect(self.redo)
 
         self.undoAvailable.connect(lambda available: self._undo_action.setEnabled(available))
@@ -599,15 +593,12 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
              self._mdi_icon_or_fallback('mdi.format-letter-case-upper', UiIcons().text), True)
         ]
         for caption, tag, tooltip, icon, icon_only in button_definitions:
-            action = self._toolbar.addAction(caption)
+            action = self._toolbar.addAction(caption or tooltip)
             if icon:
                 action.setIcon(icon)
             action.setToolTip(tooltip)
             action.setCheckable(True)
             self._tag_actions[tag] = action
-            tool_button = self._toolbar.widgetForAction(action)
-            if tool_button and icon_only:
-                tool_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
             action.triggered.connect(lambda checked=False, start_tag=tag: self._apply_formatting_by_tag(start_tag))
 
         self._color_button = QtWidgets.QToolButton(self._toolbar)
@@ -629,20 +620,14 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._toolbar.addWidget(self._edit_color_button)
 
         self._toolbar.addSeparator()
-        remove_action = self._toolbar.addAction('')
+        remove_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
         remove_action.setIcon(self._mdi_icon_or_fallback('mdi.format-clear', UiIcons().delete))
         remove_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
-        remove_button = self._toolbar.widgetForAction(remove_action)
-        if remove_button:
-            remove_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         remove_action.triggered.connect(self.remove_formatting)
 
-        remove_unused_action = self._toolbar.addAction('')
+        remove_unused_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
         remove_unused_action.setIcon(self._mdi_icon_or_fallback('mdi.format-color-marker-cancel', UiIcons().delete))
         remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
-        remove_unused_button = self._toolbar.widgetForAction(remove_unused_action)
-        if remove_unused_button:
-            remove_unused_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         remove_unused_action.triggered.connect(self.remove_unused_tags)
 
         self._toolbar.addSeparator()

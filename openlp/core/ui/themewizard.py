@@ -197,32 +197,15 @@ class Ui_ThemeWizard(object):
             self.preview_toolbar)
         self.layout_guide_action.setCheckable(True)
         self.preview_toolbar.addAction(self.layout_guide_action)
-        self.layout_guide_button = self.preview_toolbar.widgetForAction(self.layout_guide_action)
-        if self.layout_guide_button is None:
-            self.layout_guide_button = QtWidgets.QToolButton(self.preview_panel)
-            self.layout_guide_button.setDefaultAction(self.layout_guide_action)
-            self.preview_toolbar.addWidget(self.layout_guide_button)
-        self.layout_guide_button.setObjectName('layout_guide_button')
-        self.layout_guide_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.layout_guide_button = self.layout_guide_action
+        self.preview_toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.refresh_preview_action = QtGui.QAction(UiIcons().refresh, '', self.preview_toolbar)
         self.preview_toolbar.addAction(self.refresh_preview_action)
-        self.refresh_preview_button = self.preview_toolbar.widgetForAction(self.refresh_preview_action)
-        if self.refresh_preview_button is None:
-            self.refresh_preview_button = QtWidgets.QToolButton(self.preview_panel)
-            self.refresh_preview_button.setDefaultAction(self.refresh_preview_action)
-            self.preview_toolbar.addWidget(self.refresh_preview_button)
-        self.refresh_preview_button.setObjectName('refresh_preview_button')
-        self.refresh_preview_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.refresh_preview_button = self.refresh_preview_action
         self.play_transition_action = QtGui.QAction(UiIcons().play, '', self.preview_toolbar)
         self.play_transition_action.setVisible(False)
         self.preview_toolbar.addAction(self.play_transition_action)
-        self.play_transition_button = self.preview_toolbar.widgetForAction(self.play_transition_action)
-        if self.play_transition_button is None:
-            self.play_transition_button = QtWidgets.QToolButton(self.preview_panel)
-            self.play_transition_button.setDefaultAction(self.play_transition_action)
-            self.preview_toolbar.addWidget(self.play_transition_button)
-        self.play_transition_button.setObjectName('play_transition_button')
-        self.play_transition_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.play_transition_button = self.play_transition_action
         self.play_transition_button.setVisible(False)
         self.preview_panel_layout.addStretch(1)
         self.dialog_layout.addWidget(self.preview_panel, 1, 2, 1, 1)

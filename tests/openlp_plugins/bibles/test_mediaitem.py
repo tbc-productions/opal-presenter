@@ -254,8 +254,8 @@ def test_add_middle_header_bar(media_item: BibleMediaItem):
     assert media_item.search_button_widget is not None
     assert media_item.results_view_tab is not None
     assert media_item.page_layout.addWidget.call_args_list[0] == call(media_item.search_tab_bar)
-    assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.search_button_widget)
-    assert media_item.page_layout.addWidget.call_count == 3
+    assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.results_view_tab_container)
+    assert media_item.page_layout.addWidget.call_count == 2
 
 
 def test_on_focus_search_tab_visible(media_item: BibleMediaItem):

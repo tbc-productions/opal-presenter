@@ -48,7 +48,7 @@
     ],
     "qt_bridges": [
       "ADS window/dock host and docking chrome",
-      "Qt toolbar host for embedded controls and saved docking; Fluent CommandBar rejects QWidgetAction",
+      "Layout containers for Fluent inputs beside CommandBar groups; CommandBar rejects QWidgetAction",
       "Qt layout and item-model infrastructure",
       "Qt rich-text/document/spell-check engines",
       "wizard and message-dialog lifecycle",

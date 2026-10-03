@@ -560,3 +560,5 @@ from openlp.core.widgets.fluent_dialogs import (  # noqa: E402,F401
     QProgressBar, QProgressDialog, QTabWidget, QMessageBox, QColorDialog)
 
 from openlp.core.widgets.fluent_navigation import QTabBar  # noqa: E402,F401
+
+from openlp.core.widgets.fluent_commands import QToolBar  # noqa: E402,F401

@@ -3,7 +3,7 @@ FluentQt and Python 3.14
 
 OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.1`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.2+openlp.2`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -43,13 +43,13 @@ can crash during macOS accessibility hit testing.
 
 ``openlp.core.widgets.fluent`` is the operator UI construction boundary. Native
 Fluent controls replace the compatible button, label, input, selection, menu and
-slider classes. Toolbar actions retain their QAction and use Fluent buttons;
+slider classes. Native CommandBar owns toolbar actions and responsive overflow;
 Open service uses FluentQt's native SplitButton. Qt still supplies application,
-layout, docking, model and projection infrastructure. The Qt toolbar host is
-retained for embedded spin boxes, split buttons and saved window placement:
-FluentQt CommandBar rejects QWidgetAction and does not provide QMainWindow
-toolbar docking. Its visible commands and embedded controls are native Fluent
-components.
+layout, docking, model and projection infrastructure. CommandBar rejects
+QWidgetAction, so embedded Fluent inputs and SplitButton sit beside command
+groups in a layout container. The layout preset rail is part of the main content
+layout rather than a Qt toolbar. Library sub-tabs and Bible result tabs use
+native TabView, preserving logical indexes across wrapping and overflow.
 
 The appearance selector contains Auto, Dark and Light. Existing Classic colour
 preferences migrate to the same colour choice in Fluent. Saved ADS layouts
@@ -79,3 +79,7 @@ startup scheme. Restarting applies the selected scheme consistently.
 The Python 3.14 wheel and native application have been verified on macOS arm64.
 Windows/Linux source builds and frozen application bundles still need platform
 verification before release.
+
+The OpenLP wheel also fixes native FluentQt QIcon painting: disabled Button
+and CommandBar overflow presenters request QIcon.Disabled rather than the
+normal icon image. QAction enabled state remains owned by FluentQt.
