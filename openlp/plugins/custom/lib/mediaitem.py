@@ -108,7 +108,7 @@ class CustomMediaItem(MediaManagerItem):
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
         self.list_view.addAction(self.export_presentation_menu.menuAction())
         create_widget_action(
-            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
+            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
     def on_export_presentation(self, suffix):

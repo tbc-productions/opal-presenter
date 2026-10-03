@@ -172,6 +172,7 @@ def test_add_list_view_to_toolbar_keeps_context_actions(mocked_base_add_list_vie
     media_item.list_view = old_list
     media_item.page_layout = MagicMock()
     media_item.menu = MagicMock()
+    media_item.clone_context_action = MagicMock()
     replacement_list = MagicMock()
     replacement_list.actions.return_value = [old_action]
     mocked_song_list_widget.return_value = replacement_list
@@ -189,7 +190,8 @@ def test_add_list_view_to_toolbar_keeps_context_actions(mocked_base_add_list_vie
     old_action.setParent.assert_called_once_with(replacement_list)
     replacement_list.addAction.assert_called_once_with(old_action)
     media_item.menu.clear.assert_called_once_with()
-    media_item.menu.addActions.assert_called_once_with(replacement_list.actions())
+    media_item.menu.addActions.assert_called_once_with([old_action])
+    media_item.menu.addAction.assert_called_once_with(media_item.clone_context_action)
 
 
 def test_on_focus(media_item: SongMediaItem):
@@ -1338,3 +1340,41 @@ def test_generate_slide_data_with_media_files_as_strings(MockPath: MagicMock, mo
     # THEN: The media file should have been added to the service item
     assert service_item.background_audio == [(mocked_path, '1234567890')]
     assert service_item.media_length == 120
+
+
+def test_song_menu_retains_separators_and_clone_after_export(media_item, qtbot):
+    """Replacing the list keeps all actions and the requested command groups."""
+    import gc
+    from PySide6 import QtWidgets as NativeWidgets
+    from openlp.core.lib.ui import create_widget_action
+
+    media_item.on_clone_click = MagicMock()
+    old_list = QtWidgets.QListWidget(media_item)
+    media_item.page_layout = NativeWidgets.QVBoxLayout(media_item)
+    media_item.page_layout.addWidget(old_list)
+    media_item.menu = QtWidgets.QMenu()
+    qtbot.addWidget(media_item.menu)
+
+    def setup_base():
+        media_item.list_view = old_list
+        for caption in ('Edit', None, 'Preview', 'Live', 'Service', None, 'Delete'):
+            create_widget_action(old_list, text=caption) if caption else create_widget_action(old_list, separator=True)
+        media_item.add_custom_context_actions()
+        old_list.doubleClicked.connect(media_item.on_double_clicked)
+        old_list.itemSelectionChanged.connect(media_item.on_selection_change)
+        old_list.customContextMenuRequested.connect(media_item.context_menu)
+        media_item.menu.addActions(old_list.actions())
+
+    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar', side_effect=setup_base):
+        media_item.add_list_view_to_toolbar()
+    gc.collect()
+    media_item.menu.popup(QtCore.QPoint(100, 100))
+    NativeWidgets.QApplication.processEvents()
+    actions = media_item.menu.actions()
+    assert [action.text() if not action.isSeparator() else '---' for action in actions] == [
+        'Edit', '---', 'Preview', 'Live', 'Service', '---', 'Delete', '---', 'Export', '&Clone (Copy)']
+    assert all(not media_item.menu.actionGeometry(action).isEmpty() for action in actions)
+    assert media_item.clone_context_action in media_item.list_view.actions()
+    media_item.clone_context_action.trigger()
+    media_item.on_clone_click.assert_called_once()
+    media_item.menu.close()

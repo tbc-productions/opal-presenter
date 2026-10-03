@@ -205,7 +205,7 @@ class SongMediaItem(MediaManagerItem):
 
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
-        create_widget_action(
+        self.clone_context_action = create_widget_action(
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
@@ -244,7 +244,10 @@ class SongMediaItem(MediaManagerItem):
         self.list_view = SongListWidget(self, self.plugin.name)
         self.list_view.setObjectName('{name}ListView'.format(name=self.plugin.name))
         # Move context-menu actions to the new widget
-        for action in list(old_list.actions()):
+        # Retain wrappers while reparenting: otherwise PySide can destroy
+        # actions (including separators) as the temporary wrappers are collected.
+        self._song_context_actions = list(old_list.actions())
+        for action in self._song_context_actions:
             old_list.removeAction(action)
             action.setParent(self.list_view)
             self.list_view.addAction(action)
@@ -260,7 +263,8 @@ class SongMediaItem(MediaManagerItem):
         old_list.deleteLater()
         # Re-populate the context menu from the new widget's actions
         self.menu.clear()
-        self.menu.addActions(self.list_view.actions())
+        self.menu.addActions([action for action in self._song_context_actions
+                              if action is not self.clone_context_action])
         self.export_presentation_menu = QtWidgets.QMenu(
             translate('OpenLP.PresentationExport', 'Export'), self)
         self.export_presentation_menu.setIcon(UiIcons().upload)
@@ -272,6 +276,7 @@ class SongMediaItem(MediaManagerItem):
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
         self.menu.addMenu(self.export_presentation_menu)
+        self.menu.addAction(self.clone_context_action)
 
     def create_item_from_id(self, item_id):
         """Return a SongListWidgetItem pre-loaded with *item_id* as UserRole data."""
