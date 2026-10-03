@@ -33,138 +33,73 @@ def _add_item(media_tool_box, label):
     media_tool_box.addItem(widget, QtGui.QIcon(), label)
 
 
-def test_media_tool_box_placeholder_tabs_are_hidden_and_disabled(qapp):
-    """Placeholder tabs should be disabled and have zero width."""
-    media_tool_box = MediaToolBox()
-    _add_item(media_tool_box, 'Images')
-
-    assert media_tool_box._top_tab_bar.isTabEnabled(0) is False
-    assert media_tool_box._bottom_tab_bar.isTabEnabled(0) is False
-    assert media_tool_box._top_tab_bar.tabSizeHint(0).width() == 0
-    assert media_tool_box._bottom_tab_bar.tabSizeHint(0).width() == 0
-
-
-def test_media_tool_box_shows_second_row_when_split(qapp):
-    """Adding enough tabs should make the second row visible."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    _add_item(media_tool_box, 'Images Library')
-    _add_item(media_tool_box, 'Media Files')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is False
-
-
-def test_media_tool_box_prefers_single_row_when_tabs_fit(qapp):
-    """Tabs should stay on one row if there is enough room."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(2000, 300)
-    _add_item(media_tool_box, 'Images')
-    _add_item(media_tool_box, 'Media')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is True
-
-
-def test_media_tool_box_reflows_rows_when_resized(qapp):
-    """Tab rows should be recalculated when the toolbox width changes."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    media_tool_box.show()
+def test_library_selector_stays_one_row_and_overflows(qapp):
+    box = MediaToolBox()
+    for label in ('Songs', 'Bibles', 'Presentations', 'Images', 'Media', 'Custom Slides'):
+        _add_item(box, label)
+    box.resize(250, 400)
+    box.show()
     qapp.process_events()
-    _add_item(media_tool_box, 'Images Library')
-    _add_item(media_tool_box, 'Media Files')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is False
-
-    media_tool_box.resize(2000, 300)
+    height = box._selector.height()
+    assert box._selector.overflowBehavior() == QtWidgets.fluentqt.SelectorBar.OverflowBehavior.MoreButton
+    assert box._selector.hiddenItemIndexes()
+    assert not box._selector.overflowGeometry().isEmpty()
+    box.resize(2000, 400)
     qapp.process_events()
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is True
-
-
-def test_media_tool_box_inactive_row_selects_placeholder(qapp):
-    """Only one row should have a real selected tab; the other row uses placeholder index 0."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    _add_item(media_tool_box, 'Images Library')
-    _add_item(media_tool_box, 'Media Files')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    media_tool_box.setCurrentIndex(0)
-    assert media_tool_box._top_tab_bar.currentIndex() == 1
-    assert media_tool_box._bottom_tab_bar.currentIndex() == 0
-
-    media_tool_box.setCurrentIndex(2)
-    assert media_tool_box._top_tab_bar.currentIndex() == 0
-    assert media_tool_box._bottom_tab_bar.currentIndex() == (2 - media_tool_box._top_count) + 1
+    assert not box._selector.hiddenItemIndexes()
+    assert box._selector.height() == height
+    box.close()
 
 
-def test_media_tool_box_tab_bars_do_not_draw_base_line(qapp):
-    media_tool_box = MediaToolBox()
-
-    assert media_tool_box._top_tab_bar.drawBase() is False
-    assert media_tool_box._bottom_tab_bar.drawBase() is False
-
-
-def test_media_tool_box_has_flexible_minimum_width(qapp):
-    """Long tab labels should not force a large minimum width."""
-    media_tool_box = MediaToolBox()
-    _add_item(media_tool_box, 'Very Long Library Tab Label One')
-    _add_item(media_tool_box, 'Very Long Library Tab Label Two')
-    _add_item(media_tool_box, 'Very Long Library Tab Label Three')
-
-    assert media_tool_box.minimumSizeHint().width() == 0
-
-
-def test_media_tool_box_split_uses_tool_box_width(qapp):
-    """Split should be based on toolbox width, not a stale larger tab bar width."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    _add_item(media_tool_box, 'Images Library')
-    _add_item(media_tool_box, 'Media Files')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    media_tool_box._top_tab_bar.resize(2000, media_tool_box._top_tab_bar.height())
-    media_tool_box._rebuild_tab_bars()
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is False
+def test_library_selector_preserves_selection_and_mutation(qapp):
+    box = MediaToolBox()
+    for label in ('Songs', 'Bibles', 'Images'):
+        _add_item(box, label)
+    assert box.currentIndex() == 0
+    box.setCurrentIndex(2)
+    page = box.currentWidget()
+    box.removeItem(0)
+    assert box.currentIndex() == 1
+    assert box.currentWidget() is page
+    box.setItemEnabled(1, False)
+    assert box.currentIndex() == 0
+    box.setCurrentIndex(1)
+    assert box.currentIndex() == 0
+    box.removeItem(1)
+    box.removeItem(0)
+    assert box.currentIndex() == -1
+    assert box.currentWidget() is None
 
 
-def test_media_tool_box_rechecks_with_rendered_tab_widths(qapp):
-    """A one-row estimate should be corrected if rendered tabs overflow."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    _add_item(media_tool_box, 'Images')
-    _add_item(media_tool_box, 'Media')
-    _add_item(media_tool_box, 'Custom')
-
-    original_tab_width = media_tool_box._tab_width
-
-    try:
-        media_tool_box._tab_width = lambda item: 10
-        media_tool_box._rebuild_tab_bars()
-    finally:
-        media_tool_box._tab_width = original_tab_width
-
-    assert media_tool_box._bottom_tab_bar.isHidden() is False
+def test_library_selector_preserves_coloured_icons(qapp):
+    box = MediaToolBox()
+    pixmap = QtGui.QPixmap(16, 16)
+    pixmap.fill(QtGui.QColor('#ff0099'))
+    box.addItem(QtWidgets.QWidget(), QtGui.QIcon(pixmap), 'Songs')
+    box.resize(400, 200)
+    box.show()
+    qapp.process_events()
+    image = box._selector.grab().toImage()
+    assert any(image.pixelColor(x, y).name() == '#ff0099'
+               for y in range(image.height()) for x in range(image.width()))
+    assert box.minimumSizeHint().width() == 0
+    box.close()
 
 
-def test_media_tool_box_selection_uses_rendered_split(qapp):
-    """Selection sync should use the currently rendered split, not a recomputed split."""
-    media_tool_box = MediaToolBox()
-    media_tool_box.resize(150, 300)
-    _add_item(media_tool_box, 'Images Library')
-    _add_item(media_tool_box, 'Media Files')
-    _add_item(media_tool_box, 'Custom Slides')
-
-    # Simulate split estimator drift after the bars have already been rendered.
-    original_tab_width = media_tool_box._tab_width
-    try:
-        media_tool_box._tab_width = lambda item: 10
-        media_tool_box.setCurrentIndex(2)
-    finally:
-        media_tool_box._tab_width = original_tab_width
-
-    assert media_tool_box._bottom_tab_bar.currentIndex() > 0
+def test_library_more_selection_keeps_earlier_tabs_when_they_fit(qapp):
+    box = MediaToolBox()
+    pixmap = QtGui.QPixmap(16, 16)
+    pixmap.fill(QtGui.QColor('#ff0099'))
+    for label in ('Songs', 'Bibles', 'Presentations', 'Images', 'Media', 'Custom Slides'):
+        box.addItem(QtWidgets.QWidget(), QtGui.QIcon(pixmap), label)
+    box.resize(440, 400)
+    box.show()
+    qapp.process_events()
+    box.setCurrentIndex(5)
+    qapp.process_events()
+    assert 5 in box._selector.visibleItemIndexes()
+    assert 0 in box._selector.visibleItemIndexes()
+    assert len(box._selector.visibleItemIndexes()) >= 2
+    box.setCurrentIndex(0)
+    assert box.currentWidget() is box.widget(0)
+    box.close()

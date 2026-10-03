@@ -137,8 +137,7 @@ def test_adapters_use_safe_accessibility_interfaces(qapp):
         widget.deleteLater()
 
 
-def test_library_tab_clicks_and_accessibility_after_reflow(qapp):
-    """Both native TabView rows remain accessible after reflow and overflow."""
+def test_library_selector_clicks_overflow_and_accessibility(qapp):
     from PySide6 import QtTest
     from openlp.core.widgets.docks import MediaToolBox
     box = MediaToolBox()
@@ -147,34 +146,56 @@ def test_library_tab_clicks_and_accessibility_after_reflow(qapp):
         page = QtWidgets.QWidget()
         pages.append(page)
         box.addItem(page, QtGui.QIcon(), label)
-    box.resize(250, 400)
     box.show()
-    qapp.process_events()
-    for width in (250, 1200, 250):
+    for width in (160, 440, 1200, 250):
         box.resize(width, 400)
         qapp.process_events()
-        for index, page in enumerate(pages):
-            row = box._top_tab_bar if index < box._top_count else box._bottom_tab_bar
-            row_index = index + 1 if row is box._top_tab_bar else index - box._top_count + 1
-            assert isinstance(row._tabs, fluent.fluentqt.TabView)
-            physical = row._visible_indexes.index(row_index)
-            for _ in range(row.count()):
-                visible = row._tabs.visibleTabIndexes()
-                if physical in visible:
-                    break
-                control = (row._tabs.overflowForwardGeometry() if physical > max(visible)
-                           else row._tabs.overflowBackGeometry())
-                QtTest.QTest.mouseClick(row._tabs, QtCore.Qt.MouseButton.LeftButton, pos=control.center())
+        selector = box._selector
+        assert isinstance(selector, fluent.fluentqt.SelectorBar)
+        for index in (5, 0, 5, 1, 0, 2, 3, 4, 5, 0):
+            page = pages[index]
+            if index in selector.hiddenItemIndexes():
+                QtTest.QTest.mouseClick(selector, QtCore.Qt.MouseButton.LeftButton,
+                                       pos=selector.overflowGeometry().center())
                 qapp.process_events()
-            QtTest.QTest.mouseClick(row._tabs, QtCore.Qt.MouseButton.LeftButton,
-                                    pos=row.tabRect(row_index).center() - row._tabs.pos())
+                action = next(action for action in box._overflow_menu.actions() if action.data() == index)
+                menu = box._overflow_menu
+                QtTest.QTest.qWait(50)
+                assert menu.rect().contains(menu.actionGeometry(action).center())
+                position = menu.actionGeometry(action).center()
+                # Send a move with explicit global coordinates: QTest.mouseMove
+                # can skip delivery when a new popup reuses the cursor position.
+                event = QtGui.QMouseEvent(QtCore.QEvent.Type.MouseMove, QtCore.QPointF(position),
+                                         QtCore.QPointF(menu.mapToGlobal(position)),
+                                         QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.NoButton,
+                                         QtCore.Qt.KeyboardModifier.NoModifier)
+                QtCore.QCoreApplication.sendEvent(menu, event)
+                QtTest.QTest.mousePress(menu, QtCore.Qt.MouseButton.LeftButton, pos=position)
+                QtTest.QTest.mouseRelease(menu, QtCore.Qt.MouseButton.LeftButton, pos=position)
+                qapp.process_events()
+            else:
+                QtTest.QTest.mouseClick(selector, QtCore.Qt.MouseButton.LeftButton,
+                                       pos=selector.itemGeometry(index).center())
             qapp.process_events()
             assert box.currentWidget() is page
-            interface = QtGui.QAccessible.queryAccessibleInterface(row._tabs)
-            assert interface.childCount() > 0
-            centre = row.mapToGlobal(row.tabRect(row_index).center())
+            assert index in selector.visibleItemIndexes()
+            interface = QtGui.QAccessible.queryAccessibleInterface(selector)
+            centre = selector.mapToGlobal(selector.itemGeometry(index).center())
             child = interface.childAt(centre.x(), centre.y())
             assert child is not None and child.isValid()
+    hidden_index = selector.hiddenItemIndexes()[-1]
+    QtTest.QTest.mouseClick(selector, QtCore.Qt.MouseButton.LeftButton,
+                           pos=selector.overflowGeometry().center())
+    qapp.process_events()
+    menu = box._overflow_menu
+    menu.setActiveAction(None)
+    for action in menu.actions():
+        QtTest.QTest.keyClick(menu, QtCore.Qt.Key.Key_Down)
+        if action.data() == hidden_index:
+            break
+    QtTest.QTest.keyClick(menu, QtCore.Qt.Key.Key_Return)
+    qapp.process_events()
+    assert box.currentIndex() == hidden_index
     box.close()
 
 

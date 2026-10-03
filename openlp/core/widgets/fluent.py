@@ -54,7 +54,8 @@ class FluentMenu(fluentqt.FluentMenu):
         height = sum(8 if action.isSeparator() else max(32, metrics.height() + 12) for action in actions) + 16
         screen = self.screen()
         available = screen.availableGeometry().height() - 32 if screen else 720
-        return QtCore.QSize(max(120, width + 100), min(height, available))
+        native_height = super().sizeHint().height()
+        return QtCore.QSize(max(120, width + 100), min(max(height, native_height), available))
 
 
 QMenu = FluentMenu

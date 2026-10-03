@@ -12,7 +12,7 @@ import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.2'
+VERSION = '1.9.2+openlp.3'
 QT_VERSION = '6.11.1'
 
 
@@ -51,6 +51,32 @@ def patch_disabled_icons(source):
             '            isEnabled() ? QIcon::Normal : QIcon::Disabled);')
 
 
+def patch_selector_overflow(source):
+    """More menus retain the leading items and make room for the selection."""
+    selector = source / 'src/components/navigation/SelectorBar.cpp'
+    if 'const bool hasSelection = candidates.contains(m_selectedIndex);' in selector.read_text():
+        return
+    replace(selector,
+            '    int startPosition = 0;\n',
+            '    if (m_overflowBehavior == OverflowBehavior::MoreButton) {\n'
+            '        const bool hasSelection = candidates.contains(m_selectedIndex);\n'
+            '        int used = hasSelection ? widths.value(m_selectedIndex) : 0;\n'
+            '        for (int index : candidates) {\n'
+            '            if (index == m_selectedIndex) {\n'
+            '                result.append(index);\n'
+            '                continue;\n'
+            '            }\n'
+            '            const int width = widths.value(index, metrics().minItemWidth);\n'
+            '            if (used + width <= availableWidth || (!hasSelection && result.isEmpty())) {\n'
+            '                result.append(index);\n'
+            '                used += width;\n'
+            '            }\n'
+            '        }\n'
+            '        return result;\n'
+            '    }\n\n'
+            '    int startPosition = 0;\n')
+
+
 def relocate_macos(extension):
     """Use PySide's frameworks; never ship absolute SDK framework references."""
     dependencies = subprocess.check_output(['otool', '-L', str(extension)], text=True)
@@ -84,6 +110,7 @@ def main():
             raise RuntimeError('The provided source is not the pinned FluentQt revision')
         run('git', '-C', source, 'checkout', '--detach', SOURCE_REVISION)
     patch_disabled_icons(source)
+    patch_selector_overflow(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.

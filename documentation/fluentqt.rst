@@ -3,7 +3,7 @@ FluentQt and Python 3.14
 
 OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.2`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.2+openlp.3`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -48,8 +48,13 @@ Open service uses FluentQt's native SplitButton. Qt still supplies application,
 layout, docking, model and projection infrastructure. CommandBar rejects
 QWidgetAction, so embedded Fluent inputs and SplitButton sit beside command
 groups in a layout container. The layout preset rail is part of the main content
-layout rather than a Qt toolbar. Library sub-tabs and Bible result tabs use
-native TabView, preserving logical indexes across wrapping and overflow.
+layout rather than a Qt toolbar. Library navigation uses a single native
+SelectorBar row with a More overflow menu. Original coloured QIcons occupy
+the native icon slots and appear in the overflow menu; configured plugin icon
+colours are preserved. More-mode overflow reserves space for the selected
+item while retaining earlier items that fit. Page changes wait until the
+overflow popup closes so Library focus handlers cannot interrupt menu activation.
+Bible sub-tabs and result tabs retain native TabView.
 
 The appearance selector contains Auto, Dark and Light. Existing Classic colour
 preferences migrate to the same colour choice in Fluent. Saved ADS layouts
