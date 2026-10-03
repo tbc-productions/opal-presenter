@@ -172,6 +172,54 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
     window.close()
 
 
+def test_slide_lists_align_with_different_command_bar_controls(qapp):
+    from openlp.core.widgets.toolbar import OpenLPToolbar
+
+    window = QtWidgets.QMainWindow()
+    content = QtWidgets.QWidget(window)
+    window.setCentralWidget(content)
+    layout = QtWidgets.QHBoxLayout(content)
+    controllers = []
+    for _ in range(2):
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical, content)
+        panel = QtWidgets.QWidget(splitter)
+        panel_layout = QtWidgets.QVBoxLayout(panel)
+        panel_layout.setContentsMargins(0, 0, 0, 0)
+        panel_layout.setSpacing(0)
+        slides = QtWidgets.QWidget(panel)
+        panel_layout.addWidget(slides)
+        toolbar = OpenLPToolbar(panel)
+        toolbar.add_pinned_action(QtGui.QAction('Previous', toolbar))
+        panel_layout.addWidget(toolbar)
+        splitter.addWidget(QtWidgets.QWidget())
+        layout.addWidget(splitter)
+        controllers.append(SimpleNamespace(splitter=splitter, toolbar=toolbar, preview_widget=slides))
+    preview, live = controllers
+    play_button = QtWidgets.QSplitButton(live.toolbar)
+    live.toolbar.addWidget(play_button)
+    window.preview_controller = preview
+    window.live_controller = live
+    window.resize(800, 600)
+    window.show()
+    refine_modern_layout(window)
+
+    def check_alignment():
+        for _ in range(3):
+            QtWidgets.QApplication.processEvents()
+        assert preview.toolbar.height() == live.toolbar.height()
+        assert abs(preview.preview_widget.height() - live.preview_widget.height()) <= 1
+
+    check_alignment()
+    live.splitter.moveSplitter(250, 1)
+    check_alignment()
+    window.resize(1000, 800)
+    check_alignment()
+    play_button.setMinimumHeight(64)
+    check_alignment()
+    assert preview.toolbar.height() >= 64
+    window.close()
+
+
 def test_macos_modern_does_not_call_windows_api(settings):
     settings.setValue('advanced/interface style', 'modern')
     with patch('openlp.core.ui.modernstyle.is_win', return_value=False), \

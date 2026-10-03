@@ -172,8 +172,23 @@ def refine_modern_layout(window):
         toolbar.setIconSize(QtCore.QSize(18, 18))
     preview = window.preview_controller.splitter
     live = window.live_controller.splitter
+    command_bars = [controller.toolbar for controller in (window.preview_controller, window.live_controller)
+                    if hasattr(controller, 'toolbar')]
+
+    def align_command_bars():
+        # The divider includes the command row. Reserve the same height on both
+        # sides so a SplitButton cannot shorten just one of the slide lists.
+        height = max((toolbar.layout().sizeHint().height() for toolbar in command_bars), default=0)
+        for toolbar in command_bars:
+            if toolbar.minimumHeight() != height or toolbar.maximumHeight() != height:
+                toolbar.setFixedHeight(height)
+        for splitter in (preview, live):
+            layout = splitter.widget(0).layout()
+            if layout:
+                layout.activate()
 
     def align(source, target):
+        align_command_bars()
         if not source.isVisible() or not target.isVisible() or not source.sizes():
             return
         position = source.sizes()[0]
@@ -183,17 +198,23 @@ def refine_modern_layout(window):
     # setSizes does not emit splitterMoved, so each divider can drive its peer safely.
     preview.splitterMoved.connect(lambda position, index: align(preview, live))
     live.splitterMoved.connect(lambda position, index: align(live, preview))
+    alignment_timer = QtCore.QTimer(window)
+    alignment_timer.setSingleShot(True)
+    alignment_timer.timeout.connect(lambda: align(preview, live))
 
     class DividerAlignment(QtCore.QObject):
         def eventFilter(self, watched, event):
-            if event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show):
-                QtCore.QTimer.singleShot(0, lambda: align(preview, live))
+            if event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show,
+                                QtCore.QEvent.Type.LayoutRequest):
+                alignment_timer.start(0)
             return False
 
     window._divider_alignment = DividerAlignment(window)
     preview.installEventFilter(window._divider_alignment)
     live.installEventFilter(window._divider_alignment)
-    QtCore.QTimer.singleShot(0, lambda: align(preview, live))
+    for toolbar in command_bars:
+        toolbar.installEventFilter(window._divider_alignment)
+    alignment_timer.start(0)
 
 
 def _set_dwm_attribute(hwnd, attribute, value):

@@ -377,7 +377,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                                           tooltip=translate('OpenLP.SlideController',
                                                                                             'Add to Service.'),
                                                                           triggers=self.on_preview_add_to_service)
-            self.toolbar.addSeparator()
             self.toolbar.add_toolbar_action('editSong', icon=UiIcons().edit,
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Edit and reload song preview.'),

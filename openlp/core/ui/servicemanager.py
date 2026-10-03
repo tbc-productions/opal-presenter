@@ -58,20 +58,29 @@ from openlp.core.ui.starttimeform import StartTimeForm
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
+from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
 
 
-class ServiceItemDelegate(QtWidgets.QStyledItemDelegate):
+class ServiceItemDelegate(FluentLibraryTreeDelegate):
     """
     Custom delegate for rendering the service item row in Column 0.
     """
     def paint(self, painter, option, index):
         opt = QtWidgets.QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
+        super().paint(painter, opt, index)
+
+    def iconSize(self, option, index):
         if index.parent().isValid():
             icon_val = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
             if isinstance(icon_val, QtGui.QIcon) and not icon_val.isNull():
-                opt.decorationSize = QtCore.QSize(64, 48)
-        super().paint(painter, opt, index)
+                return QtCore.QSize(64, 48)
+        return super().iconSize(option, index)
+
+    def _background_rect(self, option):
+        rect = super()._background_rect(option)
+        rect.setRight(option.rect.right() - 2)
+        return rect
 
     def sizeHint(self, option, index):
         opt = QtWidgets.QStyleOptionViewItem(option)
@@ -97,6 +106,10 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         Constructor
         """
         super(ServiceManagerList, self).__init__(parent)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionIndicatorVisible(True)
+        self.setItemDelegateForColumn(0, ServiceItemDelegate(self))
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
         self.setAlternatingRowColors(use_alternate_rows())
         self.setColumnCount(2)
@@ -116,7 +129,6 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self._is_internal_dragging = False
         self._drag_tooltip_label = None
         self._last_notes_tooltip_item = None
-        self.setStyleSheet('QTreeWidget::item { padding: 4px 2px; }')
 
     def _show_notes_tooltip_on_hover(self, event):
         """Show notes tooltip immediately when hovering the right-side notes indicator column."""
@@ -402,12 +414,11 @@ class Ui_ServiceManager(object):
         self.service_manager_list.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.service_manager_list.customContextMenuRequested.connect(self.context_menu)
         self.service_manager_list.setObjectName('service_manager_list')
-        self.service_manager_list.setItemDelegateForColumn(0, ServiceItemDelegate(self.service_manager_list))
         # enable drop
         self.service_manager_list.dropEvent = self.drop_event
         self.layout.addWidget(self.service_manager_list)
         # Add the bottom toolbar
-        self.order_toolbar = OpenLPToolbar(widget)
+        self.order_toolbar = OpenLPToolbar(widget, single_command_bar=True)
         action_list = ActionList.get_instance()
         action_list.add_category(UiStrings().Service, CategoryOrder.standard_toolbar)
         self.move_top_action = self.order_toolbar.add_toolbar_action(
@@ -2418,7 +2429,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         need_confirmation: bool = self.settings.value('advanced/delete service item confirmation')
         if (
             not need_confirmation or
-            self._delete_confirmation_dialog() == QtWidgets.QMessageBox.Close
+            self._delete_confirmation_dialog() == QtWidgets.QMessageBox.StandardButton.Close
         ):
             self.delete_item()
 
@@ -2819,6 +2830,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
         # Create a container widget for Column 1
         container = QtWidgets.QWidget(self.service_manager_list)
+        container.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout = QtWidgets.QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 4, 0)
         layout.setSpacing(4)

@@ -66,11 +66,11 @@ class OpenLPToolbar(QtWidgets.QToolBar):
     Lots of toolbars around the place, so it makes sense to have a common way to manage them. This is the base toolbar
     class.
     """
-    def __init__(self, parent):
+    def __init__(self, parent, *, single_command_bar=False):
         """
         Initialise the toolbar.
         """
-        super().__init__(parent)
+        super().__init__(parent, single_command_bar=single_command_bar)
         # useful to be able to reuse button icons...
         self.setIconSize(QtCore.QSize(20, 20))
         self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)

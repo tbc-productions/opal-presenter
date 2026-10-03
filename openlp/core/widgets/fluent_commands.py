@@ -12,8 +12,9 @@ class FluentCommandToolbar(QtWidgets.QWidget):
     iconSizeChanged = QtCore.Signal(QtCore.QSize)
     toolButtonStyleChanged = QtCore.Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, single_command_bar=False):
         super().__init__(parent)
+        self._single_command_bar = single_command_bar
         self._command_groups = []
         self._command_group = None
         self._command_actions = {}
@@ -81,7 +82,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
                 action = QtGui.QAction(action, self)
             if args:
                 action.triggered.connect(args[0])
-        if action.isSeparator():
+        if action.isSeparator() and not self._single_command_bar:
             # A separator-only CommandBar has no command width, but can still
             # create native overflow chrome. Keep dividers outside command groups.
             self._command_group = None
@@ -121,7 +122,8 @@ class FluentCommandToolbar(QtWidgets.QWidget):
 
     def _sync_group_visibility(self, group):
         """Do not leave command chrome visible when all its commands are hidden."""
-        group.setVisible(any(action.isVisible() for action, owner in self._command_actions.items()
+        group.setVisible(any(action.isVisible() and not action.isSeparator()
+                             for action, owner in self._command_actions.items()
                              if owner is group))
 
     def addWidget(self, widget):

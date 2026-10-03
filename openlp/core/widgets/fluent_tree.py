@@ -21,6 +21,9 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
     def sizeHint(self, option, index):
         return QtCore.QSize(0, 36)
 
+    def iconSize(self, option, index):
+        return QtCore.QSize(20, 20)
+
     def _background_rect(self, option):
         top = option.rect.top() + 2
         height = option.rect.height() - 4
@@ -50,6 +53,9 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
             painter.setBrush(colors.subtleTertiary if pressed else colors.subtleSecondary)
             painter.drawRoundedRect(background, 4, 4)
         text_color = colors.textPrimary if enabled else colors.textDisabled
+        foreground = index.data(QtCore.Qt.ItemDataRole.ForegroundRole)
+        if enabled and isinstance(foreground, QtGui.QBrush) and foreground.style() != QtCore.Qt.BrushStyle.NoBrush:
+            text_color = foreground.color()
         chevron = self._chevron_rect(option)
         if index.model().hasChildren(index):
             painter.save()
@@ -64,8 +70,10 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
             path.lineTo(-2 * direction, 4)
             painter.drawPath(path)
             painter.restore()
-        icon_left = chevron.left() - 24 if rtl else chevron.right() + 4
-        icon_rect = QtCore.QRectF(icon_left, background.center().y() - 10, 20, 20)
+        icon_size = self.iconSize(option, index)
+        icon_left = chevron.left() - icon_size.width() - 4 if rtl else chevron.right() + 4
+        icon_rect = QtCore.QRectF(icon_left, background.center().y() - icon_size.height() / 2,
+                                 icon_size.width(), icon_size.height())
         icon = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
         if isinstance(icon, QtGui.QIcon):
             icon.paint(painter, icon_rect.toRect(), QtCore.Qt.AlignmentFlag.AlignCenter,
