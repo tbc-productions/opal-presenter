@@ -633,3 +633,36 @@ def test_on_delete_theme_blocks_default_theme(mocked_critical: MagicMock, theme_
     mocked_critical.assert_called_once_with(message='You are unable to delete the default theme.')
     theme_manager.delete_theme.assert_not_called()
     theme_manager._push_themes.assert_not_called()
+
+
+def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
+    """Theme progress advances after loading, excludes missing files and then resets."""
+    from PySide6 import QtGui
+
+    for name in ('a.json', 'b.json'):
+        (tmp_path / name).write_text('{}')
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path
+    theme_manager.global_theme = 'a'
+    theme_manager.theme_list_widget = MagicMock()
+    theme_manager._get_theme_data = MagicMock()
+    theme_manager._push_themes = MagicMock()
+    updates = []
+
+    def report(*args):
+        updates.append((args, list(theme_manager._theme_list)))
+
+    Registry().register_function('startup_progress', report)
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+               return_value=[Path('b.json'), Path('missing.json'), Path('a.json')]), \
+            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        theme_manager.load_themes()
+
+    assert updates == [
+        (('Loading themes', 0, 2), []),
+        (('Loading themes', 1, 2), ['a']),
+        (('Loading themes', 2, 2), ['a', 'b']),
+        (('Loading library and themes…',), ['a', 'b'])
+    ]
+    theme_manager._push_themes.assert_called_once_with()

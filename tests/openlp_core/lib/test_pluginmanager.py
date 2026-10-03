@@ -539,3 +539,42 @@ def test_new_service_created_with_active_plugin(registry, state):
     # THEN: The is_active() and finalise() methods should have been called
     mocked_plugin.is_active.assert_called_with()
     mocked_plugin.new_service_created.assert_called_with()
+
+
+@pytest.mark.parametrize('fails', [False, True])
+def test_initialise_plugins_progress_counts_processed_active_plugins(registry, fails):
+    """Inactive plugins are excluded; handled failures still complete a processing item."""
+    manager = PluginManager()
+    first = MagicMock(name='first')
+    first.name = 'first'
+    second = MagicMock(name='second')
+    second.name = 'second'
+    inactive = MagicMock()
+    inactive.is_active.return_value = False
+    updates = []
+    registry.register_function('startup_progress', lambda *args: updates.append(args))
+
+    def initialise_first():
+        assert updates == [('Initialising plugins', 0, 2)]
+        if fails:
+            raise RuntimeError('Plugin failed')
+
+    first.initialise.side_effect = initialise_first
+
+    def initialise_second():
+        assert updates[-1] == ('Initialising plugins', 1, 2)
+
+    second.initialise.side_effect = initialise_second
+    with patch('openlp.core.lib.pluginmanager.State') as state_class:
+        state_class.return_value.list_plugins.return_value = [first, inactive, None, second]
+        state_class.return_value.get_text.return_value = ''
+        manager.initialise_plugins()
+
+    inactive.initialise.assert_not_called()
+    second.initialise.assert_called_once_with()
+    assert updates == [
+        ('Initialising plugins', 0, 2),
+        ('Initialising plugins', 1, 2),
+        ('Initialising plugins', 2, 2),
+        ('Loading library and themes…',)
+    ]

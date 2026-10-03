@@ -21,23 +21,131 @@
 """
 Package to test the openlp.core.ui package.
 """
-from unittest.mock import MagicMock
+import os
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 from PySide6 import QtCore
+import fluentqt
 
 from openlp.core.ui.splashscreen import SplashScreen
+from openlp.core.resources import qInitResources
 
 
-def test_splashscreen(mock_settings: MagicMock):
-    """
-    Test that the SpashScreen is created correctly
-    """
-    # GIVEN: the SplashScreen class
-    # WHEN: An object is created
+def test_splashscreen(mock_settings: MagicMock, qtbot):
+    """Startup uses the simple native Fluent surface and its loading spinner."""
+    qInitResources()
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.show()
 
-    ss = SplashScreen()
-    # THEN: Nothing should go wrong and the instance should have the correct values
-    assert ss.objectName() == 'splashScreen', 'The ObjectName should have be ' \
-        'splashScreen'
-    assert ss.frameSize() == QtCore.QSize(370, 370), 'The frameSize should be (370, 370)'
-    assert ss.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu, 'The ContextMenuPolicy ' \
-        'should have been QtCore.Qt.ContextMenuPolicy.PreventContextMenu or 4'
+    assert not splash.icon().isNull()
+    assert splash.iconSize() == QtCore.QSize(128, 128)
+    assert isinstance(splash, fluentqt.SplashScreen)
+    assert splash.objectName() == 'splashScreen'
+    assert splash.size() == QtCore.QSize(370, 370)
+    assert splash.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu
+    assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
+    assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
+    assert splash.isIndeterminate()
+    assert splash.text() == 'Starting OpenLP+…'
+    ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+    assert ring is not None
+    assert ring.isVisible()
+    assert ring.isActive()
+    assert ring.isIndeterminate()
+
+
+def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
+    """A startup stage refreshes the UI while retaining indeterminate progress."""
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    with patch('openlp.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
+        splash.set_status('Loading components…')
+
+    assert splash.text() == 'Loading components…'
+    assert splash.isIndeterminate()
+    process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
+
+def test_splashscreen_hide_and_close(mock_settings: MagicMock, qtbot):
+    """Backup prompts can hide and restore the splash before startup closes it."""
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.show()
+    splash.hide()
+    assert not splash.isVisible()
+    splash.show()
+    assert splash.isVisible()
+    splash.close()
+    assert not splash.isVisible()
+
+
+def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot):
+    """Known item totals use native percentages; the next unknown stage resets them."""
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.show()
+    splash.set_stage_progress('Initialising plugins', 3, 8)
+
+    assert splash.progress() == 37
+    assert not splash.isIndeterminate()
+    assert splash.text() == 'Initialising plugins — 3 of 8'
+    ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+    assert ring.isVisible()
+    assert ring.isIndeterminate()
+    percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
+    assert percentage.isVisible()
+    assert percentage.text() == '37%'
+
+    splash.hide()
+    splash.show()
+    assert ring.isIndeterminate()
+    assert percentage.isVisible()
+
+    splash.set_status('Preparing the main window…')
+    assert splash.isIndeterminate()
+    assert ring.isIndeterminate()
+    assert not percentage.isVisible()
+
+
+def test_empty_stage_has_no_percentage(mock_settings: MagicMock, qtbot):
+    """An empty stage cannot produce a meaningful percentage."""
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.set_stage_progress('Loading themes', 0, 0)
+    assert splash.isIndeterminate()
+    assert splash.text() == 'Loading themes'
+
+
+@pytest.mark.skipif(sys.platform != 'darwin' or os.environ.get('QT_QPA_PLATFORM') == 'offscreen',
+                    reason='Requires the native macOS window server and WebEngine focus events')
+def test_native_splash_webengine_accessibility():
+    """A Fluent progress factory must not RTTI-cast WebEngine's private Quick item."""
+    # Isolate the native crash regression from QtWebEngine mocks and the shared
+    # QApplication used elsewhere in the suite. No user settings are loaded.
+    code = """
+from PySide6 import QtCore, QtWidgets, QtWebEngineWidgets
+from openlp.core.resources import qInitResources
+from openlp.core.ui.splashscreen import SplashScreen
+import fluentqt
+app = QtWidgets.QApplication([])
+qInitResources()
+fluentqt.initialize_resources()
+splash = SplashScreen()
+splash.show()
+app.processEvents()
+view = QtWebEngineWidgets.QWebEngineView()
+view.setHtml('<html><body>Startup regression</body></html>')
+view.show()
+view.setFocus()
+app.processEvents()
+splash.set_stage_progress('Initialising plugins', 3, 8)
+QtCore.QTimer.singleShot(300, app.quit)
+app.exec()
+"""
+    result = subprocess.run([sys.executable, '-X', 'faulthandler', '-c', code],
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stdout + result.stderr

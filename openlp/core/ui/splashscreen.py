@@ -23,29 +23,48 @@ The splash screen
 """
 
 from PySide6 import QtCore, QtGui
+import fluentqt
+
+from openlp.core.common.i18n import translate
 from openlp.core.widgets import fluent as QtWidgets
 
 
-class SplashScreen(QtWidgets.QSplashScreen):
-    """
-    The splash screen
-    """
-    def __init__(self):
-        """
-        Constructor
-        """
-        super(SplashScreen, self).__init__()
-        self.setup_ui()
+class SplashScreen(fluentqt.SplashScreen):
+    """Simple Fluent startup surface with stage progress and a loading spinner."""
 
-    def setup_ui(self):
-        """
-        Set up the UI
-        """
+    def __init__(self):
+        super().__init__()
         self.setObjectName('splashScreen')
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.PreventContextMenu)
-        source_image = QtGui.QPixmap(':/graphics/openlp-splash-screen.png')
-        source_image.setDevicePixelRatio(self.devicePixelRatioF())
-        splash_image = source_image.scaled(370, 370, mode=QtCore.Qt.TransformationMode.SmoothTransformation)
-        source_image = None
-        self.setPixmap(splash_image)
+        self.setWindowFlags(QtCore.Qt.WindowType.SplashScreen | QtCore.Qt.WindowType.FramelessWindowHint)
+        self.setWindowTitle('OpenLP+')
+        self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
+        self.setIcon(QtGui.QIcon(':/icon/openlp-logo.svg'))
+        self.setIconSize(QtCore.QSize(128, 128))
+        self.setText(translate('OpenLP.SplashScreen', 'Starting OpenLP+…'))
+        self.setIndeterminate(True)
         self.resize(370, 370)
+
+    def showEvent(self, event):
+        """Native show refreshes progress; retain the indeterminate spinner."""
+        super().showEvent(event)
+        self.findChild(fluentqt.ProgressRing, 'splashProgressRing').setIsIndeterminate(True)
+
+    def set_status(self, message):
+        """Refresh the loading stage before the next synchronous startup task."""
+        self.setIndeterminate(True)
+        self.setText(message)
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
+    def set_stage_progress(self, stage, completed=None, total=None):
+        """Display stage item counts while keeping the loading spinner indeterminate."""
+        if total is None or total <= 0 or completed is None:
+            self.set_status(stage)
+            return
+        completed = max(0, min(completed, total))
+        self.setText(translate('OpenLP.SplashScreen', '{stage} — {completed} of {total}').format(
+            stage=stage, completed=completed, total=total))
+        self.setProgress(completed, total)
+        # Keep motion independent of the percentage: item counts do not measure time.
+        self.findChild(fluentqt.ProgressRing, 'splashProgressRing').setIsIndeterminate(True)
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)

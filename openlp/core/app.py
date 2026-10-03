@@ -123,31 +123,43 @@ class OpenLP(QtCore.QObject, LogMixin):
         can_show_splash = self.settings.value('core/show splash')
         if can_show_splash:
             self.splash = SplashScreen()
+            Registry().register_function('startup_progress', self.splash.set_stage_progress)
             self.splash.show()
         # make sure Qt really display the splash screen
         QtWidgets.QApplication.processEvents()
         # Check if OpenLP has been upgrade and if a backup of data should be created
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Checking data…'))
         self.backup_on_upgrade(has_run_wizard, can_show_splash)
         # start the main app window
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading components…'))
         Registry().toggle_suppressing()
         loader()
         Registry().toggle_suppressing()
         # Set the darkmode based on theme
         set_default_theme(app)
         layout_recovered = begin_layout_startup(self.settings, screens)
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Preparing the main window…'))
         self.main_window = MainWindow()
         self.main_window.installEventFilter(self.main_window)
         # Correct stylesheet bugs
         application_stylesheet = get_application_stylesheet()
         app.setStyleSheet(application_stylesheet or '')
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Initialising plugins…'))
         Registry().execute('bootstrap_initialise')
         State().flush_preconditions()
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading library and themes…'))
         Registry().execute('bootstrap_post_set_up')
         self.main_window.show()
         refine_modern_layout(self.main_window)
         apply_mica(self.main_window)
         if can_show_splash:
             # now kill the splashscreen
+            Registry().remove_function('startup_progress', self.splash.set_stage_progress)
             log.debug('Splashscreen closing')
             self.splash.close()
             log.debug('Splashscreen closed')

@@ -800,11 +800,14 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         """
         self._theme_list.clear()
         self.theme_list_widget.clear()
-        files = AppLocation.get_files('themes', '/*.json')
+        files = [file for file in AppLocation.get_files('themes', '/*.json')
+                 if (self.theme_path / file).exists()]
         # Sort the themes by its name considering language specific
         files.sort(key=lambda file_name: get_locale_key(str(file_name)))
-        # now process the file list of png files
-        for file in files:
+        stage = translate('OpenLP.SplashScreen', 'Loading themes')
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', stage, 0, len(files))
+        for completed, file in enumerate(files, 1):
             # check to see file is in theme root directory
             theme_path = self.theme_path / file
             if theme_path.exists():
@@ -834,6 +837,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 item_name.setData(QtCore.Qt.ItemDataRole.UserRole, text_name)
                 self.theme_list_widget.addItem(item_name)
                 self._theme_list[text_name] = theme_obj
+            if Registry().has_function('startup_progress'):
+                Registry().execute('startup_progress', stage, completed, len(files))
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes…'))
         self._push_themes()
 
     def _push_themes(self):

@@ -6,13 +6,14 @@ result is a local distribution; it is not an upstream supported wheel.
 """
 import argparse
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.4'
+VERSION = '1.9.2+openlp.5'
 QT_VERSION = '6.11.1'
 
 
@@ -93,6 +94,37 @@ def patch_subtle_split_buttons(source):
             ': (fluentStyle() == Subtle ? colors.subtleSecondary : colors.controlSecondary);')
 
 
+def patch_accessibility_factories(source):
+    """Avoid RTTI casts on QtWebEngine's private objects, which have no typeinfo."""
+    # These global factories are queried for every QObject, including WebEngine
+    # QQuickItems compiled without RTTI. Use Qt's metadata to accept only QWidget
+    # objects before the native factory attempts its component/interface casts.
+    files = (
+        'basicinput/private/BasicValueAccessibility_p.cpp',
+        'basicinput/private/ColorPickerAccessibility_p.cpp',
+        'basicinput/private/MultiSelectComboBoxAccessibility_p.cpp',
+        'collections/private/DataGridAccessibility_p.cpp',
+        'collections/private/FlipViewAccessibility_p.cpp',
+        'collections/private/SplitViewAccessibility_p.cpp',
+        'date_time/private/CalendarViewAccessibility_p.cpp',
+        'date_time/private/PickerAccessibility_p.cpp',
+        'navigation/private/NavigationSelectionAccessibility_p.cpp',
+        'scrolling/private/AnnotatedScrollBarAccessibility_p.cpp',
+        'scrolling/private/PipsPagerAccessibility_p.cpp',
+        'status_info/private/ProgressAccessibility_p.cpp',
+        'textfields/private/AutoSuggestBoxAccessibility_p.cpp',
+        'textfields/private/NumberBoxAccessibility_p.cpp',
+    )
+    pattern = r'dynamic_cast<([^>]+)>\(object\)'
+    for relative in files:
+        path = source / 'src/components' / relative
+        text = path.read_text()
+        patched, count = re.subn(pattern, r'dynamic_cast<\1>(qobject_cast<QWidget*>(object))', text)
+        if not count and 'qobject_cast<QWidget*>(object)' not in text:
+            raise RuntimeError(f'Pinned accessibility factory changed: {path}')
+        path.write_text(patched)
+
+
 def relocate_macos(extension):
     """Use PySide's frameworks; never ship absolute SDK framework references."""
     dependencies = subprocess.check_output(['otool', '-L', str(extension)], text=True)
@@ -128,6 +160,7 @@ def main():
     patch_disabled_icons(source)
     patch_selector_overflow(source)
     patch_subtle_split_buttons(source)
+    patch_accessibility_factories(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.

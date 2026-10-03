@@ -30,7 +30,7 @@ from openlp.core.common import extension_loader
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import translate, UiStrings
 from openlp.core.common.mixins import LogMixin, RegistryProperties
-from openlp.core.common.registry import RegistryBase
+from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.lib.plugin import Plugin, PluginStatus
 
 
@@ -157,17 +157,21 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         Loop through all the plugins and give them an opportunity to initialise themselves.
         """
         uninitialised_plugins = []
-        for plugin in State().list_plugins():
-            if plugin:
-                self.log_info('initialising plugins {plugin} in a {state} state'.format(plugin=plugin.name,
-                                                                                        state=plugin.is_active()))
-                if plugin.is_active():
-                    try:
-                        plugin.initialise()
-                        self.log_info('Initialisation Complete for {plugin}'.format(plugin=plugin.name))
-                    except Exception:
-                        uninitialised_plugins.append(plugin.name.title())
-                        self.log_exception('Unable to initialise plugin {plugin}'.format(plugin=plugin.name))
+        plugins = [plugin for plugin in State().list_plugins() if plugin and plugin.is_active()]
+        stage = translate('OpenLP.SplashScreen', 'Initialising plugins')
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', stage, 0, len(plugins))
+        for completed, plugin in enumerate(plugins, 1):
+            self.log_info(f'Initialising plugin {plugin.name}')
+            try:
+                plugin.initialise()
+                self.log_info('Initialisation Complete for {plugin}'.format(plugin=plugin.name))
+            except Exception:
+                uninitialised_plugins.append(plugin.name.title())
+                self.log_exception('Unable to initialise plugin {plugin}'.format(plugin=plugin.name))
+            # Handled failures count as processed items; existing error dialogs report them.
+            if Registry().has_function('startup_progress'):
+                Registry().execute('startup_progress', stage, completed, len(plugins))
         display_text = ''
         if uninitialised_plugins:
             display_text = translate('OpenLP.PluginManager', 'Unable to initialise the following plugins:') + \
@@ -184,6 +188,8 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
             QtWidgets.QMessageBox.information(None, UiStrings().Error, info_text,
                                               QtWidgets.QMessageBox.StandardButton(
                                                   QtWidgets.QMessageBox.StandardButton.Ok))
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes…'))
 
     def finalise_plugins(self):
         """

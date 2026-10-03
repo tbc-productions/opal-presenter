@@ -3,7 +3,7 @@ FluentQt and Python 3.14
 
 OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.4`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.2+openlp.5`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -102,3 +102,9 @@ verification before release.
 The OpenLP wheel also fixes native FluentQt QIcon painting: disabled Button
 and CommandBar overflow presenters request QIcon.Disabled rather than the
 normal icon image. QAction enabled state remains owned by FluentQt.
+
+The OpenLP wheel guards FluentQt's global accessibility factories with Qt widget
+metadata before attempting C++ RTTI casts. QtWebEngine's private Quick objects
+can be compiled without RTTI; casting those objects from the progress factory
+previously crashed macOS startup when the renderer received focus. Native
+Fluent and WebEngine accessibility remain enabled.
