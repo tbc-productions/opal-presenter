@@ -25,7 +25,6 @@ import logging
 import re
 from pathlib import Path
 
-import qtawesome as qta
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.toolbar import OpenLPToolbar
@@ -521,14 +520,13 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
 
         self._undo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Undo'))
-        self._undo_action.setIcon(self._mdi_icon_or_fallback('mdi.undo', UiIcons().undo))
+        self._undo_action.setIcon(UiIcons().undo)
         self._undo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Undo last edit.'))
         self._undo_action.setEnabled(False)
         self._undo_action.triggered.connect(self.undo)
 
         self._redo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Redo'))
-        self._redo_action.setIcon(self._mdi_icon_or_fallback(
-            'mdi.redo', QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_ArrowForward)))
+        self._redo_action.setIcon(UiIcons().redo)
         self._redo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Redo last undone edit.'))
         self._redo_action.setEnabled(False)
         self._redo_action.triggered.connect(self.redo)
@@ -538,15 +536,15 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
 
         button_definitions = [
             ('', 'st', translate('OpenLP.SpellTextEdit', 'Bold'),
-             self._mdi_icon_or_fallback('mdi.format-bold', UiIcons().bold), True),
+             UiIcons().bold, True),
             ('', 'it', translate('OpenLP.SpellTextEdit', 'Italic'),
-             self._mdi_icon_or_fallback('mdi.format-italic', UiIcons().italic), True),
+             UiIcons().italic, True),
             ('', 'u', translate('OpenLP.SpellTextEdit', 'Underline'),
-             self._mdi_icon_or_fallback('mdi.format-underline', UiIcons().text), True),
-            ('X₂', 'sb', translate('OpenLP.SpellTextEdit', 'Subscript'), None, False),
-            ('X²', 'su', translate('OpenLP.SpellTextEdit', 'Superscript'), None, False),
+             UiIcons().underline, True),
+            ('', 'sb', translate('OpenLP.SpellTextEdit', 'Subscript'), UiIcons().subscript, True),
+            ('', 'su', translate('OpenLP.SpellTextEdit', 'Superscript'), UiIcons().superscript, True),
             ('', 'uc', translate('OpenLP.SpellTextEdit', 'Uppercase'),
-             self._mdi_icon_or_fallback('mdi.format-letter-case-upper', UiIcons().text), True)
+             UiIcons().uppercase, True)
         ]
         for caption, tag, tooltip, icon, icon_only in button_definitions:
             action = self._toolbar.addAction(caption or tooltip)
@@ -560,7 +558,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._color_button = QtWidgets.QToolButton(self._toolbar)
         self._color_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
         self._color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._color_button.setIcon(self._mdi_icon_or_fallback('mdi.format-color-text', UiIcons().theme))
+        self._color_button.setIcon(UiIcons().text_color)
         self._color_button.setText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
         self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
         self._color_menu = QtWidgets.QMenu(self._color_button)
@@ -570,19 +568,20 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
 
         self._edit_color_button = QtWidgets.QToolButton(self._toolbar)
         self._edit_color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._edit_color_button.setIcon(self._mdi_icon_or_fallback('mdi.palette', UiIcons().theme))
+        self._edit_color_button.setIcon(UiIcons().palette)
         self._edit_color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
         self._edit_color_button.clicked.connect(self._edit_formatting_tags)
         self._toolbar.addWidget(self._edit_color_button)
 
         self._toolbar.addSeparator()
         remove_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
-        remove_action.setIcon(self._mdi_icon_or_fallback('mdi.format-clear', UiIcons().delete))
+        remove_action.setIcon(UiIcons().clear_formatting)
         remove_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
         remove_action.triggered.connect(self.remove_formatting)
 
-        remove_unused_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
-        remove_unused_action.setIcon(self._mdi_icon_or_fallback('mdi.format-color-marker-cancel', UiIcons().delete))
+        remove_unused_action = self._toolbar.addAction(
+            translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
+        remove_unused_action.setIcon(UiIcons().remove_formatting)
         remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
         remove_unused_action.triggered.connect(self.remove_unused_tags)
 
@@ -597,16 +596,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self.setViewportMargins(0, toolbar_height + 2, 0, 0)
         self.cursorPositionChanged.connect(self._update_toolbar_state)
 
-    @staticmethod
-    def _mdi_icon_or_fallback(mdi_name, fallback_icon):
-        """
-        Return an MDI icon when available, otherwise use a supplied fallback icon.
-        """
-        try:
-            return qta.icon(mdi_name)
-        except Exception:
-            return fallback_icon
-
     def _update_mode_button_text(self):
         """
         Update mode button text for the current mode.
@@ -614,7 +603,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         if not self._mode_button:
             return
         self._mode_button.setText('')
-        self._mode_button.setIcon(self._mdi_icon_or_fallback('mdi.code-tags', UiIcons().shortcuts))
+        self._mode_button.setIcon(UiIcons().code)
         self._mode_button.blockSignals(True)
         self._mode_button.setChecked(not self.rich_text_mode)
         self._mode_button.blockSignals(False)

@@ -24,6 +24,8 @@ Provide common toolbar handling for OpenLP
 import logging
 
 from PySide6 import QtCore, QtGui
+
+from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import translate
 
@@ -401,9 +403,6 @@ class MediaToolbar(QtWidgets.QWidget):
         else:
             icon = UiIcons().volume_high
         if not isinstance(icon, QtGui.QIcon):
-            style = QtWidgets.QApplication.style() or self.style()
-            if value == 0:
-                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolumeMuted)
-            else:
-                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolume)
+            name = 'speaker_off' if value == 0 else 'speaker_2'
+            icon = fluent_icon(f'ic_fluent_{name}_24_regular')
         self.volume_button.setIcon(icon)

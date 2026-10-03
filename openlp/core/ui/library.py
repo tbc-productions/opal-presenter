@@ -227,14 +227,14 @@ class FolderLibraryItem(MediaManagerItem):
                                                      service=StringContent.Service.title()),
                 can_shortcuts=True,
                 text=self.plugin.get_string(StringContent.Service)['title'],
-                icon=UiIcons().add,
+                icon=UiIcons().plus,
                 triggers=self.on_add_click)
         if self.add_to_service_item:
             create_widget_action(self.list_view, separator=True)
             self.add_to_service_context_action = create_widget_action(
                 self.list_view,
                 text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
-                icon=UiIcons().add,
+                icon=UiIcons().plus,
                 triggers=self.on_add_edit_click)
         if self.has_delete_icon:
             _add_library_context_menu_separator(self.list_view)

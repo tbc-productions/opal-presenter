@@ -413,7 +413,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.go_live_button.setDefaultAction(self.go_live_action)
                 self.top_label_horizontal.addWidget(self.go_live_button)
                 self.toolbar.removeAction(self.go_live_action)
-            self.add_to_service_action = self.toolbar.add_toolbar_action('addToService', icon=UiIcons().add,
+            self.add_to_service_action = self.toolbar.add_toolbar_action('addToService', icon=UiIcons().plus,
                                                                           tooltip=translate('OpenLP.SlideController',
                                                                                             'Add to Service.'),
                                                                           triggers=self.on_preview_add_to_service)

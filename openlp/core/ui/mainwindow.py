@@ -140,7 +140,7 @@ class Ui_MainWindow(object):
         self.layout_preset_navigation = LayoutPresetNavigation(main_window)
         self.layout_preset_navigation.setObjectName('layout_preset_navigation')
         for button, icon in zip(self.layout_preset_navigation.buttons,
-                                (UiIcons().dashboard, UiIcons().settings, UiIcons().live)):
+                                (UiIcons().dashboard, UiIcons().mode_setup, UiIcons().live)):
             button.setIcon(icon)
         self.layout_preset_navigation.contentHost().addOwnedPage(main_window.takeCentralWidget())
         self.layout_preset_navigation.contentHost().setCurrentIndex(0, animated=False)
@@ -199,7 +199,7 @@ class Ui_MainWindow(object):
         self.status_bar.addPermanentWidget(self.default_theme_label)
         # Library and Themes are separate dock widgets; Qt tabifies them in the same dock area.
         self.media_manager_dock = dock_widget_class(main_window, 'media_manager_dock',
-                                                   UiIcons().box)
+                                                   UiIcons().library)
         self.media_tool_box = MediaToolBox()
         self.media_tool_box.setObjectName('media_tool_box')
         self.media_tool_box.setStyleSheet(get_library_stylesheet())
@@ -592,7 +592,7 @@ class Ui_MainWindow(object):
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
-        self.layout_preset_navigation.setItemText(1, translate('OpenLP.MainWindow', 'Setup'))
+        self.layout_preset_navigation.setItemText(1, translate('OpenLP.MainWindow', 'Prepare'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',

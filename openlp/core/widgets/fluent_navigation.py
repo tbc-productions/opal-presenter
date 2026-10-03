@@ -1,7 +1,7 @@
 """Native Fluent button navigation retaining logical Qt tab indexes."""
 from PySide6 import QtCore, QtGui, QtWidgets as _qt
 import fluentqt
-import qtawesome as qta
+from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.fluent_buttons import QPushButton
 
 
@@ -196,7 +196,7 @@ class LayoutPresetNavigation(fluentqt.NavigationView):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
         self.pane_toggle = QPushButton(self.pane)
-        self.pane_toggle.setIcon(qta.icon('mdi.menu'))
+        self.pane_toggle.setIcon(fluent_icon('ic_fluent_line_horizontal_3_24_regular'))
         self.pane_toggle.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
         self.pane_toggle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
         self.pane_toggle.clicked.connect(self.toggle_compact)

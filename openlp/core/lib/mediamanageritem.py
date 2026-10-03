@@ -284,7 +284,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
             toolbar_actions.append(['Live', StringContent.Live, UiIcons().live, self.on_live_click])
         # Add to service Button
         if self.can_add_to_service:
-            toolbar_actions.append(['Service', StringContent.Service, UiIcons().add, self.on_add_click])
+            toolbar_actions.append(['Service', StringContent.Service, UiIcons().plus, self.on_add_click])
         added_actions = self.add_actionlist_to_toolbar(toolbar_actions)
         action_index = 0
         if self.can_preview:
@@ -376,7 +376,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                                                                         service=StringContent.Service.title()),
                                  can_shortcuts=True,
                                  text=self.plugin.get_string(StringContent.Service)['title'],
-                                 icon=UiIcons().add,
+                                 icon=UiIcons().plus,
                                  triggers=self.on_add_click)
         if self.has_delete_icon:
             create_widget_action(self.list_view, separator=True)
@@ -393,7 +393,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.add_to_service_context_action = create_widget_action(
                 self.list_view,
                 text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
-                icon=UiIcons().add,
+                icon=UiIcons().plus,
                 triggers=self.on_add_edit_click)
         self.add_custom_context_actions()
         # Create the context menu and add all actions from the list_view.
