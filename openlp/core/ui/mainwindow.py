@@ -108,6 +108,8 @@ class Ui_MainWindow(object):
         """
         main_window.setObjectName('MainWindow')
         self._modern_appearance = is_modern_style()
+        if self._modern_appearance:
+            main_window.setProperty('fluentUi', True)
         main_window.setWindowIcon(UiIcons().main_icon)
         main_window.setDockNestingEnabled(True)
         if is_macosx():

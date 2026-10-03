@@ -8,6 +8,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
+from openlp.core.ui.fluentstyle import fluent_colors, get_fluent_controls_stylesheet
 
 
 log = logging.getLogger(__name__)
@@ -24,20 +25,26 @@ def is_modern_style():
 def set_modern_palette(app):
     """Use solid content surfaces and a quiet blue accent in either color scheme."""
     palette = app.palette()
-    dark = palette.color(QtGui.QPalette.ColorRole.Window).lightness() < 128
+    tokens = fluent_colors(palette)
     colors = {
-        QtGui.QPalette.ColorRole.Window: '#202631' if dark else '#eef3f9',
-        QtGui.QPalette.ColorRole.Base: '#171c24' if dark else '#ffffff',
-        QtGui.QPalette.ColorRole.AlternateBase: '#202631' if dark else '#f5f8fc',
-        QtGui.QPalette.ColorRole.Button: '#293140' if dark else '#f4f7fb',
-        QtGui.QPalette.ColorRole.Highlight: '#005fcc' if dark else '#d7e9ff',
-        QtGui.QPalette.ColorRole.HighlightedText: '#ffffff' if dark else '#004ca8',
-        QtGui.QPalette.ColorRole.Link: '#70b5ff' if dark else '#0067c0',
-        QtGui.QPalette.ColorRole.Mid: '#3e495a' if dark else '#d4deeb',
+        QtGui.QPalette.ColorRole.Window: tokens['window'],
+        QtGui.QPalette.ColorRole.WindowText: tokens['text'],
+        QtGui.QPalette.ColorRole.Base: tokens['surface'],
+        QtGui.QPalette.ColorRole.Text: tokens['text'],
+        QtGui.QPalette.ColorRole.AlternateBase: tokens['alternate'],
+        QtGui.QPalette.ColorRole.Button: tokens['control'],
+        QtGui.QPalette.ColorRole.ButtonText: tokens['text'],
+        QtGui.QPalette.ColorRole.Highlight: tokens['selection'],
+        QtGui.QPalette.ColorRole.HighlightedText: tokens['text'],
+        QtGui.QPalette.ColorRole.Link: tokens['accent'],
+        QtGui.QPalette.ColorRole.Mid: tokens['border'],
     }
     for role, color in colors.items():
         for group in (QtGui.QPalette.ColorGroup.Active, QtGui.QPalette.ColorGroup.Inactive):
             palette.setColor(group, role, QtGui.QColor(color))
+    for role in (QtGui.QPalette.ColorRole.WindowText, QtGui.QPalette.ColorRole.Text,
+                 QtGui.QPalette.ColorRole.ButtonText):
+        palette.setColor(QtGui.QPalette.ColorGroup.Disabled, role, QtGui.QColor(tokens['disabled']))
     app.setPalette(palette)
     font = app.font()
     font.setFamily('Segoe UI')
@@ -74,41 +81,29 @@ QMainWindow#MainWindow QTreeView::item, QMainWindow#MainWindow QListView::item {
 QMainWindow#MainWindow QTreeView QHeaderView::section {
     background: palette(button); border: none; padding: 3px;
 }
-QMainWindow#MainWindow QLineEdit {
-    background: palette(base); border: 1px solid palette(mid); border-radius: 4px; padding: 3px;
-}
-QMainWindow#MainWindow QLineEdit:focus { border-color: palette(link); }
-QMainWindow#MainWindow QToolButton, QMainWindow#MainWindow QPushButton {
-    background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 2px 4px;
-}
-QMainWindow#MainWindow QToolButton:hover, QMainWindow#MainWindow QPushButton:hover {
-    background: palette(button); border-color: palette(mid);
-}
-QMainWindow#MainWindow QToolButton:checked, QMainWindow#MainWindow QPushButton:pressed {
-    background: palette(highlight); color: palette(highlighted-text); border-color: palette(link);
-}
 QMainWindow#MainWindow QToolButton#qt_toolbar_ext_button { padding: 0; border: none; }
-QMainWindow#MainWindow QTabBar::tab { background: palette(window); padding: 5px 8px; border: none; }
-QMainWindow#MainWindow QTabBar::tab:selected {
-    background: palette(base); color: palette(link); border-bottom: 2px solid palette(link);
-}
-QMainWindow#MainWindow QToolButton[primaryAction="true"] {
-    background: #0067c0; color: white; border-color: #0067c0; padding: 3px 8px; font-weight: 600;
-}
-QMainWindow#MainWindow QToolButton[primaryAction="true"]:hover { background: #005aab; }
-QMainWindow#MainWindow QToolButton[primaryAction="true"]:disabled {
-    background: palette(button); color: palette(mid); border-color: palette(mid);
-}
 QMainWindow#MainWindow QLabel#output_status { border-radius: 3px; padding: 3px 8px; }
 QMainWindow#MainWindow QLabel#output_status[onAir="true"] { background: #bceac8; color: #125525; }
 QMainWindow#MainWindow QLabel#output_status[onAir="false"] {
     background: palette(button); color: palette(window-text);
 }
-"""
+""" + get_fluent_controls_stylesheet()
 
 
 class ModernPresetTabBar(QtWidgets.QTabBar):
     """Keep the existing preset tab API, with upright icon-and-label navigation."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self.update()
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self.update()
 
     def tabSizeHint(self, index):
         width = max(64, self.fontMetrics().horizontalAdvance(self.tabText(index)) + 16)
@@ -131,13 +126,20 @@ class ModernPresetTabBar(QtWidgets.QTabBar):
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         palette = self.palette()
+        colors = fluent_colors(palette)
+        hovered = self.tabAt(self.mapFromGlobal(QtGui.QCursor.pos())) if self.underMouse() else -1
         for index in range(self.count()):
+            if not self.isTabVisible(index):
+                continue
             rect = self.tabRect(index).adjusted(4, 4, -4, -4)
             selected = index == self.currentIndex()
-            if selected:
+            if selected or hovered == index:
                 painter.setPen(QtCore.Qt.PenStyle.NoPen)
-                painter.setBrush(palette.highlight())
+                painter.setBrush(QtGui.QColor(colors['selection'] if selected else colors['hover']))
                 painter.drawRoundedRect(rect, 5, 5)
+            if selected:
+                painter.setBrush(QtGui.QColor(colors['accent']))
+                painter.drawRoundedRect(QtCore.QRectF(rect.left(), rect.center().y() - 8, 3, 16), 1.5, 1.5)
             icon_rect = QtCore.QRect(rect.center().x() - 10, rect.top() + 5, 20, 20)
             self.tabIcon(index).paint(painter, icon_rect)
             painter.setPen(palette.highlightedText().color() if selected else palette.windowText().color())

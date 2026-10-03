@@ -2,6 +2,7 @@
 from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.common.platform import is_win
+from openlp.core.ui.fluentstyle import get_fluent_dock_stylesheet
 
 if is_win():
     import PySide6QtAds as ads
@@ -77,6 +78,7 @@ class AdvancedDockingMixin:
         ads.CDockManager.setAutoHideConfigFlags(ads.CDockManager.eAutoHideFlag.DefaultAutoHideConfig)
         content = self.takeCentralWidget()
         self.dock_manager = ads.CDockManager(self)
+        self.dock_manager.setStyleSheet(self.dock_manager.styleSheet() + get_fluent_dock_stylesheet())
         self.setCentralWidget(self.dock_manager)
         self.controller_dock = ads.CDockWidget(translate('OpenLP.MainWindow', 'Slide controllers'))
         self.controller_dock.setObjectName('slide_controllers_dock')

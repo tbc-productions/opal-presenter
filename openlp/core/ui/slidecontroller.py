@@ -44,6 +44,7 @@ from openlp.core.lib.ui import create_action
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.fluentstyle import FluentAccentButton
 from openlp.core.ui.media import MediaPlayItem, MediaState, media_empty_song
 from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
@@ -420,8 +421,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             if modern:
                 self.go_live_action.setText(translate('OpenLP.SlideController', 'Go live'))
                 self.go_live_action.setIcon(UiIcons().get_icon_variant('live', color='white'))
-                self.go_live_button = QtWidgets.QToolButton(self.panel)
-                self.go_live_button.setProperty('primaryAction', True)
+                self.go_live_button = FluentAccentButton(self.panel)
                 self.go_live_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
                 self.go_live_button.setDefaultAction(self.go_live_action)
                 self.top_label_horizontal.addWidget(self.go_live_button)

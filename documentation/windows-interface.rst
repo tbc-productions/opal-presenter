@@ -5,8 +5,8 @@ Settings > Configure OpenLP+ > General > UI Settings contains an
 ``Interface appearance (needs restart)`` choice:
 
 * **Classic** preserves the existing rendering and remains the default.
-* **Modern** adds solid content panels, blue selection accents, upright layout
-  navigation, larger panel headers, and a prominent Go live button. Service and
+* **Modern** adds Fluent-style neutral surfaces, rounded controls, accent focus
+  indicators, upright layout navigation, and a compact accent Go live button. Service and
   Library remain on the left; Preview and Live keep their slide lists above the
   screen previews, with adjustable dividers.
 
@@ -15,6 +15,12 @@ Modern supports system, light and dark colors; selecting QDarkStyle with Modern
 uses Modern's dark palette. Selecting Classic retains QDarkStyle rendering.
 Restart OpenLP+ after changing either setting. Saved layouts remain available.
 macOS and Linux continue using their existing interface.
+
+Modern's Fluent presentation uses the existing PySide6 widgets and retains their
+actions, shortcuts and accessibility roles. Hover animation respects Windows'
+animation preference. Dialogs and floating docks share the appearance; projected
+slide content is unaffected. No FluentQt dependency is required: its published
+bindings target an older Python and Qt runtime than this application uses.
 
 Modern uses Qt Advanced Docking System for Service, Library, Themes and
 Projectors. Unlock panels in the View menu, then drag a pane's tab or title
