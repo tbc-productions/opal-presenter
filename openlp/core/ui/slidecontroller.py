@@ -419,7 +419,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.slide_layout.setSpacing(0)
         self.slide_layout.setObjectName('SlideLayout')
         # Set up the preview display
-        self.preview_display = DisplayWindow(self, window_title='Live' if self.is_live else 'Preview')
+        self.preview_display = DisplayWindow(self, window_title='Live' if self.is_live else 'Preview', embedded=True)
         # Live preview always shows transitions; service preview shows transitions based on setting
         # Check window_title since is_live might not be finalized yet for subclasses
         if self.preview_display.window_title == 'Live':

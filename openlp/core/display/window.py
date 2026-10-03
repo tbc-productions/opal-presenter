@@ -168,7 +168,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
     This is a window to show the output
     """
     def __init__(self, parent=None, screen=None, can_show_startup_screen=True, start_hidden=False,
-                 after_loaded_callback=None, window_title=None):
+                 after_loaded_callback=None, window_title=None, embedded=False):
         """
         Create the display window
         """
@@ -176,18 +176,20 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.screen_number = None
         self.after_loaded_callback = after_loaded_callback
         # The live output is an independent window so the main window can cover it when topmost is disabled.
-        # Embedded preview renderers still use a tool window.
+        # Controller previews must be ordinary widgets from construction: changing
+        # flags after WebEngine creates its native surface leaves floating views on macOS.
         is_live_display = bool(screen and screen.is_display)
-        window_type = QtCore.Qt.WindowType.Window if is_live_display else QtCore.Qt.WindowType.Tool
+        window_type = (QtCore.Qt.WindowType.Widget if embedded else
+                       QtCore.Qt.WindowType.Window if is_live_display else QtCore.Qt.WindowType.Tool)
         flags = QtCore.Qt.WindowType.FramelessWindowHint | window_type
         if is_live_display and self.settings.value('core/always on top'):
             flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
-        if self.settings.value('advanced/x11 bypass wm'):
+        if not embedded and self.settings.value('advanced/x11 bypass wm'):
             flags |= QtCore.Qt.WindowType.X11BypassWindowManagerHint
-        elif not is_live_display:
+        elif not embedded and not is_live_display:
             # This helps the window not being hidden by KDE's "Hide utility windows for inactive applications" option
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_X11NetWmWindowTypeDialog)
-        if is_macosx() and not is_live_display:
+        if is_macosx() and not embedded and not is_live_display:
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
         self._is_initialised = False
         self._is_manual_close = False
@@ -196,13 +198,13 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.window_title = window_title
         self.setWindowTitle(translate('OpenLP.DisplayWindow', 'Display Window'))
         self.setWindowFlags(flags)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
         self.setAutoFillBackground(True)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = self.init_webengine()
-        self.webview.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.webview.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
         self.webview.page().setBackgroundColor(QtCore.Qt.GlobalColor.transparent)
         self.webview.display_clicked = self.disable_display
         self.layout.addWidget(self.webview)

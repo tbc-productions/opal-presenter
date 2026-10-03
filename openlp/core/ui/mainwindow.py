@@ -627,7 +627,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.copy_data = False
         self.settings.set_up_default_values()
         self.about_form = AboutForm(self)
-        SettingsForm()
+        SettingsForm(self)
         self.formatting_tag_form = FormattingTagForm(self)
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface

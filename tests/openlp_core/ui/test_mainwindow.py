@@ -73,6 +73,14 @@ def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
     assert main_window.main_content_layout.contentsMargins().left() == 6
 
 
+def test_settings_dialog_has_main_window_as_smoke_host(main_window):
+    dialog = main_window.settings_form
+    assert dialog.parentWidget() is main_window
+    assert not dialog.isWindow()
+    assert dialog.isHidden()
+    assert dialog.isSmokeEnabled()
+
+
 def test_classic_navigation_and_spacing(main_window):
     from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
     assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
@@ -1583,7 +1591,7 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
     Registry().register('application-qt', QtWidgets.QApplication.instance())
     Registry().register('media_controller', MagicMock())
 
-    def display_stub(parent, window_title):
+    def display_stub(parent, window_title, embedded=False):
         widget = QtWidgets.QWidget(parent)
         widget.window_title = window_title
         widget.show_display = MagicMock()
@@ -1608,3 +1616,36 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
         assert action in controller.toolbar._command_actions[action].primaryActions()
     assert controller.song_menu_action.menu() is None
     assert controller.song_menu is not None
+
+
+def test_preview_renderers_are_embedded_below_dialogs(main_window):
+    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, window_title, embedded=False):
+        widget = QtWidgets.QWidget(parent, QtCore.Qt.WindowType.Widget if embedded else QtCore.Qt.WindowType.Tool)
+        widget.window_title = window_title
+        widget.show_display = MagicMock()
+        return widget
+
+    for controller_class in (PreviewController, LiveController):
+        controller = controller_class(main_window)
+        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        assert not controller.preview_display.isWindow()
+        assert controller.preview_display.window() is main_window
+
+def test_shutdown_wait_dialog_has_room_for_text_and_progress(qapp):
+    parent = QtWidgets.QWidget()
+    parent.resize(900, 600)
+    parent.show()
+    with MainWindow._show_wait_dialog(parent, 'Please Wait', 'Waiting for some things to finish...'):
+        dialog = parent.findChild(QtWidgets.QProgressDialog)
+        assert dialog is not None
+        assert dialog.width() >= 360
+        assert dialog.height() > 70
+        assert dialog._label.height() >= dialog._label.heightForWidth(dialog._label.width())
+        assert dialog.layout().contentsMargins().left() >= 24
+        assert parent.rect().contains(dialog.geometry())
+    parent.close()

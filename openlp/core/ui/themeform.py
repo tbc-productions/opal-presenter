@@ -25,6 +25,7 @@ import logging
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui
+from PySide6.QtWidgets import QDialog
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import is_not_image_file
@@ -42,7 +43,7 @@ from openlp.core.widgets.dialogs import FileDialog
 log = logging.getLogger(__name__)
 
 
-class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
+class ThemeForm(QDialog, Ui_ThemeWizard, RegistryProperties):
     """
     This is the Theme dialog, which allows easy creation and editing of
     OpenLP themes.
@@ -203,13 +204,13 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         if not event:
             event = QtGui.QResizeEvent(self.size(), self.size())
-        QtWidgets.QDialog.resizeEvent(self, event)
+        QDialog.resizeEvent(self, event)
 
     def showEvent(self, event):
         """
         Ensure preview layout and scaling are recomputed whenever the dialog is shown.
         """
-        QtWidgets.QDialog.showEvent(self, event)
+        QDialog.showEvent(self, event)
         self._apply_preview_layout_geometry()
         if getattr(self, '_initial_preview_refresh_pending', False):
             QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
@@ -371,7 +372,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             self.setWindowTitle(UiStrings().NewTheme)
         self._initial_preview_refresh_pending = True
         QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
-        return QtWidgets.QDialog.exec(self)
+        return QDialog.exec(self)
 
     def _sync_preview_to_current_screen(self):
         """
@@ -836,4 +837,4 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.background_filename = destination_path
         self.theme_manager.save_theme(self.theme)
         self.theme_manager.save_preview(self.theme.theme_name, self.preview_box.save_screenshot())
-        return QtWidgets.QDialog.accept(self)
+        return QDialog.accept(self)

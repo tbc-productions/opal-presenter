@@ -178,7 +178,7 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_preview_page_values.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QDialog.exec')
+@patch('openlp.core.ui.themeform.QDialog.exec')
 @patch('openlp.core.ui.themeform.ScreenList')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, mocked_dialog_exec, settings):
@@ -250,7 +250,7 @@ def test_update_lines_text(mocked_setup, settings):
     theme_form.main_line_count_label.setText.assert_called_once_with('(approximately 10 lines per slide)')
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QDialog.resizeEvent')
+@patch('openlp.core.ui.themeform.QDialog.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -275,7 +275,7 @@ def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, setting
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QDialog.resizeEvent')
+@patch('openlp.core.ui.themeform.QDialog.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -300,7 +300,7 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QDialog.exec', return_value=0)
+@patch('openlp.core.ui.themeform.QDialog.exec', return_value=0)
 @patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_shot, mocked_dialog_exec, settings):

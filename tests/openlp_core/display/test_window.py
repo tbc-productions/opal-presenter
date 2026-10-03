@@ -1290,3 +1290,18 @@ def test_run_in_display_dumps_json(display_window_env, mock_settings):
     # THEN: The parameters should be correctly converted to JSON
     display_window._run_javascript.assert_called_once_with('requestAction(\'test_event\', 1.23, "a \\"string\", '
                                                            '[1, 2, "test"], {"test1": "test2"})', False)
+
+
+@patch('openlp.core.display.window.is_macosx', return_value=True)
+def test_embedded_preview_has_no_native_tool_or_transparency_flags(mocked_is_macosx, display_window_env, mock_settings):
+    """Embed before WebEngine starts, rather than converting an existing native tool window."""
+    from PySide6 import QtWidgets
+    mock_settings.value.return_value = True
+    parent = QtWidgets.QWidget()
+    display = DisplayWindow(parent, window_title='Preview', embedded=True)
+    assert not display.isWindow()
+    assert display.parentWidget() is parent
+    assert not display.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow)
+    assert not display.testAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert not display.windowFlags() & QtCore.Qt.WindowType.X11BypassWindowManagerHint
+    display.webview.setAttribute.assert_called_with(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, False)

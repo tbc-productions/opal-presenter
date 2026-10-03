@@ -6,6 +6,83 @@ from openlp.core.widgets.fluent_buttons import QPushButton
 from openlp.core.widgets.fluent_text import display_text
 
 
+class FluentDialog(fluentqt.Dialog):
+    """Native Fluent dialog accepting the legacy parent/window-flags signature."""
+    def __init__(self, parent=None, flags=QtCore.Qt.WindowType(0)):
+        # Native Dialog owns its same-window presentation. Legacy title-bar
+        # flags must not turn an embedded dialog back into a separate Qt window.
+        super().__init__(parent)
+        # Qt's opacity-effect capture conflicts with accelerated WebEngine views
+        # on macOS, leaving dialog children blank until a later repaint. Keep the
+        # native effect alive (FluentQt owns it), but paint the contents directly.
+        self.graphicsEffect().setEnabled(False)
+        self.setSmokeEnabled(True)
+        self.setAnimationEnabled(True)
+        self._preferred_minimum = QtCore.QSize()
+        if self.parentWidget() is not None:
+            self.parentWidget().installEventFilter(self)
+        # Embedded widgets are automatically shown with their parent unless
+        # explicitly hidden. Dialogs must wait for show(), open() or exec().
+        self.hide()
+
+    def _prepare_size(self):
+        """Measure content including Fluent's shadow and generous inner padding."""
+        layout = self.layout()
+        if layout is None:
+            return
+        padding = Spacing.Padding.Dialog
+        margins = layout.contentsMargins()
+        layout.setContentsMargins(max(padding, margins.left()), max(padding, margins.top()),
+                                  max(padding, margins.right()), max(padding, margins.bottom()))
+        layout.setSpacing(max(Spacing.Medium, layout.spacing()))
+        self.ensurePolished()
+        layout.invalidate()
+        layout.activate()
+        self._preferred_minimum = self._preferred_minimum.expandedTo(self.minimumSize())
+        preferred = self.sizeHint().expandedTo(self.minimumSizeHint()).expandedTo(self._preferred_minimum)
+        width = max(360, self.width(), preferred.width())
+        parent = self.parentWidget()
+        available = parent.size() if parent is not None else self.screen().availableGeometry().size()
+        width = min(width, available.width(), self.maximumWidth())
+        height = max(self.height(), preferred.height(), layout.totalHeightForWidth(width))
+        height = min(height, available.height(), self.maximumHeight())
+        self.setMinimumSize(self._preferred_minimum.boundedTo(available))
+        self.resize(width, height)
+        layout.activate()
+
+    def _constrain_position(self):
+        parent = self.parentWidget()
+        if parent is not None:
+            self.move(max(0, min(self.x(), parent.width() - self.width())),
+                      max(0, min(self.y(), parent.height() - self.height())))
+
+    def open(self):
+        self._prepare_size()
+        super().open()
+
+    def exec(self):
+        self._prepare_size()
+        return super().exec()
+
+    def showEvent(self, event):
+        self._prepare_size()
+        super().showEvent(event)
+        self._constrain_position()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self._constrain_position()
+
+    def eventFilter(self, watched, event):
+        if watched is self.parentWidget() and event.type() == QtCore.QEvent.Type.Resize and self.isVisible():
+            self._prepare_size()
+            self._constrain_position()
+        return super().eventFilter(watched, event)
+
+
+QDialog = FluentDialog
+
+
 class _ProgressRail(fluentqt.ProgressBar):
     """Expand the native Fluent rail to its allocated layout width."""
     def __init__(self, parent=None):
@@ -236,8 +313,8 @@ class FluentTabWidget(_qt.QWidget):
 QTabWidget = FluentTabWidget
 
 
-class FluentProgressDialog(_qt.QDialog):
-    """Qt modal lifecycle with native Fluent label, rail and cancellation button."""
+class FluentProgressDialog(FluentDialog):
+    """Native Fluent dialog with progress and cancellation contracts."""
     canceled = QtCore.Signal()
 
     def __init__(self, *args):
@@ -250,6 +327,7 @@ class FluentProgressDialog(_qt.QDialog):
             parent = args[0]
         super().__init__(parent)
         self._label = fluentqt.Label(label, self)
+        self._label.setWordWrap(True)
         self._progress = QProgressBar(self)
         self._progress.setRange(minimum, maximum)
         self._cancel = QPushButton(cancel, self)
@@ -367,7 +445,7 @@ class FluentProgressDialog(_qt.QDialog):
 QProgressDialog = FluentProgressDialog
 
 
-class FluentMessageBox(_qt.QMessageBox):
+class _MessageBoxCommands(_qt.QMessageBox):
     """Qt message/result contracts with native Fluent command controls."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -397,11 +475,14 @@ class FluentMessageBox(_qt.QMessageBox):
                 super().setEscapeButton(button)
         if self.escapeButton() is None:
             candidate = self._fluent_commands.get(self.StandardButton.Cancel)
+            if candidate is None and len(self.buttons()) == 1:
+                candidate = self.buttons()[0]
             if candidate is None:
-                rejection = [button for button in self.buttons() if self.buttonRole(button)
-                             in (self.ButtonRole.RejectRole, self.ButtonRole.NoRole)]
-                if len(rejection) == 1:
-                    candidate = rejection[0]
+                for role in (self.ButtonRole.RejectRole, self.ButtonRole.NoRole):
+                    rejection = [button for button in self.buttons() if self.buttonRole(button) == role]
+                    if len(rejection) == 1:
+                        candidate = rejection[0]
+                        break
             if candidate is not None:
                 super().setEscapeButton(candidate)
 
@@ -505,6 +586,103 @@ class FluentMessageBox(_qt.QMessageBox):
         return cls._message(cls.Icon.Question, parent, title, text, buttons, defaultButton)
 
 
+class FluentMessageBox(FluentDialog):
+    """Present messages in a native Dialog, retaining Qt button/result contracts."""
+    Icon = _qt.QMessageBox.Icon
+    StandardButton = _qt.QMessageBox.StandardButton
+    StandardButtons = _qt.QMessageBox.StandardButtons
+    Ok = StandardButton.Ok
+    ButtonRole = _qt.QMessageBox.ButtonRole
+    buttonClicked = QtCore.Signal(_qt.QAbstractButton)
+
+    def __init__(self, *args, **kwargs):
+        self._commands = _MessageBoxCommands(*args, **kwargs)
+        super().__init__(self._commands.parentWidget())
+        self._commands.setParent(self)
+        self._commands.hide()
+        # QMessageBox suppresses window titles on macOS; Fluent displays them
+        # inside the dialog, so retain the explicitly supplied title.
+        title = kwargs.get('title', args[1] if len(args) > 1 else self._commands.windowTitle())
+        self.setWindowTitle(title)
+        self._commands.finished.connect(self.done)
+        self._commands.buttonClicked.connect(self.buttonClicked.emit)
+        layout = _qt.QVBoxLayout(self)
+        self._title = fluentqt.Label(self)
+        self._icon_label = fluentqt.Label(self)
+        layout.addWidget(self._icon_label)
+        self._text = fluentqt.Label(self)
+        self._info = fluentqt.Label(self)
+        self._details = fluentqt.Label(self)
+        for label in (self._title, self._text, self._info, self._details):
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        self._buttons = _qt.QHBoxLayout()
+        self._buttons.addStretch()
+        layout.addLayout(self._buttons)
+        self.setMinimumWidth(320)
+
+    def __getattr__(self, name):
+        commands = self.__dict__.get('_commands')
+        if commands is not None:
+            return getattr(commands, name)
+        raise AttributeError(name)
+
+    def _sync_content(self):
+        self._commands._replace_commands()
+        self._icon_label.setPixmap(self._commands.iconPixmap())
+        self._icon_label.setVisible(not self._commands.iconPixmap().isNull())
+        self._text.setTextFormat(self._commands.textFormat())
+        for label, text in ((self._title, self.windowTitle()), (self._text, self.text()),
+                            (self._info, self.informativeText()), (self._details, self.detailedText())):
+            label.setText(text)
+            label.setVisible(bool(text))
+        while self._buttons.count() > 1:
+            self._buttons.takeAt(1)
+        for button in self.buttons():
+            self._buttons.addWidget(button)
+            button.show()
+        if self.defaultButton() is None and self.buttons():
+            self.setDefaultButton(self.buttons()[0])
+        if self.defaultButton() is not None:
+            self.defaultButton().setFocus()
+
+    def showEvent(self, event):
+        self._sync_content()
+        self.adjustSize()
+        super().showEvent(event)
+
+    def exec(self):
+        self._sync_content()
+        return super().exec()
+
+    def keyPressEvent(self, event):
+        button = None
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            button = self.escapeButton()
+            if button is None:
+                event.accept()
+                return
+        elif event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter):
+            button = self.defaultButton()
+        if button is not None:
+            if button.isEnabled():
+                button.click()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def reject(self):
+        button = self.escapeButton()
+        if button is not None and button.isEnabled():
+            button.click()
+
+    _message = classmethod(_MessageBoxCommands._message.__func__)
+    information = classmethod(_MessageBoxCommands.information.__func__)
+    warning = classmethod(_MessageBoxCommands.warning.__func__)
+    critical = classmethod(_MessageBoxCommands.critical.__func__)
+    question = classmethod(_MessageBoxCommands.question.__func__)
+
+
 QMessageBox = FluentMessageBox
 
 
@@ -515,7 +693,7 @@ class FluentColorDialog:
     @staticmethod
     def getColor(initial=None, parent=None, title='', options=_qt.QColorDialog.ColorDialogOption(0)):
         from PySide6 import QtGui
-        dialog = fluentqt.Dialog(parent)
+        dialog = FluentDialog(parent)
         dialog.setWindowTitle(title or 'Choose a colour')
         picker = fluentqt.ColorPicker(dialog)
         if initial is not None:
@@ -536,3 +714,63 @@ class FluentColorDialog:
 
 
 QColorDialog = FluentColorDialog
+
+
+class FluentInputDialog:
+    """Input prompts using Fluent dialogs and native Fluent fields."""
+    @staticmethod
+    def _prompt(parent, title, label, field):
+        from openlp.core.widgets.fluent import QDialogButtonBox
+        dialog = FluentDialog(parent)
+        dialog.setWindowTitle(title)
+        layout = _qt.QVBoxLayout(dialog)
+        layout.addWidget(fluentqt.Label(title, dialog))
+        prompt = fluentqt.Label(label, dialog)
+        prompt.setWordWrap(True)
+        layout.addWidget(prompt)
+        layout.addWidget(field)
+        buttons = QDialogButtonBox(_qt.QDialogButtonBox.StandardButton.Ok
+                                   | _qt.QDialogButtonBox.StandardButton.Cancel, dialog)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.setMinimumWidth(320)
+        field.setFocus()
+        return dialog, dialog.exec() == _qt.QDialog.DialogCode.Accepted
+
+    @classmethod
+    def getText(cls, parent, title, label, echo=_qt.QLineEdit.EchoMode.Normal, text='',
+                flags=QtCore.Qt.WindowType(0), inputMethodHints=QtCore.Qt.InputMethodHint.ImhNone):
+        field = fluentqt.LineEdit()
+        field.setEchoMode(echo)
+        field.setText(text)
+        field.setInputMethodHints(inputMethodHints)
+        field.selectAll()
+        dialog, accepted = cls._prompt(parent, title, label, field)
+        return field.text() if accepted else '', accepted
+
+    @classmethod
+    def getInt(cls, parent, title, label, value=0, min=-2147483647, max=2147483647, step=1,
+               flags=QtCore.Qt.WindowType(0)):
+        from openlp.core.widgets.fluent_inputs import QSpinBox
+        field = QSpinBox()
+        field.setRange(min, max)
+        field.setSingleStep(step)
+        field.setValue(value)
+        initial = field.value()
+        dialog, accepted = cls._prompt(parent, title, label, field)
+        return field.value() if accepted else initial, accepted
+
+    @classmethod
+    def getItem(cls, parent, title, label, items, current=0, editable=True,
+                flags=QtCore.Qt.WindowType(0), inputMethodHints=QtCore.Qt.InputMethodHint.ImhNone):
+        field = fluentqt.ComboBox()
+        field.addItems(items)
+        field.setCurrentIndex(current)
+        field.setEditable(editable)
+        field.setInputMethodHints(inputMethodHints)
+        dialog, accepted = cls._prompt(parent, title, label, field)
+        return field.currentText() if accepted else '', accepted
+
+
+QInputDialog = FluentInputDialog
