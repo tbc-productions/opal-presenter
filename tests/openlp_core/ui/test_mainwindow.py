@@ -1587,7 +1587,7 @@ def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, mai
     assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
 
 
-def test_slide_controller_actions_keep_pinned_controls_outside_overflow(modern_appearance, main_window):
+def test_slide_controller_action_buttons_use_native_commandbars(modern_appearance, main_window):
     from PySide6 import QtGui
     from openlp.core.widgets import fluent
     from openlp.core.ui.slidecontroller import PreviewController, LiveController

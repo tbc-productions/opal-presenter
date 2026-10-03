@@ -24,11 +24,20 @@ This module contains tests for the plugin class Presentation plugin.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from openlp.plugins.presentations.presentationplugin import PresentationPlugin
 from openlp.plugins.presentations.lib.presentationtab import PresentationTab
 
 
 TEST_RESOURCES_PATH = Path(__file__) / '..' / '..' / '..' / 'resources'
+
+
+@pytest.fixture(autouse=True)
+def mock_controller_discovery():
+    """Plugin UI tests do not inspect or launch installed presentation applications."""
+    with patch.object(PresentationPlugin, 'check_pre_conditions', return_value=True):
+        yield
 
 
 def test_plugin_about():
