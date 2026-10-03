@@ -869,7 +869,7 @@ def test_change_slide(preview_widget, state_media):
     assert preview_widget.current_slide_number() == 1, 'The current slide number should  be 1.'
 
 
-def test_text_slide_rows_have_medium_vertical_padding(settings, qapp):
+def test_text_slide_rows_have_small_vertical_padding(settings, qapp):
     """Padding surrounds wrapped slide text and remains stable after resizing."""
     from fluentqt import Spacing
 
@@ -888,7 +888,7 @@ def test_text_slide_rows_have_medium_vertical_padding(settings, qapp):
     delegate = view.itemDelegate()
     view.setItemDelegate(native)
     view.resizeRowsToContents()
-    assert padded_height == view.rowHeight(0) + 2 * Spacing.Medium
+    assert padded_height == view.rowHeight(0) + 2 * Spacing.Small
     view.setItemDelegate(delegate)
     view.resizeRowsToContents()
     assert view.rowHeight(0) == padded_height

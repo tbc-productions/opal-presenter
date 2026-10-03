@@ -112,7 +112,7 @@ class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
     def sizeHint(self, option, index):
         hint = self._native_delegate.sizeHint(option, index)
         if self._view.service_item.is_text():
-            hint.setHeight(hint.height() + 2 * Spacing.Medium)
+            hint.setHeight(hint.height() + 2 * Spacing.Small)
         return hint
 
 
