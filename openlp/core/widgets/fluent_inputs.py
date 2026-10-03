@@ -1,6 +1,8 @@
 """Native Fluent input adapters retaining OpenLP field semantics."""
 from PySide6 import QtCore, QtGui, QtWidgets as _qt
 import fluentqt
+from openlp.core.widgets.fluent_buttons import QCheckBox
+from openlp.core.widgets.fluent_text import display_text
 
 
 class FluentTimeEdit(fluentqt.TimePicker):
@@ -185,8 +187,8 @@ class FluentGroupBox(fluentqt.Card):
         if isinstance(title, _qt.QWidget) or title is None:
             parent, title = title, ''
         super().__init__(parent)
-        self._heading = fluentqt.Label(title, self)
-        self._toggle = fluentqt.CheckBox(title, self)
+        self._heading = fluentqt.Label(display_text(title), self)
+        self._toggle = QCheckBox(title, self)
         self._toggle.setChecked(True)
         self._toggle.hide()
         self._checkable = False
@@ -199,8 +201,14 @@ class FluentGroupBox(fluentqt.Card):
         return self._heading.text()
 
     def setTitle(self, title):
-        self._heading.setText(title)
+        self._heading.setText(display_text(title))
         self._toggle.setText(title)
+        self._position_heading()
+
+    def setHeadingTypography(self, role):
+        """Apply Fluent typography to both plain and checkable card headings."""
+        self._heading.setFluentTypography(role)
+        self._toggle.setFont(self._heading.font())
         self._position_heading()
 
     def setCheckable(self, checkable):

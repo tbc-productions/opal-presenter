@@ -291,34 +291,37 @@ def test_save_first_slide_settings(form):
     assert form.settings.value('songs/first slide mode') is SongFirstSlideMode.Footer.value
 
 
-def test_section_color_edit_requires_hash_and_six_hex_digits(form):
-    """
-    Test section color edits require a leading # and six hexadecimal digits.
-    """
-    # GIVEN: A section color edit widget
-    edit = form.section_color_edits['intro']
+def test_section_color_picker_saves_choice_and_restores_defaults(form):
+    """The shared colour dialog updates the swatch and the saved section colour."""
+    from openlp.core.widgets.buttons import ColorButton
 
-    # WHEN: Querying input constraints and validating sample values
-    state_valid, _, _ = edit.validator().validate('#A1B2C3', 0)
-    state_too_short, _, _ = edit.validator().validate('#ABC12', 0)
-    state_without_hash, _, _ = edit.validator().validate('A1B2C3', 0)
+    button = form.section_color_buttons['intro']
+    assert isinstance(button, ColorButton)
+    with patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor',
+               return_value=QtGui.QColor('#A1B2C3')) as dialog:
+        button.click()
+    dialog.assert_called_once_with(QtGui.QColor(DEFAULT_SECTION_COLORS['intro']), form.section_colors_group_box)
+    assert button.color == '#A1B2C3'
+    assert not button.icon().isNull()
+    form.save()
+    assert form.settings.value('songs/section color intro') == '#A1B2C3'
+    form.on_section_color_defaults_button_clicked()
+    assert button.color == DEFAULT_SECTION_COLORS['intro']
+    assert form.section_colors == DEFAULT_SECTION_COLORS
 
-    # THEN: Only # followed by six hex digits is accepted
-    assert edit.maxLength() == 7
-    assert state_valid == QtGui.QValidator.State.Acceptable
-    assert state_too_short != QtGui.QValidator.State.Acceptable
-    assert state_without_hash != QtGui.QValidator.State.Acceptable
+
+def test_section_color_picker_cancel_preserves_colour(form):
+    button = form.section_color_buttons['intro']
+    original = button.color
+    with patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor', return_value=QtGui.QColor()):
+        button.click()
+    assert button.color == original
+    assert form.section_colors['intro'] == original
 
 
 def test_section_color_load_displays_hex_with_hash(form):
-    """
-    Test loaded section colors are displayed as #RRGGBB in the edit field.
-    """
-    # GIVEN: A stored color value
     form.settings.setValue('songs/section color intro', '#A1B2C3')
-
-    # WHEN: Loading settings
     form.load()
-
-    # THEN: The edit box contains #RRGGBB text
-    assert form.section_color_edits['intro'].text() == '#A1B2C3'
+    button = form.section_color_buttons['intro']
+    assert button.color == '#A1B2C3'
+    assert button.text() == '#A1B2C3'

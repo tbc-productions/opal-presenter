@@ -97,7 +97,7 @@ class AlertsTab(SettingsTab):
         self.settings_layout.addRow(self.vertical_label, self.vertical_combo_box)
         self.left_layout.addWidget(self.settings_group_box)
         self.left_layout.addStretch()
-        self.preview_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.preview_group_box = QtWidgets.QGroupBox(self.left_column)
         self.preview_group_box.setObjectName('preview_group_box')
         self.preview_layout = QtWidgets.QVBoxLayout(self.preview_group_box)
         self.preview_layout.setObjectName('preview_layout')
@@ -108,7 +108,7 @@ class AlertsTab(SettingsTab):
         self.font_preview.setMinimumHeight(72)
         self.font_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft)
         self.preview_layout.addWidget(self.font_preview)
-        self.right_layout.addWidget(self.preview_group_box)
+        self.left_layout.insertWidget(0, self.preview_group_box)
         self.right_layout.addStretch()
         # Signals and slots
         self.background_color_button.colorChanged.connect(self.on_background_color_changed)

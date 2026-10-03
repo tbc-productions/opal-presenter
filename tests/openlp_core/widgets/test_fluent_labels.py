@@ -67,3 +67,21 @@ def test_verse_rows_fit_visible_lyrics_on_first_show(qapp, qtbot, settings):
     widget.resize(300, 500)
     QtWidgets.QApplication.processEvents()
     assert widget.rowHeight(0) > int(document.size().height()) + 4
+
+
+def test_selection_control_mnemonics(qapp):
+    for factory in (fluent.QCheckBox, fluent.QRadioButton):
+        control = factory('F&ull screen')
+        assert control.text() == 'Full screen'
+        assert control.shortcut() == QtGui.QKeySequence.mnemonic('F&ull screen')
+        control.setText('Custom &geometry')
+        assert control.text() == 'Custom geometry'
+        assert control.shortcut() == QtGui.QKeySequence.mnemonic('Custom &geometry')
+        control.setText('Rock && Roll')
+        assert control.text() == 'Rock & Roll'
+        assert control.shortcut().isEmpty()
+    group = fluent.QGroupBox('Theme && &Copyright')
+    group.setCheckable(True)
+    assert group.title() == 'Theme & Copyright'
+    assert group._toggle.text() == 'Theme & Copyright'
+    assert group._toggle.shortcut() == QtGui.QKeySequence.mnemonic('Theme && &Copyright')

@@ -11,7 +11,7 @@ import fluentqt
 from openlp.core.common.platform import is_macosx
 from openlp.core.widgets.fluent_collections import (  # noqa: F401
     QListView, QListWidget, QListWidgetItem)
-from openlp.core.widgets.fluent_buttons import QPushButton  # noqa: F401
+from openlp.core.widgets.fluent_buttons import QCheckBox, QPushButton, QRadioButton  # noqa: F401
 from openlp.core.widgets.fluent_text import MnemonicButtonMixin
 
 QLabel = fluentqt.Label
@@ -20,8 +20,7 @@ QLabel = fluentqt.Label
 QLineEdit = fluentqt.LineEdit
 QComboBox = fluentqt.ComboBox
 MultiSelectComboBox = fluentqt.MultiSelectComboBox
-QCheckBox = fluentqt.CheckBox
-QRadioButton = fluentqt.RadioButton
+Card = fluentqt.Card
 QMenuBar = fluentqt.FluentMenuBar
 
 

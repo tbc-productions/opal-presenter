@@ -40,9 +40,12 @@ class SettingsHelpButton(QtWidgets.QToolButton):
             host = self.teaching_tip.contentHost()
             layout = QtWidgets.QVBoxLayout(host)
             layout.setContentsMargins(16, 12, 16, 16)
-            heading = QtWidgets.QHBoxLayout()
-            heading.addWidget(QtWidgets.QLabel(translate('OpenLP.SettingsTooltips', 'Help'), host))
-            heading.addStretch()
+            content = QtWidgets.QHBoxLayout()
+            content.setSpacing(8)
+            self.help_label = QtWidgets.QLabel(self.help_text, host)
+            self.help_label.setWordWrap(True)
+            self.help_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
+            content.addWidget(self.help_label)
             close_button = fluentqt.Button(host)
             close_button.setObjectName('settings_teaching_tip_close')
             close_button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
@@ -53,14 +56,10 @@ class SettingsHelpButton(QtWidgets.QToolButton):
             close_button.setAccessibleName(translate('OpenLP.SettingsTooltips', 'Close help'))
             close_button.clicked.connect(lambda: self.teaching_tip.closeWithReason(
                 fluentqt.TeachingTip.CloseReason.CloseButton))
-            heading.addWidget(close_button)
-            layout.addLayout(heading)
-            self.help_label = QtWidgets.QLabel(self.help_text, host)
-            self.help_label.setWordWrap(True)
-            self.help_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
-            layout.addWidget(self.help_label)
+            content.addWidget(close_button, alignment=QtCore.Qt.AlignmentFlag.AlignTop)
+            layout.addLayout(content)
         width = min(420, max(240, self.window().width() - 32))
-        self.help_label.setFixedWidth(width - 32)
+        self.help_label.setFixedWidth(width - 32 - 30 - 8)
         self.teaching_tip.setCardSize(QtCore.QSize(width, self.teaching_tip.contentHost().layout().sizeHint().height()))
         self.teaching_tip.showAt(self)
 
@@ -163,6 +162,10 @@ def apply_settings_tooltips(tab):
                 'Choose whether songbook details appear on the first song slide.')),
         ],
         'BiblesTab': [
+            ('bible_search_while_typing_check_box', None, translate(
+                'BiblesPlugin.BiblesTab',
+                'Text searches require at least {count} characters and a space for performance reasons.').format(
+                    count='8')),
             ('layout_style_combo_box', 'layout_style_label', translate(
                 'OpenLP.SettingsTooltips',
                 '<b>Verse Per Slide:</b> Show one verse on each slide.<br/>'
@@ -189,6 +192,11 @@ def apply_settings_tooltips(tab):
                 'Credits still appear in the footer when they are present.')),
         ],
         'PresentationTab': [
+            ('render_slide_images_check_box', None, translate(
+                'PresentationPlugin.PresentationTab', 'Animations and videos will not play.')),
+            ('ppt_window_check_box', None, translate(
+                'PresentationPlugin.PresentationTab',
+                'This may fix PowerPoint scaling issues in Windows 8 and 10.')),
             ('override_app_check_box', None, translate(
                 'OpenLP.SettingsTooltips',
                 'Choose a presentation application from the Library toolbar.')),

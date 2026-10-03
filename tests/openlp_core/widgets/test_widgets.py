@@ -62,8 +62,8 @@ def test_screen_buttons_show_pixels():
     screen_selection_widget.load()
 
     # THEN: The screen buttons should show the correct size of that screen
-    screen_0_button = screen_selection_widget.findChild(QtWidgets.QPushButton, 'screen_0_button')
-    screen_1_button = screen_selection_widget.findChild(QtWidgets.QPushButton, 'screen_1_button')
+    screen_0_button = screen_selection_widget.findChild(ScreenButton, 'screen_0_button')
+    screen_1_button = screen_selection_widget.findChild(ScreenButton, 'screen_1_button')
     assert '1920' in str(screen_0_button.text())                                # type: ignore[union-attr]
     assert '1080' in str(screen_0_button.text())                                # type: ignore[union-attr]
     assert '1366' in str(screen_1_button.text())                                # type: ignore[union-attr]
@@ -314,7 +314,7 @@ def test_screen_button_initialisation():
     instance = ScreenButton(None, screen_mock)
 
     # THEN: The ScreenButton should have been initalised correctly with the data from the mocked screen object
-    assert isinstance(instance, QtWidgets.QPushButton)
+    assert isinstance(instance, QtWidgets.Card)
     assert instance.objectName() == 'screen_0_button'
     assert instance.isCheckable() is True
     assert instance.text() == 'Mocked Screen Object'
@@ -334,8 +334,8 @@ def test_init_default_args():
     # THEN: ScreenSelectionWidget should be an instance of QWidget and the screens attribute should be an empty list
     assert isinstance(instance, QtWidgets.QWidget)
     assert instance.screens == []
-    mocked_timer.setSingleShot.assert_called_once_with(True)
-    mocked_timer.setInterval.assert_called_once_with(3000)
+    mocked_timer.setTimerType.assert_called_once_with(QtCore.Qt.TimerType.PreciseTimer)
+    mocked_timer.setInterval.assert_called_once_with(1000)
 
 
 def test_init_with_args():
@@ -354,8 +354,8 @@ def test_init_with_args():
     # THEN: ScreenSelectionWidget should be an instance of QWidget and the screens attribute should the mock used
     assert isinstance(instance, QtWidgets.QWidget)
     assert instance.screens is screens_object_mock
-    mocked_timer.setSingleShot.assert_called_once_with(True)
-    mocked_timer.setInterval.assert_called_once_with(3000)
+    mocked_timer.setTimerType.assert_called_once_with(QtCore.Qt.TimerType.PreciseTimer)
+    mocked_timer.setInterval.assert_called_once_with(1000)
 
 
 def test_save_screen_none():
@@ -482,7 +482,7 @@ def test_load():
     mocked_screen_frame_layout.count.side_effect = [1, 0]
     mocked_screen_frame_layout.takeAt.return_value = mocked_item
     mocked_screen_button_group = MagicMock()
-    mocked_screen_button_group.buttons.return_value = [mocked_widget]
+    mocked_screen_button_group.buttons.return_value = [mocked_widget.selector]
     instance.screen_frame_layout = mocked_screen_frame_layout
     instance.screen_button_group = mocked_screen_button_group
     instance.screens = [Screen(number=0)]
@@ -494,7 +494,7 @@ def test_load():
     # THEN: The mocks should have been called
     mocked_widget.setParent.assert_called_once_with(None)
     mocked_widget.deleteLater.assert_called_once()
-    mocked_screen_button_group.removeButton.assert_called_once_with(mocked_widget)
+    mocked_screen_button_group.removeButton.assert_called_once_with(mocked_widget.selector)
 
 
 def test_on_identify_timer_shot():
@@ -516,41 +516,40 @@ def test_on_identify_timer_shot():
     assert instance.identify_labels == []
 
 
-def test_on_identify_button_clicked():
-    """
-    Test that the on_identify_button_clicked() method shows a label on each screen
-    """
-    # GIVEN: A ScreenSelectionWidget and a bunch o' mocks
-    instance = ScreenSelectionWidget()
-    mocked_screen = MagicMock()
-    mocked_screen.geometry.x.return_value = 0
-    mocked_screen.geometry.y.return_value = 0
-    mocked_screen.geometry.width.return_value = 1920
-    mocked_screen.__str__.return_value = 'Screen 1'                             # type: ignore[attr-defined]
-    instance.screens = [mocked_screen]
-    instance.timer = MagicMock()
+def test_on_identify_button_clicked(qapp, qtbot):
+    """Countdown expires all banners, and a second click restarts without duplicates."""
+    from openlp.core.widgets.widgets import ScreenIdentificationBanner
+    import fluentqt
 
-    # WHEN: on_identify_button_clicked() is called
-    with patch('openlp.core.widgets.widgets.QtWidgets.QLabel') as MockLabel:
-        mocked_label = MagicMock()
-        MockLabel.return_value = mocked_label
-        instance.on_identify_button_clicked()
-
-    # THEN: The labels should be cleared
-    MockLabel.assert_called_once_with(None)
-    mocked_label.setAlignment.assert_called_once_with(QtCore.Qt.AlignmentFlag.AlignCenter)
-    mocked_label.setText.assert_called_once_with('Screen 1')
-    mocked_label.setStyleSheet.assert_called_once_with('font-size: 24pt; font-weight: bold; '
-                                                       'background-color: #0C0; color: #000; '
-                                                       'border: 5px solid #000;')
-    mocked_label.setGeometry.assert_called_once_with(QtCore.QRect(0, 0, 1920, 100))
-    mocked_label.setWindowFlags.assert_called_once_with(QtCore.Qt.WindowType.FramelessWindowHint |
-                                                        QtCore.Qt.WindowType.Tool |
-                                                        QtCore.Qt.WindowType.WindowStaysOnTopHint |
-                                                        QtCore.Qt.WindowType.WindowDoesNotAcceptFocus)
-    mocked_label.show.assert_called_once()
-    assert instance.identify_labels == [mocked_label]
-    instance.timer.start.assert_called_once()
+    instance = ScreenSelectionWidget(None, mocked_screens(None))
+    qtbot.addWidget(instance)
+    instance.show()
+    instance.on_identify_button_clicked()
+    assert instance.identify_button.text() == 'Identify Screens (5)'
+    assert len(instance.identify_labels) == 2
+    banner = instance.identify_labels[0]
+    assert isinstance(banner, ScreenIdentificationBanner)
+    assert banner.backdrop.effect() == fluentqt.ParticleBackdrop.Effect.FloatingDots
+    assert not banner.backdrop.isPauseWhenInactive()
+    assert banner.label.text() == 'Screen 1'
+    qtbot.waitUntil(lambda: instance.identify_button.text() == 'Identify Screens (4)', timeout=1500)
+    instance.timer.stop()
+    for remaining in (3, 2, 1):
+        instance._on_identify_timer_shot()
+        assert instance.identify_button.text() == f'Identify Screens ({remaining})'
+    instance.on_identify_button_clicked()
+    assert not banner.isVisible()
+    assert len(instance.identify_labels) == 2
+    assert instance.identify_button.text() == 'Identify Screens (5)'
+    for _ in range(5):
+        instance._on_identify_timer_shot()
+    assert instance.identify_labels == []
+    assert instance.identify_button.text() == 'Identify Screens'
+    assert not instance.timer.isActive()
+    instance.on_identify_button_clicked()
+    instance.hide()
+    assert instance.identify_labels == []
+    assert not instance.timer.isActive()
 
 
 def test_on_display_clicked_with_checked():
@@ -617,3 +616,30 @@ def test_screen_selection_save(mock_settings):
     mocked_save_screen.assert_called_once_with(mocked_screen)
     mocked_screen.to_dict.assert_called_once()
     mock_settings.setValue.assert_called_once_with('core/screens', {0: {'number': 0}})
+
+
+def test_display_cards_select_exclusively_and_reload(qapp, qtbot):
+    """Clicking the card surface selects a screen and saves the previous geometry."""
+    screens = mocked_screens(None)
+    widget = ScreenSelectionWidget(None, screens)
+    qtbot.addWidget(widget)
+    widget.load()
+    widget.show()
+    QtWidgets.QApplication.processEvents()
+    cards = widget.findChildren(ScreenButton)
+    assert cards[0].isChecked()
+    for card in cards:
+        assert card.width() <= 320
+        assert abs(card.height() - card.width() * 9 / 16) <= 1
+    widget.custom_geometry_button.setChecked(True)
+    widget.width_spin_box.setValue(1280)
+    QtTest.QTest.mouseClick(
+        cards[1], QtCore.Qt.MouseButton.LeftButton,
+        pos=QtCore.QPoint(cards[1].width() - 8, cards[1].height() - 8))
+    assert widget.current_screen is screens[1]
+    assert cards[1].isChecked()
+    assert not cards[0].isChecked()
+    assert screens[0].custom_geometry.width() == 1280
+    widget.load()
+    assert len(widget.screen_button_group.buttons()) == 2
+    assert widget.current_screen is screens[0]

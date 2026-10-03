@@ -75,7 +75,6 @@ class ServiceTab(SettingsTab):
         """
         self.setObjectName('ServiceTab')
         super(ServiceTab, self).setup_ui()
-        self.tab_layout.setStretch(1, 1)
         # Default service name
         self.service_name_group_box = QtWidgets.QGroupBox(self.left_column)
         self.service_name_group_box.setObjectName('service_name_group_box')

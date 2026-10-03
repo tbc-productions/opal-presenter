@@ -54,6 +54,8 @@ class SettingsTab(QtWidgets.QWidget, RegistryProperties):
         """
         self.setup_ui()
         self.retranslate_ui()
+        for group in self.findChildren(QtWidgets.QGroupBox):
+            group.setHeadingTypography(QtWidgets.fluentqt.FontRole.Subtitle)
         self.initialise()
         self.load()
 
@@ -61,12 +63,14 @@ class SettingsTab(QtWidgets.QWidget, RegistryProperties):
         """
         Setup the tab's interface.
         """
-        self.tab_layout = QtWidgets.QHBoxLayout(self)
+        self.tab_layout = QtWidgets.QVBoxLayout(self)
         self.tab_layout.setObjectName('tab_layout')
         self.tab_layout.setContentsMargins(12, 12, 12, 12)
-        self.tab_layout.setSpacing(20)
+        self.tab_layout.setSpacing(24)
         self.left_column = QtWidgets.QWidget(self)
         self.left_column.setObjectName('left_column')
+        self.left_column.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         self.left_layout = QtWidgets.QVBoxLayout(self.left_column)
         self.left_layout.setContentsMargins(0, 0, 0, 0)
         self.left_layout.setSpacing(24)
@@ -74,23 +78,14 @@ class SettingsTab(QtWidgets.QWidget, RegistryProperties):
         self.tab_layout.addWidget(self.left_column)
         self.right_column = QtWidgets.QWidget(self)
         self.right_column.setObjectName('right_column')
+        self.right_column.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         self.right_layout = QtWidgets.QVBoxLayout(self.right_column)
         self.right_layout.setContentsMargins(0, 0, 0, 0)
         self.right_layout.setSpacing(24)
         self.right_layout.setObjectName('right_layout')
         self.tab_layout.addWidget(self.right_column)
-
-    def resizeEvent(self, event=None):
-        """
-        Resize the sides in two equal halves if the layout allows this.
-        """
-        if event:
-            QtWidgets.QWidget.resizeEvent(self, event)
-        width = self.width() - self.tab_layout.spacing() - \
-            self.tab_layout.contentsMargins().left() - self.tab_layout.contentsMargins().right()
-        left_width = min(width - self.right_column.minimumSizeHint().width(), width // 2)
-        left_width = max(left_width, self.left_column.minimumSizeHint().width())
-        self.left_column.setFixedWidth(left_width)
+        self.tab_layout.addStretch()
 
     def retranslate_ui(self):
         """

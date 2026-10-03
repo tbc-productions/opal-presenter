@@ -12,3 +12,21 @@ class FluentPushButton(MnemonicButtonMixin, fluentqt.Button):
 
 
 QPushButton = FluentPushButton
+
+
+class FluentCheckBox(MnemonicButtonMixin, fluentqt.CheckBox):
+    """Decode Qt labels while preserving checkbox shortcuts."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setText(self.text())
+
+
+class FluentRadioButton(MnemonicButtonMixin, fluentqt.RadioButton):
+    """Decode Qt labels while preserving radio-button shortcuts."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setText(self.text())
+
+
+QCheckBox = FluentCheckBox
+QRadioButton = FluentRadioButton

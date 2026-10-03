@@ -252,10 +252,8 @@ class BiblesTab(SettingsTab):
         self.hide_combined_quick_error_check_box.setText(translate('BiblesPlugin.BiblesTab',
                                                                    'Don\'t show error if nothing is found in "Text or '
                                                                    'Scripture Reference"'))
-        self.bible_search_while_typing_check_box.setText(translate('BiblesPlugin.BiblesTab',
-                                                                   'Search automatically while typing (Text search must'
-                                                                   ' contain a\nminimum of {count} characters and a '
-                                                                   'space for performance reasons)').format(count='8'))
+        self.bible_search_while_typing_check_box.setText(translate(
+            'BiblesPlugin.BiblesTab', 'Search automatically while typing'))
         self.reference_format_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Bible Reference Format'))
         self.reference_format_label.setText(
             translate('BiblesPlugin.BiblesTab', 'Footer reference template:'))

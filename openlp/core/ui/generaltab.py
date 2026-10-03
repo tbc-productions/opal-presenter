@@ -63,7 +63,6 @@ class GeneralTab(SettingsTab):
         """
         self.setObjectName('GeneralTab')
         super(GeneralTab, self).setup_ui()
-        self.tab_layout.setStretch(1, 1)
         # Application Startup
         self.startup_group_box = QtWidgets.QGroupBox(self.left_column)
         self.startup_group_box.setObjectName('startup_group_box')

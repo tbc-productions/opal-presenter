@@ -109,14 +109,13 @@ class PresentationTab(SettingsTab):
             translate('PresentationPlugin.PresentationTab', 'Allow presentation application to be overridden'))
         self.render_slide_images_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
-                      'Show presentation slides in OpenLP+ (animations and videos will not play)'))
+                      'Show presentation slides in OpenLP+'))
         self.ppt_slide_click_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Clicking on the current slide advances to the next effect'))
         self.ppt_window_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
-                      'Let PowerPoint control the size and monitor of the presentations\n'
-                      '(This may fix PowerPoint scaling issues in Windows 8 and 10)'))
+                      'Let PowerPoint control the size and monitor of the presentations'))
         self.impress_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'Impress options'))
         self.odp_display_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
