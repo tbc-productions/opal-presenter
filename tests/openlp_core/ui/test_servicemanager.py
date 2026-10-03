@@ -1914,25 +1914,45 @@ def test_service_manager_delete_confirmation_dialog(MockMessageBox: MagicMock, r
     mocked_message_box.exec.assert_called_once()
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox.question')
-def test_service_manager_save_modified_service(mocked_question: MagicMock, registry: Registry):
-    """Test the save_modified_service() method"""
-    # GIVEN: A service manager and a mocked main window
-    mocked_main_window = MagicMock()
-    registry.register('main_window', mocked_main_window)
+@pytest.mark.parametrize('action, expected', [
+    ('Save', QtWidgets.QMessageBox.StandardButton.Save),
+    ("Don't Save", QtWidgets.QMessageBox.StandardButton.Discard),
+    ('Cancel', QtWidgets.QMessageBox.StandardButton.Cancel),
+    ('Escape', QtWidgets.QMessageBox.StandardButton.Cancel),
+])
+def test_service_manager_save_modified_service(qapp, registry, monkeypatch, action, expected):
+    """Use an iconless ContentDialog and preserve every save decision."""
+    import fluentqt
+    from PySide6 import QtWidgets as NativeWidgets, QtTest
+    parent = NativeWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    registry.register('main_window', parent)
     service_manager = ServiceManager(None)
+    native_exec = fluentqt.ContentDialog.exec
 
-    # WHEN: save_modified_service() is called
-    service_manager.save_modified_service()
+    def inspect_and_exec(dialog):
+        dialog.setAnimationEnabled(False)
+        assert dialog.title() == 'Modified Service'
+        assert dialog.content().wordWrap()
+        assert dialog.defaultButton() == fluentqt.ContentDialogButton.Primary
+        assert not dialog.isDragEnabled()
 
-    # THEN: All the correct things should have been called
-    mocked_question.assert_called_once_with(mocked_main_window, 'Modified Service',
-                                            'The current service has been modified. '
-                                            'Would you like to save this service?',
-                                            QtWidgets.QMessageBox.StandardButton.Save |
-                                            QtWidgets.QMessageBox.StandardButton.Discard |
-                                            QtWidgets.QMessageBox.StandardButton.Cancel,
-                                            QtWidgets.QMessageBox.StandardButton.Save)
+        def dismiss():
+            assert parent.rect().contains(dialog.geometry())
+            if action == 'Escape':
+                QtTest.QTest.keyClick(dialog, QtCore.Qt.Key.Key_Escape)
+            else:
+                button = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == action)
+                button.click()
+        QtCore.QTimer.singleShot(0, dismiss)
+        return native_exec(dialog)
+
+    monkeypatch.setattr(fluentqt.ContentDialog, 'exec', inspect_and_exec)
+    try:
+        assert service_manager.save_modified_service() == expected
+    finally:
+        parent.close()
 
 
 def test_service_manager_on_recent_service_clicked_cancel(registry: Registry):

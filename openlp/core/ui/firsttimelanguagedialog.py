@@ -38,7 +38,6 @@ class Ui_FirstTimeLanguageDialog(object):
         """
         language_dialog.setObjectName('language_dialog')
         language_dialog.setWindowIcon(UiIcons().main_icon)
-        language_dialog.resize(300, 50)
         self.dialog_layout = QtWidgets.QVBoxLayout(language_dialog)
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
         self.dialog_layout.setSpacing(8)
@@ -59,7 +58,6 @@ class Ui_FirstTimeLanguageDialog(object):
         self.button_box = create_button_box(language_dialog, 'button_box', ['cancel', 'ok'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui(language_dialog)
-        self.setMaximumHeight(self.sizeHint().height())
 
     def retranslate_ui(self, language_dialog):
         """

@@ -101,7 +101,7 @@ def test_message_and_progress_use_native_dialogs(qapp):
     QtCore.QTimer.singleShot(0, message.button(message.StandardButton.Cancel).click)
     assert message.exec() == message.StandardButton.Cancel
     assert message._text.text() == 'Choose'
-    assert message._title.text() == 'Warning'
+    assert message.title() == 'Warning'
     parent.close()
 
 
@@ -154,7 +154,7 @@ def test_message_content_prepared_with_hidden_parent(qapp):
                              fluent.QMessageBox.StandardButton.Cancel, parent)
     QtCore.QTimer.singleShot(0, box.button(box.StandardButton.Cancel).click)
     assert box.exec() == box.StandardButton.Cancel
-    assert box._title.text() == 'Title'
+    assert box.title() == 'Title'
     assert box._text.text() == 'Message'
 
 
@@ -217,3 +217,140 @@ def test_dialog_stays_inside_resized_parent(qapp):
     dialog.done(0)
     parent.close()
 
+
+@pytest.mark.parametrize('module_name, ui_name', [
+    ('openlp.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
+    ('openlp.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
+    ('openlp.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
+    ('openlp.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
+    ('openlp.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
+    ('openlp.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
+])
+def test_compact_dialogs_fit_fields_and_labels(qapp, registry, mock_settings, module_name, ui_name):
+    """Old height caps must not compress fields after Fluent padding is applied."""
+    from importlib import import_module
+    ui = getattr(import_module(module_name), ui_name)
+    dialog_type = type('CompactDialog', (fluent.QDialog, ui), {})
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 800)
+    parent.show()
+    dialog = dialog_type(parent)
+    dialog.setup_ui(dialog)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    QtWidgets.QApplication.processEvents()
+    try:
+        assert dialog.width() >= 420
+        assert dialog.height() >= dialog.sizeHint().height()
+        assert parent.rect().contains(dialog.geometry())
+        fields = dialog.findChildren(fluentqt.LineEdit) + dialog.findChildren(fluentqt.ComboBox)
+        fields += dialog.findChildren(QtWidgets.QAbstractSpinBox)
+        assert fields
+        for field in fields:
+            assert field.height() >= 32
+            if isinstance(field, fluentqt.LineEdit):
+                assert field.width() >= 160
+        for label in dialog.findChildren(fluentqt.Label):
+            if label.isVisible():
+                assert label.height() >= label.sizeHint().height()
+        for form in dialog.findChildren(QtWidgets.QFormLayout):
+            assert form.horizontalSpacing() >= 12
+            assert form.verticalSpacing() >= 12
+    finally:
+        dialog.done(0)
+        parent.close()
+
+
+@pytest.mark.parametrize('choice', ['Save', 'Cancel', 'Discard'])
+def test_content_message_visible_actions_keep_qt_results(qapp, choice):
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Question, 'Modified Service', 'Save the changes?',
+                             fluent.QMessageBox.StandardButton.Save | fluent.QMessageBox.StandardButton.Discard |
+                             fluent.QMessageBox.StandardButton.Cancel, parent)
+    box.setAnimationEnabled(False)
+    box.setDefaultButton(box.StandardButton.Save)
+    assert isinstance(box, fluentqt.ContentDialog)
+    finished = []
+    clicked = []
+    box.finished.connect(finished.append)
+    box.buttonClicked.connect(clicked.append)
+
+    def choose():
+        assert box.title() == 'Modified Service'
+        assert all(button.isHidden() for button in box.buttons())
+        visible = [button for button in box.findChildren(fluentqt.Button)
+                   if button.isVisible() and button.text() == box.button(expected).text()]
+        assert len(visible) == 1
+        visible[0].click()
+
+    QtCore.QTimer.singleShot(0, choose)
+    expected = {'Save': box.StandardButton.Save, 'Cancel': box.StandardButton.Cancel,
+                'Discard': box.StandardButton.Discard}[choice]
+    try:
+        assert box.exec() == expected
+        assert box.result() == expected
+        assert finished == [expected]
+        assert clicked == [box.button(expected)]
+    finally:
+        parent.close()
+
+
+@pytest.mark.parametrize('icon', [
+    fluent.QMessageBox.Icon.Information, fluent.QMessageBox.Icon.Warning,
+    fluent.QMessageBox.Icon.Critical, fluent.QMessageBox.Icon.Question,
+])
+def test_single_action_content_message_keeps_text_without_icon(qapp, icon):
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    box = fluent.QMessageBox(icon, 'Delete Author',
+                             'This author cannot be deleted, they are currently assigned to at least one song.',
+                             fluent.QMessageBox.StandardButton.Ok, parent)
+    box.setInformativeText('A Thousand Hallelujahs')
+    box.setAnimationEnabled(False)
+    assert isinstance(box, fluentqt.ContentDialog)
+    assert '_icon_label' not in box.__dict__
+
+    def dismiss():
+        assert box.title() == 'Delete Author'
+        assert box._info.text() == 'A Thousand Hallelujahs'
+        for label in (box._text, box._info):
+            assert label.isVisible()
+            assert label.height() >= label.heightForWidth(label.width())
+        box._native_commands['primary'].click()
+
+    QtCore.QTimer.singleShot(0, dismiss)
+    try:
+        assert box.exec() == box.StandardButton.Ok
+        assert box.clickedButton() is box.button(box.StandardButton.Ok)
+    finally:
+        parent.close()
+
+
+def test_long_content_message_has_bounded_width_and_wrapped_text(qapp):
+    parent = QtWidgets.QWidget()
+    parent.resize(1800, 1000)
+    parent.show()
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Question, 'Re-run First Time Wizard?',
+                             'Are you sure you want to re-run the First Time Wizard?',
+                             fluent.QMessageBox.StandardButton.Yes | fluent.QMessageBox.StandardButton.No, parent)
+    box.setInformativeText(
+        'Re-running this wizard may make changes to your current OpenLP+ configuration and possibly '
+        'add songs to your existing songs list and change your default theme.')
+    box.setDefaultButton(box.StandardButton.No)
+    box.setAnimationEnabled(False)
+    box.open()
+    QtWidgets.QApplication.processEvents()
+    try:
+        assert box.width() <= 560
+        for label in (box._text, box._info):
+            assert label.height() >= label.heightForWidth(label.width())
+        assert parent.rect().contains(box.geometry())
+        for button in box._native_commands.values():
+            if button.isVisible():
+                assert button.width() <= 240
+    finally:
+        box.done(0)
+        parent.close()

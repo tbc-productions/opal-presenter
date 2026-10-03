@@ -36,7 +36,6 @@ class Ui_SongBookDialog(object):
         """
         song_book_dialog.setObjectName('song_book_dialog')
         song_book_dialog.setWindowIcon(UiIcons().main_icon)
-        song_book_dialog.resize(300, 10)
         self.dialog_layout = QtWidgets.QVBoxLayout(song_book_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.book_layout = QtWidgets.QFormLayout()
@@ -57,7 +56,6 @@ class Ui_SongBookDialog(object):
         self.button_box = create_button_box(song_book_dialog, 'button_box', ['cancel', 'save'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui(song_book_dialog)
-        song_book_dialog.setMaximumHeight(song_book_dialog.sizeHint().height())
 
     def retranslate_ui(self, song_book_dialog):
         """

@@ -205,7 +205,11 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = self.init_webengine()
         self.webview.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
-        self.webview.page().setBackgroundColor(QtCore.Qt.GlobalColor.transparent)
+        # Qt marks transparent WebEngine renderers WA_AlwaysStackOnTop, which
+        # paints controller previews over same-window dialogs and their Smoke.
+        # Only independent output windows need desktop transparency.
+        background = QtCore.Qt.GlobalColor.black if embedded else QtCore.Qt.GlobalColor.transparent
+        self.webview.page().setBackgroundColor(background)
         self.webview.display_clicked = self.disable_display
         self.layout.addWidget(self.webview)
         self.webview.loadFinished.connect(self.after_loaded)

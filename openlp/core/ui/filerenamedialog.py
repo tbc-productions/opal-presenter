@@ -39,7 +39,6 @@ class Ui_FileRenameDialog(object):
         """
         file_rename_dialog.setObjectName('file_rename_dialog')
         file_rename_dialog.setWindowIcon(UiIcons().main_icon)
-        file_rename_dialog.resize(300, 10)
         self.dialog_layout = QtWidgets.QGridLayout(file_rename_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.file_name_label = QtWidgets.QLabel(file_rename_dialog)
@@ -53,7 +52,6 @@ class Ui_FileRenameDialog(object):
         self.button_box = create_button_box(file_rename_dialog, 'button_box', ['cancel', 'ok'])
         self.dialog_layout.addWidget(self.button_box, 1, 0, 1, 2)
         self.retranslate_ui(file_rename_dialog)
-        self.setMaximumHeight(self.sizeHint().height())
 
     def retranslate_ui(self, file_rename_dialog):
         """

@@ -36,7 +36,6 @@ class Ui_TopicsDialog(object):
         """
         topics_dialog.setObjectName('topics_dialog')
         topics_dialog.setWindowIcon(UiIcons().main_icon)
-        topics_dialog.resize(300, 10)
         self.dialog_layout = QtWidgets.QVBoxLayout(topics_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.name_layout = QtWidgets.QFormLayout()
@@ -51,7 +50,6 @@ class Ui_TopicsDialog(object):
         self.button_box = create_button_box(topics_dialog, 'button_box', ['cancel', 'save'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui(topics_dialog)
-        topics_dialog.setMaximumHeight(topics_dialog.sizeHint().height())
 
     def retranslate_ui(self, topics_dialog):
         """

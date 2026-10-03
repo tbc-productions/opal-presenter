@@ -6,7 +6,7 @@ from openlp.core.widgets.fluent_buttons import QPushButton
 from openlp.core.widgets.fluent_text import display_text
 
 
-class FluentDialog(fluentqt.Dialog):
+class _DialogSizingMixin:
     """Native Fluent dialog accepting the legacy parent/window-flags signature."""
     def __init__(self, parent=None, flags=QtCore.Qt.WindowType(0)):
         # Native Dialog owns its same-window presentation. Legacy title-bar
@@ -18,6 +18,8 @@ class FluentDialog(fluentqt.Dialog):
         self.graphicsEffect().setEnabled(False)
         self.setSmokeEnabled(True)
         self.setAnimationEnabled(True)
+        if isinstance(self, fluentqt.ContentDialog):
+            self.setMaximumWidth(560)
         self._preferred_minimum = QtCore.QSize()
         if self.parentWidget() is not None:
             self.parentWidget().installEventFilter(self)
@@ -35,12 +37,19 @@ class FluentDialog(fluentqt.Dialog):
         layout.setContentsMargins(max(padding, margins.left()), max(padding, margins.top()),
                                   max(padding, margins.right()), max(padding, margins.bottom()))
         layout.setSpacing(max(Spacing.Medium, layout.spacing()))
+        # Fluent inputs need their full control height even in compact forms.
+        for control_type in (fluentqt.LineEdit, fluentqt.ComboBox, _qt.QAbstractSpinBox):
+            for control in self.findChildren(control_type):
+                control.setMinimumHeight(max(32, control.minimumHeight()))
+        for form in self.findChildren(_qt.QFormLayout):
+            form.setHorizontalSpacing(max(Spacing.Medium, form.horizontalSpacing()))
+            form.setVerticalSpacing(max(Spacing.Medium, form.verticalSpacing()))
         self.ensurePolished()
         layout.invalidate()
         layout.activate()
         self._preferred_minimum = self._preferred_minimum.expandedTo(self.minimumSize())
         preferred = self.sizeHint().expandedTo(self.minimumSizeHint()).expandedTo(self._preferred_minimum)
-        width = max(360, self.width(), preferred.width())
+        width = max(420, self.width(), preferred.width())
         parent = self.parentWidget()
         available = parent.size() if parent is not None else self.screen().availableGeometry().size()
         width = min(width, available.width(), self.maximumWidth())
@@ -78,6 +87,10 @@ class FluentDialog(fluentqt.Dialog):
             self._prepare_size()
             self._constrain_position()
         return super().eventFilter(watched, event)
+
+
+class FluentDialog(_DialogSizingMixin, fluentqt.Dialog):
+    """Fluent form dialog with content sizing and bounded dragging."""
 
 
 QDialog = FluentDialog
@@ -586,8 +599,8 @@ class _MessageBoxCommands(_qt.QMessageBox):
         return cls._message(cls.Icon.Question, parent, title, text, buttons, defaultButton)
 
 
-class FluentMessageBox(FluentDialog):
-    """Present messages in a native Dialog, retaining Qt button/result contracts."""
+class FluentMessageBox(_DialogSizingMixin, fluentqt.ContentDialog):
+    """Iconless ContentDialog retaining Qt message button/result contracts."""
     Icon = _qt.QMessageBox.Icon
     StandardButton = _qt.QMessageBox.StandardButton
     StandardButtons = _qt.QMessageBox.StandardButtons
@@ -606,20 +619,45 @@ class FluentMessageBox(FluentDialog):
         self.setWindowTitle(title)
         self._commands.finished.connect(self.done)
         self._commands.buttonClicked.connect(self.buttonClicked.emit)
-        layout = _qt.QVBoxLayout(self)
-        self._title = fluentqt.Label(self)
-        self._icon_label = fluentqt.Label(self)
-        layout.addWidget(self._icon_label)
-        self._text = fluentqt.Label(self)
-        self._info = fluentqt.Label(self)
-        self._details = fluentqt.Label(self)
-        for label in (self._title, self._text, self._info, self._details):
+        content = _qt.QWidget()
+        layout = _qt.QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(Spacing.Medium)
+        self._text = fluentqt.Label(content)
+        self._info = fluentqt.Label(content)
+        self._details = fluentqt.Label(content)
+        for label in (self._text, self._info, self._details):
             label.setWordWrap(True)
             layout.addWidget(label)
         self._buttons = _qt.QHBoxLayout()
         self._buttons.addStretch()
         layout.addLayout(self._buttons)
-        self.setMinimumWidth(320)
+        self.setContent(content)
+        self._content_commands = {}
+        # Bind the native button bar directly to the Qt command model. Native
+        # ContentDialog handlers otherwise finish again with their 0/1/2 results.
+        self._native_commands = {}
+        for slot, setter in (('primary', self.setPrimaryButtonText),
+                             ('secondary', self.setSecondaryButtonText),
+                             ('close', self.setCloseButtonText)):
+            setter(slot)
+            button = next(button for button in self.findChildren(fluentqt.Button)
+                          if button not in self.buttons() and button.text() == slot)
+            button.clicked.disconnect()
+            button.clicked.connect(lambda checked=False, slot=slot: self._click_command(slot))
+            self._native_commands[slot] = button
+        self.setMinimumWidth(420)
+
+    def _click_command(self, slot):
+        button = self._content_commands.get(slot)
+        if button is not None and button.isEnabled():
+            button.click()
+
+    def defaultButton(self):
+        return self._commands.defaultButton()
+
+    def setDefaultButton(self, button):
+        self._commands.setDefaultButton(button)
 
     def __getattr__(self, name):
         commands = self.__dict__.get('_commands')
@@ -629,22 +667,53 @@ class FluentMessageBox(FluentDialog):
 
     def _sync_content(self):
         self._commands._replace_commands()
-        self._icon_label.setPixmap(self._commands.iconPixmap())
-        self._icon_label.setVisible(not self._commands.iconPixmap().isNull())
+        self.setTitle(self.windowTitle())
         self._text.setTextFormat(self._commands.textFormat())
-        for label, text in ((self._title, self.windowTitle()), (self._text, self.text()),
+        for label, text in ((self._text, self.text()),
                             (self._info, self.informativeText()), (self._details, self.detailedText())):
             label.setText(text)
             label.setVisible(bool(text))
         while self._buttons.count() > 1:
             self._buttons.takeAt(1)
-        for button in self.buttons():
-            self._buttons.addWidget(button)
-            button.show()
-        if self.defaultButton() is None and self.buttons():
-            self.setDefaultButton(self.buttons()[0])
-        if self.defaultButton() is not None:
-            self.defaultButton().setFocus()
+        buttons = self.buttons()
+        if self.defaultButton() is None and buttons:
+            self.setDefaultButton(buttons[0])
+        self._content_commands.clear()
+        if len(buttons) <= 3:
+            remaining = list(buttons)
+            escape = self.escapeButton()
+            if escape in remaining and (len(buttons) > 1 or
+                                        self.buttonRole(escape) == self.ButtonRole.RejectRole):
+                self._content_commands['close'] = escape
+                remaining.remove(escape)
+            default = self.defaultButton()
+            if default in remaining:
+                remaining.remove(default)
+                remaining.insert(0, default)
+            for slot, button in zip(('primary', 'secondary', 'close'), remaining):
+                self._content_commands[slot] = button
+            for button in buttons:
+                button.hide()
+        else:
+            # Messages with more actions keep their full command row.
+            for button in buttons:
+                self._buttons.addWidget(button)
+                button.show()
+        self.setPrimaryButtonText(self._content_commands['primary'].text()
+                                  if 'primary' in self._content_commands else '')
+        self.setSecondaryButtonText(self._content_commands['secondary'].text()
+                                    if 'secondary' in self._content_commands else '')
+        self.setCloseButtonText(self._content_commands['close'].text()
+                                if 'close' in self._content_commands else '')
+        for slot, button in self._native_commands.items():
+            command = self._content_commands.get(slot)
+            button.setEnabled(command.isEnabled() if command is not None else True)
+        for slot, native in (('primary', fluentqt.ContentDialogButton.Primary),
+                             ('secondary', fluentqt.ContentDialogButton.Secondary),
+                             ('close', fluentqt.ContentDialogButton.Close)):
+            if self._content_commands.get(slot) is self.defaultButton():
+                fluentqt.ContentDialog.setDefaultButton(self, native)
+                break
 
     def showEvent(self, event):
         self._sync_content()
@@ -653,7 +722,8 @@ class FluentMessageBox(FluentDialog):
 
     def exec(self):
         self._sync_content()
-        return super().exec()
+        super().exec()
+        return self._commands.result()
 
     def keyPressEvent(self, event):
         button = None

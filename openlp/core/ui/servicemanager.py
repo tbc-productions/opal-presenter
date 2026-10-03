@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui
+import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import ThemeLevel, delete_file, sha256_file_hash
@@ -1051,15 +1052,26 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Check to see if a service needs to be saved.
         """
-        return QtWidgets.QMessageBox.question(self.main_window,
-                                              translate('OpenLP.ServiceManager', 'Modified Service'),
-                                              translate('OpenLP.ServiceManager',
-                                                        'The current service has been modified. Would you like to save '
-                                                        'this service?'),
-                                              QtWidgets.QMessageBox.StandardButton.Save |
-                                              QtWidgets.QMessageBox.StandardButton.Discard |
-                                              QtWidgets.QMessageBox.StandardButton.Cancel,
-                                              QtWidgets.QMessageBox.StandardButton.Save)
+        dialog = fluentqt.ContentDialog(self.main_window)
+        dialog.graphicsEffect().setEnabled(False)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        dialog.setMaximumWidth(560)
+        dialog.setTitle(translate('OpenLP.ServiceManager', 'Modified Service'))
+        content = fluentqt.Label(
+            translate('OpenLP.ServiceManager',
+                      'The current service has been modified. Would you like to save this service?'))
+        content.setWordWrap(True)
+        dialog.setContent(content)
+        dialog.setPrimaryButtonText(translate('OpenLP.ServiceManager', 'Save'))
+        dialog.setSecondaryButtonText(translate('OpenLP.ServiceManager', "Don't Save"))
+        dialog.setCloseButtonText(translate('OpenLP.ServiceManager', 'Cancel'))
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        result = dialog.exec()
+        return {dialog.ResultPrimary: QtWidgets.QMessageBox.StandardButton.Save,
+                dialog.ResultSecondary: QtWidgets.QMessageBox.StandardButton.Discard}.get(
+                    result, QtWidgets.QMessageBox.StandardButton.Cancel)
 
     def on_recent_service_clicked(self, checked, file_path=None):
         """
