@@ -1,7 +1,72 @@
 """Native Fluent adapters retain OpenLP action and item-model semantics."""
+import pytest
+
 from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.widgets import fluent
 from openlp.core.widgets.toolbar import OpenLPToolbar
+
+
+@pytest.mark.parametrize('kind', ['list', 'tree', 'tree_grid', 'table'])
+def test_item_adapter_signal_blocking(qapp, qtbot, kind):
+    """Item notifications respect blockSignals and QSignalBlocker while model updates continue."""
+    if kind == 'list':
+        view = fluent.QListWidget()
+        items = [fluent.QListWidgetItem(str(row), view) for row in range(2)]
+        select = view.setCurrentItem
+        def rename(item, text):
+            item.setText(text)
+
+        def remove():
+            view.takeItem(0)
+    elif kind == 'table':
+        view = fluent.QTableWidget(2, 1)
+        items = [QtWidgets.QTableWidgetItem(str(row)) for row in range(2)]
+        for row, item in enumerate(items):
+            view.setItem(row, 0, item)
+        select = view.setCurrentItem
+        def rename(item, text):
+            item.setText(text)
+
+        def remove():
+            view.removeRow(0)
+    else:
+        view = fluent.QTreeWidget() if kind == 'tree' else fluent.QTreeDataGrid()
+        items = [fluent.QTreeWidgetItem(view, [str(row)]) for row in range(2)]
+        select = view.setCurrentItem
+        def rename(item, text):
+            item.setText(0, text)
+
+        def remove():
+            view.takeTopLevelItem(0)
+    qtbot.addWidget(view)
+    selection_events, change_events, current_events = [], [], []
+    view.itemSelectionChanged.connect(lambda: selection_events.append(True))
+    view.itemChanged.connect(lambda *args: change_events.append(args))
+    view.currentItemChanged.connect(lambda *args: current_events.append(args))
+    select(items[0])
+    assert selection_events and current_events
+    selection_events.clear()
+    current_events.clear()
+
+    previous = view.blockSignals(True)
+    select(items[1])
+    rename(items[1], 'blocked update')
+    assert not selection_events and not change_events and not current_events
+    view.blockSignals(previous)
+    assert view.currentItem() is items[1]
+
+    with QtCore.QSignalBlocker(view):
+        select(items[0])
+        rename(items[0], 'another blocked update')
+        remove()
+    assert not selection_events and not change_events and not current_events
+    view.clearSelection()
+    view.setCurrentIndex(QtCore.QModelIndex())
+    selection_events.clear()
+    current_events.clear()
+    select(items[1])
+    rename(items[1], 'visible update')
+    assert selection_events and change_events and current_events
 
 
 def test_integer_numberbox_signal_and_unavailable_font(qapp):

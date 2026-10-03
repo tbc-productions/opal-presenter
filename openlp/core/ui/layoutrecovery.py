@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 _PENDING_KEY = 'core/layout startup pending'
 _BACKUP_PREFIX = 'layout recovery/'
 _LAYOUT_FIELDS = {
-    'main window state', 'main window geometry', 'main window position',
+    'main window state', 'modern window state', 'main window geometry', 'main window position',
     'main window splitter geometry', 'live splitter geometry', 'preview splitter geometry'
 }
 
@@ -29,7 +29,8 @@ def begin_layout_startup(settings, screens):
         reason = 'interrupted window startup' if interrupted else 'changed monitor configuration'
         keys = [key for key in settings.allKeys()
                 if key.startswith('user interface/') and key.rsplit('/', 1)[-1] in _LAYOUT_FIELDS
-                and (key.count('/') == 1 or key.startswith('user interface/preset layout/'))]
+                and (key.count('/') == 1 or key.startswith(('user interface/preset layout/',
+                                                           'user interface/modern preset layout/')))]
         if keys:
             # Preserve the most recent discarded layout using raw QSettings values, including QByteArrays.
             settings.remove(_BACKUP_PREFIX.rstrip('/'))

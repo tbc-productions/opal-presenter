@@ -77,6 +77,30 @@ def test_first_launch_does_not_reset_layout(settings):
     assert settings.value('user interface/main window state') == state
 
 
+@pytest.mark.parametrize('interrupted', [True, False])
+def test_recovery_quarantines_modern_layouts(settings, interrupted):
+    """Both crash and monitor recovery remove Modern state, retaining visibility intent."""
+    state = QtCore.QByteArray(b'saved ADS dock state')
+    keys = ['user interface/modern window state']
+    for mode in ('default', 'setup', 'live'):
+        for field in ('main window state', 'main window splitter geometry',
+                      'live splitter geometry', 'preview splitter geometry'):
+            keys.append(f'user interface/modern preset layout/{mode}/{field}')
+        settings.setValue(f'user interface/modern preset layout/{mode}/visibility snapshot', 'saved visibility')
+    for key in keys:
+        settings.setValue(key, state)
+    settings.setValue('core/layout startup pending', interrupted)
+    settings.setValue('core/screens', {'0': {'geometry': {}, 'is_primary': True}})
+
+    assert begin_layout_startup(settings, screen_list(match=0 if interrupted else None))
+
+    for key in keys:
+        assert not settings.contains(key)
+        assert QtCore.QSettings.value(settings, 'layout recovery/' + key) == state
+    for mode in ('default', 'setup', 'live'):
+        assert settings.value(f'user interface/modern preset layout/{mode}/visibility snapshot') == 'saved visibility'
+
+
 def test_repeated_failed_recovery_preserves_backup(settings):
     state = saved_layout(settings)
     begin_layout_startup(settings, screen_list(match=None))

@@ -3,6 +3,12 @@ from PySide6 import QtCore, QtWidgets as _qt
 import fluentqt
 
 
+def forward_item_signals(view, names):
+    """Emit item-store notifications from the visible adapter, respecting its signal blocking."""
+    for name in names:
+        getattr(view._item_store, name).connect(getattr(view, name).emit)
+
+
 class FluentListView(fluentqt.DataGrid):
     """Single-column DataGrid preserving the application's flat-list API."""
     Flow = _qt.QListView.Flow
@@ -86,12 +92,26 @@ QListView = FluentListView
 
 class FluentListWidget(QListView):
     """Native Fluent collection with Qt's item model kept behind the view."""
+    itemClicked = QtCore.Signal(_qt.QListWidgetItem)
+    itemDoubleClicked = QtCore.Signal(_qt.QListWidgetItem)
+    itemActivated = QtCore.Signal(_qt.QListWidgetItem)
+    itemPressed = QtCore.Signal(_qt.QListWidgetItem)
+    itemEntered = QtCore.Signal(_qt.QListWidgetItem)
+    itemChanged = QtCore.Signal(_qt.QListWidgetItem)
+    itemSelectionChanged = QtCore.Signal()
+    currentItemChanged = QtCore.Signal(_qt.QListWidgetItem, _qt.QListWidgetItem)
+    currentRowChanged = QtCore.Signal(int)
+    currentTextChanged = QtCore.Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._item_store = _qt.QListWidget(self)
         self._item_store.hide()
         self.setModel(self._item_store.model())
         self.setSelectionModel(self._item_store.selectionModel())
+        forward_item_signals(self, ('itemClicked', 'itemDoubleClicked', 'itemActivated', 'itemPressed',
+                                    'itemEntered', 'itemChanged', 'itemSelectionChanged',
+                                    'currentItemChanged', 'currentRowChanged', 'currentTextChanged'))
         for view_signal, item_signal in (('clicked', 'itemClicked'), ('doubleClicked', 'itemDoubleClicked'),
                                          ('activated', 'itemActivated'), ('pressed', 'itemPressed'),
                                          ('entered', 'itemEntered')):

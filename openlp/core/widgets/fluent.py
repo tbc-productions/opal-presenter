@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtWidgets as _qt
 import fluentqt
 from openlp.core.common.platform import is_macosx
 from openlp.core.widgets.fluent_collections import (  # noqa: F401
-    QListView, QListWidget, QListWidgetItem)
+    QListView, QListWidget, QListWidgetItem, forward_item_signals)
 from openlp.core.widgets.fluent_buttons import QCheckBox, QPushButton, QRadioButton  # noqa: F401
 from openlp.core.widgets.fluent_text import MnemonicButtonMixin
 
@@ -358,13 +358,16 @@ QWizard = FluentWizard
 
 class TreeItemsMixin:
     """Native Fluent hierarchy retaining OpenLP's item-based data API."""
-    @property
-    def itemExpanded(self):
-        return self._item_store.itemExpanded
-
-    @property
-    def itemCollapsed(self):
-        return self._item_store.itemCollapsed
+    itemClicked = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemDoubleClicked = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemActivated = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemPressed = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemEntered = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemChanged = QtCore.Signal(_qt.QTreeWidgetItem, int)
+    itemSelectionChanged = QtCore.Signal()
+    currentItemChanged = QtCore.Signal(_qt.QTreeWidgetItem, _qt.QTreeWidgetItem)
+    itemExpanded = QtCore.Signal(_qt.QTreeWidgetItem)
+    itemCollapsed = QtCore.Signal(_qt.QTreeWidgetItem)
 
     def setSelectionMode(self, mode):
         value = mode.value if hasattr(mode, 'value') else int(mode)
@@ -380,6 +383,9 @@ class TreeItemsMixin:
         self._item_store.hide()
         self.setModel(self._item_store.model())
         self.setSelectionModel(self._item_store.selectionModel())
+        forward_item_signals(self, ('itemClicked', 'itemDoubleClicked', 'itemActivated', 'itemPressed',
+                                    'itemEntered', 'itemChanged', 'itemSelectionChanged',
+                                    'currentItemChanged', 'itemExpanded', 'itemCollapsed'))
         for view_signal, item_signal in (('clicked', 'itemClicked'), ('doubleClicked', 'itemDoubleClicked'),
                                          ('activated', 'itemActivated'), ('pressed', 'itemPressed'),
                                          ('entered', 'itemEntered')):
@@ -523,6 +529,22 @@ QTreeWidgetItemIterator = FluentTreeWidgetItemIterator
 
 class FluentTableWidget(fluentqt.DataGrid):
     """Native Fluent data grid with Qt's item-based table model."""
+    itemClicked = QtCore.Signal(_qt.QTableWidgetItem)
+    itemDoubleClicked = QtCore.Signal(_qt.QTableWidgetItem)
+    itemActivated = QtCore.Signal(_qt.QTableWidgetItem)
+    itemPressed = QtCore.Signal(_qt.QTableWidgetItem)
+    itemEntered = QtCore.Signal(_qt.QTableWidgetItem)
+    itemChanged = QtCore.Signal(_qt.QTableWidgetItem)
+    itemSelectionChanged = QtCore.Signal()
+    currentItemChanged = QtCore.Signal(_qt.QTableWidgetItem, _qt.QTableWidgetItem)
+    cellClicked = QtCore.Signal(int, int)
+    cellDoubleClicked = QtCore.Signal(int, int)
+    cellActivated = QtCore.Signal(int, int)
+    cellPressed = QtCore.Signal(int, int)
+    cellEntered = QtCore.Signal(int, int)
+    cellChanged = QtCore.Signal(int, int)
+    currentCellChanged = QtCore.Signal(int, int, int, int)
+
     def __init__(self, *args):
         parent = args[-1] if args and isinstance(args[-1], _qt.QWidget) else None
         super().__init__(parent)
@@ -531,6 +553,10 @@ class FluentTableWidget(fluentqt.DataGrid):
         self._item_store.hide()
         self.setModel(self._item_store.model())
         self.setSelectionModel(self._item_store.selectionModel())
+        forward_item_signals(self, ('itemClicked', 'itemDoubleClicked', 'itemActivated', 'itemPressed',
+                                    'itemEntered', 'itemChanged', 'itemSelectionChanged', 'currentItemChanged',
+                                    'cellClicked', 'cellDoubleClicked', 'cellActivated', 'cellPressed',
+                                    'cellEntered', 'cellChanged', 'currentCellChanged'))
         # Verse-number headers carry per-row brushes authored by OpenLP.
         # FluentQt's default header painter intentionally ignores those roles.
         self.setVerticalHeader(_qt.QHeaderView(QtCore.Qt.Orientation.Vertical, self))
