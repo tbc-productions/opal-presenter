@@ -547,22 +547,24 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     manager = PluginManager()
     first = MagicMock(name='first')
     first.name = 'first'
+    first.name_strings = {'plural': 'First plugin'}
     second = MagicMock(name='second')
     second.name = 'second'
+    second.name_strings = {'plural': 'Second plugin'}
     inactive = MagicMock()
     inactive.is_active.return_value = False
     updates = []
     registry.register_function('startup_progress', lambda *args: updates.append(args))
 
     def initialise_first():
-        assert updates == [('Initialising plugins', 0, 2)]
+        assert updates == [('Initialising First plugin', 0, 2)]
         if fails:
             raise RuntimeError('Plugin failed')
 
     first.initialise.side_effect = initialise_first
 
     def initialise_second():
-        assert updates[-1] == ('Initialising plugins', 1, 2)
+        assert updates[-1] == ('Initialising Second plugin', 1, 2)
 
     second.initialise.side_effect = initialise_second
     with patch('openlp.core.lib.pluginmanager.State') as state_class:
@@ -573,8 +575,9 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     inactive.initialise.assert_not_called()
     second.initialise.assert_called_once_with()
     assert updates == [
-        ('Initialising plugins', 0, 2),
-        ('Initialising plugins', 1, 2),
-        ('Initialising plugins', 2, 2),
+        ('Initialising First plugin', 0, 2),
+        ('Initialising First plugin', 1, 2),
+        ('Initialising Second plugin', 1, 2),
+        ('Initialising Second plugin', 2, 2),
         ('Loading library and themes…',)
     ]

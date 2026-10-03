@@ -148,7 +148,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         application_stylesheet = get_application_stylesheet()
         app.setStyleSheet(application_stylesheet or '')
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Initialising plugins…'))
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading plugins…'))
         Registry().execute('bootstrap_initialise')
         State().flush_preconditions()
         if can_show_splash:

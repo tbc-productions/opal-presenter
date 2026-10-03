@@ -158,10 +158,11 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         """
         uninitialised_plugins = []
         plugins = [plugin for plugin in State().list_plugins() if plugin and plugin.is_active()]
-        stage = translate('OpenLP.SplashScreen', 'Initialising plugins')
-        if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', stage, 0, len(plugins))
         for completed, plugin in enumerate(plugins, 1):
+            stage = translate('OpenLP.SplashScreen', 'Initialising {plugin}').format(
+                plugin=plugin.name_strings['plural'])
+            if Registry().has_function('startup_progress'):
+                Registry().execute('startup_progress', stage, completed - 1, len(plugins))
             self.log_info(f'Initialising plugin {plugin.name}')
             try:
                 plugin.initialise()
