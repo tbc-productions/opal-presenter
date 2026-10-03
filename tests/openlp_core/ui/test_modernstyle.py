@@ -177,5 +177,9 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
     assert abs(splitters[0].sizes()[0] - splitters[1].sizes()[0]) <= 1
     splitters[1].moveSplitter(120, 1)
     assert abs(splitters[0].sizes()[0] - splitters[1].sizes()[0]) <= 1
+    window.resize(900, 600)
+    QtWidgets.QApplication.processEvents()
+    QtWidgets.QApplication.processEvents()
+    assert abs(splitters[0].sizes()[0] - splitters[1].sizes()[0]) <= 1
     assert toolbar.iconSize() == QtCore.QSize(18, 18)
     window.close()

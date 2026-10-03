@@ -73,6 +73,49 @@ def test_classic_keeps_original_navigation_and_spacing(main_window):
     assert main_window.main_content_layout.contentsMargins().left() == 0
 
 
+@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
+def test_modern_presets_restore_autohide_without_touching_classic(modern_appearance, main_window, settings):
+    import PySide6QtAds as ads
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray(b'classic'))
+    main_window.media_manager_dock.setAutoHide(True, ads.SideBarLeft)
+    main_window._save_current_layout_to_preset('default')
+    main_window.media_manager_dock.setAutoHide(False)
+    main_window._restore_layout_from_preset('default')
+    assert main_window.media_manager_dock.isAutoHide()
+    assert settings.value('user interface/preset layout/default/main window state') == QtCore.QByteArray(b'classic')
+    # Deferred startup correction must leave a restored ADS layout alone.
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'default')
+    main_window._deferred_apply_left_column_dock_layout()
+    assert main_window.media_manager_dock.isAutoHide()
+    settings.setValue('advanced/interface style', 'classic')
+    main_window._save_current_layout_to_preset('default')
+    assert settings.value('user interface/preset layout/default/main window state') == QtCore.QByteArray(b'classic')
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
+def test_modern_close_updates_menu_and_preserves_inactive_library(modern_appearance, main_window, settings):
+    main_window.theme_manager_dock.toggleView(False)
+    assert not settings.value('user interface/show themes')
+    assert not main_window.view_theme_manager_item.isChecked()
+    assert main_window.media_manager_dock.isDockOpen()
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
+def test_modern_factory_layout_has_usable_library_height(modern_appearance, main_window, settings):
+    main_window.resize(1200, 800)
+    settings.setValue('core/view mode', 'default')
+    main_window._deferred_apply_left_column_dock_layout()
+    service = main_window.service_manager_dock
+    library = main_window.media_manager_dock
+    assert service.dockAreaWidget() is not library.dockAreaWidget()
+    assert library.dockAreaWidget().currentDockWidget() is library
+
+
 class _DummyRenderer:
     def __init__(self, *args, **kwargs):
         pass

@@ -226,7 +226,10 @@ class WebViewCustomScheme(QtCore.QObject):
             profile = QtWebEngineCore.QWebEngineProfile.defaultProfile()
         handler = profile.urlSchemeHandler(self.scheme_name)
         if handler is not None:
-            profile.removeUrlSchemeHandler(handler)
+            # Preview, Live and the slide renderer share a profile. Replacing its
+            # handler cancels their in-flight resources on newer Qt versions.
+            self.handler = handler
+            return
         self.handler = self.create_scheme_handler()
         profile.installUrlSchemeHandler(self.scheme_name, self.handler)
 

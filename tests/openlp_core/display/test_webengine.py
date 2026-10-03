@@ -23,9 +23,20 @@ Package to test the openlp.core.display.webengine package.
 """
 import os
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from openlp.core.display.webengine import LocalSchemeHelper
+from openlp.core.display.webengine import LocalSchemeHelper, WebViewCustomScheme
+
+
+def test_shared_profile_keeps_existing_scheme_handler():
+    """Opening another preview must not cancel the first preview's script requests."""
+    scheme = MagicMock()
+    profile = MagicMock()
+    existing = profile.urlSchemeHandler.return_value
+    WebViewCustomScheme.init_handler(scheme, profile)
+    assert scheme.handler is existing
+    profile.removeUrlSchemeHandler.assert_not_called()
+    profile.installUrlSchemeHandler.assert_not_called()
 
 
 def test_request_path_to_file_decodes_encoded_path_segments():

@@ -169,6 +169,16 @@ def refine_modern_layout(window):
     # setSizes does not emit splitterMoved, so each divider can drive its peer safely.
     preview.splitterMoved.connect(lambda position, index: align(preview, live))
     live.splitterMoved.connect(lambda position, index: align(live, preview))
+
+    class DividerAlignment(QtCore.QObject):
+        def eventFilter(self, watched, event):
+            if event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show):
+                QtCore.QTimer.singleShot(0, lambda: align(preview, live))
+            return False
+
+    window._divider_alignment = DividerAlignment(window)
+    preview.installEventFilter(window._divider_alignment)
+    live.installEventFilter(window._divider_alignment)
     QtCore.QTimer.singleShot(0, lambda: align(preview, live))
 
 
