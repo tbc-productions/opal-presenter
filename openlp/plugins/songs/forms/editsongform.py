@@ -153,6 +153,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.lyrics_tab.setObjectName('lyrics_tab')
         self.lyrics_tab_layout = QtWidgets.QGridLayout(self.lyrics_tab)
         self.lyrics_tab_layout.setObjectName('lyrics_tab_layout')
+        self.lyrics_tab_layout.setColumnStretch(1, 1)
         self.title_label = QtWidgets.QLabel(self.lyrics_tab)
         self.title_label.setObjectName('title_label')
         self.lyrics_tab_layout.addWidget(self.title_label, 0, 0)
