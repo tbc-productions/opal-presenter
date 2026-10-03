@@ -30,7 +30,8 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import ThemeLevel, delete_file, sha256_file_hash
 from openlp.core.common.actions import ActionList, CategoryOrder
@@ -332,17 +333,16 @@ class Ui_ServiceManager(object):
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.add_toolbar_action('newService', text=UiStrings().NewService, icon=UiIcons().new,
                                         tooltip=UiStrings().CreateService, triggers=self.on_new_service_clicked)
-        self.open_service_action = self.toolbar.add_toolbar_action(
+        self.open_service_action = self.toolbar.add_split_action(
             'openService',
             text=UiStrings().OpenService,
             icon=UiIcons().open,
             tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
             triggers=self.on_load_service_clicked)
         self.open_service_button = self.toolbar.widgetForAction(self.open_service_action)
-        if isinstance(self.open_service_button, QtWidgets.QToolButton):
+        if self.open_service_button is not None:
             self.open_service_recent_menu = QtWidgets.QMenu(self.open_service_button)
             self.open_service_recent_menu.aboutToShow.connect(self.update_open_service_recent_menu)
-            self.open_service_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
             self.open_service_button.setMenu(self.open_service_recent_menu)
         self.save_service_action = self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
                                                                    icon=UiIcons().save,

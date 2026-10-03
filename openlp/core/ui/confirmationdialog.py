@@ -19,7 +19,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.icons import UiIcons
 

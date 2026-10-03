@@ -2,14 +2,14 @@
 from unittest.mock import patch
 
 import pytest
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
 
-@pytest.mark.parametrize('index', [0, 1, 2, 4, 5])
+@pytest.mark.parametrize('index', [1, 2])
 def test_changed_theme_prompts_after_saving(settings, index):
     form = SettingsForm()
     tab = GeneralTab(form)
@@ -19,7 +19,7 @@ def test_changed_theme_prompts_after_saving(settings, index):
     def check_saved_theme(*args):
         assert form.result() == QtWidgets.QDialog.DialogCode.Accepted
         assert settings.value('advanced/ui_theme_name') == GeneralTab.get_ui_theme_name(index)
-        assert settings.value('advanced/interface style') == ('modern' if index >= 3 else 'classic')
+        assert settings.value('advanced/interface style') == 'modern'
 
     with patch.object(QtWidgets.QMessageBox, 'information', side_effect=check_saved_theme) as reminder:
         form.accept()
@@ -33,7 +33,7 @@ def test_unchanged_theme_does_not_prompt(settings):
     tab = GeneralTab(form)
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(1)
-    tab.ui_theme_style_combo_box.setCurrentIndex(3)
+    tab.ui_theme_style_combo_box.setCurrentIndex(0)
     tab.number_edit.setText('12345')
 
     with patch.object(QtWidgets.QMessageBox, 'information') as reminder:

@@ -30,7 +30,8 @@ from unittest.mock import ANY, Mock, MagicMock, call, patch
 from zipfile import BadZipFile
 
 import pytest
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import ThemeLevel
 from openlp.core.common.i18n import translate
@@ -1115,7 +1116,7 @@ def test_theme_change_song(settings: Settings):
         'The visibility should be True'
 
 
-@patch('PySide6.QtWidgets.QTreeWidgetItemIterator')
+@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items(mocked_tree: MagicMock, settings: Settings):
     """
     test that an unmodified service item that is regenerated is still unmodified
@@ -1143,7 +1144,7 @@ def test_regenerate_service_items(mocked_tree: MagicMock, settings: Settings):
     service_manager.repaint_service_list.assert_called_once()
 
 
-@patch('PySide6.QtWidgets.QTreeWidgetItemIterator')
+@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items_modified(mocked_tree: MagicMock, settings: Settings):
     """
     test that an unmodified service item that is regenerated is still unmodified
@@ -1171,7 +1172,7 @@ def test_regenerate_service_items_modified(mocked_tree: MagicMock, settings: Set
     service_manager.repaint_service_list.assert_called_once()
 
 
-@patch('PySide6.QtWidgets.QTreeWidgetItemIterator')
+@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items_set_modified(mocked_tree: MagicMock, settings: Settings):
     """
     test that a service item that is regenerated with the modified argument becomes modified
@@ -1931,6 +1932,7 @@ def test_service_manager_delete_confirmation_dialog(MockMessageBox: MagicMock, r
     mocked_message_box = MagicMock()
     MockMessageBox.return_value = mocked_message_box
     # Restore a couple of items for a more realistic situation
+    MockMessageBox.Icon = QtWidgets.QMessageBox.Icon
     MockMessageBox.Question = QtWidgets.QMessageBox.Icon.Question
     MockMessageBox.Close = QtWidgets.QMessageBox.StandardButton.Close
     MockMessageBox.Cancel = QtWidgets.QMessageBox.StandardButton.Cancel

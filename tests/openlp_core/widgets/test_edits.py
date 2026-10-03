@@ -26,7 +26,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch, call
 from typing import Any
 
-from PySide6 import QtCore, QtGui, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.path import path_to_str
 from openlp.core.common.platform import is_win

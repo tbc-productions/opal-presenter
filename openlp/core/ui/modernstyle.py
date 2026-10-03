@@ -4,11 +4,11 @@ from ctypes import wintypes
 import logging
 import sys
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.core.ui.fluentstyle import fluent_colors, get_fluent_controls_stylesheet
+from openlp.core.ui.fluentstyle import fluent_colors
 
 
 log = logging.getLogger(__name__)
@@ -16,8 +16,7 @@ log = logging.getLogger(__name__)
 
 def is_modern_style():
     """Use the selected appearance on every platform."""
-    settings = Registry().get('settings')
-    return settings is not None and settings.value('advanced/interface style') == 'modern'
+    return True
 
 
 def set_modern_palette(app):
@@ -71,84 +70,100 @@ QMainWindow#MainWindow QMenuBar::item:selected { background: palette(highlight);
 QMainWindow#MainWindow QStatusBar { background: palette(window); padding: 5px 8px; }
 QMainWindow#MainWindow QSplitter::handle { background: palette(window); }
 QMainWindow#MainWindow::separator { background: palette(window); width: 8px; height: 8px; }
-QMainWindow#MainWindow QAbstractItemView {
-    background: palette(base); border: 1px solid palette(mid); border-radius: 4px;
-    selection-background-color: palette(highlight); selection-color: palette(highlighted-text);
-}
-QMainWindow#MainWindow QTreeView::item, QMainWindow#MainWindow QListView::item { padding: 3px 4px; }
-/* Do not override table headers: slide-number headers carry per-verse background brushes. */
-QMainWindow#MainWindow QTreeView QHeaderView::section {
-    background: palette(button); border: none; padding: 3px;
-}
 QMainWindow#MainWindow QToolButton#qt_toolbar_ext_button { padding: 0; border: none; }
 QMainWindow#MainWindow QLabel#output_status { border-radius: 3px; padding: 3px 8px; }
 QMainWindow#MainWindow QLabel#output_status[onAir="true"] { background: #bceac8; color: #125525; }
 QMainWindow#MainWindow QLabel#output_status[onAir="false"] {
     background: palette(button); color: palette(window-text);
 }
-""" + get_fluent_controls_stylesheet()
+"""
 
 
-class ModernPresetTabBar(QtWidgets.QTabBar):
-    """Keep the existing preset tab API, with upright icon-and-label navigation."""
+class ModernPresetTabBar(QtWidgets.QWidget):
+    """Vertical native Fluent commands retaining preset selection and keyboard navigation."""
+    currentChanged = QtCore.Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMouseTracking(True)
+        self._buttons = []
+        self._current = -1
+        self._layout = QtWidgets.QVBoxLayout(self)
+        self._layout.setContentsMargins(4, 4, 4, 4)
+        self._layout.setSpacing(4)
+        self._layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
 
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        self.update()
+    def addTab(self, text):
+        index = len(self._buttons)
+        button = QtWidgets.QPushButton(text, self)
+        button.setCheckable(True)
+        button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+        button.setFixedHeight(56)
+        button.clicked.connect(lambda checked=False, index=index: self.setCurrentIndex(index))
+        self._buttons.append(button)
+        self._layout.addWidget(button)
+        if self._current < 0:
+            self.setCurrentIndex(0)
+        return index
 
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-        self.update()
+    def count(self):
+        return len(self._buttons)
+
+    def tabText(self, index):
+        return self._buttons[index].text()
+
+    def setTabText(self, index, text):
+        self._buttons[index].setText(text)
+
+    def tabIcon(self, index):
+        return self._buttons[index].icon()
+
+    def setTabIcon(self, index, icon):
+        self._buttons[index].setIcon(icon)
+
+    def currentIndex(self):
+        return self._current
+
+    def setCurrentIndex(self, index):
+        if not 0 <= index < self.count():
+            return
+        changed = self._current != index
+        self._current = index
+        for number, button in enumerate(self._buttons):
+            button.setChecked(number == index)
+            button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Accent if number == index
+                                  else QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+        if changed:
+            self.currentChanged.emit(index)
+
+    def tabRect(self, index):
+        return self._buttons[index].geometry()
 
     def tabSizeHint(self, index):
-        width = max(64, self.fontMetrics().horizontalAdvance(self.tabText(index)) + 16)
-        return QtCore.QSize(width, 56)
+        return self._buttons[index].sizeHint().expandedTo(QtCore.QSize(64, 56))
+
+    def setShape(self, shape):
+        pass  # This preset rail is always vertical.
+
+    def setDocumentMode(self, enabled):
+        pass  # Native Fluent buttons own their surfaces.
+
+    def setDrawBase(self, enabled):
+        pass
+
+    def setMovable(self, enabled):
+        pass  # Preset order is fixed by the application.
+
+    def setExpanding(self, enabled):
+        pass
 
     def keyPressEvent(self, event):
         if event.key() in (QtCore.Qt.Key.Key_Up, QtCore.Qt.Key.Key_Down):
             step = 1 if event.key() == QtCore.Qt.Key.Key_Down else -1
-            index = self.currentIndex() + step
-            while 0 <= index < self.count():
-                if self.isTabEnabled(index) and self.isTabVisible(index):
-                    self.setCurrentIndex(index)
-                    break
-                index += step
+            self.setCurrentIndex(self.currentIndex() + step)
             event.accept()
-            return
-        super().keyPressEvent(event)
-
-    def paintEvent(self, event):
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-        palette = self.palette()
-        colors = fluent_colors(palette)
-        hovered = self.tabAt(self.mapFromGlobal(QtGui.QCursor.pos())) if self.underMouse() else -1
-        for index in range(self.count()):
-            if not self.isTabVisible(index):
-                continue
-            rect = self.tabRect(index).adjusted(4, 4, -4, -4)
-            selected = index == self.currentIndex()
-            if selected or hovered == index:
-                painter.setPen(QtCore.Qt.PenStyle.NoPen)
-                painter.setBrush(QtGui.QColor(colors['selection'] if selected else colors['hover']))
-                painter.drawRoundedRect(rect, 5, 5)
-            if selected:
-                painter.setBrush(QtGui.QColor(colors['accent']))
-                painter.drawRoundedRect(QtCore.QRectF(rect.left(), rect.center().y() - 8, 3, 16), 1.5, 1.5)
-            icon_rect = QtCore.QRect(rect.center().x() - 10, rect.top() + 5, 20, 20)
-            self.tabIcon(index).paint(painter, icon_rect)
-            painter.setPen(palette.highlightedText().color() if selected else palette.windowText().color())
-            text_rect = rect.adjusted(2, 27, -2, -2)
-            painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignCenter, self.tabText(index))
-            if selected and self.hasFocus():
-                option = QtWidgets.QStyleOptionFocusRect()
-                option.initFrom(self)
-                option.rect = rect.adjusted(2, 2, -2, -2)
-                self.style().drawPrimitive(QtWidgets.QStyle.PrimitiveElement.PE_FrameFocusRect, option, painter, self)
+        else:
+            super().keyPressEvent(event)
 
 
 def refine_modern_layout(window):

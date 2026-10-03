@@ -23,7 +23,7 @@ The :mod:`~openlp.core.widgets.comboboxes` module contains customized versions o
 """
 from typing import Callable
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 
 class LazyComboBox(QtWidgets.QComboBox):

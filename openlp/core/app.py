@@ -106,6 +106,8 @@ class OpenLP(QtCore.QObject, LogMixin):
         self.args.extend(args)
         # set desktop file name, which is used to display the proper window icon on Wayland
         QtGui.QGuiApplication.setDesktopFileName("openlp")
+        # Initialise Fluent before startup dialogs, icons and plugin UI are constructed.
+        set_default_theme(app)
         # Decide how many screens we have and their size
         screens = ScreenList.create(app)
         # First time checks in settings
@@ -521,7 +523,10 @@ def main():
             qt_args.extend(['-platform', 'windows:darkmode=2'])
     # Instantiating QCoreApplication
     init_webview_custom_schemes()
+    import fluentqt
+    fluentqt.prepare_high_dpi_application()
     application = QtWidgets.QApplication([sys.argv[0]] + qt_args)
+    fluentqt.initialize_resources()
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     # Qt 6 scales fonts per monitor. Keep their logical sizes unchanged to avoid double scaling.
     verbose = getattr(args, 'verbose', False)

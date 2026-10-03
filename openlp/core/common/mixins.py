@@ -22,6 +22,8 @@
 Provide Error Handling and login Services
 """
 import inspect
+from functools import wraps
+from types import MethodType
 import logging
 
 from openlp.core.common import trace_error_handler
@@ -57,7 +59,8 @@ class LogMixin(object):
         """
         Code to added debug wrapper to work on called functions within a decorated class.
         """
-        def wrapped(*args, **kwargs):
+        @wraps(func)
+        def wrapped(receiver, *args, **kwargs):
             parent.logger.debug("Entering {function}".format(function=func.__name__))
             try:
                 if len(inspect.signature(func).parameters.values()):
@@ -69,7 +72,10 @@ class LogMixin(object):
                     parent.logger.error('Exception in {function} : {error}'.format(function=func.__name__,
                                                                                    error=e))
                 raise e
-        return wrapped
+        # PySide needs __self__ to identify a QObject receiver and route queued
+        # signals to its thread. A plain closure is delivered in the sender's
+        # thread, which can create dialogs off the GUI thread and abort macOS.
+        return MethodType(wrapped, parent)
 
     def log_debug(self, message):
         """

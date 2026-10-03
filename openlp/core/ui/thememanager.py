@@ -28,7 +28,8 @@ import zipfile
 from pathlib import Path
 from xml.etree.ElementTree import XML, ElementTree
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
 from openlp.core.common import delete_file

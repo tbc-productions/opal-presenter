@@ -43,7 +43,7 @@ def test_window_title(form: FileRenameForm):
     Test the windowTitle of the FileRenameDialog
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
 
         # WHEN: The form is executed with no args
         form.exec()
@@ -70,7 +70,7 @@ def test_line_edit_focus(form: FileRenameForm):
     Test that the file_name_edit setFocus has called with True when executed
     """
     # GIVEN: A mocked QDialog.exec() method and mocked file_name_edit.setFocus() method.
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         mocked_set_focus = MagicMock()
         form.file_name_edit.setFocus = mocked_set_focus
 

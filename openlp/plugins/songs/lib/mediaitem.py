@@ -26,7 +26,8 @@ from pathlib import Path
 from shutil import copyfile
 from typing import Any
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import or_
 
 from openlp.core.state import State
@@ -44,7 +45,7 @@ from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.confirmationform import ConfirmationForm
-from openlp.core.widgets.views import TreeWidgetWithDnD
+from openlp.core.widgets.views import DataGridWithDnD
 from openlp.plugins.songs.forms.editsongform import EditSongForm
 from openlp.plugins.songs.forms.songexportform import SongExportForm
 from openlp.plugins.songs.forms.songimportform import SongImportForm
@@ -81,7 +82,7 @@ class SongListWidgetItem(QtWidgets.QTreeWidgetItem):
         return self.text(col).casefold() < other.text(col).casefold()
 
 
-class SongListWidget(TreeWidgetWithDnD):
+class SongListWidget(DataGridWithDnD):
     """
     A two-column, sortable song list widget.
 

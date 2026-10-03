@@ -25,7 +25,8 @@ import datetime
 import html
 
 import lxml.html
-from PySide6 import QtCore, QtGui, QtPrintSupport, QtWidgets
+from PySide6 import QtCore, QtGui, QtPrintSupport
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, translate

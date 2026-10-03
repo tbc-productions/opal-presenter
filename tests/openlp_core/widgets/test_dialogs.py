@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.widgets.dialogs import FileDialog
 
@@ -44,7 +44,7 @@ def test_get_existing_directory_user_abort():
     """
     # GIVEN: FileDialog with a mocked QDialog.getExistingDirectory method
     # WHEN: Calling FileDialog.getExistingDirectory and the user cancels the dialog returns a empty string
-    with patch('PySide6.QtWidgets.QFileDialog.getExistingDirectory', return_value=''):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getExistingDirectory', return_value=''):
         result = FileDialog.getExistingDirectory()
 
         # THEN: The result should be None
@@ -58,7 +58,7 @@ def test_get_existing_directory_user_accepts():
     # GIVEN: FileDialog with a mocked QDialog.getExistingDirectory method
     # WHEN: Calling FileDialog.getExistingDirectory, the user chooses a file and accepts the dialog (it returns a
     #       string pointing to the directory)
-    with patch('PySide6.QtWidgets.QFileDialog.getExistingDirectory', return_value=os.path.join('test', 'dir')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getExistingDirectory', return_value=os.path.join('test', 'dir')):
         result = FileDialog.getExistingDirectory()
 
         # THEN: getExistingDirectory() should return a Path object pointing to the chosen file
@@ -90,7 +90,7 @@ def test_get_open_file_name_user_abort():
     # GIVEN: FileDialog with a mocked QDialog.getOpenFileName method
     # WHEN: Calling FileDialog.getOpenFileName and the user cancels the dialog (it returns a tuple with the first
     #       value set as an empty string)
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileName', return_value=('', '')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileName', return_value=('', '')):
         result = FileDialog.getOpenFileName()
 
         # THEN: First value should be None
@@ -104,7 +104,7 @@ def test_get_open_file_name_user_accepts():
     # GIVEN: FileDialog with a mocked QDialog.getOpenFileName method
     # WHEN: Calling FileDialog.getOpenFileName, the user chooses a file and accepts the dialog (it returns a
     #       tuple with the first value set as an string pointing to the file)
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileName',
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileName',
                return_value=(os.path.join('test', 'chosen.file'), '')):
         result = FileDialog.getOpenFileName()
 
@@ -119,7 +119,7 @@ def test_get_open_file_name_selected_filter():
     """
     # GIVEN: FileDialog with a mocked QDialog.get_save_file_name method
     # WHEN: Calling FileDialog.getOpenFileName, and `QFileDialog.getOpenFileName` returns a known `selectedFilter`
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileName', return_value=('', 'selected filter')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileName', return_value=('', 'selected filter')):
         result = FileDialog.getOpenFileName()
 
         # THEN: getOpenFileName() should return a tuple with the second value set to a the selected filter
@@ -133,7 +133,7 @@ def test_get_open_file_names_user_abort():
     # GIVEN: FileDialog with a mocked QDialog.getOpenFileNames method
     # WHEN: Calling FileDialog.getOpenFileNames and the user cancels the dialog (it returns a tuple with the first
     #       value set as an empty list)
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileNames', return_value=([], '')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileNames', return_value=([], '')):
         result = FileDialog.getOpenFileNames()
 
         # THEN: First value should be an empty list
@@ -147,7 +147,7 @@ def test_get_open_file_names_user_accepts():
     # GIVEN: FileDialog with a mocked QDialog.getOpenFileNames method
     # WHEN: Calling FileDialog.getOpenFileNames, the user chooses some files and accepts the dialog (it returns a
     #       tuple with the first value set as a list of strings pointing to the file)
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileNames',
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileNames',
                return_value=([os.path.join('test', 'chosen.file1'), os.path.join('test', 'chosen.file2')], '')):
         result = FileDialog.getOpenFileNames()
 
@@ -163,7 +163,7 @@ def test_get_open_file_names_selected_filter():
     # GIVEN: FileDialog with a mocked QDialog.getOpenFileNames method
     # WHEN: Calling FileDialog.getOpenFileNames, and `QFileDialog.getOpenFileNames` returns a known
     #       `selectedFilter`
-    with patch('PySide6.QtWidgets.QFileDialog.getOpenFileNames', return_value=([], 'selected filter')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getOpenFileNames', return_value=([], 'selected filter')):
         result = FileDialog.getOpenFileNames()
 
         # THEN: getOpenFileNames() should return a tuple with the second value set to a the selected filter
@@ -177,7 +177,7 @@ def test_get_save_file_name_user_abort():
     # GIVEN: FileDialog with a mocked QDialog.get_save_file_name method
     # WHEN: Calling FileDialog.getSaveFileName and the user cancels the dialog (it returns a tuple with the first
     #       value set as an empty string)
-    with patch('PySide6.QtWidgets.QFileDialog.getSaveFileName', return_value=('', '')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getSaveFileName', return_value=('', '')):
         result = FileDialog.getSaveFileName()
 
         # THEN: First value should be None
@@ -191,7 +191,7 @@ def test_get_save_file_name_user_accepts():
     # GIVEN: FileDialog with a mocked QDialog.getSaveFileName method
     # WHEN: Calling FileDialog.getSaveFileName, the user chooses a file and accepts the dialog (it returns a
     #       tuple with the first value set as an string pointing to the file)
-    with patch('PySide6.QtWidgets.QFileDialog.getSaveFileName',
+    with patch('openlp.core.widgets.fluent.QFileDialog.getSaveFileName',
                return_value=(os.path.join('test', 'chosen.file'), '')):
         result = FileDialog.getSaveFileName()
 
@@ -206,7 +206,7 @@ def test_get_save_file_name_selected_filter():
     """
     # GIVEN: FileDialog with a mocked QDialog.get_save_file_name method
     # WHEN: Calling FileDialog.getSaveFileName, and `QFileDialog.getSaveFileName` returns a known `selectedFilter`
-    with patch('PySide6.QtWidgets.QFileDialog.getSaveFileName', return_value=('', 'selected filter')):
+    with patch('openlp.core.widgets.fluent.QFileDialog.getSaveFileName', return_value=('', 'selected filter')):
         result = FileDialog.getSaveFileName()
 
         # THEN: getSaveFileName() should return a tuple with the second value set to a the selected filter

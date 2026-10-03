@@ -26,7 +26,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.mixins import RegistryProperties
@@ -97,7 +98,7 @@ def remove_url_prefix(filename):
     return filename.replace('file://', '')
 
 
-class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
+class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
     """
     A special type of QTableWidget which lists the slides in the slide controller
 
@@ -588,69 +589,7 @@ class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
         return self.text(col) < other.text(col)
 
 
-class TreeDisclosureStyle(QtWidgets.QProxyStyle):
-    """
-    Proxy style that draws a small outlined chevron as the expand/collapse indicator,
-    plus faint 1px hairline guide lines under expanded parents to reinforce hierarchy.
-    """
-    ARROW_HALF = 4
-    ARROW_WEIGHT = 1.6
-    LINE_ALPHA = 46
-
-    def drawPrimitive(self, element, option, painter, widget=None):
-        if element != QtWidgets.QStyle.PrimitiveElement.PE_IndicatorBranch:
-            super().drawPrimitive(element, option, painter, widget)
-            return
-        rect = option.rect
-        cx = float(rect.center().x())
-        cy = float(rect.center().y())
-        top = float(rect.top())
-        bottom = float(rect.bottom())
-        state = option.state
-        has_item = bool(state & QtWidgets.QStyle.StateFlag.State_Item)
-        has_sibling = bool(state & QtWidgets.QStyle.StateFlag.State_Sibling)
-        has_children = bool(state & QtWidgets.QStyle.StateFlag.State_Children)
-        is_open = bool(state & QtWidgets.QStyle.StateFlag.State_Open)
-        painter.save()
-        line_colour = QtGui.QColor(option.palette.mid().color())
-        line_colour.setAlpha(self.LINE_ALPHA)
-        line_pen = QtGui.QPen(line_colour)
-        line_pen.setWidthF(1.0)
-        line_pen.setCosmetic(True)
-        painter.setPen(line_pen)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
-        if has_item:
-            # Current row's own column. Only draw a vertical rail for leaf rows;
-            # folder rows use the chevron as their anchor instead of a line.
-            if not has_children:
-                painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, cy))
-                if has_sibling:
-                    painter.drawLine(QtCore.QPointF(cx, cy), QtCore.QPointF(cx, bottom))
-        elif has_sibling:
-            # Ancestor column whose node has more siblings below: full-height rail.
-            painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, bottom))
-        if has_children:
-            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
-            s = float(self.ARROW_HALF)
-            pen = QtGui.QPen(option.palette.mid().color())
-            pen.setWidthF(self.ARROW_WEIGHT)
-            pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
-            painter.setPen(pen)
-            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-            if is_open:
-                path = QtGui.QPainterPath(QtCore.QPointF(cx - s, cy - s * 0.4))
-                path.lineTo(cx, cy + s * 0.5)
-                path.lineTo(cx + s, cy - s * 0.4)
-            else:
-                path = QtGui.QPainterPath(QtCore.QPointF(cx - s * 0.4, cy - s))
-                path.lineTo(cx + s * 0.5, cy)
-                path.lineTo(cx - s * 0.4, cy + s)
-            painter.drawPath(path)
-        painter.restore()
-
-
-class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
+class TreeWidgetDnDMixin:
     """
     Provide a tree widget to store objects and handle drag and drop events
     """
@@ -660,49 +599,25 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         """
         Initialise the tree widget
         """
-        super(TreeWidgetWithDnD, self).__init__(parent)
+        super().__init__(parent)
         self.mime_data_text = name
         self.allow_internal_dnd = False
         self._resizing_columns = False
         self.header().close()
         self.header().sectionResized.connect(self._on_section_resized)
         self.default_indentation = self.indentation()
-        self.setIndentation(0)
-        self.setAnimated(True)
         self._drag_start_pos = None
-        self._disclosure_style = TreeDisclosureStyle()
-        self.setStyle(self._disclosure_style)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
-        self.setRootIsDecorated(True)
-        self.setAlternatingRowColors(True)
-        self.setAllColumnsShowFocus(True)
-        palette = self.palette()
-        base = palette.color(QtGui.QPalette.ColorRole.Base)
-        # Derive a gentle zebra tint from the base colour — lighter on dark themes, darker on light.
-        if base.lightnessF() < 0.5:
-            alternate = base.lighter(108)
-        else:
-            alternate = base.darker(103)
-        palette.setColor(QtGui.QPalette.ColorRole.AlternateBase, alternate)
-        self.setPalette(palette)
-        highlight = palette.color(QtGui.QPalette.ColorRole.Highlight).name()
-        highlighted_text = palette.color(QtGui.QPalette.ColorRole.HighlightedText).name()
-        inactive_highlight = QtGui.QColor(palette.color(QtGui.QPalette.ColorRole.Highlight))
-        inactive_highlight.setAlpha(110)
-        inactive_highlight_name = inactive_highlight.name(QtGui.QColor.NameFormat.HexArgb)
-        self.setStyleSheet(
-            'QTreeWidget { outline: 0; background: palette(base); '
-            'alternate-background-color: palette(alternate-base); }'
-            'QTreeWidget::item { padding: 6px 4px; border: 0; }'
-            f'QTreeWidget::item:selected:active {{ background: {highlight}; color: {highlighted_text}; }}'
-            f'QTreeWidget::item:selected:!active {{ background: {inactive_highlight_name}; '
-            'color: palette(text); }'
-        )
+        if name in ('presentations', 'images', 'media'):
+            from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
+            self._library_delegate = FluentLibraryTreeDelegate(self)
+            self.setItemDelegate(self._library_delegate)
+            self.setSelectionIndicatorVisible(True)
 
     def setup_columns(self, labels: list):
         """
         Enable a column header with the given labels. The first column stretches to fill available space;
-        remaining columns resize to their content. Also reduces the font slightly for a more compact display.
+        remaining columns resize to their content. Retain the standard Fluent body font.
 
         :param labels: List of column header strings, e.g. ['Name', 'Type', 'Size']
         """
@@ -717,9 +632,13 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self._ensure_first_column_width()
         self.setSortingEnabled(True)
         self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
-        font = self.font()
-        font.setPointSize(max(font.pointSize() - 1, 8))
-        self.setFont(font)
+        if self.mime_data_text in ('presentations', 'images', 'media'):
+            # File libraries are a hierarchy, not a visible metadata table.
+            # Keep metadata in the model for sorting, tooltips and plugins.
+            for column in range(1, len(labels)):
+                self.setColumnHidden(column, True)
+            self.header().setStretchLastSection(True)
+            self.setHeaderHidden(True)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -733,7 +652,7 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
 
     def _ensure_first_column_width(self):
         """Keep the first column visible and proportional to the viewport width."""
-        if self.columnCount() < 2 or self._resizing_columns:
+        if self.header().isHidden() or self.columnCount() < 2 or self._resizing_columns:
             return
         available_width = self.viewport().width()
         if available_width <= 0:
@@ -810,7 +729,7 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
 
         :param event: The event that occurred
         """
-        QtWidgets.QTreeWidget.dragMoveEvent(self, event)
+        super().dragMoveEvent(event)
         if event.mimeData().hasUrls():
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
@@ -854,3 +773,11 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
 
     def item(self, index):
         return self.topLevelItem(index)
+
+
+class TreeWidgetWithDnD(TreeWidgetDnDMixin, QtWidgets.QTreeWidget):
+    """Folder hierarchy with the shared media drag-and-drop behaviour."""
+
+
+class DataGridWithDnD(TreeWidgetDnDMixin, QtWidgets.QTreeDataGrid):
+    """Flat media records with native Fluent DataGrid columns."""

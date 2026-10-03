@@ -23,7 +23,7 @@ The :mod:`upgrade` module provides a way for the database and schema that is the
 """
 import logging
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy import Table
 from sqlalchemy.sql.expression import delete, select
 

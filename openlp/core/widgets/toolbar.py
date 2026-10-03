@@ -23,11 +23,11 @@ Provide common toolbar handling for OpenLP
 """
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import translate
-from openlp.core.common.registry import Registry
 
-from openlp.core.lib.ui import create_widget_action
+from openlp.core.lib.ui import create_action
 from openlp.core.ui.icons import UiIcons
 
 
@@ -73,7 +73,70 @@ class OpenLPToolbar(QtWidgets.QToolBar):
         self.setIconSize(QtCore.QSize(20, 20))
         self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.actions_map: dict[str, QtGui.QAction] = {}
+        self._fluent_actions = {}
         log.debug('Init done for %s' % parent.__class__.__name__)
+
+    def _add_action_widget(self, action, button):
+        button.setDefaultAction(action)
+        button.setIconSize(self.iconSize())
+        button.setAutoRaise(True)
+        button.setToolButtonStyle(self.toolButtonStyle())
+        self.iconSizeChanged.connect(button.setIconSize)
+        self.toolButtonStyleChanged.connect(button.setToolButtonStyle)
+        wrapper = QtWidgets.QWidgetAction(self)
+        wrapper.setDefaultWidget(button)
+        button.addAction(action)
+
+        def sync():
+            wrapper.setVisible(action.isVisible())
+            wrapper.setEnabled(action.isEnabled())
+        action.changed.connect(sync)
+        self._fluent_actions[action] = (wrapper, button, sync)
+        sync()
+        super().addAction(wrapper)
+
+    def addAction(self, action, *args):
+        """Use native Fluent controls for QAction-backed toolbar commands."""
+        if not isinstance(action, QtGui.QAction):
+            if isinstance(action, QtGui.QIcon):
+                action = QtGui.QAction(action, args[0], self)
+                args = args[1:]
+            else:
+                action = QtGui.QAction(action, self)
+            if args:
+                action.triggered.connect(args[0])
+        if isinstance(action, QtWidgets.QWidgetAction) or action.isSeparator():
+            return super().addAction(action)
+        self._add_action_widget(action, QtWidgets.QToolButton(self))
+        return action
+
+    def widgetForAction(self, action):
+        if action in self._fluent_actions:
+            return self._fluent_actions[action][1]
+        return super().widgetForAction(action)
+
+    def removeAction(self, action):
+        if action in self._fluent_actions:
+            wrapper, button, sync = self._fluent_actions.pop(action)
+            action.changed.disconnect(sync)
+            action.changed.disconnect(button._sync_action)
+            super().removeAction(wrapper)
+            wrapper.deleteLater()
+        else:
+            super().removeAction(action)
+
+    def clear(self):
+        for action in list(self._fluent_actions):
+            self.removeAction(action)
+        super().clear()
+        self.actions_map.clear()
+
+    def add_split_action(self, name, **kwargs):
+        """A native FluentQt split button with independent primary/menu actions."""
+        action = create_action(self, name, **kwargs)
+        self._add_action_widget(action, QtWidgets.QSplitButton(self))
+        self.actions_map[name] = action
+        return action
 
     def add_toolbar_action(self, name, **kwargs):
         """
@@ -81,7 +144,8 @@ class OpenLPToolbar(QtWidgets.QToolBar):
         ``create_action()``. The action is added to the toolbar and the toolbar is set as parent. For more details
         please look at openlp.core.lib.ui.create_action()
         """
-        action = create_widget_action(self, name, **kwargs)
+        action = create_action(self, name, **kwargs)
+        self.addAction(action)
         self.actions_map[name] = action
         return action
 

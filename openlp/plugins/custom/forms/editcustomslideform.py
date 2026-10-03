@@ -21,7 +21,8 @@
 
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from .editcustomslidedialog import Ui_CustomSlideEditDialog
 

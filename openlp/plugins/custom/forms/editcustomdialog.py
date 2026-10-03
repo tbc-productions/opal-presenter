@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button, create_button_box
@@ -106,6 +106,7 @@ class Ui_CustomEditDialog(object):
     def retranslate_ui(self, custom_edit_dialog):
         custom_edit_dialog.setWindowTitle(translate('CustomPlugin.EditCustomForm', 'Edit Custom Slides'))
         self.title_label.setText(translate('CustomPlugin.EditCustomForm', '&Title:'))
+        self.slide_list_view.setHeaderLabel(translate('CustomPlugin.EditCustomForm', 'Slide'))
         self.add_button.setText(UiStrings().Add)
         self.add_button.setToolTip(translate('CustomPlugin.EditCustomForm', 'Add a new slide at bottom.'))
         self.edit_button.setText(UiStrings().Edit)

@@ -24,7 +24,8 @@ This module contains tests for the lib submodule of the Songs plugin.
 import pytest
 from unittest.mock import MagicMock, patch, call
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.enum import SongFirstSlideMode, SongSearch
 from openlp.core.common.registry import Registry

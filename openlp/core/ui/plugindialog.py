@@ -21,7 +21,8 @@
 """
 The UI widgets of the plugin view dialog
 #"""
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button_box
@@ -77,3 +78,4 @@ class Ui_PluginViewDialog(object):
         self.about_label.setText('{about}:'.format(about=UiStrings().About))
         self.status_label.setText(translate('OpenLP.PluginForm', 'Status:'))
         self.status_checkbox.setText(translate('OpenLP.PluginForm', 'Active'))
+        self.plugin_list_widget.setHeaderLabel(translate('OpenLP.PluginForm', 'Plugin'))

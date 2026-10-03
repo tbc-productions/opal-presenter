@@ -98,3 +98,69 @@ def test_get_application_on_windows(mocked_is_win):
     assert mock_application == actual_application, 'The application value should match'
     mocked_is_win.assert_called_with()
     mocked_get.assert_called_with('application')
+
+
+def test_debug_logging_preserves_queued_qobject_receiver(qapp, caplog):
+    """Debug tracing must not deliver GUI callbacks in a worker thread."""
+    import logging
+    from PySide6 import QtCore
+    from openlp.core.common.mixins import LogMixin
+
+    class Receiver(QtCore.QObject, LogMixin):
+        def receive(self, title, message):
+            deliveries.append((QtCore.QThread.currentThread(), title, message))
+            loop.quit()
+
+    class Worker(QtCore.QObject):
+        ready = QtCore.Signal(str, str)
+
+        def start(self):
+            self.ready.emit('Web remote update', 'A new version is available')
+
+    deliveries = []
+    loop = QtCore.QEventLoop()
+    receiver = Receiver()
+    with caplog.at_level(logging.DEBUG):
+        receiver.log_debug('Enable method tracing')
+        assert receiver.receive.__self__ is receiver
+        thread = QtCore.QThread()
+        worker = Worker()
+        worker.moveToThread(thread)
+        worker.ready.connect(receiver.receive, QtCore.Qt.ConnectionType.QueuedConnection)
+        thread.started.connect(worker.start)
+        thread.finished.connect(worker.deleteLater)
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        timer.start(2000)
+        try:
+            thread.start()
+            loop.exec()
+        finally:
+            timer.stop()
+            thread.quit()
+            assert thread.wait(2000)
+    assert deliveries == [(receiver.thread(), 'Web remote update', 'A new version is available')]
+    assert 'Entering receive' in caplog.text
+
+
+def test_logging_wrapper_retains_method_arguments_and_exceptions(caplog):
+    """Binding the tracing wrapper must preserve normal method behaviour."""
+    import logging
+    from openlp.core.common.mixins import LogMixin
+
+    class Receiver(LogMixin):
+        def multiply(self, value, *, factor=2):
+            return value * factor
+
+        def fail(self):
+            raise ValueError('Test exception')
+
+    receiver = Receiver()
+    with caplog.at_level(logging.DEBUG):
+        receiver.log_debug('Enable method tracing')
+        assert receiver.multiply(3, factor=4) == 12
+        with pytest.raises(ValueError, match='Test exception'):
+            receiver.fail()
+    assert 'Entering multiply' in caplog.text
+    assert 'Entering fail' in caplog.text

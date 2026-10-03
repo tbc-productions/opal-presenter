@@ -20,7 +20,8 @@
 ##########################################################################
 import logging
 
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import and_
 
 from openlp.core.common.i18n import translate

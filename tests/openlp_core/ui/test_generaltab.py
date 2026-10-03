@@ -27,7 +27,8 @@ from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 
 def test_creation(settings):
@@ -136,22 +137,20 @@ def test_logo_fit_setting_is_saved(settings):
 @pytest.mark.parametrize('scheme, offset', [(UiThemes.Native, 0), (UiThemes.QDarkStyle, 1)])
 def test_legacy_theme_selection(style, scheme, offset):
     """Legacy schemes map to Auto or Dark within the selected appearance."""
-    assert GeneralTab.get_ui_theme_index(scheme, style) == offset + (3 if style == 'modern' else 0)
+    assert GeneralTab.get_ui_theme_index(scheme, style) == offset
 
 
 def test_default_theme_is_modern_auto(settings):
     form = SettingsForm(None)
     tab = GeneralTab(form)
     form.insert_tab(tab, is_visible=True)
-    assert tab.ui_theme_style_combo_box.currentIndex() == 3
-    assert [tab.ui_theme_style_combo_box.itemText(i) for i in range(6)] == [
-        'Classic (Auto)', 'Classic Dark', 'Classic Light', 'Modern (Auto)', 'Modern Dark', 'Modern Light']
+    assert tab.ui_theme_style_combo_box.currentIndex() == 0
+    assert [tab.ui_theme_style_combo_box.itemText(i) for i in range(3)] == ['Auto', 'Dark', 'Light']
 
 
 @pytest.mark.parametrize('index, style, scheme', [
-    (0, 'classic', UiThemes.Automatic), (1, 'classic', UiThemes.DefaultDark),
-    (2, 'classic', UiThemes.DefaultLight), (3, 'modern', UiThemes.Automatic),
-    (4, 'modern', UiThemes.DefaultDark), (5, 'modern', UiThemes.DefaultLight)])
+    (0, 'modern', UiThemes.Automatic), (1, 'modern', UiThemes.DefaultDark),
+    (2, 'modern', UiThemes.DefaultLight)])
 def test_combined_theme_round_trip(settings, index, style, scheme):
     form = SettingsForm(None)
     tab = GeneralTab(form)
@@ -160,6 +159,6 @@ def test_combined_theme_round_trip(settings, index, style, scheme):
     tab.save()
     assert settings.value('advanced/interface style') == style
     assert settings.value('advanced/ui_theme_name') == scheme
-    tab.ui_theme_style_combo_box.setCurrentIndex((index + 1) % 6)
+    tab.ui_theme_style_combo_box.setCurrentIndex((index + 1) % 3)
     tab.load()
     assert tab.ui_theme_style_combo_box.currentIndex() == index

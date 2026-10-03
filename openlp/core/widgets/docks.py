@@ -24,7 +24,8 @@ The :mod:`~openlp.core.widgets.docks` module contains a customised base dock wid
 import logging
 import math
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
@@ -45,6 +46,7 @@ class LibraryTabBar(QtWidgets.QTabBar):
         super(LibraryTabBar, self).__init__(parent)
 
     def set_placeholder(self, index, enabled=True):
+        self.setTabVisible(index, not enabled)
         if enabled:
             self._placeholder_indices.add(index)
         else:

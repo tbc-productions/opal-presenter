@@ -26,7 +26,8 @@ from shutil import copy2
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import sha256_file_hash
 from openlp.core.common.applocation import AppLocation
@@ -304,8 +305,7 @@ class FolderLibraryItem(MediaManagerItem):
     def _get_proportional_folder_icon(self) -> QtGui.QIcon:
         """
         Return a folder icon rendered at a modest visual size, centered on a transparent
-        pixmap matching the tree's icon cell. This prevents folders from visually dominating
-        rows that otherwise show ~88x50 thumbnails.
+        pixmap matching the tree's compact icon cell.
         """
         cell = self.list_view.iconSize()
         if not cell.isValid() or cell.width() <= 0 or cell.height() <= 0:
@@ -344,9 +344,6 @@ class FolderLibraryItem(MediaManagerItem):
         folder_item.setText(0, f'{folder.name} ({item_count})' if item_count else folder.name)
         folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
         folder_item.setIcon(0, self._get_proportional_folder_icon())
-        folder_font = QtGui.QFont(self.list_view.font())
-        folder_font.setWeight(QtGui.QFont.Weight.DemiBold)
-        folder_item.setFont(0, folder_font)
         return folder_item
 
     def _find_folder_tree_item(self, folder_id):

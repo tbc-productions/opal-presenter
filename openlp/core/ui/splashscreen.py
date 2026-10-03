@@ -22,7 +22,8 @@
 The splash screen
 """
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 
 class SplashScreen(QtWidgets.QSplashScreen):

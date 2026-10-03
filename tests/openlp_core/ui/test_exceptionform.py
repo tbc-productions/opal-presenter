@@ -26,7 +26,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
 from openlp.core.common.registry import Registry

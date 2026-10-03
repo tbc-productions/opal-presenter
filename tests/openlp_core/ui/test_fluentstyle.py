@@ -1,10 +1,11 @@
 """Fluent appearance preserves action behavior and isolates output windows."""
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
-from PySide6 import QtCore, QtGui, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.fluentstyle import FluentAccentButton, get_fluent_controls_stylesheet
+from openlp.core.ui.fluentstyle import FluentAccentButton
 
 
 def test_accent_button_keeps_action_mouse_keyboard_and_disabled_behavior(qapp):
@@ -25,18 +26,21 @@ def test_accent_button_keeps_action_mouse_keyboard_and_disabled_behavior(qapp):
     button.close()
 
 
-def test_reduced_motion_hover_is_immediate(qapp):
+def test_accent_uses_native_style_and_motion(qapp):
+    import fluentqt
     button = FluentAccentButton()
-    with patch('openlp.core.ui.fluentstyle.animations_enabled', return_value=False):
-        button._animate_hover(1.0)
-    assert button._hover == 1.0
-    assert button._animation.state() == QtCore.QAbstractAnimation.State.Stopped
+    assert isinstance(button, fluentqt.Button)
+    assert button.fluentStyle() == fluentqt.Button.ButtonStyle.Accent
 
 
-@pytest.mark.parametrize('window_color, accent', [('#f3f3f3', '#0067c0'), ('#202020', '#60cdff')])
+@pytest.mark.parametrize('window_color, accent', [('#f3f3f3', '#005fb8'), ('#202020', '#60cdff')])
 def test_accent_render_uses_application_scheme_with_transparent_widget_palette(qapp, window_color, accent):
     app = QtWidgets.QApplication.instance()
     original = app.palette()
+    import fluentqt
+    original_theme = fluentqt.current_theme()
+    fluentqt.initialize_resources()
+    fluentqt.set_theme(fluentqt.Theme.Dark if window_color == '#202020' else fluentqt.Theme.Light)
     palette = QtGui.QPalette(original)
     palette.setColor(QtGui.QPalette.ColorRole.Window, QtGui.QColor(window_color))
     app.setPalette(palette)
@@ -48,30 +52,17 @@ def test_accent_render_uses_application_scheme_with_transparent_widget_palette(q
         assert rendered.pixelColor(8, 16).name() == accent
     finally:
         app.setPalette(original)
+        fluentqt.set_theme(original_theme)
 
 
-def test_fluent_surfaces_include_dialogs_but_exclude_output_windows(qapp):
-    """Later-created dialogs and menus acquire styling without a global event filter."""
+def test_native_controls_do_not_install_a_projection_stylesheet(settings):
+    from openlp.core.ui.style import get_application_stylesheet, set_default_theme
+    from PySide6 import QtWidgets as NativeQt
+    import fluentqt
     app = QtWidgets.QApplication.instance()
-    original_stylesheet = app.styleSheet()
-    app.setStyleSheet(get_fluent_controls_stylesheet())
-    dialog, menu, output = QtWidgets.QDialog(), QtWidgets.QMenu(), QtWidgets.QWidget()
-    dialog_field = QtWidgets.QLineEdit(dialog)
-    output_field = QtWidgets.QLineEdit(output)
-    try:
-        for widget in (dialog, menu, output, dialog_field, output_field):
-            widget.ensurePolished()
-        assert dialog.palette().color(QtGui.QPalette.ColorRole.Window).name() == '#f3f3f3'
-        assert menu.palette().color(QtGui.QPalette.ColorRole.Window).name() == '#ffffff'
-        assert dialog_field.palette().color(QtGui.QPalette.ColorRole.Base).name() == '#ffffff'
-        assert output.palette() == app.palette()
-        assert output_field.palette().color(QtGui.QPalette.ColorRole.Base) == app.palette().color(
-            QtGui.QPalette.ColorRole.Base)
-        app.setStyleSheet('')
-        classic_dialog = QtWidgets.QDialog()
-        classic_dialog.ensurePolished()
-        assert classic_dialog.palette() == app.palette()
-    finally:
-        app.setStyleSheet(original_stylesheet)
-        for widget in (dialog, menu, output):
-            widget.deleteLater()
+    set_default_theme(app)
+    output = NativeQt.QWidget()
+    field = QtWidgets.QLineEdit()
+    assert isinstance(field, fluentqt.LineEdit)
+    assert not output.styleSheet()
+    assert 'QLineEdit {' not in get_application_stylesheet()

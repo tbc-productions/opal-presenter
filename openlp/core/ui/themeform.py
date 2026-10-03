@@ -24,7 +24,8 @@ The Theme wizard
 import logging
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import is_not_image_file
 from openlp.core.common.enum import ServiceItemType

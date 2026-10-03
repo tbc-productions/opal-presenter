@@ -22,7 +22,8 @@
 The :mod:`~openlp.plugins.planningcenter.lib.planningcentertab` module contains
 the settings tab for the PlanningCenter plugin
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.settingstab import SettingsTab

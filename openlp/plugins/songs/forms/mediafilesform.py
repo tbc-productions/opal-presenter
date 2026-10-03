@@ -21,7 +21,8 @@
 
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from .mediafilesdialog import Ui_MediaFilesDialog
 

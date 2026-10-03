@@ -1,5 +1,6 @@
 """ADS integration for the Modern workspace; Classic keeps Qt's dock widgets."""
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.ui.fluentstyle import get_fluent_dock_stylesheet
 

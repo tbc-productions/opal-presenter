@@ -164,6 +164,7 @@ def test_application_keeps_marker_until_queued_startup_completes(settings, qapp,
         return MagicMock()
 
     monkeypatch.setattr(app_module, 'MainWindow', create_window)
+    monkeypatch.setattr(app_module, 'refine_modern_layout', lambda window: None)
 
     assert qapp.run([], MagicMock()) == 0
     assert settings.value('core/layout startup pending') is True

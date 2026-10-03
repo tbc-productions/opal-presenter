@@ -25,7 +25,8 @@ import logging
 import urllib.error
 
 from lxml import etree
-from PySide6 import QtWidgets, QtGui, QtCore
+from PySide6 import QtGui, QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 try:
     from pysword import modules

@@ -23,7 +23,8 @@ Package to test the openlp.plugins.alerts.forms.alertform package.
 """
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtWidgets, QtTest, QtCore
+from PySide6 import QtTest, QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings

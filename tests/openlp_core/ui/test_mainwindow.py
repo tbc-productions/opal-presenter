@@ -28,7 +28,8 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 import pytest
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
@@ -52,9 +53,10 @@ _MAIN_WINDOWS = []
 
 
 @pytest.fixture(autouse=True)
-def classic_appearance_for_existing_tests(settings, request):
+def classic_appearance_for_existing_tests(settings, request, monkeypatch):
     if 'modern_appearance' not in request.fixturenames:
         settings.setValue('advanced/interface style', 'classic')
+        monkeypatch.setattr('openlp.core.ui.mainwindow.is_modern_style', lambda: False)
 
 
 @pytest.fixture
@@ -275,7 +277,8 @@ def main_window_reduced(settings, state, qapp):
     Registry().register('mock_plugin', mocked_plugin)
     State().add_service("mock", 1, is_plugin=True, status=PluginStatus.Active)
     # Mock classes and methods used by mainwindow.
-    with patch('openlp.core.ui.mainwindow.SettingsForm'), \
+    with patch('openlp.core.ui.mainwindow.is_modern_style', return_value=False), \
+            patch('openlp.core.ui.mainwindow.SettingsForm'), \
             patch('openlp.core.ui.mainwindow.OpenLPDockWidget'), \
             patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot'), \
         patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \

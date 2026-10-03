@@ -21,7 +21,8 @@
 """
 The UI widgets for the service item edit dialog
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button, create_button_box
@@ -71,3 +72,4 @@ class Ui_ServiceItemEditDialog(object):
         Translate the UI on the fly
         """
         serviceItemEditDialog.setWindowTitle(translate('OpenLP.ServiceItemEditForm', 'Reorder Service Item'))
+        self.list_widget.setHeaderLabel(translate('OpenLP.ServiceItemEditForm', 'Slide'))

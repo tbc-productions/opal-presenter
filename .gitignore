@@ -60,3 +60,7 @@ package-lock.json
 tags
 test
 venv
+
+# Local FluentQt/Qt SDK builds
+.cache/fluentqt/
+.cache/qt/

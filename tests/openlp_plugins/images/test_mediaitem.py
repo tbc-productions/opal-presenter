@@ -25,7 +25,8 @@ from tempfile import TemporaryDirectory
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_file_type_glob
 from openlp.core.common.enum import ImageThemeMode
@@ -161,7 +162,7 @@ def test_initialise(MockItem: MagicMock, mocked_create_paths: MagicMock, media_i
 
     # THEN: The correct methods should have been called
     media_item.list_view.clear.assert_called_once_with()
-    media_item.list_view.setIconSize.assert_called_once_with(QtCore.QSize(88, 50))
+    media_item.list_view.setIconSize.assert_called_once_with(QtCore.QSize(20, 20))
     media_item.list_view.setIndentation.assert_called_once_with(4)
     assert media_item.list_view.allow_internal_dnd is True
     assert media_item.service_path.parts[-1] == 'thumbnails'

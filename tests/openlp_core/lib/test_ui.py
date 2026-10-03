@@ -23,7 +23,8 @@ Package to test the openlp.core.lib.ui package.
 """
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, add_welcome_page, \

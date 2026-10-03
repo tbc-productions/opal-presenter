@@ -20,7 +20,7 @@
 ##########################################################################
 
 import re
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtMultimedia import QMediaDevices
 
 from openlp.core.common.i18n import translate

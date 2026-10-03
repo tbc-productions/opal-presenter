@@ -21,7 +21,9 @@
 """
 The Create/Edit theme dialog
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from openlp.core.common.i18n import translate
 from openlp.core.display.render import ThemePreviewRenderer
@@ -168,7 +170,7 @@ class Ui_ThemeWizard(object):
         self.preview_label = QtWidgets.QLabel(self.preview_panel)
         self.preview_label.setObjectName('preview_label')
         self.preview_panel_layout.addWidget(self.preview_label)
-        self.preview_toolbar = QtWidgets.QToolBar(self.preview_panel)
+        self.preview_toolbar = OpenLPToolbar(self.preview_panel)
         self.preview_toolbar.setObjectName('preview_toolbar')
         self.preview_toolbar.setFloatable(False)
         self.preview_toolbar.setMovable(False)

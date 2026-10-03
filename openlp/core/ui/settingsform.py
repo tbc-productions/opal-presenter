@@ -23,7 +23,8 @@ The :mod:`settingsform` provides a user interface for the OpenLP+ settings
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
 from openlp.core.api.tab import ApiTab
@@ -248,7 +249,10 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             if combo_box.minimumHeight() < minimum_input_height:
                 combo_box.setMinimumHeight(minimum_input_height)
 
-        for abstract_spin_box in tab_widget.findChildren(QtWidgets.QAbstractSpinBox):
+        spin_boxes = (tab_widget.findChildren(QtWidgets.QAbstractSpinBox) +
+                      tab_widget.findChildren(QtWidgets.QSpinBox) +
+                      tab_widget.findChildren(QtWidgets.QTimeEdit))
+        for abstract_spin_box in spin_boxes:
             if abstract_spin_box.minimumHeight() < minimum_input_height:
                 abstract_spin_box.setMinimumHeight(minimum_input_height)
 

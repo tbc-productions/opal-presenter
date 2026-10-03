@@ -24,7 +24,7 @@ Package to test the openlp.core.ui.formattingtagsform package.
 from pathlib import Path
 
 import pytest
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 from unittest.mock import MagicMock, call, patch
 
 from openlp.core.ui.formattingtagform import FormattingTagForm

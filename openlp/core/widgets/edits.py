@@ -26,7 +26,9 @@ import re
 from pathlib import Path
 
 import qtawesome as qta
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from openlp.core.common import CONTROL_CHARS
 from openlp.core.common.i18n import UiStrings, translate
@@ -556,7 +558,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         Create a lightweight formatting toolbar docked at the top of the editor.
         """
-        self._toolbar = QtWidgets.QToolBar(self)
+        self._toolbar = OpenLPToolbar(self)
         self._toolbar.setIconSize(QtCore.QSize(20, 20))
         self._toolbar.setMovable(False)
         self._toolbar.setFloatable(False)

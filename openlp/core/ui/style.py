@@ -23,14 +23,15 @@ The :mod:`~openlp.core.ui.dark` module looks for and loads a dark theme
 """
 from subprocess import Popen, PIPE
 from enum import Enum
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.ui.modernstyle import is_modern_style, set_modern_palette, get_modern_stylesheet
 
 try:
-    import qdarkstyle
+    import qdarkstyle  # noqa: F401 - legacy settings detection
     HAS_DARK_THEME = True
 except ImportError:
     HAS_DARK_THEME = False
@@ -178,6 +179,7 @@ def get_dock_panel_header_stylesheet():
     Return stylesheet used to make dock panel headers easier to read.
     """
     return '' if is_modern_style() else DOCK_PANEL_HEADER_STYLE
+
 
 PROGRESSBAR_STYLE = """
 QProgressBar{
@@ -346,26 +348,17 @@ def set_default_theme(app):
     """
     Setup theme
     """
-    if is_ui_theme(UiThemes.Native):
-        if is_macosx():
-            native = get_macos_native_style_name()
-            if native:
-                app.setStyle(native)
-        app.setFont(get_native_system_font())
-        # Ensure any previously-customized palette is reset when using the native theme.
-        app.setPalette(app.style().standardPalette())
-        if is_modern_style():
-            set_modern_palette(app)
-        return
-    if is_ui_theme(UiThemes.DefaultDark) or (is_ui_theme(UiThemes.Automatic) and is_ui_theme_dark()):
+    import fluentqt
+    fluentqt.initialize_resources()
+    dark = is_ui_theme_dark()
+    fluentqt.set_theme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)
+    if dark:
         set_default_darkmode(app)
-    elif is_ui_theme(UiThemes.DefaultLight) or is_ui_theme(UiThemes.Automatic):
+    else:
         set_default_lightmode(app)
-    if is_modern_style():
-        # Modern supplies its own palette even when a legacy QDarkStyle scheme is selected.
-        if is_ui_theme(UiThemes.QDarkStyle):
-            set_default_darkmode(app)
-        set_modern_palette(app)
+    set_modern_palette(app)
+    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+    return
 
 
 def set_default_lightmode(app):
@@ -459,64 +452,9 @@ def get_application_stylesheet():
 
     :return str: The correct stylesheet as a string
     """
-    stylesheet = ''
-    if is_modern_style():
-        return FORM_CONTROL_STYLE_REPAIR + BUTTON_HOVER_STYLE_REPAIR + get_modern_stylesheet()
-    ui_theme_name = Registry().get('settings').value('advanced/ui_theme_name')
-    use_alternate_rows_enabled = use_alternate_rows()
-    is_qdarkstyle = ui_theme_name == UiThemes.QDarkStyle
-    is_system_theme = ui_theme_name == UiThemes.Automatic
-    if is_system_theme:
-        # Fusion + system palette (Automatic dark/light) still needs toolbar checked-state contrast
-        # and the same hover affordances as the macOS minimal-repair path.
-        stylesheet = FORM_CONTROL_STYLE_REPAIR + BUTTON_HOVER_STYLE_REPAIR + \
-            'QWidget#slide_controller_toolbar QToolButton::checked {' \
-            '  background-color: palette(highlight);' \
-            '  color: palette(highlighted-text);' \
-            '}'
-        return stylesheet
-    if is_macosx() and not is_qdarkstyle:
-        # Keep macOS rendering close to native while applying minimal control/hover repairs.
-        stylesheet += FORM_CONTROL_STYLE_REPAIR
-        stylesheet += BUTTON_HOVER_STYLE_REPAIR
-        stylesheet += 'QWidget#slide_controller_toolbar QToolButton::checked {' \
-            '  background-color: palette(highlight);' \
-            '  color: palette(highlighted-text);' \
-            '}'
-        return stylesheet
-    if is_qdarkstyle:
-        stylesheet = qdarkstyle.load_stylesheet_pyqt()
-    else:
-        stylesheet += FORM_CONTROL_STYLE_REPAIR
-        stylesheet += BUTTON_HOVER_STYLE_REPAIR
-        if not use_alternate_rows_enabled:
-            base_color = QtWidgets.QApplication.palette().color(QtGui.QPalette.ColorGroup.Active,
-                                                                QtGui.QPalette.ColorRole.Base)
-            alternate_rows_repair_stylesheet = get_alternate_rows_repair_stylesheet(base_color.name())
-            stylesheet += alternate_rows_repair_stylesheet
-        if is_win():
-            stylesheet += WIN_REPAIR_STYLESHEET
-    if not is_win():
-        stylesheet += DOCK_PANEL_HEADER_STYLE
-    stylesheet += 'QWidget#slide_controller_toolbar QToolButton::checked {' \
-        '  background-color: palette(highlight);' \
-        '  color: palette(highlighted-text);' \
-        '}'
-    return stylesheet
+    return get_modern_stylesheet()
 
 
 def get_library_stylesheet():
-    """
-    Return the correct stylesheet for the main window
-
-    :return str: The correct stylesheet as a string
-    """
-    if is_modern_style():
-        return ''
-    if is_macosx():
-        return ''
-    if is_ui_theme(UiThemes.Automatic) or is_ui_theme(UiThemes.QDarkStyle):
-        return ''
-    if is_ui_theme(UiThemes.DefaultDark) or is_ui_theme_dark():
-        return MEDIA_MANAGER_DARK_STYLE
-    return MEDIA_MANAGER_LIGHT_STYLE
+    """Native Fluent collections manage their own theme."""
+    return ''

@@ -24,7 +24,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_file_type_glob
 from openlp.core.lib import ServiceItemContext

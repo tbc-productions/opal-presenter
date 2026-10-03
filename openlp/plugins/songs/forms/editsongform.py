@@ -27,7 +27,8 @@ import re
 from shutil import copyfile
 from typing import TYPE_CHECKING
 
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import sha256_file_hash
 from openlp.core.common.applocation import AppLocation

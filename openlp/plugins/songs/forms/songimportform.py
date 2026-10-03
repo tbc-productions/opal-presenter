@@ -23,7 +23,8 @@ The song import functions for OpenLP.
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.handlers import handle_permission_error
 from openlp.core.common.i18n import UiStrings, translate

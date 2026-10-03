@@ -3,7 +3,7 @@ import json
 import zipfile
 from pathlib import Path
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import clean_filename
 from openlp.core.common.i18n import translate

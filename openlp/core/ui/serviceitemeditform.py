@@ -23,7 +23,8 @@ The service item edit dialog
 """
 from pathlib import Path
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry

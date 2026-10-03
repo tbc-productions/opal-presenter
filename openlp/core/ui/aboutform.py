@@ -24,7 +24,8 @@ The About dialog.
 import webbrowser
 import datetime
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.platform import is_macosx
@@ -166,7 +167,7 @@ class AboutForm(QtWidgets.QDialog):
                       '<li><a href="https://gitlab.com/tgc-dk/pysword">pysword</a> (MIT)</li>'
                       '<li><a href="https://pytest.org/">pytest</a> (MIT)</li>'
                       '<li><a href="https://github.com/pytest-dev/pytest-qt">pytest-qt</a> (MIT)</li>'
-                      '<li><a href="https://github.com/ColinDuquesnoy/QDarkStyleSheet">QDarkStyle</a> (MIT)</li>'
+                      '<li><a href="https://github.com/calvinhxx/Fluent-Qt">FluentQt</a> (MIT)</li>'
                       '<li><a href="https://github.com/spyder-ide/qtawesome">QtAwesome</a> (MIT)</li>'
                       '<li><a href="https://2.python-requests.org/en/master/">Requests</a> (Apache 2.0)</li>'
                       '<li><a href="https://www.sqlalchemy.org">SQLAlchemy</a> (MIT)</li>'

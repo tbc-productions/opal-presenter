@@ -22,7 +22,8 @@
 Tests for Library dock tab behavior.
 """
 
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.widgets.docks import MediaToolBox
 
@@ -134,7 +135,7 @@ def test_media_tool_box_split_uses_tool_box_width(qapp):
 def test_media_tool_box_rechecks_with_rendered_tab_widths(qapp):
     """A one-row estimate should be corrected if rendered tabs overflow."""
     media_tool_box = MediaToolBox()
-    media_tool_box.resize(200, 300)
+    media_tool_box.resize(150, 300)
     _add_item(media_tool_box, 'Images')
     _add_item(media_tool_box, 'Media')
     _add_item(media_tool_box, 'Custom')

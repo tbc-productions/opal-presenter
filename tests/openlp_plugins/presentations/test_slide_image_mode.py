@@ -2,7 +2,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtCore import QThread, QTimer
 from PySide6.QtGui import QImage
 

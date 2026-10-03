@@ -6,7 +6,8 @@ from unittest.mock import MagicMock
 from zipfile import ZipFile
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import sha256_file_hash
 from openlp.core.common.applocation import AppLocation

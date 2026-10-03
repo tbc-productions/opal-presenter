@@ -21,7 +21,7 @@
 """
 The :mod:`~openlp.core.pages.background` module contains the background page used in the theme wizard
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate

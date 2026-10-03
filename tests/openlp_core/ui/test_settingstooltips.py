@@ -1,7 +1,7 @@
 """Preferences help icons provide guidance without covering settings controls."""
 from unittest.mock import patch
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.servicetab import ServiceTab

@@ -25,7 +25,8 @@ Provides the dialog window for selecting video source for projector.
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.platform import is_macosx
@@ -219,7 +220,7 @@ class FingerTabWidget(QtWidgets.QTabWidget):
         Initialize FingerTabWidget instance
         """
         super().__init__(parent)
-        self.setTabBar(FingerTabBarWidget(self))
+        self.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
 
 
 class SourceSelectTabs(QtWidgets.QDialog):

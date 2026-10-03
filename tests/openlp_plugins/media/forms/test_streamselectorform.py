@@ -25,7 +25,8 @@ import pytest
 
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.plugins.media.forms.streamselectorform import StreamSelectorForm
 
@@ -95,6 +96,9 @@ def test_set_stream_call(stream_selector_form):
     stream_selector_form.stream_name_edit.setText('test')
     # choose camera 2
     stream_selector_form.capture_widget.video_devices_combo_box.setCurrentIndex(2)
+    # QtTest mouse events require a visible native window.
+    stream_selector_form.show()
+    QtWidgets.QApplication.processEvents()
     # click on Save
     QtTest.QTest.mouseClick(stream_selector_form.save_button, QtCore.Qt.MouseButton.LeftButton)
 

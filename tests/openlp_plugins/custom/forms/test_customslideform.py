@@ -24,7 +24,7 @@ Module to test the EditCustomSlideForm.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.plugins.custom.forms.editcustomslideform import EditCustomSlideForm
@@ -45,7 +45,7 @@ def test_basic(form):
     Test if the dialog is correctly set up.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         # WHEN: Show the dialog.
         form.exec()
 
@@ -58,7 +58,7 @@ def test_set_text(form):
     Test the set_text() method.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         mocked_set_focus = MagicMock()
         form.slide_text_edit.setFocus = mocked_set_focus
         wanted_text = 'THIS TEXT SHOULD BE SHOWN.'

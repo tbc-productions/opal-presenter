@@ -30,7 +30,8 @@ from pathlib import Path
 from tempfile import gettempdir
 from threading import Lock
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.api.http.server import HttpServer
 from openlp.core.api.websockets import WebSocketServer
@@ -167,36 +168,36 @@ class Ui_MainWindow(object):
         live_visible = self.settings.value('user interface/live panel')
         panel_locked = self.settings.value('user interface/lock panel')
         # Create menu
-        self.menu_bar = QtWidgets.QMenuBar(main_window)
+        self.menu_bar = QtWidgets.create_application_menu_bar(main_window)
         self.menu_bar.setObjectName('menu_bar')
-        self.file_menu = QtWidgets.QMenu(self.menu_bar)
+        self.file_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.file_menu.setObjectName('fileMenu')
-        self.recent_files_menu = QtWidgets.QMenu(self.file_menu)
+        self.recent_files_menu = QtWidgets.create_application_menu(self.file_menu)
         self.recent_files_menu.setIcon(UiIcons().time)
         self.recent_files_menu.setObjectName('recentFilesMenu')
-        self.file_import_menu = QtWidgets.QMenu(self.file_menu)
+        self.file_import_menu = QtWidgets.create_application_menu(self.file_menu)
         self.file_import_menu.setIcon(UiIcons().download)
         self.file_import_menu.setObjectName('file_import_menu')
-        self.file_export_menu = QtWidgets.QMenu(self.file_menu)
+        self.file_export_menu = QtWidgets.create_application_menu(self.file_menu)
         self.file_export_menu.setIcon(UiIcons().upload)
         self.file_export_menu.setObjectName('file_export_menu')
         # View Menu
-        self.view_menu = QtWidgets.QMenu(self.menu_bar)
+        self.view_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.view_menu.setObjectName('viewMenu')
-        self.view_mode_menu = QtWidgets.QMenu(self.view_menu)
+        self.view_mode_menu = QtWidgets.create_application_menu(self.view_menu)
         self.view_mode_menu.setIcon(UiIcons().dashboard)
         self.view_mode_menu.setObjectName('viewModeMenu')
         # Tools Menu
-        self.tools_menu = QtWidgets.QMenu(self.menu_bar)
+        self.tools_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.tools_menu.setObjectName('tools_menu')
         # Settings Menu
-        self.settings_menu = QtWidgets.QMenu(self.menu_bar)
+        self.settings_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.settings_menu.setObjectName('settingsMenu')
-        self.settings_language_menu = QtWidgets.QMenu(self.settings_menu)
+        self.settings_language_menu = QtWidgets.create_application_menu(self.settings_menu)
         self.settings_language_menu.setIcon(UiIcons().translation)
         self.settings_language_menu.setObjectName('settingsLanguageMenu')
         # Help Menu
-        self.help_menu = QtWidgets.QMenu(self.menu_bar)
+        self.help_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.help_menu.setObjectName('helpMenu')
         main_window.setMenuBar(self.menu_bar)
         self.status_bar = QtWidgets.QStatusBar(main_window)
@@ -646,7 +647,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface
         self.setup_ui(self)
-        self.export_presentation_menu = QtWidgets.QMenu(self.file_export_menu)
+        self.export_presentation_menu = QtWidgets.create_application_menu(self.file_export_menu)
         self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
         self.export_presentation_menu.setObjectName('export_presentation_menu')
         self.export_powerpoint_item = self.export_presentation_menu.addAction(

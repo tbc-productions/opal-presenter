@@ -21,7 +21,8 @@
 """
 The :mod:`~openlp.core.ui.servicenoteform` module contains the `ServiceNoteForm` class.
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties

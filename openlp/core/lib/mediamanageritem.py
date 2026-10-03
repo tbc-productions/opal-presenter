@@ -24,7 +24,8 @@ Provides the generic functions for interfacing plugins with the Media Manager.
 import fnmatch
 import re
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
@@ -342,6 +343,9 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Add the List widget
         self.list_view = ListWidgetWithDnD(self, self.plugin.name)
         self.list_view.setObjectName('{name}ListView'.format(name=self.plugin.name))
+        self.list_view.setHeaderLabel(translate('OpenLP.MediaManagerItem', 'Reference')
+                                      if self.plugin.name == 'bibles'
+                                      else translate('OpenLP.MediaManagerItem', 'Title'))
         # Add to page_layout
         self.page_layout.addWidget(self.list_view)
         if self.has_edit_icon:

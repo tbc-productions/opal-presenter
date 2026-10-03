@@ -25,7 +25,8 @@ from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import SlideLimits
 from openlp.core.common.actions import ActionList, CategoryOrder
@@ -320,7 +321,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.fetching_screenshot = False
             self.screen_capture = None
             # Hide Menu
-            self.hide_menu = QtWidgets.QToolButton(self.toolbar)
+            self.hide_menu = QtWidgets.QSplitButton(self.toolbar)
             self.hide_menu.setObjectName('hide_menu')
             self.hide_menu.setText(translate('OpenLP.SlideController', 'Hide'))
             self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -384,7 +385,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self._update_desktop_hide_action_state()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
-            self.play_slides_menu = QtWidgets.QToolButton(self.toolbar)
+            self.play_slides_menu = QtWidgets.QSplitButton(self.toolbar)
             self.play_slides_menu.setObjectName('play_slides_menu')
             self.play_slides_menu.setText(translate('OpenLP.SlideController', 'Play Slides'))
             self.play_slides_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -843,14 +844,18 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.log_debug('on_controller_size_changed is_event:{}'.format(event is not None))
         if self.is_live and self.ignore_toolbar_resize_events is False:
-            toolbar_width = max(self.toolbar.sizeHint().width(), self.toolbar.minimumSizeHint().width())
-            spare_space = self.controller.width() - toolbar_width
-            if spare_space <= 0 and not self.hide_menu.isVisible():
-                self.set_hide_mode_menu(narrow=True)
-            # Add threshold to prevent flickering.
-            elif spare_space > HIDE_MENU_THRESHOLD and self.hide_menu.isVisible() \
-                    or spare_space > 0 and not self.hide_menu.isVisible():
-                self.set_hide_mode_menu(narrow=False)
+            self.ignore_toolbar_resize_events = True
+            try:
+                toolbar_width = max(self.toolbar.sizeHint().width(), self.toolbar.minimumSizeHint().width())
+                spare_space = self.controller.width() - toolbar_width
+                if spare_space <= 0 and not self.hide_menu.isVisible():
+                    self.set_hide_mode_menu(narrow=True)
+                # Add threshold to prevent flickering.
+                elif spare_space > HIDE_MENU_THRESHOLD and self.hide_menu.isVisible() \
+                        or spare_space > 0 and not self.hide_menu.isVisible():
+                    self.set_hide_mode_menu(narrow=False)
+            finally:
+                self.ignore_toolbar_resize_events = False
 
     def set_hide_mode_menu(self, narrow):
         """

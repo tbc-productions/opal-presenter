@@ -28,7 +28,8 @@ from pathlib import Path
 from tempfile import gettempdir
 
 import requests
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.api.deploy import REMOTE_URL, download_and_install
 from openlp.core.common import trace_error_handler

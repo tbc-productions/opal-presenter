@@ -21,7 +21,8 @@
 """
 A widget representing a song in the duplicate song removal wizard review page.
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.style import use_alternate_rows

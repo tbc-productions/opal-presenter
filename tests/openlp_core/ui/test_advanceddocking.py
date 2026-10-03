@@ -1,6 +1,7 @@
 """Exercise real ADS floating, auto-hide, close and restore operations."""
 import pytest
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture

@@ -39,9 +39,9 @@ except ImportError:
 from openlp.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseController, \
     AppleScriptBaseDocument
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtPdf import QPdfDocument
-from PySide6.QtCore import Qt, QThread, QTimer
+from PySide6.QtCore import Qt, QEventLoop, QThread, QTimer
 from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtMultimedia import QMediaCaptureSession, QVideoSink, QWindowCapture
 
@@ -966,9 +966,15 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         dialog.setCancelButton(None)
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
         dialog.setMinimumDuration(0)
-        worker.finished.connect(dialog.accept)
-        QTimer.singleShot(0, worker.start)
-        dialog.exec()
+        loop = QEventLoop()
+        worker.finished.connect(dialog.accept, Qt.ConnectionType.QueuedConnection)
+        worker.finished.connect(loop.quit, Qt.ConnectionType.QueuedConnection)
+        # Show before starting work so native widget setup cannot consume a
+        # fast worker's completion before the progress event loop is running.
+        dialog.show()
+        worker.start()
+        loop.exec()
+        dialog.close()
         worker.wait()
         if worker.error:
             return False

@@ -26,7 +26,8 @@ import pytest
 from types import GeneratorType
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
@@ -758,8 +759,8 @@ def test_treewidgetwithdnd_constructor():
     # THEN: It should be initialised correctly
     assert widget.mime_data_text == 'Test'
     assert widget.allow_internal_dnd is False
-    assert widget.indentation() == 0
-    assert widget.isAnimated() is True
+    assert widget.indentation() == 16
+    assert widget.isAnimated() is False
 
 
 def test_treewidgetwithdnd_setup_columns(qapp):

@@ -21,7 +21,7 @@
 """
 The :mod:`~openlp.core.pages.alignment` module contains the alignment page used in the theme wizard
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.theme import HorizontalType, VerticalType, TransitionType, TransitionSpeed, TransitionDirection

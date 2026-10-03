@@ -24,7 +24,8 @@ The general tab of the configuration dialog.
 import logging
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
@@ -200,7 +201,7 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_label = QtWidgets.QLabel(self.ui_group_box)
         self.ui_theme_style_label.setObjectName('theme_style_label')
         self.ui_theme_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        self.ui_theme_style_combo_box.addItems([''] * 6)
+        self.ui_theme_style_combo_box.addItems([''] * 3)
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
@@ -290,12 +291,9 @@ class GeneralTab(SettingsTab):
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
         self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
         theme_labels = (
-            translate('OpenLP.GeneralTab', 'Classic (Auto)'),
-            translate('OpenLP.GeneralTab', 'Classic Dark'),
-            translate('OpenLP.GeneralTab', 'Classic Light'),
-            translate('OpenLP.GeneralTab', 'Modern (Auto)'),
-            translate('OpenLP.GeneralTab', 'Modern Dark'),
-            translate('OpenLP.GeneralTab', 'Modern Light'))
+            translate('OpenLP.GeneralTab', 'Auto'),
+            translate('OpenLP.GeneralTab', 'Dark'),
+            translate('OpenLP.GeneralTab', 'Light'))
         for index, label in enumerate(theme_labels):
             self.ui_theme_style_combo_box.setItemText(index, label)
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
@@ -342,7 +340,7 @@ class GeneralTab(SettingsTab):
                 self.autoscroll_combo_box.setCurrentIndex(i)
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
         ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'),
-                                                      self.settings.value('advanced/interface style'))
+                                                       self.settings.value('advanced/interface style'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
         self.new_service_message_check_box.setChecked(self.settings.value('advanced/new service message'))
@@ -353,17 +351,16 @@ class GeneralTab(SettingsTab):
     @staticmethod
     def get_ui_theme_index(ui_theme, interface_style='classic'):
         """Map stored appearance and colour settings to the combined selector."""
-        offset = 3 if interface_style == 'modern' else 0
         if ui_theme in (UiThemes.DefaultDark, UiThemes.QDarkStyle):
-            return offset + 1
+            return 1
         if ui_theme == UiThemes.DefaultLight:
-            return offset + 2
-        return offset
+            return 2
+        return 0
 
     @staticmethod
     def get_ui_theme_name(index):
         """Return the colour scheme of a combined theme selection."""
-        if index not in range(6):
+        if index not in range(3):
             return UiThemes.Automatic
         return (UiThemes.Automatic, UiThemes.DefaultDark, UiThemes.DefaultLight)[index % 3]
 
@@ -400,8 +397,7 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('advanced/search as type', self.is_search_as_you_type_enabled)
         theme_name = GeneralTab.get_ui_theme_name(self.ui_theme_style_combo_box.currentIndex())
         self.settings.setValue('advanced/ui_theme_name', theme_name)
-        self.settings.setValue('advanced/interface style',
-                               'modern' if self.ui_theme_style_combo_box.currentIndex() >= 3 else 'classic')
+        self.settings.setValue('advanced/interface style', 'modern')
         self.settings.sync()
         self.post_set_up()
 

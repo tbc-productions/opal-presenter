@@ -28,7 +28,8 @@ import sqlite3
 from pathlib import Path
 from tempfile import gettempdir
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
 from openlp.core.common.actions import ActionList

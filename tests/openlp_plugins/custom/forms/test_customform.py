@@ -24,7 +24,8 @@ Module to test the EditCustomForm.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
 from openlp.plugins.custom.forms.editcustomform import EditCustomForm
@@ -72,7 +73,7 @@ def test_on_add_button_clicked(form: EditCustomForm):
     Test the on_add_button_clicked_test method / add_button button.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         # WHEN: Add a new slide.
         QtTest.QTest.mouseClick(form.add_button, QtCore.Qt.MouseButton.LeftButton)
 

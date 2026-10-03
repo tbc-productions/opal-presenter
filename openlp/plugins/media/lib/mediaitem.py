@@ -24,7 +24,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql.expression import or_
 
 from openlp.core.common import delete_file, sha256_file_hash
@@ -208,7 +209,7 @@ class MediaMediaItem(FolderLibraryItem):
         """
         self.log_debug('Initialise')
         self.list_view.clear()
-        self.list_view.setIconSize(QtCore.QSize(88, 50))
+        self.list_view.setIconSize(QtCore.QSize(20, 20))
         self.list_view.setIndentation(self.list_view.default_indentation)
         self.list_view.allow_internal_dnd = True
         self.service_path = AppLocation.get_section_data_path(self.settings_section) / 'thumbnails'
