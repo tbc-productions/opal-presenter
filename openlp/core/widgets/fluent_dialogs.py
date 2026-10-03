@@ -3,6 +3,7 @@ from PySide6 import QtCore, QtWidgets as _qt
 import fluentqt
 from fluentqt.design import Spacing
 from openlp.core.widgets.fluent_buttons import QPushButton
+from openlp.core.widgets.fluent_text import display_text
 
 
 class _ProgressRail(fluentqt.ProgressBar):
@@ -120,6 +121,7 @@ class FluentTabWidget(_qt.QWidget):
         self._rail_layout.setContentsMargins(0, 0, 0, 0)
         self._rail.hide()
         self._rail_buttons = []
+        self._tab_labels = []
         layout = _qt.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -135,7 +137,8 @@ class FluentTabWidget(_qt.QWidget):
 
     def addTab(self, page, label):
         index = self._pages.addWidget(page)
-        self._tabs.addTab(label)
+        self._tab_labels.append(label)
+        self._tabs.addTab(display_text(label))
         self._refresh_rail()
         return index
 
@@ -143,6 +146,7 @@ class FluentTabWidget(_qt.QWidget):
         page = self.widget(index)
         if page is not None:
             self._pages.removeWidget(page)
+            self._tab_labels.pop(index)
             self._tabs.removeTab(index)
             self._refresh_rail()
 
@@ -168,12 +172,13 @@ class FluentTabWidget(_qt.QWidget):
         self.setCurrentIndex(self.indexOf(page))
 
     def setTabText(self, index, text):
-        self._tabs.setTabText(index, text)
+        self._tab_labels[index] = text
+        self._tabs.setTabText(index, display_text(text))
         if index < len(self._rail_buttons):
             self._rail_buttons[index].setText(text)
 
     def tabText(self, index):
-        return self._tabs.tabAt(index).text
+        return self._tab_labels[index]
 
     def setTabEnabled(self, index, enabled):
         self._tabs.setTabEnabled(index, enabled)

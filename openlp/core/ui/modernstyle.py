@@ -71,10 +71,8 @@ QMainWindow#MainWindow QStatusBar { background: palette(window); padding: 5px 8p
 QMainWindow#MainWindow QSplitter::handle { background: palette(window); }
 QMainWindow#MainWindow::separator { background: palette(window); width: 8px; height: 8px; }
 QMainWindow#MainWindow QToolButton#qt_toolbar_ext_button { padding: 0; border: none; }
-QMainWindow#MainWindow QLabel#output_status { border-radius: 3px; padding: 3px 8px; }
-QMainWindow#MainWindow QLabel#output_status[onAir="true"] { background: #bceac8; color: #125525; }
-QMainWindow#MainWindow QLabel#output_status[onAir="false"] {
-    background: palette(button); color: palette(window-text);
+QMainWindow#MainWindow QLabel#output_status {
+    background: transparent; color: palette(window-text); border: none; padding: 0;
 }
 """
 

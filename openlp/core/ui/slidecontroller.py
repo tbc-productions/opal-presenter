@@ -25,6 +25,7 @@ from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
 
+from fluentqt import FontIcon
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -45,7 +46,6 @@ from openlp.core.lib.ui import create_action
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.icons import UiIcons
-from openlp.core.ui.fluentstyle import FluentAccentButton
 from openlp.core.ui.media import MediaPlayItem, MediaState, media_empty_song
 from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
@@ -165,6 +165,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self._reset_blank(False)
         if self.display:
             self.__add_actions_to_widget(self.display)
+        self._update_output_status(getattr(self, 'service_item', None) is not None)
 
     def _display_after_loaded_callback(self):
         # As the display was reloaded, we'll need to process current item again
@@ -184,6 +185,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             display.close()
             del display
         self.displays = []
+        self._update_output_status(getattr(self, 'service_item', None) is not None)
 
     @property
     def display(self):
@@ -211,6 +213,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.update_slide_limits()
         self.panel = QtWidgets.QWidget(self.main_window.control_splitter)
         modern = is_modern_style()
+        self._pinned_display_controls = modern
         if modern:
             self.panel.setProperty('modernPanel', True)
         self.slide_list = {}
@@ -253,6 +256,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.top_icon.setStyleSheet('padding: 0;')
             self.top_label_horizontal.addStrut(28)
             if self.is_live:
+                self.output_status_icon = FontIcon('ic_fluent_record_24_regular', self.panel)
+                self.output_status_icon.setObjectName('output_status_icon')
+                self.output_status_icon.setIconSize(16)
+                self.output_status_icon.setFixedSize(16, 16)
+                self.output_status_icon.hide()
+                self.top_label_horizontal.addWidget(self.output_status_icon)
                 self.output_status_label = QtWidgets.QLabel(self.panel)
                 self.output_status_label.setObjectName('output_status')
                 self.output_status_label.setText(translate('OpenLP.SlideController', 'Ready'))
@@ -294,14 +303,14 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                            can_shortcuts=True,
                                            context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut,
                                            category=self.category, triggers=self.on_slide_selected_previous)
-        self.toolbar.addAction(self.previous_item)
+        self.toolbar.add_pinned_action(self.previous_item)
         self.next_item = create_action(self, 'nextItem_' + self.type_prefix,
                                        text=translate('OpenLP.SlideController', 'Next Slide'),
                                        icon=UiIcons().arrow_down,
                                        tooltip=translate('OpenLP.SlideController', 'Move to next.'),
                                        can_shortcuts=True, context=QtCore.Qt.ShortcutContext.WidgetWithChildrenShortcut,
                                        category=self.category, triggers=self.on_slide_selected_next_action)
-        self.toolbar.addAction(self.next_item)
+        self.toolbar.add_pinned_action(self.next_item)
         if self.is_live:
             self.powerpoint_timings_action = create_action(
                 self, 'powerpointTimings',
@@ -319,12 +328,13 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.fetching_screenshot = False
             self.screen_capture = None
             # Hide Menu
-            self.hide_menu = QtWidgets.QSplitButton(self.toolbar)
+            self.hide_menu = QtWidgets.QSplitButton(self.toolbar, checked_accent=False)
             self.hide_menu.setObjectName('hide_menu')
             self.hide_menu.setText(translate('OpenLP.SlideController', 'Hide'))
             self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
             self.hide_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Hide'), self.toolbar))
-            self.toolbar.add_toolbar_widget(self.hide_menu)
+            if not self._pinned_display_controls:
+                self.toolbar.add_toolbar_widget(self.hide_menu)
             self.neutral_hide_action = create_action(self, 'neutralHideMode',
                                                      text=translate('OpenLP.SlideController', 'Hide'))
             # The order of the blank to modes in Shortcuts list comes from here.
@@ -359,19 +369,22 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.hide_menu.menu().addAction(self.logo_screen)
             self.hide_menu.menu().addAction(self.blank_screen)
             self.hide_menu.menu().addAction(self.desktop_screen)
-            # CommandBar owns the presenters and overflow for display actions.
+            # Keep priority display controls outside CommandBar overflow.
             for name, action in (
                     ('show_screen_button', self.show_screen),
                     ('theme_screen_button', self.theme_screen),
                     ('logo_screen_button', self.logo_screen),
                     ('blank_screen_button', self.blank_screen),
                     ('desktop_screen_button', self.desktop_screen)):
-                self.toolbar.addAction(action)
+                if self._pinned_display_controls:
+                    self.toolbar.add_pinned_action(action)
+                else:
+                    self.toolbar.addAction(action)
                 self.toolbar.actions_map[name] = action
             self._update_desktop_hide_action_state()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
-            self.play_slides_menu = QtWidgets.QSplitButton(self.toolbar)
+            self.play_slides_menu = QtWidgets.QSplitButton(self.toolbar, checked_accent=False)
             self.play_slides_menu.setObjectName('play_slides_menu')
             self.play_slides_menu.setText(translate('OpenLP.SlideController', 'Play Slides'))
             self.play_slides_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -397,6 +410,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.delay_spin_box.setObjectName('delay_spin_box')
             self.delay_spin_box.setRange(1, 180)
             self.delay_spin_box.setSuffix(' {unit}'.format(unit=UiStrings().Seconds))
+            self.delay_spin_box.setCompactWidth(3)
             self.delay_spin_box.setToolTip(translate('OpenLP.SlideController', 'Delay between slides in seconds.'))
             self.receive_spin_delay()
             self.toolbar.add_toolbar_widget(self.delay_spin_box)
@@ -407,8 +421,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                                                   triggers=self.on_go_live)
             if modern:
                 self.go_live_action.setText(translate('OpenLP.SlideController', 'Go live'))
-                self.go_live_action.setIcon(UiIcons().get_icon_variant('live', color='white'))
-                self.go_live_button = FluentAccentButton(self.panel)
+                self.go_live_button = QtWidgets.QToolButton(self.panel)
+                self.go_live_button.setIconSize(QtCore.QSize(18, 18))
                 self.go_live_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
                 self.go_live_button.setDefaultAction(self.go_live_action)
                 self.top_label_horizontal.addWidget(self.go_live_button)
@@ -422,7 +436,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Edit and reload song preview.'),
                                             triggers=self.on_edit_song)
-            self.toolbar.add_toolbar_action('clear', icon=UiIcons().cancel,
+            self.toolbar.add_toolbar_action('clear', icon=UiIcons().minus,
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Clear'),
                                             triggers=self.on_clear)
@@ -509,7 +523,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.slidecontroller_toggle_display.connect(self.toggle_display)
             Registry().register_function('slidecontroller_live_spin_delay', self.receive_spin_delay)
             self.toolbar.set_widget_visible(LOOP_LIST, False)
-            self.toolbar.set_widget_visible(WIDE_MENU, False)
+            if not self._pinned_display_controls:
+                self.toolbar.set_widget_visible(WIDE_MENU, False)
             self.set_live_hot_keys(self)
             self.__add_actions_to_widget(self.controller)
         else:
@@ -613,6 +628,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if label is None:
             return
         hide_mode = getattr(self, '_current_hide_mode', None)
+        icon = getattr(self, 'output_status_icon', None)
+        if icon is not None:
+            icon.setVisible(bool(self.displays) and hide_mode != HideMode.Screen)
         on_air = has_item and hide_mode is None and bool(self.displays)
         labels = {
             HideMode.Blank: translate('OpenLP.SlideController', 'Blank'),
@@ -633,7 +651,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.song_menu = QtWidgets.QMenu(translate('OpenLP.SlideController', 'Go To'), self.toolbar)
         self.song_menu_action = self.toolbar.add_toolbar_action(
-            'song_menu', text=translate('OpenLP.SlideController', 'Go To'), icon=UiIcons().music,
+            'song_menu', text=translate('OpenLP.SlideController', 'Go To'), icon=UiIcons().go_to,
             triggers=self._show_song_menu)
 
     def _show_song_menu(self):
@@ -834,6 +852,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Change layout of display control buttons when the controller size changes
         """
         self.log_debug('on_controller_size_changed is_event:{}'.format(event is not None))
+        if getattr(self, '_pinned_display_controls', False):
+            return
         if self.is_live and self.ignore_toolbar_resize_events is False:
             self.ignore_toolbar_resize_events = True
             try:
@@ -854,6 +874,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
 
         :param compact: Use the narrow menu?
         """
+        if getattr(self, '_pinned_display_controls', False):
+            self.toolbar.set_widget_visible(WIDE_MENU, True)
+            self.toolbar.set_widget_visible(NON_TEXT_MENU, True)
+            self._update_desktop_hide_action_state()
+            return
         self.toolbar.set_widget_visible(NARROW_MENU, narrow)
         if narrow:
             self.toolbar.set_widget_visible(WIDE_MENU, False)

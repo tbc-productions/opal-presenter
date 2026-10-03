@@ -142,6 +142,19 @@ class FluentSpinBox(_qt.QWidget):
     def suffix(self):
         return self._unit.text()
 
+    def setCompactWidth(self, digits):
+        """Fit a toolbar number field to its digits, spin controls and unit."""
+        field = self._field
+        text_width = max(field.fontMetrics().horizontalAdvance(str(digit) * digits) for digit in range(10))
+        margins = field.contentMargins()
+        spin_width = (field.compactSpinButtonReservedWidth()
+                      + field.spinButtonRightMargin() + field.spinButtonTextGap() + 24)
+        width = text_width + max(margins.left() + margins.right() + 8, spin_width)
+        field.setFixedWidth(width)
+        unit_width = self._unit.sizeHint().width() + self.layout().spacing() if self._unit.text() else 0
+        self.setFixedWidth(width + unit_width)
+        self.setSizePolicy(_qt.QSizePolicy.Policy.Fixed, _qt.QSizePolicy.Policy.Fixed)
+
     def keyPressEvent(self, event):
         steps = {QtCore.Qt.Key.Key_Up: 1, QtCore.Qt.Key.Key_Down: -1,
                  QtCore.Qt.Key.Key_PageUp: 10, QtCore.Qt.Key.Key_PageDown: -10}

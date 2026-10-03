@@ -82,7 +82,7 @@ class SingleColumnTableWidget(QtWidgets.QTableWidget):
         """
         QtWidgets.QTableWidget.resizeEvent(self, event)
         if self.columnCount():
-            self.setColumnWidth(0, event.size().width())
+            self.setColumnWidth(0, self.viewport().width())
             self.resizeRowsToContents()
 
 

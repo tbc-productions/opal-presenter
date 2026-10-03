@@ -356,6 +356,9 @@ def test_file_tree_chevron_click_expands_and_row_click_selects(qapp, qtbot):
 
 def test_commandbar_actions_keep_activation_state_and_overflow(qapp, qtbot):
     parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(400, 200)
+    parent.show()
     toolbar = OpenLPToolbar(parent)
     action = toolbar.add_toolbar_action('command', text='Run command', icon=QtGui.QIcon())
     fired = []
@@ -375,6 +378,21 @@ def test_commandbar_actions_keep_activation_state_and_overflow(qapp, qtbot):
     toolbar.resize(100, 60)
     QtWidgets.QApplication.processEvents()
     assert toolbar._command_groups[0].overflowedPrimaryActions()
+    group = toolbar._command_groups[0]
+    overflow_action = group.overflowedPrimaryActions()[0]
+    overflow_fired = []
+    overflow_action.triggered.connect(lambda: overflow_fired.append(True))
+    group.setOverflowOpen(True)
+    popup = toolbar.window().findChild(QtWidgets.QWidget, 'FluentCommandBar.OverflowPopup')
+    qtbot.waitUntil(lambda: popup.testAttribute(QtCore.Qt.WidgetAttribute.WA_NativeWindow))
+    assert popup.isVisible()
+    assert popup.parentWidget() is toolbar.window()
+    rows = [widget for widget in popup.findChildren(QtWidgets.QWidget)
+            if widget.objectName() == 'FluentCommandBar.OverflowRow']
+    command = next(row for row in rows if row.property('commandAction') is overflow_action)
+    qtbot.mouseClick(command, QtCore.Qt.MouseButton.LeftButton)
+    assert overflow_fired == [True]
+    qtbot.waitUntil(lambda: not group.isOverflowOpen())
     toolbar.close()
 
 

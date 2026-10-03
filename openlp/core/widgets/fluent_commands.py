@@ -18,9 +18,13 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self._command_group = None
         self._command_actions = {}
         self._widget_actions = {}
+        self._separator_widgets = {}
         self._icon_size = QtCore.QSize(20, 20)
         self._button_style = QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
         self._orientation = QtCore.Qt.Orientation.Horizontal
+        self._overflow_timer = QtCore.QTimer(self)
+        self._overflow_timer.setSingleShot(True)
+        self._overflow_timer.timeout.connect(self._raise_overflow)
         self._layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.Direction.LeftToRight, self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(4)
@@ -32,12 +36,27 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             self._command_group = fluentqt.CommandBar(self)
             self._command_group.setBackgroundVisible(False)
             self._command_group.setDynamicOverflowEnabled(True)
+            self._command_group.overflowOpenChanged.connect(self._on_overflow_changed)
             self._command_group.setLabelPosition(self._label_position())
             self._command_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,
                                               QtWidgets.QSizePolicy.Policy.Fixed)
             self._layout.insertWidget(self._layout.count() - 1, self._command_group)
             self._command_groups.append(self._command_group)
         return self._command_group
+
+    def _on_overflow_changed(self, opened):
+        if opened:
+            # CommandBar creates the flyout after emitting this signal.
+            self._overflow_timer.start(0)
+
+    def _raise_overflow(self):
+        # Flyouts are reparented to the host window. Give their overlay a
+        # native surface so embedded WebEngine views cannot cover it.
+        for popup in self.window().findChildren(QtWidgets.QWidget):
+            if popup.objectName() == 'FluentCommandBar.OverflowPopup' and popup.isVisible():
+                popup.setAttribute(QtCore.Qt.WidgetAttribute.WA_DontCreateNativeAncestors)
+                popup.setAttribute(QtCore.Qt.WidgetAttribute.WA_NativeWindow)
+                popup.raise_()
 
     def _sync_input_stretch(self):
         """Give spare width to visible expanding inputs, otherwise keep it at the end."""
@@ -62,7 +81,19 @@ class FluentCommandToolbar(QtWidgets.QWidget):
                 action = QtGui.QAction(action, self)
             if args:
                 action.triggered.connect(args[0])
-        if isinstance(action, QtWidgets.QWidgetAction):
+        if action.isSeparator():
+            # A separator-only CommandBar has no command width, but can still
+            # create native overflow chrome. Keep dividers outside command groups.
+            self._command_group = None
+            divider = QtWidgets.QFrame(self)
+            divider.setFrameShape(QtWidgets.QFrame.Shape.VLine)
+            divider.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+            divider.setFixedSize(1, 24)
+            self._layout.insertWidget(self._layout.count() - 1, divider)
+            self._separator_widgets[action] = divider
+            action.changed.connect(lambda: divider.setVisible(action.isVisible()))
+            divider.setVisible(action.isVisible())
+        elif isinstance(action, QtWidgets.QWidgetAction):
             widget = action.defaultWidget()
             self._command_group = None
             self._layout.insertWidget(self._layout.count() - 1, widget)
@@ -83,8 +114,15 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             group = self._group()
             group.addPrimaryAction(action)
             self._command_actions[action] = group
+            action.changed.connect(lambda: self._sync_group_visibility(group))
+            self._sync_group_visibility(group)
         QtWidgets.QWidget.addAction(self, action)
         return action
+
+    def _sync_group_visibility(self, group):
+        """Do not leave command chrome visible when all its commands are hidden."""
+        group.setVisible(any(action.isVisible() for action, owner in self._command_actions.items()
+                             if owner is group))
 
     def addWidget(self, widget):
         action = QtWidgets.QWidgetAction(self)
@@ -101,6 +139,8 @@ class FluentCommandToolbar(QtWidgets.QWidget):
     def widgetForAction(self, action):
         if action in self._widget_actions:
             return self._widget_actions[action]
+        if action in self._separator_widgets:
+            return self._separator_widgets[action]
         group = self._command_actions.get(action)
         if group is not None:
             for widget in reversed(group.findChildren(QtWidgets.QWidget)):
@@ -112,6 +152,12 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         group = self._command_actions.pop(action, None)
         if group is not None:
             group.removeCommandAction(action)
+            self._sync_group_visibility(group)
+        divider = self._separator_widgets.pop(action, None)
+        if divider is not None:
+            self._layout.removeWidget(divider)
+            divider.hide()
+            divider.deleteLater()
         widget = self._widget_actions.pop(action, None)
         if widget is not None:
             self._layout.removeWidget(widget)

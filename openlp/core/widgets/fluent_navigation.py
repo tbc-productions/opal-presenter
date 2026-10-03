@@ -3,6 +3,7 @@ from PySide6 import QtCore, QtGui, QtWidgets as _qt
 import fluentqt
 from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.fluent_buttons import QPushButton
+from openlp.core.widgets.fluent_text import display_text
 
 
 class FluentTabBar(_qt.QWidget):
@@ -39,7 +40,8 @@ class FluentTabBar(_qt.QWidget):
         for index, item in enumerate(self._items):
             if item['visible']:
                 self._visible_indexes.append(index)
-                self._tabs.addTab(fluentqt.TabViewItem(item['text'], item['glyph'], False, item['enabled']))
+                tab = fluentqt.TabViewItem(display_text(item['text']), item['glyph'], False, item['enabled'])
+                self._tabs.addTab(tab)
         if self._current in self._visible_indexes:
             self._tabs.setSelectedIndex(self._visible_indexes.index(self._current))
         del blocker
@@ -118,7 +120,7 @@ class FluentTabBar(_qt.QWidget):
         return self._tabs.tabGeometry(self._visible_indexes.index(index)).translated(self._tabs.pos())
 
     def tabSizeHint(self, index):
-        width = self.fontMetrics().horizontalAdvance(self.tabText(index)) + 32
+        width = self.fontMetrics().horizontalAdvance(display_text(self.tabText(index))) + 32
         if self._items[index]['glyph']:
             width += 24
         return QtCore.QSize(width if self.isTabVisible(index) else 0, self._tabs.sizeHint().height())

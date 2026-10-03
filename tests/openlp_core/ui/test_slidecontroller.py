@@ -2776,3 +2776,71 @@ def test_wide_hide_controls_are_not_temporarily_hidden(settings, is_text):
         if len(args) > 1 and args[1] is False:
             assert 'logo_screen_button' not in args[0]
             assert 'show_screen_button' not in args[0]
+
+
+@mark.parametrize('hide_mode,has_item,has_display,expected_icon', [
+    (None, True, True, True),
+    (HideMode.Blank, True, True, True),
+    (HideMode.Theme, True, True, True),
+    (HideMode.Logo, True, True, True),
+    (HideMode.Screen, True, True, False),
+    (None, False, True, True),
+    (None, True, False, False),
+])
+def test_live_status_record_icon(settings, hide_mode, has_item, has_display, expected_icon):
+    """Record indicates an active OpenLP display, including blank, theme and logo output."""
+    from fluentqt import FontIcon
+    from openlp.core.widgets import fluent as QtWidgets
+
+    controller = SlideController(None)
+    controller.output_status_label = QtWidgets.QLabel(controller)
+    controller.output_status_icon = FontIcon('ic_fluent_record_24_regular', controller)
+    controller.displays = [MagicMock()] if has_display else []
+    controller._current_hide_mode = hide_mode
+
+    controller._update_output_status(has_item)
+
+    assert controller.output_status_icon.isHidden() is not expected_icon
+    assert controller.output_status_label.property('onAir') is (has_item and hide_mode is None and has_display)
+    if hide_mode == HideMode.Screen:
+        assert controller.output_status_label.text() == 'Desktop'
+
+    controller.close_displays()
+    assert controller.output_status_icon.isHidden()
+
+
+@mark.parametrize('narrow', [False, True])
+def test_priority_display_modes_stay_visible(settings, narrow):
+    """Resizing cannot move priority Live display modes into a menu."""
+    controller = SlideController(None)
+    controller._pinned_display_controls = True
+    controller.toolbar = MagicMock()
+    controller._update_desktop_hide_action_state = MagicMock()
+
+    controller.set_hide_mode_menu(narrow)
+
+    visible = {name for args in controller.toolbar.set_widget_visible.call_args_list
+               for name in args.args[0] if args.args[1]}
+    assert visible == set(WIDE_MENU + NON_TEXT_MENU)
+    controller._update_desktop_hide_action_state.assert_called_once()
+
+
+def test_slides_to_end_shows_stop_icon_when_started(settings):
+    """Starting playback shows the Stop command on the selected action."""
+    from openlp.core.common.i18n import UiStrings
+    from openlp.core.ui.icons import UiIcons
+
+    controller = SlideController(None)
+    controller.play_slides_once = QtGui.QAction(controller)
+    controller.play_slides_once.setCheckable(True)
+    controller.play_slides_loop = QtGui.QAction(controller)
+    controller.play_slides_menu = MagicMock()
+    controller.on_toggle_loop = MagicMock()
+
+    controller.on_play_slides_once(True)
+
+    assert controller.play_slides_once.isChecked()
+    assert controller.play_slides_once.icon().cacheKey() == UiIcons().stop.cacheKey()
+    assert controller.play_slides_once.text() == UiStrings().StopPlaySlidesToEnd
+    controller.play_slides_menu.setDefaultAction.assert_called_once_with(controller.play_slides_once)
+    controller.on_toggle_loop.assert_called_once()

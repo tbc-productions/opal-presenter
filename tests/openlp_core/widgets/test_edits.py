@@ -867,9 +867,9 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
     # Only the color tag should appear in the dropdown.
-    assert list(editor._color_actions.keys()) == ['{r}']
-    assert editor._color_button.text() == 'Custom formatting'
-    assert editor._color_button.toolTip() == 'Custom formatting'
+    assert editor._color_tags == ['{r}']
+    assert isinstance(editor._custom_formatting_combo, QtWidgets.MultiSelectComboBox)
+    assert editor._custom_formatting_combo.placeholderText() == 'Custom formatting'
 
 
 @patch('openlp.core.widgets.edits.FormattingTagForm')
@@ -892,51 +892,67 @@ def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_h
 
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
-    assert list(editor._color_actions.keys()) == ['{r}']
+    assert editor._color_tags == ['{r}']
 
     editor._edit_color_button.click()
 
     mock_formatting_tag_form.assert_called_once()
     mock_formatting_tag_form.return_value.exec.assert_called_once_with()
-    assert list(editor._color_actions.keys()) == ['{bl}']
+    assert editor._color_tags == ['{bl}']
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
-def test_spell_text_edit_color_menu_actions_are_checkable(mock_get_html_tags: MagicMock, mock_settings):
-    """Color menu actions should be checkable so the word-processor toggle UX works."""
+def test_spell_text_edit_custom_formatting_multiple_selection(mock_get_html_tags, mock_settings):
+    """Selecting multiple options preserves each format and existing bold text."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="color:red">'},
+        {'desc': 'Blue', 'start tag': '{bl}', 'end tag': '{/bl}',
+         'start html': '<span style="color:blue">'}
+    ]
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Hello world{/st}')
+    cursor = editor.textCursor()
+    cursor.setPosition(4)
+    cursor.setPosition(15, QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+    combo = editor._custom_formatting_combo
+    combo.setSelectedRows([0, 1])
+    assert editor.toPlainText() == '{st}{r}{bl}Hello world{/bl}{/r}{/st}'
+    assert combo.selectedRows() == [0, 1]
+    combo.setSelectedRows([1])
+    assert editor.toPlainText() == '{st}{bl}Hello world{/bl}{/st}'
+    assert combo.selectedRows() == [1]
+    editor.undo()
+    assert editor.toPlainText() == '{st}{r}{bl}Hello world{/bl}{/r}{/st}'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_custom_formatting_preserves_slide_markers(mock_get_html_tags, mock_settings):
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}', 'start html': '<span style="color:red">'}
+    ]
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('First slide\n[---]\nSecond slide')
+    editor.selectAll()
+    editor._custom_formatting_combo.setSelectedRows([0])
+    assert editor.toPlainText() == '{r}First slide{/r}\n[---]\n{r}Second slide{/r}'
+    editor._custom_formatting_combo.setSelectedRows([])
+    assert editor.toPlainText() == 'First slide\n[---]\nSecond slide'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock_settings):
+    """Native combo rows carry readable names, colour and tag metadata."""
     mock_get_html_tags.return_value = [
         {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
          'start html': '<span style="-webkit-text-fill-color:red">'}
     ]
-
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
-
-    for action in editor._color_actions.values():
-        assert action.isCheckable()
-
-
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
-def test_spell_text_edit_color_menu_label_contains_styled_text(mock_get_html_tags: MagicMock, mock_settings):
-    """Color menu items should render styled name and tag token in separate columns."""
-    mock_get_html_tags.return_value = [
-        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
-         'start html': '<span style="-webkit-text-fill-color:red">'}
-    ]
-
-    editor = SpellTextEdit(None, formatting_tags_allowed=True)
-
-    # The QWidgetAction's default widget should be a two-column widget.
-    action = editor._color_actions['{r}']
-    widget = action.defaultWidget()
-    assert isinstance(widget, QtWidgets.QWidget)
-    labels = widget.findChildren(QtWidgets.QLabel, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly)
-    assert len(labels) == 2
-    assert 'Red' in labels[0].text()
-    assert '{r}' == labels[1].text()
-    assert labels[0].contentsMargins().right() == 12
-    assert '{/r}' not in labels[0].text()
-    assert 'color' in labels[0].text().lower() or 'red' in labels[0].text().lower()
-    assert labels[1].palette().color(QtGui.QPalette.ColorRole.WindowText).alphaF() == pytest.approx(0.65, rel=0.05)
+    item = editor._color_model.item(0)
+    assert item.text() == 'Red'
+    assert item.data(QtCore.Qt.ItemDataRole.UserRole) == '{r}'
+    assert item.foreground().color() == QtGui.QColor('red')
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
@@ -984,7 +1000,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
 
     editor._update_toolbar_state()
 
-    assert editor._color_actions['{r}'].isChecked() is True
+    assert editor._custom_formatting_combo.selectedRows() == [0]
 
     # Move outside: should uncheck.
     cursor = editor.textCursor()
@@ -992,7 +1008,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
     editor.setTextCursor(cursor)
     editor._update_toolbar_state()
 
-    assert editor._color_actions['{r}'].isChecked() is False
+    assert editor._custom_formatting_combo.selectedRows() == []
 
 
 def test_spell_text_edit_apply_formatting_wrap_selection(mock_settings):

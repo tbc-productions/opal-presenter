@@ -89,6 +89,12 @@ Theme changes display a restart reminder. Native controls can update their
 colours live, but existing QAction icons and ADS docking surfaces cache the
 startup scheme. Restarting applies the selected scheme consistently.
 
+Hover hints use native FluentQt ToolTip surfaces, including widget and action
+hints, Library row metadata, and immediate Service notes and drag hints. Qt's
+existing tooltip text and hover delay are retained; long hints wrap within the
+screen and dismiss on leaving the target, interaction or timeout. Settings help
+continues to use persistent, dismissible TeachingTip cards.
+
 The Python 3.14 wheel and native application have been verified on macOS arm64.
 Windows/Linux source builds and frozen application bundles still need platform
 verification before release.

@@ -12,12 +12,14 @@ from openlp.core.common.platform import is_macosx
 from openlp.core.widgets.fluent_collections import (  # noqa: F401
     QListView, QListWidget, QListWidgetItem)
 from openlp.core.widgets.fluent_buttons import QPushButton  # noqa: F401
+from openlp.core.widgets.fluent_text import MnemonicButtonMixin
 
 QLabel = fluentqt.Label
 
 
 QLineEdit = fluentqt.LineEdit
 QComboBox = fluentqt.ComboBox
+MultiSelectComboBox = fluentqt.MultiSelectComboBox
 QCheckBox = fluentqt.CheckBox
 QRadioButton = fluentqt.RadioButton
 QMenuBar = fluentqt.FluentMenuBar
@@ -42,6 +44,38 @@ class FluentMenu(fluentqt.FluentMenu):
         if isinstance(title, _qt.QWidget) or title is None:
             parent, title = title, ''
         super().__init__(title, parent)
+        self._pressed_action = None
+
+    def mousePressEvent(self, event):
+        self._pressed_action = None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            action = self.actionAt(event.position().toPoint())
+            if (action is not None and action.isEnabled() and not action.isSeparator()
+                    and action.menu() is None and not isinstance(action, _qt.QWidgetAction)):
+                self._pressed_action = action
+        # FluentMenu raises the native popup during mouse events. Keep its
+        # window stable between press and release, retaining Qt's hover handling.
+        _qt.QMenu.mousePressEvent(self, event)
+
+    def mouseReleaseEvent(self, event):
+        action, self._pressed_action = self._pressed_action, None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and action is not None:
+            if (action in self.actions() and action.isEnabled() and action.isVisible()
+                    and self.actionAt(event.position().toPoint()) is action):
+                from PySide6 import QtGui
+                self.setActiveAction(action)
+                # Qt's keyboard path commits immediately and also preserves
+                # checkable actions, menu signals and the result of exec().
+                _qt.QMenu.keyPressEvent(self, QtGui.QKeyEvent(
+                    QtCore.QEvent.Type.KeyPress, QtCore.Qt.Key.Key_Return,
+                    QtCore.Qt.KeyboardModifier.NoModifier))
+            event.accept()
+            return
+        _qt.QMenu.mouseReleaseEvent(self, event)
+
+    def hideEvent(self, event):
+        self._pressed_action = None
+        super().hideEvent(event)
 
     def sizeHint(self):
         # FluentMenu repeatedly sets minimumWidth from its hint as actions are
@@ -73,7 +107,7 @@ class FluentSlider(fluentqt.Slider):
 QSlider = FluentSlider
 
 
-class FluentToolButton(fluentqt.Button):
+class FluentToolButton(MnemonicButtonMixin, fluentqt.Button):
     """Fluent icon button retaining the application's QAction wiring."""
     ToolButtonPopupMode = _qt.QToolButton.ToolButtonPopupMode
 
@@ -149,12 +183,11 @@ class FluentToolButton(fluentqt.Button):
 QToolButton = FluentToolButton
 
 
-class FluentSplitButton(fluentqt.SplitButton):
+class FluentSplitButton(MnemonicButtonMixin, fluentqt.SplitButton):
     """Native split control with OpenLP's existing tool-button action API."""
     ToolButtonPopupMode = QToolButton.ToolButtonPopupMode
     setDefaultAction = QToolButton.setDefaultAction
     defaultAction = QToolButton.defaultAction
-    _sync_action = QToolButton._sync_action
     _activate = QToolButton._activate
     showMenu = QToolButton.showMenu
     setPopupMode = QToolButton.setPopupMode
@@ -162,8 +195,9 @@ class FluentSplitButton(fluentqt.SplitButton):
     setAutoRaise = QToolButton.setAutoRaise
     setToolButtonStyle = QToolButton.setToolButtonStyle
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, checked_accent=True):
         super().__init__('', parent)
+        self._checked_accent = checked_accent
         self._action = None
         self._menu = None
         self._popup_mode = self.ToolButtonPopupMode.MenuButtonPopup
@@ -172,6 +206,13 @@ class FluentSplitButton(fluentqt.SplitButton):
         self.setFluentSize(fluentqt.Button.ButtonSize.Small)
         self.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
         self.clicked.connect(self._activate)
+
+    def _sync_action(self):
+        QToolButton._sync_action(self)
+        if not self._checked_accent:
+            # The menu actions retain selection; keep the split surface neutral
+            # so its palette-coloured QIcon matches the native chevron.
+            self.setCheckable(False)
 
     def sizeHint(self):
         hint = super().sizeHint()
@@ -565,3 +606,5 @@ from openlp.core.widgets.fluent_dialogs import (  # noqa: E402,F401
 from openlp.core.widgets.fluent_navigation import QTabBar  # noqa: E402,F401
 
 from openlp.core.widgets.fluent_commands import QToolBar  # noqa: E402,F401
+
+from openlp.core.widgets.fluent_tooltips import QToolTip  # noqa: E402,F401

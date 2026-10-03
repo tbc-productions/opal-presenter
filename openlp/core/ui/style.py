@@ -358,6 +358,8 @@ def set_default_theme(app):
         set_default_lightmode(app)
     set_modern_palette(app)
     app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+    from openlp.core.widgets.fluent_tooltips import install_fluent_tooltips
+    install_fluent_tooltips(app)
     return
 
 

@@ -435,7 +435,15 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
         if text is None or text == '':
             return super().sizeHint(option, index)
-        width = option.rect.width() if option.rect.width() > 0 else 200
+        width = option.rect.width()
+        # QTableView asks for row hints with an empty rect. Measure using the
+        # visible column, otherwise lyrics wrap to a narrow fallback width and
+        # leave oversized rows when painted across the full editor.
+        view = self.parent()
+        if width <= 0 and isinstance(view, QtWidgets.QTableView):
+            width = view.columnWidth(index.column())
+        if width <= 0:
+            width = 200
         available_width = max(0, width - 4)
         font = option.font
         marker_height = self._marker_line_height(font)
@@ -475,7 +483,8 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._toolbar = None
         self._mode_button = None
         self._tag_actions = {}       # maps start tag token → QAction for toolbar state tracking
-        self._color_actions = {}     # maps start_tag → QAction for color dropdown state
+        self._color_tags = []
+        self._updating_custom_formatting = False
         self._color_action_ends = {} # maps start_tag → end_tag for color toggle logic
         self._formatting_tag_form = None
         self._visual_line_overrides = {}
@@ -555,16 +564,18 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             self._tag_actions[tag] = action
             action.triggered.connect(lambda checked=False, start_tag=tag: self._apply_formatting_by_tag(start_tag))
 
-        self._color_button = QtWidgets.QToolButton(self._toolbar)
-        self._color_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-        self._color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._color_button.setIcon(UiIcons().text_color)
-        self._color_button.setText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._color_menu = QtWidgets.QMenu(self._color_button)
-        self._color_button.setMenu(self._color_menu)
+        self._custom_formatting_combo = QtWidgets.MultiSelectComboBox(self._toolbar)
+        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setSelectAllVisible(False)
+        self._custom_formatting_combo.setMaximumVisibleItems(9)
+        self._custom_formatting_combo.setFixedWidth(190)
+        self._color_model = QtGui.QStandardItemModel(self._custom_formatting_combo)
+        self._custom_formatting_combo.setModel(self._color_model)
         self._populate_color_menu()
-        self._toolbar.addWidget(self._color_button)
+        self._custom_formatting_combo.selectionChanged.connect(self._on_custom_formatting_changed)
+        self._toolbar.addWidget(self._custom_formatting_combo)
 
         self._edit_color_button = QtWidgets.QToolButton(self._toolbar)
         self._edit_color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -610,15 +621,10 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._mode_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Source mode'))
 
     def _populate_color_menu(self):
-        """
-        Populate the toolbar's color dropdown from available formatting tags.
-
-        Each entry is a QWidgetAction whose widget is a QLabel rendered with
-        the tag's actual HTML styling, mirroring the Preview column in the
-        formatting-tag dialog.  Actions are checkable for word-processor UX.
-        """
-        self._color_menu.clear()
-        self._color_actions.clear()
+        """Populate the multi-select dropdown with available colour formatting tags."""
+        blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
+        self._color_model.clear()
+        self._color_tags.clear()
         self._color_action_ends.clear()
         try:
             html_tags = FormattingTags.get_html_tags()
@@ -628,50 +634,77 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             start_tag = html.get('start tag')
             end_tag = html.get('end tag')
             start_html = html.get('start html', '')
-            end_html = html.get('end html', '')
             if not start_tag or not end_tag:
                 continue
             if not re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE):
                 continue
             desc = html.get('desc', start_tag)
-            widget_action = QtWidgets.QWidgetAction(self._color_menu)
-            widget_action.setCheckable(True)
-            label = self._build_color_menu_label(start_html, end_html, desc, start_tag)
-            widget_action.setDefaultWidget(label)
-            self._color_menu.addAction(widget_action)
-            self._color_actions[start_tag] = widget_action
+            item = QtGui.QStandardItem(desc)
+            item.setData(start_tag, QtCore.Qt.ItemDataRole.UserRole)
+            item.setToolTip(start_tag)
+            colour_match = re.search(r'(?:-webkit-text-fill-color|color)\s*:\s*([^;"\'>]+)',
+                                     start_html, flags=re.IGNORECASE)
+            if colour_match:
+                colour = QtGui.QColor(colour_match.group(1).strip())
+                if colour.isValid():
+                    item.setForeground(colour)
+            self._color_model.appendRow(item)
+            self._color_tags.append(start_tag)
             self._color_action_ends[start_tag] = end_tag
-            widget_action.triggered.connect(
-                lambda checked=False, st=start_tag, et=end_tag: self._toggle_color_tag(st, et))
+        del blocker
 
-    def _build_color_menu_label(self, start_html, end_html, desc, start_tag):
-        """
-        Build a two-column widget with a styled description and the opening tag token.
-        """
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(4, 2, 4, 2)
-        layout.setSpacing(12)
+    def _on_custom_formatting_changed(self, selected, deselected):
+        """Apply only changed tags, keeping the other selected formats intact."""
+        if self._updating_custom_formatting:
+            return
+        additions = [self._color_tags[index.row()] for index in selected.indexes()]
+        removals = [self._color_tags[index.row()] for index in deselected.indexes()]
+        self._updating_custom_formatting = True
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        try:
+            for start_tag in removals:
+                self._change_custom_tag(start_tag, False)
+            for start_tag in additions:
+                self._change_custom_tag(start_tag, True)
+        finally:
+            cursor.endEditBlock()
+            self._updating_custom_formatting = False
+        self._update_toolbar_state()
+        if self._custom_formatting_combo.isOpen():
+            self._custom_formatting_combo.setFocus()
 
-        label = QtWidgets.QLabel(container)
-        label.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        label.setContentsMargins(0, 0, 12, 0)
-        # Normalize -webkit-text-fill-color → color so QLabel renders it correctly.
-        normalized = start_html.replace('-webkit-text-fill-color', 'color')
-        label.setText('{start}{text}{end}'.format(start=normalized, text=desc, end=end_html))
-        layout.addWidget(label, 1)
-
-        tag_label = QtWidgets.QLabel(start_tag, container)
-        tag_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        tag_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        tag_palette = tag_label.palette()
-        tag_color = tag_palette.color(QtGui.QPalette.ColorRole.WindowText)
-        tag_color.setAlphaF(0.65)
-        tag_palette.setColor(QtGui.QPalette.ColorRole.WindowText, tag_color)
-        tag_label.setPalette(tag_palette)
-        layout.addWidget(tag_label, 0)
-        return container
+    def _change_custom_tag(self, start_tag, enabled):
+        """Change a tag independently in each selected slide section."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            start, end = cursor.selectionStart(), cursor.selectionEnd()
+            ranges = self._selection_section_ranges(self.toPlainText(), start, end)
+            if not ranges:
+                return
+            if ranges != [(start, end)]:
+                delta = 0
+                selections = []
+                for section_start, section_end in ranges:
+                    section_cursor = QtGui.QTextCursor(self.document())
+                    section_cursor.setPosition(section_start + delta)
+                    section_cursor.setPosition(section_end + delta, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(section_cursor)
+                    previous_length = len(self.toPlainText())
+                    self._change_custom_tag(start_tag, enabled)
+                    delta += len(self.toPlainText()) - previous_length
+                    result = self.textCursor()
+                    selections.append((result.selectionStart(), result.selectionEnd()))
+                cursor = self.textCursor()
+                cursor.setPosition(selections[0][0])
+                cursor.setPosition(selections[-1][1], QtGui.QTextCursor.MoveMode.KeepAnchor)
+                self.setTextCursor(cursor)
+                return
+        end_tag = self._color_action_ends[start_tag]
+        if enabled:
+            self._apply_formatting_tokens(start_tag, end_tag)
+        else:
+            self._remove_specific_tag_at_cursor(start_tag, end_tag)
 
     def _edit_formatting_tags(self):
         """
@@ -699,6 +732,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self.rich_text_mode = bool(enabled)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
         self._update_mode_button_text()
+        self._update_toolbar_state()
         self.viewport().update()
         self.highlighter.rehighlight()
 
@@ -948,11 +982,19 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             middle = text[max(sel_start, content_start):min(sel_end, content_end)]
             right = text[min(sel_end, content_end):content_end]
             replacement = ''
-            if left:
+            # Nested tag tokens outside the selected text do not need their
+            # own colour region; keep them around the remaining content.
+            left_has_text = bool(re.sub(r'\{/?\w+\}', '', left))
+            right_has_text = bool(re.sub(r'\{/?\w+\}', '', right))
+            if left_has_text:
                 replacement += start_tag + left + end_tag
+            else:
+                replacement += left
             replacement += middle.replace(start_tag, '').replace(end_tag, '')
-            if right:
+            if right_has_text:
                 replacement += start_tag + right + end_tag
+            else:
+                replacement += right
             edit_cursor = QtGui.QTextCursor(self.document())
             edit_cursor.setPosition(edit_start)
             edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
@@ -961,8 +1003,10 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             edit_cursor.insertText(replacement)
             edit_cursor.endEditBlock()
             selection_start = edit_start
-            if left:
+            if left_has_text:
                 selection_start += len(start_tag) + len(left) + len(end_tag)
+            else:
+                selection_start += len(left)
             selection_end = selection_start + len(middle.replace(start_tag, '').replace(end_tag, ''))
             edit_cursor.setPosition(selection_start)
             edit_cursor.setPosition(selection_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
@@ -1017,6 +1061,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                 action.blockSignals(True)
                 action.setChecked(False)
                 action.blockSignals(False)
+            self._sync_custom_formatting()
             return
         text = self.toPlainText()
         cursor = self.textCursor()
@@ -1033,19 +1078,18 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             action.blockSignals(True)
             action.setChecked(active)
             action.blockSignals(False)
-        for start_tag, action in self._color_actions.items():
-            end_tag = self._color_action_ends.get(start_tag, '')
-            active = False
-            if end_tag:
-                for region in self._iter_matching_tag_regions(text, start_tag, end_tag):
-                    r_start = region['start_token_start']
-                    r_end = region['end_token_start'] + region['end_token_length']
-                    if r_start <= pos < r_end:
-                        active = True
-                        break
-            action.blockSignals(True)
-            action.setChecked(active)
-            action.blockSignals(False)
+        self._sync_custom_formatting()
+
+    def _sync_custom_formatting(self):
+        """Reflect cursor formatting without modifying the document."""
+        if self._updating_custom_formatting:
+            return
+        rows = [row for row, start_tag in enumerate(self._color_tags)
+                if self.rich_text_mode and
+                self._is_tag_active_at_cursor(start_tag, self._color_action_ends[start_tag])]
+        blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
+        self._custom_formatting_combo.setSelectedRows(rows)
+        del blocker
 
     def _apply_formatting_tokens(self, start_tag, end_tag):
         """
