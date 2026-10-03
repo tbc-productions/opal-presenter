@@ -119,3 +119,21 @@ def test_settings_sidebar_uses_larger_icon_and_font(form):
     """
     assert form.setting_list_widget.iconSize() == QtCore.QSize(22, 22)
     assert form.setting_list_widget.alternatingRowColors() is True
+
+
+def test_reopening_preferences_resets_scroll_position(form, qtbot):
+    """A previous visit's scroll offset must not carry into reopened Preferences."""
+    qtbot.addWidget(form)
+    page = QtWidgets.QWidget()
+    page.setMinimumHeight(2000)
+    form.content_tabs_layout.addWidget(page)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    scrollbar = form.scroll_area.verticalScrollBar()
+    assert scrollbar.maximum() > 0
+    scrollbar.setValue(scrollbar.maximum())
+    assert scrollbar.value() > 0
+    form.hide()
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    assert scrollbar.value() == 0

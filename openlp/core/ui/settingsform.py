@@ -114,6 +114,11 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.setting_list_widget.setCurrentRow(starting_tab_row)
         return QtWidgets.QDialog.exec(self)
 
+    def showEvent(self, event):
+        """Start each Preferences visit at the top of the active settings page."""
+        super().showEvent(event)
+        self.scroll_area.verticalScrollBar().setValue(0)
+
     def _get_ordered_tabs(self):
         """
         Return all settings tabs in display order:
