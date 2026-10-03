@@ -479,3 +479,40 @@ def test_commandbar_expanding_input_uses_spare_width(qapp):
     qapp.process_events()
     assert toolbar._command_groups[0].width() <= toolbar._command_groups[0].sizeHint().width()
     toolbar.close()
+
+
+def test_pinned_controls_and_separators_do_not_create_overflow_chrome(qapp):
+    toolbar = OpenLPToolbar(None)
+    buttons = []
+    for name in ('Previous', 'Next'):
+        action = QtGui.QAction(name, toolbar)
+        toolbar.add_pinned_action(action)
+        buttons.append(toolbar.widgetForAction(action))
+    timings = toolbar.add_toolbar_action('timings', text='Timings', visible=False)
+    separator = toolbar.addSeparator()
+    for name in ('Presentation', 'Theme', 'Logo', 'Black', 'Desktop'):
+        action = QtGui.QAction(name, toolbar)
+        toolbar.add_pinned_action(action)
+        buttons.append(toolbar.widgetForAction(action))
+    toolbar.resize(550, 48)
+    toolbar.show()
+    qapp.process_events()
+
+    assert len(toolbar._command_groups) == 1
+    group = toolbar._command_groups[0]
+    assert group.isHidden()
+    divider = toolbar.widgetForAction(separator)
+    assert divider.width() == 1
+    for left, right in zip(buttons, buttons[1:]):
+        assert left.geometry().right() < right.geometry().left()
+    timings.setVisible(True)
+    qapp.process_events()
+    assert not group.isHidden()
+    timings.setVisible(False)
+    qapp.process_events()
+    assert group.isHidden()
+    separator.setVisible(False)
+    assert divider.isHidden()
+    toolbar.removeAction(separator)
+    assert separator not in toolbar._separator_widgets
+    toolbar.close()
