@@ -327,61 +327,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.slide_changed_time = datetime.datetime.now()
             self.fetching_screenshot = False
             self.screen_capture = None
-            # Hide Menu
-            self.hide_menu = QtWidgets.QSplitButton(self.toolbar, checked_accent=False)
-            self.hide_menu.setObjectName('hide_menu')
-            self.hide_menu.setText(translate('OpenLP.SlideController', 'Hide'))
-            self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-            self.hide_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Hide'), self.toolbar))
-            if not self._pinned_display_controls:
-                self.toolbar.add_toolbar_widget(self.hide_menu)
-            self.neutral_hide_action = create_action(self, 'neutralHideMode',
-                                                     text=translate('OpenLP.SlideController', 'Hide'))
-            # The order of the blank to modes in Shortcuts list comes from here.
-            self.show_screen = create_action(self, 'showScreen',
-                                             text=translate('OpenLP.SlideController', 'Show Presentation'),
-                                             icon=UiIcons().get_icon_variant_selected('live_presentation'),
-                                             checked=False, can_shortcuts=True, category=self.category,
-                                             triggers=self.on_show_display)
-            self.theme_screen = create_action(self, 'themeScreen',
-                                              text=translate('OpenLP.SlideController', 'Show Theme'),
-                                              icon=UiIcons().get_icon_variant_selected('live_theme'),
-                                              checked=False, can_shortcuts=True, category=self.category,
-                                              triggers=self.on_toggle_theme)
-            self.logo_screen = create_action(self, 'logoScreen',
-                                             text=translate('OpenLP.SlideController', 'Show Logo'),
-                                             icon=UiIcons().get_icon_variant_selected('live_logo'),
-                                             checked=False, can_shortcuts=True, category=self.category,
-                                             triggers=self.on_toggle_logo)
-            self.blank_screen = create_action(self, 'blankScreen',
-                                              text=translate('OpenLP.SlideController', 'Show Black'),
-                                              icon=UiIcons().get_icon_variant_selected('live_black'),
-                                              checked=False, can_shortcuts=True, category=self.category,
-                                              triggers=self.on_toggle_blank)
-            self.desktop_screen = create_action(self, 'desktopScreen',
-                                                text=translate('OpenLP.SlideController', 'Show Desktop'),
-                                                icon=UiIcons().get_icon_variant_selected('live_desktop'),
-                                                checked=False, can_shortcuts=True, category=self.category,
-                                                triggers=self.on_toggle_desktop)
-            self.hide_menu.setDefaultAction(self.neutral_hide_action)
-            self.hide_menu.menu().addAction(self.show_screen)
-            self.hide_menu.menu().addAction(self.theme_screen)
-            self.hide_menu.menu().addAction(self.logo_screen)
-            self.hide_menu.menu().addAction(self.blank_screen)
-            self.hide_menu.menu().addAction(self.desktop_screen)
-            # Keep priority display controls outside CommandBar overflow.
-            for name, action in (
-                    ('show_screen_button', self.show_screen),
-                    ('theme_screen_button', self.theme_screen),
-                    ('logo_screen_button', self.logo_screen),
-                    ('blank_screen_button', self.blank_screen),
-                    ('desktop_screen_button', self.desktop_screen)):
-                if self._pinned_display_controls:
-                    self.toolbar.add_pinned_action(action)
-                else:
-                    self.toolbar.addAction(action)
-                self.toolbar.actions_map[name] = action
-            self._update_desktop_hide_action_state()
+            self._setup_display_mode_actions()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
             self.play_slides_menu = QtWidgets.QSplitButton(self.toolbar, checked_accent=False)
@@ -559,6 +505,64 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             getattr(self, 'slidecontroller_preview_clear').connect(self.on_clear)
         self._update_slide_action_enabled_state()
 
+    def _setup_display_mode_actions(self):
+        """Create pinned mode controls, or the legacy responsive mode menu."""
+        if not self._pinned_display_controls:
+            self.hide_menu = QtWidgets.QSplitButton(self.toolbar, checked_accent=False)
+            self.hide_menu.setObjectName('hide_menu')
+            self.hide_menu.setText(translate('OpenLP.SlideController', 'Hide'))
+            self.hide_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+            self.hide_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Hide'), self.toolbar))
+            self.toolbar.add_toolbar_widget(self.hide_menu)
+        self.neutral_hide_action = create_action(self, 'neutralHideMode',
+                                                 text=translate('OpenLP.SlideController', 'Hide'))
+        # The order of the blank to modes in Shortcuts list comes from here.
+        self.show_screen = create_action(self, 'showScreen',
+                                         text=translate('OpenLP.SlideController', 'Show Presentation'),
+                                         icon=UiIcons().get_icon_variant_selected('live_presentation'),
+                                         checked=False, can_shortcuts=True, category=self.category,
+                                         triggers=self.on_show_display)
+        self.theme_screen = create_action(self, 'themeScreen',
+                                          text=translate('OpenLP.SlideController', 'Show Theme'),
+                                          icon=UiIcons().get_icon_variant_selected('live_theme'),
+                                          checked=False, can_shortcuts=True, category=self.category,
+                                          triggers=self.on_toggle_theme)
+        self.logo_screen = create_action(self, 'logoScreen',
+                                         text=translate('OpenLP.SlideController', 'Show Logo'),
+                                         icon=UiIcons().get_icon_variant_selected('live_logo'),
+                                         checked=False, can_shortcuts=True, category=self.category,
+                                         triggers=self.on_toggle_logo)
+        self.blank_screen = create_action(self, 'blankScreen',
+                                          text=translate('OpenLP.SlideController', 'Show Black'),
+                                          icon=UiIcons().get_icon_variant_selected('live_black'),
+                                          checked=False, can_shortcuts=True, category=self.category,
+                                          triggers=self.on_toggle_blank)
+        self.desktop_screen = create_action(self, 'desktopScreen',
+                                            text=translate('OpenLP.SlideController', 'Show Desktop'),
+                                            icon=UiIcons().get_icon_variant_selected('live_desktop'),
+                                            checked=False, can_shortcuts=True, category=self.category,
+                                            triggers=self.on_toggle_desktop)
+        if not self._pinned_display_controls:
+            self.hide_menu.setDefaultAction(self.neutral_hide_action)
+            self.hide_menu.menu().addAction(self.show_screen)
+            self.hide_menu.menu().addAction(self.theme_screen)
+            self.hide_menu.menu().addAction(self.logo_screen)
+            self.hide_menu.menu().addAction(self.blank_screen)
+            self.hide_menu.menu().addAction(self.desktop_screen)
+        # Keep priority display controls outside CommandBar overflow.
+        for name, action in (
+                ('show_screen_button', self.show_screen),
+                ('theme_screen_button', self.theme_screen),
+                ('logo_screen_button', self.logo_screen),
+                ('blank_screen_button', self.blank_screen),
+                ('desktop_screen_button', self.desktop_screen)):
+            if self._pinned_display_controls:
+                self.toolbar.add_pinned_action(action)
+            else:
+                self.toolbar.addAction(action)
+            self.toolbar.actions_map[name] = action
+        self._update_desktop_hide_action_state()
+
     def _update_slide_action_enabled_state(self):
         """
         Enable/disable slide-controller actions based on whether there are slides in this controller.
@@ -589,7 +593,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                     getattr(self, name).setEnabled(has_item)
             if hasattr(self, 'toolbar'):
                 self.toolbar.set_widget_enabled([
-                    'hide_menu',
+                    *([] if getattr(self, '_pinned_display_controls', False) else ['hide_menu']),
                     'show_screen_button', 'theme_screen_button', 'logo_screen_button', 'blank_screen_button',
                     'play_slides_menu', 'delay_spin_box'
                 ], has_item)
@@ -613,9 +617,11 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not has_item:
             for action in hide_mode_actions.values():
                 action.setChecked(False)
-            self.hide_menu.setDefaultAction(self.neutral_hide_action)
+            if not getattr(self, '_pinned_display_controls', False):
+                self.hide_menu.setDefaultAction(self.neutral_hide_action)
             return
-        self.hide_menu.setDefaultAction(active_action)
+        if not getattr(self, '_pinned_display_controls', False):
+            self.hide_menu.setDefaultAction(active_action)
         self.show_screen.setChecked(active_action is self.show_screen)
         self.blank_screen.setChecked(active_action is self.blank_screen)
         self.theme_screen.setChecked(active_action is self.theme_screen)

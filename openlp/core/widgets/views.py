@@ -26,6 +26,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from fluentqt import Spacing
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -98,6 +99,23 @@ def remove_url_prefix(filename):
     return filename.replace('file://', '')
 
 
+class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
+    """Keep native Fluent cell painting with room above and below slide text."""
+    def __init__(self, view):
+        super().__init__(view)
+        self._view = view
+        self._native_delegate = view.itemDelegate()
+
+    def paint(self, painter, option, index):
+        self._native_delegate.paint(painter, option, index)
+
+    def sizeHint(self, option, index):
+        hint = self._native_delegate.sizeHint(option, index)
+        if self._view.service_item.is_text():
+            hint.setHeight(hint.height() + 2 * Spacing.Medium)
+        return hint
+
+
 class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
     """
     A special type of QTableWidget which lists the slides in the slide controller
@@ -139,6 +157,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
+        self.setItemDelegate(SlidePreviewDelegate(self))
         self.screen_ratio = screen_ratio
         self.auto_row_height = 100
         # Connect signals

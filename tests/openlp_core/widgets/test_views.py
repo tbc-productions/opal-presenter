@@ -867,3 +867,29 @@ def test_change_slide(preview_widget, state_media):
     preview_widget.change_slide(1)
     # THEN: The current_slide_number should reflect the change.
     assert preview_widget.current_slide_number() == 1, 'The current slide number should  be 1.'
+
+
+def test_text_slide_rows_have_medium_vertical_padding(settings, qapp):
+    """Padding surrounds wrapped slide text and remains stable after resizing."""
+    from fluentqt import Spacing
+
+    parent = QtWidgets.QWidget()
+    view = ListPreviewWidget(parent, 1)
+    view.service_item = MagicMock()
+    view.service_item.is_text.return_value = True
+    view.setRowCount(1)
+    view.setItem(0, 0, QtWidgets.QTableWidgetItem('First line\nSecond line\nThird line'))
+    view.resize(400, 240)
+    view.show()
+    qapp.process_events()
+    view.resizeRowsToContents()
+    padded_height = view.rowHeight(0)
+    native = view.itemDelegate()._native_delegate
+    delegate = view.itemDelegate()
+    view.setItemDelegate(native)
+    view.resizeRowsToContents()
+    assert padded_height == view.rowHeight(0) + 2 * Spacing.Medium
+    view.setItemDelegate(delegate)
+    view.resizeRowsToContents()
+    assert view.rowHeight(0) == padded_height
+    view.close()

@@ -2844,3 +2844,38 @@ def test_slides_to_end_shows_stop_icon_when_started(settings):
     assert controller.play_slides_once.text() == UiStrings().StopPlaySlidesToEnd
     controller.play_slides_menu.setDefaultAction.assert_called_once_with(controller.play_slides_once)
     controller.on_toggle_loop.assert_called_once()
+
+
+def test_pinned_live_modes_have_no_unmanaged_dropdown(settings, registry, qapp):
+    """Mode changes must not reveal the old dropdown over the pinned buttons."""
+    from openlp.core.widgets.toolbar import OpenLPToolbar
+    from openlp.core.widgets import fluent as QtWidgets
+
+    registry.register('application-qt', QtWidgets.QApplication.instance())
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._pinned_display_controls = True
+    controller.category = 'Live'
+    controller.toolbar = OpenLPToolbar(controller)
+    controller._update_desktop_hide_action_state = MagicMock()
+    controller._setup_display_mode_actions()
+    controller.toolbar.resize(400, 48)
+    controller.toolbar.show()
+    qapp.process_events()
+
+    assert not hasattr(controller, 'hide_menu')
+    assert controller.toolbar.findChildren(QtWidgets.QSplitButton) == []
+    actions = [controller.show_screen, controller.theme_screen, controller.logo_screen,
+               controller.blank_screen, controller.desktop_screen]
+    for mode in (None, HideMode.Theme, HideMode.Logo, HideMode.Blank, HideMode.Screen):
+        controller._current_hide_mode = mode
+        controller._sync_live_hide_action_state(True)
+        qapp.process_events()
+        buttons = [controller.toolbar.widgetForAction(action) for action in actions]
+        assert all(not button.isHidden() for button in buttons)
+        assert controller.toolbar.findChildren(QtWidgets.QSplitButton) == []
+        for left, right in zip(buttons, buttons[1:]):
+            assert left.geometry().right() < right.geometry().left()
+    controller._sync_live_hide_action_state(False)
+    assert not any(action.isChecked() for action in actions)
+    controller.toolbar.close()
