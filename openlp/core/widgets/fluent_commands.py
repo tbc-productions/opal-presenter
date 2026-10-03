@@ -3,6 +3,52 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
 
+class SpacedCommandBar(fluentqt.CommandBar):
+    """Keep native overflow while placing commands after a spacer at the trailing edge."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.has_spacer = False
+        self.trailing_actions = []
+        self._alignment_timer = QtCore.QTimer(self)
+        self._alignment_timer.setSingleShot(True)
+        self._alignment_timer.timeout.connect(self._align_trailing_actions)
+        self.overflowedPrimaryActionsChanged.connect(self.schedule_alignment)
+        self.overflowOpenChanged.connect(self.schedule_alignment)
+
+    def schedule_alignment(self):
+        self._alignment_timer.start(0)
+
+    def event(self, event):
+        result = super().event(event)
+        if event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show,
+                            QtCore.QEvent.Type.LayoutDirectionChange):
+            # Native CommandBar's event filter has already restored its inline
+            # layout. Align now so showing a Library page cannot paint that
+            # intermediate layout before the deferred timer runs.
+            self._align_trailing_actions()
+        return result
+
+    def _align_trailing_actions(self):
+        if not self.has_spacer:
+            return
+        presenters = [widget for widget in self.findChildren(QtWidgets.QWidget)
+                      if widget.parentWidget() is self and not widget.isHidden()
+                      and widget.property('commandAction') in self.trailing_actions]
+        more = self.findChild(QtWidgets.QWidget, 'FluentCommandBar.MoreButton')
+        if more is not None and not more.isHidden():
+            presenters.append(more)
+        if not presenters:
+            return
+        rect = self.contentsRect()
+        if self.layoutDirection() == QtCore.Qt.LayoutDirection.RightToLeft:
+            offset = rect.left() - min(widget.x() for widget in presenters)
+        else:
+            offset = rect.right() - max(widget.geometry().right() for widget in presenters)
+        for widget in presenters:
+            widget.move(widget.x() + offset, widget.y())
+
+
 class FluentCommandToolbar(QtWidgets.QWidget):
     """Keep QAction semantics; CommandBar owns command layout and overflow.
 
@@ -12,7 +58,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
     iconSizeChanged = QtCore.Signal(QtCore.QSize)
     toolButtonStyleChanged = QtCore.Signal(object)
 
-    def __init__(self, parent=None, *, single_command_bar=False):
+    def __init__(self, parent=None, *, single_command_bar=True):
         super().__init__(parent)
         self._single_command_bar = single_command_bar
         self._command_groups = []
@@ -20,6 +66,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self._command_actions = {}
         self._widget_actions = {}
         self._separator_widgets = {}
+        self._spaced_group = None
         self._icon_size = QtCore.QSize(20, 20)
         self._button_style = QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
         self._orientation = QtCore.Qt.Orientation.Horizontal
@@ -34,7 +81,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
 
     def _group(self):
         if self._command_group is None:
-            self._command_group = fluentqt.CommandBar(self)
+            self._command_group = SpacedCommandBar(self)
             self._command_group.setBackgroundVisible(False)
             self._command_group.setDynamicOverflowEnabled(True)
             self._command_group.overflowOpenChanged.connect(self._on_overflow_changed)
@@ -66,7 +113,17 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             grows = bool(widget.sizePolicy().expandingDirections() & QtCore.Qt.Orientation.Horizontal)
             self._layout.setStretch(self._layout.indexOf(widget), 1 if grows else 0)
             expanding |= grows and action.isVisible()
-        self._layout.setStretch(self._layout.count() - 1, 0 if expanding else 1)
+        self._layout.setStretch(self._layout.count() - 1, 0 if expanding or self._spaced_group else 1)
+
+    def _add_divider(self, action):
+        divider = QtWidgets.QFrame(self)
+        divider.setFrameShape(QtWidgets.QFrame.Shape.VLine)
+        divider.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        divider.setFixedSize(1, 24)
+        self._layout.insertWidget(self._layout.count() - 1, divider)
+        self._separator_widgets[action] = divider
+        action.changed.connect(lambda: divider.setVisible(action.isVisible()))
+        divider.setVisible(action.isVisible())
 
     def _label_position(self):
         return (fluentqt.CommandBar.LabelPosition.Collapsed
@@ -82,23 +139,26 @@ class FluentCommandToolbar(QtWidgets.QWidget):
                 action = QtGui.QAction(action, self)
             if args:
                 action.triggered.connect(args[0])
-        if action.isSeparator() and not self._single_command_bar:
+        if action.isSeparator() and (not self._single_command_bar or self._command_group is None):
             # A separator-only CommandBar has no command width, but can still
             # create native overflow chrome. Keep dividers outside command groups.
             self._command_group = None
-            divider = QtWidgets.QFrame(self)
-            divider.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-            divider.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-            divider.setFixedSize(1, 24)
-            self._layout.insertWidget(self._layout.count() - 1, divider)
-            self._separator_widgets[action] = divider
-            action.changed.connect(lambda: divider.setVisible(action.isVisible()))
-            divider.setVisible(action.isVisible())
+            self._add_divider(action)
         elif isinstance(action, QtWidgets.QWidgetAction):
+            # A divider before an embedded control belongs to the outer row,
+            # since native CommandBar drops separators at its trailing edge.
+            if self._command_group is not None:
+                primary = self._command_group.primaryActions()
+                if primary and primary[-1].isSeparator():
+                    separator = primary[-1]
+                    group = self._command_actions.pop(separator)
+                    group.removeCommandAction(separator)
+                    self._add_divider(separator)
             widget = action.defaultWidget()
             self._command_group = None
             self._layout.insertWidget(self._layout.count() - 1, widget)
             self._widget_actions[action] = widget
+
             def sync():
                 widget.setVisible(action.isVisible())
                 widget.setEnabled(action.isEnabled())
@@ -108,12 +168,17 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         else:
             if not action.isSeparator() and not action.text():
                 action.setText(action.toolTip() or action.objectName() or 'Command')
+
                 def caption():
                     if action.text() == 'Command' and action.toolTip():
                         action.setText(action.toolTip())
                 action.changed.connect(caption)
             group = self._group()
             group.addPrimaryAction(action)
+            if group is self._spaced_group:
+                group.trailing_actions.append(action)
+            action.changed.connect(group.schedule_alignment)
+            group.schedule_alignment()
             self._command_actions[action] = group
             action.changed.connect(lambda: self._sync_group_visibility(group))
             self._sync_group_visibility(group)
@@ -138,6 +203,18 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self.addAction(action)
         return action
 
+    def add_spacer(self):
+        """Use a stretch within the current command bar, or before adjacent inputs."""
+        if self._command_group is not None:
+            self._spaced_group = self._command_group
+            self._spaced_group.has_spacer = True
+            self._spaced_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                             QtWidgets.QSizePolicy.Policy.Fixed)
+            self._layout.setStretch(self._layout.indexOf(self._spaced_group), 1)
+            self._layout.setStretch(self._layout.count() - 1, 0)
+        else:
+            self._layout.insertStretch(self._layout.count() - 1, 1)
+
     def widgetForAction(self, action):
         if action in self._widget_actions:
             return self._widget_actions[action]
@@ -153,7 +230,10 @@ class FluentCommandToolbar(QtWidgets.QWidget):
     def removeAction(self, action):
         group = self._command_actions.pop(action, None)
         if group is not None:
+            if action in group.trailing_actions:
+                group.trailing_actions.remove(action)
             group.removeCommandAction(action)
+            group.schedule_alignment()
             self._sync_group_visibility(group)
         divider = self._separator_widgets.pop(action, None)
         if divider is not None:
@@ -175,6 +255,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             group.deleteLater()
         self._command_groups.clear()
         self._command_group = None
+        self._spaced_group = None
 
     def setIconSize(self, size):
         self._icon_size = size
@@ -187,6 +268,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self._button_style = style
         for group in self._command_groups:
             group.setLabelPosition(self._label_position())
+            group.schedule_alignment()
         self.toolButtonStyleChanged.emit(style)
 
     def toolButtonStyle(self):

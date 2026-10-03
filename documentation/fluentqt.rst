@@ -50,8 +50,11 @@ QWidgetAction, so embedded Fluent inputs and SplitButton sit beside command
 groups in a layout container. Preview and Live slide actions, including the
 Live display modes and Go To verse command, use native CommandBar presenters.
 Their rows use the native control height; Hide and Play remain SplitButtons
-beside the command groups. Command groups keep their natural width and leave
-spare space after the commands, or give it to expanding inputs. Toolbar
+beside the command groups. Separators between commands share one CommandBar
+and one responsive overflow menu by default. Command groups keep their natural
+width and leave spare space after the commands, or give it to expanding inputs.
+Library toolbars expand a single CommandBar across the row and place the
+Preview, Live and Add to Service commands at the trailing edge. Toolbar
 SplitButtons share CommandBar button height and honour the native Subtle style.
 The layout preset rail is part of the main content
 layout rather than a Qt toolbar. Library navigation uses a single native

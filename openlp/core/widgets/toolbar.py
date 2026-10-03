@@ -66,7 +66,7 @@ class OpenLPToolbar(QtWidgets.QToolBar):
     Lots of toolbars around the place, so it makes sense to have a common way to manage them. This is the base toolbar
     class.
     """
-    def __init__(self, parent, *, single_command_bar=False):
+    def __init__(self, parent, *, single_command_bar=True):
         """
         Initialise the toolbar.
         """
@@ -231,8 +231,8 @@ class OpenLPToolbar(QtWidgets.QToolBar):
             log.warning(f'No handle {name} in actions list.')
 
     def add_spacer(self):
-        """CommandBar keeps commands together and owns responsive overflow."""
-        pass
+        """Right-align the following commands within the shared CommandBar."""
+        super().add_spacer()
 
 
 class MediaToolbar(QtWidgets.QWidget):
