@@ -6,6 +6,19 @@ from openlp.core.widgets import fluent
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
 
+def test_binding_discovery_accepts_private_qt_models_and_native_widgets(qapp, qtbot):
+    """Wrapping Qt's private model must not attempt C++ RTTI discovery."""
+    store = QtWidgets.QTreeWidget()
+    qtbot.addWidget(store)
+    item = QtWidgets.QTreeWidgetItem(store, ['Song'])
+    model = store.model()
+    assert isinstance(model, QtCore.QAbstractItemModel)
+    assert model.data(model.index(0, 0)) == item.text(0)
+    button = fluent.fluentqt.Button(store)
+    assert button in store.findChildren(QtWidgets.QWidget)
+    assert isinstance(button, fluent.fluentqt.Button)
+
+
 @pytest.mark.parametrize('kind', ['list', 'tree', 'tree_grid', 'table'])
 def test_item_adapter_signal_blocking(qapp, qtbot, kind):
     """Item notifications respect blockSignals and QSignalBlocker while model updates continue."""
@@ -109,9 +122,49 @@ def test_unchecked_group_disables_new_children_and_restores_them(qapp):
     group.setCheckable(True)
     group.setChecked(False)
     child = fluent.QLineEdit(group)
+    QtWidgets.QApplication.processEvents()
     assert not child.isEnabled()
     group.setCheckable(False)
     assert child.isEnabled()
+
+
+def test_group_child_events_do_not_wrap_partial_objects(qapp):
+    """Layout construction/destruction must not invoke Shiboken's child type discovery."""
+    from unittest.mock import MagicMock
+
+    group = fluent.QGroupBox('Outline')
+
+    class ConstructionEvent(QtCore.QChildEvent):
+        def child(self):
+            raise AssertionError('Partial child must not be wrapped')
+
+    event_child = QtCore.QObject()
+    for kind in (QtCore.QEvent.Type.ChildAdded, QtCore.QEvent.Type.ChildRemoved):
+        event = ConstructionEvent(kind, event_child)
+        group.childEvent(event)
+    # Exercise the actual failing construction path and checkable child lifecycle.
+    layout = QtWidgets.QFormLayout(group)
+    group.setCheckable(True)
+    group.setChecked(False)
+    child = fluent.QLineEdit()
+    layout.addRow('Field', child)
+    toggled = MagicMock()
+    group.toggled.connect(toggled)
+    QtWidgets.QApplication.processEvents()
+    assert not child.isEnabled()
+    toggled.assert_not_called()
+    child.setParent(None)
+    QtWidgets.QApplication.processEvents()
+    assert child not in group._disabled_children
+    group.setChecked(True)
+
+
+def test_group_deferred_sync_preserves_explicitly_disabled_children(qapp):
+    group = fluent.QGroupBox('Outline')
+    child = fluent.QLineEdit(group)
+    child.setEnabled(False)
+    QtWidgets.QApplication.processEvents()
+    assert not child.isEnabled()
 
 
 def test_icon_buttons_and_large_menu_keep_bounded_geometry(qapp):

@@ -228,30 +228,39 @@ class FluentGroupBox(fluentqt.Card):
         return self._toggle.isChecked()
 
     def _toggle_content(self, checked):
-        for child in self.findChildren(_qt.QWidget, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly):
+        self._sync_content_enabled(checked)
+        if self._checkable:
+            self.toggled.emit(checked)
+
+    def _sync_content_enabled(self, checked=None):
+        if checked is None:
+            checked = not self._checkable or self.isChecked()
+        children = self.findChildren(_qt.QWidget, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly)
+        for child in list(self._disabled_children):
+            if child not in children:
+                del self._disabled_children[child]
+        for child in children:
             if child in (self._heading, self._toggle):
                 continue
             if checked:
-                child.setEnabled(self._disabled_children.pop(child, True))
+                if child in self._disabled_children:
+                    child.setEnabled(self._disabled_children.pop(child))
             else:
                 if child not in self._disabled_children:
                     self._disabled_children[child] = child.isEnabledTo(self)
                 child.setEnabled(False)
-        if self._checkable:
-            self.toggled.emit(checked)
 
     def childEvent(self, event):
         super().childEvent(event)
         if not hasattr(self, '_disabled_children'):
             return
-        child = event.child()
-        if (event.added() or event.polished()) and isinstance(child, _qt.QWidget):
-            if self._checkable and not self.isChecked() and child not in (self._heading, self._toggle):
-                if child not in self._disabled_children:
-                    self._disabled_children[child] = child.isEnabledTo(self)
-                child.setEnabled(False)
-        elif event.removed():
-            self._disabled_children.pop(child, None)
+        if event.added() or event.removed():
+            # ChildAdded arrives before the child's derived C++ constructor,
+            # and ChildRemoved may arrive during destruction. Asking Shiboken
+            # to wrap event.child() at either point can crash in type discovery.
+            QtCore.QTimer.singleShot(0, self, self._sync_content_enabled)
+        elif event.polished():
+            self._sync_content_enabled()
 
     def setFlat(self, flat):
         self.setBorderVisible(not flat)

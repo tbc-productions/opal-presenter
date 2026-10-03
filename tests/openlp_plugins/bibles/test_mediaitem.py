@@ -62,12 +62,14 @@ mocked_bible_2.name = 'Bible 2'
 
 @pytest.fixture()
 def mocked_timer():
-    return patch('openlp.plugins.bibles.lib.mediaitem.QtCore.QTimer').start()
+    with patch('openlp.plugins.bibles.lib.mediaitem.QtCore.QTimer') as timer:
+        yield timer
 
 
 @pytest.fixture()
 def mocked_log():
-    return patch('openlp.plugins.bibles.lib.mediaitem.log').start()
+    with patch('openlp.plugins.bibles.lib.mediaitem.log') as log:
+        yield log
 
 
 def test_valid_text_search():

@@ -33,10 +33,6 @@ from openlp.core.common.settings import Settings
 from openlp.core.ui.style import UiThemes
 
 
-# Mock QtWebEngineCore
-sys.modules['PySide6.QtWebEngineCore'] = MagicMock()
-
-
 @pytest.fixture
 def mocked_qapp():
     patcher = patch('openlp.core.app.QtWidgets.QApplication')

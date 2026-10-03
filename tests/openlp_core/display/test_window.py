@@ -21,7 +21,6 @@
 """
 Package to test the openlp.core.display.window package.
 """
-import sys
 import time
 import pytest
 from pathlib import Path
@@ -37,9 +36,6 @@ from openlp.core.display.screens import Screen
 from openlp.core.display.window import TRANSITION_END_EVENT_NAME, DisplayWindow, DisplayWatcher
 from openlp.core.lib.theme import Theme
 from openlp.core.ui import HideMode
-
-# Mock QtWebEngineCore
-sys.modules['PySide6.QtWebEngineCore'] = MagicMock()
 
 
 @pytest.fixture

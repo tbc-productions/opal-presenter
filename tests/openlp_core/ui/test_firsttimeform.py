@@ -102,19 +102,27 @@ def download_env(registry: Registry):
 
 @pytest.fixture()
 def mocked_set_icon(mock_settings):
-    move_to_thread_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker.moveToThread').start()
-    set_icon_patcher = patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem.setIcon').start()
-    q_thread_patcher = patch('openlp.core.ui.firsttimeform.QtCore.QThread').start()
+    icons = {name: UiIcons().get_icon_variant(name) for name in ('picture', 'exception')}
+    icon_patcher = patch('openlp.core.ui.firsttimeform.UiIcons.get_icon_variant',
+                         side_effect=lambda name: icons[name])
+    icon_patcher.start()
+    move_to_thread_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker.moveToThread')
+    set_icon_patcher = patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem.setIcon')
+    q_thread_patcher = patch('openlp.core.ui.firsttimeform.QtCore.QThread')
+    move_to_thread_patcher.start()
+    mocked_set_icon = set_icon_patcher.start()
+    q_thread_patcher.start()
     mocked_app = MagicMock()
     mocked_app.worker_threads = {}
     mocked_main_window = MagicMock()
     Registry().remove('application')
     Registry().register('application', mocked_app)
     Registry().register('main_window', mocked_main_window)
-    yield set_icon_patcher
+    yield mocked_set_icon
     move_to_thread_patcher.stop()
     set_icon_patcher.stop()
     q_thread_patcher.stop()
+    icon_patcher.stop()
 
 
 def test_init_sample_data(download_env, mock_settings):

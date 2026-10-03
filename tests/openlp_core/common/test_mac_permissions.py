@@ -3,7 +3,8 @@ import ctypes
 import plistlib
 import sys
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.mac_permissions import (
     _DraggableFileIcon, _accessibility_drag_target, _launching_app_bundle, _open_privacy_settings, _running_app_bundle,
@@ -144,10 +145,13 @@ def test_missing_permissions_offer_native_request_and_system_settings():
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
     parent = QtWidgets.QWidget()
+    parent.resize(800, 700)
+    parent.show()
 
     def use_dialog():
-        dialog = next(widget for widget in QtWidgets.QApplication.topLevelWidgets()
+        dialog = next(widget for widget in parent.findChildren(QtWidgets.QDialog)
                       if isinstance(widget, QtWidgets.QDialog) and widget.isVisible())
+        dialog.setAnimationEnabled(False)
         try:
             buttons = {button.text(): button for button in dialog.findChildren(QtWidgets.QPushButton)}
             assert any('Access needed: Accessibility, Screen Recording' in label.text()
@@ -188,6 +192,8 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
     parent = QtWidgets.QWidget()
+    parent.resize(800, 700)
+    parent.show()
     bundle = tmp_path / 'OpenLP+.app'
     bundle.mkdir()
     interpreter = tmp_path / 'python3.14'
@@ -196,8 +202,9 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     source_notes = []
 
     def inspect_dialog():
-        dialog = next(widget for widget in QtWidgets.QApplication.topLevelWidgets()
+        dialog = next(widget for widget in parent.findChildren(QtWidgets.QDialog)
                       if isinstance(widget, QtWidgets.QDialog) and widget.isVisible())
+        dialog.setAnimationEnabled(False)
         offered_icons.append(dialog.findChildren(_DraggableFileIcon))
         source_notes.append([label.text() for label in dialog.findChildren(QtWidgets.QLabel)
                              if 'Or use + to add this file' in label.text()])

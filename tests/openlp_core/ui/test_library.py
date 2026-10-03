@@ -520,7 +520,7 @@ def test_on_delete_click_as_folder(mocked_question, mocked_sha256_file_hash, fol
     folder_library_item.service_path = Path()
     folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder)]
     mocked_sha256_file_hash.return_value = 'abcd'
-    mocked_question.return_value = QtWidgets.QMessageBox.Yes
+    mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
 
     # WHEN: Calling on_delete_click
     folder_library_item.on_delete_click()
@@ -546,7 +546,7 @@ def test_on_delete_click_as_folder_with_parent(mocked_question, mocked_sha256_fi
     folder_library_item.service_path = Path()
     folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder, MockTreeParent())]
     mocked_sha256_file_hash.return_value = 'abcd'
-    mocked_question.return_value = QtWidgets.QMessageBox.Yes
+    mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
 
     # WHEN: Calling on_delete_click
     folder_library_item.on_delete_click()

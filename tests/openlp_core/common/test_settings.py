@@ -401,15 +401,17 @@ def test_settings_pyqt5_pyside6_migration_ini_missing():
     assert settings == ret_settings
 
 
-def test_settings_zip_export_import(settings):
+def test_settings_zip_export_import(settings, monkeypatch):
     """Test exporting and importing settings using ZIP format"""
     from openlp.core.common import settings as modsettings
+    from openlp.core.common.applocation import AppLocation
     original_version = modsettings.__version__
     modsettings.__version__ = 4
     try:
         # GIVEN: A Settings object with custom values
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir_path = Path(tmp_dir)
+            monkeypatch.setattr(AppLocation, 'get_data_path', lambda: tmp_dir_path / 'data')
             zip_path = tmp_dir_path / 'backup.zip'
             logo_path = tmp_dir_path / 'my_logo.png'
             # Create a dummy logo file

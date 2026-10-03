@@ -6,7 +6,10 @@ from PySide6 import QtWidgets
 from openlp.core.ui.servicemanager import ServiceManager
 
 
-def test_service_commandbar_shares_overflow_across_sections(registry, settings, qtbot):
+def test_service_commandbar_shares_overflow_across_sections(registry, settings, qtbot, monkeypatch):
+    from openlp.core.common.actions import ActionList
+    monkeypatch.setattr(ActionList, 'instance', None)
+    monkeypatch.setattr(ActionList, 'shortcut_map', {})
     for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
         registry.register(name, MagicMock())
     manager = ServiceManager()

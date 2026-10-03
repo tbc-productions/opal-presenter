@@ -13,7 +13,7 @@ import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.6'
+VERSION = '1.9.2+openlp.7'
 QT_VERSION = '6.11.1'
 
 
@@ -139,6 +139,33 @@ def patch_accessibility_factories(source):
         path.write_text(patched)
 
 
+def patch_type_discovery(source):
+    """Use Qt metadata when wrapping private Qt objects without C++ RTTI."""
+    native = source / 'bindings/pyside6/native'
+    for filename, namespace in (('typesystem_fluentqt.xml', []), ('spatial_types.xml', ['fluent'])):
+        path = native / filename
+        namespaces = list(namespace)
+
+        def patch_tag(match):
+            tag = match.group(0)
+            if tag == '</namespace-type>':
+                namespaces.pop()
+            elif tag.startswith('<namespace-type'):
+                namespaces.append(re.search(r'name="([^"]+)"', tag)[1])
+            elif 'polymorphic-id-expression=' not in tag:
+                name = re.search(r'name="([^"]+)"', tag)[1]
+                # The BindingApi shims have no Q_OBJECT and are constructed with
+                # their concrete Python type; they need no base-type discovery.
+                expression = ('false' if namespaces == ['fluent', 'binding'] else
+                              f'qobject_cast&lt;{"::".join([*namespaces, name])}*&gt;(%B)')
+                tag = tag.replace('/>', f' polymorphic-id-expression="{expression}"/>') if tag.endswith('/>') else \
+                    tag[:-1] + f' polymorphic-id-expression="{expression}">'
+            return tag
+
+        text = re.sub(r'</namespace-type>|<(?:namespace-type|object-type)\b[^>]*>', patch_tag, path.read_text())
+        path.write_text(text)
+
+
 def relocate_macos(extension):
     """Use PySide's frameworks; never ship absolute SDK framework references."""
     dependencies = subprocess.check_output(['otool', '-L', str(extension)], text=True)
@@ -176,6 +203,7 @@ def main():
     patch_subtle_split_buttons(source)
     patch_accessibility_factories(source)
     patch_menu_shortcut_alignment(source)
+    patch_type_discovery(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.

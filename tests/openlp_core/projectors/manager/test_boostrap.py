@@ -94,6 +94,7 @@ def test_bootstrap_post_set_up_autostart_false(mock_timer, mocked_edit, projecto
 
     settings.setValue('projector/connect on start', False)
     projector_manager.bootstrap_initialise()
+    mock_timer.reset_mock()
 
     with patch.multiple(projector_manager,
                         _load_projectors=DEFAULT,
@@ -127,6 +128,7 @@ def test_bootstrap_post_set_up_autostart_true(mock_timer, mocked_edit, projector
 
     settings.setValue('projector/connect on start', True)
     projector_manager.bootstrap_initialise()
+    mock_timer.reset_mock()
 
     with patch.multiple(projector_manager,
                         _load_projectors=DEFAULT,

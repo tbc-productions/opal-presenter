@@ -54,6 +54,9 @@ _MAIN_WINDOWS = []
 
 @pytest.fixture(autouse=True)
 def classic_appearance_for_existing_tests(settings, request, monkeypatch):
+    from openlp.core.common.actions import ActionList
+    monkeypatch.setattr(ActionList, 'instance', None)
+    monkeypatch.setattr(ActionList, 'shortcut_map', {})
     if 'modern_appearance' not in request.fixturenames:
         settings.setValue('advanced/interface style', 'classic')
         monkeypatch.setattr('openlp.core.ui.mainwindow.is_modern_style', lambda: False)
@@ -1584,7 +1587,7 @@ def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, mai
     assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
 
 
-def test_slide_controller_action_buttons_use_native_commandbars(modern_appearance, main_window):
+def test_slide_controller_actions_keep_pinned_controls_outside_overflow(modern_appearance, main_window):
     from PySide6 import QtGui
     from openlp.core.widgets import fluent
     from openlp.core.ui.slidecontroller import PreviewController, LiveController
@@ -1603,17 +1606,26 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
             controller.setup_ui()
         toolbar = controller.toolbar
         for action in (controller.previous_item, controller.next_item):
-            group = toolbar._command_actions[action]
-            assert isinstance(group, fluent.fluentqt.CommandBar)
-            assert action in group.primaryActions()
+            wrapper, button, _ = toolbar._fluent_actions[action]
+            assert isinstance(button, fluent.fluentqt.Button)
+            assert button.defaultAction() is action
+            assert wrapper.defaultWidget() is button
+            assert wrapper in toolbar.actions()
+            assert action not in toolbar._command_actions
         assert toolbar.maximumHeight() > toolbar._command_groups[0].sizeHint().height()
     controller = controllers[1]
     for name in ('show_screen_button', 'theme_screen_button', 'logo_screen_button',
-                 'blank_screen_button', 'desktop_screen_button', 'song_menu'):
+                 'blank_screen_button', 'desktop_screen_button'):
         action = controller.toolbar.actions_map[name]
         assert isinstance(action, QtGui.QAction)
         assert not isinstance(action, QtWidgets.QWidgetAction)
-        assert action in controller.toolbar._command_actions[action].primaryActions()
+        wrapper, button, _ = controller.toolbar._fluent_actions[action]
+        assert wrapper in controller.toolbar.actions()
+        assert button.defaultAction() is action
+        assert action not in controller.toolbar._command_actions
+    group = controller.toolbar._command_actions[controller.song_menu_action]
+    assert isinstance(group, fluent.fluentqt.CommandBar)
+    assert controller.song_menu_action in group.primaryActions()
     assert controller.song_menu_action.menu() is None
     assert controller.song_menu is not None
 

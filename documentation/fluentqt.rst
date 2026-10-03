@@ -3,7 +3,7 @@ FluentQt and Python 3.14
 
 OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.6`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.2+openlp.7`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -113,3 +113,8 @@ metadata before attempting C++ RTTI casts. QtWebEngine's private Quick objects
 can be compiled without RTTI; casting those objects from the progress factory
 previously crashed macOS startup when the renderer received focus. Native
 Fluent and WebEngine accessibility remain enabled.
+
+Binding type discovery also uses Qt metadata instead of C++ RTTI. Qt's private
+item models and partially constructed layout children can lack usable RTTI;
+wrapping those objects previously crashed the test suite. BindingApi shims
+without their own Qt meta-object retain their concrete Python wrapper type.

@@ -9,9 +9,15 @@ from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
 
-@pytest.mark.parametrize('index', [1, 2])
-def test_changed_theme_prompts_after_saving(settings, index):
+@pytest.fixture()
+def form(settings, qtbot):
     form = SettingsForm()
+    qtbot.addWidget(form)
+    return form
+
+
+@pytest.mark.parametrize('index', [1, 2])
+def test_changed_theme_prompts_after_saving(settings, form, index):
     tab = GeneralTab(form)
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(index)
@@ -28,8 +34,7 @@ def test_changed_theme_prompts_after_saving(settings, index):
         form, 'Restart required', 'Your interface theme has been saved. Restart OpenLP+ to apply it.')
 
 
-def test_unchanged_theme_does_not_prompt(settings):
-    form = SettingsForm()
+def test_unchanged_theme_does_not_prompt(settings, form):
     tab = GeneralTab(form)
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(1)
@@ -43,8 +48,7 @@ def test_unchanged_theme_does_not_prompt(settings):
     reminder.assert_not_called()
 
 
-def test_cancelled_theme_change_does_not_prompt_or_save(settings):
-    form = SettingsForm()
+def test_cancelled_theme_change_does_not_prompt_or_save(settings, form):
     tab = GeneralTab(form)
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(1)
