@@ -56,6 +56,26 @@ def test_ui_defaults(form: EditSongForm):
     assert form.topic_remove_button.isEnabled() is False, 'The topic remove button should not be enabled'
 
 
+def test_song_editor_exec_opens_and_closes(form: EditSongForm):
+    """The Song Editor should open through the Fluent dialog sizing lifecycle."""
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    observed = []
+
+    def dismiss():
+        observed.append(form.isVisible() and form.isOpen())
+        form.reject()
+
+    QtCore.QTimer.singleShot(0, dismiss)
+    try:
+        assert form.exec() == QtWidgets.QDialog.DialogCode.Rejected
+        assert observed == [True]
+    finally:
+        parent.close()
+
+
 def test_verse_order_no_warning(form: EditSongForm):
     """
     Test if the verse order warning is not shown

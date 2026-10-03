@@ -177,9 +177,9 @@ class ProxyDialog(QtWidgets.QDialog):
         self.show_ftw_options = show_ftw_options
         self.timeout = timeout
         self.retries = retries
-        self.layout = QtWidgets.QVBoxLayout(self)
+        self.dialog_layout = QtWidgets.QVBoxLayout(self)
         self.proxy_widget = ProxyWidget(self)
-        self.layout.addWidget(self.proxy_widget)
+        self.dialog_layout.addWidget(self.proxy_widget)
         self.ftw_options_group_box = None
         self.timeout_spin_box = None
         self.retries_spin_box = None
@@ -194,11 +194,11 @@ class ProxyDialog(QtWidgets.QDialog):
             self.retries_spin_box.setRange(0, 10)
             self.retries_spin_box.setValue(_coerce_bounded_int(retries, 0, minimum=0, maximum=10))
             self.ftw_options_layout.addRow('Number of retry attempts:', self.retries_spin_box)
-            self.layout.addWidget(self.ftw_options_group_box)
+            self.dialog_layout.addWidget(self.ftw_options_group_box)
         self.button_box = \
             QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
                                        QtWidgets.QDialogButtonBox.StandardButton.Cancel, self)
-        self.layout.addWidget(self.button_box)
+        self.dialog_layout.addWidget(self.button_box)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.retranslate_ui()

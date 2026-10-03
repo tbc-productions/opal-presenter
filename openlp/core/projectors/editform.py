@@ -227,7 +227,6 @@ class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
     updateProjectors = QtCore.Signal()
 
     def __init__(self, parent=None, projectordb=None):
-        self.parent = parent
         self.projectordb = projectordb
         self.new_projector = False
         super(ProjectorEditForm, self).__init__(parent,

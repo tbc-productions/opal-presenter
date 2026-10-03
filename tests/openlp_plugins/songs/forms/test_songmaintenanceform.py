@@ -65,6 +65,39 @@ def test_constructor(db_manager: MagicMock, maintenance_form: SongMaintenanceFor
     assert maintenance_form.manager is db_manager
 
 
+@pytest.mark.parametrize('section,item,list_name,index', [
+    ('authors', 'author', 'authors_list_widget', 0),
+    ('topics', 'topic', 'topics_list_widget', 1),
+    ('books', 'book', 'song_books_list_widget', 2)
+])
+def test_section_commands_and_navigation_layout(maintenance_form, section, item, list_name, index):
+    """Section commands stay above the list and aligned with readable navigation."""
+    form = maintenance_form
+    form.setAnimationEnabled(False)
+    form.type_list_widget.setCurrentRow(index)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    try:
+        command_bar = getattr(form, f'{section}_command_bar')
+        list_widget = getattr(form, list_name)
+        assert command_bar.primaryActions() == [getattr(form, f'{command}_{item}_action')
+                                                for command in ('add', 'edit', 'delete')]
+        assert command_bar.mapTo(form, QtCore.QPoint()).y() == form.type_list_widget.y()
+        assert command_bar.mapTo(form, command_bar.rect().bottomLeft()).y() < \
+            list_widget.mapTo(form, QtCore.QPoint()).y()
+        assert form.type_list_widget.viewport().width() >= form.type_list_widget.sizeHintForColumn(0)
+        edit_action = getattr(form, f'edit_{item}_action')
+        delete_action = getattr(form, f'delete_{item}_action')
+        assert not edit_action.isEnabled() and not delete_action.isEnabled()
+        list_widget.addItem('Selected item')
+        list_widget.setCurrentRow(0)
+        assert edit_action.isEnabled() and delete_action.isEnabled()
+        list_widget.clear()
+        assert not edit_action.isEnabled() and not delete_action.isEnabled()
+    finally:
+        form.close()
+
+
 @patch('openlp.plugins.songs.forms.songmaintenanceform.QtWidgets.QDialog.exec')
 def test_exec(mocked_exec: MagicMock, maintenance_form: SongMaintenanceForm):
     """

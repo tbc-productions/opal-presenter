@@ -81,8 +81,6 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                          QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.media_item = media_item
         self.song = None
-        # can this be automated?
-        self.width = 400
         self.setup_ui()
         # Connecting signals and slots
         self.author_add_button.clicked.connect(self.on_author_add_button_clicked)

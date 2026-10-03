@@ -115,7 +115,6 @@ class DownloadProgressDialog(QtWidgets.QProgressDialog):
     """
     def __init__(self, parent, app):
         super(DownloadProgressDialog, self).__init__(parent)
-        self.parent = parent
         self.app = app
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setWindowTitle(translate('OpenLP.RemotePlugin', 'Importing Website'))

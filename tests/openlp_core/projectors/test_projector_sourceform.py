@@ -28,7 +28,7 @@ from unittest.mock import patch
 
 import pytest
 
-from PySide6.QtWidgets import QDialog
+from openlp.core.widgets.fluent import QDialog
 
 from openlp.core.projectors.constants import PJLINK_DEFAULT_CODES, PJLINK_DEFAULT_SOURCES
 from openlp.core.projectors.db import Projector, ProjectorDB

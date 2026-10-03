@@ -57,22 +57,22 @@ class SongMaintenanceForm(QtWidgets.QDialog, Ui_SongMaintenanceDialog, RegistryP
         self.topic_form = TopicsForm(self)
         self.song_book_form = SongBookForm(self)
         # Disable all edit and delete buttons, as there is no row selected.
-        self.delete_author_button.setEnabled(False)
-        self.edit_author_button.setEnabled(False)
-        self.delete_topic_button.setEnabled(False)
-        self.edit_topic_button.setEnabled(False)
-        self.delete_book_button.setEnabled(False)
-        self.edit_book_button.setEnabled(False)
+        self.delete_author_action.setEnabled(False)
+        self.edit_author_action.setEnabled(False)
+        self.delete_topic_action.setEnabled(False)
+        self.edit_topic_action.setEnabled(False)
+        self.delete_book_action.setEnabled(False)
+        self.edit_book_action.setEnabled(False)
         # Signals
-        self.add_author_button.clicked.connect(self.on_add_author_button_clicked)
-        self.add_topic_button.clicked.connect(self.on_add_topic_button_clicked)
-        self.add_book_button.clicked.connect(self.on_add_book_button_clicked)
-        self.edit_author_button.clicked.connect(self.on_edit_author_button_clicked)
-        self.edit_topic_button.clicked.connect(self.on_edit_topic_button_clicked)
-        self.edit_book_button.clicked.connect(self.on_edit_book_button_clicked)
-        self.delete_author_button.clicked.connect(self.on_delete_author_button_clicked)
-        self.delete_topic_button.clicked.connect(self.on_delete_topic_button_clicked)
-        self.delete_book_button.clicked.connect(self.on_delete_book_button_clicked)
+        self.add_author_action.triggered.connect(self.on_add_author_button_clicked)
+        self.add_topic_action.triggered.connect(self.on_add_topic_button_clicked)
+        self.add_book_action.triggered.connect(self.on_add_book_button_clicked)
+        self.edit_author_action.triggered.connect(self.on_edit_author_button_clicked)
+        self.edit_topic_action.triggered.connect(self.on_edit_topic_button_clicked)
+        self.edit_book_action.triggered.connect(self.on_edit_book_button_clicked)
+        self.delete_author_action.triggered.connect(self.on_delete_author_button_clicked)
+        self.delete_topic_action.triggered.connect(self.on_delete_topic_button_clicked)
+        self.delete_book_action.triggered.connect(self.on_delete_book_button_clicked)
         self.authors_list_widget.currentRowChanged.connect(self.on_authors_list_row_changed)
         self.topics_list_widget.currentRowChanged.connect(self.on_topics_list_row_changed)
         self.song_books_list_widget.currentRowChanged.connect(self.on_song_books_list_row_changed)
@@ -564,19 +564,19 @@ class SongMaintenanceForm(QtWidgets.QDialog, Ui_SongMaintenanceDialog, RegistryP
         """
         Called when the *authors_list_widget*'s current row has changed.
         """
-        self._row_change(row, self.edit_author_button, self.delete_author_button)
+        self._row_change(row, self.edit_author_action, self.delete_author_action)
 
     def on_topics_list_row_changed(self, row):
         """
         Called when the *topics_list_widget*'s current row has changed.
         """
-        self._row_change(row, self.edit_topic_button, self.delete_topic_button)
+        self._row_change(row, self.edit_topic_action, self.delete_topic_action)
 
     def on_song_books_list_row_changed(self, row):
         """
         Called when the *song_books_list_widget*'s current row has changed.
         """
-        self._row_change(row, self.edit_book_button, self.delete_book_button)
+        self._row_change(row, self.edit_book_action, self.delete_book_action)
 
     def _row_change(self, row, edit_button, delete_button):
         """
