@@ -1538,8 +1538,8 @@ def test_layout_navigation_compact_mode_keeps_workspace_and_selection(main_windo
     with patch.object(main_window, '_activate_layout_preset') as activate:
         navigation.buttons[1].click()
         activate.assert_called_once_with('setup')
-        navigation.pane_toggle.click()
         assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+        assert not navigation.isPaneOpen()
         assert navigation.currentIndex() == 1
         assert navigation.buttons[1].isChecked()
         assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconOnly
@@ -1552,6 +1552,10 @@ def test_layout_navigation_compact_mode_keeps_workspace_and_selection(main_windo
         assert navigation.displayMode() == navigation.DisplayMode.Left
         assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconBefore
                    for button in navigation.buttons)
+        for button in navigation.buttons:
+            content = button.contentPaintRect(QtCore.QRectF(0, 0, 172, 32))
+            assert content.left() == 0
+            assert content.width() == button.sizeHint().width()
         activate.assert_called_once_with('setup')
 
 
@@ -1565,7 +1569,8 @@ def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, mai
     navigation.show()
     QtWidgets.QApplication.processEvents()
     assert navigation.paneGeometry().left() == 0
-    assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
+    assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+    assert navigation.contentGeometry().left() == navigation.compactPaneWidth()
     navigation.pane_toggle.click()
     QtWidgets.QApplication.processEvents()
-    assert navigation.contentGeometry().left() == navigation.compactPaneWidth()
+    assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()

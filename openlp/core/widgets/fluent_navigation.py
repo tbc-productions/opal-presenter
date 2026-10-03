@@ -167,6 +167,16 @@ class FluentTabBar(_qt.QWidget):
 QTabBar = FluentTabBar
 
 
+class LayoutPresetButton(QPushButton):
+    """Use native button painting with content aligned to the left in expanded mode."""
+
+    def contentPaintRect(self, surface_rect):
+        rect = super().contentPaintRect(surface_rect)
+        if self.fluentLayout() != fluentqt.Button.ButtonLayout.IconOnly:
+            rect.setWidth(min(rect.width(), self.sizeHint().width()))
+        return rect
+
+
 class LayoutPresetNavigation(fluentqt.NavigationView):
     """Left navigation for presets that share a single dock workspace."""
     currentChanged = QtCore.Signal(int)
@@ -175,7 +185,7 @@ class LayoutPresetNavigation(fluentqt.NavigationView):
         super().__init__(parent)
         self._current = -1
         self._navigation_visible = True
-        self._preferred_mode = self.DisplayMode.Left
+        self._preferred_mode = self.DisplayMode.LeftCompact
         self.setDisplayMode(self._preferred_mode)
         self.setExpandedPaneWidth(180)
         self.setCompactPaneWidth(48)
@@ -190,10 +200,11 @@ class LayoutPresetNavigation(fluentqt.NavigationView):
         self.pane_toggle.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
         self.pane_toggle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
         self.pane_toggle.clicked.connect(self.toggle_compact)
-        layout.addWidget(self.pane_toggle)
+        self.pane_toggle.setFixedWidth(40)
+        layout.addWidget(self.pane_toggle, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
         self.buttons = []
         for index in range(3):
-            button = QPushButton(self.pane)
+            button = LayoutPresetButton(self.pane)
             button.setCheckable(True)
             button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
             button.clicked.connect(lambda _checked=False, index=index: self.setCurrentIndex(index))
@@ -202,6 +213,8 @@ class LayoutPresetNavigation(fluentqt.NavigationView):
         layout.addStretch()
         self.setOwnedMainChromeWidget(self.pane)
         self.displayModeChanged.connect(self._update_button_layout)
+        self._update_button_layout(self._preferred_mode)
+        self.setPaneOpen(False)
         self.setCurrentIndex(0)
 
     def setItemText(self, index, text):
