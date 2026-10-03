@@ -42,7 +42,7 @@ from openlp.core.common.utils import wait_for
 from openlp.core.lib import build_icon, check_item_selected, create_thumb, get_text_file_string, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.theme import Theme
-from openlp.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, create_widget_action, \
+from openlp.core.lib.ui import add_list_view_mode_items_to_toolbar, create_widget_action, \
     critical_error_message_box, set_list_view_mode_toolbar_state
 from openlp.core.display.screens import ScreenList
 from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
@@ -52,6 +52,7 @@ from openlp.core.ui.themeform import ThemeForm
 from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
+from openlp.core.widgets.themeviews import ThemeViews
 
 THEME_LIST_ICON_WIDTH = 124
 THEME_LIST_ICON_HEIGHT = 70
@@ -186,7 +187,7 @@ class Ui_ThemeManager(object):
         self.theme_widget = QtWidgets.QWidgetAction(self.toolbar)
         self.theme_widget.setObjectName('theme_widget')
         # create theme manager list
-        self.theme_list_widget = MultipleViewModeList(widget)
+        self.theme_list_widget = ThemeViews(widget)
         self.theme_list_widget.setAlternatingRowColors(True)
         self.theme_list_widget.setIconSize(QtCore.QSize(THEME_LIST_ICON_WIDTH, THEME_LIST_ICON_HEIGHT))
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.ListMode,
@@ -196,7 +197,7 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.theme_list_widget.activate_drag('themes')
         self.theme_list_widget.setObjectName('theme_list_widget')
-        self.theme_list_widget.setItemDelegate(ThemeListDelegate(self.theme_list_widget))
+        self.theme_list_widget.setItemDelegate(ThemeListDelegate(self.theme_list_widget.list_view))
         self.layout.addWidget(self.theme_list_widget)
         self.footer_status_bar = QtWidgets.QStatusBar(widget)
         self.footer_status_bar.setObjectName('footer_status_bar')

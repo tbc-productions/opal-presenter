@@ -71,6 +71,8 @@ retain their column headings. Folder and service hierarchies retain native
 TreeView with supplied column headings visible, preserving expansion and
 parent/child item contracts. Thumbnail preferences adjust DataGrid row and
 icon sizes rather than switching to ListView.
+The Theme Manager switches between DataGrid for its list and GridView for its
+thumbnail grid, sharing theme records and selection across both views.
 
 Native Fluent controls now cover item collections, numeric/date/time fields,
 font selection, group cards, tab navigation, progress indicators and command
