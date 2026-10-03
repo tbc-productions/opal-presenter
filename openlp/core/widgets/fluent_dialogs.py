@@ -93,6 +93,41 @@ class FluentDialog(_DialogSizingMixin, fluentqt.Dialog):
     """Fluent form dialog with content sizing and bounded dragging."""
 
 
+class TextEditorDialog(FluentDialog):
+    """Resizable text editor with content sizing bounded by the parent window."""
+
+    def _prepare_size(self):
+        """Fit the text and controls inside the host window with room around the dialog."""
+        parent = self.parentWidget()
+        available = parent.size() if parent is not None else self.screen().availableGeometry().size()
+        available -= QtCore.QSize(48, 48)
+        available = available.expandedTo(QtCore.QSize(1, 1))
+        self.setMaximumSize(available)
+        editor = self._text_editor
+        block = editor.document().begin()
+        text_height = 2 * editor.document().documentMargin()
+        while block.isValid():
+            text_height += max(editor.fontMetrics().lineSpacing(), editor.blockBoundingRect(block).height())
+            block = block.next()
+        editor_height = text_height + editor.viewportMargins().top() + 2 * editor.frameWidth()
+        controls_height = self.layout().sizeHint().height() - editor.sizeHint().height()
+        target_height = max(self.height(), round(editor_height + controls_height))
+        self.resize(min(self.width(), available.width()), min(target_height, available.height()))
+        super()._prepare_size()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._constrain_position()
+
+    def _constrain_position(self):
+        """Keep padding above and below the embedded, resizable editor."""
+        super()._constrain_position()
+        parent = self.parentWidget()
+        if parent is not None:
+            self.move(max(24, min(self.x(), parent.width() - self.width() - 24)),
+                      max(24, min(self.y(), parent.height() - self.height() - 24)))
+
+
 QDialog = FluentDialog
 
 

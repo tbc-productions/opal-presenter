@@ -26,6 +26,7 @@ import re
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui
+import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
@@ -460,6 +461,59 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         return QtCore.QSize(ideal_width, total_height + 4)
 
 
+class FormattingToolbar(OpenLPToolbar):
+    """Extend the native CommandBar surface behind its adjacent input controls."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._theme_host = fluentqt.FluentWidget(self)
+        self._theme_host.hide()
+        self.layout().setContentsMargins(0, 0, 12, 0)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QtGui.QPainter(self)
+        painter.fillRect(self.rect(), self._theme_host.theme_tokens().colors.bgCanvas)
+
+
+class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):
+    """Show format previews while retaining the picker's multi-selection checkboxes."""
+    def __init__(self, combo, parent):
+        super().__init__(parent)
+        self.combo = combo
+        self._checkbox = fluentqt.CheckBox(parent)
+        self._checkbox.setFixedSize(32, 32)
+        self._checkbox.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self._checkbox.hide()
+
+    def paint(self, painter, option, index):
+        """Paint the normal Fluent checkbox and keep the preview's own text colour."""
+        styled = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(styled, index)
+        style = styled.widget.style() if styled.widget else QtWidgets.QApplication.style()
+        painter.save()
+        style.drawPrimitive(QtWidgets.QStyle.PrimitiveElement.PE_PanelItemViewItem, styled, painter, styled.widget)
+        checkbox_position = QtCore.QPoint(styled.rect.left() + 8, styled.rect.center().y() - 16)
+        self._checkbox.setChecked(self.combo.isRowSelected(index.row()))
+        checkbox_image = QtGui.QPixmap(self._checkbox.size())
+        checkbox_image.fill(QtCore.Qt.GlobalColor.transparent)
+        self._checkbox.render(checkbox_image, QtCore.QPoint(), QtGui.QRegion(),
+                              QtWidgets.QWidget.RenderFlag.DrawChildren)
+        painter.drawPixmap(checkbox_position, checkbox_image)
+        text_rect = styled.rect.adjusted(44, 0, -12, 0)
+        foreground = index.data(QtCore.Qt.ItemDataRole.ForegroundRole)
+        painter.setPen(foreground.color() if foreground is not None else
+                       styled.palette.color(QtGui.QPalette.ColorRole.Text))
+        painter.setFont(styled.font)
+        text = QtGui.QFontMetrics(styled.font).elidedText(
+            styled.text, QtCore.Qt.TextElideMode.ElideRight, max(0, text_rect.width()))
+        painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft, text)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        return QtCore.QSize(size.width() + 56, max(36, size.height() + 8))
+
+
 class SpellTextEdit(QtWidgets.QPlainTextEdit):
     """
     Spell checking widget based on QPlanTextEdit.
@@ -481,11 +535,11 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self.highlighter = Highlighter(self.document(), formatting_tags_allowed=self.formatting_tags_allowed)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
         self._toolbar = None
-        self._mode_button = None
+        self._mode_switch = None
         self._tag_actions = {}       # maps start tag token → QAction for toolbar state tracking
         self._color_tags = []
         self._updating_custom_formatting = False
-        self._color_action_ends = {} # maps start_tag → end_tag for color toggle logic
+        self._color_action_ends = {}  # maps start_tag → end_tag for color toggle logic
         self._formatting_tag_form = None
         self._visual_line_overrides = {}
         if self.formatting_tags_allowed:
@@ -522,7 +576,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         Create a lightweight formatting toolbar docked at the top of the editor.
         """
-        self._toolbar = OpenLPToolbar(self)
+        self._toolbar = FormattingToolbar(self)
         self._toolbar.setIconSize(QtCore.QSize(20, 20))
         self._toolbar.setMovable(False)
         self._toolbar.setFloatable(False)
@@ -564,26 +618,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             self._tag_actions[tag] = action
             action.triggered.connect(lambda checked=False, start_tag=tag: self._apply_formatting_by_tag(start_tag))
 
-        self._custom_formatting_combo = QtWidgets.MultiSelectComboBox(self._toolbar)
-        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._custom_formatting_combo.setSelectAllVisible(False)
-        self._custom_formatting_combo.setMaximumVisibleItems(9)
-        self._custom_formatting_combo.setFixedWidth(190)
-        self._color_model = QtGui.QStandardItemModel(self._custom_formatting_combo)
-        self._custom_formatting_combo.setModel(self._color_model)
-        self._populate_color_menu()
-        self._custom_formatting_combo.selectionChanged.connect(self._on_custom_formatting_changed)
-        self._toolbar.addWidget(self._custom_formatting_combo)
-
-        self._edit_color_button = QtWidgets.QToolButton(self._toolbar)
-        self._edit_color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._edit_color_button.setIcon(UiIcons().palette)
-        self._edit_color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
-        self._edit_color_button.clicked.connect(self._edit_formatting_tags)
-        self._toolbar.addWidget(self._edit_color_button)
-
         self._toolbar.addSeparator()
         remove_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
         remove_action.setIcon(UiIcons().clear_formatting)
@@ -596,32 +630,66 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
         remove_unused_action.triggered.connect(self.remove_unused_tags)
 
-        self._toolbar.addSeparator()
-        self._mode_button = QtWidgets.QToolButton(self._toolbar)
-        self._mode_button.setCheckable(True)
-        self._mode_button.toggled.connect(lambda checked: self.set_rich_text_mode(not checked))
-        self._toolbar.addWidget(self._mode_button)
-        self._update_mode_button_text()
+        edit_tags_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
+        edit_tags_action.setIcon(UiIcons().palette)
+        edit_tags_action.triggered.connect(self._edit_formatting_tags)
+        self._edit_tags_action = edit_tags_action
+
+        # Keep every action in one native CommandBar. Custom inputs sit alongside it.
+        self._formatting_command_bar = self._toolbar.findChild(fluentqt.CommandBar)
+        self._formatting_command_bar.setBackgroundVisible(True)
+        self._formatting_command_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                   QtWidgets.QSizePolicy.Policy.Fixed)
+        self._toolbar.layout().setStretch(self._toolbar.layout().indexOf(self._formatting_command_bar), 1)
+
+        self._custom_formatting_combo = QtWidgets.MultiSelectComboBox(self._toolbar)
+        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setSelectAllVisible(False)
+        self._custom_formatting_combo.setMaximumVisibleItems(9)
+        self._custom_formatting_combo.setFixedWidth(190)
+        self._color_model = QtGui.QStandardItemModel(self._custom_formatting_combo)
+        self._custom_formatting_combo.setModel(self._color_model)
+        self._custom_formatting_combo.isOpenChanged.connect(self._on_formatting_picker_opened)
+        self._populate_color_menu()
+        self._custom_formatting_combo.selectionChanged.connect(self._on_custom_formatting_changed)
+        self._toolbar.addWidget(self._custom_formatting_combo)
+
+        self._mode_switch = fluentqt.ToggleSwitch(self._toolbar)
+        self._mode_switch.setObjectName('source_switch')
+        self._mode_switch.toggled.connect(lambda checked: self.set_rich_text_mode(not checked))
+        source_container = QtWidgets.QWidget(self._toolbar)
+        source_layout = QtWidgets.QHBoxLayout(source_container)
+        source_layout.setContentsMargins(12, 0, 0, 0)
+        source_layout.addWidget(self._mode_switch)
+        source_container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        self._toolbar.addWidget(source_container)
+        self._toolbar.layout().setStretch(self._toolbar.layout().count() - 1, 0)
+        self._update_mode_switch()
 
         toolbar_height = self._toolbar.sizeHint().height()
         self.setViewportMargins(0, toolbar_height + 2, 0, 0)
+        self._position_formatting_toolbar()
         self.cursorPositionChanged.connect(self._update_toolbar_state)
 
-    def _update_mode_button_text(self):
+    def _update_mode_switch(self):
         """
-        Update mode button text for the current mode.
+        Synchronise the Source switch with the current editing mode.
         """
-        if not self._mode_button:
+        if not self._mode_switch:
             return
-        self._mode_button.setText('')
-        self._mode_button.setIcon(UiIcons().code)
-        self._mode_button.blockSignals(True)
-        self._mode_button.setChecked(not self.rich_text_mode)
-        self._mode_button.blockSignals(False)
-        self._mode_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Source mode'))
+        caption = translate('OpenLP.SpellTextEdit', 'Source')
+        self._mode_switch.setOnContent(caption)
+        self._mode_switch.setOffContent(caption)
+        self._mode_switch.setAccessibleName(caption)
+        blocker = QtCore.QSignalBlocker(self._mode_switch)
+        self._mode_switch.setIsOn(not self.rich_text_mode)
+        del blocker
+        self._mode_switch.setToolTip(translate('OpenLP.SpellTextEdit', 'Show formatting tags in the source text'))
 
     def _populate_color_menu(self):
-        """Populate the multi-select dropdown with available colour formatting tags."""
+        """Populate styled colour and custom formatting options with their opening tags."""
         blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
         self._color_model.clear()
         self._color_tags.clear()
@@ -636,22 +704,34 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             start_html = html.get('start html', '')
             if not start_tag or not end_tag:
                 continue
-            if not re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE):
+            has_colour = re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE)
+            if not has_colour and html.get('protected', True):
                 continue
             desc = html.get('desc', start_tag)
-            item = QtGui.QStandardItem(desc)
+            item = QtGui.QStandardItem(f'{desc} {start_tag}')
             item.setData(start_tag, QtCore.Qt.ItemDataRole.UserRole)
             item.setToolTip(start_tag)
-            colour_match = re.search(r'(?:-webkit-text-fill-color|color)\s*:\s*([^;"\'>]+)',
-                                     start_html, flags=re.IGNORECASE)
-            if colour_match:
-                colour = QtGui.QColor(colour_match.group(1).strip())
-                if colour.isValid():
-                    item.setForeground(colour)
+            preview_format = self.highlighter._format_from_start_html(start_html)
+            item.setFont(preview_format.font().resolve(self.font()))
+            if preview_format.foreground().style() != QtCore.Qt.BrushStyle.NoBrush:
+                item.setForeground(preview_format.foreground())
             self._color_model.appendRow(item)
             self._color_tags.append(start_tag)
             self._color_action_ends[start_tag] = end_tag
         del blocker
+
+    def _on_formatting_picker_opened(self, opened):
+        """Install a delegate that honours the format model's font and colour roles."""
+        if opened:
+            QtCore.QTimer.singleShot(0, self._install_formatting_preview_delegate)
+
+    def _install_formatting_preview_delegate(self):
+        for view in self.window().findChildren(QtWidgets.QAbstractItemView, 'MultiSelectComboBox.ListView'):
+            if view.model() is self._color_model:
+                if not isinstance(view.itemDelegate(), FormattingStyleDelegate):
+                    view.setItemDelegate(FormattingStyleDelegate(self._custom_formatting_combo, view))
+                view.viewport().update()
+                break
 
     def _on_custom_formatting_changed(self, selected, deselected):
         """Apply only changed tags, keeping the other selected formats intact."""
@@ -723,7 +803,17 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         super().resizeEvent(event)
         if self._toolbar:
-            self._toolbar.setGeometry(0, 0, self.viewport().width(), self._toolbar.sizeHint().height())
+            self._position_formatting_toolbar()
+
+    def _position_formatting_toolbar(self):
+        """Reserve the full header row while keeping the scrollbar below it."""
+        toolbar_height = self._toolbar.sizeHint().height()
+        rect = self.contentsRect()
+        self._toolbar.setGeometry(rect.x(), rect.y(), rect.width(), toolbar_height)
+        scrollbar_container = self.verticalScrollBar().parentWidget()
+        scrollbar_layout = scrollbar_container.layout()
+        scrollbar_layout.setContentsMargins(0, toolbar_height + 2, 0, 0)
+        self._toolbar.raise_()
 
     def set_rich_text_mode(self, enabled):
         """
@@ -731,7 +821,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         self.rich_text_mode = bool(enabled)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
-        self._update_mode_button_text()
+        self._update_mode_switch()
         self._update_toolbar_state()
         self.viewport().update()
         self.highlighter.rehighlight()
@@ -744,7 +834,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         self._visual_line_overrides = overrides if isinstance(overrides, dict) else {}
         self.viewport().update()
-    
+
     def reset_undo_redo_history(self):
         """
         Clear the document's undo/redo history after loading content programmatically.
@@ -1415,7 +1505,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         cursor = self.textCursor()
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
-        full_text = self.toPlainText()
         while block.isValid():
             geometry = self.blockBoundingGeometry(block).translated(offset)
             top = geometry.top()
@@ -1458,8 +1547,8 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                     painter.setPen(QtGui.QPen(pen_color))
                     text_rect = QtCore.QRectF(10, top, self.viewport().width() - 20,
                                               self.blockBoundingRect(block).height())
-                    painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft,
-                                     override_text)
+                    alignment = QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft
+                    painter.drawText(text_rect, alignment, override_text)
             block = block.next()
 
     def mousePressEvent(self, event):

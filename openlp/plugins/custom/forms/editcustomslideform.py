@@ -22,7 +22,7 @@
 import logging
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.fluent_dialogs import TextEditorDialog
 
 from .editcustomslidedialog import Ui_CustomSlideEditDialog
 
@@ -30,7 +30,7 @@ from .editcustomslidedialog import Ui_CustomSlideEditDialog
 log = logging.getLogger(__name__)
 
 
-class EditCustomSlideForm(QtWidgets.QDialog, Ui_CustomSlideEditDialog):
+class EditCustomSlideForm(TextEditorDialog, Ui_CustomSlideEditDialog):
     """
     Class documentation goes here.
     """
@@ -45,6 +45,7 @@ class EditCustomSlideForm(QtWidgets.QDialog, Ui_CustomSlideEditDialog):
                                                   QtCore.Qt.WindowType.WindowTitleHint |
                                                   QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.setup_ui(self)
+        self._text_editor = self.slide_text_edit
         # Connecting signals and slots
         self.insert_button.clicked.connect(self.on_insert_button_clicked)
         self.split_button.clicked.connect(self.on_split_button_clicked)

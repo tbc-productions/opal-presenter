@@ -597,3 +597,28 @@ def test_single_verse_paste_keeps_plain_headings(edit_verse_form: EditVerseForm)
     edit_verse_form.verse_text_edit.insertFromMimeData(clipboard)
 
     assert edit_verse_form.verse_text_edit.toPlainText() == 'Verse 1\nFirst line'
+
+
+def test_lyric_dialog_fits_content_with_parent_padding(registry, settings, qtbot):
+    """Long lyrics grow the resizable dialog only as far as the host's padded bounds."""
+    parent = QtWidgets.QMainWindow()
+    parent.resize(1200, 900)
+    parent.show()
+    form = EditVerseForm(parent)
+    form.setAnimationEnabled(False)
+    form.verse_text_edit.setPlainText('\n'.join(f'Line {row}' for row in range(60)))
+    form.show()
+    qtbot.wait(50)
+    try:
+        assert form.isSizeGripEnabled()
+        assert form.width() >= 1000
+        assert form.height() == parent.height() - 48
+        assert form.y() >= 24
+        assert form.geometry().bottom() < parent.height() - 24
+        parent.resize(1200, 650)
+        qtbot.wait(50)
+        assert form.height() <= parent.height() - 48
+        assert form.geometry().bottom() < parent.height() - 24
+    finally:
+        form.close()
+        parent.close()

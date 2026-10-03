@@ -86,3 +86,28 @@ def test_set_text_scrolls_to_top(form):
     QtWidgets.QApplication.processEvents()
 
     assert form.slide_text_edit.verticalScrollBar().value() == 0
+
+
+def test_custom_text_editor_fits_parent_with_padding(settings, qtbot):
+    """The custom text editor shares the lyric editor's bounded, resizable sizing."""
+    parent = QtWidgets.QMainWindow()
+    parent.resize(1200, 900)
+    parent.show()
+    editor = EditCustomSlideForm(parent)
+    editor.setAnimationEnabled(False)
+    editor.set_text('\n'.join(f'Line {row}' for row in range(60)))
+    editor.show()
+    qtbot.wait(50)
+    try:
+        assert editor.isSizeGripEnabled()
+        assert editor.width() >= 1000
+        assert editor.height() == parent.height() - 48
+        assert editor.y() >= 24
+        assert editor.geometry().bottom() < parent.height() - 24
+        parent.resize(1200, 650)
+        qtbot.wait(50)
+        assert editor.height() <= parent.height() - 48
+        assert editor.geometry().bottom() < parent.height() - 24
+    finally:
+        editor.close()
+        parent.close()

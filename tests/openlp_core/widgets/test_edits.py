@@ -27,6 +27,7 @@ from unittest.mock import MagicMock, PropertyMock, patch, call
 from typing import Any
 
 from PySide6 import QtCore, QtGui, QtTest
+import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.path import path_to_str
@@ -842,15 +843,16 @@ def test_spell_text_edit_source_button_mapping(mock_settings):
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
     assert editor.rich_text_mode is True
-    assert editor._mode_button.isChecked() is False
-    assert editor._mode_button.text() == ''
-    assert editor._mode_button.toolTip() == 'Source mode'
+    assert editor._mode_switch.isOn() is False
+    assert isinstance(editor._mode_switch, fluentqt.ToggleSwitch)
+    assert editor._mode_switch.onContent() == 'Source'
+    assert editor._mode_switch.offContent() == 'Source'
 
-    editor._mode_button.setChecked(True)
+    editor._mode_switch.setIsOn(True)
     assert editor.rich_text_mode is False
     assert editor.highlighter.rich_text_mode is False
 
-    editor._mode_button.setChecked(False)
+    editor._mode_switch.setIsOn(False)
     assert editor.rich_text_mode is True
     assert editor.highlighter.rich_text_mode is True
 
@@ -894,7 +896,7 @@ def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_h
 
     assert editor._color_tags == ['{r}']
 
-    editor._edit_color_button.click()
+    editor._edit_tags_action.trigger()
 
     mock_formatting_tag_form.assert_called_once()
     mock_formatting_tag_form.return_value.exec.assert_called_once_with()
@@ -950,7 +952,7 @@ def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock
     ]
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
     item = editor._color_model.item(0)
-    assert item.text() == 'Red'
+    assert item.text() == 'Red {r}'
     assert item.data(QtCore.Qt.ItemDataRole.UserRole) == '{r}'
     assert item.foreground().color() == QtGui.QColor('red')
 
@@ -1334,3 +1336,81 @@ def test_spell_text_edit_apply_formatting_by_tag_applies_when_not_active(mock_se
     editor._apply_formatting_by_tag('st')
 
     assert editor.toPlainText() == '{st}Hello{/st}'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, qtbot):
+    """Custom styles are previewed and remain selectable beside a single overflow menu."""
+    mock_tags.return_value = [
+        {'desc': 'Emphasis', 'start tag': '{em}', 'end tag': '{/em}',
+         'start html': '<strong><em><span style="color:blue">', 'protected': False}]
+    window = QtWidgets.QMainWindow()
+    editor = SpellTextEdit(window)
+    window.setCentralWidget(editor)
+    window.resize(1000, 600)
+    editor.setPlainText('Lyrics to format')
+    window.show()
+    editor._custom_formatting_combo.setIsOpen(True)
+    qtbot.waitUntil(lambda: any(
+        view.itemDelegate().metaObject().className() == 'FormattingStyleDelegate'
+        for view in window.findChildren(QtWidgets.QAbstractItemView)))
+    try:
+        assert len(editor._toolbar.findChildren(fluentqt.CommandBar)) == 1
+        item = editor._color_model.item(0)
+        assert item.text() == 'Emphasis {em}'
+        assert item.font().bold() and item.font().italic()
+        assert item.foreground().color() == QtGui.QColor('blue')
+        view = window.findChild(QtWidgets.QAbstractItemView, 'MultiSelectComboBox.ListView')
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=view.visualRect(view.model().index(0, 0)).center())
+        assert editor._custom_formatting_combo.selectedRows() == [0]
+        assert '{em}' in editor.toPlainText()
+        # Focus and selection must preserve the blue style preview.
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = QtCore.QRect(0, 0, 300, 40)
+        option.widget = view
+        option.palette = view.palette()
+        option.state = (QtWidgets.QStyle.StateFlag.State_Enabled | QtWidgets.QStyle.StateFlag.State_Selected |
+                        QtWidgets.QStyle.StateFlag.State_HasFocus)
+        preview = QtGui.QPixmap(300, 40)
+        preview.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(preview)
+        view.itemDelegate().paint(painter, option, view.model().index(0, 0))
+        painter.end()
+        image = preview.toImage()
+        assert any(image.pixelColor(x, y).blue() > 220 and image.pixelColor(x, y).red() < 60
+                   for x in range(44, 200) for y in range(40))
+        editor._mode_switch.setIsOn(True)
+        assert editor.rich_text_mode is False
+        assert '{em}' in editor.toPlainText()
+        editor._custom_formatting_combo.setIsOpen(False)
+        editor._mode_switch.setIsOn(False)
+    finally:
+        window.close()
+
+
+@pytest.mark.parametrize('width', [650, 1000])
+def test_formatting_header_spans_row_above_scrollbar(mock_settings, qtbot, width):
+    """The full header has a continuous surface, trailing padding and no scrollbar beside it."""
+    window = QtWidgets.QMainWindow()
+    editor = SpellTextEdit(window)
+    window.setCentralWidget(editor)
+    window.resize(width, 500)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    window.show()
+    qtbot.waitUntil(lambda: editor.verticalScrollBar().isVisible())
+    try:
+        header = editor._toolbar
+        scrollbar_top = editor.verticalScrollBar().mapTo(editor, QtCore.QPoint()).y()
+        assert header.geometry().right() == editor.contentsRect().right()
+        assert scrollbar_top > header.geometry().bottom()
+        switch_left = editor._mode_switch.mapTo(header, QtCore.QPoint()).x()
+        switch_right = switch_left + editor._mode_switch.width()
+        assert switch_right <= header.width() - 12
+        assert switch_left - editor._custom_formatting_combo.geometry().right() >= 12
+        window.resize(width - 100, 400)
+        QtWidgets.QApplication.processEvents()
+        assert header.geometry().right() == editor.contentsRect().right()
+        assert editor.verticalScrollBar().mapTo(editor, QtCore.QPoint()).y() > header.geometry().bottom()
+    finally:
+        window.close()

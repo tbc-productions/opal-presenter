@@ -68,6 +68,7 @@ class UiIcons(metaclass=Singleton):
             'superscript': {'icon': 'ic_fluent_text_superscript_24_regular'},
             'active': {'icon': 'ic_fluent_accessibility_24_regular'},
             'add': {'icon': 'ic_fluent_add_circle_24_regular'},
+            'add_starburst': {'icon': 'ic_fluent_add_starburst_24_regular'},
             'alert': {'icon': 'ic_fluent_warning_24_regular'},
             'arrow_down': {'icon': 'ic_fluent_arrow_down_24_regular'},
             'arrow_collapse_vertical': {'icon': 'ic_fluent_text_collapse_24_regular'},

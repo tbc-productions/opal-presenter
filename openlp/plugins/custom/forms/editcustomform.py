@@ -56,9 +56,12 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         self.edit_slide_form = EditCustomSlideForm(self)
         # Connecting signals and slots
         self.preview_button.clicked.connect(self.on_preview_button_clicked)
-        self.add_button.clicked.connect(self.on_add_button_clicked)
-        self.edit_button.clicked.connect(self.on_edit_button_clicked)
-        self.edit_all_button.clicked.connect(self.on_edit_all_button_clicked)
+        self.add_action.triggered.connect(self.on_add_button_clicked)
+        self.edit_action.triggered.connect(self.on_edit_button_clicked)
+        self.edit_all_action.triggered.connect(self.on_edit_all_button_clicked)
+        self.delete_action.triggered.connect(self.on_delete_button_clicked)
+        self.up_action.triggered.connect(self.on_up_button_clicked)
+        self.down_action.triggered.connect(self.on_down_button_clicked)
         self.slide_list_view.currentRowChanged.connect(self.on_current_row_changed)
         self.slide_list_view.doubleClicked.connect(self.on_edit_button_clicked)
         Registry().register_function('theme_update_list', self.load_themes)
@@ -225,16 +228,16 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         :param row: The row (int). If there is no current row, the value is -1.
         """
         if row == -1:
-            self.delete_button.setEnabled(False)
-            self.edit_button.setEnabled(False)
-            self.up_button.setEnabled(False)
-            self.down_button.setEnabled(False)
+            self.delete_action.setEnabled(False)
+            self.edit_action.setEnabled(False)
+            self.up_action.setEnabled(False)
+            self.down_action.setEnabled(False)
         else:
-            self.delete_button.setEnabled(True)
-            self.edit_button.setEnabled(True)
+            self.delete_action.setEnabled(True)
+            self.edit_action.setEnabled(True)
             # Decide if the up/down buttons should be enabled or not.
-            self.down_button.setEnabled(self.slide_list_view.count() - 1 != row)
-            self.up_button.setEnabled(row != 0)
+            self.down_action.setEnabled(self.slide_list_view.count() - 1 != row)
+            self.up_action.setEnabled(row != 0)
 
     def _validate(self):
         """

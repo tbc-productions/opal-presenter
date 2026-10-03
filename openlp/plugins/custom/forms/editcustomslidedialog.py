@@ -31,12 +31,13 @@ class Ui_CustomSlideEditDialog(object):
     def setup_ui(self, custom_slide_edit_dialog):
         custom_slide_edit_dialog.setObjectName('custom_slide_edit_dialog')
         custom_slide_edit_dialog.setWindowIcon(UiIcons().main_icon)
-        custom_slide_edit_dialog.resize(550, 550)
+        custom_slide_edit_dialog.resize(1000, 680)
+        custom_slide_edit_dialog.setSizeGripEnabled(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(custom_slide_edit_dialog)
         self.slide_text_edit = SpellTextEdit(self, visual_mode_only=True)
         self.slide_text_edit.setObjectName('slide_text_edit')
         self.dialog_layout.addWidget(self.slide_text_edit)
-        self.split_button = create_button(custom_slide_edit_dialog, 'splitButton', icon=UiIcons().add)
+        self.split_button = create_button(custom_slide_edit_dialog, 'splitButton', icon=UiIcons().add_starburst)
         self.insert_button = create_button(custom_slide_edit_dialog, 'insertButton', icon=UiIcons().add)
         self.button_box = create_button_box(custom_slide_edit_dialog, 'button_box', ['cancel', 'save'],
                                             [self.split_button, self.insert_button])

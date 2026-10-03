@@ -24,6 +24,7 @@ import re
 
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.fluent_dialogs import TextEditorDialog
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
@@ -40,7 +41,7 @@ VERSE_REGEX = re.compile(r'---\[(.+):\D*(\d*)\D*.*\]---')
 VERSE_LINE_REGEX = re.compile(r'^\s*---\[(.+?)(?::(.*?))?\]---\s*$')
 
 
-class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
+class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
     """
     This is the form that is used to edit the verses of the song.
     """
@@ -51,6 +52,7 @@ class EditVerseForm(QtWidgets.QDialog, Ui_EditVerseDialog):
         super().__init__(parent, QtCore.Qt.WindowType.WindowSystemMenuHint | QtCore.Qt.WindowType.WindowTitleHint |
                          QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.setup_ui(self)
+        self._text_editor = self.verse_text_edit
         self.has_single_verse = False
         self.insert_button.clicked.connect(self.on_insert_button_clicked)
         self.overflow_split_button.clicked.connect(self.on_overflow_split_button_clicked)

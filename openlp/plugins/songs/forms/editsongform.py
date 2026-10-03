@@ -28,6 +28,7 @@ from shutil import copyfile
 from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtGui
+import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import sha256_file_hash
@@ -44,7 +45,7 @@ from openlp.core.ui.style import use_alternate_rows
 from openlp.core.lib import create_separated_list
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.lib.plugin import PluginStatus
-from openlp.core.lib.ui import create_button, create_button_box, critical_error_message_box, \
+from openlp.core.lib.ui import create_button_box, critical_error_message_box, \
     find_and_set_in_combo_box, set_case_insensitive_completer
 from openlp.core.state import State
 from openlp.core.widgets.edits import FormattingTagDelegate
@@ -84,33 +85,33 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.setup_ui()
         # Connecting signals and slots
         self.author_add_button.clicked.connect(self.on_author_add_button_clicked)
-        self.author_edit_button.clicked.connect(self.on_author_edit_button_clicked)
-        self.author_remove_button.clicked.connect(self.on_author_remove_button_clicked)
+        self.author_edit_action.triggered.connect(self.on_author_edit_button_clicked)
+        self.author_remove_action.triggered.connect(self.on_author_remove_button_clicked)
         self.authors_list_view.itemClicked.connect(self.on_authors_list_view_clicked)
         self.topic_add_button.clicked.connect(self.on_topic_add_button_clicked)
-        self.topic_remove_button.clicked.connect(self.on_topic_remove_button_clicked)
+        self.topic_remove_action.triggered.connect(self.on_topic_remove_button_clicked)
         self.topics_list_view.itemClicked.connect(self.on_topic_list_view_clicked)
         self.songbook_add_button.clicked.connect(self.on_songbook_add_button_clicked)
-        self.songbook_remove_button.clicked.connect(self.on_songbook_remove_button_clicked)
+        self.songbook_remove_action.triggered.connect(self.on_songbook_remove_button_clicked)
         self.songbooks_list_view.itemClicked.connect(self.on_songbook_list_view_clicked)
         self.copyright_insert_button.clicked.connect(self.on_copyright_insert_button_triggered)
-        self.verse_add_button.clicked.connect(self.on_verse_add_button_clicked)
+        self.verse_add_action.triggered.connect(self.on_verse_add_button_clicked)
         self.verse_list_widget.doubleClicked.connect(self.on_verse_edit_button_clicked)
-        self.verse_edit_button.clicked.connect(self.on_verse_edit_button_clicked)
-        self.verse_edit_all_button.clicked.connect(self.on_verse_edit_all_button_clicked)
-        self.verse_delete_button.clicked.connect(self.on_verse_delete_button_clicked)
+        self.verse_edit_action.triggered.connect(self.on_verse_edit_button_clicked)
+        self.verse_edit_all_action.triggered.connect(self.on_verse_edit_all_button_clicked)
+        self.verse_delete_action.triggered.connect(self.on_verse_delete_button_clicked)
         self.verse_list_widget.itemClicked.connect(self.on_verse_list_view_clicked)
         self.verse_order_edit.textEdited.connect(self.on_verse_order_text_changed)
         self.theme_add_button.clicked.connect(self.theme_manager.on_add_theme)
         self.maintenance_button.clicked.connect(self.on_maintenance_button_clicked)
-        self.from_file_button.clicked.connect(self.on_audio_add_from_file_button_clicked)
-        self.from_media_button.clicked.connect(self.on_audio_add_from_media_button_clicked)
-        self.audio_remove_button.clicked.connect(self.on_audio_remove_button_clicked)
-        self.audio_remove_all_button.clicked.connect(self.on_audio_remove_all_button_clicked)
+        self.from_file_action.triggered.connect(self.on_audio_add_from_file_button_clicked)
+        self.from_media_action.triggered.connect(self.on_audio_add_from_media_button_clicked)
+        self.audio_remove_action.triggered.connect(self.on_audio_remove_button_clicked)
+        self.audio_remove_all_action.triggered.connect(self.on_audio_remove_all_button_clicked)
         Registry().register_function('theme_update_list', self.load_themes)
         if self.authors_combo_box.lineEdit():
             self.authors_combo_box.lineEdit().installEventFilter(self)
-        self.copyright_edit.installEventFilter(self)
+        self.copyright_text_edit.installEventFilter(self)
         self.copyright_edit.textChanged.connect(self._on_copyright_edit_text_changed)
         self.preview_button = QtWidgets.QPushButton()
         self.preview_button.setObjectName('preview_button')
@@ -122,10 +123,6 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_form = EditVerseForm(self)
         self.media_form = MediaFilesForm(self)
         self.initialise()
-        line_spacing = QtGui.QFontMetrics(self.copyright_edit.font()).lineSpacing()
-        margins = self.copyright_edit.contentsMargins()
-        chrome = self.copyright_edit.frameWidth() * 2 + margins.top() + margins.bottom()
-        self.copyright_edit.setFixedHeight(line_spacing * 3 + chrome)
         self.authors_list_view.setSortingEnabled(False)
         self.authors_list_view.setAlternatingRowColors(use_alternate_rows())
         self.topics_list_view.setSortingEnabled(False)
@@ -180,30 +177,22 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_list_widget.setObjectName('verse_list_widget')
         self.verse_list_widget.setItemDelegate(FormattingTagDelegate(self.verse_list_widget))
         self.lyrics_label.setBuddy(self.verse_list_widget)
-        self.lyrics_tab_layout.addWidget(self.verse_list_widget, 2, 1)
+        self.lyrics_tab_layout.addWidget(self.verse_list_widget, 3, 1, 1, 2)
         self.verse_order_label = QtWidgets.QLabel(self.lyrics_tab)
         self.verse_order_label.setObjectName('verse_order_label')
-        self.lyrics_tab_layout.addWidget(self.verse_order_label, 3, 0)
+        self.lyrics_tab_layout.addWidget(self.verse_order_label, 4, 0)
         self.verse_order_edit = QtWidgets.QLineEdit(self.lyrics_tab)
         self.verse_order_edit.setObjectName('verse_order_edit')
         self.verse_order_label.setBuddy(self.verse_order_edit)
-        self.lyrics_tab_layout.addWidget(self.verse_order_edit, 3, 1, 1, 2)
-        self.verse_buttons_layout = QtWidgets.QVBoxLayout()
-        self.verse_buttons_layout.setObjectName('verse_buttons_layout')
-        self.verse_add_button = QtWidgets.QPushButton(self.lyrics_tab)
-        self.verse_add_button.setObjectName('verse_add_button')
-        self.verse_buttons_layout.addWidget(self.verse_add_button)
-        self.verse_edit_button = QtWidgets.QPushButton(self.lyrics_tab)
-        self.verse_edit_button.setObjectName('verse_edit_button')
-        self.verse_buttons_layout.addWidget(self.verse_edit_button)
-        self.verse_edit_all_button = QtWidgets.QPushButton(self.lyrics_tab)
-        self.verse_edit_all_button.setObjectName('verse_edit_all_button')
-        self.verse_buttons_layout.addWidget(self.verse_edit_all_button)
-        self.verse_delete_button = QtWidgets.QPushButton(self.lyrics_tab)
-        self.verse_delete_button.setObjectName('verse_delete_button')
-        self.verse_buttons_layout.addWidget(self.verse_delete_button)
-        self.verse_buttons_layout.addStretch()
-        self.lyrics_tab_layout.addLayout(self.verse_buttons_layout, 2, 2)
+        self.lyrics_tab_layout.addWidget(self.verse_order_edit, 4, 1, 1, 2)
+        self.lyrics_command_bar = self._create_command_bar(
+            self.lyrics_tab, 'lyrics_command_bar',
+            (('verse_add_action', UiIcons().add, UiStrings().Add),
+             ('verse_edit_action', UiIcons().edit, UiStrings().Edit),
+             ('verse_edit_all_action', UiIcons().edit, translate('SongsPlugin.EditSongForm', 'Ed&it All')),
+             ('verse_delete_action', UiIcons().delete, UiStrings().Delete)))
+        self.lyrics_tab_layout.addWidget(self.lyrics_command_bar, 2, 1, 1, 2)
+        self.lyrics_tab_layout.setRowStretch(3, 1)
         self.song_tab_widget.addTab(self.lyrics_tab, '')
         # authors tab
         self.authors_tab = QtWidgets.QWidget()
@@ -229,20 +218,15 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.author_type_layout.addWidget(self.author_add_button)
         self.author_add_layout.addLayout(self.author_type_layout)
         self.authors_layout.addLayout(self.author_add_layout)
+        self.author_command_bar = self._create_command_bar(
+            self.authors_group_box, 'author_command_bar',
+            (('author_edit_action', UiIcons().edit, translate('SongsPlugin.EditSongForm', '&Edit Author Type')),
+             ('author_remove_action', UiIcons().minus, translate('SongsPlugin.EditSongForm', '&Remove'))))
+        self.authors_layout.addWidget(self.author_command_bar)
         self.authors_list_view = QtWidgets.QListWidget(self.authors_group_box)
         self.authors_list_view.setAlternatingRowColors(use_alternate_rows())
         self.authors_list_view.setObjectName('authors_list_view')
-        self.authors_layout.addWidget(self.authors_list_view)
-        self.author_remove_layout = QtWidgets.QHBoxLayout()
-        self.author_remove_layout.setObjectName('author_remove_layout')
-        self.author_remove_layout.addStretch()
-        self.author_edit_button = QtWidgets.QPushButton(self.authors_group_box)
-        self.author_edit_button.setObjectName('author_edit_button')
-        self.author_remove_layout.addWidget(self.author_edit_button)
-        self.author_remove_button = QtWidgets.QPushButton(self.authors_group_box)
-        self.author_remove_button.setObjectName('author_remove_button')
-        self.author_remove_layout.addWidget(self.author_remove_button)
-        self.authors_layout.addLayout(self.author_remove_layout)
+        self.authors_layout.addWidget(self.authors_list_view, 1)
         self.authors_left_layout.addWidget(self.authors_group_box)
         self.maintenance_layout = QtWidgets.QHBoxLayout()
         self.maintenance_layout.setObjectName('maintenance_layout')
@@ -266,17 +250,14 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.topic_add_button.setObjectName('topic_add_button')
         self.topic_add_layout.addWidget(self.topic_add_button)
         self.topics_layout.addLayout(self.topic_add_layout)
+        self.topic_command_bar = self._create_command_bar(
+            self.topics_group_box, 'topic_command_bar',
+            (('topic_remove_action', UiIcons().minus, translate('SongsPlugin.EditSongForm', 'R&emove')),))
+        self.topics_layout.addWidget(self.topic_command_bar)
         self.topics_list_view = QtWidgets.QListWidget(self.topics_group_box)
         self.topics_list_view.setAlternatingRowColors(use_alternate_rows())
         self.topics_list_view.setObjectName('topics_list_view')
-        self.topics_layout.addWidget(self.topics_list_view)
-        self.topic_remove_layout = QtWidgets.QHBoxLayout()
-        self.topic_remove_layout.setObjectName('topic_remove_layout')
-        self.topic_remove_layout.addStretch()
-        self.topic_remove_button = QtWidgets.QPushButton(self.topics_group_box)
-        self.topic_remove_button.setObjectName('topic_remove_button')
-        self.topic_remove_layout.addWidget(self.topic_remove_button)
-        self.topics_layout.addLayout(self.topic_remove_layout)
+        self.topics_layout.addWidget(self.topics_list_view, 1)
         self.authors_right_layout.addWidget(self.topics_group_box)
         self.songbook_group_box = QtWidgets.QGroupBox(self.authors_tab)
         self.songbook_group_box.setObjectName('songbook_group_box')
@@ -293,17 +274,14 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.songbook_add_button.setObjectName('songbook_add_button')
         self.songbook_add_layout.addWidget(self.songbook_add_button)
         self.songbooks_layout.addLayout(self.songbook_add_layout)
+        self.songbook_command_bar = self._create_command_bar(
+            self.songbook_group_box, 'songbook_command_bar',
+            (('songbook_remove_action', UiIcons().minus, translate('SongsPlugin.EditSongForm', 'Re&move')),))
+        self.songbooks_layout.addWidget(self.songbook_command_bar)
         self.songbooks_list_view = QtWidgets.QListWidget(self.songbook_group_box)
         self.songbooks_list_view.setAlternatingRowColors(use_alternate_rows())
         self.songbooks_list_view.setObjectName('songbooks_list_view')
-        self.songbooks_layout.addWidget(self.songbooks_list_view)
-        self.songbook_remove_layout = QtWidgets.QHBoxLayout()
-        self.songbook_remove_layout.setObjectName('songbook_remove_layout')
-        self.songbook_remove_layout.addStretch()
-        self.songbook_remove_button = QtWidgets.QPushButton(self.songbook_group_box)
-        self.songbook_remove_button.setObjectName('songbook_remove_button')
-        self.songbook_remove_layout.addWidget(self.songbook_remove_button)
-        self.songbooks_layout.addLayout(self.songbook_remove_layout)
+        self.songbooks_layout.addWidget(self.songbooks_list_view, 1)
         self.authors_right_layout.addWidget(self.songbook_group_box)
         self.authors_tab_layout.addLayout(self.authors_right_layout)
         self.song_tab_widget.addTab(self.authors_tab, '')
@@ -326,21 +304,35 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.theme_left_layout.addWidget(self.theme_group_box)
         self.rights_group_box = QtWidgets.QGroupBox(self.theme_tab)
         self.rights_group_box.setObjectName('rights_group_box')
+        self.rights_group_box.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.rights_layout = QtWidgets.QVBoxLayout(self.rights_group_box)
         self.rights_layout.setObjectName('rights_layout')
+        self.rights_layout.setSpacing(8)
+        self.rights_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.copyright_layout = QtWidgets.QHBoxLayout()
         self.copyright_layout.setObjectName('copyright_layout')
-        self.copyright_edit = QtWidgets.QTextEdit(self.rights_group_box)
+        self.copyright_edit = fluentqt.TextEdit(self.rights_group_box, minVisibleLines=4, maxVisibleLines=4,
+                                                tabChangesFocus=True)
         self.copyright_edit.setObjectName('copyright_edit')
-        self.copyright_edit.setAcceptRichText(False)
-        self.copyright_edit.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.WidgetWidth)
-        self.copyright_edit.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.copyright_edit.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.copyright_edit.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        # Use the native editor for cursor operations and copyright key filtering.
+        self.copyright_text_edit = self.copyright_edit.findChild(QtWidgets.QTextEdit)
+        self.copyright_text_edit.setAcceptRichText(False)
+        self.copyright_text_edit.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.WidgetWidth)
+        self.copyright_text_edit.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.copyright_text_edit.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.copyright_edit.setTabChangesFocus(True)
-        self.copyright_layout.addWidget(self.copyright_edit)
         self.copyright_insert_button = QtWidgets.QToolButton(self.rights_group_box)
         self.copyright_insert_button.setObjectName('copyright_insert_button')
+        self.copyright_insert_button.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.copyright_insert_button.setIcon(UiIcons().copyright)
+        self.copyright_insert_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.copyright_insert_button.setFixedSize(self.copyright_insert_button.sizeHint())
         self.copyright_layout.addWidget(self.copyright_insert_button, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+        self.copyright_layout.addWidget(self.copyright_edit, 1)
         self.rights_layout.addLayout(self.copyright_layout)
         self.ccli_layout = QtWidgets.QHBoxLayout()
         self.ccli_layout.setObjectName('ccli_layout')
@@ -375,31 +367,22 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         # audio tab
         self.audio_tab = QtWidgets.QWidget()
         self.audio_tab.setObjectName('audio_tab')
-        self.audio_layout = QtWidgets.QHBoxLayout(self.audio_tab)
+        self.audio_layout = QtWidgets.QVBoxLayout(self.audio_tab)
         self.audio_layout.setObjectName('audio_layout')
+        self.audio_command_bar = self._create_command_bar(
+            self.audio_tab, 'audio_command_bar',
+            (('from_file_action', UiIcons().open, translate('SongsPlugin.EditSongForm', 'Add &File(s)')),
+             ('from_media_action', UiIcons().media, translate('SongsPlugin.EditSongForm', 'Add &Media')),
+             ('audio_remove_action', UiIcons().minus, translate('SongsPlugin.EditSongForm', '&Remove')),
+             ('audio_remove_all_action', UiIcons().delete, translate('SongsPlugin.EditSongForm', 'Remove &All')),
+             ('audio_up_action', UiIcons().arrow_up, UiStrings().Up),
+             ('audio_down_action', UiIcons().arrow_down, UiStrings().Down)))
+        self.audio_up_action.triggered.connect(self.on_up_button_clicked)
+        self.audio_down_action.triggered.connect(self.on_down_button_clicked)
+        self.audio_layout.addWidget(self.audio_command_bar)
         self.audio_list_widget = QtWidgets.QListWidget(self.audio_tab)
         self.audio_list_widget.setObjectName('audio_list_widget')
-        self.audio_layout.addWidget(self.audio_list_widget)
-        self.audio_buttons_layout = QtWidgets.QVBoxLayout()
-        self.audio_buttons_layout.setObjectName('audio_buttons_layout')
-        self.from_file_button = QtWidgets.QPushButton(self.audio_tab)
-        self.from_file_button.setObjectName('from_file_button')
-        self.audio_buttons_layout.addWidget(self.from_file_button)
-        self.from_media_button = QtWidgets.QPushButton(self.audio_tab)
-        self.from_media_button.setObjectName('from_media_button')
-        self.audio_buttons_layout.addWidget(self.from_media_button)
-        self.audio_remove_button = QtWidgets.QPushButton(self.audio_tab)
-        self.audio_remove_button.setObjectName('audio_remove_button')
-        self.audio_buttons_layout.addWidget(self.audio_remove_button)
-        self.audio_remove_all_button = QtWidgets.QPushButton(self.audio_tab)
-        self.audio_remove_all_button.setObjectName('audio_remove_all_button')
-        self.audio_buttons_layout.addWidget(self.audio_remove_all_button)
-        self.audio_buttons_layout.addStretch(1)
-        self.up_button = create_button(self, 'up_button', role='up', click=self.on_up_button_clicked)
-        self.down_button = create_button(self, 'down_button', role='down', click=self.on_down_button_clicked)
-        self.audio_buttons_layout.addWidget(self.up_button)
-        self.audio_buttons_layout.addWidget(self.down_button)
-        self.audio_layout.addLayout(self.audio_buttons_layout)
+        self.audio_layout.addWidget(self.audio_list_widget, 1)
         self.song_tab_widget.addTab(self.audio_tab, '')
         # Last few bits
         self.dialog_layout.addWidget(self.song_tab_widget)
@@ -413,6 +396,20 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.dialog_layout.addLayout(self.bottom_layout)
         self.retranslate_ui()
 
+    def _create_command_bar(self, parent, name, actions):
+        """Create a Fluent command bar with labelled actions above a list."""
+        command_bar = fluentqt.CommandBar(parent)
+        command_bar.setObjectName(name)
+        command_bar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)
+        command_bar.setBackgroundVisible(True)
+        command_bar.setDynamicOverflowEnabled(True)
+        for action_name, icon, caption in actions:
+            action = QtGui.QAction(icon, caption, command_bar)
+            action.setObjectName(action_name)
+            setattr(self, action_name, action)
+            command_bar.addPrimaryAction(action)
+        return command_bar
+
     def retranslate_ui(self):
         """
         Translate the UI on the fly.
@@ -422,29 +419,30 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.alternative_title_label.setText(translate('SongsPlugin.EditSongForm', 'Alt&ernate title:'))
         self.lyrics_label.setText(translate('SongsPlugin.EditSongForm', '&Lyrics:'))
         self.verse_order_label.setText(translate('SongsPlugin.EditSongForm', '&Verse order:'))
-        self.verse_add_button.setText(UiStrings().Add)
-        self.verse_edit_button.setText(UiStrings().Edit)
-        self.verse_edit_all_button.setText(translate('SongsPlugin.EditSongForm', 'Ed&it All'))
-        self.verse_delete_button.setText(UiStrings().Delete)
+        self.verse_add_action.setText(UiStrings().Add)
+        self.verse_edit_action.setText(UiStrings().Edit)
+        self.verse_edit_all_action.setText(translate('SongsPlugin.EditSongForm', 'Ed&it All'))
+        self.verse_delete_action.setText(UiStrings().Delete)
         self.song_tab_widget.setTabText(self.song_tab_widget.indexOf(self.lyrics_tab),
                                         translate('SongsPlugin.EditSongForm', 'Title && Lyrics'))
         self.authors_group_box.setTitle(SongStrings().Authors)
         self.author_add_button.setText(translate('SongsPlugin.EditSongForm', '&Add to Song'))
-        self.author_edit_button.setText(translate('SongsPlugin.EditSongForm', '&Edit Author Type'))
-        self.author_remove_button.setText(translate('SongsPlugin.EditSongForm', '&Remove'))
+        self.author_edit_action.setText(translate('SongsPlugin.EditSongForm', '&Edit Author Type'))
+        self.author_remove_action.setText(translate('SongsPlugin.EditSongForm', '&Remove'))
         self.maintenance_button.setText(translate('SongsPlugin.EditSongForm', '&Manage Authors, Topics, Songbooks'))
         self.topics_group_box.setTitle(SongStrings().Topics)
         self.topic_add_button.setText(translate('SongsPlugin.EditSongForm', 'A&dd to Song'))
-        self.topic_remove_button.setText(translate('SongsPlugin.EditSongForm', 'R&emove'))
+        self.topic_remove_action.setText(translate('SongsPlugin.EditSongForm', 'R&emove'))
         self.songbook_group_box.setTitle(SongStrings().SongBooks)
         self.songbook_add_button.setText(translate('SongsPlugin.EditSongForm', 'Add &to Song'))
-        self.songbook_remove_button.setText(translate('SongsPlugin.EditSongForm', 'Re&move'))
+        self.songbook_remove_action.setText(translate('SongsPlugin.EditSongForm', 'Re&move'))
         self.song_tab_widget.setTabText(self.song_tab_widget.indexOf(self.authors_tab),
                                         translate('SongsPlugin.EditSongForm', 'Authors, Topics && Songbooks'))
         self.theme_group_box.setTitle(UiStrings().Theme)
         self.theme_add_button.setText(translate('SongsPlugin.EditSongForm', 'New &Theme'))
         self.rights_group_box.setTitle(translate('SongsPlugin.EditSongForm', 'Copyright Information'))
-        self.copyright_insert_button.setText(SongStrings().CopyrightSymbol)
+        self.copyright_insert_button.setAccessibleName(SongStrings().CopyrightSymbol)
+        self.copyright_insert_button.setToolTip(translate('SongsPlugin.EditSongForm', 'Insert copyright symbol'))
         self.ccli_label.setText(UiStrings().CCLISongNumberLabel)
         self.flags_group_box.setTitle(translate('SongsPlugin.EditSongForm', 'Flags'))
         self.favourite_checkbox.setText(translate('SongsPlugin.EditSongForm', 'Favourite'))
@@ -453,10 +451,14 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                                         translate('SongsPlugin.EditSongForm', 'Theme, Copyright, Flags && Comments'))
         self.song_tab_widget.setTabText(self.song_tab_widget.indexOf(self.audio_tab),
                                         translate('SongsPlugin.EditSongForm', 'Linked Audio'))
-        self.from_file_button.setText(translate('SongsPlugin.EditSongForm', 'Add &File(s)'))
-        self.from_media_button.setText(translate('SongsPlugin.EditSongForm', 'Add &Media'))
-        self.audio_remove_button.setText(translate('SongsPlugin.EditSongForm', '&Remove'))
-        self.audio_remove_all_button.setText(translate('SongsPlugin.EditSongForm', 'Remove &All'))
+        self.from_file_action.setText(translate('SongsPlugin.EditSongForm', 'Add &File(s)'))
+        self.from_media_action.setText(translate('SongsPlugin.EditSongForm', 'Add &Media'))
+        self.audio_remove_action.setText(translate('SongsPlugin.EditSongForm', '&Remove'))
+        self.audio_remove_all_action.setText(translate('SongsPlugin.EditSongForm', 'Remove &All'))
+        self.audio_up_action.setText(UiStrings().Up)
+        self.audio_up_action.setToolTip(translate('OpenLP.Ui', 'Move selection up one position.'))
+        self.audio_down_action.setText(UiStrings().Down)
+        self.audio_down_action.setToolTip(translate('OpenLP.Ui', 'Move selection down one position.'))
         self.not_all_verses_used_warning = \
             translate('SongsPlugin.EditSongForm', '<strong>Warning:</strong> Not all of the verses are in use.')
         self.no_verse_order_entered_warning =  \
@@ -496,17 +498,17 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         text = self.copyright_edit.toPlainText()
         sanitized_text = self._sanitize_copyright_text(text)
         if sanitized_text != text:
-            cursor = self.copyright_edit.textCursor()
+            cursor = self.copyright_text_edit.textCursor()
             cursor_position = len(self._sanitize_copyright_text(text[:cursor.position()]))
             anchor_position = len(self._sanitize_copyright_text(text[:cursor.anchor()]))
             self.copyright_edit.blockSignals(True)
             self.copyright_edit.setPlainText(sanitized_text)
             self.copyright_edit.blockSignals(False)
-            new_cursor = self.copyright_edit.textCursor()
+            new_cursor = self.copyright_text_edit.textCursor()
             new_cursor.setPosition(min(len(sanitized_text), anchor_position))
             new_cursor.setPosition(min(len(sanitized_text), cursor_position),
                                    QtGui.QTextCursor.MoveMode.KeepAnchor)
-            self.copyright_edit.setTextCursor(new_cursor)
+            self.copyright_text_edit.setTextCursor(new_cursor)
 
     def _add_author_to_list(self, author: Author, author_type: AuthorType):
         """
@@ -898,7 +900,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         if watched == self.authors_combo_box.lineEdit() and event.type() == QtCore.QEvent.Type.KeyPress:
             if event.matches(QtGui.QKeySequence.StandardKey.Paste):
                 QtCore.QTimer.singleShot(0, self._handle_author_combo_box_paste)
-        elif watched == self.copyright_edit and event.type() == QtCore.QEvent.Type.KeyPress:
+        elif watched == self.copyright_text_edit and event.type() == QtCore.QEvent.Type.KeyPress:
             if event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter):
                 return True
         return super().eventFilter(watched, event)
@@ -917,11 +919,11 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         Set up the form for when it is displayed.
         """
-        self.verse_edit_button.setEnabled(False)
-        self.verse_delete_button.setEnabled(False)
-        self.author_edit_button.setEnabled(False)
-        self.author_remove_button.setEnabled(False)
-        self.topic_remove_button.setEnabled(False)
+        self.verse_edit_action.setEnabled(False)
+        self.verse_delete_action.setEnabled(False)
+        self.author_edit_action.setEnabled(False)
+        self.author_remove_action.setEnabled(False)
+        self.topic_remove_action.setEnabled(False)
 
     def load_authors(self):
         """
@@ -990,10 +992,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         Load the media files into a combobox.
         """
-        self.from_media_button.setVisible(False)
+        self.from_media_action.setVisible(False)
         for plugin in State().list_plugins():
             if plugin.name == 'media' and plugin.status == PluginStatus.Active:
-                self.from_media_button.setVisible(True)
+                self.from_media_action.setVisible(True)
                 self.media_form.populate_files(plugin.media_item.get_list())
                 break
 
@@ -1173,37 +1175,58 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         count = self.authors_list_view.count()
         if count > 0:
-            self.author_edit_button.setEnabled(True)
+            self.author_edit_action.setEnabled(True)
         if count > 1:
             # There must be at least one author
-            self.author_remove_button.setEnabled(True)
+            self.author_remove_action.setEnabled(True)
 
     def on_author_edit_button_clicked(self):
         """
         Show a dialog to change the type of an author when the edit button is clicked
         """
-        self.author_edit_button.setEnabled(False)
         item = self.authors_list_view.currentItem()
-        author_id, author_type = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        choice, ok = QtWidgets.QInputDialog.getItem(self, translate('SongsPlugin.EditSongForm', 'Edit Author Type'),
-                                                    translate('SongsPlugin.EditSongForm',
-                                                              'Choose type for this author'),
-                                                    AuthorType.get_translated_types_list(),
-                                                    current=AuthorType.SortedTypes.index(author_type),
-                                                    editable=False)
-        if not ok:
+        if item is None:
             return
-        author = self.manager.get_object(Author, author_id)
-        author_type = AuthorType.from_translated_text(choice)
-        item.setData(QtCore.Qt.ItemDataRole.UserRole, (author_id, author_type))
-        item.setText(author.get_display_name(author_type))
+        author_id, author_type = item.data(QtCore.Qt.ItemDataRole.UserRole)
+        dialog = fluentqt.ContentDialog(self)
+        dialog.setObjectName('author_type_dialog')
+        dialog.graphicsEffect().setEnabled(False)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        dialog.setMaximumWidth(560)
+        dialog.setTitle(translate('SongsPlugin.EditSongForm', 'Edit Author Type'))
+        content = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        label = QtWidgets.QLabel(translate('SongsPlugin.EditSongForm', 'Choose type for this author'), content)
+        layout.addWidget(label)
+        combo = create_combo_box(content, 'edit_author_type_combo_box', editable=False)
+        for value in AuthorType.SortedTypes:
+            combo.addItem(AuthorType.get_translated_type(value), value)
+        combo.setCurrentIndex(AuthorType.SortedTypes.index(author_type))
+        label.setBuddy(combo)
+        layout.addWidget(combo)
+        dialog.setContent(content)
+        dialog.setPrimaryButtonText(translate('OpenLP.Ui', 'OK'))
+        dialog.setCloseButtonText(UiStrings().Cancel)
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        try:
+            if dialog.exec() != dialog.ResultPrimary:
+                return
+            author = self.manager.get_object(Author, author_id)
+            author_type = combo.currentData()
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, (author_id, author_type))
+            item.setText(author.get_display_name(author_type))
+        finally:
+            dialog.deleteLater()
 
     def on_author_remove_button_clicked(self):
         """
         Remove the author from the list when the delete button is clicked.
         """
         if self.authors_list_view.count() <= 2:
-            self.author_remove_button.setEnabled(False)
+            self.author_remove_action.setEnabled(False)
         item = self.authors_list_view.currentItem()
         row = self.authors_list_view.row(item)
         self.authors_list_view.takeItem(row)
@@ -1246,10 +1269,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                           'new topic.'))
 
     def on_topic_list_view_clicked(self):
-        self.topic_remove_button.setEnabled(True)
+        self.topic_remove_action.setEnabled(True)
 
     def on_topic_remove_button_clicked(self):
-        self.topic_remove_button.setEnabled(False)
+        self.topic_remove_action.setEnabled(False)
         item = self.topics_list_view.currentItem()
         row = self.topics_list_view.row(item)
         self.topics_list_view.takeItem(row)
@@ -1290,16 +1313,16 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                           'button to add the new Songbook.'))
 
     def on_songbook_list_view_clicked(self):
-        self.songbook_remove_button.setEnabled(True)
+        self.songbook_remove_action.setEnabled(True)
 
     def on_songbook_remove_button_clicked(self):
-        self.songbook_remove_button.setEnabled(False)
+        self.songbook_remove_action.setEnabled(False)
         row = self.songbooks_list_view.row(self.songbooks_list_view.currentItem())
         self.songbooks_list_view.takeItem(row)
 
     def on_verse_list_view_clicked(self):
-        self.verse_edit_button.setEnabled(True)
-        self.verse_delete_button.setEnabled(True)
+        self.verse_edit_action.setEnabled(True)
+        self.verse_delete_action.setEnabled(True)
 
     def on_verse_add_button_clicked(self):
         self.verse_form.set_verse('', True)
@@ -1400,8 +1423,8 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                         self.verse_list_widget.setRowCount(self.verse_list_widget.rowCount() + 1)
                         self.verse_list_widget.setItem(self.verse_list_widget.rowCount() - 1, 0, item)
         self.tag_rows()
-        self.verse_edit_button.setEnabled(False)
-        self.verse_delete_button.setEnabled(False)
+        self.verse_edit_action.setEnabled(False)
+        self.verse_delete_action.setEnabled(False)
         # Check if all verse tags are used.
         self.on_verse_order_text_changed(self.verse_order_edit.text())
 
@@ -1413,8 +1436,8 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_list_widget.removeRow(self.verse_list_widget.currentRow())
         self.tag_rows()
         if not self.verse_list_widget.selectedItems():
-            self.verse_edit_button.setEnabled(False)
-            self.verse_delete_button.setEnabled(False)
+            self.verse_edit_action.setEnabled(False)
+            self.verse_delete_action.setEnabled(False)
 
     def on_verse_order_text_changed(self, text: str):
         """
@@ -1450,9 +1473,9 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         Copyright insert button pressed
         """
-        cursor = self.copyright_edit.textCursor()
+        cursor = self.copyright_text_edit.textCursor()
         cursor.insertText(SongStrings().CopyrightSymbol)
-        self.copyright_edit.setTextCursor(cursor)
+        self.copyright_text_edit.setTextCursor(cursor)
         self.copyright_edit.setFocus()
 
     def on_maintenance_button_clicked(self):
