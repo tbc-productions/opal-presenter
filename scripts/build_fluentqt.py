@@ -22,12 +22,12 @@ def run(*args, env=None):
 
 
 def replace(path, old, new):
-    text = path.read_text()
+    text = path.read_text(encoding='utf-8')
     if old not in text:
         if new in text:
             return
         raise RuntimeError(f'Pinned source changed: expected text is missing in {path}')
-    path.write_text(text.replace(old, new))
+    path.write_text(text.replace(old, new), encoding='utf-8')
 
 
 def patch_disabled_icons(source):
@@ -55,7 +55,7 @@ def patch_disabled_icons(source):
 def patch_selector_overflow(source):
     """More menus retain the leading items and make room for the selection."""
     selector = source / 'src/components/navigation/SelectorBar.cpp'
-    if 'const bool hasSelection = candidates.contains(m_selectedIndex);' in selector.read_text():
+    if 'const bool hasSelection = candidates.contains(m_selectedIndex);' in selector.read_text(encoding='utf-8'):
         return
     replace(selector,
             '    int startPosition = 0;\n',
@@ -132,11 +132,11 @@ def patch_accessibility_factories(source):
     pattern = r'dynamic_cast<([^>]+)>\(object\)'
     for relative in files:
         path = source / 'src/components' / relative
-        text = path.read_text()
+        text = path.read_text(encoding='utf-8')
         patched, count = re.subn(pattern, r'dynamic_cast<\1>(qobject_cast<QWidget*>(object))', text)
         if not count and 'qobject_cast<QWidget*>(object)' not in text:
             raise RuntimeError(f'Pinned accessibility factory changed: {path}')
-        path.write_text(patched)
+        path.write_text(patched, encoding='utf-8')
 
 
 def patch_type_discovery(source):
@@ -162,8 +162,9 @@ def patch_type_discovery(source):
                     tag[:-1] + f' polymorphic-id-expression="{expression}">'
             return tag
 
-        text = re.sub(r'</namespace-type>|<(?:namespace-type|object-type)\b[^>]*>', patch_tag, path.read_text())
-        path.write_text(text)
+        text = re.sub(r'</namespace-type>|<(?:namespace-type|object-type)\b[^>]*>', patch_tag,
+                      path.read_text(encoding='utf-8'))
+        path.write_text(text, encoding='utf-8')
 
 
 def relocate_macos(extension):
