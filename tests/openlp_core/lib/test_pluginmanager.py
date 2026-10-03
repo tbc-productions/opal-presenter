@@ -74,6 +74,25 @@ def test_bootstrap_initialise(mocked_subclasses, settings, state):
     mocked_initialise_plugins.assert_called_with()
 
 
+def test_bootstrap_initialise_progress_counts_processed_plugins(registry, settings):
+    """Plugin loading advances its startup share, including handled constructor failures."""
+    manager = PluginManager()
+    failed = MagicMock(side_effect=TypeError('Cannot construct plugin'))
+    loaded = MagicMock()
+    loaded.return_value.name_strings = {'plural': 'Songs'}
+    updates = []
+    registry.register_function('startup_progress', lambda *args, **kwargs: updates.append((args, kwargs)))
+
+    with patch('openlp.core.lib.pluginmanager.extension_loader'), \
+            patch('openlp.core.lib.pluginmanager.Plugin.__subclasses__', return_value=[failed, loaded]):
+        manager.bootstrap_initialise()
+
+    assert updates == [
+        (('Loading plugins…', 1, 2), {'progress_range': (25, 55)}),
+        (('Loading Songs…', 2, 2), {'progress_range': (25, 55)})
+    ]
+
+
 def test_hook_media_manager_with_disabled_plugin(registry, state):
     """
     Test running the hook_media_manager() method with a disabled plugin
@@ -554,7 +573,11 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     inactive = MagicMock()
     inactive.is_active.return_value = False
     updates = []
-    registry.register_function('startup_progress', lambda *args: updates.append(args))
+    def report(*args, **kwargs):
+        assert kwargs == ({'progress_range': (55, 75)} if len(args) > 1 else {})
+        updates.append(args)
+
+    registry.register_function('startup_progress', report)
 
     def initialise_first():
         assert updates == [('Initialising First plugin', 0, 2)]

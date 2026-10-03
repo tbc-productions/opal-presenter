@@ -649,7 +649,8 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
     theme_manager._push_themes = MagicMock()
     updates = []
 
-    def report(*args):
+    def report(*args, **kwargs):
+        assert kwargs == ({'progress_range': (75, 90)} if len(args) > 1 else {})
         updates.append((args, list(theme_manager._theme_list)))
 
     Registry().register_function('startup_progress', report)

@@ -60,12 +60,17 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
             AppLocation.get_data_path(), glob_pattern, community=True
         )
         plugin_classes = Plugin.__subclasses__()
-        for plugin in plugin_classes:
+        for completed, plugin in enumerate(plugin_classes, 1):
+            stage = translate('OpenLP.SplashScreen', 'Loading plugins…')
             try:
-                plugin()
+                instance = plugin()
+                stage = translate('OpenLP.SplashScreen', 'Loading {plugin}…').format(
+                    plugin=instance.name_strings['plural'])
                 self.log_debug(f'Loaded plugin {plugin}')
             except TypeError:
                 self.log_exception(f'Failed to load plugin {plugin}')
+            if Registry().has_function('startup_progress'):
+                Registry().execute('startup_progress', stage, completed, len(plugin_classes), progress_range=(25, 55))
 
     def bootstrap_post_set_up(self):
         """
@@ -162,7 +167,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
             stage = translate('OpenLP.SplashScreen', 'Initialising {plugin}').format(
                 plugin=plugin.name_strings['plural'])
             if Registry().has_function('startup_progress'):
-                Registry().execute('startup_progress', stage, completed - 1, len(plugins))
+                Registry().execute('startup_progress', stage, completed - 1, len(plugins), progress_range=(55, 75))
             self.log_info(f'Initialising plugin {plugin.name}')
             try:
                 plugin.initialise()
@@ -172,7 +177,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
                 self.log_exception('Unable to initialise plugin {plugin}'.format(plugin=plugin.name))
             # Handled failures count as processed items; existing error dialogs report them.
             if Registry().has_function('startup_progress'):
-                Registry().execute('startup_progress', stage, completed, len(plugins))
+                Registry().execute('startup_progress', stage, completed, len(plugins), progress_range=(55, 75))
         display_text = ''
         if uninitialised_plugins:
             display_text = translate('OpenLP.PluginManager', 'Unable to initialise the following plugins:') + \

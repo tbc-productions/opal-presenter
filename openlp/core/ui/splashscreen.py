@@ -30,11 +30,10 @@ from openlp.core.widgets import fluent as QtWidgets
 
 
 class SplashScreen(fluentqt.SplashScreen):
-    """Simple Fluent startup surface with stage progress and a loading spinner."""
+    """Simple Fluent startup surface with overall progress and a loading spinner."""
 
     def __init__(self):
         super().__init__()
-        self._has_stage_progress = False
         self.setObjectName('splashScreen')
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.PreventContextMenu)
         self.setWindowFlags(QtCore.Qt.WindowType.SplashScreen | QtCore.Qt.WindowType.FramelessWindowHint)
@@ -43,7 +42,7 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setIcon(QtGui.QIcon(':/icon/openlp-logo.svg'))
         self.setIconSize(QtCore.QSize(128, 128))
         self.setText(translate('OpenLP.SplashScreen', 'Starting OpenLP+…'))
-        # Keep the native percentage row in the layout, even when it is blank.
+        # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
         self._refresh_progress_display()
         self.resize(370, 370)
@@ -54,29 +53,26 @@ class SplashScreen(fluentqt.SplashScreen):
         self._refresh_progress_display()
 
     def _refresh_progress_display(self):
-        """Reserve a blank percentage line for stages with unknown progress."""
+        """Keep the loading spinner independent of completed startup work."""
         self.findChild(fluentqt.ProgressRing, 'splashProgressRing').setIsIndeterminate(True)
-        self.findChild(fluentqt.Label, 'splashPercentage').setText(
-            f'{self.progress()}%' if self._has_stage_progress else '')
 
-    def set_status(self, message):
+    def set_status(self, message, progress=None):
         """Refresh the loading stage before the next synchronous startup task."""
-        self._has_stage_progress = False
-        self.setProgress(0, 100)
+        if progress is not None:
+            self.setProgress(max(self.progress(), min(100, progress)), 100)
         self.setText(message)
         self._refresh_progress_display()
         QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
-    def set_stage_progress(self, stage, completed=None, total=None):
-        """Display stage item counts while keeping the loading spinner indeterminate."""
+    def set_stage_progress(self, stage, completed=None, total=None, progress_range=None):
+        """Map stage item counts into their share of overall startup progress."""
         if total is None or total <= 0 or completed is None:
             self.set_status(stage)
             return
         completed = max(0, min(completed, total))
-        self._has_stage_progress = True
-        self.setText(translate('OpenLP.SplashScreen', '{stage} — {completed} of {total}').format(
-            stage=stage, completed=completed, total=total))
-        self.setProgress(completed, total)
-        # Keep motion independent of the percentage: item counts do not measure time.
-        self._refresh_progress_display()
-        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+        progress = None
+        if progress_range is not None:
+            start, end = progress_range
+            progress = start + (end - start) * completed // total
+        self.set_status(translate('OpenLP.SplashScreen', '{stage} — {completed} of {total}').format(
+            stage=stage, completed=completed, total=total), progress)

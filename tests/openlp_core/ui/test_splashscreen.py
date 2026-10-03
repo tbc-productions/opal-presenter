@@ -58,7 +58,7 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert ring.isIndeterminate()
     percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
     assert percentage.isVisible()
-    assert percentage.text() == ''
+    assert percentage.text() == '0%'
 
 
 def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
@@ -70,7 +70,7 @@ def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
 
     assert splash.text() == 'Loading components…'
     assert not splash.isIndeterminate()
-    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == ''
+    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '0%'
     process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
 
@@ -87,8 +87,8 @@ def test_splashscreen_hide_and_close(mock_settings: MagicMock, qtbot):
     assert not splash.isVisible()
 
 
-def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot):
-    """Known item totals use native percentages; the next unknown stage resets them."""
+def test_overall_percentage_preserves_layout_and_progress(mock_settings: MagicMock, qtbot):
+    """Stage totals contribute to startup progress, which persists between stages."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
     splash.show()
@@ -96,9 +96,10 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     status_top = status.y()
     ring_top = ring.y()
-    splash.set_stage_progress('Initialising plugins', 3, 8)
+    splash.set_status('Loading plugins…', 55)
+    splash.set_stage_progress('Initialising plugins', 3, 8, progress_range=(55, 75))
 
-    assert splash.progress() == 37
+    assert splash.progress() == 62
     assert not splash.isIndeterminate()
     assert splash.text() == 'Initialising plugins — 3 of 8'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
@@ -106,7 +107,7 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     assert ring.isIndeterminate()
     percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
     assert percentage.isVisible()
-    assert percentage.text() == '37%'
+    assert percentage.text() == '62%'
     assert status.y() == status_top
     assert ring.y() == ring_top
 
@@ -119,30 +120,38 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     assert not splash.isIndeterminate()
     assert ring.isIndeterminate()
     assert percentage.isVisible()
-    assert percentage.text() == ''
+    assert percentage.text() == '62%'
     assert status.y() == status_top
     assert ring.y() == ring_top
 
     splash.hide()
     splash.show()
     assert percentage.isVisible()
-    assert percentage.text() == ''
+    assert percentage.text() == '62%'
     assert status.y() == status_top
     assert ring.y() == ring_top
 
-    splash.set_stage_progress('Loading themes', 0, 2)
-    assert percentage.text() == '0%'
+    splash.set_stage_progress('Loading themes', 0, 2, progress_range=(75, 90))
+    assert percentage.text() == '75%'
     assert status.y() == status_top
     assert ring.y() == ring_top
 
+    splash.set_stage_progress('Loading themes', 2, 2, progress_range=(75, 90))
+    assert percentage.text() == '90%'
+    splash.set_status('Earlier stage', 55)
+    assert percentage.text() == '90%'
+    splash.set_status('Ready', 100)
+    assert percentage.text() == '100%'
 
-def test_empty_stage_has_no_percentage(mock_settings: MagicMock, qtbot):
-    """An empty stage cannot produce a meaningful percentage."""
+
+def test_empty_stage_preserves_overall_percentage(mock_settings: MagicMock, qtbot):
+    """An empty stage preserves the progress made by earlier startup work."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
-    splash.set_stage_progress('Loading themes', 0, 0)
+    splash.set_status('Loading library', 75)
+    splash.set_stage_progress('Loading themes', 0, 0, progress_range=(75, 90))
     assert not splash.isIndeterminate()
-    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == ''
+    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '75%'
     assert splash.text() == 'Loading themes'
 
 

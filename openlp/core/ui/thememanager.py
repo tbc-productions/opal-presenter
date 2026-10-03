@@ -806,7 +806,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         files.sort(key=lambda file_name: get_locale_key(str(file_name)))
         stage = translate('OpenLP.SplashScreen', 'Loading themes')
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', stage, 0, len(files))
+            Registry().execute('startup_progress', stage, 0, len(files), progress_range=(75, 90))
         for completed, file in enumerate(files, 1):
             # check to see file is in theme root directory
             theme_path = self.theme_path / file
@@ -838,7 +838,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 self.theme_list_widget.addItem(item_name)
                 self._theme_list[text_name] = theme_obj
             if Registry().has_function('startup_progress'):
-                Registry().execute('startup_progress', stage, completed, len(files))
+                Registry().execute('startup_progress', stage, completed, len(files), progress_range=(75, 90))
         if Registry().has_function('startup_progress'):
             Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes…'))
         self._push_themes()
