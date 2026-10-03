@@ -24,6 +24,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self._layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.Direction.LeftToRight, self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(4)
+        self._layout.addStretch(1)
         self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
 
     def _group(self):
@@ -32,9 +33,20 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             self._command_group.setBackgroundVisible(False)
             self._command_group.setDynamicOverflowEnabled(True)
             self._command_group.setLabelPosition(self._label_position())
-            self._layout.addWidget(self._command_group)
+            self._command_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,
+                                              QtWidgets.QSizePolicy.Policy.Fixed)
+            self._layout.insertWidget(self._layout.count() - 1, self._command_group)
             self._command_groups.append(self._command_group)
         return self._command_group
+
+    def _sync_input_stretch(self):
+        """Give spare width to visible expanding inputs, otherwise keep it at the end."""
+        expanding = False
+        for action, widget in self._widget_actions.items():
+            grows = bool(widget.sizePolicy().expandingDirections() & QtCore.Qt.Orientation.Horizontal)
+            self._layout.setStretch(self._layout.indexOf(widget), 1 if grows else 0)
+            expanding |= grows and action.isVisible()
+        self._layout.setStretch(self._layout.count() - 1, 0 if expanding else 1)
 
     def _label_position(self):
         return (fluentqt.CommandBar.LabelPosition.Collapsed
@@ -53,11 +65,12 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         if isinstance(action, QtWidgets.QWidgetAction):
             widget = action.defaultWidget()
             self._command_group = None
-            self._layout.addWidget(widget)
+            self._layout.insertWidget(self._layout.count() - 1, widget)
             self._widget_actions[action] = widget
             def sync():
                 widget.setVisible(action.isVisible())
                 widget.setEnabled(action.isEnabled())
+                self._sync_input_stretch()
             action.changed.connect(sync)
             sync()
         else:
@@ -103,6 +116,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         if widget is not None:
             self._layout.removeWidget(widget)
             widget.hide()
+            self._sync_input_stretch()
         QtWidgets.QWidget.removeAction(self, action)
 
     def clear(self):

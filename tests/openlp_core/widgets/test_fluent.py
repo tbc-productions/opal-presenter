@@ -422,3 +422,42 @@ def test_commandbar_paints_disabled_icon_and_blocks_activation(qapp, qtbot):
     assert pixels(overflow, '#e60000') == 0
     group.setOverflowOpen(False)
     parent.close()
+
+
+def test_commandbar_split_commands_stay_grouped_at_wide_and_narrow_widths(qapp):
+    parent = QtWidgets.QWidget()
+    toolbar = OpenLPToolbar(parent)
+    new = toolbar.add_toolbar_action('new', text='New', icon=QtGui.QIcon())
+    opened = toolbar.add_split_action('open', text='Open', icon=QtGui.QIcon())
+    save = toolbar.add_toolbar_action('save', text='Save', icon=QtGui.QIcon())
+    for width in (900, 400):
+        toolbar.resize(width, toolbar.sizeHint().height())
+        toolbar.show()
+        qapp.process_events()
+        new_button = toolbar.widgetForAction(new)
+        open_button = toolbar.widgetForAction(opened)
+        save_button = toolbar.widgetForAction(save)
+        new_right = new_button.mapTo(toolbar, new_button.rect().topRight()).x()
+        save_left = save_button.mapTo(toolbar, save_button.rect().topLeft()).x()
+        assert 0 < open_button.x() - new_right < 24
+        assert 0 < save_left - open_button.geometry().right() < 24
+        assert open_button.height() == new_button.height() == save_button.height()
+        assert open_button.fluentStyle() == fluent.fluentqt.Button.ButtonStyle.Subtle
+    toolbar.close()
+
+
+def test_commandbar_expanding_input_uses_spare_width(qapp):
+    parent = QtWidgets.QWidget()
+    toolbar = OpenLPToolbar(parent)
+    toolbar.add_toolbar_action('play', text='Play')
+    slider = fluent.QSlider()
+    slider.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+    wrapper = toolbar.addWidget(slider)
+    toolbar.resize(800, 60)
+    toolbar.show()
+    qapp.process_events()
+    assert slider.width() > 600
+    wrapper.setVisible(False)
+    qapp.process_events()
+    assert toolbar._command_groups[0].width() <= toolbar._command_groups[0].sizeHint().width()
+    toolbar.close()

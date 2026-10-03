@@ -12,7 +12,7 @@ import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.3'
+VERSION = '1.9.2+openlp.4'
 QT_VERSION = '6.11.1'
 
 
@@ -77,6 +77,22 @@ def patch_selector_overflow(source):
             '    int startPosition = 0;\n')
 
 
+def patch_subtle_split_buttons(source):
+    """SplitButton must honour Subtle just like native CommandBar presenters."""
+    replace(source / 'src/components/basicinput/SplitButton.cpp',
+            '    if (!isEnabled()) {\n        baseBg = colors.controlDisabled;',
+            '    if (fluentStyle() == Subtle && !accentLike)\n'
+            '        baseBg = Qt::transparent;\n\n'
+            '    if (!isEnabled()) {\n'
+            '        baseBg = fluentStyle() == Subtle ? QColor(Qt::transparent) : colors.controlDisabled;')
+    replace(source / 'src/components/basicinput/SplitButton.cpp',
+            ': colors.controlTertiary;',
+            ': (fluentStyle() == Subtle ? colors.subtleTertiary : colors.controlTertiary);')
+    replace(source / 'src/components/basicinput/SplitButton.cpp',
+            ': colors.controlSecondary;',
+            ': (fluentStyle() == Subtle ? colors.subtleSecondary : colors.controlSecondary);')
+
+
 def relocate_macos(extension):
     """Use PySide's frameworks; never ship absolute SDK framework references."""
     dependencies = subprocess.check_output(['otool', '-L', str(extension)], text=True)
@@ -111,6 +127,7 @@ def main():
         run('git', '-C', source, 'checkout', '--detach', SOURCE_REVISION)
     patch_disabled_icons(source)
     patch_selector_overflow(source)
+    patch_subtle_split_buttons(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.

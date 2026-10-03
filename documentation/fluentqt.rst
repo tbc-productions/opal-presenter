@@ -3,7 +3,7 @@ FluentQt and Python 3.14
 
 OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.3`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.2+openlp.4`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -50,7 +50,10 @@ QWidgetAction, so embedded Fluent inputs and SplitButton sit beside command
 groups in a layout container. Preview and Live slide actions, including the
 Live display modes and Go To verse command, use native CommandBar presenters.
 Their rows use the native control height; Hide and Play remain SplitButtons
-beside the command groups. The layout preset rail is part of the main content
+beside the command groups. Command groups keep their natural width and leave
+spare space after the commands, or give it to expanding inputs. Toolbar
+SplitButtons share CommandBar button height and honour the native Subtle style.
+The layout preset rail is part of the main content
 layout rather than a Qt toolbar. Library navigation uses a single native
 SelectorBar row with a More overflow menu. Original coloured QIcons occupy
 the native icon slots and appear in the overflow menu; configured plugin icon

@@ -167,6 +167,8 @@ class FluentSplitButton(fluentqt.SplitButton):
         self._action = None
         self._menu = None
         self._popup_mode = self.ToolButtonPopupMode.MenuButtonPopup
+        self.setMinimumHeight(40)
+        self.setSizePolicy(_qt.QSizePolicy.Policy.Maximum, _qt.QSizePolicy.Policy.Fixed)
         self.setFluentSize(fluentqt.Button.ButtonSize.Small)
         self.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
         self.clicked.connect(self._activate)
@@ -175,7 +177,7 @@ class FluentSplitButton(fluentqt.SplitButton):
         hint = super().sizeHint()
         if self.fluentLayout() == fluentqt.Button.ButtonLayout.IconOnly:
             return QtCore.QSize(max(32, self.iconSize().width() + 16) + self.secondaryWidth(),
-                                max(32, self.iconSize().height() + 8))
+                                max(40, self.iconSize().height() + 8))
         return hint
 
     def paintEvent(self, event):
