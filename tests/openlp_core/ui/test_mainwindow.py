@@ -1112,10 +1112,10 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
 
 
 def test_layout_preset_tab_bar_has_expected_tabs(main_window):
-    """Main window includes General, Setup and Live in left navigation."""
+    """Main window includes General, Prepare and Live in left navigation."""
     assert len(main_window.layout_preset_navigation.buttons) == 3
     assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
-    assert main_window.layout_preset_navigation.buttons[1].text() == 'Setup'
+    assert main_window.layout_preset_navigation.buttons[1].text() == 'Prepare'
     assert main_window.layout_preset_navigation.buttons[2].text() == 'Live'
 
 

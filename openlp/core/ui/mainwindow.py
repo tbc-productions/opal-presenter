@@ -61,7 +61,7 @@ from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.shortcutlistform import ShortcutListForm
 from openlp.core.ui import HideMode
-from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
+from openlp.core.ui.style import get_library_stylesheet
 from openlp.core.ui.modernstyle import is_modern_style
 from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
 from openlp.core.ui.thememanager import ThemeManager
@@ -189,10 +189,9 @@ class Ui_MainWindow(object):
         main_window.setStatusBar(self.status_bar)
         self.load_progress_bar = QtWidgets.QProgressBar(self.status_bar)
         self.load_progress_bar.setObjectName('load_progress_bar')
-        self.status_bar.addPermanentWidget(self.load_progress_bar)
+        self.status_bar.addPermanentWidget(self.load_progress_bar, 1)
         self.load_progress_bar.hide()
         self.load_progress_bar.setValue(0)
-        self.load_progress_bar.setStyleSheet(PROGRESSBAR_STYLE)
         self.default_theme_label = QtWidgets.QLabel(self.status_bar)
         self.default_theme_label.setObjectName('default_theme_label')
         self.default_theme_label.setContentsMargins(8, 0, 12, 0)

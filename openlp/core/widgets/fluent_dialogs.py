@@ -1,7 +1,20 @@
 """Native Fluent navigation and feedback controls with Qt modal lifecycle."""
 from PySide6 import QtCore, QtWidgets as _qt
 import fluentqt
+from fluentqt.design import Spacing
 from openlp.core.widgets.fluent_buttons import QPushButton
+
+
+class _ProgressRail(fluentqt.ProgressBar):
+    """Expand the native Fluent rail to its allocated layout width."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSizePolicy(_qt.QSizePolicy.Policy.Expanding, _qt.QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(Spacing.ControlHeight.Large)
+
+    def resizeEvent(self, event):
+        self.setBarWidth(max(1, event.size().width()))
+        super().resizeEvent(event)
 
 
 class FluentProgressBar(_qt.QWidget):
@@ -10,16 +23,18 @@ class FluentProgressBar(_qt.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._bar = fluentqt.ProgressBar(self)
+        self.setSizePolicy(_qt.QSizePolicy.Policy.Expanding, _qt.QSizePolicy.Policy.Fixed)
+        self._bar = _ProgressRail(self)
         self._label = fluentqt.Label(self)
         self._format = '%p%'
         self._text_visible = True
         self._minimum, self._maximum = 0, 100
         self._bar.setRange(0, 100)
-        layout = _qt.QHBoxLayout(self)
+        layout = _qt.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._bar, 1)
-        layout.addWidget(self._label)
+        layout.setSpacing(0)
+        layout.addWidget(self._bar)
+        layout.addWidget(self._label, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
         self._bar.valueChanged.connect(self._changed)
         self._refresh()
 
