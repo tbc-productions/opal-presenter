@@ -64,6 +64,35 @@ class FluentLibrarySelectorBar(QtWidgets.fluentqt.SelectorBar):
         painter.end()
 
 
+class FluentLibraryOverflowMenu(QtWidgets.QMenu):
+    """Activate leaf commands on a matching click without waiting for hover."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pressed_action = None
+
+    def mousePressEvent(self, event):
+        self._pressed_action = None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            action = self.actionAt(event.position().toPoint())
+            if action and action.isEnabled() and not action.isSeparator() and not action.menu():
+                self._pressed_action = action
+                self.setActiveAction(action)
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        action = self._pressed_action
+        self._pressed_action = None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and action:
+            if self.actionAt(event.position().toPoint()) == action and action.isEnabled():
+                self.close()
+                action.trigger()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
 class MediaToolBox(QtWidgets.QWidget):
     """Single-row Library SelectorBar backed by the existing page stack."""
     currentChanged = QtCore.Signal(int)
@@ -82,7 +111,7 @@ class MediaToolBox(QtWidgets.QWidget):
         layout.addWidget(self._selector)
         self._stack = QtWidgets.QStackedWidget(self)
         layout.addWidget(self._stack, 1)
-        self._overflow_menu = QtWidgets.QMenu(self)
+        self._overflow_menu = FluentLibraryOverflowMenu(self)
 
     def minimumSizeHint(self):
         return QtCore.QSize(0, super().minimumSizeHint().height())
@@ -118,7 +147,7 @@ class MediaToolBox(QtWidgets.QWidget):
     def _show_overflow(self, indexes):
         self._overflow_menu.close()
         self._overflow_menu.deleteLater()
-        self._overflow_menu = QtWidgets.QMenu(self)
+        self._overflow_menu = FluentLibraryOverflowMenu(self)
         for index in indexes:
             item = self._items[index]
             action = self._overflow_menu.addAction(item['icon'], item['label'])

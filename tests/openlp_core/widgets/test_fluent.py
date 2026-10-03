@@ -160,18 +160,10 @@ def test_library_selector_clicks_overflow_and_accessibility(qapp):
                 qapp.process_events()
                 action = next(action for action in box._overflow_menu.actions() if action.data() == index)
                 menu = box._overflow_menu
-                QtTest.QTest.qWait(50)
                 assert menu.rect().contains(menu.actionGeometry(action).center())
+                # A short click must work immediately, without a preceding hover.
                 position = menu.actionGeometry(action).center()
-                # Send a move with explicit global coordinates: QTest.mouseMove
-                # can skip delivery when a new popup reuses the cursor position.
-                event = QtGui.QMouseEvent(QtCore.QEvent.Type.MouseMove, QtCore.QPointF(position),
-                                         QtCore.QPointF(menu.mapToGlobal(position)),
-                                         QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.NoButton,
-                                         QtCore.Qt.KeyboardModifier.NoModifier)
-                QtCore.QCoreApplication.sendEvent(menu, event)
-                QtTest.QTest.mousePress(menu, QtCore.Qt.MouseButton.LeftButton, pos=position)
-                QtTest.QTest.mouseRelease(menu, QtCore.Qt.MouseButton.LeftButton, pos=position)
+                QtTest.QTest.mouseClick(menu, QtCore.Qt.MouseButton.LeftButton, pos=position, delay=0)
                 qapp.process_events()
             else:
                 QtTest.QTest.mouseClick(selector, QtCore.Qt.MouseButton.LeftButton,
@@ -197,6 +189,35 @@ def test_library_selector_clicks_overflow_and_accessibility(qapp):
     qapp.process_events()
     assert box.currentIndex() == hidden_index
     box.close()
+
+
+def test_library_overflow_short_clicks_trigger_once_and_respect_disabled(qapp):
+    from PySide6 import QtTest
+    from openlp.core.widgets.docks import FluentLibraryOverflowMenu
+    menu = FluentLibraryOverflowMenu()
+    first = menu.addAction('Songs')
+    disabled = menu.addAction('Bibles')
+    disabled.setEnabled(False)
+    last = menu.addAction('Custom Slides')
+    activated = []
+    first.triggered.connect(lambda: activated.append('Songs'))
+    disabled.triggered.connect(lambda: activated.append('Bibles'))
+    last.triggered.connect(lambda: activated.append('Custom Slides'))
+    for action in (last, first, last, disabled, first):
+        menu.popup(QtCore.QPoint(40, 40))
+        qapp.process_events()
+        QtTest.QTest.mouseClick(menu, QtCore.Qt.MouseButton.LeftButton,
+                               pos=menu.actionGeometry(action).center(), delay=0)
+        qapp.process_events()
+    assert activated == ['Custom Slides', 'Songs', 'Custom Slides', 'Songs']
+    menu.popup(QtCore.QPoint(40, 40))
+    qapp.process_events()
+    QtTest.QTest.mousePress(menu, QtCore.Qt.MouseButton.LeftButton,
+                           pos=menu.actionGeometry(first).center(), delay=0)
+    QtTest.QTest.mouseRelease(menu, QtCore.Qt.MouseButton.LeftButton,
+                             pos=menu.actionGeometry(last).center(), delay=0)
+    assert activated == ['Custom Slides', 'Songs', 'Custom Slides', 'Songs']
+    menu.close()
 
 
 def test_flat_lists_are_native_datagrids_with_optional_headers(qapp):
