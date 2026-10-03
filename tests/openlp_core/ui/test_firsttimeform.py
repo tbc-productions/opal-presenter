@@ -773,3 +773,26 @@ def test_accept_method_without_imported_settings(mock_settings):
         mocked_screen_selection_widget.save.assert_called_once()
         mocked_qwizard_accept.assert_called_once()
 
+
+
+def test_import_settings_native_clear(qapp):
+    """The native LineEdit button clears a selected backup and reports the change."""
+    from PySide6 import QtCore, QtTest, QtWidgets
+    import fluentqt
+    from openlp.core.ui.firsttimewizard import ImportSettingsPage
+
+    page = ImportSettingsPage()
+    page.setup_ui()
+    page.retranslate_ui()
+    page.show()
+    changes = []
+    page.completeChanged.connect(lambda: changes.append(page.file_edit.text()))
+    page.file_edit.setText('/dummy/path/backup.zip')
+    QtWidgets.QApplication.processEvents()
+    assert isinstance(page.file_edit, fluentqt.LineEdit)
+    assert not hasattr(page, 'clear_button')
+    clear_button = page.file_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    QtTest.QTest.mouseClick(clear_button, QtCore.Qt.MouseButton.LeftButton)
+    assert page.file_edit.text() == ''
+    assert changes == ['/dummy/path/backup.zip', '']
+    page.close()

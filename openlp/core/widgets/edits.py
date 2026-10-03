@@ -55,7 +55,7 @@ log = logging.getLogger(__name__)
 
 class SearchEdit(QtWidgets.QLineEdit):
     """
-    This is a specialised QLineEdit with a "clear" button inside for searches.
+    A Fluent LineEdit with a search-type selector and native clearing.
     """
     searchTypeChanged = QtCore.Signal(int)
 
@@ -67,46 +67,18 @@ class SearchEdit(QtWidgets.QLineEdit):
         self.settings_section = settings_section
         self._current_search_type = -1
         self._search_button_gap = 4
-        self.clear_button = QtWidgets.QToolButton(self)
-        self.clear_button.setIcon(UiIcons().backspace)
-        self.clear_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
-        self.clear_button.setStyleSheet('QToolButton { border: none; padding: 0px; }')
-        self.clear_button.resize(18, 18)
-        self.clear_button.hide()
-        self.clear_button.clicked.connect(self._on_clear_button_clicked)
-        self.textChanged.connect(self._on_search_edit_text_changed)
-        self._update_style_sheet()
         self.settings = Registry().get('settings')
         self.setAcceptDrops(False)
 
-    def _update_style_sheet(self):
-        """
-        Internal method to update the stylesheet depending on which widgets are available and visible.
-        """
-        frame_width = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth)
-        right_padding = self.clear_button.width() + frame_width
-        if hasattr(self, 'menu_button'):
-            right_padding += self.menu_button.width() + self._search_button_gap
-        stylesheet = 'QLineEdit {{ padding-right: {right}px; }} '.format(right=right_padding)
-        self.setStyleSheet(stylesheet)
-        msz = self.minimumSizeHint()
-        self.setMinimumSize(max(msz.width(), self.clear_button.width() + (frame_width * 2) + 2),
-                            max(msz.height(), self.clear_button.height() + (frame_width * 2) + 2))
-
     def resizeEvent(self, event):
-        """
-        Reimplemented method to react to resizing of the widget.
-
-        :param event: The event that happened.
-        """
-        size = self.clear_button.size()
-        frame_width = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth)
-        self.clear_button.move(self.rect().right() - frame_width - size.width(),
-                               (self.rect().bottom() + 1 - size.height()) // 2)
+        """Keep the selector on the left, away from the native clear button."""
+        super().resizeEvent(event)
         if hasattr(self, 'menu_button'):
-            size = self.menu_button.size()
-            menu_left = self.clear_button.x() - self._search_button_gap - size.width()
-            self.menu_button.move(menu_left, (self.rect().bottom() + 1 - size.height()) // 2)
+            self._position_menu_button()
+
+    def _position_menu_button(self):
+        x = self._search_button_gap
+        self.menu_button.move(x, (self.height() - self.menu_button.height()) // 2)
 
     def current_search_type(self):
         """
@@ -160,31 +132,15 @@ class SearchEdit(QtWidgets.QLineEdit):
             self.menu_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
             self.menu_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
             self.menu_button.setAutoRaise(True)
-            self.menu_button.setStyleSheet(
-                'QToolButton { border: none; padding: 0px 18px 0px 4px; } '
-                'QToolButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: center right; right: 2px; }'
-            )
-            self.menu_button.resize(QtCore.QSize(40, 18))
+            self.menu_button.resize(40, self.menu_button.sizeHint().height())
+            margins = self.contentMargins()
+            margins.setLeft(margins.left() + self.menu_button.width() + self._search_button_gap)
+            self.setContentMargins(margins)
         self.menu_button.setMenu(menu)
         self.set_current_search_type(
             self.settings.value('{section}/last used search type'.format(section=self.settings_section)))
         self.menu_button.show()
-        self._update_style_sheet()
-
-    def _on_search_edit_text_changed(self, text):
-        """
-        Internally implemented slot to react to when the text in the line edit has changed so that we can show or hide
-        the clear button.
-
-        :param text: A :class:`~PySide6.QtCore.QString` instance which represents the text in the line edit.
-        """
-        self.clear_button.setVisible(bool(text))
-
-    def _on_clear_button_clicked(self):
-        """
-        Internally implemented slot to react to the clear button being clicked to clear the line edit.
-        """
-        self.clear()
+        self._position_menu_button()
 
     def _on_menu_action_triggered(self):
         """

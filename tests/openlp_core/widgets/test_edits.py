@@ -421,31 +421,54 @@ def test_clear_button_visibility(search_edit: SearchEdit):
     """
     Test if the clear button is hidden/shown correctly.
     """
-    # GIVEN: Everything is left to its defaults (hidden).
-    assert search_edit.clear_button.isHidden(), "Pre condition not met. Button should be hidden."
+    # GIVEN: A visible search field with no text.
+    Registry().get('main_window').show()
+    search_edit.show()
+    QtWidgets.QApplication.processEvents()
+    clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    assert search_edit.isClearButtonEnabled()
+    assert clear_button.isHidden(), "Pre condition not met. Button should be hidden."
 
     # WHEN: Type something in the search edit.
     QtTest.QTest.keyPress(search_edit, QtCore.Qt.Key.Key_A)
     QtTest.QTest.keyRelease(search_edit, QtCore.Qt.Key.Key_A)
 
     # THEN: The clear button should not be hidden any more.
-    assert not search_edit.clear_button.isHidden(), "The clear button should be visible."
+    assert not clear_button.isHidden(), "The clear button should be visible."
 
 
 def test_press_clear_button(search_edit: SearchEdit):
     """
     Check if the search edit behaves correctly when pressing the clear button.
     """
-    # GIVEN: A search edit with text.
+    # GIVEN: A visible search edit with text.
+    Registry().get('main_window').show()
+    search_edit.show()
+    QtWidgets.QApplication.processEvents()
     QtTest.QTest.keyPress(search_edit, QtCore.Qt.Key.Key_A)
     QtTest.QTest.keyRelease(search_edit, QtCore.Qt.Key.Key_A)
 
     # WHEN: Press the clear button.
-    QtTest.QTest.mouseClick(search_edit.clear_button, QtCore.Qt.MouseButton.LeftButton)
+    clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    QtTest.QTest.mouseClick(clear_button, QtCore.Qt.MouseButton.LeftButton)
 
     # THEN: The search edit text should be cleared and the button be hidden.
     assert not search_edit.text(), "The search edit should not have any text."
-    assert search_edit.clear_button.isHidden(), "The clear button should be hidden."
+    assert clear_button.isHidden(), "The clear button should be hidden."
+
+
+def test_search_selector_does_not_overlap_native_clear_button(search_edit: SearchEdit):
+    """Resizing keeps the selector, input text and native clear control apart."""
+    Registry().get('main_window').show()
+    search_edit.show()
+    search_edit.setText('Search text')
+    for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+        search_edit.setLayoutDirection(direction)
+        search_edit.resize(320, 40)
+        QtWidgets.QApplication.processEvents()
+        clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+        assert not search_edit.menu_button.geometry().intersects(clear_button.geometry())
+        assert search_edit.contentMargins().left() > search_edit.menu_button.geometry().right()
 
 
 def test_history_combo_get_items(history_combo: HistoryComboBox):

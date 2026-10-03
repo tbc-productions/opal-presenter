@@ -85,10 +85,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         self.browse_button.setObjectName('browse_button')
         self.file_layout.addWidget(self.browse_button)
         
-        self.clear_button = QtWidgets.QPushButton(self)
-        self.clear_button.setObjectName('clear_button')
-        self.file_layout.addWidget(self.clear_button)
-        
         self.file_label = QtWidgets.QLabel(self)
         self.file_label.setObjectName('file_label')
         self.group_layout.addRow(self.file_label, self.file_layout)
@@ -96,7 +92,7 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         
         # Connect signals
         self.browse_button.clicked.connect(self.on_browse_clicked)
-        self.clear_button.clicked.connect(self.on_clear_clicked)
+        self.file_edit.textChanged.connect(lambda _text: self.completeChanged.emit())
         
         # Set initial states
         self.file_edit.setEnabled(True)
@@ -111,7 +107,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
                       'This will restore your configuration, including plugins, theme selections, and other preferences. '
                       'Alternatively, you can leave this blank to configure OpenLP+ manually.'))
         self.browse_button.setText(translate('OpenLP.FirstTimeWizard', 'Browse...'))
-        self.clear_button.setText(translate('OpenLP.FirstTimeWizard', 'Clear'))
         self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File:'))
         
     def on_browse_clicked(self):
@@ -123,11 +118,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
             translate('OpenLP.FirstTimeWizard', 'OpenLP+ Settings (*.conf *.zip)'))
         if file_path:
             self.file_edit.setText(str(file_path))
-            self.completeChanged.emit()
-
-    def on_clear_clicked(self):
-        self.file_edit.clear()
-        self.completeChanged.emit()
 
     def isComplete(self):
         # Optional, so always complete
