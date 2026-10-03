@@ -49,13 +49,16 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
-    assert splash.isIndeterminate()
+    assert not splash.isIndeterminate()
     assert splash.text() == 'Starting OpenLP+…'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring is not None
     assert ring.isVisible()
     assert ring.isActive()
     assert ring.isIndeterminate()
+    percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
+    assert percentage.isVisible()
+    assert percentage.text() == ''
 
 
 def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
@@ -66,7 +69,8 @@ def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
         splash.set_status('Loading components…')
 
     assert splash.text() == 'Loading components…'
-    assert splash.isIndeterminate()
+    assert not splash.isIndeterminate()
+    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == ''
     process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
 
@@ -88,6 +92,10 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     splash = SplashScreen()
     qtbot.addWidget(splash)
     splash.show()
+    status = splash.findChild(fluentqt.Label, 'splashStatusText')
+    ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+    status_top = status.y()
+    ring_top = ring.y()
     splash.set_stage_progress('Initialising plugins', 3, 8)
 
     assert splash.progress() == 37
@@ -99,6 +107,8 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
     assert percentage.isVisible()
     assert percentage.text() == '37%'
+    assert status.y() == status_top
+    assert ring.y() == ring_top
 
     splash.hide()
     splash.show()
@@ -106,9 +116,24 @@ def test_stage_percentage_and_return_to_spinner(mock_settings: MagicMock, qtbot)
     assert percentage.isVisible()
 
     splash.set_status('Preparing the main window…')
-    assert splash.isIndeterminate()
+    assert not splash.isIndeterminate()
     assert ring.isIndeterminate()
-    assert not percentage.isVisible()
+    assert percentage.isVisible()
+    assert percentage.text() == ''
+    assert status.y() == status_top
+    assert ring.y() == ring_top
+
+    splash.hide()
+    splash.show()
+    assert percentage.isVisible()
+    assert percentage.text() == ''
+    assert status.y() == status_top
+    assert ring.y() == ring_top
+
+    splash.set_stage_progress('Loading themes', 0, 2)
+    assert percentage.text() == '0%'
+    assert status.y() == status_top
+    assert ring.y() == ring_top
 
 
 def test_empty_stage_has_no_percentage(mock_settings: MagicMock, qtbot):
@@ -116,7 +141,8 @@ def test_empty_stage_has_no_percentage(mock_settings: MagicMock, qtbot):
     splash = SplashScreen()
     qtbot.addWidget(splash)
     splash.set_stage_progress('Loading themes', 0, 0)
-    assert splash.isIndeterminate()
+    assert not splash.isIndeterminate()
+    assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == ''
     assert splash.text() == 'Loading themes'
 
 
