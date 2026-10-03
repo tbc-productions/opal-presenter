@@ -1,6 +1,7 @@
 """Native Fluent button navigation retaining logical Qt tab indexes."""
 from PySide6 import QtCore, QtGui, QtWidgets as _qt
 import fluentqt
+import qtawesome as qta
 from openlp.core.widgets.fluent_buttons import QPushButton
 
 
@@ -164,3 +165,83 @@ class FluentTabBar(_qt.QWidget):
 
 
 QTabBar = FluentTabBar
+
+
+class LayoutPresetNavigation(fluentqt.NavigationView):
+    """Left navigation for presets that share a single dock workspace."""
+    currentChanged = QtCore.Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._current = -1
+        self._navigation_visible = True
+        self._preferred_mode = self.DisplayMode.Left
+        self.setDisplayMode(self._preferred_mode)
+        self.setExpandedPaneWidth(180)
+        self.setCompactPaneWidth(48)
+        self.setTopBarHeight(0)
+        self.setAnimationEnabled(False)
+        self.pane = _qt.QWidget(self)
+        layout = _qt.QVBoxLayout(self.pane)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+        self.pane_toggle = QPushButton(self.pane)
+        self.pane_toggle.setIcon(qta.icon('mdi.menu'))
+        self.pane_toggle.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
+        self.pane_toggle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+        self.pane_toggle.clicked.connect(self.toggle_compact)
+        layout.addWidget(self.pane_toggle)
+        self.buttons = []
+        for index in range(3):
+            button = QPushButton(self.pane)
+            button.setCheckable(True)
+            button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+            button.clicked.connect(lambda _checked=False, index=index: self.setCurrentIndex(index))
+            layout.addWidget(button)
+            self.buttons.append(button)
+        layout.addStretch()
+        self.setOwnedMainChromeWidget(self.pane)
+        self.displayModeChanged.connect(self._update_button_layout)
+        self.setCurrentIndex(0)
+
+    def setItemText(self, index, text):
+        self.buttons[index].setText(text)
+        self.buttons[index].setToolTip(text)
+        self.buttons[index].setAccessibleName(text)
+
+    def currentIndex(self):
+        return self._current
+
+    def setCurrentIndex(self, index):
+        if not 0 <= index < len(self.buttons):
+            return
+        changed = self._current != index
+        self._current = index
+        for item_index, button in enumerate(self.buttons):
+            button.setChecked(item_index == index)
+        if changed:
+            self.currentChanged.emit(index)
+
+    def toggle_compact(self):
+        self.setDisplayMode(self.DisplayMode.LeftCompact if self.displayMode() == self.DisplayMode.Left
+                            else self.DisplayMode.Left)
+        self.setPaneOpen(self.displayMode() == self.DisplayMode.Left)
+
+    def _update_button_layout(self, mode):
+        if self._navigation_visible:
+            self._preferred_mode = mode
+        compact = mode == self.DisplayMode.LeftCompact
+        for button in self.buttons:
+            button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly if compact
+                                   else fluentqt.Button.ButtonLayout.IconBefore)
+
+    def setNavigationVisible(self, visible):
+        self._navigation_visible = visible
+        self.pane.setVisible(visible)
+        self.setExpandedPaneWidth(180 if visible else 0)
+        self.setCompactPaneWidth(48 if visible else 0)
+        self.setDisplayMode(self._preferred_mode if visible else self.DisplayMode.Left)
+        self.setPaneOpen(visible and self.displayMode() == self.DisplayMode.Left)
+
+    def isNavigationVisible(self):
+        return self._navigation_visible

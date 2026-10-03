@@ -62,7 +62,8 @@ from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.shortcutlistform import ShortcutListForm
 from openlp.core.ui import HideMode
 from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
-from openlp.core.ui.modernstyle import is_modern_style, ModernPresetTabBar
+from openlp.core.ui.modernstyle import is_modern_style
+from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
 from openlp.core.ui.thememanager import ThemeManager
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
@@ -126,33 +127,6 @@ class Ui_MainWindow(object):
         show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
         if show_layout_preset_tabs is None:
             show_layout_preset_tabs = True
-        self.layout_preset_toolbar = QtWidgets.QToolBar(main_window)
-        self.layout_preset_toolbar.setObjectName('layout_preset_toolbar')
-        self.layout_preset_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.layout_preset_toolbar.setMovable(False)
-        self.layout_preset_toolbar.setFloatable(False)
-        self.layout_preset_toolbar.setIconSize(QtCore.QSize(1, 1))
-        self.main_content_layout.addWidget(self.layout_preset_toolbar)
-        tab_bar_class = ModernPresetTabBar if is_modern_style() else QtWidgets.QTabBar
-        self.layout_preset_tab_bar = tab_bar_class(self.layout_preset_toolbar)
-        self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')
-        self.layout_preset_tab_bar.setShape(QtWidgets.QTabBar.Shape.RoundedWest)
-        if is_macosx():
-            self.layout_preset_tab_bar.setDocumentMode(True)
-        self.layout_preset_tab_bar.setDrawBase(False)
-        self.layout_preset_tab_bar.setMovable(False)
-        self.layout_preset_tab_bar.setExpanding(not is_modern_style())
-        self.layout_preset_tab_bar.setSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Fixed,
-            QtWidgets.QSizePolicy.Policy.Expanding)
-        self.layout_preset_tab_bar.addTab('')
-        self.layout_preset_tab_bar.addTab('')
-        self.layout_preset_tab_bar.addTab('')
-        if is_modern_style():
-            for index, icon in enumerate((UiIcons().dashboard, UiIcons().settings, UiIcons().live)):
-                self.layout_preset_tab_bar.setTabIcon(index, icon)
-        self.layout_preset_toolbar.addWidget(self.layout_preset_tab_bar)
-        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
         self.control_splitter = QtWidgets.QSplitter(self.main_content)
         self.control_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.control_splitter.setObjectName('control_splitter')
@@ -163,6 +137,15 @@ class Ui_MainWindow(object):
         advanced_docking = is_modern_style()
         if advanced_docking:
             main_window.initialize_advanced_docking()
+        self.layout_preset_navigation = LayoutPresetNavigation(main_window)
+        self.layout_preset_navigation.setObjectName('layout_preset_navigation')
+        for button, icon in zip(self.layout_preset_navigation.buttons,
+                                (UiIcons().dashboard, UiIcons().settings, UiIcons().live)):
+            button.setIcon(icon)
+        self.layout_preset_navigation.contentHost().addOwnedPage(main_window.takeCentralWidget())
+        self.layout_preset_navigation.contentHost().setCurrentIndex(0, animated=False)
+        main_window.setCentralWidget(self.layout_preset_navigation)
+        self.layout_preset_navigation.setNavigationVisible(show_layout_preset_tabs)
         dock_widget_class = AdvancedDockWidget if advanced_docking else OpenLPDockWidget
         preview_visible = self.settings.value('user interface/preview panel')
         live_visible = self.settings.value('user interface/live panel')
@@ -597,25 +580,28 @@ class Ui_MainWindow(object):
         self.update_theme_images.setText(translate('OpenLP.MainWindow', 'Update Theme Images'))
         self.update_theme_images.setStatusTip(translate('OpenLP.MainWindow',
                                                         'Update the preview images for all themes.'))
-        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Show all'))
+        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&General'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
-        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow',
-                                                        'Default' if is_modern_style() else 'Show all'))
+        self.layout_preset_navigation.setItemText(0, translate('OpenLP.MainWindow',
+                                                        'General'))
+        self.layout_preset_navigation.pane_toggle.setToolTip(translate('OpenLP.MainWindow', 'Toggle Compact mode'))
+        self.layout_preset_navigation.pane_toggle.setAccessibleName(
+            translate('OpenLP.MainWindow', 'Toggle Compact mode'))
         self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
-        self.layout_preset_tab_bar.setTabText(1, translate('OpenLP.MainWindow', 'Setup'))
+        self.layout_preset_navigation.setItemText(1, translate('OpenLP.MainWindow', 'Setup'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
-        self.layout_preset_tab_bar.setTabText(2, translate('OpenLP.MainWindow', 'Live'))
-        self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &tabs'))
+        self.layout_preset_navigation.setItemText(2, translate('OpenLP.MainWindow', 'Live'))
+        self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &navigation'))
         self.view_layout_preset_tabs_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Show or hide the vertical layout preset tabs on the left side of the window.'))
+            'Show or hide the layout navigation pane on the left side of the window.'))
         self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
         self.mode_reset_layout_presets_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -690,7 +676,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.mode_default_item.triggered.connect(self.on_mode_default_item_clicked)
         self.mode_setup_item.triggered.connect(self.on_mode_setup_item_clicked)
         self.mode_live_item.triggered.connect(self.on_mode_live_item_clicked)
-        self.layout_preset_tab_bar.currentChanged.connect(self.on_layout_preset_tab_changed)
+        self.layout_preset_navigation.currentChanged.connect(self.on_layout_preset_tab_changed)
         # Media Manager
         self.media_tool_box.currentChanged.connect(self.on_media_tool_box_changed)
         self.application.set_busy_cursor()
@@ -1219,12 +1205,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         return index_to_mode.get(index)
 
     def _sync_layout_preset_tab_from_settings(self) -> None:
-        if not hasattr(self, 'layout_preset_tab_bar'):
+        if not hasattr(self, 'layout_preset_navigation'):
             return
         mode = self.settings.value('core/view mode')
         index = self._layout_preset_mode_to_tab_index(mode)
-        signal_blocker = QtCore.QSignalBlocker(self.layout_preset_tab_bar)
-        self.layout_preset_tab_bar.setCurrentIndex(index)
+        signal_blocker = QtCore.QSignalBlocker(self.layout_preset_navigation)
+        self.layout_preset_navigation.setCurrentIndex(index)
         del signal_blocker
 
     def on_layout_preset_tab_changed(self, index: int) -> None:
@@ -1243,7 +1229,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         Show or hide the left layout preset tabs and persist the user preference.
         """
         self.settings.setValue('user interface/show layout preset tabs', checked)
-        self.layout_preset_toolbar.setVisible(checked)
+        self.layout_preset_navigation.setNavigationVisible(checked)
         self.view_layout_preset_tabs_item.setChecked(checked)
 
     def on_mode_setup_item_clicked(self):
@@ -2032,7 +2018,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
         if show_layout_preset_tabs is None:
             show_layout_preset_tabs = True
-        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
+        self.layout_preset_navigation.setNavigationVisible(show_layout_preset_tabs)
         self.view_layout_preset_tabs_item.setChecked(show_layout_preset_tabs)
         self._sync_layout_preset_tab_from_settings()
 

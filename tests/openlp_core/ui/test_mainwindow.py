@@ -66,17 +66,17 @@ def modern_appearance(settings):
 
 
 def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
-    from openlp.core.ui.modernstyle import ModernPresetTabBar
-    assert isinstance(main_window.layout_preset_tab_bar, ModernPresetTabBar)
-    assert main_window.layout_preset_tab_bar.tabText(0) == 'Default'
-    assert not main_window.layout_preset_tab_bar.tabIcon(0).isNull()
+    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
+    assert not main_window.layout_preset_navigation.buttons[0].icon().isNull()
     assert main_window.main_content_layout.contentsMargins().left() == 6
 
 
-def test_classic_keeps_original_navigation_and_spacing(main_window):
-    from openlp.core.ui.modernstyle import ModernPresetTabBar
-    assert not isinstance(main_window.layout_preset_tab_bar, ModernPresetTabBar)
-    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
+def test_classic_navigation_and_spacing(main_window):
+    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
     assert main_window.main_content_layout.contentsMargins().left() == 0
 
 
@@ -1112,11 +1112,11 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
 
 
 def test_layout_preset_tab_bar_has_expected_tabs(main_window):
-    """Main window should include a left vertical tab bar for layout presets."""
-    assert main_window.layout_preset_tab_bar.count() == 3
-    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
-    assert main_window.layout_preset_tab_bar.tabText(1) == 'Setup'
-    assert main_window.layout_preset_tab_bar.tabText(2) == 'Live'
+    """Main window includes General, Setup and Live in left navigation."""
+    assert len(main_window.layout_preset_navigation.buttons) == 3
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
+    assert main_window.layout_preset_navigation.buttons[1].text() == 'Setup'
+    assert main_window.layout_preset_navigation.buttons[2].text() == 'Live'
 
 
 def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):
@@ -1125,7 +1125,7 @@ def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):
 
     main_window._sync_layout_preset_tab_from_settings()
 
-    assert main_window.layout_preset_tab_bar.currentIndex() == 1
+    assert main_window.layout_preset_navigation.currentIndex() == 1
 
 
 def test_layout_preset_tab_change_activates_mode(main_window):
@@ -1141,7 +1141,7 @@ def test_layout_preset_tabs_toggle_honours_enabled_setting(main_window, settings
     main_window.on_toggle_layout_preset_tabs(True)
 
     assert main_window.view_layout_preset_tabs_item.isChecked() is True
-    assert main_window.layout_preset_toolbar.isHidden() is False
+    assert main_window.layout_preset_navigation.isNavigationVisible() is True
 
 
 def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
@@ -1149,7 +1149,7 @@ def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
     main_window.on_toggle_layout_preset_tabs(False)
 
     assert settings.value('user interface/show layout preset tabs') is False
-    assert main_window.layout_preset_toolbar.isHidden() is True
+    assert main_window.layout_preset_navigation.isNavigationVisible() is False
     assert main_window.view_layout_preset_tabs_item.isChecked() is False
 
 
@@ -1526,3 +1526,46 @@ def test_wait_for_threads_runtime_error(MockApp, main_window_reduced):
     assert mocked_http_thread.isRunning.call_count == 1, 'isRunning() should have been called once'
     mocked_http_thread.wait.assert_not_called()
     mocked_http_thread.terminate.assert_not_called()
+
+
+def test_layout_navigation_compact_mode_keeps_workspace_and_selection(main_window):
+    """The pane toggle exposes Compact mode without changing the active workspace."""
+    navigation = main_window.layout_preset_navigation
+    host = navigation.contentHost()
+    workspace = host.pageWidget(0)
+    assert host.currentIndex() == 0
+    assert workspace == main_window.main_content
+    with patch.object(main_window, '_activate_layout_preset') as activate:
+        navigation.buttons[1].click()
+        activate.assert_called_once_with('setup')
+        navigation.pane_toggle.click()
+        assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+        assert navigation.currentIndex() == 1
+        assert navigation.buttons[1].isChecked()
+        assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconOnly
+                   for button in navigation.buttons)
+        assert host.pageWidget(0) == workspace
+        main_window.on_toggle_layout_preset_tabs(False)
+        main_window.on_toggle_layout_preset_tabs(True)
+        assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+        navigation.pane_toggle.click()
+        assert navigation.displayMode() == navigation.DisplayMode.Left
+        assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconBefore
+                   for button in navigation.buttons)
+        activate.assert_called_once_with('setup')
+
+
+def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, main_window):
+    """Navigation sits to the left of the dock manager, including Library and Service."""
+    navigation = main_window.layout_preset_navigation
+    assert main_window.centralWidget() == navigation
+    assert navigation.contentHost().pageWidget(0) == main_window.dock_manager
+    assert navigation.contentHost().currentIndex() == 0
+    navigation.resize(1000, 600)
+    navigation.show()
+    QtWidgets.QApplication.processEvents()
+    assert navigation.paneGeometry().left() == 0
+    assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
+    navigation.pane_toggle.click()
+    QtWidgets.QApplication.processEvents()
+    assert navigation.contentGeometry().left() == navigation.compactPaneWidth()
