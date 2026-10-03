@@ -44,26 +44,9 @@ from openlp.core.widgets.views import TreeWidgetWithDnD
 
 
 def _add_library_context_menu_separator(target):
-    """
-    Add a visible context-menu separator for platforms/themes where QMenu separators are hard to see.
-    """
-    action = QtWidgets.QWidgetAction(target)
+    """Use a native action separator so Fluent can lay out and paint it."""
+    action = create_widget_action(target, separator=True)
     action.setObjectName('openlp_library_context_menu_sep')
-    container = QtWidgets.QWidget(target)
-    layout = QtWidgets.QVBoxLayout(container)
-    layout.setContentsMargins(6, 4, 6, 4)
-    layout.setSpacing(0)
-    line = QtWidgets.QFrame(container)
-    line.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-    line.setFixedHeight(1)
-    mid = target.palette().color(QtGui.QPalette.ColorRole.Mid)
-    line.setStyleSheet(
-        'background-color: {c}; border: none; min-height: 1px; max-height: 1px;'.format(c=mid.name()))
-    layout.addWidget(line)
-    container.setLayout(layout)
-    action.setDefaultWidget(container)
-    action.setEnabled(False)
-    target.addAction(action)
     return action
 
 
@@ -248,6 +231,7 @@ class FolderLibraryItem(MediaManagerItem):
         # Create the context menu and add all actions from the list_view.
         self.menu = QtWidgets.QMenu()
         self.menu.addActions(self.list_view.actions())
+        self.menu.setMinimumWidth(round(self.menu.sizeHint().width() * 1.2))
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)

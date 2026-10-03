@@ -459,3 +459,27 @@ def test_convert_value_with_enum(settings):
     # THEN: It should convert correctly to the enum's integer value (1)
     assert val == 1
 
+
+@pytest.mark.parametrize('plugin', ['Bibles', 'Custom', 'Images', 'Media', 'Presentations', 'Songs'])
+def test_upgrade_saved_live_shortcuts(settings, monkeypatch, plugin):
+    """Existing broken defaults are repaired when settings are upgraded."""
+    from PySide6 import QtGui
+    monkeypatch.setattr(modsettings, '__version__', 5)
+    key = f'shortcuts/listView{plugin}LiveItem'
+    old = [QtGui.QKeySequence(int(QtCore.Qt.Key.Key_Shift) + int(value))
+           for value in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    settings.setValue('settings/version', 4)
+    settings.setValue(key, old)
+    settings.upgrade_settings()
+    assert settings.value(key) == [QtGui.QKeySequence('Shift+Return'), QtGui.QKeySequence('Shift+Enter')]
+
+
+def test_upgrade_preserves_custom_live_shortcut(settings, monkeypatch):
+    """Changing defaults does not replace a user's chosen shortcut."""
+    from PySide6 import QtGui
+    monkeypatch.setattr(modsettings, '__version__', 5)
+    custom = [QtGui.QKeySequence('Ctrl+L')]
+    settings.setValue('settings/version', 4)
+    settings.setValue('shortcuts/listViewImagesLiveItem', custom)
+    settings.upgrade_settings()
+    assert settings.value('shortcuts/listViewImagesLiveItem') == custom

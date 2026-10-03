@@ -49,7 +49,7 @@ if is_win():
 
 log = logging.getLogger(__name__)
 
-__version__ = 4
+__version__ = 5
 
 
 class ProxyMode(IntEnum):
@@ -111,6 +111,16 @@ def upgrade_screens(number, x_position, y_position, height, width, can_override,
             'is_primary': can_override
         }
     }
+
+
+def upgrade_live_shortcuts(shortcuts):
+    """Repair the old Live defaults while retaining customised shortcuts."""
+    old_defaults = [QtGui.QKeySequence(int(QtCore.Qt.Key.Key_Shift) + int(key))
+                    for key in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    if [QtGui.QKeySequence(shortcut) for shortcut in shortcuts] == old_defaults:
+        return [QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | key)
+                for key in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    return shortcuts
 
 
 def upgrade_dark_theme_to_ui_theme(value):
@@ -700,6 +710,13 @@ class Settings(QtCore.QSettings):
         ('presentations/thumbnail_scheme', '', [])
     ]
 
+    # Repair defaults previously built by adding two key codes.
+    __setting_upgrade_5__ = [
+        (f'shortcuts/listView{plugin}LiveItem', f'shortcuts/listView{plugin}LiveItem',
+         [(upgrade_live_shortcuts, [[]])])
+        for plugin in ('Bibles', 'Custom', 'Images', 'Media', 'Presentations', 'Songs')
+    ]
+
     @staticmethod
     def extend_default_settings(default_values):
         """
@@ -782,45 +799,49 @@ class Settings(QtCore.QSettings):
             'shortcuts/listViewBiblesDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewBiblesPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewBiblesLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewBiblesLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewBiblesServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewCustomDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewCustomPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewCustomLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewCustomLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewCustomServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewImagesDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewImagesPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewImagesLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewImagesLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewImagesServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewMediaDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewMediaPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewMediaLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewMediaLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewMediaServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewPresentationsDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewPresentationsPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                            QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewPresentationsLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift +
-                                                                           QtCore.Qt.Key.Key_Return),
-                                                        QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift +
-                                                                           QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewPresentationsLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewPresentationsServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                            QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewSongsDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewSongsPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewSongsLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewSongsLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewSongsServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/lockPanel': [],

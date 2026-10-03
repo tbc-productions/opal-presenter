@@ -64,7 +64,7 @@ dependencies = [
     "beautifulsoup4",
     "chardet",
     "distro; platform_system == 'Linux'",
-    "FluentQt == 1.9.2+openlp.5",
+    "FluentQt == 1.9.2+openlp.6",
     "flask",
     "flask-cors",
     "lxml",

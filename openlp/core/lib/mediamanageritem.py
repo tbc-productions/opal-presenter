@@ -399,6 +399,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Create the context menu and add all actions from the list_view.
         self.menu = QtWidgets.QMenu()
         self.menu.addActions(self.list_view.actions())
+        self.menu.setMinimumWidth(round(self.menu.sizeHint().width() * 1.2))
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)

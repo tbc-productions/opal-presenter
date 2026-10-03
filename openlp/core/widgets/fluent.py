@@ -82,13 +82,17 @@ class FluentMenu(fluentqt.FluentMenu):
         # causing unbounded growth. Measure the action content independently.
         metrics = self.fontMetrics()
         actions = [action for action in self.actions() if action.isVisible()]
-        width = max((metrics.horizontalAdvance(action.text().replace('&', ''))
-                     + metrics.horizontalAdvance(action.shortcut().toString()) for action in actions), default=0)
-        height = sum(8 if action.isSeparator() else max(32, metrics.height() + 12) for action in actions) + 16
+        labels = [action.text().split('\t', 1)[0].replace('&', '')
+                  for action in actions if not action.isSeparator()]
+        shortcuts = [self.shortcutTextForAction(action) for action in actions if not action.isSeparator()]
+        width = (max((metrics.horizontalAdvance(label) for label in labels), default=0)
+                 + max((metrics.horizontalAdvance(shortcut) for shortcut in shortcuts), default=0))
         screen = self.screen()
         available = screen.availableGeometry().height() - 32 if screen else 720
-        native_height = super().sizeHint().height()
-        return QtCore.QSize(max(120, width + 100), min(max(height, native_height), available))
+        # Use Qt's actual row layout: Fluent's synthetic minimum counts
+        # collapsed separators and can exceed the rendered rows' height.
+        height = _qt.QMenu.sizeHint(self).height()
+        return QtCore.QSize(max(120, width + 100), min(height, available))
 
 
 QMenu = FluentMenu

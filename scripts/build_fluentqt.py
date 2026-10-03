@@ -13,7 +13,7 @@ import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
 SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.5'
+VERSION = '1.9.2+openlp.6'
 QT_VERSION = '6.11.1'
 
 
@@ -94,6 +94,20 @@ def patch_subtle_split_buttons(source):
             ': (fluentStyle() == Subtle ? colors.subtleSecondary : colors.controlSecondary);')
 
 
+def patch_menu_shortcut_alignment(source):
+    """Only submenu rows reserve a trailing arrow column."""
+    menu = source / 'src/components/menus_toolbars/Menu.cpp'
+    replace(menu,
+            'hasSubmenuAction(this) ? spacing.controlHeight.small : ::Spacing::Small;\n'
+            '    QRect rect = actionGeometry(action);',
+            'action->menu() ? spacing.controlHeight.small : ::Spacing::Small;\n'
+            '    QRect rect = actionGeometry(action);')
+    replace(menu,
+            'const int textRight = itemRect.right() - textPadding - trailingColumn - shortcutReserve;',
+            'const int rowTrailingColumn = action->menu() ? trailingColumn : ::Spacing::Small;\n'
+            '        const int textRight = itemRect.right() - textPadding - rowTrailingColumn - shortcutReserve;')
+
+
 def patch_accessibility_factories(source):
     """Avoid RTTI casts on QtWebEngine's private objects, which have no typeinfo."""
     # These global factories are queried for every QObject, including WebEngine
@@ -161,6 +175,7 @@ def main():
     patch_selector_overflow(source)
     patch_subtle_split_buttons(source)
     patch_accessibility_factories(source)
+    patch_menu_shortcut_alignment(source)
     bindings = source / 'bindings/pyside6'
     # Widen the source guard only for our tested build. Keep the resulting
     # wheel restricted to 3.14 and identify it with an OpenLP local version.
