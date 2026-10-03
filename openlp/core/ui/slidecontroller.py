@@ -281,8 +281,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         # Build the full toolbar
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.setObjectName('slide_controller_toolbar')
-        if modern:
-            self.toolbar.setFixedHeight(30)
         size_toolbar_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                 QtWidgets.QSizePolicy.Policy.Fixed)
         size_toolbar_policy.setHorizontalStretch(0)
@@ -361,27 +359,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.hide_menu.menu().addAction(self.logo_screen)
             self.hide_menu.menu().addAction(self.blank_screen)
             self.hide_menu.menu().addAction(self.desktop_screen)
-            # Wide menu of display control buttons.
-            self.show_screen_button = QtWidgets.QToolButton(self.toolbar)
-            self.show_screen_button.setObjectName('show_screen_button')
-            self.toolbar.add_toolbar_widget(self.show_screen_button)
-            self.show_screen_button.setDefaultAction(self.show_screen)
-            self.theme_screen_button = QtWidgets.QToolButton(self.toolbar)
-            self.theme_screen_button.setObjectName('theme_screen_button')
-            self.toolbar.add_toolbar_widget(self.theme_screen_button)
-            self.theme_screen_button.setDefaultAction(self.theme_screen)
-            self.logo_screen_button = QtWidgets.QToolButton(self.toolbar)
-            self.logo_screen_button.setObjectName('logo_screen_button')
-            self.toolbar.add_toolbar_widget(self.logo_screen_button)
-            self.logo_screen_button.setDefaultAction(self.logo_screen)
-            self.blank_screen_button = QtWidgets.QToolButton(self.toolbar)
-            self.blank_screen_button.setObjectName('blank_screen_button')
-            self.toolbar.add_toolbar_widget(self.blank_screen_button)
-            self.blank_screen_button.setDefaultAction(self.blank_screen)
-            self.desktop_screen_button = QtWidgets.QToolButton(self.toolbar)
-            self.desktop_screen_button.setObjectName('desktop_screen_button')
-            self.toolbar.add_toolbar_widget(self.desktop_screen_button)
-            self.desktop_screen_button.setDefaultAction(self.desktop_screen)
+            # CommandBar owns the presenters and overflow for display actions.
+            for name, action in (
+                    ('show_screen_button', self.show_screen),
+                    ('theme_screen_button', self.theme_screen),
+                    ('logo_screen_button', self.logo_screen),
+                    ('blank_screen_button', self.blank_screen),
+                    ('desktop_screen_button', self.desktop_screen)):
+                self.toolbar.addAction(action)
+                self.toolbar.actions_map[name] = action
             self._update_desktop_hide_action_state()
             self.toolbar.add_toolbar_action('loop_separator', separator=True)
             # Play Slides Menu
@@ -453,7 +439,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.mediabar.setVisible(False)
         if self.is_live:
             self.new_song_menu()
-            self.toolbar.add_toolbar_widget(self.song_menu)
             self.toolbar.set_widget_visible('song_menu', False)
         # Screen preview area
         self.preview_frame = QtWidgets.QFrame(self.splitter)
@@ -646,12 +631,18 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         Rebuild the song menu object from scratch.
         """
-        # Build the Song Toolbar
-        self.song_menu = QtWidgets.QToolButton(self.toolbar)
-        self.song_menu.setObjectName('song_menu')
-        self.song_menu.setText(translate('OpenLP.SlideController', 'Go To'))
-        self.song_menu.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.song_menu.setMenu(QtWidgets.QMenu(translate('OpenLP.SlideController', 'Go To'), self.toolbar))
+        self.song_menu = QtWidgets.QMenu(translate('OpenLP.SlideController', 'Go To'), self.toolbar)
+        self.song_menu_action = self.toolbar.add_toolbar_action(
+            'song_menu', text=translate('OpenLP.SlideController', 'Go To'), icon=UiIcons().music,
+            triggers=self._show_song_menu)
+
+    def _show_song_menu(self):
+        """Open verse navigation from its native CommandBar presenter."""
+        presenter = self.toolbar.widgetForAction(self.song_menu_action)
+        anchor = presenter if presenter is not None and presenter.isVisible() else self.toolbar
+        position = anchor.mapToGlobal(anchor.rect().bottomLeft())
+        # Allow CommandBar's overflow popup to close before opening the verse menu.
+        QtCore.QTimer.singleShot(0, lambda: self.song_menu.popup(position))
 
     def _raise_displays(self):
         for display in self.displays:
@@ -944,7 +935,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.play_slides_loop.setIcon(UiIcons().loop)
         self.play_slides_loop.setText(UiStrings().PlaySlidesInLoop)
         self.toolbar.set_widget_visible('song_menu', bool(
-            item.is_text() and self.settings.value('songs/display songbar') and not self.song_menu.menu().isEmpty()))
+            item.is_text() and self.settings.value('songs/display songbar') and not self.song_menu.isEmpty()))
         self.toolbar.set_widget_visible(LOOP_LIST, item.is_capable(ItemCapabilities.CanLoop) and len(item.slides) > 1)
         self.mediabar.setVisible(item.is_media() or item.is_capable(ItemCapabilities.HasBackgroundAudio))
         self.previous_item.setEnabled(not item.is_media())
@@ -1254,7 +1245,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 display.load_verses(self.service_item.rendered_slides)
             # Replace the song menu so the verses match the song and are not cumulative
             if self.is_live:
-                self.song_menu.menu().clear()
+                self.song_menu.clear()
             for slide_index, slide in enumerate(self.service_item.display_slides):
                 if not slide['verse'].isdigit():
                     # These tags are already translated.
@@ -1264,7 +1255,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                     if verse_def not in self.slide_list:
                         self.slide_list[verse_def] = slide_index
                         if self.is_live:
-                            self.song_menu.menu().addAction(verse_def, self.on_song_bar_handler)
+                            self.song_menu.addAction(verse_def, self.on_song_bar_handler)
                 else:
                     row += 1
                     self.slide_list[str(row)] = row - 1

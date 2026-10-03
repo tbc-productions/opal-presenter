@@ -1574,3 +1574,37 @@ def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, mai
     navigation.pane_toggle.click()
     QtWidgets.QApplication.processEvents()
     assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
+
+
+def test_slide_controller_action_buttons_use_native_commandbars(modern_appearance, main_window):
+    from PySide6 import QtGui
+    from openlp.core.widgets import fluent
+    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, window_title):
+        widget = QtWidgets.QWidget(parent)
+        widget.window_title = window_title
+        widget.show_display = MagicMock()
+        return widget
+
+    controllers = (PreviewController(main_window), LiveController(main_window))
+    for controller in controllers:
+        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        toolbar = controller.toolbar
+        for action in (controller.previous_item, controller.next_item):
+            group = toolbar._command_actions[action]
+            assert isinstance(group, fluent.fluentqt.CommandBar)
+            assert action in group.primaryActions()
+        assert toolbar.maximumHeight() > toolbar._command_groups[0].sizeHint().height()
+    controller = controllers[1]
+    for name in ('show_screen_button', 'theme_screen_button', 'logo_screen_button',
+                 'blank_screen_button', 'desktop_screen_button', 'song_menu'):
+        action = controller.toolbar.actions_map[name]
+        assert isinstance(action, QtGui.QAction)
+        assert not isinstance(action, QtWidgets.QWidgetAction)
+        assert action in controller.toolbar._command_actions[action].primaryActions()
+    assert controller.song_menu_action.menu() is None
+    assert controller.song_menu is not None

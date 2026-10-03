@@ -47,7 +47,10 @@ slider classes. Native CommandBar owns toolbar actions and responsive overflow;
 Open service uses FluentQt's native SplitButton. Qt still supplies application,
 layout, docking, model and projection infrastructure. CommandBar rejects
 QWidgetAction, so embedded Fluent inputs and SplitButton sit beside command
-groups in a layout container. The layout preset rail is part of the main content
+groups in a layout container. Preview and Live slide actions, including the
+Live display modes and Go To verse command, use native CommandBar presenters.
+Their rows use the native control height; Hide and Play remain SplitButtons
+beside the command groups. The layout preset rail is part of the main content
 layout rather than a Qt toolbar. Library navigation uses a single native
 SelectorBar row with a More overflow menu. Original coloured QIcons occupy
 the native icon slots and appear in the overflow menu; configured plugin icon
