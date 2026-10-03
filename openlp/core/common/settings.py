@@ -341,7 +341,7 @@ class Settings(QtCore.QSettings):
         'advanced/prefer windowed screen capture': False,
         'advanced/search as type': True,
         'advanced/ui_theme_name': UiThemes.Automatic,
-        'advanced/interface style': 'classic',
+        'advanced/interface style': 'modern',
         'advanced/delete service item confirmation': False,
         'alerts/font face': QtGui.QFont().family(),
         'alerts/font size': 40,

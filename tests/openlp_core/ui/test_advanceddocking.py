@@ -2,10 +2,6 @@
 import pytest
 from PySide6 import QtCore, QtTest, QtWidgets
 
-from openlp.core.common.platform import is_win
-
-pytestmark = pytest.mark.skipif(not is_win(), reason='Modern docking is Windows-only')
-
 
 @pytest.fixture
 def workspace(settings):

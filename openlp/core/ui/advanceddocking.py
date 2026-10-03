@@ -1,16 +1,12 @@
 """ADS integration for the Modern workspace; Classic keeps Qt's dock widgets."""
 from PySide6 import QtCore, QtWidgets
 from openlp.core.common.i18n import translate
-from openlp.core.common.platform import is_win
 from openlp.core.ui.fluentstyle import get_fluent_dock_stylesheet
 
-if is_win():
-    import PySide6QtAds as ads
-else:
-    ads = None
+import PySide6QtAds as ads
 
 
-class AdvancedDockWidget(ads.CDockWidget if ads else QtWidgets.QWidget):
+class AdvancedDockWidget(ads.CDockWidget):
     """Expose the dock operations used by OpenLP on an ADS dock widget."""
 
     visibilityChanged = QtCore.Signal(bool)

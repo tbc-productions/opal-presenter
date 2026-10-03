@@ -24,6 +24,7 @@ Package to test the :mod:`~openlp.core.ui.style` module.
 from unittest.mock import MagicMock, patch, call
 
 import pytest
+from PySide6 import QtCore
 
 from openlp.core.ui.style import MEDIA_MANAGER_DARK_STYLE, MEDIA_MANAGER_LIGHT_STYLE, UiThemes, WIN_REPAIR_STYLESHEET, \
     get_alternate_rows_repair_stylesheet, get_application_stylesheet, \
@@ -507,3 +508,16 @@ def test_set_default_theme_native_theme_non_macos_resets_palette_only(_mock_is_m
     # THEN: app style should not be changed, but palette should reset
     mock_app.setStyle.assert_not_called()
     mock_app.setPalette.assert_called_once_with(mock_app.style().standardPalette())
+
+
+@pytest.mark.parametrize('scheme, dark', [(QtCore.Qt.ColorScheme.Dark, True),
+                                         (QtCore.Qt.ColorScheme.Light, False),
+                                         (QtCore.Qt.ColorScheme.Unknown, False)])
+def test_linux_system_colour_scheme(scheme, dark):
+    """Auto follows Qt's system colour scheme on platforms without a native probe."""
+    with patch('openlp.core.ui.style.IS_SYSTEM_DARKMODE', None), \
+            patch('openlp.core.ui.style.is_win', return_value=False), \
+            patch('openlp.core.ui.style.is_macosx', return_value=False), \
+            patch('openlp.core.ui.style.QtWidgets.QApplication.instance') as app:
+        app.return_value.styleHints.return_value.colorScheme.return_value = scheme
+        assert openlp.core.ui.style.is_system_darkmode() is dark

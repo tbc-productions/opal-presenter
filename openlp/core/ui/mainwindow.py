@@ -159,7 +159,7 @@ class Ui_MainWindow(object):
             self.main_content_layout.setContentsMargins(6, 6, 6, 6)
             self.control_splitter.setHandleWidth(8)
         self.main_content_layout.addWidget(self.control_splitter)
-        advanced_docking = is_modern_style() and is_win()
+        advanced_docking = is_modern_style()
         if advanced_docking:
             main_window.initialize_advanced_docking()
         dock_widget_class = AdvancedDockWidget if advanced_docking else OpenLPDockWidget

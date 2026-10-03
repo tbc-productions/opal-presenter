@@ -51,11 +51,16 @@ QT_QPA_PLATFORM = os.environ.get("QT_QPA_PLATFORM", "")
 _MAIN_WINDOWS = []
 
 
+@pytest.fixture(autouse=True)
+def classic_appearance_for_existing_tests(settings, request):
+    if 'modern_appearance' not in request.fixturenames:
+        settings.setValue('advanced/interface style', 'classic')
+
+
 @pytest.fixture
 def modern_appearance(settings):
     settings.setValue('advanced/interface style', 'modern')
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True):
-        yield
+    yield
 
 
 def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
@@ -73,7 +78,6 @@ def test_classic_keeps_original_navigation_and_spacing(main_window):
     assert main_window.main_content_layout.contentsMargins().left() == 0
 
 
-@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
 def test_modern_presets_restore_autohide_without_touching_classic(modern_appearance, main_window, settings):
     import PySide6QtAds as ads
     main_window._preview_controller = _DummyController()
@@ -97,7 +101,6 @@ def test_modern_presets_restore_autohide_without_touching_classic(modern_appeara
     assert settings.value('user interface/preset layout/default/main window state') == QtCore.QByteArray(b'classic')
 
 
-@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
 def test_modern_close_updates_menu_and_preserves_inactive_library(modern_appearance, main_window, settings):
     main_window.theme_manager_dock.toggleView(False)
     assert not settings.value('user interface/show themes')
@@ -105,7 +108,6 @@ def test_modern_close_updates_menu_and_preserves_inactive_library(modern_appeara
     assert main_window.media_manager_dock.isDockOpen()
 
 
-@pytest.mark.skipif(os.name != 'nt', reason='Modern docking is Windows-only')
 def test_modern_factory_layout_has_usable_library_height(modern_appearance, main_window, settings):
     main_window.resize(1200, 800)
     settings.setValue('core/view mode', 'default')

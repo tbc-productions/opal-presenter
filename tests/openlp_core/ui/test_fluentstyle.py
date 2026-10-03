@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 
-from openlp.core.ui.fluentstyle import FluentAccentButton, configure_fluent_surfaces
+from openlp.core.ui.fluentstyle import FluentAccentButton, get_fluent_controls_stylesheet
 
 
 def test_accent_button_keeps_action_mouse_keyboard_and_disabled_behavior(qapp):
@@ -51,18 +51,27 @@ def test_accent_render_uses_application_scheme_with_transparent_widget_palette(q
 
 
 def test_fluent_surfaces_include_dialogs_but_exclude_output_windows(qapp):
+    """Later-created dialogs and menus acquire styling without a global event filter."""
     app = QtWidgets.QApplication.instance()
-    configure_fluent_surfaces(app, True)
+    original_stylesheet = app.styleSheet()
+    app.setStyleSheet(get_fluent_controls_stylesheet())
     dialog, menu, output = QtWidgets.QDialog(), QtWidgets.QMenu(), QtWidgets.QWidget()
+    dialog_field = QtWidgets.QLineEdit(dialog)
+    output_field = QtWidgets.QLineEdit(output)
     try:
-        for widget in (dialog, menu, output):
+        for widget in (dialog, menu, output, dialog_field, output_field):
             widget.ensurePolished()
-        assert dialog.property('fluentUi') is True
-        assert menu.property('fluentUi') is True
-        assert output.property('fluentUi') is None
-        configure_fluent_surfaces(app, False)
+        assert dialog.palette().color(QtGui.QPalette.ColorRole.Window).name() == '#f3f3f3'
+        assert menu.palette().color(QtGui.QPalette.ColorRole.Window).name() == '#ffffff'
+        assert dialog_field.palette().color(QtGui.QPalette.ColorRole.Base).name() == '#ffffff'
+        assert output.palette() == app.palette()
+        assert output_field.palette().color(QtGui.QPalette.ColorRole.Base) == app.palette().color(
+            QtGui.QPalette.ColorRole.Base)
+        app.setStyleSheet('')
         classic_dialog = QtWidgets.QDialog()
         classic_dialog.ensurePolished()
-        assert classic_dialog.property('fluentUi') is None
+        assert classic_dialog.palette() == app.palette()
     finally:
-        configure_fluent_surfaces(app, False)
+        app.setStyleSheet(original_stylesheet)
+        for widget in (dialog, menu, output):
+            widget.deleteLater()

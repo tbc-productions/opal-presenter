@@ -29,10 +29,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
-from openlp.core.common.platform import is_win
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.ui import HideMode
-from openlp.core.ui.style import UiThemes, has_ui_theme
+from openlp.core.ui.style import UiThemes
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.edits import PathEdit
 
@@ -201,22 +200,10 @@ class GeneralTab(SettingsTab):
         self.ui_theme_style_label = QtWidgets.QLabel(self.ui_group_box)
         self.ui_theme_style_label.setObjectName('theme_style_label')
         self.ui_theme_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.addItems(['', '', '', ''])
-        else:
-            self.ui_theme_style_combo_box.addItems(['', '', ''])
+        self.ui_theme_style_combo_box.addItems([''] * 6)
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
-        self.interface_style_label = QtWidgets.QLabel(self.ui_group_box)
-        self.interface_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        self.interface_style_combo_box.setObjectName('interface_style_combo_box')
-        self.interface_style_combo_box.addItem('', 'classic')
-        self.interface_style_combo_box.addItem('', 'modern')
-        self.ui_layout.addRow(self.interface_style_label)
-        self.ui_layout.addRow(self.interface_style_combo_box)
-        self.interface_style_label.setVisible(is_win())
-        self.interface_style_combo_box.setVisible(is_win())
         self.right_layout.addWidget(self.ui_group_box)
         # Push everything in both columns to the top
         self.left_layout.addStretch()
@@ -302,14 +289,15 @@ class GeneralTab(SettingsTab):
                                                              'Alert if New clicked on blank service'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
         self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
-        self.interface_style_label.setText(translate('OpenLP.GeneralTab', 'Interface appearance (needs restart):'))
-        self.interface_style_combo_box.setItemText(0, translate('OpenLP.GeneralTab', 'Classic'))
-        self.interface_style_combo_box.setItemText(1, translate('OpenLP.GeneralTab', 'Modern'))
-        self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
-        self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
-        self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
-        if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
+        theme_labels = (
+            translate('OpenLP.GeneralTab', 'Classic (Auto)'),
+            translate('OpenLP.GeneralTab', 'Classic Dark'),
+            translate('OpenLP.GeneralTab', 'Classic Light'),
+            translate('OpenLP.GeneralTab', 'Modern (Auto)'),
+            translate('OpenLP.GeneralTab', 'Modern Dark'),
+            translate('OpenLP.GeneralTab', 'Modern Light'))
+        for index, label in enumerate(theme_labels):
+            self.ui_theme_style_combo_box.setItemText(index, label)
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
 
     def load(self):
@@ -353,10 +341,9 @@ class GeneralTab(SettingsTab):
             if self.autoscroll_map[i] == autoscroll_value and i < self.autoscroll_combo_box.count():
                 self.autoscroll_combo_box.setCurrentIndex(i)
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
-        ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'))
+        ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'),
+                                                      self.settings.value('advanced/interface style'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
-        style_index = self.interface_style_combo_box.findData(self.settings.value('advanced/interface style'))
-        self.interface_style_combo_box.setCurrentIndex(max(0, style_index))
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
         self.new_service_message_check_box.setChecked(self.settings.value('advanced/new service message'))
         self.hide_mouse_check_box.setChecked(self.settings.value('advanced/hide mouse'))
@@ -364,44 +351,21 @@ class GeneralTab(SettingsTab):
         self.search_as_type_check_box.setChecked(self.is_search_as_you_type_enabled)
 
     @staticmethod
-    def get_ui_theme_index(ui_theme):
-        """
-        Converts :class:`~openlp.core.ui.dark.UiThemes` item to Interface Theme ComboBox
-
-        :param ui_theme UIThemes enum item
-        :return ComboBox index
-        """
-        if ui_theme == UiThemes.Automatic:
-            return 0
+    def get_ui_theme_index(ui_theme, interface_style='classic'):
+        """Map stored appearance and colour settings to the combined selector."""
+        offset = 3 if interface_style == 'modern' else 0
+        if ui_theme in (UiThemes.DefaultDark, UiThemes.QDarkStyle):
+            return offset + 1
         if ui_theme == UiThemes.DefaultLight:
-            return 1
-        if ui_theme == UiThemes.DefaultDark:
-            return 2
-        if ui_theme == UiThemes.Native:
-            return 0
-        if ui_theme == UiThemes.QDarkStyle:
-            return 3 if has_ui_theme(UiThemes.QDarkStyle) else 0
-
-        return 0
+            return offset + 2
+        return offset
 
     @staticmethod
     def get_ui_theme_name(index):
-        """
-        Converts "Interface Theme" ComboBox index to :class:`~openlp.core.ui.dark.UiThemes` item
-
-        :param index "Interface Theme" ComboBox current index
-        :return UiThemes enum item
-        """
-        if index == 0:
+        """Return the colour scheme of a combined theme selection."""
+        if index not in range(6):
             return UiThemes.Automatic
-        if index == 1:
-            return UiThemes.DefaultLight
-        if index == 2:
-            return UiThemes.DefaultDark
-        if index == 3:
-            return UiThemes.QDarkStyle if has_ui_theme(UiThemes.QDarkStyle) else UiThemes.Automatic
-
-        return UiThemes.Automatic
+        return (UiThemes.Automatic, UiThemes.DefaultDark, UiThemes.DefaultLight)[index % 3]
 
     def save(self):
         """
@@ -436,7 +400,8 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('advanced/search as type', self.is_search_as_you_type_enabled)
         theme_name = GeneralTab.get_ui_theme_name(self.ui_theme_style_combo_box.currentIndex())
         self.settings.setValue('advanced/ui_theme_name', theme_name)
-        self.settings.setValue('advanced/interface style', self.interface_style_combo_box.currentData())
+        self.settings.setValue('advanced/interface style',
+                               'modern' if self.ui_theme_style_combo_box.currentIndex() >= 3 else 'classic')
         self.settings.sync()
         self.post_set_up()
 

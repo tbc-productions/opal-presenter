@@ -6,33 +6,18 @@ import pytest
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 
 from openlp.core.ui import HideMode
-from openlp.core.ui.generaltab import GeneralTab
-from openlp.core.ui.modernstyle import ModernPresetTabBar, apply_mica, is_modern_style, refine_modern_layout
-from openlp.core.ui.settingsform import SettingsForm
+from openlp.core.ui.modernstyle import (
+    ModernPresetTabBar, apply_mica, is_modern_style, refine_modern_layout, set_modern_palette
+)
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.style import UiThemes, get_application_stylesheet, get_library_stylesheet, set_default_theme
 
 
-def test_appearance_setting_round_trip(settings):
-    """Choosing Modern survives saving/reopening without changing the color scheme."""
-    settings.setValue('advanced/ui_theme_name', UiThemes.DefaultDark)
-    form = SettingsForm(None)
-    tab = GeneralTab(form)
-    form.insert_tab(tab, is_visible=True)
-    assert tab.interface_style_combo_box.currentData() == 'classic'
-    tab.interface_style_combo_box.setCurrentIndex(1)
-    tab.save()
-    assert settings.value('advanced/interface style') == 'modern'
-    assert settings.value('advanced/ui_theme_name') == UiThemes.DefaultDark
-    tab.load()
-    assert tab.interface_style_combo_box.currentData() == 'modern'
-
-
 @pytest.mark.parametrize('windows', [True, False])
-def test_modern_is_windows_only(settings, windows):
+def test_modern_supported_platforms(settings, windows):
     settings.setValue('advanced/interface style', 'modern')
     with patch('openlp.core.ui.modernstyle.is_win', return_value=windows):
-        assert is_modern_style() is windows
+        assert is_modern_style() is True
 
 
 @pytest.mark.parametrize('scheme', [UiThemes.DefaultLight, UiThemes.DefaultDark, UiThemes.QDarkStyle])
@@ -57,6 +42,7 @@ def test_modern_color_schemes_have_solid_readable_surfaces(settings, qapp, schem
 
 
 def test_classic_does_not_call_native_material_api(settings):
+    settings.setValue('advanced/interface style', 'classic')
     with patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
         assert apply_mica(None) is False
         native.assert_not_called()
@@ -183,3 +169,24 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
     assert abs(splitters[0].sizes()[0] - splitters[1].sizes()[0]) <= 1
     assert toolbar.iconSize() == QtCore.QSize(18, 18)
     window.close()
+
+
+def test_macos_modern_does_not_call_windows_api(settings):
+    settings.setValue('advanced/interface style', 'modern')
+    with patch('openlp.core.ui.modernstyle.is_win', return_value=False), \
+            patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
+        assert is_modern_style()
+        assert apply_mica(None) is False
+        native.assert_not_called()
+
+
+def test_macos_modern_preserves_system_font(settings, qapp):
+    app = QtWidgets.QApplication.instance()
+    old_palette, old_font = app.palette(), app.font()
+    try:
+        with patch('openlp.core.ui.modernstyle.is_win', return_value=False):
+            set_modern_palette(app)
+            assert app.font() == old_font
+    finally:
+        app.setPalette(old_palette)
+        app.setFont(old_font)

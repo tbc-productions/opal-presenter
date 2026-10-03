@@ -303,6 +303,8 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         Process the form saving the settings
         """
         log.debug('Processing settings exit')
+        theme_keys = ('advanced/interface style', 'advanced/ui_theme_name')
+        previous_theme = tuple(self.settings.value(key) for key in theme_keys)
         # All tab widgets are registered even if the plugin is inactive,
         # but we don't add the item to the list on the side if the plugin is inactive,
         # so loop through the list items, and then find the tab for that item.
@@ -328,7 +330,13 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 QtCore.QTimer.singleShot(0, self._execute_deferred_config_screen_changed)
             else:
                 Registry().execute(process)
-        return QtWidgets.QDialog.accept(self)
+        result = QtWidgets.QDialog.accept(self)
+        if tuple(self.settings.value(key) for key in theme_keys) != previous_theme:
+            QtWidgets.QMessageBox.information(
+                self, translate('OpenLP.SettingsForm', 'Restart required'),
+                translate('OpenLP.SettingsForm',
+                          'Your interface theme has been saved. Restart OpenLP+ to apply it.'))
+        return result
 
     def _execute_deferred_config_screen_changed(self):
         main_window = Registry().get('main_window')

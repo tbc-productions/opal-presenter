@@ -72,15 +72,20 @@ def get_fluent_controls_stylesheet():
         'QMenuBar::item': 'padding: 5px 10px;',
         'QMenuBar::item:selected': f'background: {c["hover"]}; border-radius: 4px;',
     }
+    # Qt matches these roots itself, including surfaces created after startup.
+    # An application-wide Python event filter can encounter QObjects while their
+    # native constructors are running, before PySide can safely wrap them.
+    roots = ('QWidget[fluentUi="true"]', 'QDialog', 'ads--CFloatingDockContainer')
     result = []
     for controls, body in rules.items():
-        selectors = [f'QWidget[fluentUi="true"] {control.strip()}'.strip() for control in controls.split(',')]
+        selectors = [f'{root} {control.strip()}'.strip()
+                     for root in roots for control in controls.split(',')]
         result.append(', '.join(selectors) + ' { ' + body + ' }')
-    result.append(f'QMenu[fluentUi="true"] {{ background: {c["surface"]}; '
+    result.append(f'QMenu {{ background: {c["surface"]}; '
                   f'color: {c["text"]}; border: 1px solid {c["border"]}; padding: 4px; }}')
-    result.append('QMenu[fluentUi="true"]::item { padding: 5px 24px; border-radius: 4px; margin: 1px; }')
-    result.append(f'QMenu[fluentUi="true"]::item:selected {{ background: {c["selection"]}; }}')
-    result.append(f'QMenu[fluentUi="true"]::item:disabled {{ color: {c["disabled"]}; }}')
+    result.append('QMenu::item { padding: 5px 24px; border-radius: 4px; margin: 1px; }')
+    result.append(f'QMenu::item:selected {{ background: {c["selection"]}; }}')
+    result.append(f'QMenu::item:disabled {{ color: {c["disabled"]}; }}')
     return '\n'.join(result)
 
 
@@ -102,34 +107,6 @@ ads--CAutoHideTab {{ background: {c['control']}; border: 1px solid {c['border']}
     border-radius: 4px; padding: 4px; color: {c['text']}; }}
 ads--CAutoHideTab:hover {{ background: {c['selection']}; }}
 """
-
-
-class FluentSurfaceFilter(QtCore.QObject):
-    """Apply Modern form styling to dialogs and floated docks, including ones created later."""
-    def eventFilter(self, watched, event):
-        if event.type() in (QtCore.QEvent.Type.Polish, QtCore.QEvent.Type.Show):
-            if (isinstance(watched, (QtWidgets.QDialog, QtWidgets.QMenu)) or
-                    watched.metaObject().className() == 'ads::CFloatingDockContainer'):
-                if not watched.property('fluentUi'):
-                    watched.setProperty('fluentUi', True)
-                    if event.type() == QtCore.QEvent.Type.Show:
-                        watched.style().unpolish(watched)
-                        watched.style().polish(watched)
-        return False
-
-
-def configure_fluent_surfaces(app, enabled):
-    """Install once at appearance startup; Classic never acquires Fluent form styling."""
-    if not isinstance(app, QtWidgets.QApplication):
-        return
-    previous = getattr(app, '_fluent_surface_filter', None)
-    if previous:
-        app.removeEventFilter(previous)
-        previous.deleteLater()
-        app._fluent_surface_filter = None
-    if enabled:
-        app._fluent_surface_filter = FluentSurfaceFilter(app)
-        app.installEventFilter(app._fluent_surface_filter)
 
 
 def animations_enabled():

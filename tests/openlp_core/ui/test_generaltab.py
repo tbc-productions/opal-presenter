@@ -21,7 +21,7 @@
 """
 Package to test the openlp.core.ui.generaltab package.
 """
-from unittest.mock import patch
+import pytest
 
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
@@ -132,15 +132,34 @@ def test_logo_fit_setting_is_saved(settings):
     assert settings.value('core/logo fit') == 'cover'
 
 
-@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
-def test_get_ui_theme_index_maps_native_to_system_theme(_mock_has_ui_theme):
-    """Test that legacy Native theme maps to the Use system theme combo index."""
-    assert GeneralTab.get_ui_theme_index(UiThemes.Native) == 0
+@pytest.mark.parametrize('style', ['classic', 'modern'])
+@pytest.mark.parametrize('scheme, offset', [(UiThemes.Native, 0), (UiThemes.QDarkStyle, 1)])
+def test_legacy_theme_selection(style, scheme, offset):
+    """Legacy schemes map to Auto or Dark within the selected appearance."""
+    assert GeneralTab.get_ui_theme_index(scheme, style) == offset + (3 if style == 'modern' else 0)
 
 
-@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
-def test_get_ui_theme_name_index_3_falls_back_to_automatic_without_qdarkstyle(_mock_has_ui_theme):
-    """Test that index 3 maps to Automatic when QDarkStyle is unavailable."""
-    assert GeneralTab.get_ui_theme_name(3) == UiThemes.Automatic
+def test_default_theme_is_modern_auto(settings):
+    form = SettingsForm(None)
+    tab = GeneralTab(form)
+    form.insert_tab(tab, is_visible=True)
+    assert tab.ui_theme_style_combo_box.currentIndex() == 3
+    assert [tab.ui_theme_style_combo_box.itemText(i) for i in range(6)] == [
+        'Classic (Auto)', 'Classic Dark', 'Classic Light', 'Modern (Auto)', 'Modern Dark', 'Modern Light']
 
 
+@pytest.mark.parametrize('index, style, scheme', [
+    (0, 'classic', UiThemes.Automatic), (1, 'classic', UiThemes.DefaultDark),
+    (2, 'classic', UiThemes.DefaultLight), (3, 'modern', UiThemes.Automatic),
+    (4, 'modern', UiThemes.DefaultDark), (5, 'modern', UiThemes.DefaultLight)])
+def test_combined_theme_round_trip(settings, index, style, scheme):
+    form = SettingsForm(None)
+    tab = GeneralTab(form)
+    form.insert_tab(tab, is_visible=True)
+    tab.ui_theme_style_combo_box.setCurrentIndex(index)
+    tab.save()
+    assert settings.value('advanced/interface style') == style
+    assert settings.value('advanced/ui_theme_name') == scheme
+    tab.ui_theme_style_combo_box.setCurrentIndex((index + 1) % 6)
+    tab.load()
+    assert tab.ui_theme_style_combo_box.currentIndex() == index

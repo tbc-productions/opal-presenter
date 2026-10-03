@@ -1,4 +1,4 @@
-"""Modern Windows operator-interface styling and optional native window materials."""
+"""Modern operator-interface styling and optional native window materials."""
 import ctypes
 from ctypes import wintypes
 import logging
@@ -15,9 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def is_modern_style():
-    """Keep the modern appearance opt-in and confined to Windows."""
-    if not is_win():
-        return False
+    """Use the selected appearance on every platform."""
     settings = Registry().get('settings')
     return settings is not None and settings.value('advanced/interface style') == 'modern'
 
@@ -46,10 +44,11 @@ def set_modern_palette(app):
                  QtGui.QPalette.ColorRole.ButtonText):
         palette.setColor(QtGui.QPalette.ColorGroup.Disabled, role, QtGui.QColor(tokens['disabled']))
     app.setPalette(palette)
-    font = app.font()
-    font.setFamily('Segoe UI')
-    font.setPointSize(10)
-    app.setFont(font)
+    if is_win():
+        font = app.font()
+        font.setFamily('Segoe UI')
+        font.setPointSize(10)
+        app.setFont(font)
 
 
 def get_modern_stylesheet():
@@ -200,7 +199,7 @@ def apply_mica(window):
     Windows 11 22H2 introduced DWMWA_SYSTEMBACKDROP_TYPE. The system manages
     material fallbacks; failed calls retain the normal solid window appearance.
     """
-    if not is_modern_style():
+    if not is_win() or not is_modern_style():
         return False
     try:
         if sys.getwindowsversion().build < 22621:

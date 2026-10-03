@@ -28,7 +28,6 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.ui.modernstyle import is_modern_style, set_modern_palette, get_modern_stylesheet
-from openlp.core.ui.fluentstyle import configure_fluent_surfaces
 
 try:
     import qdarkstyle
@@ -299,7 +298,8 @@ def is_system_darkmode():
             elif is_macosx():
                 IS_SYSTEM_DARKMODE = is_macosx_darkmode()
             else:
-                IS_SYSTEM_DARKMODE = False
+                app = QtWidgets.QApplication.instance()
+                IS_SYSTEM_DARKMODE = bool(app and app.styleHints().colorScheme() == QtCore.Qt.ColorScheme.Dark)
         except Exception:
             IS_SYSTEM_DARKMODE = False
 
@@ -346,7 +346,6 @@ def set_default_theme(app):
     """
     Setup theme
     """
-    configure_fluent_surfaces(app, is_modern_style())
     if is_ui_theme(UiThemes.Native):
         if is_macosx():
             native = get_macos_native_style_name()

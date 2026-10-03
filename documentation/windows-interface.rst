@@ -1,20 +1,28 @@
-Windows interface appearances
-=============================
+Interface themes
+================
 
-Settings > Configure OpenLP+ > General > UI Settings contains an
-``Interface appearance (needs restart)`` choice:
+Settings > Configure OpenLP+ > General > UI Settings contains one
+``Interface Theme (needs restart)`` selector on every platform:
 
-* **Classic** preserves the existing rendering and remains the default.
-* **Modern** adds Fluent-style neutral surfaces, rounded controls, accent focus
-  indicators, upright layout navigation, and a compact accent Go live button. Service and
-  Library remain on the left; Preview and Live keep their slide lists above the
-  screen previews, with adjustable dividers.
+* **Classic (Auto)** follows the system colour scheme with Classic styling.
+* **Classic Dark** uses Classic styling with dark colours.
+* **Classic Light** uses Classic styling with light colours.
+* **Modern (Auto)** follows the system colour scheme with Modern styling and is the default.
+* **Modern Dark** uses Modern styling with dark colours.
+* **Modern Light** uses Modern styling with light colours.
 
-Appearance is independent of the existing Interface Theme color scheme.
-Modern supports system, light and dark colors; selecting QDarkStyle with Modern
-uses Modern's dark palette. Selecting Classic retains QDarkStyle rendering.
-Restart OpenLP+ after changing either setting. Saved layouts remain available.
-macOS and Linux continue using their existing interface.
+Modern adds Fluent-style neutral surfaces, rounded controls, accent focus
+indicators, upright layout navigation, and a compact accent Go live button. Service and
+Library remain on the left; Preview and Live keep their slide lists above the
+screen previews, with adjustable dividers.
+
+Restart OpenLP+ after changing the theme. Saved layouts remain available.
+Saving a different theme displays a restart reminder. Switching between Classic
+and Modern replaces the workspace's dock widgets, so the change applies at startup.
+Existing appearance and colour settings load into the combined selector;
+legacy QDarkStyle selections map to the corresponding Dark option.
+Modern is available on Windows, macOS and Linux. Native Mica remains specific
+to supported Windows versions; other platforms use solid window rendering.
 
 Modern's Fluent presentation uses the existing PySide6 widgets and retains their
 actions, shortcuts and accessibility roles. Hover animation respects Windows'
