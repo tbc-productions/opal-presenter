@@ -41,7 +41,7 @@ from openlp.core.state import State
 from openlp.core.common.enum import ServiceItemType
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
+from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList, SERVICE_ITEM_INDICATORS_ROLE
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from tests.utils.constants import RESOURCE_PATH
@@ -206,12 +206,7 @@ def test_render_service_item_row_with_transition(service_manager: ServiceManager
         mock_create_colored_icon.assert_called_once_with(service_item.icon, service_item)
         # AND: The display text is not padded
         assert tree_widget_item.text(0) == "Test Transition Item"
-        # AND: The transition indicator widget is set in column 1
-        indicator_widget = service_manager.service_manager_list.itemWidget(tree_widget_item, 1)
-        assert indicator_widget is not None
-        layout = indicator_widget.layout()
-        assert layout is not None
-        assert layout.count() == 1
+        assert tree_widget_item.data(0, SERVICE_ITEM_INDICATORS_ROLE) == ['shape_subtract']
 
 
 def test_set_child_thumbnail_image_collection(service_manager: ServiceManager):
@@ -249,54 +244,20 @@ def test_set_child_thumbnail_image_collection_missing_image(service_manager: Ser
     assert icon.actualSize(QtCore.QSize(64, 48)) == QtCore.QSize(64, 48)
 
 
-def test_update_indicator_widget(service_manager: ServiceManager):
-    """Test that _update_indicator_widget creates the correct combination of indicator icons in column 1."""
-    tree_widget_item = QtWidgets.QTreeWidgetItem()
-    service_manager.service_manager_list.addTopLevelItem(tree_widget_item)
-    service_item = MagicMock()
-    service_item.notes = ""
-
-    # GIVEN: No transition, no notes
-    with patch.object(service_manager, '_get_service_item_transition_settings', return_value={'enabled': False}), \
-            patch.object(service_manager, '_service_item_supports_transition', return_value=False):
-        # WHEN: Updating the indicator widget
-        service_manager._update_indicator_widget(tree_widget_item, service_item, [])
-        # THEN: No widget is set in column 1
-        assert service_manager.service_manager_list.itemWidget(tree_widget_item, 1) is None
-
-    # GIVEN: Transition enabled, no notes
-    with patch.object(service_manager, '_get_service_item_transition_settings', return_value={'enabled': True}), \
+@pytest.mark.parametrize('transition,notes,expected', [
+    (False, '', []), (True, '', ['shape_subtract']),
+    (False, 'Notes', ['note']), (True, 'Notes', ['shape_subtract', 'note']),
+])
+def test_update_item_indicators(service_manager, transition, notes, expected):
+    tree_item = QtWidgets.QTreeWidgetItem()
+    service_manager.service_manager_list.addTopLevelItem(tree_item)
+    service_item = MagicMock(notes=notes)
+    with patch.object(service_manager, '_get_service_item_transition_settings', return_value={'enabled': transition}), \
             patch.object(service_manager, '_service_item_supports_transition', return_value=True):
-        # WHEN: Updating
-        service_manager._update_indicator_widget(tree_widget_item, service_item, [])
-        # THEN: Widget is set with 1 child
-        widget = service_manager.service_manager_list.itemWidget(tree_widget_item, 1)
-        assert widget is not None
-        assert widget.layout().count() == 1
+        service_manager._update_item_indicators(tree_item, service_item, [])
+    assert tree_item.data(0, SERVICE_ITEM_INDICATORS_ROLE) == expected
+    assert service_manager.service_manager_list.columnCount() == 1
 
-    # GIVEN: Transition disabled, notes present
-    service_item.notes = "Here are some notes"
-    with patch.object(service_manager, '_get_service_item_transition_settings', return_value={'enabled': False}), \
-            patch.object(service_manager, '_service_item_supports_transition', return_value=False):
-        # WHEN: Updating
-        service_manager._update_indicator_widget(tree_widget_item, service_item, [])
-        # THEN: Widget is set with 1 child
-        widget = service_manager.service_manager_list.itemWidget(tree_widget_item, 1)
-        assert widget is not None
-        assert widget.layout().count() == 1
-
-    # GIVEN: Transition enabled, notes present
-    with patch.object(service_manager, '_get_service_item_transition_settings', return_value={'enabled': True}), \
-            patch.object(service_manager, '_service_item_supports_transition', return_value=True):
-        # WHEN: Updating
-        service_manager._update_indicator_widget(tree_widget_item, service_item, [])
-        # THEN: Widget is set with 2 children
-        widget = service_manager.service_manager_list.itemWidget(tree_widget_item, 1)
-        assert widget is not None
-        layout = widget.layout()
-        assert layout.count() == 2
-        assert layout.itemAt(0).widget() is not None
-        assert layout.itemAt(1).widget() is not None
 
 
 @pytest.fixture()

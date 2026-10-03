@@ -59,16 +59,24 @@ from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
+from openlp.core.ui.fluenticons import fluent_icon
+
+
+SERVICE_ITEM_INDICATORS_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
 
 
 class ServiceItemDelegate(FluentLibraryTreeDelegate):
     """
-    Custom delegate for rendering the service item row in Column 0.
+    Render a full-width service row with indicators immediately after its label.
     """
     def paint(self, painter, option, index):
         opt = QtWidgets.QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         super().paint(painter, opt, index)
+
+    def trailingIcons(self, index):
+        names = index.data(SERVICE_ITEM_INDICATORS_ROLE) or []
+        return [fluent_icon(f'ic_fluent_{name}_24_regular') for name in names]
 
     def iconSize(self, option, index):
         if index.parent().isValid():
@@ -112,15 +120,10 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setItemDelegateForColumn(0, ServiceItemDelegate(self))
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
         self.setAlternatingRowColors(use_alternate_rows())
-        self.setColumnCount(2)
+        self.setColumnCount(1)
         self.setHeaderHidden(True)
         self.header().setStretchLastSection(False)
         self.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.header().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Fixed)
-        notes_icon_size = self.iconSize()
-        if not notes_icon_size.isValid() or notes_icon_size.width() <= 0:
-            notes_icon_size = QtCore.QSize(16, 16)
-        self.setColumnWidth(1, notes_icon_size.width() * 2 + 12)
         self.setIndentation(30)
         self.setMouseTracking(True)
         self.setExpandsOnDoubleClick(False)
@@ -131,13 +134,20 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self._last_notes_tooltip_item = None
 
     def _show_notes_tooltip_on_hover(self, event):
-        """Show notes tooltip immediately when hovering the right-side notes indicator column."""
+        """Show the row tooltip immediately over its inline indicators."""
         if not isinstance(event, QtGui.QMouseEvent):
             return False
         index = self.indexAt(event.pos())
-        if index.isValid() and index.column() == 1:
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = self.visualRect(index)
+        option.font = self.font()
+        option.direction = self.layoutDirection()
+        delegate = self.itemDelegateForColumn(0)
+        if index.isValid():
+            delegate.initStyleOption(option, index)
+        if index.isValid() and any(rect.contains(event.pos()) for rect in delegate.trailingIconRects(option, index)):
             item = self.itemFromIndex(index)
-            tooltip = item.toolTip(1) if item else ''
+            tooltip = item.toolTip(0) if item else ''
             if tooltip:
                 if self._last_notes_tooltip_item is not item:
                     QtWidgets.QToolTip.showText(self.viewport().mapToGlobal(event.pos()), tooltip, self.viewport())
@@ -2502,9 +2512,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_manager_list.clear()
         for _, item in enumerate(self.service_items):
             service_item_from_item = item['service_item']
-            transition_settings = self._get_service_item_transition_settings(service_item_from_item)
-            transition_enabled = self._service_item_supports_transition(service_item_from_item) and \
-                transition_settings.get('enabled', False)
             autoplay_loop_enabled = bool(service_item_from_item.auto_play_slides_loop)
             tree_widget_item = QtWidgets.QTreeWidgetItem(self.service_manager_list)
             self.tree_widget_items.append(tree_widget_item)
@@ -2516,13 +2523,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                    QtCore.Qt.TransformationMode.SmoothTransformation)
                 if service_item_from_item.notes:
                     painter = QtGui.QPainter(icon)
-                    if transition_enabled:
-                        transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
-                        transition_overlay = transition_overlay.scaled(
-                            30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                            QtCore.Qt.TransformationMode.SmoothTransformation
-                        )
-                        painter.drawImage(50, 50, transition_overlay)
                     if autoplay_loop_enabled:
                         sync_pixmap = UiIcons().sync.pixmap(30, 30)
                         sync_overlay = sync_pixmap.toImage()
@@ -2543,13 +2543,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                                              QtCore.Qt.TransformationMode.SmoothTransformation)
                     painter = QtGui.QPainter(icon)
                     painter.drawImage(40, 0, overlay)
-                    if transition_enabled:
-                        transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
-                        transition_overlay = transition_overlay.scaled(
-                            30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                            QtCore.Qt.TransformationMode.SmoothTransformation
-                        )
-                        painter.drawImage(50, 50, transition_overlay)
                     if autoplay_loop_enabled:
                         sync_pixmap = UiIcons().sync.pixmap(30, 30)
                         sync_overlay = sync_pixmap.toImage()
@@ -2564,30 +2557,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         painter.drawImage(20, 50, sync_overlay)
                     painter.end()
                     tree_widget_item.setIcon(0, build_icon(icon))
-                elif transition_enabled or autoplay_loop_enabled:
+                elif autoplay_loop_enabled:
                     painter = QtGui.QPainter(icon)
-                    if transition_enabled:
-                        transition_overlay = UiIcons().transition.pixmap(30, 30).toImage()
-                        transition_overlay = transition_overlay.scaled(
-                            30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                            QtCore.Qt.TransformationMode.SmoothTransformation
-                        )
-                        painter.drawImage(50, 50, transition_overlay)
                     if autoplay_loop_enabled:
                         sync_pixmap = UiIcons().sync.pixmap(30, 30)
-                        transition_pixmap = UiIcons().transition.pixmap(30, 30)
-                        sync_image = sync_pixmap.toImage()
-                        transition_image_for_count = transition_pixmap.toImage()
-                        sync_non_transparent = 0
-                        transition_non_transparent = 0
-                        for x in range(sync_image.width()):
-                            for y in range(sync_image.height()):
-                                if sync_image.pixelColor(x, y).alpha() > 0:
-                                    sync_non_transparent += 1
-                        for x in range(transition_image_for_count.width()):
-                            for y in range(transition_image_for_count.height()):
-                                if transition_image_for_count.pixelColor(x, y).alpha() > 0:
-                                    transition_non_transparent += 1
                         sync_overlay = sync_pixmap.toImage()
                         sync_overlay = sync_overlay.scaled(
                             30, 30, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -2607,7 +2580,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 tree_widget_item.setIcon(0, UiIcons().delete)
             title = service_item_from_item.get_display_title()
             tree_widget_item.setText(0, title)
-            tree_widget_item.setTextAlignment(1, int(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter))
+
             tips = []
             if service_item_from_item.temporary_edit:
                 text1 = translate('OpenLP.ServiceManager', 'Edit')
@@ -2627,7 +2600,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 for meta in item['service_item'].metadata:
                     tips.append(meta)
             tree_widget_item.setToolTip(0, '<br>'.join(tips))
-            self._update_indicator_widget(tree_widget_item, service_item_from_item, tips)
+            self._update_item_indicators(tree_widget_item, service_item_from_item, tips)
             tree_widget_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item['order'])
             tree_widget_item.setSelected(item['selected'] and not is_dragged_item)
             if is_dragged_item:
@@ -2680,9 +2653,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     def _render_service_item_row(self, item_data, tree_widget_item):
         """Render one top-level service row and its children into an existing QTreeWidgetItem."""
         service_item_from_item = item_data['service_item']
-        transition_settings = self._get_service_item_transition_settings(service_item_from_item)
-        transition_enabled = self._service_item_supports_transition(service_item_from_item) and \
-            transition_settings.get('enabled', False)
         autoplay_loop_enabled = bool(service_item_from_item.auto_play_slides_loop)
         is_dragged_item = item_data is self._internal_drag_item or item_data is self._external_drag_item
         if service_item_from_item.is_valid:
@@ -2741,7 +2711,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             tree_widget_item.setIcon(0, UiIcons().delete)
         title = service_item_from_item.get_display_title()
         tree_widget_item.setText(0, title)
-        tree_widget_item.setTextAlignment(1, int(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter))
+
         tips = []
         if service_item_from_item.temporary_edit:
             text1 = translate('OpenLP.ServiceManager', 'Edit')
@@ -2760,7 +2730,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             for meta in item_data['service_item'].metadata:
                 tips.append(meta)
         tree_widget_item.setToolTip(0, '<br>'.join(tips))
-        self._update_indicator_widget(tree_widget_item, service_item_from_item, tips)
+        self._update_item_indicators(tree_widget_item, service_item_from_item, tips)
         tree_widget_item.setSelected(item_data['selected'] and not is_dragged_item)
         if is_dragged_item:
             dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
@@ -2817,49 +2787,16 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     painter.end()
             child.setIcon(0, QtGui.QIcon(icon_pixmap))
 
-    def _update_indicator_widget(self, tree_widget_item, service_item, tips):
+    def _update_item_indicators(self, tree_widget_item, service_item, tips):
         transition_settings = self._get_service_item_transition_settings(service_item)
         transition_enabled = self._service_item_supports_transition(service_item) and \
             transition_settings.get('enabled', False)
-        has_notes = bool(service_item.notes)
-
-        if not has_notes and not transition_enabled:
-            self.service_manager_list.removeItemWidget(tree_widget_item, 1)
-            tree_widget_item.setToolTip(1, '')
-            return
-
-        # Create a container widget for Column 1
-        container = QtWidgets.QWidget(self.service_manager_list)
-        container.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 4, 0)
-        layout.setSpacing(4)
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-
-        icon_size = self.service_manager_list.iconSize()
-        if not icon_size.isValid() or icon_size.width() <= 0:
-            icon_size = QtCore.QSize(16, 16)
-
+        indicators = []
         if transition_enabled:
-            trans_label = QtWidgets.QLabel(container)
-            trans_label.setPixmap(UiIcons().transition.pixmap(icon_size))
-            trans_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-            trans_opacity = QtWidgets.QGraphicsOpacityEffect(trans_label)
-            trans_opacity.setOpacity(0.65)
-            trans_label.setGraphicsEffect(trans_opacity)
-            layout.addWidget(trans_label)
-
-        if has_notes:
-            notes_label = QtWidgets.QLabel(container)
-            notes_label.setPixmap(UiIcons().edit.pixmap(icon_size))
-            notes_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-            notes_opacity = QtWidgets.QGraphicsOpacityEffect(notes_label)
-            notes_opacity.setOpacity(0.65)
-            notes_label.setGraphicsEffect(notes_opacity)
-            layout.addWidget(notes_label)
-
-        self.service_manager_list.setItemWidget(tree_widget_item, 1, container)
-        tree_widget_item.setToolTip(1, '<br>'.join(tips))
+            indicators.append('shape_subtract')
+        if service_item.notes:
+            indicators.append('note')
+        tree_widget_item.setData(0, SERVICE_ITEM_INDICATORS_ROLE, indicators)
 
     def _refresh_tree_rows_from_service_items(self, start_index=0):
         """Update top-level order metadata and row styling after in-place list changes."""
@@ -3024,7 +2961,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             if replace < len(self.tree_widget_items):
                 tree_item = self.tree_widget_items[replace]
                 tree_item.takeChildren()
-                self.service_manager_list.removeItemWidget(tree_item, 1)
                 self._render_service_item_row(self.service_items[replace], tree_item)
                 self._refresh_tree_rows_from_service_items(replace)
             elif repaint:
@@ -3370,7 +3306,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if self._external_drag_highlight_index != -1 and self._external_drag_highlight_index < len(self.tree_widget_items):
             previous_item = self.tree_widget_items[self._external_drag_highlight_index]
             previous_item.setBackground(0, QtGui.QBrush())
-            previous_item.setBackground(1, QtGui.QBrush())
+
         self._external_drag_highlight_index = -1
         if not self.tree_widget_items:
             return
@@ -3382,7 +3318,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         highlight_color.setAlpha(60)
         highlight_brush = QtGui.QBrush(highlight_color)
         highlight_item.setBackground(0, highlight_brush)
-        highlight_item.setBackground(1, highlight_brush)
+
         self._external_drag_highlight_index = highlight_index
 
     def _clear_external_drag_highlight(self):
@@ -3391,7 +3327,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if self._external_drag_highlight_index < len(self.tree_widget_items):
             item = self.tree_widget_items[self._external_drag_highlight_index]
             item.setBackground(0, QtGui.QBrush())
-            item.setBackground(1, QtGui.QBrush())
+
         self._external_drag_highlight_index = -1
 
     def cancel_external_drag_preview(self):

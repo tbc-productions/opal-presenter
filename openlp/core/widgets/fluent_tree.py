@@ -38,6 +38,38 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         left = option.rect.right() - 31 if rtl else option.rect.left() + 12
         return QtCore.QRectF(left, option.rect.top() + 2, 20, option.rect.height() - 4)
 
+    def trailingIcons(self, index):
+        return []
+
+    def _text_layout(self, option, index):
+        background = self._background_rect(option)
+        rtl = option.direction == QtCore.Qt.LayoutDirection.RightToLeft
+        chevron = self._chevron_rect(option)
+        icon_size = self.iconSize(option, index)
+        icon_left = chevron.left() - icon_size.width() - 4 if rtl else chevron.right() + 4
+        left = background.left() + 8 if rtl else icon_left + icon_size.width() + 6
+        right = icon_left - 6 if rtl else background.right() - 8
+        icons = self.trailingIcons(index)
+        extent, gap = 16, 6
+        available = max(0, right - left - len(icons) * (extent + gap))
+        metrics = QtGui.QFontMetrics(option.font)
+        text = metrics.elidedText(str(index.data(QtCore.Qt.ItemDataRole.DisplayRole) or ''),
+                                 QtCore.Qt.TextElideMode.ElideLeft if rtl else QtCore.Qt.TextElideMode.ElideRight,
+                                 int(available))
+        width = min(available, metrics.horizontalAdvance(text))
+        text_rect = QtCore.QRectF(right - available if rtl else left, background.top(),
+                                 available, background.height())
+        edge = right - width if rtl else left + width
+        rectangles = []
+        for icon in icons:
+            x = edge - gap - extent if rtl else edge + gap
+            rectangles.append(QtCore.QRectF(x, background.center().y() - extent / 2, extent, extent))
+            edge = x if rtl else x + extent
+        return text, text_rect, icons, rectangles
+
+    def trailingIconRects(self, option, index):
+        return self._text_layout(option, index)[3]
+
     def paint(self, painter, option, index):
         colors = self._theme_host.theme_tokens().colors
         enabled = bool(option.state & QtWidgets.QStyle.StateFlag.State_Enabled)
@@ -73,22 +105,19 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         icon_size = self.iconSize(option, index)
         icon_left = chevron.left() - icon_size.width() - 4 if rtl else chevron.right() + 4
         icon_rect = QtCore.QRectF(icon_left, background.center().y() - icon_size.height() / 2,
-                                 icon_size.width(), icon_size.height())
+                                  icon_size.width(), icon_size.height())
         icon = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
         if isinstance(icon, QtGui.QIcon):
             icon.paint(painter, icon_rect.toRect(), QtCore.Qt.AlignmentFlag.AlignCenter,
                        QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled)
-        text_left = background.left() + 8 if rtl else icon_rect.right() + 6
-        text_right = icon_rect.left() - 6 if rtl else background.right() - 8
-        text_rect = QtCore.QRectF(text_left, background.top(), max(0, text_right - text_left), background.height())
+        text, text_rect, trailing_icons, trailing_rects = self._text_layout(option, index)
         painter.setFont(option.font)
         painter.setPen(text_color)
-        text = str(index.data(QtCore.Qt.ItemDataRole.DisplayRole) or '')
-        text = painter.fontMetrics().elidedText(
-            text, QtCore.Qt.TextElideMode.ElideLeft if rtl else QtCore.Qt.TextElideMode.ElideRight,
-            int(text_rect.width()))
         alignment = QtCore.Qt.AlignmentFlag.AlignRight if rtl else QtCore.Qt.AlignmentFlag.AlignLeft
         painter.drawText(text_rect, alignment | QtCore.Qt.AlignmentFlag.AlignVCenter, text)
+        for icon, rect in zip(trailing_icons, trailing_rects):
+            icon.paint(painter, rect.toRect(), QtCore.Qt.AlignmentFlag.AlignCenter,
+                       QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled)
         painter.restore()
 
     def editorEvent(self, event, model, option, index):
