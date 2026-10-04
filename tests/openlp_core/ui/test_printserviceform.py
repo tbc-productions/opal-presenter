@@ -200,3 +200,20 @@ def test_print_output_preserves_formatting_without_markers(print_form, song_item
     assert '{' not in print_form.main_window.clipboard.setText.call_args.args[0]
     print_form.copy_html_text()
     assert 'font-weight:700' in print_form.main_window.clipboard.setText.call_args.args[0]
+
+
+def test_service_item_details_are_indented(print_form, song_item):
+    """Printed and copied HTML keep the title above its associated child content."""
+    song_item.notes = 'Congregation stands.'
+    song_item.footer_html = 'Song title<br>Public domain'
+    print_form.notes_check_box.setChecked(True)
+    for document in (print_form.document, print_form.clipboard_document):
+        title_block = document.find('Amazing Grace').block()
+        for text in ('Amazing grace', 'Public domain', 'Congregation stands.'):
+            child_block = document.find(text, 0, QtGui.QTextDocument.FindFlag.FindCaseSensitively).block()
+            assert child_block.blockFormat().leftMargin() == title_block.blockFormat().leftMargin() + 16
+        assert 'margin-left:16px' in document.toHtml()
+    print_form.copy_text()
+    copied = print_form.main_window.clipboard.setText.call_args.args[0]
+    assert '\n\n  Amazing grace' in copied
+    assert '\n\n  Notes: Congregation stands.' in copied

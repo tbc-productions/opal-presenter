@@ -89,3 +89,28 @@ def prepare_print_document(document, html_source):
                     cell_format.setBackground(QtGui.QColor('white'))
                     cell.setFormat(cell_format)
         frames.extend(frame.childFrames())
+
+
+def plain_print_text(document):
+    """Retain the service sheet hierarchy when copying to unformatted text."""
+    plain_document = document.clone()
+    children = []
+    block = plain_document.begin()
+    while block.isValid():
+        cursor = QtGui.QTextCursor(block)
+        indented = block.blockFormat().leftMargin() >= 16 or block.textList() is not None
+        frame = cursor.currentFrame()
+        while frame is not None:
+            indented |= frame.frameFormat().leftMargin() >= 16
+            frame = frame.parentFrame()
+        if indented and block.text():
+            children.append((block.position(), block.text()))
+        block = block.next()
+    for position, text in reversed(children):
+        cursor = QtGui.QTextCursor(plain_document)
+        cursor.setPosition(position)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfBlock, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        cursor.insertText('  ' + text.replace('\u2028', '\u2028  '))
+    cursor = QtGui.QTextCursor(plain_document)
+    cursor.select(QtGui.QTextCursor.SelectionType.Document)
+    return cursor.selectedText()

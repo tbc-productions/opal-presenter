@@ -33,7 +33,7 @@ from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.lib import get_text_file_string
-from openlp.core.lib.serviceprint import prepare_print_document, render_print_text
+from openlp.core.lib.serviceprint import plain_print_text, prepare_print_document, render_print_text
 from openlp.core.ui.fluenticons import FluentIconEngine
 from openlp.core.ui.printservicedialog import Ui_PrintServiceDialog, ZoomSize
 
@@ -273,6 +273,7 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
             icon.set('style', 'font-family: "{family}"; font-weight: normal;'.format(family=engine.family))
             icon.set('data-unicode', unicode_icon)
         self._add_element('span', ' ' + render_print_text(html.escape(item.get_display_title())), item_title)
+        details = self._add_element('div', class_id='itemDetails', attribute=('style', 'margin-left: 16px;'))
         if self.slide_text_check_box.isChecked():
             # Add the text of the service item.
             if item.is_text():
@@ -281,7 +282,7 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
                 for slide in item.print_slides:
                     slide_text = render_print_text(slide['text']).replace('\n', '<br>')
                     if not verse_def or verse_def != slide['verse'] or verse_html == slide_text:
-                        text_div = self._add_element('div', parent=div, class_id='itemText')
+                        text_div = self._add_element('div', parent=details, class_id='itemText')
                     elif 'chordspacing' not in slide_text:
                         self._add_element('br', parent=text_div)
                     self._add_element('span', slide_text, text_div)
@@ -292,7 +293,7 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
                     div.set('class', 'item newPage')
             # Add the image names of the service item.
             elif item.is_image():
-                ol = self._add_element('ol', parent=div, class_id='imageList')
+                ol = self._add_element('ol', parent=details, class_id='imageList')
                 for slide in range(len(item.get_frames())):
                     self._add_element('li', item.get_frame_title(slide), ol)
             # add footer
@@ -300,11 +301,11 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
             footer_html = footer_html.partition('<br>')[2]
             if footer_html:
                 footer_html = render_print_text(html.escape(footer_html.replace('<br>', '\n')))
-                self._add_element('div', footer_html.replace('\n', '<br>'), parent=div, class_id='itemFooter')
+                self._add_element('div', footer_html.replace('\n', '<br>'), parent=details, class_id='itemFooter')
         # Add service items' notes.
         if self.notes_check_box.isChecked():
             if item.notes:
-                p = self._add_element('div', class_id='itemNotes', parent=div)
+                p = self._add_element('div', class_id='itemNotes', parent=details)
                 self._add_element('span', translate('OpenLP.ServiceManager', 'Notes: '), p, class_id='itemNotesTitle')
                 self._add_element('span', render_print_text(html.escape(item.notes)).replace('\n', '<br>'),
                                   p, class_id='itemNotesText')
@@ -313,10 +314,13 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
             tme = item.media_length
             if item.end_time > 0:
                 tme = item.end_time - item.start_time
-            title = self._add_element('div', class_id='media', parent=div)
+            title = self._add_element('div', class_id='media', parent=details)
             self._add_element(
                 'span', translate('OpenLP.ServiceManager', 'Playing time: '), title, class_id='mediaTitle')
             self._add_element('span', str(datetime.timedelta(seconds=tme)), title, class_id='mediaText')
+
+        if len(details):
+            div.append(details)
 
     def _add_element(self, tag, text=None, parent=None, class_id=None, attribute=None):
         """
@@ -379,9 +383,7 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
         Copies the display text to the clipboard as plain text
         """
         self.update_song_usage()
-        cursor = QtGui.QTextCursor(self.clipboard_document)
-        cursor.select(QtGui.QTextCursor.SelectionType.Document)
-        clipboard_text = cursor.selectedText()
+        clipboard_text = plain_print_text(self.clipboard_document)
         # We now have the unprocessed unicode service text in the cursor
         # So we replace u2028 with \n and u2029 with \n\n and a few others
         clipboard_text = clipboard_text.replace('\u2028', '\n')
