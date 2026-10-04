@@ -324,9 +324,9 @@ class ServiceItem(RegistryProperties):
         if not self._print_slides:
             self._print_slides = []
             previous_pages = {}
-            index = 0
-            for raw_slide in self.slides:
-                verse_tag = raw_slide.get('verse', str(index + 1))
+            for index, raw_slide in enumerate(self.slides):
+                default_verse = f'v{index + 1}' if self.name == 'songs' else str(index + 1)
+                verse_tag = raw_slide.get('verse') or default_verse
                 if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                     pages = previous_pages[verse_tag][1]
                 else:
@@ -336,7 +336,7 @@ class ServiceItem(RegistryProperties):
                     slide = {
                         'title': raw_slide['title'],
                         'text': render_print_text(page.replace('\n', '{br}'), render_chords=True),
-                        'verse': index,
+                        'verse': verse_tag,
                         'footer': self.raw_footer,
                     }
                     self._print_slides.append(slide)

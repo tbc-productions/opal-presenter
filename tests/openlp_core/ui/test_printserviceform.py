@@ -27,6 +27,7 @@ from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 import fluentqt
 
 from openlp.core.ui.printserviceform import PrintServiceForm, SERVICE_ICONS
+from openlp.core.lib import ItemCapabilities
 from openlp.core.lib.serviceprint import white_contrast
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.common.enum import ServiceItemType
@@ -215,5 +216,78 @@ def test_service_item_details_are_indented(print_form, song_item):
         assert 'margin-left:16px' in document.toHtml()
     print_form.copy_text()
     copied = print_form.main_window.clipboard.setText.call_args.args[0]
-    assert '\n\n  Amazing grace' in copied
+    assert '\n  Amazing grace' in copied
     assert '\n\n  Notes: Congregation stands.' in copied
+
+
+@pytest.mark.parametrize('slide_type', [ServiceItemType.Text, ServiceItemType.Image, ServiceItemType.Command])
+def test_presentations_exclude_slide_content_but_keep_notes(print_form, song_item, slide_type):
+    song_item.name = 'presentations'
+    song_item.service_item_type = slide_type
+    song_item.title = 'Sermon presentation'
+    song_item.notes = 'Speaker notes stay visible.'
+    song_item.slides = [
+        {'title': 'Slide 1.png', 'text': 'Presentation slide text must not appear.', 'verse': '1'},
+        {'title': 'Slide 2.png', 'text': 'More presentation slide text.', 'verse': '2'}
+    ]
+    song_item._print_slides = None
+    print_form.notes_check_box.setChecked(True)
+    print_form.update_preview_text()
+    for document in (print_form.document, print_form.clipboard_document):
+        output = document.toPlainText()
+        assert 'Sermon presentation' in output and 'Speaker notes stay visible.' in output
+        assert 'Presentation slide text' not in output and 'Slide 1.png' not in output
+        assert 'Slide 2.png' not in output
+
+
+def test_song_sections_are_bold_and_follow_verse_order(print_form, song_item):
+    song_item.slides = [
+        {'title': 'Verse', 'text': 'Verse lyric', 'verse': 'v1'},
+        {'title': 'Chorus', 'text': 'Chorus lyric', 'verse': 'c1'},
+        {'title': 'Verse again', 'text': 'Verse lyric', 'verse': 'v1'},
+        {'title': 'Bridge', 'text': 'Bridge lyric', 'verse': 'b2'}
+    ]
+    song_item._print_slides = None
+    print_form.update_preview_text()
+    assert [slide['verse'] for slide in song_item.print_slides] == ['v1', 'c1', 'v1', 'b2']
+    for document in (print_form.document, print_form.clipboard_document):
+        output = document.toPlainText()
+        assert output.count('Verse 1') == 2
+        assert output.index('Verse 1') < output.index('Chorus 1') < output.rindex('Verse 1') < output.index('Bridge 2')
+        for label in ('Verse 1', 'Chorus 1', 'Bridge 2'):
+            assert document.find(label).charFormat().fontWeight() >= QtGui.QFont.Weight.Bold
+    print_form.slide_text_check_box.setChecked(False)
+    assert 'Verse 1' not in print_form.document.toPlainText()
+
+
+def test_split_song_pages_share_one_section_heading(print_form, song_item):
+    Registry().get('renderer').format_slide.return_value = ['First half', 'Second half']
+    Registry().get('renderer').format_slide.side_effect = None
+    song_item._print_slides = None
+    print_form.update_preview_text()
+    output = print_form.document.toPlainText()
+    assert output.count('Verse 1') == 1
+    assert 'First half' in output and 'Second half' in output
+
+
+@pytest.mark.parametrize('length,start,end,expected', [
+    (260000, 0, 0, '00:04:20'),
+    (260000, 30000, 0, '00:03:50'),
+    (260000, 30000, 90000, '00:01:00'),
+    (260000, 30000, 300000, '00:03:50'),
+    (260000, 90000, 30000, '00:00:00'),
+    (0, 0, 0, '00:00:00'),
+])
+def test_media_playback_time_uses_milliseconds(print_form, song_item, length, start, end, expected):
+    song_item.name = 'media'
+    song_item.service_item_type = ServiceItemType.Command
+    song_item.add_capability(ItemCapabilities.RequiresMedia)
+    song_item.media_length = length
+    song_item.start_time = start
+    song_item.end_time = end
+    print_form.meta_data_check_box.setChecked(True)
+    print_form.update_preview_text()
+    for document in (print_form.document, print_form.clipboard_document):
+        output = document.toPlainText()
+        assert 'Playing time: ' + expected in output
+        assert 'day' not in output
