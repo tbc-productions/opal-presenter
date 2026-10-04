@@ -34,7 +34,8 @@ from openlp.core.common.path import path_to_str
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter, FormattingTagDelegate
+from openlp.core.widgets.edits import (
+    PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter, FormattingTagDelegate)
 from openlp.core.widgets.enums import PathEditType
 
 
@@ -1152,6 +1153,102 @@ def test_spell_text_edit_undo_action_reverts_text(mock_settings):
     assert editor.toPlainText() == ''
 
 
+def test_fluent_editor_keyboard_formatting_uses_saved_tags(settings, qtbot):
+    """Native rich-text shortcuts must produce OpenLP tags that survive saving."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    assert isinstance(editor._input, fluentqt.TextEdit)
+    assert isinstance(editor._editor, QtWidgets.QTextEdit)
+    editor.setPlainText('Hello')
+    editor.selectAll()
+    QtTest.QTest.keySequence(editor._editor, QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Bold))
+    assert editor.toPlainText() == '{st}Hello{/st}'
+    editor.undo()
+    assert editor.toPlainText() == 'Hello'
+    editor.redo()
+    assert editor.toPlainText() == '{st}Hello{/st}'
+
+
+def test_fluent_editor_source_toggle_preserves_redo(settings, qtbot):
+    """Switching the presentation must not discard edits waiting to be redone."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    source = '---[Verse:1]---\n{st}Lyrics{/st}'
+    editor.setPlainText(source)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.insertPlainText(' added')
+    editor.undo()
+    editor.set_rich_text_mode(False)
+    assert editor.document().isRedoAvailable()
+    editor.redo()
+    assert editor.toPlainText() == source + ' added'
+    editor.set_rich_text_mode(True)
+    editor.undo()
+    assert editor.toPlainText() == source
+
+
+def test_fluent_editor_resize_fills_field_without_changing_undo(settings, qtbot):
+    """Dialog resizing must fill the input area without becoming a source edit."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(650, 350)
+    editor.show()
+    source = '---[Verse:1]---\nLyrics'
+    editor.setPlainText(source)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.insertPlainText(' added')
+    editor.resize(850, 500)
+    QtWidgets.QApplication.processEvents()
+    assert editor._input.geometry().bottom() == editor.contentsRect().bottom()
+    editor.undo()
+    assert editor.toPlainText() == source
+    editor.resize(700, 380)
+    QtWidgets.QApplication.processEvents()
+    assert editor.document().isRedoAvailable()
+    editor.redo()
+    assert editor.toPlainText() == source + ' added'
+
+
+@pytest.mark.parametrize('visual_mode_only', [False, True])
+def test_fluent_editor_theme_refresh_fills_container(settings, qtbot, visual_mode_only):
+    """Fluent theme refreshes must not clamp song/custom editors to their line-count height."""
+    editor = SpellTextEdit(visual_mode_only=visual_mode_only)
+    qtbot.addWidget(editor)
+    editor.resize(900, 650)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    editor.show()
+    QtWidgets.QApplication.processEvents()
+
+    editor._input.onThemeUpdated()
+
+    qtbot.waitUntil(lambda: editor._input.geometry().bottom() == editor.contentsRect().bottom())
+    assert editor._editor.geometry() == editor._input.rect().adjusted(
+        1, 1, -1, -1 - editor.BOTTOM_PADDING)
+    assert editor._input.maximumHeight() >= editor.height()
+    assert editor.verticalScrollBar().height() == editor._input.height() - 2
+
+
+def test_fluent_editor_section_background_preserves_border_and_bottom_padding(settings, qtbot):
+    """Section bands leave the border visible and scrolling the last line retains bottom padding."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(700, 400)
+    editor.setPlainText('---[Verse:1]---\n' + '\n'.join(f'Lyrics {row}' for row in range(100)))
+    editor.set_visual_line_overrides({0: {'text': 'Verse 1', 'background': QtGui.QColor('#c6e6ff')}})
+    editor.show()
+    QtWidgets.QApplication.processEvents()
+    pixels = editor._input.grab().toImage()
+
+    assert pixels.pixelColor(0, 10) != pixels.pixelColor(2, 10)
+    assert pixels.pixelColor(0, 10) == pixels.pixelColor(0, 40)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.ensureCursorVisible()
+    QtWidgets.QApplication.processEvents()
+    cursor_bottom = editor.viewport().mapTo(editor._input, editor.cursorRect().bottomLeft()).y()
+    assert editor._input.rect().bottom() - cursor_bottom >= editor.BOTTOM_PADDING
+    assert editor.verticalScrollBar().value() == editor.verticalScrollBar().maximum()
+
+
 def test_spell_text_edit_toggle_off_formatting_preserves_content(mock_settings):
     """Toggling off formatting should remove only tokens, never the wrapped text."""
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
@@ -1430,3 +1527,25 @@ def test_formatting_header_spans_row_above_scrollbar(mock_settings, qtbot, width
         assert editor.verticalScrollBar().mapTo(editor, QtCore.QPoint()).y() > header.geometry().bottom()
     finally:
         window.close()
+
+
+def test_fluent_scrollbar_stays_visible_with_overflow(mock_settings, qtbot):
+    """Leaving an overflowing editor and waiting must not fade its Fluent rail."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(650, 320)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    editor.show()
+    scrollbar = editor.verticalScrollBar()
+    qtbot.waitUntil(lambda: scrollbar.isVisible())
+    scrollbar.setValue(scrollbar.maximum())
+    QtWidgets.QApplication.sendEvent(editor._input, QtCore.QEvent(QtCore.QEvent.Type.Leave))
+    QtWidgets.QApplication.sendEvent(scrollbar, QtCore.QEvent(QtCore.QEvent.Type.Leave))
+    qtbot.wait(1800)
+
+    assert scrollbar.isVisible()
+    assert scrollbar.opacity() == 1.0
+    assert editor._editor.verticalScrollBar().value() == scrollbar.maximum()
+
+    editor.setPlainText('One line')
+    qtbot.waitUntil(lambda: not scrollbar.isVisible())

@@ -214,6 +214,19 @@ def test_copyright_edit_shows_four_lines(form: EditSongForm):
     assert form.copyright_text_edit.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
 
 
+def test_copyright_edit_uses_normal_line_spacing(form: EditSongForm):
+    """Wrapped copyright text uses the font's line spacing rather than Fluent's large default."""
+    editor = form.copyright_text_edit
+    form.copyright_edit.setPlainText('Copyright publisher ' * 40)
+    editor.document().setTextWidth(250)
+    editor.document().documentLayout().documentSize()
+    layout = editor.document().firstBlock().layout()
+
+    assert form.copyright_edit.lineHeight() == editor.fontMetrics().lineSpacing()
+    assert layout.lineCount() > 1
+    assert layout.lineAt(1).y() - layout.lineAt(0).y() == editor.fontMetrics().lineSpacing()
+
+
 def test_on_copyright_insert_button_triggered_inserts_symbol_at_cursor(form: EditSongForm):
     """The copyright insert button should insert the symbol at the current cursor position."""
     assert not form.copyright_insert_button.icon().isNull()

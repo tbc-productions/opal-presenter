@@ -319,6 +319,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         # Use the native editor for cursor operations and copyright key filtering.
         self.copyright_text_edit = self.copyright_edit.findChild(QtWidgets.QTextEdit)
+        self.copyright_edit.setLineHeight(self.copyright_text_edit.fontMetrics().lineSpacing())
         self.copyright_text_edit.setAcceptRichText(False)
         self.copyright_text_edit.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.WidgetWidth)
         self.copyright_text_edit.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

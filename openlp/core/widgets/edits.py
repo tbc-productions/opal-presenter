@@ -537,12 +537,16 @@ class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):
         return QtCore.QSize(size.width() + 56, max(36, size.height() + 8))
 
 
-class SpellTextEdit(QtWidgets.QPlainTextEdit):
+class SpellTextEdit(QtWidgets.QWidget):
     """
-    Spell checking widget based on QPlanTextEdit.
+    Fluent TextEdit with OpenLP's tagged-source formatting and spell checking.
 
     Based on code from http://john.nachtimwald.com/2009/08/22/qplaintextedit-with-in-line-spell-check
     """
+    TEXT_INSET = 10
+    BOTTOM_PADDING = Spacing.Small
+    LABEL_PADDING = Spacing.Small // 2
+    LABEL_MARGIN = Spacing.Small
     SECTION_BOUNDARY_LINE_REGEX = re.compile(
         r'(?m)^\s*(?:\[(?:---|===|--}\{--)\]|---\[(?:.+?)(?::.*)?\]---)\s*$')
 
@@ -552,21 +556,50 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         global ENCHANT_AVAILABLE
         super(SpellTextEdit, self).__init__(parent)
+        self._toolbar = None
+        self._input = fluentqt.TextEdit(self, contentMargins=QtCore.QMargins(0, 0, 0, 0))
+        self._editor = self._input.findChild(QtWidgets.QTextEdit)
+        # Fluent's automatic line-height pass would overwrite section spacing
+        # and create extra undo commands. This adapter owns those block formats
+        # and sizes the control to the resizable editor area instead.
+        self._editor.textChanged.disconnect()
+        QtCore.QObject.disconnect(
+            self._editor.document().documentLayout(),
+            QtCore.SIGNAL('documentSizeChanged(QSizeF)'), self._input, None)
+        self._editor.textChanged.connect(self._input.update)
+        self._viewport = self._editor.viewport()
+        self._editor.setAcceptRichText(False)
+        self._editor.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._editor.installEventFilter(self)
+        self._editor.viewport().installEventFilter(self)
+        self._input.installEventFilter(self)
+        self._input.verticalScrollBar().installEventFilter(self)
+        self._input.setMinimumHeight(0)
+        self._input.setMaximumHeight(16777215)
+        self._editor.verticalScrollBar().rangeChanged.connect(self._sync_vertical_scrollbar)
+        self.setFocusProxy(self._editor)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         self.formatting_tags_allowed = formatting_tags_allowed
         self.visual_mode_only = visual_mode_only
         self.rich_text_mode = formatting_tags_allowed
+        self._visual_line_overrides = {}
+        self._updating_block_formats = False
+        self.document().setDocumentMargin(0)
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
         self.highlighter = Highlighter(self.document(), formatting_tags_allowed=self.formatting_tags_allowed)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
-        self._toolbar = None
         self._mode_switch = None
         self._tag_actions = {}       # maps start tag token → QAction for toolbar state tracking
         self._color_tags = []
         self._updating_custom_formatting = False
         self._color_action_ends = {}  # maps start_tag → end_tag for color toggle logic
         self._formatting_tag_form = None
-        self._visual_line_overrides = {}
         if self.formatting_tags_allowed:
             self._setup_formatting_toolbar()
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
+        self.textChanged.connect(self._refresh_block_formats)
         # Default dictionary based on the current locale.
         if ENCHANT_AVAILABLE:
             try:
@@ -575,6 +608,153 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             except (Error, DictNotFoundError):
                 ENCHANT_AVAILABLE = False
                 log.debug('Could not load default dictionary')
+
+    def __getattr__(self, name):
+        editor = self.__dict__.get('_editor')
+        if editor is not None:
+            return getattr(editor, name)
+        raise AttributeError(name)
+
+    def sizeHint(self):
+        return QtCore.QSize(600, 320)
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(200, 120)
+
+    def viewportMargins(self):
+        return QtCore.QMargins(0, self._toolbar.sizeHint().height() + 2 if self._toolbar else 0, 0, 0)
+
+    def frameWidth(self):
+        return 1
+
+    def verticalScrollBar(self):
+        return self._input.verticalScrollBar()
+
+    def _sync_vertical_scrollbar(self, *args):
+        native = self._editor.verticalScrollBar()
+        scrollbar = self._input.verticalScrollBar()
+        scrollbar.setRange(native.minimum(), native.maximum())
+        scrollbar.setPageStep(native.pageStep())
+        scrollbar.setValue(native.value())
+        scrollbar.setVisible(native.maximum() > native.minimum())
+        if scrollbar.isVisible():
+            scrollbar.setOpacity(1.0)
+
+    def setPlainText(self, text):
+        self._editor.setPlainText(text)
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
+
+    def blockBoundingRect(self, block):
+        if self.document().textWidth() <= 0:
+            self.document().setTextWidth(max(1, self._editor.viewport().width()))
+        self.document().documentLayout().documentSize()
+        rect = self.document().documentLayout().blockBoundingRect(block)
+        if block.blockFormat().lineHeightType() == QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight.value:
+            rect.setHeight(max(rect.height(), block.blockFormat().lineHeight()))
+        rect.setHeight(rect.height() + block.blockFormat().topMargin() + block.blockFormat().bottomMargin())
+        return rect
+
+    def _refresh_block_formats(self):
+        """Keep presentation formatting in the same undo step as the source edit."""
+        if self._updating_block_formats:
+            return
+        self._updating_block_formats = True
+        document = self.document()
+        cursor = QtGui.QTextCursor(document)
+        cursor.joinPreviousEditBlock()
+        block = document.begin()
+        try:
+            while block.isValid():
+                fmt = block.blockFormat()
+                desired = QtGui.QTextBlockFormat(fmt)
+                desired.setLeftMargin(self.TEXT_INSET)
+                desired.setRightMargin(self.TEXT_INSET)
+                # Section spacing is presentation shared by visual and source
+                # modes, so switching modes never changes the undo history.
+                label = bool(re.fullmatch(r'\s*---\[.+?\]---\s*', block.text()))
+                desired.setNonBreakableLines(label)
+                desired.setTopMargin(self.LABEL_MARGIN if label and block.blockNumber() else 0)
+                desired.setBottomMargin(0)
+                if label:
+                    desired.setLineHeight(self._editor.fontMetrics().lineSpacing() + 2 * self.LABEL_PADDING,
+                                          QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight.value)
+                else:
+                    desired.setLineHeight(100, QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+                if fmt != desired:
+                    cursor.setPosition(block.position())
+                    cursor.setBlockFormat(desired)
+                block = block.next()
+        finally:
+            cursor.endEditBlock()
+            self._updating_block_formats = False
+
+    def keyPressEvent(self, event):
+        if getattr(self, '_forwarding_key_event', False):
+            return super().keyPressEvent(event)
+        self._forwarding_key_event = True
+        try:
+            QtWidgets.QApplication.sendEvent(self._editor, event)
+        finally:
+            self._forwarding_key_event = False
+
+    def paste(self):
+        self.insertFromMimeData(QtWidgets.QApplication.clipboard().mimeData())
+
+    def createStandardContextMenu(self):
+        menu = self._editor.createStandardContextMenu()
+        for action in menu.actions():
+            if action.objectName() == 'edit-paste':
+                action.triggered.disconnect()
+                action.triggered.connect(self.paste)
+        return menu
+
+    def eventFilter(self, watched, event):
+        if watched == self._input.verticalScrollBar() and event.type() == QtCore.QEvent.Type.Paint:
+            # Fluent fades its rail after scrolling or leaving the field. It has
+            # no persistent-visibility setting, so keep the overflowing rail
+            # opaque and stop its fade animation before it is painted.
+            for animation in watched.findChildren(QtCore.QPropertyAnimation):
+                if animation.targetObject() == watched and animation.propertyName() == b'opacity':
+                    animation.stop()
+            if watched.opacity() != 1.0:
+                watched.setOpacity(1.0)
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.Resize:
+            QtWidgets.QTextEdit.resizeEvent(self._editor, event)
+            self._editor.setViewportMargins(0, 0, 0, 0)
+            return True
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.Show:
+            QtWidgets.QTextEdit.showEvent(self._editor, event)
+            self._editor.setViewportMargins(0, 0, 0, 0)
+            return True
+        if watched == self._input and event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show):
+            # The surrounding dialog supplies the height, rather than Fluent's
+            # automatic line-count sizing. Keep its editor and native rail.
+            self._layout_text_input()
+            if self._input.maximumHeight() != 16777215:
+                # Theme refreshes reapply Fluent's fixed line-count height.
+                # Restore the container geometry after that refresh finishes.
+                QtCore.QTimer.singleShot(0, self._position_formatting_toolbar)
+            return True
+        if watched == self._viewport and event.type() == QtCore.QEvent.Type.Paint:
+            QtWidgets.QTextEdit.paintEvent(self._editor, event)
+            self._paint_visual_markers(event)
+            return True
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.KeyPress:
+            if event.matches(QtGui.QKeySequence.StandardKey.Paste):
+                self.insertFromMimeData(QtWidgets.QApplication.clipboard().mimeData())
+                return True
+            for key, tag in ((QtGui.QKeySequence.StandardKey.Bold, 'st'),
+                             (QtGui.QKeySequence.StandardKey.Italic, 'it'),
+                             (QtGui.QKeySequence.StandardKey.Underline, 'u')):
+                if event.matches(key):
+                    if self.formatting_tags_allowed:
+                        self._apply_formatting_by_tag(tag)
+                    return True
+        if watched == self._viewport and event.type() == QtCore.QEvent.Type.ContextMenu:
+            self.contextMenuEvent(event)
+            return True
+        return super().eventFilter(watched, event)
 
     @staticmethod
     def split_marker_style_for_text(text):
@@ -691,8 +871,6 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._toolbar.layout().setStretch(self._toolbar.layout().count() - 1, 0)
         self._update_mode_switch()
 
-        toolbar_height = self._toolbar.sizeHint().height()
-        self.setViewportMargins(0, toolbar_height + 2, 0, 0)
         self._position_formatting_toolbar()
         self.cursorPositionChanged.connect(self._update_toolbar_state)
 
@@ -825,18 +1003,31 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         Keep the formatting toolbar positioned above the editable viewport.
         """
         super().resizeEvent(event)
-        if self._toolbar:
-            self._position_formatting_toolbar()
+        self._position_formatting_toolbar()
 
     def _position_formatting_toolbar(self):
         """Reserve the full header row while keeping the scrollbar below it."""
-        toolbar_height = self._toolbar.sizeHint().height()
+        toolbar_height = self._toolbar.sizeHint().height() + 2 if self._toolbar else 0
         rect = self.contentsRect()
-        self._toolbar.setGeometry(rect.x(), rect.y(), rect.width(), toolbar_height)
-        scrollbar_container = self.verticalScrollBar().parentWidget()
-        scrollbar_layout = scrollbar_container.layout()
-        scrollbar_layout.setContentsMargins(0, toolbar_height + 2, 0, 0)
-        self._toolbar.raise_()
+        if self._toolbar:
+            self._toolbar.setGeometry(rect.x(), rect.y(), rect.width(), toolbar_height - 2)
+            self._toolbar.raise_()
+        height = max(1, rect.height() - toolbar_height)
+        self._input.setMinimumHeight(0)
+        self._input.setMaximumHeight(16777215)
+        self._input.setGeometry(rect.x(), rect.y() + toolbar_height, rect.width(), height)
+        self._layout_text_input()
+
+    def _layout_text_input(self):
+        """Keep text and section backgrounds inside the Fluent border with bottom breathing room."""
+        border = self.frameWidth()
+        self._editor.setGeometry(self._input.rect().adjusted(
+            border, border, -border, -border - self.BOTTOM_PADDING))
+        scrollbar = self._input.verticalScrollBar()
+        width = scrollbar.sizeHint().width()
+        scrollbar.setGeometry(self._input.width() - width - border, border,
+                              width, max(1, self._input.height() - 2 * border))
+        self._sync_vertical_scrollbar()
 
     def set_rich_text_mode(self, enabled):
         """
@@ -848,6 +1039,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         self._update_toolbar_state()
         self.viewport().update()
         self.highlighter.rehighlight()
+        self._refresh_block_formats()
 
     def set_visual_line_overrides(self, overrides):
         """
@@ -856,6 +1048,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         :param overrides: Dict[int, str] where key is the document block number.
         """
         self._visual_line_overrides = overrides if isinstance(overrides, dict) else {}
+        self._refresh_block_formats()
         self.viewport().update()
 
     def reset_undo_redo_history(self):
@@ -1514,24 +1707,23 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         if cleaned_text != text:
             self.setPlainText(cleaned_text)
 
-    def paintEvent(self, event):
+    def _paint_visual_markers(self, event):
         """
         Draw visual split lines for split markers while keeping raw marker text in the document.
         """
-        super().paintEvent(event)
         if not self.rich_text_mode:
             return
         painter = QtGui.QPainter(self.viewport())
         pen_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
-        block = self.firstVisibleBlock()
-        offset = self.contentOffset()
+        block = self.document().begin()
+        offset = QtCore.QPointF(-self.horizontalScrollBar().value(), -self.verticalScrollBar().value())
         cursor = self.textCursor()
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
         while block.isValid():
-            geometry = self.blockBoundingGeometry(block).translated(offset)
+            geometry = self.document().documentLayout().blockBoundingRect(block).translated(offset)
             top = geometry.top()
-            bottom = top + self.blockBoundingRect(block).height()
+            bottom = geometry.bottom()
             if top > event.rect().bottom():
                 break
             if bottom >= event.rect().top():
@@ -1562,14 +1754,16 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                         override_color = None
                     if not isinstance(override_color, QtGui.QColor) or not override_color.isValid():
                         override_color = self.palette().color(QtGui.QPalette.ColorRole.Base)
-                    row_rect = QtCore.QRectF(0, top, self.viewport().width(), self.blockBoundingRect(block).height())
+                    height = max(geometry.height(), block.blockFormat().lineHeight())
+                    painter.fillRect(QtCore.QRectF(0, top, self.viewport().width(), height),
+                                     self.palette().brush(QtGui.QPalette.ColorRole.Base))
+                    row_rect = QtCore.QRectF(0, top, self.viewport().width(), height)
                     painter.fillRect(row_rect, QtGui.QBrush(override_color))
                     font = QtGui.QFont(self.font())
                     font.setBold(True)
                     painter.setFont(font)
                     painter.setPen(QtGui.QPen(pen_color))
-                    text_rect = QtCore.QRectF(10, top, self.viewport().width() - 20,
-                                              self.blockBoundingRect(block).height())
+                    text_rect = row_rect.adjusted(self.TEXT_INSET, 0, -self.TEXT_INSET, 0)
                     alignment = QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft
                     painter.drawText(text_rect, alignment, override_text)
             block = block.next()
@@ -1585,7 +1779,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                                       QtCore.Qt.MouseButton.LeftButton,
                                       QtCore.Qt.MouseButton.LeftButton,
                                       QtCore.Qt.KeyboardModifier.NoModifier)
-        QtWidgets.QPlainTextEdit.mousePressEvent(self, event)
+        QtWidgets.QTextEdit.mousePressEvent(self._editor, event)
 
     def contextMenuEvent(self, event):
         """
@@ -1934,6 +2128,11 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         """
         if not self.rich_text_mode:
             self.setCurrentBlockState(0)
+            return
+
+        if not text:
+            previous = self.previousBlockState()
+            self.setCurrentBlockState(previous if previous > 0 else 0)
             return
 
         split_style = SpellTextEdit.split_marker_style_for_text(text)

@@ -99,6 +99,10 @@ def test_custom_text_editor_fits_parent_with_padding(settings, qtbot):
     editor.show()
     qtbot.wait(50)
     try:
+        text_edit = editor.slide_text_edit
+        text_edit._input.onThemeUpdated()
+        qtbot.waitUntil(lambda: text_edit._input.geometry().bottom() == text_edit.contentsRect().bottom())
+        assert text_edit.height() > editor.height() // 2
         assert editor.isSizeGripEnabled()
         assert editor.width() >= 1000
         assert editor.height() == parent.height() - 48
