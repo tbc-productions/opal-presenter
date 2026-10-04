@@ -1142,12 +1142,84 @@ describe("Display.setTextSlides", function () {
 
 describe("Display.setImageSlides", function () {
   beforeEach(function() {
+    spyOn(Reveal, "configure");
+    Display._theme = null;
     document.body.innerHTML = "";
     var slides_container = _createDiv({"class": "slides"});
     var footer_container = _createDiv({"class": "footer"});
     Display._slidesContainer = slides_container;
     Display._footerContainer = footer_container;
     Display._slides = {};
+  });
+
+  ["contain", "cover", "stretch", "invalid"].forEach(function (mode) {
+    [false, true].forEach(function (fade) {
+      it("should preserve " + mode + " fit and logo colour with fade=" + fade, function () {
+        Display._theme = {background_fit: "cover", display_slide_transition: fade,
+          display_slide_transition_type: TransitionType.Fade};
+        spyOn(Reveal, "sync");
+        spyOn(Reveal, "slide");
+        Display.setImageSlides([{path: "file:///image.png"}], mode, "#123456");
+        var section = $(".slides > section > section")[0];
+        var resolvedMode = mode === "invalid" ? "contain" : mode;
+        if (fade) {
+          expect(section.getAttribute("data-background-size"))
+            .toEqual(resolvedMode === "stretch" ? "100% 100%" : resolvedMode);
+          expect(section.getAttribute("data-background-color")).toEqual("#123456");
+        } else {
+          expect(section.querySelector("img").style.objectFit)
+            .toEqual(resolvedMode === "stretch" ? "fill" : resolvedMode);
+          expect(section.style.backgroundColor).toEqual("rgb(18, 52, 86)");
+        }
+      });
+    });
+  });
+
+  it("should keep image fit when the theme reapplies background sizing", function () {
+    var reveal = _createDiv({"class": "reveal"});
+    reveal.appendChild(Display._slidesContainer);
+    var section = document.createElement("section");
+    section.classList.add("use-background-image");
+    Display._slidesContainer.appendChild(section);
+    var background = _createDiv({"class": "slide-background"}, reveal);
+    var content = _createDiv({"class": "slide-background-content"}, background);
+    content.style.backgroundSize = "contain";
+    content.style.backgroundRepeat = "no-repeat";
+    content.style.backgroundPosition = "50% 50%";
+    section.slideBackgroundElement = background;
+
+    _applyBackgroundFitToRenderedSlides(_resolveBackgroundFit("cover"));
+
+    expect(content.style.backgroundSize).toEqual("contain");
+    expect(content.style.backgroundPosition).toEqual("50% 50%");
+  });
+
+  [TransitionType.Slide, TransitionType.Zoom, TransitionType.Fade].forEach(function (transition) {
+    [BackgroundType.Solid, BackgroundType.Image, BackgroundType.Transparent].forEach(function (backgroundType) {
+      it("should keep the logo colour behind transitioning images with transition=" + transition +
+        " and theme background=" + backgroundType, function () {
+        spyOn(Reveal, "sync");
+        spyOn(Reveal, "slide");
+        Display._theme = {
+          display_slide_transition: true,
+          display_slide_transition_type: transition,
+          background_type: backgroundType,
+          background_color: "#000000",
+          background_filename: "file:///theme.jpg"
+        };
+
+        Display.setImageSlides([{path: "file:///one.png"}, {path: "file:///two.png"}], "contain", "#123456");
+        var canvas = Display._slidesContainer.firstElementChild;
+
+        expect(canvas.getAttribute("data-background")).toEqual("#123456");
+        expect(canvas.getAttribute("data-background-color")).toEqual("#123456");
+        expect(canvas.hasAttribute("data-background-image")).toBe(false);
+        Display.applyTheme(canvas, false);
+        expect(canvas.getAttribute("data-background")).toEqual("#123456");
+        expect(canvas.getAttribute("data-background-color")).toEqual("#123456");
+        expect(canvas.hasAttribute("data-background-image")).toBe(false);
+      });
+    });
   });
 
   it("should add a list of images", function () {
@@ -1204,7 +1276,7 @@ describe("Display.setImageSlides", function () {
     Display.setImageSlides(slides);
 
     expect($(".slides > section > section > img").length).toEqual(0);
-    expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBeTrue();
+    expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBe(true);
     expect($(".slides > section > section")[0].getAttribute("data-background-image"))
       .toEqual("openlp-library://local-file//openlp1.jpg");
     expect($(".slides > section > section")[0].getAttribute("data-background-size")).toEqual("cover");
@@ -1213,7 +1285,7 @@ describe("Display.setImageSlides", function () {
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
     expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toEqual("fade");
     expect($(".slides > section > section")[0].getAttribute("data-transition-speed")).toEqual("default");
-    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeTrue();
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBe(true);
     expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-ms")).toEqual("800ms");
     expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-easing")).toEqual("cubic-bezier(0.4, 0, 0.2, 1)");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
@@ -1235,7 +1307,7 @@ describe("Display.setImageSlides", function () {
 
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
     expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toBeNull();
-    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeFalse();
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBe(false);
   });
 
   it("should keep non-fade transitions on image slide content", function () {

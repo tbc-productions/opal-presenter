@@ -79,3 +79,23 @@ def test_save_tab_theme_mode_change(form):
         'Image Post processing should have been requested'
     # THEN: The theme should be set
     assert form.background_mode == ImageThemeMode.CustomTheme, 'The updated background mode should have been saved'
+
+
+def test_image_fit_defaults_to_contain(form):
+    assert form.image_fit_combo_box.currentData() == 'contain'
+
+
+@pytest.mark.parametrize('fit', ['contain', 'cover', 'stretch'])
+def test_image_fit_saved_and_reloaded(form, fit):
+    form.image_fit_combo_box.setCurrentIndex(form.image_fit_combo_box.findData(fit))
+    form.save()
+    assert form.settings.value('images/fit') == fit
+    assert form.settings_form.register_post_process.call_count == (fit != 'contain')
+    form.load()
+    assert form.image_fit_combo_box.currentData() == fit
+
+
+def test_invalid_image_fit_falls_back_to_contain(form):
+    form.settings.setValue('images/fit', 'unknown')
+    form.load()
+    assert form.image_fit_combo_box.currentData() == 'contain'

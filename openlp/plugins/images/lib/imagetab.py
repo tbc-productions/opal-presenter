@@ -60,6 +60,15 @@ class ImageTab(SettingsTab):
         self.image_theme_group_box_layout.addRow(self.image_theme_label, self.theme_combo_box)
         # Add all to layout
         self.left_layout.addWidget(self.image_theme_group_box)
+        self.image_fit_group_box = QtWidgets.QGroupBox(self.left_column)
+        self.image_fit_layout = QtWidgets.QFormLayout(self.image_fit_group_box)
+        self.image_fit_combo_box = QtWidgets.QComboBox(self.image_fit_group_box)
+        for fit in ('contain', 'cover', 'stretch'):
+            self.image_fit_combo_box.addItem('', fit)
+        self.image_fit_label = QtWidgets.QLabel(self.image_fit_group_box)
+        self.image_fit_label.setBuddy(self.image_fit_combo_box)
+        self.image_fit_layout.addRow(self.image_fit_label, self.image_fit_combo_box)
+        self.left_layout.addWidget(self.image_fit_group_box)
         self.left_layout.addStretch()
         self.right_column.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.right_layout.addStretch()
@@ -73,6 +82,14 @@ class ImageTab(SettingsTab):
         self.use_black_radio.setText(translate('ImagesPlugin.ImageTab', 'Use blank theme'))
         self.custom_theme_radio.setText(translate('ImagesPlugin.ImageTab', 'Custom theme'))
         self.image_theme_label.setText(translate('ImagesPlugin.ImageTab', 'Theme:'))
+        self.image_fit_group_box.setTitle(translate('ImagesPlugin.ImageTab', 'Image Sizing'))
+        self.image_fit_label.setText(translate('ImagesPlugin.ImageTab', 'Fit:'))
+        for index, label in enumerate(('Contain', 'Cover', 'Stretch')):
+            self.image_fit_combo_box.setItemText(index, translate('ImagesPlugin.ImageTab', label))
+        self.image_fit_combo_box.setToolTip(translate(
+            'ImagesPlugin.ImageTab',
+            'Contain centres the whole image. Cover zooms to fill the display. Stretch fills the display '
+            'without preserving the aspect ratio. Unfilled areas use the logo background colour.'))
 
     def on_radio_group_button_toggled(self, button, checked):
         """
@@ -114,9 +131,15 @@ class ImageTab(SettingsTab):
         checked_radio.setChecked(True)
         self.image_theme = self.settings.value('images/theme')
         self.initial_theme = self.image_theme
+        fit_index = self.image_fit_combo_box.findData(self.settings.value('images/fit'))
+        self.image_fit_combo_box.setCurrentIndex(max(0, fit_index))
+        self.initial_fit = self.image_fit_combo_box.currentData()
 
     def save(self):
         self.settings.setValue('images/background mode', self.radio_group.checkedId())
         self.settings.setValue('images/theme', self.image_theme)
-        if self.initial_theme != self.image_theme or self.initial_mode != self.background_mode:
+        image_fit = self.image_fit_combo_box.currentData()
+        self.settings.setValue('images/fit', image_fit)
+        if (self.initial_theme != self.image_theme or self.initial_mode != self.background_mode or
+                self.initial_fit != image_fit):
             self.settings_form.register_post_process('images_config_updated')

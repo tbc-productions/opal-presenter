@@ -403,7 +403,14 @@ function _ensureLayoutGuideOverlay() {
  * @param {{size: string, repeat: string}} fit - Resolved fit settings
  */
 function _applyBackgroundFitToRenderedSlides(fit) {
+  var imageBackgrounds = new Set($(".reveal section.use-background-image").map(function (section) {
+    return section.slideBackgroundElement;
+  }));
   $(".reveal .slide-background").forEach(function (background) {
+    // Image and PDF slides already carry their own fit, independent of the theme.
+    if (imageBackgrounds.has(background)) {
+      return;
+    }
     var backgroundContent = background.querySelector(".slide-background-content");
     if (!backgroundContent) {
       return;
@@ -1335,11 +1342,15 @@ var Display = {
   /**
    * Set image slides
    * @param {Object[]} slides - A list of images to add as JS objects [{"path": "url/to/file"}]
+   * @param {string} imageFitMode - contain (default), cover or stretch
+   * @param {string} backgroundColor - Logo background colour for image margins
    */
-  setImageSlides: function (slides) {
+  setImageSlides: function (slides, imageFitMode, backgroundColor) {
     Display._clearSlidesList();
     var parentSection = document.createElement("section");
-    var imageFit = _resolveBackgroundFit("contain");
+    var imageFit = _resolveBackgroundFit(
+      ["contain", "cover", "stretch"].includes(imageFitMode) ? imageFitMode : "contain"
+    );
     var themeTransitionType = TransitionType.Fade;
     var themeTransitionsEnabled = false;
     if (Display._theme) {
@@ -1361,6 +1372,11 @@ var Display = {
       );
     } else {
       Display._setPresentationSlideTransition(false);
+      // The stack background stays in place while individual image sections
+      // move during slide/zoom transitions, filling the exposed canvas.
+      parentSection.setAttribute("data-image-canvas-color", backgroundColor || "#000");
+      parentSection.setAttribute("data-background", backgroundColor || "#000");
+      parentSection.setAttribute("data-background-color", backgroundColor || "#000");
     }
     slides.forEach(function (slide, index) {
       var section = document.createElement("section");
@@ -1387,7 +1403,7 @@ var Display = {
           section.setAttribute("data-transition", "none");
         }
       } else {
-        _applyImageSlideContent(section, imageUrl, useNativeBackgroundForImageSlides, imageFit);
+        _applyImageSlideContent(section, imageUrl, useNativeBackgroundForImageSlides, imageFit, backgroundColor);
         if (useNativeBackgroundForImageSlides) {
           section.setAttribute("data-transition", "none");
           section.setAttribute("data-background-transition", "fade");
@@ -2487,7 +2503,12 @@ var Display = {
         backgroundContent = "#000";
     }
     targetElement.style.cssText = "";
-    if (Display._theme.background_type !== BackgroundType.Image) {
+    var imageCanvasColor = targetElement.getAttribute("data-image-canvas-color");
+    if (imageCanvasColor) {
+      targetElement.removeAttribute("data-background-image");
+      targetElement.setAttribute("data-background-color", imageCanvasColor);
+      targetElement.setAttribute("data-background", imageCanvasColor);
+    } else if (Display._theme.background_type !== BackgroundType.Image) {
       targetElement.setAttribute("data-background", backgroundContent);
     }
     targetElement.setAttribute("data-background-size", fit.size);

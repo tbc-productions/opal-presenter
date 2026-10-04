@@ -450,6 +450,7 @@ class Settings(QtCore.QSettings):
         'core/application version': '0.0',
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
+        'images/fit': 'contain',
         'images/db type': 'sqlite',
         'images/db username': '',
         'images/db password': '',

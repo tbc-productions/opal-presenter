@@ -533,7 +533,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 image['thumbnail'] = image['thumbnail'].as_uri()
             else:
                 image['thumbnail'] = image['path']
-        self.run_in_display('setImageSlides', imagesr)
+        self.run_in_display('setImageSlides', imagesr, self.settings.value('images/fit'),
+                            self.settings.value('core/logo background color'))
 
     def save_screenshot(self, fname=None):
         """

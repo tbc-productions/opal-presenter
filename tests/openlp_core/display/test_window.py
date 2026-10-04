@@ -50,6 +50,20 @@ def mock_geometry():
     screenlist_patcher.stop()
 
 
+def test_load_images_passes_fit_and_logo_colour(display_window_env, mock_settings):
+    mock_settings.value.side_effect = lambda key: {
+        'images/fit': 'stretch', 'core/logo background color': '#123456'
+    }.get(key, False)
+    window = DisplayWindow()
+    window.run_in_display = MagicMock()
+    images = [{'path': Path('/tmp/image.png')}]
+    window.load_images(images)
+    window.run_in_display.assert_called_once_with(
+        'setImageSlides', [{'path': 'file:///tmp/image.png', 'thumbnail': 'file:///tmp/image.png'}],
+        'stretch', '#123456')
+    assert images == [{'path': Path('/tmp/image.png')}]
+
+
 @pytest.fixture
 def display_window_env():
     box_layout_patcher = patch('openlp.core.display.window.QtWidgets.QVBoxLayout')

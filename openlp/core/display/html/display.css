@@ -236,10 +236,6 @@ body.presentation-slide-transition .reveal[data-background-transition=none] .sli
   margin: 0;
 }
 
-.reveal .slides > section > section.use-background-image {
-  background-color: #000 !important;
-}
-
 .reveal .slides > section > section.use-background-image .pdf-slide-image {
   width: 100% !important;
   height: 100% !important;
