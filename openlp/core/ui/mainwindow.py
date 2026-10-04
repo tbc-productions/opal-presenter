@@ -2008,6 +2008,32 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if update_preset_layout_flag:
             self._leave_named_preset_layout_if_unpinned()
 
+    def _restore_main_window_geometry(self):
+        """Restore the last window geometry, or choose a useful first-start size."""
+        saved_geometry = self.settings.value('user interface/main window geometry')
+        if saved_geometry and self.restoreGeometry(saved_geometry):
+            # Restore the normal/maximised state, but never reopen the app minimised.
+            self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowMinimized)
+            return
+        screen = self.screen() or QtGui.QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        geometry = screen.geometry()
+        self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+        if geometry.width() * 9 >= geometry.height() * 21:
+            # Use half an ultrawide screen, centred, without covering its taskbar or dock.
+            target = QtCore.QRect(available)
+            target.setWidth(available.width() // 2)
+            target.moveLeft(available.x() + (available.width() - target.width()) // 2)
+            handle = self.windowHandle()
+            if handle is not None:
+                margins = handle.frameMargins()
+                target.adjust(margins.left(), margins.top(), -margins.right(), -margins.bottom())
+            self.setGeometry(target)
+        else:
+            self.setWindowState(QtCore.Qt.WindowState.WindowMaximized)
+
     def load_settings(self):
         """
         Load the main window settings.
@@ -2016,8 +2042,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.settings.remove('custom slide')
         self.settings.remove('service')
         self.recent_files = self.settings.value('core/recent files')
-        self.move(self.settings.value('user interface/main window position'))
-        self.restoreGeometry(self.settings.value('user interface/main window geometry'))
+        self._restore_main_window_geometry()
         self.restoreState(self.settings.value(_window_state_storage_key(self._modern_appearance)))
         if not self._window_position_is_valid(self.pos(), self.geometry()):
             self.move(0, 0)
