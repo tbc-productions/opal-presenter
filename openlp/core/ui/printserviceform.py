@@ -119,7 +119,7 @@ td.lyrics {
 """
 
 
-class PrintServiceForm(QtWidgets.QDialog, Ui_PrintServiceDialog, RegistryProperties):
+class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, RegistryProperties):
     """
     The :class:`~openlp.core.ui.printserviceform.PrintServiceForm` class displays a dialog for printing the service.
     """
@@ -127,10 +127,8 @@ class PrintServiceForm(QtWidgets.QDialog, Ui_PrintServiceDialog, RegistryPropert
         """
         Constructor
         """
-        super(PrintServiceForm, self).__init__(Registry().get('main_window'),
-                                               QtCore.Qt.WindowType.WindowSystemMenuHint |
-                                               QtCore.Qt.WindowType.WindowTitleHint |
-                                               QtCore.Qt.WindowType.WindowCloseButtonHint)
+        super().__init__(Registry().get('main_window'))
+        self._event_loop = None
         self.printer = QtPrintSupport.QPrinter()
         self.print_dialog = QtPrintSupport.QPrintDialog(self.printer, self)
         self.document = QtGui.QTextDocument()
@@ -157,6 +155,33 @@ class PrintServiceForm(QtWidgets.QDialog, Ui_PrintServiceDialog, RegistryPropert
         self.html_copy.triggered.connect(self.copy_html_text)
         self.slide_text_check_box.stateChanged.connect(self.on_slide_text_check_box_changed)
         self.update_preview_text()
+
+    def exec(self):
+        """Show the Fluent preview window modally until it is closed."""
+        modality = self.windowModality()
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self._event_loop = QtCore.QEventLoop(self)
+        try:
+            self.show()
+            self._event_loop.exec()
+        finally:
+            self._event_loop.deleteLater()
+            self._event_loop = None
+            self.setWindowModality(modality)
+        return QtWidgets.QDialog.DialogCode.Rejected
+
+    def closeEvent(self, event):
+        """Release the modal event loop when any window close control is used."""
+        super().closeEvent(event)
+        if event.isAccepted() and self._event_loop is not None:
+            self._event_loop.quit()
+
+    def keyPressEvent(self, event):
+        """Retain the dialog's Escape shortcut in the Fluent window."""
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)
 
     def toggle_options(self, checked):
         """
