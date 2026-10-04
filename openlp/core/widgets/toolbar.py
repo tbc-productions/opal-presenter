@@ -143,14 +143,17 @@ class OpenLPToolbar(QtWidgets.QToolBar):
         """Keep an essential command visible outside CommandBar overflow."""
         self._add_action_widget(action, QtWidgets.QToolButton(self))
 
-    def add_toolbar_action(self, name, **kwargs):
+    def add_toolbar_action(self, name, *, pinned=False, **kwargs):
         """
         A method to help developers easily add a button to the toolbar. A new QAction is created by calling
         ``create_action()``. The action is added to the toolbar and the toolbar is set as parent. For more details
         please look at openlp.core.lib.ui.create_action()
         """
         action = create_action(self, name, **kwargs)
-        self.addAction(action)
+        if pinned:
+            self.add_pinned_action(action)
+        else:
+            self.addAction(action)
         self.actions_map[name] = action
         return action
 

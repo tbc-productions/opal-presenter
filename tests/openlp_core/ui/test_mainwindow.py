@@ -1613,6 +1613,44 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
             assert wrapper in toolbar.actions()
             assert action not in toolbar._command_actions
         assert toolbar.maximumHeight() > toolbar._command_groups[0].sizeHint().height()
+    preview = controllers[0]
+    toolbar = preview.toolbar
+    button = preview.go_live_button
+    assert toolbar.widgetForAction(preview.go_live_action) is button
+    assert preview.top_label_horizontal.indexOf(button) == -1
+    assert button.text() == 'Go Live'
+    assert button.fluentLayout() == fluent.fluentqt.Button.ButtonLayout.IconBefore
+    assert preview.go_live_action not in toolbar._command_actions
+    parent = toolbar.parentWidget()
+    preview.controller_layout.removeWidget(toolbar)
+    toolbar.setParent(None)
+    try:
+        toolbar.set_widget_visible(['editSong', 'clear'], True)
+        toolbar.setVisible(True)
+        for width in (260, 800):
+            toolbar.resize(width, toolbar.sizeHint().height())
+            QtWidgets.QApplication.processEvents()
+            assert button.isVisible()
+            separator = toolbar.widgetForAction(preview.go_live_separator)
+            group = toolbar._command_groups[0]
+            assert separator.isVisible()
+            assert group.geometry().right() < separator.x() < button.x()
+            assert button.x() - separator.geometry().right() <= 8
+            if width == 800:
+                assert button.geometry().right() < toolbar.contentsRect().right() - 100
+            preview.go_live_action.setVisible(False)
+            assert separator.isHidden()
+            preview.go_live_action.setVisible(True)
+            assert separator.isVisible()
+            preview.go_live_action.setEnabled(True)
+            assert button.isEnabled()
+            preview.go_live_action.setEnabled(False)
+            assert not button.isEnabled()
+            if width == 260:
+                assert toolbar._command_groups[0].overflowedPrimaryActions()
+    finally:
+        toolbar.setParent(parent)
+        preview.controller_layout.insertWidget(1, toolbar)
     controller = controllers[1]
     for name in ('show_screen_button', 'theme_screen_button', 'logo_screen_button',
                  'blank_screen_button', 'desktop_screen_button'):
@@ -1623,11 +1661,35 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
         assert wrapper in controller.toolbar.actions()
         assert button.defaultAction() is action
         assert action not in controller.toolbar._command_actions
-    group = controller.toolbar._command_actions[controller.song_menu_action]
-    assert isinstance(group, fluent.fluentqt.CommandBar)
-    assert controller.song_menu_action in group.primaryActions()
-    assert controller.song_menu_action.menu() is None
+    toolbar = controller.toolbar
+    action = controller.song_menu_action
+    assert action not in toolbar._command_actions
+    wrapper, button, _ = toolbar._fluent_actions[action]
+    assert button.defaultAction() is action
+    next_button = toolbar.widgetForAction(controller.next_item)
+    assert toolbar.layout().indexOf(button) == toolbar.layout().indexOf(next_button) + 1
+    assert action.menu() is None
     assert controller.song_menu is not None
+    parent = toolbar.parentWidget()
+    controller.controller_layout.removeWidget(toolbar)
+    toolbar.setParent(None)
+    try:
+        toolbar.set_widget_visible('song_menu', True)
+        toolbar.resize(700, toolbar.sizeHint().height())
+        toolbar.setVisible(True)
+        QtWidgets.QApplication.processEvents()
+        assert button.isVisible()
+        assert button.x() > next_button.geometry().right()
+        assert not any(widget.isVisible() for widget in toolbar.findChildren(QtWidgets.QWidget)
+                       if widget.objectName() == 'FluentCommandBar.MoreButton')
+        controller.song_menu.addAction('Verse 1')
+        button.click()
+        QtWidgets.QApplication.processEvents()
+        assert controller.song_menu.isVisible()
+        controller.song_menu.close()
+    finally:
+        toolbar.setParent(parent)
+        controller.controller_layout.insertWidget(1, toolbar)
 
 
 def test_preview_renderers_are_embedded_below_dialogs(main_window):

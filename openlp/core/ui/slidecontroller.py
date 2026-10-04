@@ -312,6 +312,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                        category=self.category, triggers=self.on_slide_selected_next_action)
         self.toolbar.add_pinned_action(self.next_item)
         if self.is_live:
+            self.new_song_menu()
+            self.toolbar.set_widget_visible('song_menu', False)
             self.powerpoint_timings_action = create_action(
                 self, 'powerpointTimings',
                 text=translate('OpenLP.SlideController', 'PowerPoint automatic timings'),
@@ -361,18 +363,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.receive_spin_delay()
             self.toolbar.add_toolbar_widget(self.delay_spin_box)
         else:
-            self.go_live_action = self.toolbar.add_toolbar_action('goLive', icon=UiIcons().live,
-                                                                  tooltip=translate('OpenLP.SlideController',
-                                                                                    'Move to live.'),
-                                                                  triggers=self.on_go_live)
-            if modern:
-                self.go_live_action.setText(translate('OpenLP.SlideController', 'Go live'))
-                self.go_live_button = QtWidgets.QToolButton(self.panel)
-                self.go_live_button.setIconSize(QtCore.QSize(18, 18))
-                self.go_live_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-                self.go_live_button.setDefaultAction(self.go_live_action)
-                self.top_label_horizontal.addWidget(self.go_live_button)
-                self.toolbar.removeAction(self.go_live_action)
             self.add_to_service_action = self.toolbar.add_toolbar_action('addToService', icon=UiIcons().plus,
                                                                           tooltip=translate('OpenLP.SlideController',
                                                                                             'Add to Service.'),
@@ -385,6 +375,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                             tooltip=translate('OpenLP.SlideController',
                                                               'Clear'),
                                             triggers=self.on_clear)
+            self.go_live_separator = self.toolbar.addSeparator()
+            self.go_live_action = self.toolbar.add_toolbar_action(
+                'goLive', pinned=True, text=translate('OpenLP.SlideController', 'Go Live'),
+                icon=UiIcons().live, tooltip=translate('OpenLP.SlideController', 'Move to live.'),
+                triggers=self.on_go_live)
+            self.go_live_action.changed.connect(
+                lambda: self.go_live_separator.setVisible(self.go_live_action.isVisible()))
+            self.go_live_button = self.toolbar.widgetForAction(self.go_live_action)
+            self.go_live_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.controller_layout.addWidget(self.toolbar)
         # Build a Media ToolBar
         self.mediabar = MediaToolbar(self)
@@ -396,9 +395,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             media_size_policy.setRetainSizeWhenHidden(True)
             self.mediabar.setSizePolicy(media_size_policy)
         self.mediabar.setVisible(False)
-        if self.is_live:
-            self.new_song_menu()
-            self.toolbar.set_widget_visible('song_menu', False)
         # Screen preview area
         self.preview_frame = QtWidgets.QFrame(self.splitter)
         self.preview_frame.setGeometry(QtCore.QRect(0, 0, 300, int(300 * self.ratio)))
@@ -656,15 +652,15 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.song_menu = QtWidgets.QMenu(translate('OpenLP.SlideController', 'Go To'), self.toolbar)
         self.song_menu_action = self.toolbar.add_toolbar_action(
-            'song_menu', text=translate('OpenLP.SlideController', 'Go To'), icon=UiIcons().go_to,
+            'song_menu', pinned=True, text=translate('OpenLP.SlideController', 'Go To'), icon=UiIcons().go_to,
             triggers=self._show_song_menu)
 
     def _show_song_menu(self):
-        """Open verse navigation from its native CommandBar presenter."""
+        """Open verse navigation beneath the pinned Go To button."""
         presenter = self.toolbar.widgetForAction(self.song_menu_action)
         anchor = presenter if presenter is not None and presenter.isVisible() else self.toolbar
         position = anchor.mapToGlobal(anchor.rect().bottomLeft())
-        # Allow CommandBar's overflow popup to close before opening the verse menu.
+        # Open the menu after the button finishes processing its activation.
         QtCore.QTimer.singleShot(0, lambda: self.song_menu.popup(position))
 
     def _raise_displays(self):

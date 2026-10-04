@@ -354,19 +354,17 @@ class Ui_ServiceManager(object):
         self.layout.setContentsMargins(0, 0, 0, 0)
         # Create the top toolbar
         self.toolbar = OpenLPToolbar(self)
+        self.toolbar.layout().setContentsMargins(0, 0, 8, 0)
         self.toolbar.add_toolbar_action('newService', text=UiStrings().NewService, icon=UiIcons().new,
                                         tooltip=UiStrings().CreateService, triggers=self.on_new_service_clicked)
-        self.open_service_action = self.toolbar.add_split_action(
+        self.open_service_action = self.toolbar.add_toolbar_action(
             'openService',
             text=UiStrings().OpenService,
             icon=UiIcons().open,
             tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
-            triggers=self.on_load_service_clicked)
-        self.open_service_button = self.toolbar.widgetForAction(self.open_service_action)
-        if self.open_service_button is not None:
-            self.open_service_recent_menu = QtWidgets.QMenu(self.open_service_button)
-            self.open_service_recent_menu.aboutToShow.connect(self.update_open_service_recent_menu)
-            self.open_service_button.setMenu(self.open_service_recent_menu)
+            triggers=self._show_open_service_menu)
+        self.open_service_recent_menu = QtWidgets.QMenu(self.toolbar)
+        self.open_service_recent_menu.aboutToShow.connect(self.update_open_service_recent_menu)
         self.save_service_action = self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
                                                                    icon=UiIcons().save,
                                                                    tooltip=translate('OpenLP.ServiceManager',
@@ -380,7 +378,7 @@ class Ui_ServiceManager(object):
             triggers=self.save_file_as)
         self.save_service_action.setEnabled(False)
         self.save_service_as_action.setEnabled(False)
-        self.toolbar.addSeparator()
+        self.toolbar.add_spacer()
         self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
         self.theme_label.setObjectName('theme_label')
@@ -481,14 +479,14 @@ class Ui_ServiceManager(object):
         self.note_toolbar_action.setEnabled(False)
         self.order_toolbar.addSeparator()
         self.make_preview_action = self.order_toolbar.add_toolbar_action(
-            'make_preview', can_shortcuts=True,
+            'make_preview', pinned=True, can_shortcuts=True,
             text=translate('OpenLP.ServiceManager', 'Show &Preview'), icon=UiIcons().preview,
             tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Preview'),
             category=UiStrings().Service,
             triggers=self.make_preview)
         self.make_preview_action.setEnabled(False)
         self.make_live_action = self.order_toolbar.add_toolbar_action(
-            'make_live', can_shortcuts=True,
+            'make_live', pinned=True, can_shortcuts=True,
             text=translate('OpenLP.ServiceManager', 'Go Live'), icon=UiIcons().live,
             tooltip=translate('OpenLP.ServiceManager', 'Send the selected item to Live.'),
             category=UiStrings().Service,
@@ -992,6 +990,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         self.load_service()
 
+    def _show_open_service_menu(self):
+        """Open the service menu from the shared CommandBar, including its overflow."""
+        presenter = self.toolbar.widgetForAction(self.open_service_action)
+        anchor = presenter if presenter is not None and presenter.isVisible() else self.toolbar
+        position = anchor.mapToGlobal(anchor.rect().bottomLeft())
+        # Let the CommandBar overflow close before displaying the service menu.
+        QtCore.QTimer.singleShot(0, lambda: self.open_service_recent_menu.popup(position))
+
     def update_open_service_recent_menu(self):
         """
         Rebuild the Open Service toolbar dropdown using the main window's recent service list.
@@ -999,6 +1005,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if not hasattr(self, 'open_service_recent_menu'):
             return
         self.open_service_recent_menu.clear()
+        open_action = self.open_service_recent_menu.addAction(UiStrings().OpenService)
+        open_action.triggered.connect(lambda checked=False: self.on_load_service_clicked(checked))
+        self.open_service_recent_menu.addSeparator()
         if not self.main_window:
             return
         self.main_window.update_recent_files_menu()
