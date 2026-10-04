@@ -41,7 +41,7 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
         self.setIcon(QtGui.QIcon(':/icon/openlp-logo.svg'))
         self.setIconSize(QtCore.QSize(128, 128))
-        self.setText(translate('OpenLP.SplashScreen', 'Starting OpenLP+…'))
+        self.setText(translate('OpenLP.SplashScreen', 'Starting OpenLP+'))
         # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
         self._refresh_progress_display()
@@ -74,5 +74,5 @@ class SplashScreen(fluentqt.SplashScreen):
         if progress_range is not None:
             start, end = progress_range
             progress = start + (end - start) * completed // total
-        self.set_status(translate('OpenLP.SplashScreen', '{stage} — {completed} of {total}').format(
+        self.set_status(translate('OpenLP.SplashScreen', '{stage} - {completed} of {total}').format(
             stage=stage, completed=completed, total=total), progress)

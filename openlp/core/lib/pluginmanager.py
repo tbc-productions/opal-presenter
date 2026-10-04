@@ -61,10 +61,10 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         )
         plugin_classes = Plugin.__subclasses__()
         for completed, plugin in enumerate(plugin_classes, 1):
-            stage = translate('OpenLP.SplashScreen', 'Loading plugins…')
+            stage = translate('OpenLP.SplashScreen', 'Loading plugins')
             try:
                 instance = plugin()
-                stage = translate('OpenLP.SplashScreen', 'Loading {plugin}…').format(
+                stage = translate('OpenLP.SplashScreen', 'Loading {plugin}').format(
                     plugin=instance.name_strings['plural'])
                 self.log_debug(f'Loaded plugin {plugin}')
             except TypeError:
@@ -195,7 +195,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
                                               QtWidgets.QMessageBox.StandardButton(
                                                   QtWidgets.QMessageBox.StandardButton.Ok))
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes…'))
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes'))
 
     def finalise_plugins(self):
         """

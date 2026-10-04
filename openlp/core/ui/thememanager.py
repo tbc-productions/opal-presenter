@@ -840,7 +840,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             if Registry().has_function('startup_progress'):
                 Registry().execute('startup_progress', stage, completed, len(files), progress_range=(75, 90))
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes…'))
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes'))
         self._push_themes()
 
     def _push_themes(self):

@@ -50,7 +50,7 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Starting OpenLP+…'
+    assert splash.text() == 'Starting OpenLP+'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring is not None
     assert ring.isVisible()
@@ -66,9 +66,9 @@ def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
     splash = SplashScreen()
     qtbot.addWidget(splash)
     with patch('openlp.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
-        splash.set_status('Loading components…')
+        splash.set_status('Loading components')
 
-    assert splash.text() == 'Loading components…'
+    assert splash.text() == 'Loading components'
     assert not splash.isIndeterminate()
     assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '0%'
     process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
@@ -96,12 +96,12 @@ def test_overall_percentage_preserves_layout_and_progress(mock_settings: MagicMo
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     status_top = status.y()
     ring_top = ring.y()
-    splash.set_status('Loading plugins…', 55)
+    splash.set_status('Loading plugins', 55)
     splash.set_stage_progress('Initialising plugins', 3, 8, progress_range=(55, 75))
 
     assert splash.progress() == 62
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Initialising plugins — 3 of 8'
+    assert splash.text() == 'Initialising plugins - 3 of 8'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring.isVisible()
     assert ring.isIndeterminate()
@@ -116,7 +116,7 @@ def test_overall_percentage_preserves_layout_and_progress(mock_settings: MagicMo
     assert ring.isIndeterminate()
     assert percentage.isVisible()
 
-    splash.set_status('Preparing the main window…')
+    splash.set_status('Preparing the main window')
     assert not splash.isIndeterminate()
     assert ring.isIndeterminate()
     assert percentage.isVisible()

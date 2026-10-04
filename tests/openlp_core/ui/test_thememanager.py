@@ -664,6 +664,6 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
         (('Loading themes', 0, 2), []),
         (('Loading themes', 1, 2), ['a']),
         (('Loading themes', 2, 2), ['a', 'b']),
-        (('Loading library and themes…',), ['a', 'b'])
+        (('Loading library and themes',), ['a', 'b'])
     ]
     theme_manager._push_themes.assert_called_once_with()

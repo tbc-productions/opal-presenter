@@ -135,7 +135,7 @@ class Plugin(RegistryBase, RegistryProperties):
         Registry().register_function('{name}_config_updated'.format(name=self.name), self.config_update)
         Registry().register_function('{name}_visible_name'.format(name=self.name), self.get_visible_name)
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading {plugin}…').format(
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading {plugin}').format(
                 plugin=self.name_strings['plural']))
         self._setup(version)
 

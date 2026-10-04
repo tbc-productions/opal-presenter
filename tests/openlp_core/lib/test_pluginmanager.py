@@ -88,8 +88,8 @@ def test_bootstrap_initialise_progress_counts_processed_plugins(registry, settin
         manager.bootstrap_initialise()
 
     assert updates == [
-        (('Loading plugins…', 1, 2), {'progress_range': (25, 55)}),
-        (('Loading Songs…', 2, 2), {'progress_range': (25, 55)})
+        (('Loading plugins', 1, 2), {'progress_range': (25, 55)}),
+        (('Loading Songs', 2, 2), {'progress_range': (25, 55)})
     ]
 
 
@@ -602,5 +602,5 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
         ('Initialising First plugin', 1, 2),
         ('Initialising Second plugin', 1, 2),
         ('Initialising Second plugin', 2, 2),
-        ('Loading library and themes…',)
+        ('Loading library and themes',)
     ]
