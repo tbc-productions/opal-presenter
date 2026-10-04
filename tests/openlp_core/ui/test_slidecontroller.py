@@ -40,6 +40,7 @@ from openlp.core.lib import ItemCapabilities, ServiceItemAction
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui import HideMode
+from openlp.core.ui.media import MediaState, MediaType
 from openlp.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
     InfoLabel, LiveController, PreviewController, SlideController
 
@@ -1803,12 +1804,30 @@ def test_set_theme_applies_pdf_transition_settings(settings: Settings):
     # WHEN: _set_theme is called
     slide_controller._set_theme(service_item)
 
-    # THEN: The theme transition settings should be overridden and sent to display/preview
-    assert theme_data.display_slide_transition is True
-    assert theme_data.display_slide_transition_type == TransitionType.Zoom
-    assert theme_data.display_slide_transition_speed == TransitionSpeed.Slow
-    slide_controller.preview_display.set_theme.assert_called_once_with(theme_data, service_item_type='image')
-    slide_controller.displays[0].set_theme.assert_called_once_with(theme_data, service_item_type='image')
+    # THEN: Both displays receive the override without changing the shared theme.
+    applied_theme = slide_controller.preview_display.set_theme.call_args.args[0]
+    assert applied_theme is not theme_data
+    assert applied_theme.display_slide_transition is True
+    assert applied_theme.display_slide_transition_type == TransitionType.Zoom
+    assert applied_theme.display_slide_transition_speed == TransitionSpeed.Slow
+    assert theme_data.display_slide_transition is False
+    assert theme_data.display_slide_transition_type == TransitionType.Fade
+    assert theme_data.display_slide_transition_speed == TransitionSpeed.Normal
+    slide_controller.preview_display.set_theme.assert_called_once_with(applied_theme, service_item_type='image')
+    slide_controller.displays[0].set_theme.assert_called_once_with(applied_theme, service_item_type='image')
+
+
+@mark.parametrize('is_image,expected', [(True, False), (False, True)])
+def test_disabled_collection_transition_does_not_inherit_theme(settings, is_image, expected):
+    controller = SlideController(None)
+    item = MagicMock()
+    item.is_image.return_value = is_image
+    item.slide_transition_settings = {'enabled': False, 'type': TransitionType.Fade}
+    theme = MagicMock(display_slide_transition=True)
+
+    controller._apply_service_item_transitions(item, theme)
+
+    assert theme.display_slide_transition is expected
 
 
 def test_live_stolen_focus_shortcuts(settings: Settings):
@@ -2131,8 +2150,9 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
 
 
 @mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
-def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type):
-    """Leaving Show Desktop restores the current slide in the live preview."""
+@mark.parametrize('intermediate_mode', [HideMode.Screen, HideMode.Logo, HideMode.Blank, HideMode.Theme, None])
+def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type, intermediate_mode):
+    """A desktop capture is replaced even after a cover or mirror-setting change."""
     controller = SlideController(None)
     controller.is_live = True
     controller._current_hide_mode = None
@@ -2144,10 +2164,23 @@ def test_update_preview_restores_slides_after_show_desktop(settings: Settings, i
     controller.selected_row = 1
     controller.slide_changed_time = datetime.datetime.now()
     controller.preview_display = MagicMock()
-    controller.preview_display.hide_mode = HideMode.Screen
+    controller.preview_display.hide_mode = intermediate_mode
     controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
+    controller._capture_maindisplay = MagicMock(return_value='desktop capture')
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+        controller.display_maindisplay()
+    assert controller._live_preview_is_capture is True
+
+    # An intermediate cover must not lose track of the captured slide underneath.
+    if intermediate_mode is not None:
+        controller._current_hide_mode = intermediate_mode
+        with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+            controller.update_preview()
+        controller.preview_display.load_verses.assert_not_called()
+        controller.preview_display.load_images.assert_not_called()
+    controller._current_hide_mode = None
 
     controller.update_preview()
 
@@ -2158,7 +2191,48 @@ def test_update_preview_restores_slides_after_show_desktop(settings: Settings, i
         controller.preview_display.load_images.assert_called_once_with(controller.service_item.slides)
         controller.preview_display.load_verses.assert_not_called()
     controller.preview_display.go_to_slide.assert_called_once_with(1)
-    controller.preview_display.show_display.assert_called_once_with()
+    if intermediate_mode is not None:
+        controller.preview_display.show_display.assert_called_once_with()
+    assert controller._live_preview_is_capture is False
+
+    # Ordinary slide navigation must not rebuild the deck or lose its transitions.
+    controller.preview_display.reset_mock()
+    controller.update_preview()
+    controller.preview_display.load_verses.assert_not_called()
+    controller.preview_display.load_images.assert_not_called()
+
+
+@mark.parametrize('capture_available', [False, True])
+def test_desktop_monitor_captures_screen_without_becoming_transparent(settings: Settings, capture_available):
+    """Desktop mode keeps the monitor visible and never uses a native slide thumbnail."""
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._current_hide_mode = HideMode.Screen
+    controller.service_item = MagicMock(processor='PowerPointMac')
+    controller.preview_display = MagicMock()
+    controller.preview_display.hide_mode = HideMode.Logo
+    controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
+    controller.slide_changed_time = datetime.datetime.now()
+    controller._capture_maindisplay_desktop = MagicMock(return_value='desktop' if capture_available else None)
+    controller._update_desktop_capture_timer = MagicMock()
+    controller.output_has_changed = MagicMock()
+
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop jpeg'):
+        controller.update_preview()
+
+    controller._capture_maindisplay_desktop.assert_called_once_with()
+    controller.preview_display.hide_display.assert_not_called()
+    controller.preview_display.go_to_slide.assert_not_called()
+    controller.preview_display.set_single_image.assert_not_called()
+    controller._update_desktop_capture_timer.assert_called_once_with()
+    if capture_available:
+        controller.preview_display.assert_has_calls([
+            call.set_single_image_data('#000', 'desktop jpeg'), call.show_display()
+        ])
+        assert controller._live_preview_is_capture is True
+    else:
+        controller.preview_display.set_single_image_data.assert_not_called()
+        controller.preview_display.show_display.assert_not_called()
 
 
 def test_on_live_preview_capture_timer_runs_pending_capture(settings: Settings):
@@ -2208,6 +2282,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
     live_display._is_initialised = True
     preview_display = MagicMock()
     preview_display._is_initialised = True
+    preview_display.allow_item_transitions = False
     slide_controller.displays = [live_display]
     slide_controller.preview_display = preview_display
     settings.setValue('themes/item transitions', True)
@@ -2219,7 +2294,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
 
     # THEN: Both displays should receive the update command
     live_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
-    preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
+    preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', False, 1.2, 'ease-in')
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
@@ -2538,6 +2613,56 @@ def test__update_desktop_capture_timer_uses_fixed_interval(settings: Settings):
 
     # THEN: the timer should start with the fixed capture interval
     slide_controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
+
+
+@mark.parametrize('media_type', [MediaType.Video, MediaType.DeviceStream, MediaType.NetworkStream])
+@mark.parametrize('state', [MediaState.Playing, MediaState.Paused])
+def test_live_media_monitor_keeps_refreshing_without_screen_mirroring(settings: Settings, media_type, state):
+    """The timer that starts for native video must survive its first tick."""
+    settings.setValue('core/live preview shows presentation screen', False)
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.service_item = ServiceItem(None)
+    controller.service_item.name = 'media'
+    controller.service_item.service_item_type = ServiceItemType.Command
+    controller.service_item.capabilities = [ItemCapabilities.RequiresMedia]
+    controller._current_hide_mode = None
+    controller.media_play_item.media_type = media_type
+    controller.media_play_item.is_playing = state
+    controller.preview_display = MagicMock(hide_mode=None)
+    controller.desktop_capture_timer = MagicMock()
+    controller.desktop_capture_timer.isActive.return_value = False
+    controller.slide_changed_time = datetime.datetime.now()
+    controller._schedule_live_preview_capture = MagicMock()
+    controller.output_has_changed = MagicMock()
+    controller._capture_maindisplay_desktop = MagicMock(return_value='video frame')
+
+    controller.update_preview()
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='video jpeg'):
+        controller._on_desktop_capture_timer()
+        controller._on_desktop_capture_timer()
+
+    controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
+    controller.desktop_capture_timer.stop.assert_not_called()
+    assert controller._capture_maindisplay_desktop.call_count == 2
+    assert controller.preview_display.set_single_image_data.call_count == 2
+    controller.preview_display.set_single_image_data.assert_called_with('#000', 'video jpeg')
+    controller.preview_display.go_to_slide.assert_not_called()
+
+    # A cover must stop media-specific mirroring, even before playback pauses.
+    for mode in (HideMode.Logo, HideMode.Blank, HideMode.Theme):
+        controller._current_hide_mode = mode
+        controller._on_desktop_capture_timer()
+    assert controller.desktop_capture_timer.stop.call_count == 3
+    assert controller._capture_maindisplay_desktop.call_count == 2
+
+    # A retired video's delayed cleanup must not keep capturing over a new song.
+    controller._current_hide_mode = None
+    controller.service_item.name = 'songs'
+    controller.service_item.capabilities = []
+    controller._on_desktop_capture_timer()
+    assert controller.desktop_capture_timer.stop.call_count == 4
+    assert controller._capture_maindisplay_desktop.call_count == 2
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')

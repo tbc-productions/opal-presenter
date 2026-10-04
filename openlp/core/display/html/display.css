@@ -130,7 +130,8 @@ body.transition #logo-screen {
 .reveal .slide-background {
   opacity: 1;
   visibility: visible;
-  transition: none !important;
+  /* Keep Reveal's configured background fade and speed. Disabling it here
+     makes image fades depend on the separate item-transition override. */
   z-index: 2;
 }
 
@@ -158,27 +159,23 @@ body.transition #logo-screen {
   border: 2px solid transparent;
 }
 
+body.presentation-slide-transition .reveal .slides section[data-transition] {
+  transition-duration: var(--presentation-slide-transition-ms) !important;
+}
+
 body.presentation-slide-transition .reveal .slides section[data-transition=fade],
 body.presentation-slide-transition .reveal.fade .slides section:not([data-transition]),
 body.presentation-slide-transition .reveal.fade .slides > section > section:not([data-transition]) {
   transition: opacity var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
-body.transition .reveal .slide-background {
-  transition: all var(--item-transition-ms) var(--item-transition-easing) !important;
-}
 
-/* Per-slide presentation transitions (e.g. PDFs) take precedence over the
-   global item-transition speed. Without this order, body.transition's rule
-   wins on same specificity and PDFs always fade at the item-transition
-   duration regardless of the user's configured PDF transition speed. */
+/* Presentation slide settings are independent of item/mode transitions. */
 body.presentation-slide-transition .reveal .slide-background {
   transition: all var(--presentation-slide-transition-ms) var(--presentation-slide-transition-easing) !important;
 }
 
-/* Respect reveal's guards: no-transition on backgrounds (same-hash adjacent slides)
-   and data-background-transition=none (theme has no slide transitions) must win
-   over the body.transition item-transition rule above.
+/* Respect Reveal's guards for identical backgrounds and disabled slide transitions.
 
    When the wrapper says none, only kill the transition if the slide-background
    itself has no overriding per-slide data-background-transition. PDFs set
@@ -552,29 +549,41 @@ section.text-slides.stack.present {
   transition-delay: 0ms;
   transition-timing-function: ease-in-out; }
 
+body .reveal .slides section[data-transition*=fade],
+body .reveal.fade .slides section:not([data-transition]) {
+  transition-duration: var(--slide-transition-ms, 800ms);
+}
+
+/* Fade both slides together, using the configured 400/800/1200ms speed. */
 .reveal .slides section.present[data-transition*=fade],
 .reveal[class*=fade] .slides section.present:not([data-transition]) {
-  transition-delay: 400ms; }
+  transition-delay: 0ms;
+}
 
-.reveal .slides section.present[data-transition-speed="fast"][data-transition*=fade],
-.reveal[data-transition-speed="fast"][class*=fade] .slides section.present:not([data-transition]) {
-  transition-delay: 200ms; }
+/* Explicit cuts must win over every slide, background and logo rule. */
+body.disable-transitions,
+body.disable-transitions *,
+body.disable-transitions #logo-screen {
+  transition: none !important;
+  transition-delay: 0ms !important;
+}
 
-.reveal .slides section.present[data-transition-speed="slow"][data-transition*=fade],
-.reveal[data-transition-speed="slow"][class*=fade] .slides section.present:not([data-transition]) {
-  transition-delay: 800ms; }
+body.disable-transitions .reveal .slide-background,
+body.disable-transitions .reveal .slides section,
+body.disable-transitions .reveal .slides section[data-transition] {
+  transition: none !important;
+}
 
-.reveal[class*=fade] .slides section,
-.reveal .slides section[class*=fade] {
-  transition-duration: 400ms !important; }
+.display-item-snapshot {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
 
-.reveal[data-transition-speed="fast"][class*=fade] .slides section,
-.reveal .slides section[data-transition-speed="fast"][class*=fade] {
-  transition-duration: 200ms !important; }
-
-.reveal[data-transition-speed="slow"][class*=fade] .slides section,
-.reveal .slides section[data-transition-speed="slow"][class*=fade] {
-  transition-duration: 800ms !important; }
+body.show-theme .reveal .image-slide-background {
+  opacity: 0 !important;
+}
 
 .reveal[class*=fade].overview .slides section {
   transition: none; }
@@ -583,34 +592,42 @@ section.text-slides.stack.present {
  * Fallback enforcement for QtWebEngine cases where transform can resolve to "none"
  * even when Reveal has applied transition classes.
  */
-.reveal.slide .slides > section > section.past {
+.reveal.slide .slides > section > section.past:not([data-transition]),
+.reveal.slide .slides > section > section.past[data-transition=slide] {
   transform: translate(0, -150%) !important;
 }
 
-.reveal.slide .slides > section > section.future {
+.reveal.slide .slides > section > section.future:not([data-transition]),
+.reveal.slide .slides > section > section.future[data-transition=slide] {
   transform: translate(0, 150%) !important;
 }
 
-.reveal.convex .slides > section > section.past {
+.reveal.convex .slides > section > section.past:not([data-transition]),
+.reveal.convex .slides > section > section.past[data-transition=convex] {
   transform: translate3d(0, -300px, 0) rotateX(70deg) translate3d(0, -300px, 0) !important;
 }
 
-.reveal.convex .slides > section > section.future {
+.reveal.convex .slides > section > section.future:not([data-transition]),
+.reveal.convex .slides > section > section.future[data-transition=convex] {
   transform: translate3d(0, 300px, 0) rotateX(-70deg) translate3d(0, 300px, 0) !important;
 }
 
-.reveal.concave .slides > section > section.past {
+.reveal.concave .slides > section > section.past:not([data-transition]),
+.reveal.concave .slides > section > section.past[data-transition=concave] {
   transform: translate3d(0, -80%, 0) rotateX(-70deg) translate3d(0, -80%, 0) !important;
 }
 
-.reveal.concave .slides > section > section.future {
+.reveal.concave .slides > section > section.future:not([data-transition]),
+.reveal.concave .slides > section > section.future[data-transition=concave] {
   transform: translate3d(0, 80%, 0) rotateX(70deg) translate3d(0, 80%, 0) !important;
 }
 
-.reveal.zoom .slides > section > section.past {
+.reveal.zoom .slides > section > section.past:not([data-transition]),
+.reveal.zoom .slides > section > section.past[data-transition=zoom] {
   transform: scale(16) !important;
 }
 
-.reveal.zoom .slides > section > section.future {
+.reveal.zoom .slides > section > section.future:not([data-transition]),
+.reveal.zoom .slides > section > section.future[data-transition=zoom] {
   transform: scale(0.2) !important;
 }

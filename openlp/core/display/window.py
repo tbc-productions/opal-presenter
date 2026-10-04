@@ -196,6 +196,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self._can_show_startup_screen = can_show_startup_screen
         self._fbo = None
         self.window_title = window_title
+        self.show_transparency = not embedded
         self.setWindowTitle(translate('OpenLP.DisplayWindow', 'Display Window'))
         self.setWindowFlags(flags)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
@@ -408,7 +409,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         Add stuff after page initialisation
         """
-        item_transitions = self.settings.value('themes/item transitions')
+        item_transitions = self.settings.value('themes/item transitions') and \
+            getattr(self, 'allow_item_transitions', True)
         item_transition_speed = TransitionSpeed.to_seconds(self.settings.value('themes/item transition speed'))
         valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
         item_transition_type = self.settings.value('themes/item transition type')
@@ -418,6 +420,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
+                            'showTransparency': self.show_transparency,
                             'allowThemeTransitions': getattr(self, 'allow_theme_transitions', False),
                             'doItemTransitions': item_transitions,
                             'itemTransitionSpeed': item_transition_speed,
@@ -477,7 +480,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         :param script: The script to run, a string
         :param is_sync: Run the script synchronously. Defaults to False
         """
-        log.debug((script[:80] + '..') if len(script) > 80 else script)
+        # Desktop/media preview frames arrive continuously; log control actions,
+        # not every JPEG sent to the embedded monitor.
+        if not script.startswith("requestAction('setFullscreenImageFromData',"):
+            log.debug((script[:80] + '..') if len(script) > 80 else script)
         if not hasattr(self, 'webview'):
             return None
         # Wait for previous scripts to finish
@@ -663,7 +669,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             # Show the desktop by hiding the output window after its fade completes.
             self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,
                                                          lambda _: self.setVisible(False))
-            self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
+            self.run_in_display('toTransparent', self._disable_hide_transition(),
+                                return_event_name=TRANSITION_END_EVENT_NAME)
         elif mode == HideMode.Blank:
             if self._disable_hide_transition():
                 self.run_in_display('toBlack', True)

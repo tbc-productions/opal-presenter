@@ -292,7 +292,8 @@ def test_pause_stream(base_media_player):
     base_media_player.device_audio_input.setMuted.assert_called_with(True)
 
 
-def test_stop_media(base_media_player):
+@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+def test_stop_media(invoke_method, base_media_player):
     """
     Test stopping the current item
     """
@@ -303,7 +304,8 @@ def test_stop_media(base_media_player):
     base_media_player.stop()
 
     # THEN: the media player should have been asked to stop
-    base_media_player.media_player.stop.assert_called_once()
+    invoke_method.assert_called_once_with(
+        base_media_player.media_player, 'stop', QtCore.Qt.ConnectionType.DirectConnection)
 
 
 def test_stop_stream(base_media_player):
@@ -366,18 +368,45 @@ def test_seek_unseekable_media(base_media_player):
     base_media_player.media_player.setPosition.assert_not_called()
 
 
-def test_reset(base_media_player):
-    """
-    Test the reset() method
-    """
-    # GIVEN: Some mocked out stuff
-    base_media_player.media_player = MagicMock()
+@pytest.mark.parametrize('signals_blocked', [False, True])
+@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+def test_reset_detaches_surface_before_stopping(invoke_method, base_media_player, signals_blocked):
+    """Retiring hidden video must detach its surface before stopping the decoder."""
+    player = base_media_player
+    player.controller.media_play_item = MediaPlayItem()
+    player.controller.media_play_item.media_type = MediaType.Video
+    player._active_playback = True
+    player.media_player.blockSignals.return_value = signals_blocked
+    operations = MagicMock()
+    operations.attach_mock(player.media_player, 'media')
+    operations.attach_mock(player.media_capture_session, 'capture')
+    operations.attach_mock(invoke_method, 'invoke')
 
-    # WHEN: reset() is called
-    base_media_player.reset()
+    def check_inactive(*args):
+        assert player._active_playback is False
 
-    # THEN: The media should be stopped and invisible
-    base_media_player.media_player.stop.assert_called_once()
+    invoke_method.side_effect = check_inactive
+    player.reset()
+
+    assert operations.mock_calls == [
+        call.media.blockSignals(True),
+        call.media.setVideoOutput(None),
+        call.capture.setVideoOutput(None),
+        call.invoke(player.media_player, 'stop', QtCore.Qt.ConnectionType.DirectConnection),
+        call.media.blockSignals(signals_blocked)
+    ]
+
+
+@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+def test_reset_restores_signals_after_stop_failure(invoke_method, base_media_player):
+    """A failed cleanup must not leave the reusable player with signals disabled."""
+    base_media_player.media_player.blockSignals.return_value = False
+    invoke_method.side_effect = RuntimeError('stop failed')
+
+    with pytest.raises(RuntimeError, match='stop failed'):
+        base_media_player.reset()
+
+    base_media_player.media_player.blockSignals.assert_has_calls([call(True), call(False)])
 
 
 def test_update_ui(base_media_player):

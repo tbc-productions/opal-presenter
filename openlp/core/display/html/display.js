@@ -492,6 +492,12 @@ var Display = {
   _itemTransitionSpeedSeconds: 0.8,
   _itemTransitionType: "balanced",
   _skipNextTransition: false,
+  _pendingItemSnapshot: null,
+  _itemTransitionAnimation: null,
+  _itemTransitionTimeout: null,
+  _itemTransitionVersion: 0,
+  _clearAfterNativeHandoff: false,
+  _displayMode: 'show',
   _isInitialised: false,
   _initialisedSlidesContainer: null,
   _themeApplied: true,
@@ -519,9 +525,6 @@ var Display = {
   },
   _lastRequestAnimationFrameHandle: null,
   _previewTransitionTimeoutHandles: [],
-  _logoBackgroundOverrideActive: false,
-  _savedBackgroundAttributes: null,
-  _lastLogoParams: null,
   /*
     Every hide/show operation bumps _transitionToken on entry. Async
     continuations (requestAnimationFrame, transitionend, setTimeout, image
@@ -530,9 +533,8 @@ var Display = {
     superseded callbacks become no-ops instead of corrupting state.
   */
   _transitionToken: 0,
-  _pendingLogoTransitionEndHandler: null,
-  _pendingLogoTransitionElement: null,
-  _pendingLogoFallbackTimeout: null,
+  _modeCompletionTimeout: null,
+  _transparentFallbackTimeout: null,
   _pendingLogoPreloader: null,
   _suppressRevealConfigure: false,
   _pendingRevealConfig: null,
@@ -542,6 +544,7 @@ var Display = {
    * @param {object} options - The initialisation options:
    *                           * {bool} isDisplay         - Is this a real display output
    *                           * {bool} doItemTransitions - Transition between service items
+   *                           * {bool} showTransparency - Show checkerboard in non-output views (default true)
    *                           * {number} itemTransitionSpeed - Transition duration between service items in seconds
    *                           * {string} itemTransitionType - Transition easing type for service item transitions
    *                           * {bool} hideMouse         - Hide the cursor when hovering on this display
@@ -563,9 +566,7 @@ var Display = {
     }
 
     // Now continue to initialisation
-    if (!isDisplay) {
-      document.body.classList.add('checkerboard');
-    }
+    document.body.classList.toggle('checkerboard', !isDisplay && options.showTransparency !== false);
     if (hideMouse) {
       document.body.classList.add('hide-mouse');
     }
@@ -619,6 +620,7 @@ var Display = {
       body.classList.add("transition");
     } else {
       body.classList.remove("transition");
+      Display._cancelItemTransition();
     }
   },
 
@@ -640,8 +642,7 @@ var Display = {
     );
     var rootSlide = Display._getRootSlideSection();
     if (Display._theme && rootSlide) {
-      Display.applyTheme(rootSlide, rootSlide.classList.contains("text-slides"));
-      Reveal.sync();
+      Display.resetTheme();
     }
   },
 
@@ -649,7 +650,7 @@ var Display = {
     if (speedSeconds <= 0.75) {
       return "fast";
     }
-    if (speedSeconds >= 1.5) {
+    if (speedSeconds >= 1.2) {
       return "slow";
     }
     return "default";
@@ -797,81 +798,189 @@ var Display = {
    * Clear the current list of slides
   */
   _clearSlidesList: function () {
+    Display._captureItemTransition();
     Display._footerContainer.innerHTML = "";
     Display._slides = {};
   },
   /**
    * Add new item/slides, replacing the old one
    * Clears current list of slides but allows time for a transition animation
-   * Items are ordered newest to oldest in the slides container
+   * The outgoing rendered frame is kept separately until the item fade completes.
    * @param {element} new_slides - New slides to display
    * @param {element} is_text - Used to decide if the theme main area constraints should apply
   */
   replaceSlides: function (new_slides, is_text=false) {
-    if (Array.isArray(new_slides)) {
-      Display._slidesContainer.innerHTML = "";
-      Display._suppressRevealConfigure = true;
+    Display._clearAfterNativeHandoff = false;
+    Display._captureItemTransition();
+    var sections = Array.isArray(new_slides) ? new_slides : [new_slides];
+    Display._slidesContainer.replaceChildren(...sections);
+    Display._suppressRevealConfigure = true;
+    Display._pendingRevealConfig = null;
+    try {
+      sections.forEach(function (section) { Display.applyTheme(section, is_text); });
+    } finally {
+      Display._suppressRevealConfigure = false;
+    }
+    if (Display._pendingRevealConfig) {
+      Reveal.configure(Display._pendingRevealConfig);
       Display._pendingRevealConfig = null;
-      try {
-        new_slides.forEach(function (slide) {
-          if (Display._doItemTransitions) {
-            slide.setAttribute('data-transition', "fade");
-            slide.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
-          }
-          slide.classList.add("future");
-          Display.applyTheme(slide, is_text);
-          Display._slidesContainer.appendChild(slide);
-        });
-      } finally {
-        Display._suppressRevealConfigure = false;
-      }
-      if (Display._pendingRevealConfig) {
-        Reveal.configure(Display._pendingRevealConfig);
-        Display._pendingRevealConfig = null;
-      }
-      Display.reinit();
-      if (is_text) {
-        Display._reapplyTextThemeAfterLayout(new_slides);
-      }
-      Display._skipNextTransition = false;
-      Display._syncLogoOverrideAfterSlideReplacement();
+    }
+    Display.reinit();
+    if (is_text) {
+      Display._reapplyTextThemeAfterLayout(new_slides);
+    }
+    Display._skipNextTransition = false;
+    Display._syncOutputModeAfterSlideReplacement();
+    Display._playItemTransition();
+  },
+
+  /**
+   * Keep the outgoing rendered item independent of Reveal's new slide layout,
+   * theme and indices. Freeze visible styles so an interrupted fade can become
+   * the next transition's starting frame. Hidden slides are not copied.
+   */
+  _captureItemTransition: function () {
+    if ((Display._pendingItemSnapshot && !Display._itemTransitionAnimation) ||
+        !Display._doItemTransitions || Display._skipNextTransition ||
+        !Display._slidesContainer || !Display._slidesContainer.children.length) {
       return;
     }
-    if (Display._doItemTransitions) {
-      new_slides.setAttribute('data-transition', "fade");
-      new_slides.setAttribute('data-transition-speed', Display._getRevealTransitionSpeed(Display._itemTransitionSpeedSeconds));
+    var reveal = Display._slidesContainer.closest('.reveal');
+    if (!reveal || Reveal.isPaused() || document.body.classList.contains('is-desktop') ||
+        (Display._displayMode === 'logo')) {
+      return;
     }
-    new_slides.classList.add("future");
-    Display.applyTheme(new_slides, is_text);
-    Display._slidesContainer.prepend(new_slides);
-    var currentSlide = Reveal.getIndices();
-    if (Display._doItemTransitions && Display._slidesContainer.children.length >= 2 && !Display._skipNextTransition) {
-      // Set the slide one section ahead so we'll stay on the old slide after reinit
-      Reveal.slide(1, currentSlide.v);
-      Display.reinit();
-      if (is_text) {
-        Display._reapplyTextThemeAfterLayout(new_slides);
+    function copyVisible(element) {
+      var style = getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 ||
+          element.classList.contains('pause-overlay')) {
+        return null;
       }
-      // Timeout to allow time to transition before deleting the old slides
-      setTimeout(Display._removeLastSection, Math.round(Display._itemTransitionSpeedSeconds * 1000) + 100);
-    } else {
-      Reveal.slide(0, currentSlide.v);
-      Reveal.sync();
-      if (is_text) {
-        Display._reapplyTextThemeAfterLayout(new_slides);
+      if (element.tagName === 'AUDIO') {
+        return null;
       }
-      Display._removeLastSection();
-      Display._skipNextTransition = false;
+      var copy;
+      if (element.tagName === 'VIDEO' || element.tagName === 'CANVAS') {
+        copy = document.createElement('canvas');
+        copy.width = element.videoWidth || element.width || element.clientWidth;
+        copy.height = element.videoHeight || element.height || element.clientHeight;
+        try {
+          copy.getContext('2d').drawImage(element, 0, 0, copy.width, copy.height);
+        } catch (error) {
+          // An undecoded video has no frame to preserve yet.
+        }
+      } else {
+        copy = element.cloneNode(false);
+      }
+      copy.removeAttribute('id');
+      // Reveal and theme updates select by class. A frozen frame must not
+      // become another navigable deck or receive the next item's styling.
+      copy.removeAttribute('class');
+      // Inline the rendered frame; later theme rules must not restyle it.
+      for (var property of style) {
+        copy.style.setProperty(property, style.getPropertyValue(property), 'important');
+      }
+      copy.style.setProperty('transition', 'none', 'important');
+      copy.style.setProperty('animation', 'none', 'important');
+      copy.style.setProperty('pointer-events', 'none', 'important');
+      Array.from(element.childNodes).forEach(function (child) {
+        var childCopy = child.nodeType === Node.ELEMENT_NODE ? copyVisible(child) : child.cloneNode(true);
+        if (childCopy) {
+          copy.appendChild(childCopy);
+        }
+      });
+      return copy;
     }
-    Display._syncLogoOverrideAfterSlideReplacement();
+    var snapshot = document.createElement('div');
+    snapshot.className = 'display-item-snapshot';
+    snapshot.setAttribute('aria-hidden', 'true');
+    Array.from(reveal.children).forEach(function (child) {
+      var copy = copyVisible(child);
+      if (copy) {
+        snapshot.appendChild(copy);
+      }
+    });
+    Display._cancelItemTransition();
+    reveal.appendChild(snapshot);
+    Display._pendingItemSnapshot = snapshot;
   },
-  /**
-   * Removes the last slides item if there are more than one
-  */
-  _removeLastSection: function () {
-    if (Display._slidesContainer.children.length > 1) {
-      Display._slidesContainer.lastChild.remove();
+
+  _cancelItemTransition: function () {
+    Display._itemTransitionVersion += 1;
+    clearTimeout(Display._itemTransitionTimeout);
+    if (Display._itemTransitionAnimation) {
+      Display._itemTransitionAnimation.cancel();
+      Display._itemTransitionAnimation = null;
     }
+    if (Display._pendingItemSnapshot) {
+      Display._pendingItemSnapshot.remove();
+      Display._pendingItemSnapshot = null;
+    }
+  },
+
+  _playItemTransition: function () {
+    var snapshot = Display._pendingItemSnapshot;
+    if (!snapshot) {
+      return;
+    }
+    var version = ++Display._itemTransitionVersion;
+    // Selection of the requested starting slide follows replaceSlides in the
+    // same event-loop turn. Start after it and after the new layout is painted.
+    Display._itemTransitionTimeout = setTimeout(async function () {
+      await Display._waitForSlideImages();
+      if (Display._pendingItemSnapshot !== snapshot || version !== Display._itemTransitionVersion) {
+        return;
+      }
+      var animation = snapshot.animate([{opacity: 1}, {opacity: 0}], {
+        duration: Display._itemTransitionSpeedSeconds * 1000,
+        easing: Display._getTransitionEasing(Display._itemTransitionType),
+        fill: 'forwards'
+      });
+      Display._itemTransitionAnimation = animation;
+      animation.onfinish = function () {
+        if (Display._pendingItemSnapshot === snapshot) {
+          Display._cancelItemTransition();
+        }
+      };
+    }, 0);
+  },
+
+  _waitForSlideImages: function () {
+    var slide = Reveal.getCurrentSlide();
+    if (!slide) {
+      return Promise.resolve();
+    }
+    var urls = Array.from(slide.querySelectorAll('img[src]')).map(function (image) { return image.src; });
+    for (var section = slide; section && section.tagName === 'SECTION'; section = section.parentElement) {
+      var url = section.getAttribute('data-background-image');
+      if (url) {
+        urls.push(url);
+      }
+    }
+    return Promise.all(Array.from(new Set(urls)).map(function (url) {
+      return new Promise(function (resolve) {
+        var image = new Image();
+        var timeout;
+        function finish() {
+          clearTimeout(timeout);
+          image.onload = null;
+          image.onerror = null;
+          resolve();
+        }
+        // A failed or unresponsive source must not leave the old item covering
+        // the output indefinitely. Ordinary local images finish on load/decode.
+        timeout = setTimeout(finish, 3000);
+        image.onload = function () {
+          if (image.decode) {
+            image.decode().then(finish, finish);
+          } else {
+            finish();
+          }
+        };
+        image.onerror = finish;
+        image.src = url;
+      });
+    }));
   },
 
   /**
@@ -1300,6 +1409,7 @@ var Display = {
    * @param String slide - Text to put on the slide
    */
   setTextSlide: function (text) {
+    Display._clearAfterNativeHandoff = false;
     Display._setPresentationSlideTransition(false);
     var layout = Display._resolveTextSlideLayout();
     Display._textSlideDirection = layout.direction;
@@ -1316,7 +1426,7 @@ var Display = {
         } else {
           Display.applyTheme(slide, true);
         }
-        Display._syncLogoOverrideAfterSlideReplacement();
+        Display._syncOutputModeAfterSlideReplacement();
       }
     } else {
       Display._clearSlidesList();
@@ -1336,7 +1446,7 @@ var Display = {
         Display._slidesContainer.prepend(slide_html);
       }
       Display.reinit();
-      Display._syncLogoOverrideAfterSlideReplacement();
+      Display._syncOutputModeAfterSlideReplacement();
     }
   },
   /**
@@ -1592,220 +1702,180 @@ var Display = {
    * Go to the previous slide in the list
   */
   prev: Reveal.prevFragment,
-  /**
-   * Blank the screen
-  */
-  toBlack: function (disableTransitions) {
-    return new Promise((resolve, reject) => {
-      /* Avoid race conditions where display goes to transparent and quickly goes to black */
+  /** Change output modes without changing any slide's theme/background data. */
+  _setOutputMode: function (mode, disableTransitions, logo) {
+    // Auto-unblank also sends Show for already visible items. It must not
+    // cancel the item fade that has just started.
+    if (mode === 'show' && Display._displayMode === 'show' && !Display._pendingLogoPreloader &&
+        document.body.style.opacity !== '0' && Display._slidesContainer.style.opacity !== '0') {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
       var token = Display._beginTransitionOperation();
       var body = document.body;
-      var useDisableTransitions = !!disableTransitions;
-      if (useDisableTransitions) {
-        body.classList.add('disable-transitions');
-      }
-      /*
-        Restore the theme background in case we're coming from Logo mode so
-        the underlying content is never left in the logo-override state
-        once Black is dismissed.
-      */
-      Display._restoreThemeBackgroundFromLogo();
-      /*
-        Reveal's black overlay should be shown before the transitions are
-        restored, to avoid screen flashes
-      */
-      Display._restorePauseBehavior();
-      Display._requestAnimationFrameExclusive(function() {
+      var previousMode = Display._displayMode || 'show';
+      var immediate = !!disableTransitions || !Display._doItemTransitions;
+      function apply() {
         if (!Display._isCurrentTransition(token)) {
           return;
         }
-        if (!Reveal.isPaused()) {
+        var fromDesktop = previousMode === 'desktop' || Number(getComputedStyle(body).opacity) === 0;
+        var wasPaused = Reveal.isPaused();
+        Display._displayMode = mode;
+        body.classList.toggle('disable-transitions', immediate || fromDesktop);
+        Display._restorePauseBehavior();
+        if (mode === 'logo') {
+          Display._setLogoScreenBackground(logo.bg_color, logo.image, logo.logo_fit);
+          // Black is above Logo. Keep Logo opaque underneath it while Black
+          // fades away so the slide cannot flash between these two covers.
+          if (wasPaused || previousMode === 'logo' || fromDesktop) {
+            Display._setOpacityImmediately(Display._logoScreen, 1);
+          }
+          Display._logoScreen.classList.add('show');
+          Display._logoScreen.style.removeProperty('opacity');
+        } else if (mode !== 'black') {
+          Display._hideLogoScreen();
+        }
+        if (mode === 'show' || mode === 'theme') {
+          var opacity = mode === 'show' ? 1 : 0;
+          var covered = previousMode === 'black' || previousMode === 'logo' || fromDesktop;
+          [Display._slidesContainer, Display._footerContainer].forEach(function (element) {
+            if (covered) {
+              Display._setOpacityImmediately(element, opacity);
+            } else {
+              element.style.opacity = opacity;
+            }
+          });
+        }
+        body.classList.toggle('show-theme', mode === 'theme');
+        Array.from(document.querySelectorAll('.image-slide-background')).forEach(function (background) {
+          background.style.setProperty('transition', immediate ? 'none' :
+            'opacity ' + Display._itemTransitionSpeedSeconds + 's ' +
+              Display._getTransitionEasing(Display._itemTransitionType), 'important');
+        });
+        if (Reveal.isPaused() !== (mode === 'black')) {
           Reveal.togglePause();
         }
-        // Hide logo only after black mode is active to avoid flashing slide content.
-        Display._hideLogoScreen();
-        var documentBody = $("body")[0];
-        documentBody.style.opacity = 1;
-        if (useDisableTransitions) {
-          Display._requestAnimationFrameExclusive(function () {
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            body.classList.remove('disable-transitions');
-            resolve();
-          });
-          return;
+        // Commit the prepared state while still transparent before fading a
+        // previously hidden native window back in.
+        if (fromDesktop) {
+          void body.offsetHeight;
+          body.classList.toggle('disable-transitions', immediate);
         }
-        Display._reenableGlobalTransitions(function() {
+        body.style.opacity = 1;
+        void body.offsetHeight;
+        var finish = function () {
           if (!Display._isCurrentTransition(token)) {
             return;
           }
-          resolve();
-        });
-      });
-    });
-  },
-  /**
-   * Hide all but theme background
-  */
-  toTheme: function (disableTransitions) {
-    return new Promise((resolve, reject) => {
-      var token = Display._beginTransitionOperation();
-      var body = document.body;
-      var useDisableTransitions = !!disableTransitions;
-      if (useDisableTransitions) {
-        body.classList.add('disable-transitions');
-      }
-      Display._hideLogoScreen();
-      Display._restoreThemeBackgroundFromLogo();
-      /*
-        Reveal's black overlay should be shown before the transitions are
-        restored, to avoid screen flashes
-      */
-      Display._restorePauseBehavior();
-      var documentBody = $("body")[0];
-      var slidesContainer = Display._slidesContainer;
-      var footerContainer = Display._footerContainer;
-      var wasPaused = Reveal.isPaused();
-      var wasSlideLayerVisible = parseFloat(getComputedStyle(slidesContainer).opacity || "1") > 0.01;
-      var shouldFadeLyrics = !useDisableTransitions && !wasPaused && wasSlideLayerVisible;
-      // Only fade lyrics when coming from presentation. From black/theme/logo/desktop,
-      // lyrics must stay hidden and only the background transition should be visible.
-      if (shouldFadeLyrics) {
-        documentBody.style.opacity = 1;
-        slidesContainer.style.opacity = 0;
-        footerContainer.style.opacity = 0;
-        Display._requestAnimationFrameExclusive(function () {
-          if (!Display._isCurrentTransition(token)) {
-            return;
+          if (mode === 'logo') {
+            Display._setOpacityImmediately(Display._slidesContainer, 0);
+            Display._setOpacityImmediately(Display._footerContainer, 0);
+          } else if (mode === 'black') {
+            // Keep Logo in place until the black cover is fully opaque.
+            Display._setOpacityImmediately(Display._logoScreen, 0);
+            Display._hideLogoScreen();
           }
-          if (Reveal.isPaused()) {
-            Reveal.togglePause();
-          }
-          Display._reenableGlobalTransitions(function() {
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            resolve();
+          body.classList.remove('disable-transitions');
+          Array.from(document.querySelectorAll('.image-slide-background')).forEach(function (background) {
+            background.style.removeProperty('transition');
           });
-        });
+          resolve();
+        };
+        if (immediate) {
+          Display._requestAnimationFrameExclusive(finish);
+        } else {
+          Display._modeCompletionTimeout = setTimeout(finish,
+            Math.round(Display._itemTransitionSpeedSeconds * 1000) + 50);
+        }
+      }
+      if (mode !== 'logo' || !logo.image) {
+        apply();
         return;
       }
-      var previousSlidesTransition = slidesContainer.style.transition;
-      var previousFooterTransition = footerContainer.style.transition;
-      // Hide lyric/content layers immediately for non-presentation source modes.
-      slidesContainer.style.transition = "none";
-      footerContainer.style.transition = "none";
-      documentBody.style.opacity = 1;
-      slidesContainer.style.opacity = 0;
-      footerContainer.style.opacity = 0;
-      Display._requestAnimationFrameExclusive(function () {
-        if (!Display._isCurrentTransition(token)) {
-          return;
-        }
-        if (Reveal.isPaused()) {
-          Reveal.togglePause();
-        }
-        Display._requestAnimationFrameExclusive(function () {
-          if (!Display._isCurrentTransition(token)) {
-            return;
-          }
-          slidesContainer.style.transition = previousSlidesTransition || "";
-          footerContainer.style.transition = previousFooterTransition || "";
-          if (useDisableTransitions) {
-            body.classList.remove('disable-transitions');
-            resolve();
-            return;
-          }
-          Display._reenableGlobalTransitions(function() {
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            resolve();
-          });
-        });
-      });
+      var preloader = new Image();
+      Display._pendingLogoPreloader = preloader;
+      preloader.onload = function () {
+        Display._pendingLogoPreloader = null;
+        apply();
+      };
+      preloader.onerror = function () {
+        Display._pendingLogoPreloader = null;
+        logo.image = null;
+        apply();
+      };
+      preloader.src = logo.image;
     });
   },
+
+  _setOpacityImmediately: function (element, opacity) {
+    if (!element) {
+      return;
+    }
+    var transition = element.style.getPropertyValue('transition');
+    var priority = element.style.getPropertyPriority('transition');
+    element.style.setProperty('transition', 'none', 'important');
+    element.style.opacity = opacity;
+    void element.offsetHeight;
+    element.style.removeProperty('transition');
+    if (transition) {
+      element.style.setProperty('transition', transition, priority);
+    }
+  },
+
+  toBlack: function (disableTransitions) {
+    return Display._setOutputMode('black', disableTransitions);
+  },
+
+  toTheme: function (disableTransitions) {
+    return Display._setOutputMode('theme', disableTransitions);
+  },
+
   /**
    * Hide everything (CAUTION: Causes a invisible mouse barrier)
   */
   toTransparent: function (disableTransitions) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       var token = Display._beginTransitionOperation();
       var body = document.body;
-      var useDisableTransitions = !!disableTransitions;
-      if (useDisableTransitions) {
-        body.classList.add('disable-transitions');
-      }
-      Display._hideLogoScreen();
-      Display._restoreThemeBackgroundFromLogo();
-      var documentBody = $("body")[0];
-      documentBody.style.opacity = 0;
-      if (!Reveal.isPaused()) {
-        /*
-          Removing previously the overlay if it's not paused, to avoid a
-          content flash while going from black screen to transparent
-        */
-        document.body.classList.add('is-desktop');
-        Reveal.togglePause();
-      } else {
-        /*
-          When coming from Black we're already paused, but we still need
-          the is-desktop class so the pause overlay doesn't linger as a
-          black flash beneath the now-transparent body.
-        */
-        document.body.classList.add('is-desktop');
-      }
-      /*
-        Waiting for body transition to happen, now it would be safe to
-        hide the Webview (as other transitions were suppressed)
-      */
-      if (useDisableTransitions) {
+      var immediate = !!disableTransitions || !Display._doItemTransitions;
+      Display._displayMode = 'desktop';
+      body.classList.toggle('disable-transitions', immediate);
+      var alreadyTransparent = Number(getComputedStyle(body).opacity) === 0;
+      // Fade the currently visible composition, including Black or Logo. Do
+      // not reveal a different layer underneath while fading to the desktop.
+      body.style.opacity = 0;
+      function finish() {
+        if (!Display._isCurrentTransition(token)) {
+          return;
+        }
+        Display._removeTransitionEndEventToBody();
+        clearTimeout(Display._transparentFallbackTimeout);
+        body.classList.add('disable-transitions', 'is-desktop');
         Display._slidesContainer.style.opacity = 0;
         Display._footerContainer.style.opacity = 0;
+        if (Display._clearAfterNativeHandoff) {
+          Display.setTextSlide('');
+        }
         displayWatcher.pleaseRepaint();
-        Display._requestAnimationFrameExclusive(function() {
-          if (!Display._isCurrentTransition(token)) {
-            return;
+        Display._requestAnimationFrameExclusive(function () {
+          if (Display._isCurrentTransition(token)) {
+            resolve();
           }
-          resolve();
         });
+      }
+      if (immediate || alreadyTransparent) {
+        finish();
         return;
       }
-      Display._addTransitionEndEventToBody(transitionEndEvent);
-      function transitionEndEvent(e) {
-        // Targeting only body
-        if (e.target != documentBody) {
-          return;
+      Display._addTransitionEndEventToBody(function (event) {
+        if (event.target === body && event.propertyName === 'opacity') {
+          finish();
         }
-        if (!Display._isCurrentTransition(token)) {
-          Display._removeTransitionEndEventToBody();
-          return;
-        }
-        /*
-          Disabling all transitions (except body) to allow the Webview to attain the
-          transparent state before it gets hidden by Qt.
-        */
-        document.body.classList.add('disable-transitions');
-        document.body.classList.add('is-desktop');
-        Display._slidesContainer.style.opacity = 0;
-        Display._footerContainer.style.opacity = 0;
-        /*
-          Repainting before hiding the Webview to avoid flashes when
-          showing it again.
-        */
-        displayWatcher.pleaseRepaint();
-        /* Waiting for repaint to happen before saying that it's done. */
-        Display._requestAnimationFrameExclusive(function() {
-          if (!Display._isCurrentTransition(token)) {
-            return;
-          }
-          /* We're transparent now, aborting any transition event between */
-          Display._removeTransitionEndEventToBody();
-          resolve();
-        });
-      }
+      });
+      // Hidden/minimised WebEngine windows may never deliver transitionend.
+      Display._transparentFallbackTimeout = setTimeout(finish,
+        Math.round(Display._itemTransitionSpeedSeconds * 1000) + 100);
     });
   },
   /**
@@ -1815,213 +1885,17 @@ var Display = {
    * @param {string} logo_fit - cover, contain, stretch, repeat
   */
   toLogo: function (bg_color, image, logo_fit, disableTransitions) {
-    return new Promise((resolve, reject) => {
-      var token = Display._beginTransitionOperation();
-      Display._restorePauseBehavior();
-      var documentBody = $("body")[0];
-      var body = document.body;
-      var useDisableTransitions = !!disableTransitions;
-      if (useDisableTransitions) {
-        body.classList.add('disable-transitions');
-      }
-      // Settings can refresh the logo while it is already covering the output.
-      // Keep that cover in place throughout the refresh.
-      if (Display._logoBackgroundOverrideActive) {
-        Display._slidesContainer.style.opacity = 0;
-        Display._footerContainer.style.opacity = 0;
-        Display._setLogoScreenBackground(bg_color, image, logo_fit);
-        Display._logoScreen.classList.add("show");
-        Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
-        body.classList.remove('disable-transitions');
-        resolve();
-        return;
-      }
-      var wasSlideLayerVisible = parseFloat(getComputedStyle(Display._slidesContainer).opacity || "1") > 0.01;
-      documentBody.style.opacity = 1;
-      Display._hideLogoScreen();
-      if (wasSlideLayerVisible) {
-        Display._slidesContainer.style.opacity = 1;
-        Display._footerContainer.style.opacity = 1;
-      }
-      if (Reveal.isPaused()) {
-        Reveal.togglePause();
-      }
-      Display._setLogoScreenBackground(bg_color, null, logo_fit);
-
-      function hideSlideLayerAndResolve() {
-        if (!Display._isCurrentTransition(token)) {
-          return;
-        }
-        Display._slidesContainer.style.opacity = 0;
-        Display._footerContainer.style.opacity = 0;
-        Display._setThemeBackgroundToLogo(bg_color, image, logo_fit);
-        if (useDisableTransitions) {
-          Display._requestAnimationFrameExclusive(function () {
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            body.classList.remove('disable-transitions');
-            resolve();
-          });
-          return;
-        }
-        resolve();
-      }
-
-      function fadeLogoOverSlide() {
-        Display._requestAnimationFrameExclusive(function() {
-          if (!Display._isCurrentTransition(token)) {
-            return;
-          }
-          if (!Display._logoScreen) {
-            hideSlideLayerAndResolve();
-            return;
-          }
-          Display._logoScreen.classList.add("show");
-          var logoScreenStyle = getComputedStyle(Display._logoScreen);
-          var hasOpacityTransition =
-            !useDisableTransitions &&
-            document.body.classList.contains("transition") &&
-            logoScreenStyle.transitionDuration !== "0s";
-          if (!hasOpacityTransition) {
-            hideSlideLayerAndResolve();
-            return;
-          }
-          var onTransitionEnd = function(event) {
-            if (event.target !== Display._logoScreen || event.propertyName !== "opacity") {
-              return;
-            }
-            if (Display._pendingLogoTransitionElement) {
-              Display._pendingLogoTransitionElement.removeEventListener(
-                "transitionend", onTransitionEnd);
-            }
-            Display._pendingLogoTransitionEndHandler = null;
-            Display._pendingLogoTransitionElement = null;
-            if (Display._pendingLogoFallbackTimeout) {
-              clearTimeout(Display._pendingLogoFallbackTimeout);
-              Display._pendingLogoFallbackTimeout = null;
-            }
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            hideSlideLayerAndResolve();
-          };
-          Display._pendingLogoTransitionEndHandler = onTransitionEnd;
-          Display._pendingLogoTransitionElement = Display._logoScreen;
-          Display._logoScreen.addEventListener("transitionend", onTransitionEnd);
-          // Safety fallback in case transitionend is skipped by the browser.
-          Display._pendingLogoFallbackTimeout = setTimeout(function() {
-            Display._pendingLogoFallbackTimeout = null;
-            if (Display._pendingLogoTransitionElement && Display._pendingLogoTransitionEndHandler) {
-              Display._pendingLogoTransitionElement.removeEventListener(
-                "transitionend", Display._pendingLogoTransitionEndHandler);
-            }
-            Display._pendingLogoTransitionEndHandler = null;
-            Display._pendingLogoTransitionElement = null;
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            hideSlideLayerAndResolve();
-          }, 900);
-        });
-      }
-
-      Display._reenableGlobalTransitions(function() {
-        if (!Display._isCurrentTransition(token)) {
-          return;
-        }
-        if (!image) {
-          fadeLogoOverSlide();
-          return;
-        }
-        var preloader = new Image();
-        Display._pendingLogoPreloader = preloader;
-        preloader.onload = function() {
-          if (Display._pendingLogoPreloader === preloader) {
-            Display._pendingLogoPreloader = null;
-          }
-          if (!Display._isCurrentTransition(token)) {
-            return;
-          }
-          Display._setLogoScreenBackground(bg_color, image, logo_fit);
-          fadeLogoOverSlide();
-        };
-        preloader.onerror = function() {
-          if (Display._pendingLogoPreloader === preloader) {
-            Display._pendingLogoPreloader = null;
-          }
-          if (!Display._isCurrentTransition(token)) {
-            return;
-          }
-          Display._setLogoScreenBackground(bg_color, null, logo_fit);
-          fadeLogoOverSlide();
-        };
-        preloader.src = image;
-      });
-    });
+    return Display._setOutputMode('logo', disableTransitions,
+      {bg_color: bg_color, image: image, logo_fit: logo_fit});
   },
-  /**
-   * Show the screen
-  */
-  show: function (disableTransitions) {
-    return new Promise((resolve, reject) => {
-      /*
-        _beginTransitionOperation() bumps the token *and* aborts any pending
-        async continuations left behind by a prior transition (stale
-        transitionend listeners, fallback timeouts, preloader handlers).
-      */
-      var token = Display._beginTransitionOperation();
-      var documentBody = $("body")[0];
-      var body = document.body;
-      var useDisableTransitions = !!disableTransitions;
-      var pauseOverlay = document.querySelector('.reveal .pause-overlay');
-      var previousPauseOverlayTransition = null;
-      if (useDisableTransitions) {
-        body.classList.add('disable-transitions');
-        if (pauseOverlay) {
-          previousPauseOverlayTransition = pauseOverlay.style.transition;
-          pauseOverlay.style.transition = 'none';
-        }
-      }
-      Display._hideLogoScreen();
-      Display._restoreThemeBackgroundFromLogo();
 
-      Display._slidesContainer.style.opacity = 1;
-      Display._footerContainer.style.opacity = 1;
-      if (Reveal.isPaused()) {
-        Reveal.togglePause();
-      }
-      Display._restorePauseBehavior();
-      var finishShow = function () {
-        if (!Display._isCurrentTransition(token)) {
-          return;
-        }
-        documentBody.style.opacity = 1;
-        if (useDisableTransitions) {
-          Display._requestAnimationFrameExclusive(function () {
-            if (!Display._isCurrentTransition(token)) {
-              return;
-            }
-            if (pauseOverlay) {
-              pauseOverlay.style.transition = previousPauseOverlayTransition || '';
-            }
-            body.classList.remove('disable-transitions');
-            resolve();
-          });
-          return;
-        }
-        resolve();
-      };
-      if (useDisableTransitions) {
-        finishShow();
-      } else {
-        Display._reenableGlobalTransitions(finishShow);
-      }
-    });
+  show: function (disableTransitions) {
+    return Display._setOutputMode('show', disableTransitions);
   },
 
   _hideLogoScreen: function() {
     if (Display._logoScreen) {
+      Display._logoScreen.style.removeProperty("opacity");
       Display._logoScreen.classList.remove("show");
     }
   },
@@ -2053,150 +1927,15 @@ var Display = {
     return $(".slides > section")[0];
   },
 
-  _setThemeBackgroundToLogo: function(bg_color, image, logo_fit) {
-    var rootSlide = Display._getRootSlideSection();
-    if (!rootSlide) {
-      return;
+  _syncOutputModeAfterSlideReplacement: function () {
+    if ((Display._displayMode === 'logo')) {
+      Display._setOpacityImmediately(Display._slidesContainer, 0);
+      Display._setOpacityImmediately(Display._footerContainer, 0);
     }
-    if (!Display._logoBackgroundOverrideActive) {
-      Display._savedBackgroundAttributes = {
-        background: rootSlide.getAttribute("data-background"),
-        image: rootSlide.getAttribute("data-background-image"),
-        color: rootSlide.getAttribute("data-background-color"),
-        size: rootSlide.getAttribute("data-background-size"),
-        repeat: rootSlide.getAttribute("data-background-repeat"),
-        position: rootSlide.getAttribute("data-background-position")
-      };
-    }
-    var fit = _resolveBackgroundFit(logo_fit || "cover");
-    rootSlide.setAttribute("data-background-color", bg_color || "#000");
-    if (image) {
-      rootSlide.setAttribute("data-background-image", image);
-      rootSlide.removeAttribute("data-background");
-      rootSlide.setAttribute("data-background-size", fit.size);
-      rootSlide.setAttribute("data-background-repeat", fit.repeat);
-      rootSlide.setAttribute("data-background-position", fit.position);
-    }
-    else {
-      rootSlide.setAttribute("data-background", bg_color || "#000");
-      rootSlide.removeAttribute("data-background-image");
-      rootSlide.removeAttribute("data-background-size");
-      rootSlide.removeAttribute("data-background-repeat");
-      rootSlide.removeAttribute("data-background-position");
-    }
-    Display._logoBackgroundOverrideActive = true;
-    Display._lastLogoParams = { bg_color: bg_color, image: image, logo_fit: logo_fit };
-    Reveal.sync();
-  },
-
-  /**
-   * Re-sync the logo background override after the slides (and thus the root
-   * slide element) have been replaced while logo mode is active. Captures the
-   * new root slide's freshly applied theme attributes so they can be restored
-   * when logo mode is exited, and re-applies the logo attributes on top so the
-   * reveal background layer continues to show the logo during transitions.
-   */
-  _syncLogoOverrideAfterSlideReplacement: function() {
-    if (!Display._logoBackgroundOverrideActive) {
-      return;
-    }
-    var rootSlide = Display._getRootSlideSection();
-    if (!rootSlide) {
-      return;
-    }
-    Display._savedBackgroundAttributes = {
-      background: rootSlide.getAttribute("data-background"),
-      image: rootSlide.getAttribute("data-background-image"),
-      color: rootSlide.getAttribute("data-background-color"),
-      size: rootSlide.getAttribute("data-background-size"),
-      repeat: rootSlide.getAttribute("data-background-repeat"),
-      position: rootSlide.getAttribute("data-background-position")
-    };
-    if (!Display._lastLogoParams) {
-      return;
-    }
-    var params = Display._lastLogoParams;
-    var fit = _resolveBackgroundFit(params.logo_fit || "cover");
-    rootSlide.setAttribute("data-background-color", params.bg_color || "#000");
-    if (params.image) {
-      rootSlide.setAttribute("data-background-image", params.image);
-      rootSlide.removeAttribute("data-background");
-      rootSlide.setAttribute("data-background-size", fit.size);
-      rootSlide.setAttribute("data-background-repeat", fit.repeat);
-      rootSlide.setAttribute("data-background-position", fit.position);
-    } else {
-      rootSlide.setAttribute("data-background", params.bg_color || "#000");
-      rootSlide.removeAttribute("data-background-image");
-      rootSlide.removeAttribute("data-background-size");
-      rootSlide.removeAttribute("data-background-repeat");
-      rootSlide.removeAttribute("data-background-position");
-    }
-    Reveal.sync();
-  },
-
-  _restoreThemeBackgroundFromLogo: function() {
-    if (!Display._logoBackgroundOverrideActive) {
-      return;
-    }
-    var rootSlide = Display._getRootSlideSection();
-    if (!rootSlide) {
-      Display._logoBackgroundOverrideActive = false;
-      Display._savedBackgroundAttributes = null;
-      Display._lastLogoParams = null;
-      return;
-    }
-    var saved = Display._savedBackgroundAttributes || {};
-    if (saved.background) {
-      rootSlide.setAttribute("data-background", saved.background);
-    }
-    else {
-      rootSlide.removeAttribute("data-background");
-    }
-    if (saved.image) {
-      rootSlide.setAttribute("data-background-image", saved.image);
-    }
-    else {
-      rootSlide.removeAttribute("data-background-image");
-    }
-    if (saved.color) {
-      rootSlide.setAttribute("data-background-color", saved.color);
-    }
-    else {
-      rootSlide.removeAttribute("data-background-color");
-    }
-    if (saved.size) {
-      rootSlide.setAttribute("data-background-size", saved.size);
-    }
-    else {
-      rootSlide.removeAttribute("data-background-size");
-    }
-    if (saved.repeat) {
-      rootSlide.setAttribute("data-background-repeat", saved.repeat);
-    }
-    else {
-      rootSlide.removeAttribute("data-background-repeat");
-    }
-    if (saved.position) {
-      rootSlide.setAttribute("data-background-position", saved.position);
-    }
-    else {
-      rootSlide.removeAttribute("data-background-position");
-    }
-    Display._logoBackgroundOverrideActive = false;
-    Display._savedBackgroundAttributes = null;
-    Display._lastLogoParams = null;
-    Reveal.sync();
-  },
-
-  _reenableGlobalTransitions: function(afterCallback) {
-    Display._requestAnimationFrameExclusive(function() {
-      /*
-        Waiting for the previous opacity + unpause operations to complete
-        to restore the transitions behavior
-      */
-      document.body.classList.remove('disable-transitions');
-      if (typeof afterCallback === 'function') {
-        afterCallback();
+    // Image/PDF backgrounds are slide content, unlike a song's theme image.
+    Array.from(Display._slidesContainer.querySelectorAll('.use-background-image')).forEach(function (slide) {
+      if (slide.slideBackgroundElement) {
+        slide.slideBackgroundElement.classList.add('image-slide-background');
       }
     });
   },
@@ -2221,23 +1960,15 @@ var Display = {
 
   /**
    * Aborts last body's transitionend and requestAnimationFrame's events, to avoid
-   * race condition bugs. Also tears down any in-flight logo helpers (transitionend
-   * listener, fallback timeout and image preloader) so they can't mutate state
+   * race condition bugs. Also tears down mode completion timers and logo
+   * image preloaders so they can't mutate state
    * after a different hide/show operation has taken over.
    */
   _abortLastTransitionOperation: function() {
     Display._removeTransitionEndEventToBody();
+    clearTimeout(Display._transparentFallbackTimeout);
+    clearTimeout(Display._modeCompletionTimeout);
     cancelAnimationFrame(Display._lastRequestAnimationFrameHandle);
-    if (Display._pendingLogoTransitionElement && Display._pendingLogoTransitionEndHandler) {
-      Display._pendingLogoTransitionElement.removeEventListener(
-        "transitionend", Display._pendingLogoTransitionEndHandler);
-    }
-    Display._pendingLogoTransitionEndHandler = null;
-    Display._pendingLogoTransitionElement = null;
-    if (Display._pendingLogoFallbackTimeout) {
-      clearTimeout(Display._pendingLogoFallbackTimeout);
-      Display._pendingLogoFallbackTimeout = null;
-    }
     if (Display._pendingLogoPreloader) {
       Display._pendingLogoPreloader.onload = null;
       Display._pendingLogoPreloader.onerror = null;
@@ -2252,6 +1983,7 @@ var Display = {
    */
   _beginTransitionOperation: function() {
     Display._abortLastTransitionOperation();
+    Display._cancelItemTransition();
     Display._transitionToken += 1;
     return Display._transitionToken;
   },
@@ -2361,9 +2093,22 @@ var Display = {
       console.warn("Couldn't reset theme: No slides exist");
       return;
     }
-    Display.applyTheme(targetElement, targetElement.classList.contains("text-slides"));
+    Display._suppressRevealConfigure = true;
+    Display._pendingRevealConfig = null;
+    try {
+      Array.from(Display._slidesContainer.children).forEach(function (section) {
+        Display.applyTheme(section, section.classList.contains('text-slides') ||
+          section.classList.contains('text-slide'));
+      });
+    } finally {
+      Display._suppressRevealConfigure = false;
+    }
+    if (Display._pendingRevealConfig) {
+      Reveal.configure(Display._pendingRevealConfig);
+      Display._pendingRevealConfig = null;
+    }
     Reveal.sync();
-    Display._syncLogoOverrideAfterSlideReplacement();
+    Display._syncOutputModeAfterSlideReplacement();
   },
   /**
    * Apply the theme to the provided element
@@ -2382,6 +2127,9 @@ var Display = {
     if (!!Display._theme.display_slide_transition && Display._doTransitions) {
       var themeTransitionType = Display._normaliseThemeTransitionType(Display._theme.display_slide_transition_type);
       var themeTransitionSpeed = Display._normaliseThemeTransitionSpeed(Display._theme.display_slide_transition_speed);
+      var slideDuration = themeTransitionSpeed === TransitionSpeed.Fast ? 400 :
+        (themeTransitionSpeed === TransitionSpeed.Slow ? 1200 : 800);
+      document.body.style.setProperty('--slide-transition-ms', slideDuration + 'ms');
       var themeTransitionDirection = Display._normaliseThemeTransitionDirection(
         Display._theme.display_slide_transition_direction);
       var themeTransitionReverse = Display._normaliseThemeTransitionReverse(Display._theme.display_slide_transition_reverse);
@@ -2651,10 +2399,14 @@ var Display = {
    * and we don't want any flashbacks to the current slide contents
    */
   finishWithCurrentItem: function () {
-    Display.setTextSlide('');
-    var documentBody = $("body")[0];
-    documentBody.style.opacity = 1;
     Display._skipNextTransition = true;
+    // Media/native presentations reveal their own window via toTransparent.
+    // Keep the outgoing picture until that fade ends, then clear it while
+    // invisible so it cannot flash when this display is shown again.
+    Display._clearAfterNativeHandoff = true;
+    if (Number(getComputedStyle(document.body).opacity) === 0) {
+      Display.setTextSlide('');
+    }
     displayWatcher.pleaseRepaint();
   },
   /**

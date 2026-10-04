@@ -24,6 +24,7 @@ This class is for playing Media within OpenLP.
 """
 from unittest.mock import MagicMock, patch
 
+from PySide6 import QtCore
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 import pytest
 
@@ -135,7 +136,8 @@ def test_pause(base_audio_player):
     base_audio_player.media_player.pause.assert_called_once()
 
 
-def test_stop(base_audio_player):
+@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+def test_stop(invoke_method, base_audio_player):
     """
     Test stopping the current item
     """
@@ -145,8 +147,9 @@ def test_stop(base_audio_player):
     # WHEN: stop is called
     base_audio_player.stop()
 
-    # THEN: A thread should have been started to stop audio_player
-    base_audio_player.media_player.stop.assert_called_once()
+    # THEN: Qt stops synchronously through the GIL-releasing invocation path.
+    invoke_method.assert_called_once_with(
+        base_audio_player.media_player, 'stop', QtCore.Qt.ConnectionType.DirectConnection)
 
 
 def test_media_status_changed_live_media(base_audio_player, registry):

@@ -501,6 +501,7 @@ def test_after_loaded(display_window_env, mock_settings, registry):
 
     # THEN: The following functions should have been called
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': True,
+                                                                   'showTransparency': True,
                                                                    'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
@@ -517,8 +518,10 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
     Test the mouse is showing even if the `hide mouse` setting is set while is_display=false
     """
     # GIVEN: An initialised display window and settings for item transitions and hide mouse returns true
-    display_window = DisplayWindow()
+    display_window = DisplayWindow(embedded=True)
     display_window.is_display = False
+    display_window.allow_theme_transitions = True
+    display_window.allow_item_transitions = False
     mock_settings.value.return_value = True
     display_window.scale = 2
     display_window._is_initialised = True
@@ -529,10 +532,11 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
     # WHEN: after_loaded is run
     display_window.after_loaded()
 
-    # THEN: Display.init should be called where is_display=false, do_item_transitions=true, show_mouse=false
+    # THEN: Preview retains slide transitions while service item transitions stay disabled.
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': False,
-                                                                   'allowThemeTransitions': False,
-                                                                   'doItemTransitions': True,
+                                                                   'showTransparency': False,
+                                                                   'allowThemeTransitions': True,
+                                                                   'doItemTransitions': False,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',
                                                                    'slideNumbersInFooter': True,
@@ -559,6 +563,20 @@ def test_after_loaded_callback(display_window_env, mock_settings, registry):
 
     # THEN: The after_loaded_callback should be called
     mocked_after_loaded_callback.assert_called_once()
+
+
+@patch('openlp.core.display.window.wait_for')
+def test_preview_frame_logs_do_not_flood_debug_output(mocked_wait_for, display_window_env, mock_settings):
+    """Routine capture payloads stay quiet while display control actions remain logged."""
+    window = DisplayWindow(embedded=True)
+    window.webview = MagicMock()
+    with patch('openlp.core.display.window.log.debug') as debug:
+        for _ in range(3):
+            window.set_single_image_data('#000', 'jpeg data')
+        debug.assert_not_called()
+        window.run_in_display('show')
+        debug.assert_called_once_with("requestAction('show')")
+    assert window.webview.page().runJavaScript.call_count == 4
 
 
 @patch('openlp.core.display.window.wait_for')
@@ -868,7 +886,7 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
     display_window.display_watcher.dispatchEvent(TRANSITION_END_EVENT_NAME, {})
     display_window.setVisible.assert_called_once_with(False)
     display_window.run_in_display.assert_called_once_with(
-        'toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
+        'toTransparent', True, return_event_name=TRANSITION_END_EVENT_NAME)
 
 
 def test_hide_display_to_blank(display_window_env, mock_settings):
@@ -983,7 +1001,7 @@ def test_hide_display_to_transparent(display_window_env, mock_settings):
 
     # THEN: Should run the correct javascript on the display and not set the visiblity
     display_window.run_in_display.assert_called_once_with(
-        'toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
+        'toTransparent', True, return_event_name=TRANSITION_END_EVENT_NAME)
     assert display_window.setVisible.call_count == 0
 
 

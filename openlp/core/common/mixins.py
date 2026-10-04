@@ -34,7 +34,7 @@ from openlp.core.common.settings import Settings
 
 DO_NOT_TRACE_EVENTS = ['timerEvent', 'paintEvent', 'drag_enter_event', 'drop_event', 'on_controller_size_changed',
                        'preview_size_changed', 'resizeEvent', 'eventFilter', 'tick', 'resize', 'update_ui',
-                       'get_time']
+                       'get_time', 'display_maindisplay', 'set_single_image_data', 'run_in_display']
 
 
 class LogMixin(object):

@@ -31,6 +31,7 @@ from openlp.core.common.mixins import LogMixin, RegistryProperties
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.display.window import DisplayWindow
 from openlp.core.lib.serviceitem import ItemCapabilities
+from openlp.core.lib.theme import TransitionSpeed
 from openlp.core.lib.ui import critical_error_message_box, warning_message_box
 from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
@@ -44,8 +45,6 @@ from openlp.core.ui.media.mediaplayer import MediaPlayer
 from openlp.core.ui.slidecontroller import SlideController
 
 log = logging.getLogger(__name__)
-
-HIDE_DELAY_TIME = 2500
 
 
 class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryProperties):
@@ -392,8 +391,8 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         critical_error_message_box(
             translate('OpenLP.MediaController', 'Unsupported Media on This Platform'),
             translate('OpenLP.MediaController',
-                      'Unable to play media file:\n{file}\n\n{details}').format(file=str(media_path),
-                                                                               details=details)
+                      'Unable to play media file:\n{file}\n\n{details}').format(
+                          file=str(media_path), details=details)
         )
 
     def _check_file_type_and_load(self, controller: SlideController) -> bool:
@@ -638,6 +637,12 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         return self.media_stop(msg[0], blank_on_stop=True)
 
+    def _output_transition_delay(self):
+        """Keep the native video frame until the configured output fade has finished."""
+        if not self.settings.value('themes/item transitions'):
+            return 0
+        return round(TransitionSpeed.to_seconds(self.settings.value('themes/item transition speed')) * 1000) + 100
+
     def on_media_stop(self):
         """
         Responds to the request to stop a loaded video from the web.
@@ -668,7 +673,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             else:
                 controller.media_player.stop()
         if controller.is_live:
-            self.live_hide_timer.start(HIDE_DELAY_TIME)
+            self.live_hide_timer.start(self._output_transition_delay())
             if not controller.media_play_item.is_background:
                 if controller.current_hide_mode == HideMode.Screen:
                     self._media_set_visibility(controller, False)
@@ -803,15 +808,16 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller.is_live:
             self.live_hide_timer.stop()
             self.live_kill_timer.stop()
-        controller.media_player.reset()
         controller.audio_player.reset()
-        if controller.is_live and delayed:
-            self.live_kill_timer.start(HIDE_DELAY_TIME)
+        delay = self._output_transition_delay() if controller.is_live and delayed else 0
+        if delay and controller.current_hide_mode is None:
+            # Resetting now removes the video surface before the WebEngine
+            # output has faded over it. Hold its final frame until the timer.
+            controller.media_player.pause()
+            self.live_kill_timer.start(delay)
         else:
-            if controller.is_live:
-                self.live_kill_timer.stop()
-            else:
-                self._media_set_visibility(controller, False)
+            controller.media_player.reset()
+            self._media_set_visibility(controller, False)
             controller.media_play_item = MediaPlayItem()
         self._media_bar(controller, "reset")
 
@@ -836,7 +842,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
             return
         if self.live_controller.media_play_item.is_playing == MediaState.Playing:
             if delayed:
-                self.live_hide_timer.start(HIDE_DELAY_TIME)
+                self.live_hide_timer.start(self._output_transition_delay())
             else:
                 self.media_pause(self.live_controller)
                 self._media_set_visibility(self.live_controller, False)
@@ -860,6 +866,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         Local function to kill the live media
         """
         self._media_set_visibility(self.live_controller, False)
+        self.live_controller.media_player.reset()
         self.live_controller.media_play_item = MediaPlayItem()
 
     def _media_set_visibility(self, controller: SlideController, visible):
@@ -916,7 +923,12 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """
         is_live = msg[1]
         self.log_debug(f"media_blank is_live:{is_live}")
-        if not is_live or self.live_kill_timer.isActive():
+        if not is_live:
+            return
+        if self.live_kill_timer.isActive():
+            # The old video is fading behind a new item. Showing that item
+            # must not wait for (or restart) the retired video.
+            Registry().execute("live_display_show")
             return
         play_item = self.live_controller.media_play_item
         # If there is no media, just show the display and return.
