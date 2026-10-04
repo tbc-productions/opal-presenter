@@ -21,7 +21,8 @@
 """
 The :mod:`~openlp.core.widgets.widgets` module contains custom widgets used in OpenLP
 """
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
+from PySide6.QtWidgets import QAbstractButton
 import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -210,59 +211,137 @@ class ProxyDialog(QtWidgets.QDialog):
             self.setWindowTitle(translate('OpenLP.ProxyDialog', 'Proxy Server Settings'))
 
 
-class ScreenButton(QtWidgets.Card):
-    """A Fluent display card with an exclusive, keyboard-accessible selector."""
-    clicked = QtCore.Signal()
+class ScreenButton(QAbstractButton):
+    """A proportional monitor tile with mouse, keyboard and accessible button selection."""
 
     def __init__(self, parent, screen):
         super().__init__(parent)
         self.setObjectName(f'screen_{screen.number}_button')
         self.screen = screen
-        self.setMaximumWidth(320)
-        self.setFixedHeight(180)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.addStretch()
-        self.selector = QtWidgets.QRadioButton(str(screen), self)
-        self.selector.screen = screen
-        layout.addWidget(self.selector, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
-        if isinstance(screen.geometry, QtCore.QRect):
-            size_text = translate('OpenLP.ScreenButton',
-                                  f'({screen.geometry.width()} x {screen.geometry.height()} pixels)')
-            self.size_label = QtWidgets.QLabel(size_text, self)
-            self.size_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-            self.size_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(self.size_label)
-        layout.addStretch()
-        self.selector.clicked.connect(self.clicked)
+        self.selector = self
+        self.setCheckable(True)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self._theme_host = fluentqt.FluentWidget(self)
+        self._theme_host.hide()
+        name = getattr(screen, 'name', '')
+        self.monitor_name = name if isinstance(name, str) else ''
+        description = str(screen)
+        if self.monitor_name:
+            description += '\n' + self.monitor_name
+        if isinstance(screen.geometry, QtCore.QRect):
+            description += '\n' + translate('OpenLP.ScreenButton', '{width} x {height} pixels').format(
+                width=screen.geometry.width(), height=screen.geometry.height())
+        self.setText(description)
+        self.setAccessibleName(description.replace('\n', ', '))
+        self.setToolTip(description)
+        self.toggled.connect(self.update)
 
     def sizeHint(self):
+        geometry = self.screen.geometry
+        if isinstance(geometry, QtCore.QRect) and geometry.width() > 0:
+            return QtCore.QSize(320, round(320 * geometry.height() / geometry.width()))
         return QtCore.QSize(320, 180)
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.setFixedHeight(round(self.width() * 9 / 16))
+    def paintEvent(self, event):
+        colors = self._theme_host.theme_tokens().colors
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        bounds = QtCore.QRectF(self.rect()).adjusted(3, 3, -3, -3)
+        selected = self.isChecked()
+        background = colors.accentDefault if selected else colors.controlDefault
+        if self.isDown():
+            background = colors.accentTertiary if selected else colors.controlTertiary
+        elif self.underMouse():
+            background = colors.accentSecondary if selected else colors.controlSecondary
+        painter.setBrush(background)
+        painter.setPen(QtGui.QPen(colors.accentDefault if selected else colors.strokeStrong, 2))
+        painter.drawRoundedRect(bounds, 8, 8)
+        if self.hasFocus():
+            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+            painter.setPen(QtGui.QPen(colors.strokeFocusOuter, 2, QtCore.Qt.PenStyle.DashLine))
+            painter.drawRoundedRect(bounds.adjusted(4, 4, -4, -4), 5, 5)
+        painter.setPen(colors.textOnAccent if selected else colors.textPrimary)
+        text_bounds = bounds.adjusted(10, 8, -10, -8)
+        # Keep numbers readable on small tiles; full details remain in the tooltip and selected-screen label.
+        number_font = QtGui.QFont(self.font())
+        number_font.setPixelSize(max(14, min(36, round(self.height() / 4))))
+        number_font.setBold(True)
+        painter.setFont(number_font)
+        number_height = QtGui.QFontMetrics(number_font).height()
+        label_font = QtGui.QFont(self.font())
+        label_font.setPixelSize(12)
+        label_height = QtGui.QFontMetrics(label_font).height()
+        lines = []
+        if self.monitor_name:
+            lines.append((self.monitor_name, False))
+        if self.screen.is_primary:
+            lines.append((translate('OpenLP.ScreenButton', 'Primary'), True))
+        if self.screen.is_display:
+            lines.append((translate('OpenLP.ScreenButton', 'Projection'), False))
+        visible_lines = max(0, min(len(lines), int((text_bounds.height() - number_height - 6) / label_height)))
+        top = text_bounds.center().y() - (number_height + visible_lines * label_height) / 2
+        painter.drawText(QtCore.QRectF(text_bounds.left(), top, text_bounds.width(), number_height),
+                         QtCore.Qt.AlignmentFlag.AlignCenter, str(self.screen.number + 1))
+        for index, (text, bold) in enumerate(lines[:visible_lines]):
+            label_font.setBold(bold)
+            painter.setFont(label_font)
+            text = painter.fontMetrics().elidedText(text, QtCore.Qt.TextElideMode.ElideRight,
+                                                    max(0, int(text_bounds.width())))
+            painter.drawText(QtCore.QRectF(text_bounds.left(), top + number_height + index * label_height,
+                                           text_bounds.width(), label_height),
+                             QtCore.Qt.AlignmentFlag.AlignCenter, text)
 
-    def text(self):
-        return self.selector.text() + ('\n' + self.size_label.text() if hasattr(self, 'size_label') else '')
 
-    def isCheckable(self):
-        return self.selector.isCheckable()
+class ScreenLayout(QtWidgets.QLayout):
+    """Scale the OS desktop coordinates uniformly to fit the monitor map."""
 
-    def isChecked(self):
-        return self.selector.isChecked()
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.items = []
+        self.setContentsMargins(16, 16, 16, 16)
 
-    def click(self):
-        self.selector.click()
+    def addItem(self, item):
+        self.items.append(item)
+        self.invalidate()
 
-    def mouseReleaseEvent(self, event):
-        if event.button() == QtCore.Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
-            self.click()
-            event.accept()
-        else:
-            super().mouseReleaseEvent(event)
+    def count(self):
+        return len(self.items)
+
+    def itemAt(self, index):
+        return self.items[index] if 0 <= index < len(self.items) else None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self.items):
+            item = self.items.pop(index)
+            self.invalidate()
+            return item
+        return None
+
+    def sizeHint(self):
+        return QtCore.QSize(560, 260)
+
+    def minimumSize(self):
+        return QtCore.QSize(240, 200)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        tiles = [(item.widget(), item.widget().screen.geometry) for item in self.items]
+        tiles = [(widget, geometry) for widget, geometry in tiles
+                 if isinstance(geometry, QtCore.QRect) and not geometry.isEmpty()]
+        if not tiles:
+            return
+        desktop = QtCore.QRectF()
+        for widget, geometry in tiles:
+            desktop = desktop.united(QtCore.QRectF(geometry))
+        left, top, right, bottom = self.getContentsMargins()
+        available = QtCore.QRectF(rect).adjusted(left, top, -right, -bottom)
+        scale = min(available.width() / desktop.width(), available.height() / desktop.height())
+        offset = available.center() - desktop.center() * scale
+        for widget, geometry in tiles:
+            widget.setGeometry(QtCore.QRectF(offset.x() + geometry.x() * scale,
+                                             offset.y() + geometry.y() * scale,
+                                             geometry.width() * scale, geometry.height() * scale).toRect())
 
 
 class ScreenIdentificationBanner(QtWidgets.QWidget):
@@ -298,6 +377,28 @@ class ScreenIdentificationBanner(QtWidgets.QWidget):
         layout.setCurrentWidget(self.label)
 
 
+class ScreenDisplaySettings(QtWidgets.Card):
+    """A screen section whose details remain readable above its display toggle."""
+    clicked = QtCore.Signal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.enable_display_check = QtWidgets.QCheckBox(self)
+        self.display_options = QtWidgets.QWidget(self)
+        self.enable_display_check.clicked.connect(self.clicked)
+        self.enable_display_check.toggled.connect(self.display_options.setEnabled)
+        self.display_options.setEnabled(False)
+
+    def setTitle(self, title):
+        self.enable_display_check.setText(title)
+
+    def isChecked(self):
+        return self.enable_display_check.isChecked()
+
+    def setChecked(self, checked):
+        self.enable_display_check.setChecked(checked)
+
+
 class ScreenSelectionWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, screens=None):
         super().__init__(parent)
@@ -316,67 +417,95 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         self.screen_frame = QtWidgets.QFrame(self)
         self.screen_frame.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.screen_frame.setObjectName('screen_frame')
-        self.screen_frame_layout = QtWidgets.QVBoxLayout(self.screen_frame)
-        self.screen_frame_layout.setContentsMargins(16, 16, 16, 16)
-        self.screen_frame_layout.setSpacing(8)
+        self.screen_frame.setFixedHeight(260)
+        self.screen_frame_layout = ScreenLayout(self.screen_frame)
         self.screen_frame_layout.setObjectName('screen_frame_layout')
         self.layout.addWidget(self.screen_frame)
+        # Mirrored/overlapping monitors can obscure one another in the OS map.
+        self.overlapping_screen_combo = QtWidgets.QComboBox(self)
+        self.overlapping_screen_combo.setObjectName('overlapping_screen_combo')
+        self.overlapping_screen_combo.hide()
+        self.overlapping_screen_combo.currentIndexChanged.connect(self.on_overlapping_screen_selected)
+        self.layout.addWidget(self.overlapping_screen_combo)
         self.identify_layout = QtWidgets.QVBoxLayout()
-        self.screen_details_layout = QtWidgets.QVBoxLayout()
-        self.screen_details_layout.setObjectName('screen_details_layout')
-        self.screen_number_label = QtWidgets.QLabel(self)
-        self.screen_number_label.setObjectName('screen_number_label')
-        self.screen_details_layout.addWidget(self.screen_number_label)
-        self.use_screen_check_box = QtWidgets.QCheckBox(self)
-        self.use_screen_check_box.setVisible(False)
-        self.screen_details_layout.addWidget(self.use_screen_check_box)
-        self.display_group_box = QtWidgets.QGroupBox(self)
+        self.display_group_box = ScreenDisplaySettings(self)
         self.display_group_box.setObjectName('display_group_box')
-        self.display_group_box.setCheckable(True)
-        self.display_group_box_layout = QtWidgets.QGridLayout(self.display_group_box)
+        self.screen_details_layout = QtWidgets.QVBoxLayout(self.display_group_box)
+        self.screen_details_layout.setObjectName('screen_details_layout')
+        self.screen_details_layout.setContentsMargins(16, 16, 16, 16)
+        self.screen_details_layout.setSpacing(12)
+        self.screen_info_layout = QtWidgets.QVBoxLayout()
+        self.screen_info_layout.setSpacing(2)
+        self.screen_number_label = QtWidgets.QLabel(self.display_group_box)
+        self.screen_number_label.setObjectName('screen_number_label')
+        self.screen_number_label.setFluentTypography(fluentqt.FontRole.Subtitle)
+        self.screen_name_label = QtWidgets.QLabel(self.display_group_box)
+        self.screen_name_label.setObjectName('screen_name_label')
+        self.screen_name_label.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        self.screen_resolution_label = QtWidgets.QLabel(self.display_group_box)
+        self.screen_resolution_label.setObjectName('screen_resolution_label')
+        self.screen_resolution_label.setFluentTypography(fluentqt.FontRole.Caption)
+        for label in (self.screen_number_label, self.screen_name_label, self.screen_resolution_label):
+            label.setWordWrap(True)
+            label.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+        self.screen_info_layout.addWidget(self.screen_number_label)
+        self.screen_name_layout = QtWidgets.QHBoxLayout()
+        self.screen_name_layout.setSpacing(6)
+        for label in (self.screen_name_label, self.screen_resolution_label):
+            label.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Preferred)
+            self.screen_name_layout.addWidget(label, alignment=QtCore.Qt.AlignmentFlag.AlignBaseline)
+        self.screen_resolution_label.setWordWrap(False)
+        self.screen_name_layout.addStretch()
+        self.screen_info_layout.addLayout(self.screen_name_layout)
+        self.screen_details_layout.addLayout(self.screen_info_layout)
+        self.use_screen_check_box = self.display_group_box.enable_display_check
+        self.screen_details_layout.addWidget(self.use_screen_check_box)
+        self.screen_details_layout.addWidget(self.display_group_box.display_options)
+        self.display_group_box_layout = QtWidgets.QGridLayout(self.display_group_box.display_options)
+        self.display_group_box_layout.setContentsMargins(0, 0, 0, 0)
         self.display_group_box_layout.setSpacing(8)
         self.display_group_box_layout.setObjectName('display_group_box_layout')
-        self.full_screen_radio_button = QtWidgets.QRadioButton(self.display_group_box)
+        self.full_screen_radio_button = QtWidgets.QRadioButton(self.display_group_box.display_options)
         self.full_screen_radio_button.setObjectName('full_screen_radio_button')
-        self.display_group_box_layout.addWidget(self.full_screen_radio_button, 0, 0, 1, 2)
-        self.custom_geometry_button = QtWidgets.QRadioButton(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.full_screen_radio_button, 0, 0, 1, 4)
+        self.custom_geometry_button = QtWidgets.QRadioButton(self.display_group_box.display_options)
         self.custom_geometry_button.setObjectName('custom_geometry_button')
-        self.display_group_box_layout.addWidget(self.custom_geometry_button, 1, 0, 1, 2)
-        self.left_label = QtWidgets.QLabel(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.custom_geometry_button, 1, 0, 1, 4)
+        self.left_label = QtWidgets.QLabel(self.display_group_box.display_options)
         self.left_label.setObjectName('left_label')
         self.display_group_box_layout.addWidget(self.left_label, 2, 0)
-        self.top_label = QtWidgets.QLabel(self.display_group_box)
+        self.top_label = QtWidgets.QLabel(self.display_group_box.display_options)
         self.top_label.setObjectName('top_label')
-        self.display_group_box_layout.addWidget(self.top_label, 3, 0)
-        self.width_label = QtWidgets.QLabel(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.top_label, 2, 2)
+        self.width_label = QtWidgets.QLabel(self.display_group_box.display_options)
         self.width_label.setObjectName('width_label')
-        self.display_group_box_layout.addWidget(self.width_label, 4, 0)
-        self.height_label = QtWidgets.QLabel(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.width_label, 3, 0)
+        self.height_label = QtWidgets.QLabel(self.display_group_box.display_options)
         self.height_label.setObjectName('height_label')
-        self.display_group_box_layout.addWidget(self.height_label, 5, 0)
-        self.left_spin_box = QtWidgets.QSpinBox(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.height_label, 3, 2)
+        self.left_spin_box = QtWidgets.QSpinBox(self.display_group_box.display_options)
         self.left_spin_box.setObjectName('left_spin_box')
         self.left_spin_box.setEnabled(False)
         self.display_group_box_layout.addWidget(self.left_spin_box, 2, 1)
-        self.top_spin_box = QtWidgets.QSpinBox(self.display_group_box)
+        self.top_spin_box = QtWidgets.QSpinBox(self.display_group_box.display_options)
         self.top_spin_box.setObjectName('top_spin_box')
         self.top_spin_box.setEnabled(False)
-        self.display_group_box_layout.addWidget(self.top_spin_box, 3, 1)
-        self.width_spin_box = QtWidgets.QSpinBox(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.top_spin_box, 2, 3)
+        self.width_spin_box = QtWidgets.QSpinBox(self.display_group_box.display_options)
         self.width_spin_box.setObjectName('width_spin_box')
         self.width_spin_box.setEnabled(False)
-        self.display_group_box_layout.addWidget(self.width_spin_box, 4, 1)
-        self.height_spin_box = QtWidgets.QSpinBox(self.display_group_box)
+        self.display_group_box_layout.addWidget(self.width_spin_box, 3, 1)
+        self.height_spin_box = QtWidgets.QSpinBox(self.display_group_box.display_options)
         self.height_spin_box.setObjectName('height_spin_box')
         self.height_spin_box.setEnabled(False)
-        self.display_group_box_layout.addWidget(self.height_spin_box, 5, 1)
+        self.display_group_box_layout.addWidget(self.height_spin_box, 3, 3)
         self.display_group_box_layout.setColumnStretch(1, 1)
-        self.display_group_box.setLayout(self.display_group_box_layout)
-        self.screen_details_layout.addWidget(self.display_group_box)
+        self.display_group_box_layout.setColumnStretch(3, 1)
+        self.display_group_box_layout.setHorizontalSpacing(16)
         self.identify_button = QtWidgets.QPushButton(self)
         self.identify_button.setObjectName('identify_button')
         self.identify_layout.addWidget(self.identify_button, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
-        self.identify_layout.addLayout(self.screen_details_layout)
+        self.identify_layout.addWidget(self.display_group_box)
         self.screen_button_group = QtWidgets.QButtonGroup(self.screen_frame)
         self.screen_button_group.setExclusive(True)
         self.screen_button_group.setObjectName('screen_button_group')
@@ -385,8 +514,6 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
 
         # Signals and slots
         self.display_group_box.clicked.connect(self.on_display_clicked)
-        self.use_screen_check_box.clicked.connect(self.on_display_clicked)
-        self.use_screen_check_box.toggled.connect(self.display_group_box.setChecked)
         self.custom_geometry_button.toggled.connect(self.height_spin_box.setEnabled)
         self.custom_geometry_button.toggled.connect(self.left_spin_box.setEnabled)
         self.custom_geometry_button.toggled.connect(self.top_spin_box.setEnabled)
@@ -411,6 +538,10 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         self.top_label.setText(translate('OpenLP.ScreensTab', 'Top:'))
         self.height_label.setText(translate('OpenLP.ScreensTab', 'Height:'))
         self.identify_button.setText(translate('OpenLP.ScreensTab', 'Identify Screens'))
+        self.overlapping_screen_combo.setAccessibleName(translate('OpenLP.ScreensTab', 'Select a screen'))
+        self.overlapping_screen_combo.setToolTip(translate(
+            'OpenLP.ScreensTab', 'Some screens overlap in your system display settings. '
+            'You can select each screen here.'))
 
     def on_display_clicked(self, is_checked):
         if not is_checked:
@@ -425,6 +556,8 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
             for screen in self.screens:
                 screen.is_display = False
             self.current_screen.is_display = True
+            for button in self.screen_button_group.buttons():
+                button.update()
 
     def _save_screen(self, screen):
         """
@@ -457,6 +590,8 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         spin_box.setValue(value)
 
     def load(self):
+        selected_screen = self.current_screen
+        self.current_screen = None
         # Remove all the existing items in the layout
         while self.screen_frame_layout.count() > 0:
             item = self.screen_frame_layout.takeAt(0)
@@ -467,14 +602,36 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
                 widget.setParent(None)
                 widget.deleteLater()
             del item
+        # Keep the selected monitor on refresh; otherwise start with the projection monitor.
+        screens = list(self.screens)
+        if selected_screen not in screens:
+            selected_screen = next((screen for screen in screens if screen.is_display), screens[0] if screens else None)
+        selected_button = None
+        with QtCore.QSignalBlocker(self.overlapping_screen_combo):
+            self.overlapping_screen_combo.clear()
+            for screen in screens:
+                name = getattr(screen, 'name', '')
+                label = str(screen) + (' - ' + name if isinstance(name, str) and name else '')
+                self.overlapping_screen_combo.addItem(label, screen.number)
+        geometries = [screen.geometry for screen in screens if isinstance(screen.geometry, QtCore.QRect)]
+        self.overlapping_screen_combo.setVisible(any(
+            geometry.intersects(other)
+            for index, geometry in enumerate(geometries) for other in geometries[index + 1:]))
         # Add the existing screens into the frame
         for screen in self.screens:
             screen_button = ScreenButton(self.screen_frame, screen)
             screen_button.clicked.connect(self.on_screen_button_clicked)
-            self.screen_frame_layout.addWidget(screen_button, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
+            self.screen_frame_layout.addWidget(screen_button)
             self.screen_button_group.addButton(screen_button.selector)
-            if screen.number == 0:
-                screen_button.click()
+            if screen is selected_screen:
+                selected_button = screen_button
+        if selected_button is not None:
+            selected_button.click()
+        else:
+            for label in (self.screen_number_label, self.screen_name_label, self.screen_resolution_label):
+                label.setText('')
+        self.identify_button.setEnabled(bool(screens))
+        self.display_group_box.setEnabled(bool(screens))
 
     def save(self):
         """
@@ -494,7 +651,7 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         :rtype: None
         """
         self.use_screen_check_box.setVisible(True)
-        self.display_group_box.setVisible(False)
+        self.display_group_box.display_options.setVisible(False)
 
     @QtCore.Slot()
     def _on_identify_timer_shot(self):
@@ -536,6 +693,13 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         self._clear_identification()
         super().hideEvent(event)
 
+    def on_overlapping_screen_selected(self, index):
+        number = self.overlapping_screen_combo.itemData(index)
+        for button in self.screen_button_group.buttons():
+            if button.screen.number == number:
+                button.click()
+                break
+
     def on_screen_button_clicked(self):
         """
         Respond to a screen button being clicked
@@ -543,7 +707,14 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
         screen = self.sender().screen
         if self.current_screen is not screen:
             self._save_screen(self.current_screen)
+        name = getattr(screen, 'name', '')
+        name = name if isinstance(name, str) else ''
         self.screen_number_label.setText(str(screen))
+        self.screen_name_label.setText(name)
+        self.screen_name_label.setVisible(bool(name))
+        resolution = translate('OpenLP.ScreenButton', '{width} x {height} pixels').format(
+            width=screen.geometry.width(), height=screen.geometry.height())
+        self.screen_resolution_label.setText(('- ' if name else '') + resolution)
         self.use_screen_check_box.setChecked(screen.is_display)
         self.display_group_box.setChecked(screen.is_display)
         self.full_screen_radio_button.setChecked(screen.custom_geometry is None)
@@ -560,3 +731,5 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
             self.height_spin_box.setValue(screen.geometry.height())
 
         self.current_screen = screen
+        with QtCore.QSignalBlocker(self.overlapping_screen_combo):
+            self.overlapping_screen_combo.setCurrentIndex(self.overlapping_screen_combo.findData(screen.number))

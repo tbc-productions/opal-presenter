@@ -45,6 +45,7 @@ from openlp.core.common.path import create_paths, resolve
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
+from openlp.core.common.screen_settings import request_screen_configuration, show_screen_setup_message
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.ui import create_action
@@ -1275,6 +1276,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         """
         The screen has changed so we have to update components such as the renderer.
         """
+        configure_screens = False
         try:
             # If a warning has been shown before, skip showing again to avoid spamming user.
             # Also do not show if the settings window is visible.
@@ -1282,11 +1284,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             if should_show_messagebox:
                 self.should_show_screen_change_message = False
                 self.live_controller.toggle_display('desktop')
-                QtWidgets.QMessageBox.information(self,
-                                                  UiStrings().ScreenSetupHasChangedTitle,
-                                                  UiStrings().ScreenSetupHasChanged,
-                                                  QtWidgets.QMessageBox.StandardButtons(
-                                                      QtWidgets.QMessageBox.StandardButton.Ok))
+                configure_screens = show_screen_setup_message(
+                    self, UiStrings().ScreenSetupHasChangedTitle, UiStrings().ScreenSetupHasChanged)
                 self.screen_change_timestamp = datetime.now()
             self.screen_updating_lock.acquire()
             self.application.set_busy_cursor()
@@ -1306,6 +1305,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         finally:
             self.screen_updating_lock.release()
             self.should_show_screen_change_message = True
+        if configure_screens:
+            request_screen_configuration()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         """

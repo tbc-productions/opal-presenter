@@ -24,6 +24,8 @@ within openlp/core/widgets/widgets.py
 """
 from unittest.mock import MagicMock, call, patch
 
+import pytest
+
 from PySide6 import QtCore, QtTest
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -31,6 +33,9 @@ from openlp.core.app import OpenLP
 from openlp.core.common.settings import ProxyMode, Settings
 from openlp.core.display.screens import Screen
 from openlp.core.widgets.widgets import ProxyWidget, ProxyDialog, ScreenButton, ScreenSelectionWidget
+
+
+pytestmark = pytest.mark.usefixtures('qapp')
 
 
 def mocked_screens(custom_geometry):
@@ -314,7 +319,7 @@ def test_screen_button_initialisation():
     instance = ScreenButton(None, screen_mock)
 
     # THEN: The ScreenButton should have been initalised correctly with the data from the mocked screen object
-    assert isinstance(instance, QtWidgets.Card)
+    assert isinstance(instance, QtWidgets.QAbstractButton)
     assert instance.objectName() == 'screen_0_button'
     assert instance.isCheckable() is True
     assert instance.text() == 'Mocked Screen Object'
@@ -629,8 +634,8 @@ def test_display_cards_select_exclusively_and_reload(qapp, qtbot):
     cards = widget.findChildren(ScreenButton)
     assert cards[0].isChecked()
     for card in cards:
-        assert card.width() <= 320
-        assert abs(card.height() - card.width() * 9 / 16) <= 1
+        geometry = card.screen.geometry
+        assert abs(card.height() - card.width() * geometry.height() / geometry.width()) <= 1
     widget.custom_geometry_button.setChecked(True)
     widget.width_spin_box.setValue(1280)
     QtTest.QTest.mouseClick(
@@ -642,4 +647,87 @@ def test_display_cards_select_exclusively_and_reload(qapp, qtbot):
     assert screens[0].custom_geometry.width() == 1280
     widget.load()
     assert len(widget.screen_button_group.buttons()) == 2
+    assert widget.current_screen is screens[1]
+
+
+def test_monitor_map_preserves_os_coordinates_and_proportions(qtbot):
+    """Portrait, negative origins and offsets share one scale even when the settings panel resizes."""
+    screens = [Screen(0, QtCore.QRect(-1080, -240, 1080, 1920), raw_screen=MagicMock(
+        **{'model.return_value': 'DELL U2723QE'})),
+        Screen(1, QtCore.QRect(0, 0, 1920, 1080), is_primary=True, is_display=True,
+               custom_geometry=QtCore.QRect(50, 50, 1280, 720))]
+    widget = ScreenSelectionWidget(screens=screens)
+    qtbot.addWidget(widget)
+    widget.load()
+    widget.show()
+    for width in (720, 420):
+        widget.resize(width, 800)
+        QtWidgets.QApplication.processEvents()
+        portrait, primary = widget.findChildren(ScreenButton)
+        scale = portrait.width() / 1080
+        assert abs(portrait.height() - 1920 * scale) <= 2
+        assert abs(primary.width() - 1920 * scale) <= 2
+        assert abs(primary.height() - 1080 * scale) <= 2
+        assert abs(primary.x() - portrait.x() - 1080 * scale) <= 2
+        assert abs(primary.y() - portrait.y() - 240 * scale) <= 2
+        assert widget.screen_frame.rect().contains(portrait.geometry())
+        assert widget.screen_frame.rect().contains(primary.geometry())
+    assert primary.isChecked()
+    assert widget.current_screen is screens[1]
+    assert 'DELL U2723QE' in portrait.text()
+    assert 'DELL U2723QE' in portrait.accessibleName()
+    QtTest.QTest.mouseClick(portrait, QtCore.Qt.MouseButton.LeftButton)
+    assert 'DELL U2723QE' in widget.screen_name_label.text()
+    assert '1080 x 1920 pixels' in widget.screen_resolution_label.text()
+    primary.setFocus()
+    QtTest.QTest.keyClick(primary, QtCore.Qt.Key.Key_Space)
+    assert primary.isChecked()
+    assert not portrait.isChecked()
+    assert widget.current_screen is screens[1]
+    # The map reflects the OS geometry rather than the application's custom output area.
+    assert screens[1].custom_geometry == QtCore.QRect(50, 50, 1280, 720)
+
+
+def test_monitor_map_reload_uses_current_display_state(qtbot):
+    """An OS refresh must not overwrite a new output choice with the previous form state."""
+    screens = [Screen(0, QtCore.QRect(0, 0, 1920, 1080), is_primary=True, is_display=True),
+               Screen(1, QtCore.QRect(1920, 0, 1920, 1080))]
+    widget = ScreenSelectionWidget(screens=screens)
+    qtbot.addWidget(widget)
+    widget.load()
+    screens[0].is_display = False
+    screens[1].is_display = True
+    widget.load()
+    assert not screens[0].is_display
+    assert screens[1].is_display
+    assert not widget.display_group_box.isChecked()
+    screens.pop(0)
+    widget.load()
     assert widget.current_screen is screens[0]
+    assert widget.display_group_box.isChecked()
+    assert len(widget.screen_button_group.buttons()) == 1
+    screens.clear()
+    widget.load()
+    assert widget.current_screen is None
+    assert widget.screen_number_label.text() == ''
+    assert not widget.identify_button.isEnabled()
+
+
+def test_overlapping_monitors_can_each_be_selected(qtbot):
+    """A selector keeps mirrored screens reachable when their tiles occupy the same coordinates."""
+    screens = [Screen(0, QtCore.QRect(0, 0, 1920, 1080), is_primary=True, is_display=True),
+               Screen(1, QtCore.QRect(0, 0, 1920, 1080), raw_screen=MagicMock(
+                   **{'model.return_value': 'EPSON Projector'}))]
+    widget = ScreenSelectionWidget(screens=screens)
+    qtbot.addWidget(widget)
+    widget.load()
+    widget.show()
+    assert widget.overlapping_screen_combo.isVisible()
+    assert widget.overlapping_screen_combo.itemText(1) == 'Screen 2 - EPSON Projector'
+    widget.overlapping_screen_combo.setCurrentIndex(1)
+    assert widget.current_screen is screens[1]
+    widget.overlapping_screen_combo.setCurrentIndex(0)
+    assert widget.current_screen is screens[0]
+    screens[1].geometry.moveLeft(1920)
+    widget.load()
+    assert not widget.overlapping_screen_combo.isVisible()

@@ -1302,7 +1302,7 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.information')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_singleshot: MagicMock,
                               main_window: MainWindow):
     """
@@ -1321,7 +1321,7 @@ def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_single
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.information')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal_sets_timestamp_after_blocking_on_modal(mocked_information: MagicMock,
                                                                      mocked_timer_singleshot: MagicMock,
                                                                      main_window: MainWindow):
@@ -1806,3 +1806,21 @@ def test_command_line_disable_overrides_enabled_remote(main_window):
         http_thread.assert_not_called()
         websocket_thread.assert_not_called()
     main_window.ws_server.close()
+
+
+@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=True)
+def test_screen_changed_configure_action_follows_display_refresh(message, timer, main_window):
+    main_window._live_controller = MagicMock()
+    main_window._preview_controller = MagicMock()
+    main_window._renderer = MagicMock()
+
+    def request_configuration():
+        assert not main_window.screen_updating_lock.locked()
+        main_window.live_controller.setup_displays.assert_called_once()
+        main_window.renderer.resize.assert_called_once()
+
+    with patch('openlp.core.ui.mainwindow.request_screen_configuration',
+               side_effect=request_configuration) as configure:
+        main_window.screen_changed()
+    configure.assert_called_once()
