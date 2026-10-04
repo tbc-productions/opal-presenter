@@ -146,14 +146,19 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
         self.settings.endGroup()
         # Signals
         self.print_button.triggered.connect(self.print_service_order)
-        self.zoom_out_button.clicked.connect(self.zoom_out)
-        self.zoom_in_button.clicked.connect(self.zoom_in)
-        self.zoom_original_button.clicked.connect(self.zoom_original)
+        self.zoom_out_button.triggered.connect(self.zoom_out)
+        self.zoom_in_button.triggered.connect(self.zoom_in)
+        self.zoom_original_button.triggered.connect(self.zoom_original)
         self.preview_widget.paintRequested.connect(self.paint_requested)
         self.zoom_combo_box.currentIndexChanged.connect(self.display_size_changed)
         self.plain_copy.triggered.connect(self.copy_text)
         self.html_copy.triggered.connect(self.copy_html_text)
         self.slide_text_check_box.stateChanged.connect(self.on_slide_text_check_box_changed)
+        for check_box in (self.slide_text_check_box, self.page_break_after_text, self.notes_check_box,
+                          self.meta_data_check_box, self.show_chords_check_box):
+            check_box.toggled.connect(self.on_options_changed)
+        self.title_line_edit.textChanged.connect(self.update_preview_text)
+        self.footer_text_edit.textChanged.connect(self.update_preview_text)
         self.update_preview_text()
 
     def exec(self):
@@ -173,8 +178,19 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
     def closeEvent(self, event):
         """Release the modal event loop when any window close control is used."""
         super().closeEvent(event)
-        if event.isAccepted() and self._event_loop is not None:
-            self._event_loop.quit()
+        if event.isAccepted():
+            self.save_options()
+            if self._event_loop is not None:
+                self._event_loop.quit()
+
+    def showEvent(self, event):
+        """Centre each preview opening over the main window, including on other screens."""
+        super().showEvent(event)
+        parent = self.parentWidget()
+        if parent is not None:
+            frame = self.frameGeometry()
+            frame.moveCenter(parent.window().frameGeometry().center())
+            self.move(frame.topLeft())
 
     def keyPressEvent(self, event):
         """Retain the dialog's Escape shortcut in the Fluent window."""
@@ -183,18 +199,9 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
         else:
             super().keyPressEvent(event)
 
-    def toggle_options(self, checked):
-        """
-        Toggle various options
-        """
-        self.options_widget.setVisible(checked)
-        if checked:
-            left = self.options_button.pos().x()
-            top = self.toolbar.height()
-            self.options_widget.move(left, top)
-            self.title_line_edit.setFocus()
-        else:
-            self.save_options()
+    def on_options_changed(self):
+        """Apply the persistent pane's options to the preview as they change."""
+        self.save_options()
         self.update_preview_text()
 
     def update_preview_text(self):
@@ -412,11 +419,11 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
         Disable or enable the ``page_break_after_text`` checkbox  as it should only
         be enabled, when the ``slide_text_check_box`` is enabled.
         """
-        self.page_break_after_text.setDisabled(state == QtCore.Qt.CheckState.Unchecked)
+        self.page_break_after_text.setDisabled(not self.slide_text_check_box.isChecked())
 
     def save_options(self):
         """
-        Save the settings and close the dialog.
+        Save the print options.
         """
         # Save the settings for this dialog.
         self.settings.beginGroup('advanced')
