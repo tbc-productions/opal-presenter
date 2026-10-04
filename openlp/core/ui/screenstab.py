@@ -74,10 +74,12 @@ class ScreensTab(SettingsTab):
 
     def retranslate_ui(self):
         self.generic_group_box.setTitle(translate('OpenLP.ScreensTab', 'Generic screen settings'))
-        self.display_on_monitor_check.setText(translate('OpenLP.ScreensTab', 'Display if a single screen'))
-        self.always_on_top_check.setText(translate('OpenLP.ScreensTab', 'Always on top'))
+        self.display_on_monitor_check.setText(translate(
+            'OpenLP.ScreensTab', 'Allow display output with only one screen'))
+        self.always_on_top_check.setText(translate(
+            'OpenLP.ScreensTab', 'Always keep display output above other windows'))
         self.display_on_monitor_check.setToolTip(translate(
-            'OpenLP.ScreensTab', 'Show the projection window when only one screen is connected.'))
+            'OpenLP.ScreensTab', 'Allow the display window to open on the same screen as the OpenLP+ main window.'))
         self.always_on_top_check.setToolTip(translate(
             'OpenLP.ScreensTab', 'Keep the projection window above other windows.'))
 

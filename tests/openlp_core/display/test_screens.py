@@ -23,6 +23,8 @@ Package to test the openlp.core.lib.screenlist package.
 """
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from PySide6 import QtCore
 
 from openlp.core.display.screens import Screen, ScreenList
@@ -69,7 +71,7 @@ def test_current_primary_screen():
     assert screen.is_display is False
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_create_screen_list(mocked_screens, settings):
     """
     Create the screen list
@@ -95,7 +97,7 @@ def test_create_screen_list(mocked_screens, settings):
     assert screen_list.screens[1].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_create_screen_list_with_settings_matching(mocked_screens, settings):
     """
     Create the screen list and match with saved settings
@@ -129,14 +131,18 @@ def test_create_screen_list_with_settings_matching(mocked_screens, settings):
     assert screen_list.screens[1].custom_geometry == QtCore.QRect(50, 50, 924, 568)
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
-@patch('openlp.core.display.screens.QtWidgets.QMessageBox.warning')
-def test_create_screen_list_with_screen_unplugged(screen_warning, mocked_screens, settings):
+@patch('PySide6.QtWidgets.QApplication.screens')
+@patch('openlp.core.display.screens.show_screen_setup_message')
+@patch('openlp.core.display.screens.request_screen_configuration')
+@pytest.mark.parametrize('configure', [False, True])
+def test_create_screen_list_with_screen_unplugged(request_configuration, screen_warning, mocked_screens,
+                                                  settings, configure):
     """
     Create the screen list where saved screens > os screens (ie display unplugged)
     """
     # GIVEN: Mocked application and saved screen settings
     mocked_application = MagicMock()
+    screen_warning.return_value = configure
     settings.setValue('core/screens', {'0': {'number': 0,
                                              'geometry': {'x': -1024, 'y': 0, 'width': 1024, 'height': 768},
                                              'is_primary': False,
@@ -163,9 +169,10 @@ def test_create_screen_list_with_screen_unplugged(screen_warning, mocked_screens
     # find_new_display_screen() sets this screen's is_display to True
     assert screen_list.screens[0].is_display is True
     assert screen_list.screens[0].custom_geometry == QtCore.QRect(50, 50, 924, 568)
+    assert request_configuration.called is configure
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_create_screen_list_with_screen_replugged_1(mocked_screens, settings):
     """
     Create the screen list where saved screens < os screens (ie display plugged in again)
@@ -200,7 +207,7 @@ def test_create_screen_list_with_screen_replugged_1(mocked_screens, settings):
     assert screen_list.screens[1].custom_geometry is None
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_create_screen_list_with_screen_replugged_2(mocked_screens, settings):
     """
     Create the screen list where saved screens < os screens (ie display plugged in again)
@@ -235,7 +242,7 @@ def test_create_screen_list_with_screen_replugged_2(mocked_screens, settings):
     assert screen_list.screens[1].custom_geometry == QtCore.QRect(50, 50, 924, 668)
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_screen_list_on_primary_changed(mocked_screens, settings, registry):
     """Test that the screen is correctly updated when a primary screen is changed"""
     # GIVEN: Mocked application
@@ -419,7 +426,7 @@ def test_screen_repr():
     assert screen_str == '<Screen 2 (primary)>'
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_screen_removed(mocked_screens, settings):
     """Test that the screen list is correct after a new screen is removed"""
     # GIVEN: A screenlist of a mocked application with two screens
@@ -443,7 +450,7 @@ def test_screen_removed(mocked_screens, settings):
     assert screen_list.screens[0].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_screen_removed_when_geometry_changed(mocked_screens, settings):
     """Test that screen removal matches by raw screen identity when geometry has changed"""
     # GIVEN: A screenlist of a mocked application with two screens
@@ -468,7 +475,7 @@ def test_screen_removed_when_geometry_changed(mocked_screens, settings):
     assert screen_list.screens[0].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_screen_added(mocked_screens, settings):
     """Test that the screen list is correct after a screen is added"""
     # GIVEN: A screenlist of a mocked application with one screen
@@ -496,7 +503,7 @@ def test_screen_added(mocked_screens, settings):
     assert screen_list.screens[1].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_screen_removed_added(mocked_screens, settings):
     """
     Test that the screen list is correct after a screen disappears and reappears again.
@@ -533,7 +540,7 @@ def test_screen_removed_added(mocked_screens, settings):
     assert screen_list.screens[1].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_third_screen_added(mocked_screens, settings):
     """Test that the screen list is correct after a third screen is added"""
     # GIVEN: A screenlist of a mocked application with one screen
@@ -566,7 +573,7 @@ def test_third_screen_added(mocked_screens, settings):
     assert screen_list.screens[2].is_display is False
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_third_screen_removed(mocked_screens, settings):
     """Test that the screen list is correct after a third screen is removed"""
     # GIVEN: A screenlist of a mocked application with one screen
@@ -595,7 +602,7 @@ def test_third_screen_removed(mocked_screens, settings):
     assert screen_list.screens[1].is_display is True
 
 
-@patch('openlp.core.display.screens.QtWidgets.QApplication.screens')
+@patch('PySide6.QtWidgets.QApplication.screens')
 def test_swap_primary_screen(mocked_screens, settings):
     """Test that the screen list is correct after a different screen becomes a primary screen"""
     # GIVEN: A screenlist of a mocked application with two screens
@@ -622,3 +629,16 @@ def test_swap_primary_screen(mocked_screens, settings):
     assert screen_list.screens[1].geometry == QtCore.QRect(1024, 0, 1024, 768)
     assert screen_list.screens[1].is_primary is True
     assert screen_list.screens[1].is_display is False
+
+
+def test_monitor_name_prefers_model_and_falls_back_to_connector():
+    """Hardware names are available without changing persisted screen identity/settings."""
+    raw_screen = MagicMock(**{'model.return_value': ' DELL U2723QE ', 'name.return_value': 'DP-1'})
+    screen = Screen(0, QtCore.QRect(0, 0, 1920, 1080), raw_screen=raw_screen)
+    assert screen.name == 'DELL U2723QE'
+    raw_screen.model.return_value = ''
+    assert screen.name == 'DP-1'
+    raw_screen.name.return_value = ''
+    assert screen.name == ''
+    assert Screen(0).name == ''
+    assert 'name' not in screen.to_dict()
