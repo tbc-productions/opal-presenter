@@ -192,10 +192,21 @@ class Ui_MainWindow(object):
         self.status_bar.addPermanentWidget(self.load_progress_bar, 1)
         self.load_progress_bar.hide()
         self.load_progress_bar.setValue(0)
-        self.default_theme_label = QtWidgets.QLabel(self.status_bar)
+        self.default_theme_container = QtWidgets.QWidget(self.status_bar)
+        default_theme_layout = QtWidgets.QHBoxLayout(self.default_theme_container)
+        default_theme_layout.setContentsMargins(8, 0, 12, 0)
+        default_theme_layout.setSpacing(4)
+        self.default_theme_label = QtWidgets.QLabel(self.default_theme_container)
         self.default_theme_label.setObjectName('default_theme_label')
-        self.default_theme_label.setContentsMargins(8, 0, 12, 0)
-        self.status_bar.addPermanentWidget(self.default_theme_label)
+        self.default_theme_label.setText(translate('OpenLP.MainWindow', 'Default Theme:'))
+        default_theme_layout.addWidget(self.default_theme_label)
+        self.default_theme_button = QtWidgets.fluentqt.HyperlinkButton('', self.default_theme_container)
+        self.default_theme_button.setObjectName('default_theme_button')
+        self.default_theme_button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+        self.default_theme_button.setToolTip(translate('OpenLP.MainWindow', 'Open Themes settings'))
+        self.default_theme_button.clicked.connect(self.on_default_theme_clicked)
+        default_theme_layout.addWidget(self.default_theme_button)
+        self.status_bar.addPermanentWidget(self.default_theme_container)
         # Library and Themes are separate dock widgets; Qt tabifies them in the same dock area.
         self.media_manager_dock = dock_widget_class(main_window, 'media_manager_dock',
                                                    UiIcons().library)
@@ -1090,6 +1101,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         """
         self.settings_form.exec()
 
+    def on_default_theme_clicked(self):
+        """Open Settings at the Themes section from the footer link."""
+        self.settings_form.exec(UiStrings().Themes)
+
     def on_settings_shortcuts_item_clicked(self):
         """
         Show the shortcuts dialog
@@ -1436,8 +1451,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         Update the default theme indicator in the status bar
         """
         theme_name = self.settings.value('themes/global theme')
-        self.default_theme_label.setText(translate('OpenLP.MainWindow',
-                                                   'Default Theme: {theme}').format(theme=theme_name))
+        self.default_theme_button.setText(theme_name)
 
     def _dock_hidden_only_as_inactive_tab(self, dock: QtWidgets.QDockWidget) -> bool:
         """

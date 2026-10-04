@@ -1723,3 +1723,19 @@ def test_shutdown_wait_dialog_has_room_for_text_and_progress(qapp):
         assert dialog.layout().contentsMargins().left() >= 24
         assert parent.rect().contains(dialog.geometry())
     parent.close()
+
+
+def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
+    """The current theme name links directly to the translated Themes settings section."""
+    settings.setValue('themes/global theme', 'Sunday worship')
+    main_window.default_theme_changed()
+    button = main_window.default_theme_button
+    assert isinstance(button, QtWidgets.fluentqt.HyperlinkButton)
+    assert button.text() == 'Sunday worship'
+    assert main_window.default_theme_label.text() == 'Default Theme:'
+    with patch.object(main_window.settings_form, 'exec') as open_settings:
+        button.click()
+    open_settings.assert_called_once_with(UiStrings().Themes)
+    settings.setValue('themes/global theme', 'Evening worship')
+    main_window.default_theme_changed()
+    assert button.text() == 'Evening worship'
