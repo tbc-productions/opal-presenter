@@ -237,14 +237,18 @@ def _create_mock_action(parent, name, **kwargs):
 
 
 @pytest.fixture()
-def main_window(state, settings, qapp):
+def main_window(state, settings, qapp, request):
     QtWidgets.QApplication.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontUseNativeMenuBar, True)
     app = Registry().get('application')
     app.set_busy_cursor = lambda: None
     app.set_normal_cursor = lambda: None
     app.process_events = lambda: None
     app.args = []
-    Registry().set_flag('no_web_server', True)
+    feature_options = getattr(request, 'param', {})
+    for name in ('projector', 'remote_interface'):
+        if feature_options.get(name):
+            settings.setValue(f'{name}/status', PluginStatus.Active)
+    Registry().set_flag('no_web_server', feature_options.get('no_web_server', True))
     add_toolbar_action_patcher = patch('openlp.core.ui.mainwindow.create_action', new=_create_mock_action)
     add_toolbar_action_patcher.start()
     plugin_form_patcher = patch('openlp.core.ui.mainwindow.PluginForm', new=_DummyPluginForm)
@@ -729,6 +733,7 @@ def test_on_first_time_wizard_clicked_show_projectors_after(mocked_warning, Mock
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
     main_window.settings.setValue('projector/show after wizard', True)
+    Registry().set_flag('projector_disabled', False)
 
     with patch.object(main_window, 'projector_manager_dock') as mocked_dock, \
             patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents'):
@@ -1751,3 +1756,55 @@ def test_footer_has_large_padding_around_progress_and_theme(modern_appearance, m
     assert footer.left_content.layout().indexOf(footer.message_label) == 0
     assert footer.left_content.layout().indexOf(main_window.load_progress_bar) == 1
     assert footer.right_content.layout().indexOf(main_window.default_theme_container) == 0
+
+
+@pytest.mark.parametrize('main_window', [{'no_web_server': False}], indirect=True)
+def test_unused_features_disabled_on_startup(main_window):
+    """Unused optional features hide controls and disable network services."""
+    assert Registry().get_flag('projector_disabled') is True
+    assert Registry().get_flag('no_web_server') is True
+    assert main_window.view_projector_manager_item.isVisible() is False
+    assert main_window.import_projector_item.isVisible() is False
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_not_called()
+        websocket_thread.assert_not_called()
+    with patch.object(main_window, 'set_preview_panel_visibility'), \
+            patch.object(main_window, 'set_live_panel_visibility'):
+        main_window.set_view_mode(projector=True)
+    assert main_window.projector_manager_dock.isVisible() is False
+
+
+@pytest.mark.parametrize('main_window', [
+    {'projector': True, 'remote_interface': True, 'no_web_server': False},
+], indirect=True)
+def test_enabled_features_start_on_next_session(main_window):
+    """Saved activation restores projector controls and starts both remote servers."""
+    assert Registry().get_flag('projector_disabled') is False
+    assert Registry().get_flag('no_web_server') is False
+    assert main_window.view_projector_manager_item.isVisible() is True
+    assert main_window.import_projector_item.isVisible() is True
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_called_once()
+        websocket_thread.assert_called_once()
+    main_window.ws_server.close()
+
+
+@pytest.mark.parametrize('main_window', [
+    {'remote_interface': True, 'no_web_server': True},
+], indirect=True)
+def test_command_line_disable_overrides_enabled_remote(main_window):
+    """The existing command-line override still prevents both remote servers."""
+    assert Registry().get_flag('no_web_server') is True
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_not_called()
+        websocket_thread.assert_not_called()
+    main_window.ws_server.close()

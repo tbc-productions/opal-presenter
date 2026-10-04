@@ -326,17 +326,25 @@ class UiFirstTimeWizard(object):
         self.media_check_box.setObjectName('media_check_box')
         self.plugin_layout.addWidget(self.media_check_box)
         self.song_usage_check_box = QtWidgets.QCheckBox(self.plugin_page)
-        self.song_usage_check_box.setChecked(True)
+        self.song_usage_check_box.setChecked(False)
         self.song_usage_check_box.setObjectName('song_usage_check_box')
         self.plugin_layout.addWidget(self.song_usage_check_box)
         self.alert_check_box = QtWidgets.QCheckBox(self.plugin_page)
-        self.alert_check_box.setChecked(True)
+        self.alert_check_box.setChecked(False)
         self.alert_check_box.setObjectName('alert_check_box')
         self.plugin_layout.addWidget(self.alert_check_box)
         self.obs_studio_check_box = QtWidgets.QCheckBox(self.plugin_page)
         self.obs_studio_check_box.setChecked(False)
         self.obs_studio_check_box.setObjectName('obs_studio_check_box')
         self.plugin_layout.addWidget(self.obs_studio_check_box)
+        self.projector_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.projector_check_box.setChecked(False)
+        self.projector_check_box.setObjectName('projector_check_box')
+        self.plugin_layout.addWidget(self.projector_check_box)
+        self.remote_interface_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.remote_interface_check_box.setChecked(False)
+        self.remote_interface_check_box.setObjectName('remote_interface_check_box')
+        self.plugin_layout.addWidget(self.remote_interface_check_box)
         first_time_wizard.setPage(FirstTimePage.Plugins, self.plugin_page)
         # Web Remote page
         self.remote_page = RemotePage(self)
@@ -456,6 +464,13 @@ class UiFirstTimeWizard(object):
         self.obs_studio_check_box.setText(
             translate('OpenLP.FirstTimeWizard', 'OBS Studio - Control scenes directly from OpenLP+')
         )
+        self.projector_check_box.setText(
+            translate('OpenLP.FirstTimeWizard', 'Projector – Control network projectors using PJLink'))
+        self.remote_interface_check_box.setText(
+            translate('OpenLP.FirstTimeWizard', 'Remote Interface – Remote control, stage, live and chords views'))
+        for check_box in (self.projector_check_box, self.remote_interface_check_box):
+            check_box.setToolTip(translate('OpenLP.FirstTimeWizard',
+                                          'Changes made when re-running setup take effect after restarting OpenLP+.'))
         self.resource_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Resource Data'))
         self.resource_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Can OpenLP+ download some resource data?'))
         self.resource_label.setText(

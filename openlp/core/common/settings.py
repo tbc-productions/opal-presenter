@@ -368,6 +368,7 @@ class Settings(QtCore.QSettings):
         'alerts/repeat': 1,
         'alerts/scroll': True,
         'api/twelve hour': True,
+        'remote_interface/status': PluginStatus.Inactive,
         'api/port': 4316,
         'api/websocket port': 4317,
         'api/user id': 'openlp',
@@ -616,6 +617,7 @@ class Settings(QtCore.QSettings):
         'projector/db hostname': '',
         'projector/db database': '',
         'projector/enable': True,
+        'projector/status': PluginStatus.Inactive,
         'projector/connect on start': False,
         'projector/connect when LKUP received': True,  # PJLink v2: Projector sends LKUP command after it powers up
         'projector/last directory import': None,

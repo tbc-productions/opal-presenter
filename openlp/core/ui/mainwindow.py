@@ -637,12 +637,18 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.new_data_path = None
         self.copy_data = False
         self.settings.set_up_default_values()
+        # Capture service activation for this session; plugin changes take effect after a restart.
+        Registry().set_flag('projector_disabled', self.settings.value('projector/status') != PluginStatus.Active)
+        Registry().set_flag('no_web_server', Registry().get_flag('no_web_server') or
+                            self.settings.value('remote_interface/status') != PluginStatus.Active)
         self.about_form = AboutForm(self)
         SettingsForm(self)
         self.formatting_tag_form = FormattingTagForm(self)
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface
         self.setup_ui(self)
+        self.view_projector_manager_item.setVisible(not Registry().get_flag('projector_disabled'))
+        self.import_projector_item.setVisible(not Registry().get_flag('projector_disabled'))
         self.export_presentation_menu = QtWidgets.create_application_menu(self.file_export_menu)
         self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
         self.export_presentation_menu.setObjectName('export_presentation_menu')
@@ -985,7 +991,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.application.set_busy_cursor()
         self.first_time()
         # Check if Projectors panel should be visible or not after wizard.
-        if self.settings.value('projector/show after wizard'):
+        if self.settings.value('projector/show after wizard') and not Registry().get_flag('projector_disabled'):
             _set_dock_visible(self.projector_manager_dock, True)
         else:
             _set_dock_visible(self.projector_manager_dock, False)
@@ -1268,7 +1274,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         _set_dock_visible(self.media_manager_dock, media)
         _set_dock_visible(self.service_manager_dock, service)
         _set_dock_visible(self.theme_manager_dock, theme)
-        _set_dock_visible(self.projector_manager_dock, projector)
+        _set_dock_visible(self.projector_manager_dock, projector and not Registry().get_flag('projector_disabled'))
         # Menu reflects layout intent, not QDockWidget.isVisible() (false for inactive tabified tabs).
         self.view_media_manager_item.setChecked(media)
         self.view_service_manager_item.setChecked(service)
@@ -1518,6 +1524,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.view_preview_panel.setChecked(preview_panel)
         self.live_controller.panel.setVisible(live_panel)
         self.view_live_panel.setChecked(live_panel)
+        show_projectors = show_projectors and not Registry().get_flag('projector_disabled')
         _set_dock_visible(self.projector_manager_dock, show_projectors)
         self.view_projector_manager_item.setChecked(show_projectors)
         return True
@@ -1661,6 +1668,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         """
         Toggle visibility of the projector manager
         """
+        if Registry().get_flag('projector_disabled'):
+            _set_dock_visible(self.projector_manager_dock, False)
+            self.view_projector_manager_item.setChecked(False)
+            return
         if self.sender() is self.view_projector_manager_item:
             _set_dock_visible(self.projector_manager_dock, not _dock_is_visible(self.projector_manager_dock))
         self.view_projector_manager_item.setChecked(_dock_is_visible(self.projector_manager_dock))

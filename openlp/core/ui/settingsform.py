@@ -27,12 +27,10 @@ from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
-from openlp.core.api.tab import ApiTab
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.lib import build_icon
-from openlp.core.projectors.tab import ProjectorTab
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.icons import UiIcons
@@ -130,9 +128,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             (self.advanced_tab, True),
             (self.screens_tab, True),
             (self.themes_tab, True),
-            (self.player_tab, True),
-            (self.projector_tab, True),
-            (self.api_tab, True)
+            (self.player_tab, True)
         ]
         for plugin in State().list_plugins():
             if plugin.settings_tab:
@@ -386,10 +382,8 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             self.general_tab = GeneralTab(self)
             self.service_tab = ServiceTab(self)
             self.themes_tab = ThemesTab(self)
-            self.projector_tab = ProjectorTab(self)
             self.advanced_tab = AdvancedTab(self)
             self.player_tab = MediaTab(self)
-            self.api_tab = ApiTab(self)
             self.screens_tab = ScreensTab(self)
         except Exception as e:
             print(e)
@@ -397,7 +391,6 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.themes_tab.post_set_up()
         self.advanced_tab.post_set_up()
         self.player_tab.post_set_up()
-        self.api_tab.post_set_up()
         for plugin in State().list_plugins():
             if plugin.settings_tab:
                 plugin.settings_tab.post_set_up()

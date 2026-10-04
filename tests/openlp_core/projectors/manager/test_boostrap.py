@@ -147,3 +147,17 @@ def test_bootstrap_post_set_up_autostart_true(mock_timer, mocked_edit, projector
         mock_manager['_load_projectors'].assert_not_called(),
         mock_manager['projector_list_widget'].itemSelectionChanged.connect.assert_called_once()
         assert caplog.record_tuples == logs, 'Invalid log entries'
+
+
+def test_disabled_projector_does_not_load_database_or_connections(projector_manager_nodb, registry):
+    """Disabling prevents database creation, projector connections and UDP listeners."""
+    registry.set_flag('projector_disabled', True)
+    with patch('openlp.core.projectors.manager.ProjectorDB') as database, \
+            patch('openlp.core.projectors.manager.ProjectorEditForm') as edit_form, \
+            patch.object(projector_manager_nodb, '_load_projectors') as load:
+        projector_manager_nodb.bootstrap_initialise()
+        projector_manager_nodb.bootstrap_post_set_up()
+    database.assert_not_called()
+    edit_form.assert_not_called()
+    load.assert_not_called()
+    assert projector_manager_nodb.pjlink_udp == {}

@@ -162,3 +162,7 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
             status_text = translate('OpenLP.PluginForm', '{name} (Disabled)')
         self.plugin_list_widget.currentItem().setText(
             status_text.format(name=self.active_plugin.name_strings['singular']))
+        if getattr(self.active_plugin, 'requires_restart', False) is True:
+            QtWidgets.QMessageBox.information(
+                self, translate('OpenLP.PluginForm', 'Restart Required'),
+                translate('OpenLP.PluginForm', 'Restart OpenLP+ to apply this plugin change.'))

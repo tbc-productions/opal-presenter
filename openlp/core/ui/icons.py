@@ -191,7 +191,7 @@ class UiIcons(metaclass=Singleton):
             'select_none': {'icon': 'ic_fluent_checkbox_unchecked_24_regular'},
             'settings': {'icon': 'ic_fluent_settings_24_regular'},
             'shortcuts': {'icon': 'ic_fluent_wrench_24_regular'},
-            'song_usage': {'icon': 'ic_fluent_chart_multiple_24_regular'},
+            'song_usage': {'icon': 'ic_fluent_slide_record_24_regular'},
             'song_usage_active': {'icon': 'ic_fluent_slide_record_24_regular'},
             'song_usage_inactive': {'icon': 'ic_fluent_slide_record_24_regular'},
             'sort': {'icon': 'ic_fluent_arrow_sort_24_regular'},

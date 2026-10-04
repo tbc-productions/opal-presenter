@@ -179,7 +179,7 @@ class OpenLP(QtCore.QObject, LogMixin):
             request_presentation_permissions(self.main_window)
         if self.settings.value('core/update check'):
             check_for_update(self.main_window)
-        if self.settings.value('api/update check'):
+        if self.settings.value('api/update check') and not Registry().get_flag('no_web_server'):
             check_for_remote_update(self.main_window)
         self.main_window.is_display_blank()
         Registry().execute('bootstrap_completion')

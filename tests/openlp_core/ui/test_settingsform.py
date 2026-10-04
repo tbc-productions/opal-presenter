@@ -222,7 +222,12 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     inactive_plugin.is_active.return_value = False
 
     with patch('openlp.core.ui.settingsform.State') as mocked_state:
-        mocked_state.return_value.list_plugins.return_value = [inactive_plugin, active_plugin]
+        projector_plugin = MagicMock(settings_tab=settings_form.projector_tab)
+        projector_plugin.is_active.return_value = False
+        remote_plugin = MagicMock(settings_tab=settings_form.api_tab)
+        remote_plugin.is_active.return_value = True
+        mocked_state.return_value.list_plugins.return_value = [
+            inactive_plugin, active_plugin, projector_plugin, remote_plugin]
 
         # WHEN: Getting ordered tabs
         ordered_tabs = settings_form._get_ordered_tabs()
@@ -234,3 +239,7 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     ]
     assert ordered_tabs[0][1] is True
     assert ordered_tabs[-1][1] is True
+
+    visibility = {tab.tab_title_visible: visible for tab, visible in ordered_tabs}
+    assert visibility['Projectors'] is False
+    assert visibility['API'] is True
