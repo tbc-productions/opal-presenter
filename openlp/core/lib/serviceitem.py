@@ -43,6 +43,7 @@ from openlp.core.display.render import (
     remove_html_and_strip, remove_tags, remove_unknown_tags, render_tags, render_chords_for_printing
 )
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
+from openlp.core.lib.slidedesign import apply_design, normalise_design, design_theme, package_design
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
@@ -102,6 +103,7 @@ class ServiceItem(RegistryProperties):
         self.media_length = 0
         self.from_service = False
         self.background_audio = []
+        self.slide_design = {}
         self.theme_overwritten = False
         self.temporary_edit = False
         self.auto_play_slides_once = False
@@ -140,6 +142,7 @@ class ServiceItem(RegistryProperties):
         if self.is_capable(ItemCapabilities.ProvidesOwnTheme) or theme_level == ThemeLevel.Song and self.theme:
             theme = self.theme
         theme = theme_manager.get_theme_data(theme)
+        theme = design_theme(theme, self.slide_design)
         # Clean up capabilities and reload from the theme.
         if self.is_text():
             # Cleanup capabilities
@@ -156,7 +159,7 @@ class ServiceItem(RegistryProperties):
             if theme.background_type == BackgroundType.to_string(BackgroundType.Video):
                 self.video_file_name = theme.background_filename
                 self.add_capability(ItemCapabilities.HasBackgroundVideo)
-        return theme
+        return apply_design(theme, self.slide_design)
 
     def _new_item(self):
         """
@@ -456,6 +459,7 @@ class ServiceItem(RegistryProperties):
             'name': self.name,
             'plugin': self.name,
             'theme': self.theme,
+            'slide_design': package_design(self.slide_design, self.get_theme_data()) if self.slide_design else {},
             'title': self.title,
             'footer': self.raw_footer,
             'type': self.service_item_type,
@@ -635,6 +639,7 @@ class ServiceItem(RegistryProperties):
                     break
         self.service_item_type = ServiceItemType.parse(header['type'])
         self.theme = header['theme']
+        self.slide_design = normalise_design(header.get('slide_design'))
         self.add_icon()
         self.raw_footer = header['footer']
         self.audit = header['audit']
@@ -990,6 +995,7 @@ class ServiceItem(RegistryProperties):
 
         :param theme: The new theme to be replaced in the service item
         """
+        self.slide_design.pop('theme', None)
         self.theme_overwritten = (theme is None)
         self.theme = theme
         if self.is_text():

@@ -118,6 +118,8 @@ class OpenLPSongImport(SongImport):
             new_song.copyright = song['copyright']
             new_song.comments = song['comments']
             new_song.theme_name = song['theme_name']
+            if 'slide_design' in song.keys():
+                new_song.slide_design = song['slide_design']
             new_song.ccli_number = song['ccli_number']
             if 'song_number' in song.keys():
                 new_song.song_number = song['song_number']

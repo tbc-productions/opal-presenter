@@ -25,6 +25,7 @@ import re
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.fluent_dialogs import TextEditorDialog
+from openlp.core.widgets.slidedesigner import SlideDesignerDialogMixin, designer_dialog_parent
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
@@ -41,7 +42,7 @@ VERSE_REGEX = re.compile(r'---\[(.+):\D*(\d*)\D*.*\]---')
 VERSE_LINE_REGEX = re.compile(r'^\s*---\[(.+?)(?::(.*?))?\]---\s*$')
 
 
-class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
+class EditVerseForm(SlideDesignerDialogMixin, TextEditorDialog, Ui_EditVerseDialog):
     """
     This is the form that is used to edit the verses of the song.
     """
@@ -49,8 +50,8 @@ class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
         """
         Constructor
         """
-        super().__init__(parent, QtCore.Qt.WindowType.WindowSystemMenuHint | QtCore.Qt.WindowType.WindowTitleHint |
-                         QtCore.Qt.WindowType.WindowCloseButtonHint)
+        super().__init__(designer_dialog_parent(parent), QtCore.Qt.WindowType.WindowSystemMenuHint |
+                         QtCore.Qt.WindowType.WindowTitleHint | QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.setup_ui(self)
         self._text_editor = self.verse_text_edit
         self.has_single_verse = False
@@ -63,6 +64,7 @@ class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
         self.transpose_up_button.clicked.connect(self.on_transpose_up_button_clicked)
         self.verse_text_edit.textChanged.connect(self.on_verse_text_changed)
         self._updating_section_styles = False
+        self.setup_slide_designer(parent, self.verse_text_edit, 'song')
 
     def exec(self):
         self.transpose_widget.setVisible(Registry().get('settings').value('songs/enable chords'))

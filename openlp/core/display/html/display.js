@@ -2025,6 +2025,140 @@ var Display = {
     var dh = parseFloat(_getStyle(d, "height"));
     return Math.floor(dh / lh);
   },
+  /** Render song-local decorations in each text slide, so normal blanking and transitions include them. */
+  _applySongDesign: function (slide) {
+    slide.querySelectorAll('.song-design-element').forEach(node => node.remove());
+    var design = Display._theme.song_design || {};
+    var content = slide.querySelector('.slide-text-content');
+    if (!content) return;
+    slide.style.width = '100%';
+    slide.style.height = '100%';
+    if (slide.parentElement && slide.parentElement.classList.contains('text-slides')) {
+      slide.parentElement.style.height = '100%';
+    }
+    var lyrics = design.lyrics || {};
+    content.dataset.designId = 'lyrics';
+    content.style.transform = `rotate(${lyrics.rotation || 0}deg)`;
+    content.style.opacity = (lyrics.opacity === undefined ? 100 : lyrics.opacity) / 100;
+    content.style.zIndex = '101';
+    (design.elements || []).forEach((element, index) => {
+      var node = document.createElement(element.kind === 'image' ? 'img' : 'div');
+      node.className = 'song-design-element';
+      node.dataset.designId = element.id;
+      Object.assign(node.style, {
+        position: 'absolute', boxSizing: 'border-box', margin: '0', padding: '0',
+        left: `${element.x}%`, top: `${element.y}%`, width: `${element.width}%`, height: `${element.height}%`,
+        zIndex: String(index + 1), transform: `rotate(${element.rotation || 0}deg)`,
+        opacity: (element.opacity === undefined ? 100 : element.opacity) / 100,
+        border: `${element.border_width || 0}px solid ${element.border_colour || '#ffffff'}`,
+        maxWidth: 'none', maxHeight: 'none', boxShadow: 'none', textShadow: 'none',
+        overflow: 'hidden', borderRadius: element.kind === 'ellipse' ? '50%' : '0'
+      });
+      if (element.kind === 'image') {
+        // Only embedded raster images are allowed, never HTML, SVG, file or remote URLs.
+        if (/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(element.src || '')) node.src = element.src;
+        node.style.objectFit = 'contain';
+        node.draggable = false;
+      } else if (element.kind === 'text') {
+        node.textContent = element.text || '';
+        Object.assign(node.style, {
+          whiteSpace: 'pre-wrap', fontFamily: element.font || 'Arial', color: element.colour || '#ffffff',
+          fontSize: `${(element.font_size || 40) * (Display._theme.song_design_output_height || 1080) /
+            (design.canvas_height || 1080)}pt`,
+          fontWeight: element.bold ? 'bold' : 'normal', fontStyle: element.italic ? 'italic' : 'normal',
+          textAlign: element.align || 'center', lineHeight: '1.15'
+        });
+      } else {
+        node.style.backgroundColor = element.fill || '#315efb';
+      }
+      slide.appendChild(node);
+    });
+    Display._bindDesignEditor(slide);
+  },
+
+  /** Enable editing only inside the song editor's own display window. */
+  setDesignEditor: function (selected) {
+    Display._designEditor = selected !== null;
+    Display._designSelected = selected;
+    document.querySelectorAll('.text-slide').forEach(Display._bindDesignEditor);
+  },
+
+  _bindDesignEditor: function (slide) {
+    slide.querySelectorAll('.design-resize-handle').forEach(node => node.remove());
+    slide.querySelectorAll('[data-design-id]').forEach(node => {
+      node.style.outline = '';
+      node.style.cursor = '';
+      node.onpointerdown = null;
+      if (!Display._designEditor) return;
+      node.style.cursor = 'move';
+      node.style.userSelect = 'none';
+      if (node.dataset.designId === Display._designSelected) {
+        node.style.outline = '3px solid #51a7ff';
+        // Images are replaced elements; use a sibling handle instead of a child.
+        var handle = document.createElement('div');
+        handle.className = 'design-resize-handle';
+        Object.assign(handle.style, {
+          position: 'absolute', width: '18px', height: '18px', background: '#ffffff',
+          border: '3px solid #217aff', boxSizing: 'border-box', zIndex: '200', cursor: 'nwse-resize',
+          left: `${node.offsetLeft + node.offsetWidth - 9}px`, top: `${node.offsetTop + node.offsetHeight - 9}px`
+        });
+        slide.appendChild(handle);
+        handle.onpointerdown = event => Display._startDesignDrag(event, node, true);
+      }
+      node.onpointerdown = event => Display._startDesignDrag(event, node, false);
+    });
+  },
+
+  _startDesignDrag: function (event, node, resizing) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    var slide = node.parentElement;
+    var bounds = slide.getBoundingClientRect();
+    var width = slide.clientWidth;
+    var height = slide.clientHeight;
+    if (!width || !height || !bounds.width || !bounds.height) return;
+    var start = {x: node.offsetLeft / width * 100, y: node.offsetTop / height * 100,
+      width: node.offsetWidth / width * 100, height: node.offsetHeight / height * 100};
+    var changed = Object.assign({}, start);
+    var clientX = event.clientX;
+    var clientY = event.clientY;
+    var target = event.currentTarget;
+    target.setPointerCapture(event.pointerId);
+    var clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    target.onpointermove = move => {
+      var dx = (move.clientX - clientX) / bounds.width * 100;
+      var dy = (move.clientY - clientY) / bounds.height * 100;
+      if (resizing) {
+        changed.width = clamp(start.width + dx, 1, 100 - start.x);
+        changed.height = clamp(start.height + dy, 1, 100 - start.y);
+      } else {
+        changed.x = clamp(start.x + dx, 0, 100 - start.width);
+        changed.y = clamp(start.y + dy, 0, 100 - start.height);
+      }
+      ['x', 'y', 'width', 'height'].forEach(key => {
+        node.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${changed[key]}%`, 'important');
+      });
+    };
+    var finish = cancelled => {
+      if (cancelled) {
+        ['x', 'y', 'width', 'height'].forEach(key => {
+          node.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${start[key]}%`, 'important');
+        });
+      }
+      target.onpointermove = null;
+      target.onpointerup = null;
+      target.onpointercancel = null;
+      Display._designSelected = node.dataset.designId;
+      displayWatcher.dispatchEvent('songDesignChanged', {
+        id: node.dataset.designId, geometry: cancelled ? start : changed,
+        changed: !cancelled && JSON.stringify(changed) !== JSON.stringify(start)
+      });
+    };
+    target.onpointerup = () => finish(false);
+    target.onpointercancel = () => finish(true);
+  },
+
   /**
    * Prepare the theme for the next item to be added
    * @param theme The theme to be used
@@ -2337,6 +2471,7 @@ var Display = {
           contentElement.style.setProperty(mainKey, mainStyle[mainKey], priority);
         }
       }
+      Display._applySongDesign(slideElement);
     });
 
     // Set up the footer

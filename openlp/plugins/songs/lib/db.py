@@ -320,6 +320,7 @@ class Song(Base):
     comments = Column(UnicodeText)
     ccli_number = Column(Unicode(64))
     theme_name = Column(Unicode(128))
+    slide_design = Column(UnicodeText)
     search_title = Column(Unicode(255), index=True, nullable=False)
     search_lyrics = Column(UnicodeText, nullable=False)
     create_date = Column(DateTime, default=func.now())

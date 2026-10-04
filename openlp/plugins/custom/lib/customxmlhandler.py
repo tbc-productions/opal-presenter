@@ -36,7 +36,9 @@ The basic XML is of the format::
 
 import copy
 import logging
+import json
 from lxml import etree, objectify
+from openlp.core.lib.slidedesign import normalise_design
 
 
 log = logging.getLogger(__name__)
@@ -60,6 +62,22 @@ class CustomXML(object):
             # Create the minidom document if no input given
             self.custom_xml = objectify.fromstring('<song version="1.0" />')
             self.add_lyrics_to_song()
+
+    def get_design(self):
+        """Read the optional portable design extension; older XML inherits its theme."""
+        element = self.custom_xml.find('{https://openlp.org/ns/slide-design/1}design')
+        return normalise_design(element.text if element is not None else None)
+
+    def set_design(self, value):
+        tag = '{https://openlp.org/ns/slide-design/1}design'
+        element = self.custom_xml.find(tag)
+        if element is not None:
+            self.custom_xml.remove(element)
+        design = normalise_design(value)
+        if design:
+            element = etree.Element(tag, nsmap={'olp': 'https://openlp.org/ns/slide-design/1'})
+            element.text = json.dumps(design)
+            self.custom_xml.append(element)
 
     def add_lyrics_to_song(self):
         """

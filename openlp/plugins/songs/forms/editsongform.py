@@ -23,6 +23,8 @@ The :mod:`~openlp.plugins.songs.forms.editsongform` module contains the form
 used to edit songs.
 """
 import logging
+import json
+from types import SimpleNamespace
 import re
 from shutil import copyfile
 from typing import TYPE_CHECKING
@@ -51,6 +53,7 @@ from openlp.core.state import State
 from openlp.core.widgets.edits import FormattingTagDelegate
 from openlp.core.widgets.comboboxes import create_combo_box
 from openlp.core.widgets.dialogs import FileDialog
+from openlp.core.lib.slidedesign import normalise_design
 from openlp.plugins.songs.forms.editverseform import EditVerseForm
 from openlp.plugins.songs.forms.mediafilesform import MediaFilesForm
 from openlp.plugins.songs.lib import VerseType, clean_song
@@ -82,6 +85,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                          QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.media_item = media_item
         self.song = None
+        self.slide_design = {}
         self.setup_ui()
         # Connecting signals and slots
         self.author_add_button.clicked.connect(self.on_author_add_button_clicked)
@@ -103,6 +107,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_list_widget.itemClicked.connect(self.on_verse_list_view_clicked)
         self.verse_order_edit.textEdited.connect(self.on_verse_order_text_changed)
         self.theme_add_button.clicked.connect(self.theme_manager.on_add_theme)
+        self.theme_combo_box.activated.connect(lambda: self.slide_design.pop('theme', None))
         self.maintenance_button.clicked.connect(self.on_maintenance_button_clicked)
         self.from_file_action.triggered.connect(self.on_audio_add_from_file_button_clicked)
         self.from_media_action.triggered.connect(self.on_audio_add_from_media_button_clicked)
@@ -1006,6 +1011,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         log.debug('New Song')
         self.song = None
+        self.slide_design = {}
         self.initialise()
         self.song_tab_widget.setCurrentIndex(0)
         self.title_edit.clear()
@@ -1047,6 +1053,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.load_songbooks()
         self.load_media_files()
         self.song = self.manager.get_object(Song, song_id)
+        self.slide_design = normalise_design(self.song.slide_design)
         self.title_edit.setText(self.song.title)
         self.alternative_edit.setText(self.song.alternate_title if self.song.alternate_title else '')
         if self.song.theme_name:
@@ -1136,6 +1143,24 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.preview_button.setVisible(preview)
         # Check if all verse tags are used.
         self.on_verse_order_text_changed(self.verse_order_edit.text())
+
+    def designer_footer(self):
+        """Render the footer from the current unsaved fields using the song output template."""
+        authors = []
+        for row in range(self.authors_list_view.count()):
+            identifier, author_type = self.authors_list_view.item(row).data(QtCore.Qt.ItemDataRole.UserRole)
+            author = self.manager.get_object(Author, identifier)
+            if author is not None:
+                authors.append(SimpleNamespace(author=author, author_type=author_type))
+        draft = SimpleNamespace(title=self.title_edit.text(), alternate_title=self.alternative_edit.text(),
+                                copyright=self.copyright_edit.toPlainText(), ccli_number=self.ccli_number_edit.text(),
+                                authors_songs=authors,
+                                topics=[SimpleNamespace(name=self.topics_list_view.item(row).text())
+                                        for row in range(self.topics_list_view.count())])
+        music_authors = self.media_item._get_music_authors(draft)
+        songbooks = [self.songbooks_list_view.item(row).text() for row in range(self.songbooks_list_view.count())]
+        variables = self.media_item._get_mako_vars(draft, music_authors, songbooks)
+        return self.media_item._generate_mako_footer(variables, show_error=False) or ''
 
     def tag_rows(self):
         """
@@ -1630,6 +1655,8 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             self.song.theme_name = theme_name
         else:
             self.song.theme_name = None
+        design = normalise_design(self.slide_design)
+        self.song.slide_design = json.dumps(design) if design else None
         self._process_lyrics()
         self.song.authors_songs = []
         for row in range(self.authors_list_view.count()):

@@ -20,6 +20,7 @@
 ##########################################################################
 
 import logging
+import html
 
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
@@ -51,6 +52,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
                                              QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.manager = manager
         self.media_item = media_item
+        self.slide_design = {}
         self.setup_ui(self)
         # Create other objects and forms.
         self.edit_slide_form = EditCustomSlideForm(self)
@@ -64,7 +66,14 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         self.down_action.triggered.connect(self.on_down_button_clicked)
         self.slide_list_view.currentRowChanged.connect(self.on_current_row_changed)
         self.slide_list_view.doubleClicked.connect(self.on_edit_button_clicked)
+        self.theme_combo_box.activated.connect(lambda: self.slide_design.pop('theme', None))
         Registry().register_function('theme_update_list', self.load_themes)
+
+    def designer_footer(self):
+        settings = Registry().get('settings')
+        if settings.value('custom/display footer') or self.credit_edit.text():
+            return html.escape(' '.join([self.title_edit.text(), self.credit_edit.text()]))
+        return ''
 
     def load_themes(self, theme_list=None):
         """
@@ -87,6 +96,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         :param preview: States whether the custom is edited while being previewed in the preview panel.
         """
         self.slide_list_view.clear()
+        self.slide_design = {}
         if id == 0:
             self.custom_slide = CustomSlide()
             self.title_edit.setText('')
@@ -97,6 +107,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
             self.title_edit.setText(self.custom_slide.title)
             self.credit_edit.setText(self.custom_slide.credits)
             custom_xml = CustomXML(self.custom_slide.text)
+            self.slide_design = custom_xml.get_design()
             slide_list = custom_xml.get_verses()
             self.slide_list_view.addItems([slide[1] for slide in slide_list])
             theme = self.custom_slide.theme_name
@@ -122,6 +133,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         sxml = CustomXML()
         for count in range(self.slide_list_view.count()):
             sxml.add_verse_to_lyrics('custom', str(count + 1), self.slide_list_view.item(count).text())
+        sxml.set_design(self.slide_design)
         self.custom_slide.title = self.title_edit.text()
         self.custom_slide.text = str(sxml.extract_xml(), 'utf-8')
         self.custom_slide.credits = self.credit_edit.text()

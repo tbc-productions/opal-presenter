@@ -55,6 +55,7 @@ The XML of an `OpenLyrics <http://openlyrics.info/>`_  song looks like this::
     </song>
 """
 import html
+import json
 import logging
 import re
 
@@ -62,6 +63,7 @@ from lxml import etree, objectify
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
+from openlp.core.lib.slidedesign import normalise_design, package_design
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.version import get_version
 from openlp.plugins.songs.lib import VerseType, clean_song
@@ -71,6 +73,7 @@ from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, Song, Topi
 log = logging.getLogger(__name__)
 
 NAMESPACE = 'http://openlyrics.info/namespace/2009/song'
+DESIGN_NAMESPACE = 'https://openlp.org/ns/slide-design/1'
 NSMAP = '{{' + NAMESPACE + '}}{tag}'
 NEWPAGETAG = '<p style="page-break-after: always;"/>'
 
@@ -243,6 +246,16 @@ class OpenLyrics(object):
         song_xml.set('modifiedIn', application_name)
         # "Convert" 2012-08-27 11:49:15 to 2012-08-27T11:49:15.
         song_xml.set('modifiedDate', str(song.last_modified).replace(' ', 'T'))
+        design = normalise_design(song.slide_design)
+        if design:
+            from openlp.core.lib.serviceitem import ServiceItem
+            item = ServiceItem()
+            item.theme = song.theme_name
+            design = package_design(design, item.get_theme_data())
+        if design:
+            element = etree.Element('{' + DESIGN_NAMESPACE + '}design', nsmap={'olp': DESIGN_NAMESPACE})
+            element.text = json.dumps(design)
+            song_xml.append(element)
         properties = etree.SubElement(song_xml, 'properties')
         titles = etree.SubElement(properties, 'titles')
         self._add_text_to_element('title', titles, song.title)
@@ -405,6 +418,9 @@ class OpenLyrics(object):
             song = self.manager.get_object(Song, update_song_id)
         else:
             song = Song()
+        design_element = song_xml.find('{' + DESIGN_NAMESPACE + '}design')
+        design = normalise_design(design_element.text if design_element is not None else None)
+        song.slide_design = json.dumps(design) if design else None
         # Values will be set when cleaning the song.
         song.search_lyrics = ''
         song.verse_order = ''

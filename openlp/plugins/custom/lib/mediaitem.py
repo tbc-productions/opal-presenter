@@ -285,6 +285,7 @@ class CustomMediaItem(MediaManagerItem):
         if theme:
             service_item.theme = theme
         custom_xml = CustomXML(custom_slide.text)
+        service_item.slide_design = custom_xml.get_design()
         verse_list = custom_xml.get_verses()
         raw_slides = [verse[1] for verse in verse_list]
         service_item.title = title
@@ -380,6 +381,7 @@ class CustomMediaItem(MediaManagerItem):
         """
         # Create the text
         custom_xml = CustomXML()
+        custom_xml.set_design(item.slide_design)
         for (idx, slide) in enumerate(item.slides):
             custom_xml.add_verse_to_lyrics('custom', str(idx + 1), slide['text'])
         # Create the credits from the footer

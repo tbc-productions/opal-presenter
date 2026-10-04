@@ -51,6 +51,7 @@ from openlp.plugins.songs.forms.songexportform import SongExportForm
 from openlp.plugins.songs.forms.songimportform import SongImportForm
 from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
 from openlp.plugins.songs.lib import VerseType, clean_string, delete_song
+from openlp.core.lib.slidedesign import normalise_design
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
 from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML
 from openlp.plugins.songs.lib.ui import SongStrings
@@ -830,6 +831,7 @@ class SongMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.HasMetaData)
         song = self.plugin.manager.get_object(Song, item_id)
         service_item.theme = song.theme_name
+        service_item.slide_design = normalise_design(song.slide_design)
         service_item.edit_id = item_id
         verse_list = SongXML().get_verses(song.lyrics)
         authors = self._get_music_authors(song)
