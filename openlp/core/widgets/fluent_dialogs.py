@@ -144,7 +144,7 @@ class _ProgressRail(fluentqt.ProgressBar):
 
 
 class FluentProgressBar(_qt.QWidget):
-    """Native Fluent progress rail with an optional accessible progress label."""
+    """Full-width row containing a Fluent progress rail and optional trailing label."""
     valueChanged = QtCore.Signal(int)
 
     def __init__(self, parent=None):
@@ -156,11 +156,11 @@ class FluentProgressBar(_qt.QWidget):
         self._text_visible = True
         self._minimum, self._maximum = 0, 100
         self._bar.setRange(0, 100)
-        layout = _qt.QVBoxLayout(self)
+        layout = _qt.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self._bar)
-        layout.addWidget(self._label, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
+        layout.setSpacing(8)
+        layout.addWidget(self._bar, stretch=1)
+        layout.addWidget(self._label, alignment=QtCore.Qt.AlignmentFlag.AlignVCenter)
         self._bar.valueChanged.connect(self._changed)
         self._refresh()
 

@@ -634,3 +634,34 @@ def test_pinned_controls_and_separators_do_not_create_overflow_chrome(qapp):
     toolbar.removeAction(separator)
     assert separator not in toolbar._separator_widgets
     toolbar.close()
+
+
+def test_progress_bar_and_trailing_label_share_available_width(qapp, qtbot):
+    progress = fluent.QProgressBar()
+    qtbot.addWidget(progress)
+    progress.setValue(40)
+    progress.show()
+    for width in (300, 700):
+        progress.resize(width, progress.sizeHint().height())
+        qapp.process_events()
+        assert progress._bar.x() == 0
+        assert progress._label.geometry().right() == progress.contentsRect().right()
+        assert progress._label.x() == progress._bar.geometry().right() + 9
+        assert progress._bar.barWidth() == progress._bar.width()
+        assert progress._label.geometry().center().y() == progress._bar.geometry().center().y()
+    progress.setTextVisible(False)
+    qapp.process_events()
+    assert progress._label.isHidden()
+    assert progress._bar.width() == progress.contentsRect().width()
+    progress.setTextVisible(True)
+    progress.setFormat('%v / %m')
+    progress.setRange(0, 10000)
+    progress.setValue(10000)
+    qapp.process_events()
+    assert progress._label.text() == '10000 / 10000'
+    assert progress._label.geometry().right() == progress.contentsRect().right()
+    assert progress._label.x() > progress._bar.geometry().right()
+    progress.setRange(0, 0)
+    qapp.process_events()
+    assert progress._label.isHidden()
+    assert progress._bar.width() == progress.contentsRect().width()

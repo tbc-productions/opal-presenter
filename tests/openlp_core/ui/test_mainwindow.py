@@ -1739,3 +1739,15 @@ def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
     settings.setValue('themes/global theme', 'Evening worship')
     main_window.default_theme_changed()
     assert button.text() == 'Evening worship'
+
+
+def test_footer_has_large_padding_around_progress_and_theme(modern_appearance, main_window):
+    from fluentqt.design import Spacing
+    footer = main_window.status_bar
+    main_window.show_status_message('Loading Sunday service')
+    assert footer.contentsMargins().left() == Spacing.Large
+    assert footer.contentsMargins().right() == Spacing.Large
+    assert footer.message_label.text() == 'Loading Sunday service'
+    assert footer.left_content.layout().indexOf(footer.message_label) == 0
+    assert footer.left_content.layout().indexOf(main_window.load_progress_bar) == 1
+    assert footer.right_content.layout().indexOf(main_window.default_theme_container) == 0

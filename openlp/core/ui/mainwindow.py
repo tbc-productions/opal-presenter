@@ -59,6 +59,7 @@ from openlp.core.ui.pluginform import PluginForm
 from openlp.core.ui.printserviceform import PrintServiceForm
 from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.ui.settingsform import SettingsForm
+from openlp.core.widgets.statusbar import FooterStatusBar
 from openlp.core.ui.shortcutlistform import ShortcutListForm
 from openlp.core.ui import HideMode
 from openlp.core.ui.style import get_library_stylesheet
@@ -183,18 +184,17 @@ class Ui_MainWindow(object):
         self.help_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.help_menu.setObjectName('helpMenu')
         main_window.setMenuBar(self.menu_bar)
-        self.status_bar = QtWidgets.QStatusBar(main_window)
+        self.status_bar = FooterStatusBar(main_window)
         self.status_bar.setObjectName('status_bar')
-        self.status_bar.setStyleSheet('QStatusBar { padding-left: 16px; }')
         main_window.setStatusBar(self.status_bar)
         self.load_progress_bar = QtWidgets.QProgressBar(self.status_bar)
         self.load_progress_bar.setObjectName('load_progress_bar')
-        self.status_bar.addPermanentWidget(self.load_progress_bar, 1)
+        self.status_bar.add_left_widget(self.load_progress_bar, 1)
         self.load_progress_bar.hide()
         self.load_progress_bar.setValue(0)
         self.default_theme_container = QtWidgets.QWidget(self.status_bar)
         default_theme_layout = QtWidgets.QHBoxLayout(self.default_theme_container)
-        default_theme_layout.setContentsMargins(8, 0, 12, 0)
+        default_theme_layout.setContentsMargins(0, 0, 0, 0)
         default_theme_layout.setSpacing(4)
         self.default_theme_label = QtWidgets.QLabel(self.default_theme_container)
         self.default_theme_label.setObjectName('default_theme_label')
@@ -206,7 +206,7 @@ class Ui_MainWindow(object):
         self.default_theme_button.setToolTip(translate('OpenLP.MainWindow', 'Open Themes settings'))
         self.default_theme_button.clicked.connect(self.on_default_theme_clicked)
         default_theme_layout.addWidget(self.default_theme_button)
-        self.status_bar.addPermanentWidget(self.default_theme_container)
+        self.status_bar.add_right_widget(self.default_theme_container)
         # Library and Themes are separate dock widgets; Qt tabifies them in the same dock area.
         self.media_manager_dock = dock_widget_class(main_window, 'media_manager_dock',
                                                    UiIcons().library)
