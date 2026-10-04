@@ -18,140 +18,223 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-"""
-The UI widgets for the formatting tags window.
-"""
-from PySide6 import QtCore
+"""Fluent style browser and editor for inline text formatting."""
+from PySide6 import QtCore, QtGui
+from fluentqt import CommandBar, FontIcon, FontRole, TextEdit
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
-from openlp.core.ui.style import use_alternate_rows
 
 
 class Ui_FormattingTagDialog(object):
-    """
-    The UI widgets for the formatting tags window.
-    """
+    """Build the formatting styles dialog."""
+
     def setup_ui(self, formatting_tag_dialog):
-        """
-        Set up the UI
-        """
         formatting_tag_dialog.setObjectName('formatting_tag_dialog')
         formatting_tag_dialog.setWindowIcon(UiIcons().main_icon)
-        formatting_tag_dialog.resize(935, 648)
+        formatting_tag_dialog.resize(1040, 780)
+        formatting_tag_dialog.setMinimumSize(860, 640)
         self.list_data_grid_layout = QtWidgets.QVBoxLayout(formatting_tag_dialog)
-        self.list_data_grid_layout.setContentsMargins(12, 12, 12, 12)
-        self.list_data_grid_layout.setSpacing(8)
-        self.list_data_grid_layout.setObjectName('list_data_grid_layout')
-        self.tag_table_widget_read_label = QtWidgets.QLabel()
-        self.list_data_grid_layout.addWidget(self.tag_table_widget_read_label)
-        self.tag_table_widget_read = QtWidgets.QTableWidget(formatting_tag_dialog)
-        self.tag_table_widget_read.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.tag_table_widget_read.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.tag_table_widget_read.setAlternatingRowColors(use_alternate_rows())
-        self.tag_table_widget_read.setCornerButtonEnabled(False)
-        self.tag_table_widget_read.setObjectName('tag_table_widget_read')
-        self.tag_table_widget_read.setColumnCount(5)
-        self.tag_table_widget_read.setRowCount(0)
-        self.tag_table_widget_read.horizontalHeader().setStretchLastSection(True)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget_read.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget_read.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget_read.setHorizontalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget_read.setHorizontalHeaderItem(3, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget_read.setHorizontalHeaderItem(4, item)
-        self.list_data_grid_layout.addWidget(self.tag_table_widget_read)
-        self.tag_table_widget_label = QtWidgets.QLabel()
-        self.list_data_grid_layout.addWidget(self.tag_table_widget_label)
-        self.tag_table_widget = QtWidgets.QTableWidget(formatting_tag_dialog)
-        self.tag_table_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.tag_table_widget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.AllEditTriggers)
-        self.tag_table_widget.setAlternatingRowColors(use_alternate_rows())
-        self.tag_table_widget.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
-        self.tag_table_widget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
-        self.tag_table_widget.setCornerButtonEnabled(False)
-        self.tag_table_widget.setObjectName('tag_table_widget')
-        self.tag_table_widget.setColumnCount(6)
-        self.tag_table_widget.setRowCount(0)
-        self.tag_table_widget.horizontalHeader().setStretchLastSection(True)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(3, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(4, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tag_table_widget.setHorizontalHeaderItem(5, item)
-        self.list_data_grid_layout.addWidget(self.tag_table_widget)
-        self.edit_button_layout = QtWidgets.QHBoxLayout()
-        self.new_button = QtWidgets.QPushButton(formatting_tag_dialog)
-        self.new_button.setIcon(UiIcons().new)
-        self.new_button.setObjectName('new_button')
-        self.edit_button_layout.addWidget(self.new_button)
-        self.delete_button = QtWidgets.QPushButton(formatting_tag_dialog)
-        self.delete_button.setIcon(UiIcons().delete)
-        self.delete_button.setObjectName('delete_button')
-        self.edit_button_layout.addWidget(self.delete_button)
-        self.edit_button_layout.addStretch()
-        self.list_data_grid_layout.addLayout(self.edit_button_layout)
-        self.button_box = create_button_box(formatting_tag_dialog, 'button_box', ['cancel', 'save', 'defaults'])
+        self.list_data_grid_layout.setContentsMargins(24, 20, 24, 20)
+        self.list_data_grid_layout.setSpacing(16)
+        self.title_label = QtWidgets.QLabel(formatting_tag_dialog)
+        self.title_label.setFluentTypography(FontRole.Title)
+        self.list_data_grid_layout.addWidget(self.title_label)
+
+        self.content_splitter = QtWidgets.QSplitter(formatting_tag_dialog)
+        self.content_splitter.setChildrenCollapsible(False)
+        self.list_data_grid_layout.addWidget(self.content_splitter, 1)
+        browser = QtWidgets.QWidget(self.content_splitter)
+        browser.setMinimumWidth(340)
+        browser_layout = QtWidgets.QVBoxLayout(browser)
+        browser_layout.setContentsMargins(0, 0, 12, 0)
+        browser_layout.setSpacing(12)
+        self.search_edit = QtWidgets.QLineEdit(browser)
+        self.search_edit.setClearButtonEnabled(True)
+        browser_layout.addWidget(self.search_edit)
+        self.style_tabs = QtWidgets.QTabWidget(browser)
+        browser_layout.addWidget(self.style_tabs, 1)
+        self.tag_table_widget = self._create_style_table('tag_table_widget', 6)
+        self.tag_table_widget_read = self._create_style_table('tag_table_widget_read', 5)
+        for table in (self.tag_table_widget, self.tag_table_widget_read):
+            page = QtWidgets.QWidget()
+            layout = QtWidgets.QVBoxLayout(page)
+            layout.setContentsMargins(0, 12, 0, 0)
+            layout.setSpacing(8)
+            layout.addWidget(table, 1)
+            self.style_tabs.addTab(page, '')
+        self.list_status_label = QtWidgets.QLabel(browser)
+        self.list_status_label.setWordWrap(True)
+        browser_layout.addWidget(self.list_status_label)
+        self.style_command_bar = self._create_command_bar(browser, 'style_command_bar')
+        self.new_button = self._create_command(
+            self.style_command_bar, 'new_button', UiIcons().new,
+            UiStrings().New)
+        self.copy_button = self._create_command(
+            self.style_command_bar, 'copy_button', UiIcons().copy, translate('OpenLP.FormattingTagDialog', 'Copy'))
+        self.delete_button = self._create_command(
+            self.style_command_bar, 'delete_button', UiIcons().delete, UiStrings().Delete)
+        self.import_button = self._create_command(
+            self.style_command_bar, 'import_button', UiIcons().download, UiStrings().Import)
+        self.export_button = self._create_command(
+            self.style_command_bar, 'export_button', UiIcons().upload, UiStrings().Export)
+        browser_layout.insertWidget(1, self.style_command_bar)
+
+        editor_scroll = QtWidgets.QScrollArea(self.content_splitter)
+        editor_scroll.setWidgetResizable(True)
+        editor_scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        editor_scroll.setMinimumWidth(420)
+        self.editor_card = QtWidgets.Card()
+        editor_scroll.setWidget(self.editor_card)
+        editor_layout = QtWidgets.QVBoxLayout(self.editor_card)
+        editor_layout.setContentsMargins(20, 16, 20, 16)
+        editor_layout.setSpacing(8)
+        self.editor_heading = QtWidgets.QLabel(self.editor_card)
+        self.editor_heading.setFluentTypography(FontRole.Subtitle)
+        editor_header = QtWidgets.QHBoxLayout()
+        editor_header.addWidget(self.editor_heading, 1)
+        self.read_only_icon = FontIcon('ic_fluent_lock_closed_24_regular', self.editor_card)
+        self.read_only_icon.setObjectName('read_only_icon')
+        self.read_only_icon.setIconSize(20)
+        editor_header.addWidget(self.read_only_icon)
+        editor_layout.addLayout(editor_header)
+        self.preview_heading = QtWidgets.QLabel(self.editor_card)
+        self.preview_heading.setFluentTypography(FontRole.BodyStrong)
+        editor_layout.addWidget(self.preview_heading)
+        self.preview_card = QtWidgets.Card(self.editor_card)
+        self.preview_card.setMinimumHeight(80)
+        preview_layout = QtWidgets.QVBoxLayout(self.preview_card)
+        preview_layout.setContentsMargins(16, 12, 16, 12)
+        self.preview_label = QtWidgets.QLabel(self.preview_card)
+        self.preview_label.setFluentTypography(FontRole.Subtitle)
+        self.preview_label.setWordWrap(True)
+        self.preview_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        self.preview_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        preview_layout.addWidget(self.preview_label)
+        editor_layout.addWidget(self.preview_card)
+        self.editor_fields = QtWidgets.QWidget(self.editor_card)
+        editor_layout.addWidget(self.editor_fields)
+        fields_layout = QtWidgets.QVBoxLayout(self.editor_fields)
+        fields_layout.setContentsMargins(0, 0, 0, 0)
+        fields_layout.setSpacing(8)
+        self.name_edit = QtWidgets.QLineEdit(self.editor_fields)
+        self.tag_edit = QtWidgets.QLineEdit(self.editor_fields)
+        self.start_html_edit = TextEdit(self.editor_fields)
+        self.end_html_edit = TextEdit(self.editor_fields)
+        for edit in (self.start_html_edit, self.end_html_edit):
+            edit.setMinVisibleLines(2)
+            edit.setMaxVisibleLines(3)
+            edit.setTabChangesFocus(True)
+        self.field_labels = []
+        identity_layout = QtWidgets.QGridLayout()
+        identity_layout.setColumnStretch(0, 2)
+        identity_layout.setColumnStretch(1, 1)
+        identity_layout.setHorizontalSpacing(12)
+        fields_layout.addLayout(identity_layout)
+        for index, edit in enumerate((self.name_edit, self.tag_edit, self.start_html_edit, self.end_html_edit)):
+            label = QtWidgets.QLabel(self.editor_fields)
+            label.setFluentTypography(FontRole.BodyStrong)
+            label.setBuddy(edit)
+            self.field_labels.append(label)
+            if index < 2:
+                identity_layout.addWidget(label, 0, index)
+                identity_layout.addWidget(edit, 1, index)
+            else:
+                fields_layout.addWidget(label)
+                fields_layout.addWidget(edit)
+        self.hidden_checkbox = QtWidgets.QCheckBox(self.editor_fields)
+        fields_layout.addWidget(self.hidden_checkbox)
+        editor_layout.addStretch()
+        self.content_splitter.setSizes([420, 560])
+
+        footer = QtWidgets.QHBoxLayout()
+        footer.addStretch()
+        self.button_box = create_button_box(formatting_tag_dialog, 'button_box', ['cancel', 'save'])
         self.save_button = self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Save)
         self.save_button.setObjectName('save_button')
-        self.restore_button = self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.RestoreDefaults)
-        self.restore_button.setIcon(UiIcons().undo)
-        self.restore_button.setObjectName('restore_button')
-        self.import_button = QtWidgets.QPushButton(formatting_tag_dialog)
-        self.import_button.setIcon(UiIcons().download)
-        self.import_button.setObjectName('import_button')
-        self.button_box.addButton(self.import_button, QtWidgets.QDialogButtonBox.ButtonRole.ActionRole)
-        self.export_button = QtWidgets.QPushButton(formatting_tag_dialog)
-        self.export_button.setIcon(UiIcons().upload)
-        self.export_button.setObjectName('export_button')
-        self.button_box.addButton(self.export_button, QtWidgets.QDialogButtonBox.ButtonRole.ActionRole)
-        self.list_data_grid_layout.addWidget(self.button_box)
+        self.save_button.setIcon(UiIcons().get_icon_variant('save', color='white'))
+        self.save_button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Accent)
+        footer.addWidget(self.button_box)
+        self.list_data_grid_layout.addLayout(footer)
         self.retranslate_ui(formatting_tag_dialog)
 
+    def _create_command_bar(self, parent, name):
+        bar = CommandBar(parent)
+        bar.setObjectName(name)
+        bar.setLabelPosition(CommandBar.LabelPosition.Right)
+        bar.setDynamicOverflowEnabled(True)
+        bar.setBackgroundVisible(True)
+        bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        return bar
+
+    def _create_command(self, bar, name, icon, text):
+        action = QtGui.QAction(icon, text, bar)
+        action.setObjectName(name)
+        bar.addPrimaryAction(action)
+        return action
+
+    def _create_style_table(self, name, columns):
+        """Show readable style information; HTML lives in the detail editor."""
+        table = QtWidgets.QTableWidget()
+        table.setObjectName(name)
+        table.setColumnCount(columns)
+        table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        table.setCornerButtonEnabled(False)
+        table.verticalHeader().hide()
+        table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        table.setColumnWidth(1, 70)
+        table.setColumnWidth(4, 115)
+        for column in range(columns):
+            table.setHorizontalHeaderItem(column, QtWidgets.QTableWidgetItem())
+        for column in (2, 3, 5):
+            if column < columns:
+                table.setColumnHidden(column, True)
+        return table
+
     def retranslate_ui(self, formatting_tag_dialog):
-        """
-        Translate the UI on the fly
-        """
-        formatting_tag_dialog.setWindowTitle(translate('OpenLP.FormattingTagDialog', 'Configure Formatting Tags'))
-        self.delete_button.setText(UiStrings().Delete)
+        formatting_tag_dialog.setWindowTitle(translate('OpenLP.FormattingTagDialog', 'Formatting styles'))
+        self.title_label.setText(translate('OpenLP.FormattingTagDialog', 'Formatting styles'))
+        self.search_edit.setPlaceholderText(translate('OpenLP.FormattingTagDialog', 'Search styles by name or tag'))
+        self.search_edit.setAccessibleName(translate('OpenLP.FormattingTagDialog', 'Search styles'))
+        self.style_tabs.setTabText(0, translate('OpenLP.FormattingTagDialog', 'Custom'))
+        self.style_tabs.setTabText(1, translate('OpenLP.FormattingTagDialog', 'Built-in'))
         self.new_button.setText(UiStrings().New)
+        self.copy_button.setText(translate('OpenLP.FormattingTagDialog', 'Copy'))
+        self.delete_button.setText(UiStrings().Delete)
+        self.save_button.setText(translate('OpenLP.FormattingTagDialog', 'Save changes'))
         self.import_button.setText(UiStrings().Import)
         self.export_button.setText(UiStrings().Export)
-        self.tag_table_widget_read_label.setText(translate('OpenLP.FormattingTagDialog', 'Default Formatting'))
-        self.tag_table_widget_read.horizontalHeaderItem(0).\
-            setText(translate('OpenLP.FormattingTagDialog', 'Description'))
-        self.tag_table_widget_read.horizontalHeaderItem(1).setText(translate('OpenLP.FormattingTagDialog', 'Tag'))
-        self.tag_table_widget_read.horizontalHeaderItem(2).\
-            setText(translate('OpenLP.FormattingTagDialog', 'Start HTML'))
-        self.tag_table_widget_read.horizontalHeaderItem(3).setText(translate('OpenLP.FormattingTagDialog', 'End HTML'))
-        self.tag_table_widget_read.horizontalHeaderItem(4).setText(translate('OpenLP.FormattingTagDialog', 'Preview'))
-        self.tag_table_widget_read.setColumnWidth(0, 120)
-        self.tag_table_widget_read.setColumnWidth(1, 80)
-        self.tag_table_widget_read.setColumnWidth(2, 330)
-        self.tag_table_widget_read.setColumnWidth(3, 150)
-        self.tag_table_widget_label.setText(translate('OpenLP.FormattingTagDialog', 'Custom Formatting'))
-        self.tag_table_widget.horizontalHeaderItem(0).setText(translate('OpenLP.FormattingTagDialog', 'Description'))
-        self.tag_table_widget.horizontalHeaderItem(1).setText(translate('OpenLP.FormattingTagDialog', 'Tag'))
-        self.tag_table_widget.horizontalHeaderItem(2).setText(translate('OpenLP.FormattingTagDialog', 'Start HTML'))
-        self.tag_table_widget.horizontalHeaderItem(3).setText(translate('OpenLP.FormattingTagDialog', 'End HTML'))
-        self.tag_table_widget.horizontalHeaderItem(4).setText(translate('OpenLP.FormattingTagDialog', 'Preview'))
-        self.tag_table_widget.horizontalHeaderItem(5).setText(translate('OpenLP.FormattingTagDialog',
-                                                                        'Hide content from Live/Preview'))
-        self.tag_table_widget.setColumnWidth(0, 80)
-        self.tag_table_widget.setColumnWidth(1, 40)
-        self.tag_table_widget.setColumnWidth(2, 320)
-        self.tag_table_widget.setColumnWidth(3, 150)
-        self.tag_table_widget.setColumnWidth(4, 140)
+        self.import_button.setToolTip(translate('OpenLP.FormattingTagDialog', 'Import custom styles from a JSON file.'))
+        self.export_button.setToolTip(translate('OpenLP.FormattingTagDialog', 'Export custom styles to a JSON file.'))
+        self.copy_button.setToolTip(translate('OpenLP.FormattingTagDialog', 'Create an editable copy of this style.'))
+        read_only = translate('OpenLP.FormattingTagDialog', 'Read-only')
+        self.read_only_icon.setToolTip(read_only)
+        self.read_only_icon.setAccessibleName(read_only)
+        column_labels = ((0, translate('OpenLP.FormattingTagDialog', 'Name')),
+                         (1, translate('OpenLP.FormattingTagDialog', 'Tag')),
+                         (4, translate('OpenLP.FormattingTagDialog', 'Preview')))
+        for table in (self.tag_table_widget, self.tag_table_widget_read):
+            for column, text in column_labels:
+                table.horizontalHeaderItem(column).setText(text)
+        field_labels = (translate('OpenLP.FormattingTagDialog', 'Name'),
+                        translate('OpenLP.FormattingTagDialog', 'Tag'),
+                        translate('OpenLP.FormattingTagDialog', 'Opening HTML'),
+                        translate('OpenLP.FormattingTagDialog', 'Closing HTML'))
+        for label, edit, text in zip(self.field_labels,
+                                     (self.name_edit, self.tag_edit, self.start_html_edit, self.end_html_edit),
+                                     field_labels):
+            label.setText(text)
+            edit.setAccessibleName(text)
+        self.name_edit.setPlaceholderText(translate('OpenLP.FormattingTagDialog', 'e.g. Emphasis'))
+        self.tag_edit.setPlaceholderText(translate('OpenLP.FormattingTagDialog', 'e.g. emphasis'))
+        self.tag_edit.setToolTip(translate('OpenLP.FormattingTagDialog', 'Enter the tag without braces or spaces.'))
+        self.start_html_edit.setPlaceholderText('<span style="font-weight: bold;">')
+        self.start_html_edit.setToolTip(
+            translate('OpenLP.FormattingTagDialog', 'Closing HTML is suggested automatically as you type.'))
+        self.end_html_edit.setPlaceholderText('</span>')
+        self.hidden_checkbox.setText(translate('OpenLP.FormattingTagDialog', 'Hide styled text in operator views'))
+        self.preview_heading.setText(translate('OpenLP.FormattingTagDialog', 'Preview'))

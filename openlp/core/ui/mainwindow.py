@@ -512,21 +512,21 @@ class Ui_MainWindow(object):
         self.export_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.export_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', 'Configure &Shortcuts...'))
-        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', 'Configure &Formatting Tags...'))
+        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', '&Formatting styles...'))
         self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP+...'))
         self.settings_export_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
         self.settings_export_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_export_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Export formatting tags to a *.json file.'))
-        self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
+            translate('OpenLP.MainWindow', 'Export formatting styles to a *.json file.'))
+        self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.settings_import_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Import settings from a *.config file previously exported from '
                                            'this or another machine.'))
         self.settings_import_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_import_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Import formatting tags from a *.json file.'))
-        self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
+            translate('OpenLP.MainWindow', 'Import formatting styles from a *.json file.'))
+        self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.view_projector_manager_item.setText(translate('OpenLP.MainWindow', '&Projector Controller'))
         self.view_projector_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show Projectors.'))
         self.view_projector_manager_item.setStatusTip(translate('OpenLP.MainWindow',

@@ -833,7 +833,7 @@ class SpellTextEdit(QtWidgets.QWidget):
         remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
         remove_unused_action.triggered.connect(self.remove_unused_tags)
 
-        edit_tags_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
+        edit_tags_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Edit formatting styles'))
         edit_tags_action.setIcon(UiIcons().palette)
         edit_tags_action.triggered.connect(self._edit_formatting_tags)
         self._edit_tags_action = edit_tags_action
@@ -1813,7 +1813,7 @@ class SpellTextEdit(QtWidgets.QWidget):
                 # Only add the spelling suggests to the menu if there are suggestions.
                 if spell_menu.actions():
                     popup_menu.insertMenu(popup_menu.actions()[0], spell_menu)
-        tag_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Formatting Tags'))
+        tag_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Formatting styles'))
         if self.formatting_tags_allowed:
             for html in FormattingTags.get_html_tags():
                 action = SpellAction(html['desc'], tag_menu)
