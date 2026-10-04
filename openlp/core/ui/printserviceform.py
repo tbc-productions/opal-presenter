@@ -21,7 +21,6 @@
 """
 The actual print service dialog
 """
-import datetime
 import html
 
 import lxml.html
@@ -35,6 +34,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib import get_text_file_string
 from openlp.core.lib.serviceprint import plain_print_text, prepare_print_document, render_print_text
 from openlp.core.ui.fluenticons import FluentIconEngine
+from openlp.core.ui.media import format_play_time
 from openlp.core.ui.printservicedialog import Ui_PrintServiceDialog, ZoomSize
 
 
@@ -274,15 +274,19 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
             icon.set('data-unicode', unicode_icon)
         self._add_element('span', ' ' + render_print_text(html.escape(item.get_display_title())), item_title)
         details = self._add_element('div', class_id='itemDetails', attribute=('style', 'margin-left: 16px;'))
-        if self.slide_text_check_box.isChecked():
+        if self.slide_text_check_box.isChecked() and item.name != 'presentations':
             # Add the text of the service item.
             if item.is_text():
                 verse_def = None
                 verse_html = None
                 for slide in item.print_slides:
                     slide_text = render_print_text(slide['text']).replace('\n', '<br>')
-                    if not verse_def or verse_def != slide['verse'] or verse_html == slide_text:
+                    if verse_def is None or verse_def != slide['verse'] or verse_html == slide_text:
                         text_div = self._add_element('div', parent=details, class_id='itemText')
+                        if item.name == 'songs':
+                            self._add_element('strong', html.escape(self._song_section_label(slide['verse'])),
+                                              text_div, class_id='songSection')
+                            self._add_element('br', parent=text_div)
                     elif 'chordspacing' not in slide_text:
                         self._add_element('br', parent=text_div)
                     self._add_element('span', slide_text, text_div)
@@ -311,16 +315,28 @@ class PrintServiceForm(QtWidgets.fluentqt.Window, Ui_PrintServiceDialog, Registr
                                   p, class_id='itemNotesText')
         # Add play length of media files.
         if item.is_media() and self.meta_data_check_box.isChecked():
-            tme = item.media_length
-            if item.end_time > 0:
-                tme = item.end_time - item.start_time
+            end_time = item.end_time if item.end_time > 0 else item.media_length
+            if item.media_length > 0:
+                end_time = min(end_time, item.media_length)
+            duration = max(0, end_time - max(0, item.start_time))
             title = self._add_element('div', class_id='media', parent=details)
             self._add_element(
                 'span', translate('OpenLP.ServiceManager', 'Playing time: '), title, class_id='mediaTitle')
-            self._add_element('span', str(datetime.timedelta(seconds=tme)), title, class_id='mediaText')
+            self._add_element('span', format_play_time(duration), title, class_id='mediaText')
 
         if len(details):
             div.append(details)
+
+    @staticmethod
+    def _song_section_label(verse_tag):
+        """Expand the song plugin's translated section tag into a readable heading."""
+        from openlp.plugins.songs.lib import VerseType
+        tag = str(verse_tag)
+        section = VerseType.from_translated_tag(tag, default=None)
+        if section is None:
+            section = VerseType.from_tag(tag)
+        number = tag[1:]
+        return f'{VerseType.translated_names[section]} {number}'.strip()
 
     def _add_element(self, tag, text=None, parent=None, class_id=None, attribute=None):
         """
