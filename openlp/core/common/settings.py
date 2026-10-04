@@ -341,6 +341,7 @@ class Settings(QtCore.QSettings):
         'advanced/max recent files': 20,
         'advanced/print file meta data': False,
         'advanced/print notes': False,
+        'advanced/print icons': True,
         'advanced/print slide text': False,
         'advanced/protect data directory': False,
         'advanced/copy library files to data folder': True,
