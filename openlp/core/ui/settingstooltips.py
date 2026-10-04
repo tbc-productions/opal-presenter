@@ -3,6 +3,7 @@ import fluentqt
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
+from openlp.core.common import is_win
 from openlp.core.common.i18n import translate
 from openlp.core.ui.icons import UiIcons
 
@@ -190,7 +191,7 @@ def apply_settings_tooltips(tab):
             ('ppt_window_check_box', None, translate(
                 'PresentationPlugin.PresentationTab',
                 'This may fix PowerPoint scaling issues in Windows 8 and 10.')),
-        ],
+        ] if is_win() else [],
     }.get(type(tab).__name__, ())
     for control_name, label_name, tip in hints:
         control = getattr(tab, control_name, None)

@@ -1756,6 +1756,34 @@ def test_footer_has_large_padding_around_progress_and_theme(modern_appearance, m
     assert footer.right_content.layout().indexOf(main_window.default_theme_container) == 0
 
 
+@pytest.mark.parametrize('name', ['preview', 'live'])
+def test_modern_controller_close_and_view_toggle_sync(modern_appearance, main_window, settings, name):
+    dock = getattr(main_window, f'{name}_controller_dock')
+    action = getattr(main_window, f'view_{name}_panel')
+    dock.toggleView(False)
+    assert not settings.value(f'user interface/{name} panel')
+    assert not action.isChecked()
+    getattr(main_window, f'set_{name}_panel_visibility')(True)
+    assert dock.isDockOpen()
+    assert settings.value(f'user interface/{name} panel')
+    assert action.isChecked()
+
+
+def test_modern_controller_lock_and_preset_visibility(modern_appearance, main_window, settings):
+    import json
+    import PySide6QtAds as ads
+    main_window.set_lock_panel(True)
+    for dock in (main_window.preview_controller_dock, main_window.live_controller_dock):
+        assert dock.features() == ads.CDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+    main_window.set_lock_panel(False)
+    assert main_window.live_controller_dock.features() & ads.CDockWidget.DockWidgetFeature.DockWidgetPinnable
+    settings.setValue('user interface/is preset layout', True)
+    assert main_window._apply_preset_visibility_snapshot(json.dumps({'preview_panel': False, 'live_panel': True}))
+    assert main_window.preview_controller_dock.isClosed()
+    assert main_window.live_controller_dock.isDockOpen()
+    assert settings.value('user interface/is preset layout')
+
+
 @pytest.mark.parametrize('main_window', [{'no_web_server': False}], indirect=True)
 def test_unused_features_disabled_on_startup(main_window):
     """Unused optional features hide controls and disable network services."""

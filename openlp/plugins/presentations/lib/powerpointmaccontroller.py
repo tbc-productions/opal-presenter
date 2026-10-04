@@ -27,6 +27,7 @@ import posixpath
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile
@@ -38,6 +39,7 @@ except ImportError:
 
 from openlp.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseController, \
     AppleScriptBaseDocument
+from openlp.plugins.presentations.lib.applicationdiscovery import find_macos_application, macos_application_version
 
 from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtPdf import QPdfDocument
@@ -46,6 +48,7 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtMultimedia import QMediaCaptureSession, QVideoSink, QWindowCapture
 
 from openlp.core.common.i18n import translate
+from openlp.core.common.platform import is_macosx
 from openlp.core.common.mac_permissions import (
     accessibility_target_name, has_post_event_access, request_post_event_access)
 from openlp.core.common.registry import Registry
@@ -54,6 +57,17 @@ from openlp.core.ui import HideMode
 
 log = logging.getLogger(__name__)
 _post_event_access_requested = False
+
+
+def _powerpoint_monitor_name(screen, screens):
+    """Match PowerPoint's generic monitor labels without assuming Qt's screen ordering."""
+    if screen.is_primary:
+        return 'Primary Monitor'
+    # PowerPoint exposes no display IDs or names. With one secondary display its
+    # identity is unambiguous; Qt's index is not a reliable mapping with three or more.
+    if len(screens) == 2 and sum(bool(item.is_primary) for item in screens) == 1 and screen in screens:
+        return 'Monitor 2'
+    raise RuntimeError('PowerPoint monitor labels cannot be matched to this screen automatically.')
 
 
 def _open_powerpoint_document(document_path):
@@ -65,6 +79,47 @@ def _open_powerpoint_document(document_path):
     """
     subprocess.run(['/usr/bin/open', '-g', '-b', 'com.microsoft.Powerpoint', str(document_path)],
                    check=True, capture_output=True, text=True)
+
+
+def _operator_native_window():
+    """Get the existing Cocoa window without recreating Qt's native window."""
+    main_window = Registry().get('main_window')
+    if not isinstance(main_window, QtWidgets.QWidget) or not main_window.isVisible() or \
+            QtWidgets.QApplication.platformName() != 'cocoa':
+        return None
+    import objc
+
+    # Qt's macOS WId is an NSView pointer, whose window owns the stacking level.
+    view = objc.objc_object(c_void_p=ctypes.c_void_p(int(main_window.winId())))
+    return view.window()
+
+
+@contextmanager
+def _keep_operator_window_on_top():
+    """Cover automatic PowerPoint setup while allowing its accessibility actions."""
+    native_window = None
+    previous_level = None
+    try:
+        native_window = _operator_native_window()
+        if native_window is not None:
+            from AppKit import NSPopUpMenuWindowLevel
+
+            previous_level = native_window.level()
+            native_window.setLevel_(max(previous_level, NSPopUpMenuWindowLevel + 1))
+            # PowerPoint still needs to be the active app for its menu/dialog.
+            # Raising this window independently keeps OpenLP visible without
+            # repeatedly taking focus away from the native automation.
+            native_window.orderFrontRegardless()
+    except Exception:
+        log.exception('Could not keep OpenLP above PowerPoint setup')
+    try:
+        yield
+    finally:
+        if native_window is not None and previous_level is not None:
+            try:
+                native_window.setLevel_(previous_level)
+            except Exception:
+                log.exception('Could not restore OpenLP window level after PowerPoint setup')
 
 
 def _find_powerpoint_slideshow_window(window_title):
@@ -279,8 +334,74 @@ on close_presentation()
     end tell
 end close_presentation
 
+on show_slide_show_settings(documentName)
+    tell application "Microsoft PowerPoint"
+        if (count of slide show windows) > 0 then error "Stop the running slide show before changing its settings."
+        set presentationIndex to 0
+        repeat with attempt from 1 to 150
+            try
+                set presentationIndex to my find_presentation_index(documentName)
+                exit repeat
+            end try
+            delay 0.2
+        end repeat
+        if presentationIndex is 0 then error "PowerPoint did not open the requested presentation"
+        set index of document window 1 of presentation presentationIndex to 1
+        activate
+    end tell
+    tell application "System Events"
+        tell process "Microsoft PowerPoint"
+            set frontmost to true
+            click menu item "Set Up Show..." of menu "Slide Show" of menu bar item "Slide Show" of menu bar 1
+            repeat with attempt from 1 to 50
+                if exists window "Set Up Show" then return true
+                delay 0.1
+            end repeat
+        end tell
+    end tell
+    error "PowerPoint did not open Set Up Show."
+end show_slide_show_settings
+
+on select_slide_show_monitor(documentName, monitorName)
+    my show_slide_show_settings(documentName)
+    tell application "System Events"
+        tell process "Microsoft PowerPoint"
+            try
+                set setupWindow to window "Set Up Show"
+                set monitorPicker to first pop up button of setupWindow whose description is "Monitor list"
+                if (value of monitorPicker as text) is not monitorName then
+                    click monitorPicker
+                    click menu item monitorName of menu 1 of monitorPicker
+                end if
+                -- Office updates the accessible value after the menu action returns.
+                -- Wait for it rather than cancelling a selection that is still being applied.
+                set monitorSelected to false
+                repeat with attempt from 1 to 50
+                    if (value of monitorPicker as text) is monitorName then
+                        set monitorSelected to true
+                        exit repeat
+                    end if
+                    delay 0.1
+                end repeat
+                if not monitorSelected then error "PowerPoint did not select the output monitor."
+                click button "OK" of setupWindow
+                repeat with attempt from 1 to 50
+                    if not (exists window "Set Up Show") then return true
+                    delay 0.1
+                end repeat
+                error "PowerPoint did not close Set Up Show."
+            on error errorText number errorNumber
+                try
+                    click button "Cancel" of window "Set Up Show"
+                end try
+                error errorText number errorNumber
+            end try
+        end tell
+    end tell
+end select_slide_show_monitor
+
 on start_presentation(documentName, new_top, new_left_pos, ¬
-        new_width, new_height, startingSlide, useTimings, fullScreen)
+        new_width, new_height, startingSlide, useTimings, fullScreen, separateDisplays)
     tell application "Microsoft PowerPoint"
         set presentationIndex to 0
         repeat with attempt from 1 to 300
@@ -292,12 +413,17 @@ on start_presentation(documentName, new_top, new_left_pos, ¬
         end repeat
         if presentationIndex is 0 then error "PowerPoint did not open the requested presentation"
         set targetPresentation to presentation presentationIndex
-        -- disable presenter console
-        set showpresenterview of slide show settings of targetPresentation to 0
-        if fullScreen then
+        -- Disabling Presenter View for a fullscreen Mac show can mirror the
+        -- displays. Keep separate audience/operator displays in presenter mode.
+        if fullScreen and separateDisplays then
+            set show type of slide show settings of targetPresentation to slide show type presenter
+            set show with presenter of slide show settings of targetPresentation to true
+        else if fullScreen then
             set show type of slide show settings of targetPresentation to slide show type speaker
+            set show with presenter of slide show settings of targetPresentation to false
         else
             set show type of slide show settings of targetPresentation to slide show type window
+            set show with presenter of slide show settings of targetPresentation to false
         end if
         -- Keep every slide in the running show's range so number-and-Return
         -- navigation can also reach slides before the initially selected one.
@@ -310,6 +436,9 @@ on start_presentation(documentName, new_top, new_left_pos, ¬
         -- start presentation
         run slide show slide show settings of targetPresentation
         set showWindow to slide show window of targetPresentation
+        if not fullScreen then
+            my position_slide_show(documentName, new_top, new_left_pos, new_width, new_height)
+        end if
         activate
         return current show position of slide show view of showWindow
     end tell
@@ -336,7 +465,13 @@ end get_slide_show_window_title
 on is_slide_show_window_active(documentName)
     tell application "Microsoft PowerPoint"
         set presentationIndex to my find_presentation_index(documentName)
-        return active of slide show window of presentation presentationIndex
+        if active of slide show window of presentation presentationIndex then return true
+        repeat with presenterWindow in presenter view windows
+            if name of presentation of presenterWindow is name of presentation presentationIndex then
+                if active of presenterWindow then return true
+            end if
+        end repeat
+        return false
     end tell
 end is_slide_show_window_active
 
@@ -582,21 +717,20 @@ class PowerPointMacController(AppleScriptBaseController):
         """
         Program is able to run on this machine.
         """
-        ret = super().check_available()
-        if ret:
-            # Powerpoint is available! now check if the version is 15 (Powerpoint 2016) or above
-            try:
-                version = self.applescript.call('get_version')
-            except Exception:
-                log.exception('script execution failed')
-                return False
-            try:
-                major_version = int(version.split('.')[0])
-            except ValueError:
-                return False
-            if major_version >= 15:
-                return True
-        return False
+        if not is_macosx() or not APPLESCRIPT_AVAILABLE:
+            return False
+        app = find_macos_application({'com.microsoft.Powerpoint', 'com.microsoft.PowerPoint'})
+        return macos_application_version(app) >= (15,)
+
+    def show_slide_show_settings(self, document_path):
+        """Open the selected deck's native monitor settings without starting a show."""
+        _open_powerpoint_document(document_path)
+        self.applescript.call('show_slide_show_settings', document_path.name)
+
+    def configure_slide_show_monitor(self, document_path, screen, screens):
+        """Apply OpenLP's output selection through PowerPoint's native setup dialog."""
+        monitor_name = _powerpoint_monitor_name(screen, screens)
+        self.applescript.call('select_slide_show_monitor', document_path.name, monitor_name)
 
 
 class PowerPointMacDocument(AppleScriptBaseDocument):
@@ -629,6 +763,9 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         self._retired_snapshot_workers = set()
         self._slideshow_window_title = None
         self._hidden_for_overlay = False
+        self._opening = False
+        self._monitor_setup_key = None
+        self._monitor_setup_failed = False
         self._slide_advance_times = []
         self._use_openlp_timing = False
         self._timing_slide = None
@@ -736,39 +873,40 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         self._window_capture.start()
 
     def stop_presentation(self):
+        self._monitor_setup_key = None
+        self._monitor_setup_failed = False
         self._automatic_slide_timer.stop()
         self._stop_window_capture()
         self._hidden_for_overlay = False
         super().stop_presentation()
 
     def close_presentation(self):
+        self._monitor_setup_key = None
+        self._monitor_setup_failed = False
         self._automatic_slide_timer.stop()
         self._stop_window_capture()
         self._hidden_for_overlay = False
         super().close_presentation()
 
     def hide_for_overlay(self):
-        """Reveal OpenLP's Logo or Theme display without ending the slide show."""
+        """Keep the slide show underneath OpenLP while Logo or Theme fades over it."""
         if self._hidden_for_overlay:
             return
-        try:
-            self._stop_window_capture()
-            self.controller.applescript.call('hide_application')
-            self._hidden_for_overlay = True
-        except Exception:
-            log.exception('Could not hide PowerPoint behind the OpenLP display')
+        self._stop_window_capture()
+        # Hiding the app here reveals the desktop during the overlay's transition.
+        # OpenLP raises its transparent display above the still-running slide show instead.
+        self._hidden_for_overlay = True
 
     def show_after_overlay(self):
-        """Restore the same PowerPoint slide show after Logo or Theme."""
+        """Resume capturing the same show while OpenLP's cover fades away."""
         if not self._hidden_for_overlay:
             return
         try:
-            self.controller.applescript.call('show_application')
             self._hidden_for_overlay = False
             self._slideshow_window_title = self.controller.applescript.call(
                 'get_slide_show_window_title', self.file_path.name)
         except Exception:
-            log.exception('Could not restore PowerPoint after the OpenLP display')
+            log.exception('Could not resume PowerPoint capture after the OpenLP display')
 
     def is_loaded(self):
         try:
@@ -801,6 +939,17 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         super().poll_slidenumber(is_live, hide_mode)
 
     def start_presentation(self):
+        """Prevent slide clicks from re-entering native setup while Apple events run."""
+        if self._opening:
+            return
+        self._opening = True
+        try:
+            with _keep_operator_window_on_top():
+                self._start_presentation()
+        finally:
+            self._opening = False
+
+    def _start_presentation(self):
         """Start a full-range show, select the requested slide, then move it to output."""
         self._automatic_slide_timer.stop()
         self._timing_slide = None
@@ -818,12 +967,41 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
         screen = ScreenList().current
         size = screen.display_geometry
         full_screen = screen.custom_geometry is None
+        auto_select = self.settings.value('presentations/powerpoint auto select display') == Qt.CheckState.Checked
+        screens = list(ScreenList())
+        setup_key = (screen.number, tuple((s.number, s.is_primary, s.geometry.getRect()) for s in screens))
+        if full_screen and auto_select:
+            if setup_key == self._monitor_setup_key and self._monitor_setup_failed:
+                return
+        else:
+            self._monitor_setup_key = None
+            self._monitor_setup_failed = False
         try:
             _open_powerpoint_document(self.file_path)
+            if full_screen and auto_select and setup_key != self._monitor_setup_key:
+                self._monitor_setup_key = setup_key
+                self._monitor_setup_failed = True
+                try:
+                    self.controller.configure_slide_show_monitor(self.file_path, screen, screens)
+                    self._monitor_setup_failed = False
+                except Exception:
+                    log.exception('Could not select the PowerPoint output monitor')
+                    main_window = Registry().get('main_window')
+                    if main_window:
+                        message = translate('PresentationPlugin.PowerPointMac',
+                                            'Could not select the PowerPoint output monitor. Allow OpenLP+ in macOS '
+                                            'Accessibility, or turn off “Automatically select the output display” '
+                                            'in Presentation settings and choose the monitor using '
+                                            '“PowerPoint slideshow settings…” in the library. '
+                                            'Send the presentation live again to retry.')
+                        main_window.show_status_message(message, 15000)
+                        main_window.raise_()
+                        main_window.activateWindow()
+                    return
             actual = self.controller.applescript.call('start_presentation',
                                                       self.file_path.name, size.top(), size.left(),
                                                       size.width(), size.height(), start_slide, native_use_timings,
-                                                      full_screen)
+                                                      full_screen, len(screens) > 1)
             self._slideshow_started = int(actual) >= 1
             self._starting_slide = 1
             if self._slideshow_started and start_slide != int(actual):
@@ -832,11 +1010,12 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
             if self._slideshow_started:
                 self._slideshow_window_title = self.controller.applescript.call(
                     'get_slide_show_window_title', self.file_path.name)
-                if not full_screen:
-                    self.controller.applescript.call('position_slide_show', self.file_path.name,
-                                                     size.top(), size.left(), size.width(), size.height())
                 self._timing_slide = self.get_slide_number()
                 self._schedule_automatic_slide(self._timing_slide)
+                main_window = Registry().get('main_window')
+                if main_window and not size.intersects(main_window.frameGeometry()):
+                    main_window.raise_()
+                    main_window.activateWindow()
             self.presentation_loaded = self._slideshow_started
             if not self._slideshow_started:
                 log.warning('PowerPoint could not show the selected slide %s', start_slide)

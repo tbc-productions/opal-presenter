@@ -30,6 +30,50 @@ from PySide6 import QtCore
 from openlp.core.display.screens import Screen, ScreenList
 
 
+def test_geometry_signal_updates_its_own_screen():
+    """A primary screen's resize must not overwrite the output screen's geometry."""
+    primary = MagicMock(**{'geometry.return_value': QtCore.QRect(0, 0, 1512, 982),
+                           'devicePixelRatio.return_value': 2})
+    output = MagicMock(**{'geometry.return_value': QtCore.QRect(1512, 0, 1920, 1080),
+                          'devicePixelRatio.return_value': 1})
+    screen_list = ScreenList()
+    screen_list.application = MagicMock()
+    screen_list.application.screens.return_value = [primary, output]
+    screen_list.application.primaryScreen.return_value = primary
+    screen_list.update_screens()
+    callback = primary.geometryChanged.connect.call_args.args[0]
+    new_geometry = QtCore.QRect(0, 0, 1280, 800)
+
+    with patch('openlp.core.display.screens.ConfigScreenChangedEmitter'):
+        callback(new_geometry)
+
+    assert screen_list[0].geometry == new_geometry
+    assert screen_list[0].device_pixel_ratio == 2
+    assert screen_list[1].geometry == QtCore.QRect(1512, 0, 1920, 1080)
+    assert screen_list[1].device_pixel_ratio == 1
+
+
+def test_added_screen_geometry_signal_keeps_its_target_after_another_is_added():
+    first = MagicMock(**{'geometry.return_value': QtCore.QRect(0, 0, 1512, 982),
+                         'devicePixelRatio.return_value': 2})
+    second = MagicMock(**{'geometry.return_value': QtCore.QRect(1512, 0, 1920, 1080),
+                          'devicePixelRatio.return_value': 1})
+    screen_list = ScreenList()
+    screen_list.screens = []
+    screen_list.application = MagicMock()
+    screen_list.application.primaryScreen.return_value = first
+    with patch('openlp.core.display.screens.ConfigScreenChangedEmitter'):
+        screen_list.on_screen_added(first)
+        screen_list.on_screen_added(second)
+        callback = first.geometryChanged.connect.call_args.args[0]
+        callback(QtCore.QRect(0, 0, 1280, 800))
+
+    assert screen_list[0].geometry == QtCore.QRect(0, 0, 1280, 800)
+    assert screen_list[0].device_pixel_ratio == 2
+    assert screen_list[1].geometry == QtCore.QRect(1512, 0, 1920, 1080)
+    assert screen_list[1].device_pixel_ratio == 1
+
+
 def test_current_display_screen():
     """
     Test that the "current" property returns the first display screen

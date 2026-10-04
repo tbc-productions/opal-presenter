@@ -387,7 +387,8 @@ def test_convert_pdf_menu_position(media_item):
     media_item.list_view = QtWidgets.QTreeWidget()
     media_item.add_custom_context_actions()
     actions = media_item.list_view.actions()
-    assert actions[-3].isSeparator()
+    assert actions[-4].isSeparator()
+    assert actions[-3] is media_item.powerpoint_settings_action
     assert actions[-2] is media_item.convert_pdf_action
     assert actions[-2].text() == 'Convert to PDF'
     assert actions[-1].text() == 'Show in folder'

@@ -100,11 +100,53 @@ QMenu = FluentMenu
 
 class FluentSlider(fluentqt.Slider):
     """Accept Qt's orientation/parent constructor forms."""
-    def __init__(self, orientation=QtCore.Qt.Orientation.Horizontal, parent=None):
+    def __init__(self, orientation=QtCore.Qt.Orientation.Horizontal, parent=None, *, value_formatter=None):
         if isinstance(orientation, _qt.QWidget) or orientation is None:
             parent, orientation = orientation, QtCore.Qt.Orientation.Horizontal
         super().__init__(parent)
         self.setOrientation(orientation)
+        self._value_formatter = value_formatter
+        self._value_tooltip = None
+
+    def mousePressEvent(self, event):
+        # FluentQt 1.9.2 owns a lazily created top-level tooltip, but exposes
+        # neither the tooltip nor a value formatter. Capture only the popup
+        # created by this press, then retain it for subsequent drags.
+        capture = self._value_tooltip is None and event.button() == QtCore.Qt.MouseButton.LeftButton
+        existing = set(_qt.QApplication.topLevelWidgets()) if capture else set()
+        super().mousePressEvent(event)
+        if capture:
+            self._value_tooltip = next(
+                (widget for widget in _qt.QApplication.topLevelWidgets()
+                 if widget not in existing and isinstance(widget, fluentqt.ToolTip)), None)
+            if self._value_tooltip is not None:
+                # FluentQt paints its own shadow. Cocoa's window shadow adds
+                # an outline around the translucent margin of the popup.
+                tip = self._value_tooltip
+                position = tip.pos()
+                tip.setWindowFlag(QtCore.Qt.WindowType.NoDropShadowWindowHint)
+                tip.move(position)
+                # Changing window flags hides an already visible widget.
+                tip.show()
+        self._format_value_tooltip()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self._format_value_tooltip()
+
+    def _format_value_tooltip(self):
+        tip = self._value_tooltip
+        if self._value_formatter is None or tip is None or not tip.isVisible():
+            return
+        # The native handler has positioned the numeric popup over the handle.
+        # Preserve that anchor when the formatted text changes its dimensions.
+        old_size = tip.size()
+        tip.setText(self._value_formatter(self.sliderPosition()))
+        if self.orientation() == QtCore.Qt.Orientation.Horizontal:
+            tip.move(tip.x() + (old_size.width() - tip.width()) // 2,
+                     tip.y() + old_size.height() - tip.height())
+        else:
+            tip.move(tip.x(), tip.y() + (old_size.height() - tip.height()) // 2)
 
 
 QSlider = FluentSlider

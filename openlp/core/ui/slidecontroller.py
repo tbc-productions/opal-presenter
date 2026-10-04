@@ -137,6 +137,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         Call by bootstrap functions
         """
         self.setup_ui()
+        if getattr(self.main_window, 'dock_manager', None):
+            self.main_window.dock_slide_controller(self)
         self.setup_displays()
         self.screen_size_changed()
 
@@ -1244,7 +1246,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self._set_theme(self.service_item)
         else:
             self._set_theme(self.service_item)
-        self.info_label.setText("–  " + self.service_item.title)
+        self.info_label.setText(self.service_item.title)
         self.slide_list = {}
         # if the old item was text or images (ie doesn't provide its own display) and the new item provides its own
         # display then clear out the old item so that it doesn't flash momentarily when next showing text/image
@@ -1261,7 +1263,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 display.finish_with_current_item()
         # Prepare the new slides for text / image items
         row = 0
-        width = self.main_window.control_splitter.sizes()[self.split]
+        width = self.preview_widget.width()
         self._presentation_preview_images_loaded = False
         if self.service_item.is_text():
             self.preview_display.load_verses(self.service_item.rendered_slides)
@@ -1380,7 +1382,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         request = self.sender().text()
         slide_no = self.slide_list[request]
-        width = self.main_window.control_splitter.sizes()[self.split]
+        width = self.preview_widget.width()
         self.preview_widget.replace_service_item(self.service_item, width, slide_no)
         self.slide_selected()
 

@@ -3030,3 +3030,16 @@ def test_pinned_live_modes_have_no_unmanaged_dropdown(settings, registry, qapp):
     controller._sync_live_hide_action_state(False)
     assert not any(action.isChecked() for action in actions)
     controller.toolbar.close()
+
+
+def test_song_bar_uses_current_slide_list_width(registry):
+    """Detached controllers size slides from their own view, with no central splitter."""
+    controller = SlideController(None)
+    controller.sender = MagicMock(return_value=MagicMock(text=MagicMock(return_value='V1')))
+    controller.slide_list = {'V1': 2}
+    controller.service_item = MagicMock()
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.width.return_value = 345
+    controller.slide_selected = MagicMock()
+    controller.on_song_bar_handler()
+    controller.preview_widget.replace_service_item.assert_called_once_with(controller.service_item, 345, 2)

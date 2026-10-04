@@ -986,6 +986,29 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
     )
 
 
+@pytest.mark.parametrize('transitions', [False, True])
+@pytest.mark.parametrize('is_display', [False, True])
+def test_logo_cover_raises_live_output_before_fading(display_window_env, mock_settings, transitions, is_display):
+    """Keep the transparent live cover above native windows throughout its logo fade."""
+    display_window = DisplayWindow()
+    display_window.is_display = is_display
+    display_window.isHidden = MagicMock(return_value=True)
+    display_window._get_logo_settings = MagicMock(return_value=('#123456', None, 'contain'))
+    mock_settings.value.return_value = transitions
+    calls = MagicMock()
+    display_window.setVisible = calls.visible
+    display_window.raise_ = calls.raise_window
+    display_window.run_in_display = calls.render
+    with patch('openlp.core.display.window.ScreenList') as screens:
+        screens.return_value.__len__.return_value = 2
+        display_window.hide_display(HideMode.Logo)
+
+    assert [entry[0] for entry in calls.mock_calls] == (
+        ['visible', 'raise_window', 'render'] if is_display else ['render'])
+    arguments = ('toLogo', '#123456', None, 'contain')
+    calls.render.assert_called_once_with(*(arguments if transitions else arguments + (True,)))
+
+
 def test_hide_display_to_transparent(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function

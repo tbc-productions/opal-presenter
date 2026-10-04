@@ -411,8 +411,9 @@ class ScreenList(metaclass=Singleton):
             self.screens.append(
                 Screen(number, screen.geometry(), is_primary=self.application.primaryScreen() == screen,
                        device_pixel_ratio=device_pixel_ratio, raw_screen=screen))
-            screen.geometryChanged.connect(lambda geometry: self.screens[-1]
-                                           .on_geometry_changed(geometry, screen.devicePixelRatio()))
+            screen.geometryChanged.connect(
+                lambda geometry, target=self.screens[-1], raw_screen=screen:
+                target.on_geometry_changed(geometry, raw_screen.devicePixelRatio()))
 
     def on_screen_added(self, changed_screen):
         """
@@ -432,8 +433,9 @@ class ScreenList(metaclass=Singleton):
                                    is_primary=self.application.primaryScreen() == changed_screen,
                                    device_pixel_ratio=device_pixel_ratio, raw_screen=changed_screen))
         self.find_new_display_screen()
-        changed_screen.geometryChanged.connect(lambda geometry: self.screens[-1]
-                                               .on_geometry_changed(geometry, changed_screen.devicePixelRatio()))
+        changed_screen.geometryChanged.connect(
+            lambda geometry, target=self.screens[-1], raw_screen=changed_screen:
+            target.on_geometry_changed(geometry, raw_screen.devicePixelRatio()))
         ConfigScreenChangedEmitter().emit()
 
     def on_screen_removed(self, removed_screen):

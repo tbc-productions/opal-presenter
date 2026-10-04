@@ -22,10 +22,8 @@
 This module is for controlling keynote.
 """
 import logging
-import plistlib
 import shutil
 import subprocess
-from pathlib import Path
 from PySide6 import QtCore
 try:
     import applescript
@@ -35,6 +33,7 @@ except ImportError:
 
 from openlp.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseController, \
     AppleScriptBaseDocument
+from openlp.plugins.presentations.lib.applicationdiscovery import find_macos_application, macos_application_version
 from openlp.core.common.platform import is_macosx
 from openlp.core.display.screens import ScreenList
 
@@ -52,20 +51,7 @@ def _open_keynote_document(document_path, application_path):
 
 def find_keynote_application(application_folders=None):
     """Find both the classic Keynote app and the renamed Creator Studio app."""
-    if application_folders is None:
-        application_folders = (Path('/Applications'), Path.home() / 'Applications', Path('/System/Applications'))
-    for folder in application_folders:
-        if not folder.is_dir():
-            continue
-        for app in folder.glob('*.app'):
-            try:
-                with (app / 'Contents' / 'Info.plist').open('rb') as info_file:
-                    bundle_id = plistlib.load(info_file).get('CFBundleIdentifier')
-            except (OSError, ValueError):
-                continue
-            if bundle_id in KEYNOTE_BUNDLE_IDS:
-                return app
-    return None
+    return find_macos_application(KEYNOTE_BUNDLE_IDS, application_folders)
 
 
 KEYNOTE_APPLESCRIPT = """
@@ -315,26 +301,7 @@ class KeynoteController(AppleScriptBaseController):
         """
         Program is able to run on this machine.
         """
-        ret = bool(self.keynote_app and APPLESCRIPT_AVAILABLE)
-        if ret:
-            # Check that this Keynote version supports the scripting interface.
-            try:
-                version = self.applescript.call('get_version')
-            except Exception:
-                log.exception('script execution failed')
-                return False
-            try:
-                versions = version.split('.')
-                major_version = int(versions[0])
-                if major_version == 10:
-                    minor_version = int(versions[1])
-                    if minor_version >= 1:
-                        return True
-                elif major_version > 10:
-                    return True
-            except ValueError:
-                pass
-        return False
+        return bool(APPLESCRIPT_AVAILABLE and macos_application_version(self.keynote_app) >= (10, 1))
 
 
 class KeynoteDocument(AppleScriptBaseDocument):

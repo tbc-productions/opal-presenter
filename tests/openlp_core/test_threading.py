@@ -189,3 +189,16 @@ def test_make_remove_thread():
     # THEN: The result should be a function
     assert isfunction(rm_func), 'make_remove_thread should return a function'
     assert rm_func.__name__ == 'remove_thread'
+
+
+def test_finished_callback_can_reuse_thread_name(registry):
+    """A completion callback runs only after its thread's registry entry has been released."""
+    application = MagicMock(worker_threads={'refresh': {'worker': MagicMock()}})
+    registry.register('application', application)
+
+    def finished():
+        assert 'refresh' not in application.worker_threads
+        application.worker_threads['refresh'] = {'worker': 'replacement'}
+
+    make_remove_thread('refresh', finished)()
+    assert application.worker_threads['refresh']['worker'] == 'replacement'

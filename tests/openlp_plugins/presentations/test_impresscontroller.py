@@ -59,13 +59,14 @@ def test_check_available(mocked_log, settings, mock_plugin):
     # GIVEN: An instance of :class:`ImpressController`
     controller = ImpressController(plugin=mock_plugin)
 
-    # WHEN: `check_available` is called on Windows and `get_com_servicemanager` returns None
+    # WHEN: `check_available` is called on Windows and the COM server is not registered
     with patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
-            patch.object(controller, 'get_com_servicemanager', return_value=None) as mocked_get_com_servicemanager:
+            patch('openlp.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=False), \
+            patch.object(controller, 'get_com_servicemanager') as mocked_get_com_servicemanager:
         result = controller.check_available()
 
         # THEN: `check_available` should return False
-        assert mocked_get_com_servicemanager.called is True
+        assert mocked_get_com_servicemanager.called is False
         assert result is False
 
 
@@ -77,15 +78,14 @@ def test_check_available_on_windows(mocked_log, settings, mock_plugin):
     # GIVEN: An instance of :class:`ImpressController`
     controller = ImpressController(plugin=mock_plugin)
 
-    # WHEN: `check_available` is called on Windows and `get_com_servicemanager` returns an object
-    mocked_com_object = MagicMock()
+    # WHEN: `check_available` is called on Windows and the COM server is registered
     with patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
-            patch.object(controller, 'get_com_servicemanager', return_value=mocked_com_object) \
-            as mocked_get_com_servicemanager:
+            patch('openlp.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=True), \
+            patch.object(controller, 'get_com_servicemanager') as mocked_get_com_servicemanager:
         result = controller.check_available()
 
         # THEN: `check_available` should return True
-        assert mocked_get_com_servicemanager.called is True
+        assert mocked_get_com_servicemanager.called is False
         assert result is True
 
 

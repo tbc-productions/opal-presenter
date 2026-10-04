@@ -2,6 +2,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtCore import QThread, QTimer
@@ -424,12 +425,68 @@ def test_powerpoint_mac_starts_on_selected_slide(settings, tmp_path):
 
     open_document.assert_called_once_with(document.file_path)
     assert controller.applescript.call.call_args_list[0].args == (
-        'start_presentation', 'slides.pptx', 10, 20, 1200, 700, 3, False, True)
+        'start_presentation', 'slides.pptx', 10, 20, 1200, 700, 3, False, True, False)
     assert not any(call.args[0] == 'position_slide_show' for call in controller.applescript.call.call_args_list)
     send_slide_number.assert_called_once_with(3)
     assert not any(call.args[0] == 'goto_slide' for call in controller.applescript.call.call_args_list)
     assert document._slideshow_started
     assert document._starting_slide == 1
+
+
+@pytest.mark.parametrize('geometry,custom_geometry,restore_focus', [
+    ((1920, 0, 1920, 1080), None, True),
+    ((-1920, 0, 1920, 1080), None, True),
+    ((0, -1080, 1920, 1080), None, True),
+    ((1920, 0, 1920, 1080), (100, 80, 1280, 720), True),
+    ((0, 0, 1920, 1080), None, False),
+])
+def test_powerpoint_mac_routes_to_selected_output(settings, tmp_path, geometry, custom_geometry, restore_focus):
+    from openlp.core.common.registry import Registry
+    from openlp.core.display.screens import Screen
+    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+
+    controller = MagicMock()
+    controller.applescript.call.return_value = 1
+    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+        document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
+    document.file_path = tmp_path / 'slides.pptx'
+    document.ui_slidenumber = 1
+    main_window = MagicMock()
+    main_window.frameGeometry.return_value = QtCore.QRect(0, 0, 1000, 800)
+    Registry().register('main_window', main_window)
+    output = Screen(1, QtCore.QRect(*geometry),
+                    QtCore.QRect(*custom_geometry) if custom_geometry else None)
+    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'), \
+            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
+                  return_value=[]):
+        screens.return_value.current = output
+        document.start_presentation()
+
+    bounds = output.display_geometry
+    assert controller.applescript.call.call_args_list[0].args == (
+        'start_presentation', 'slides.pptx', bounds.top(), bounds.left(), bounds.width(), bounds.height(), 1, False,
+        custom_geometry is None, False)
+    if custom_geometry is None:
+        controller.configure_slide_show_monitor.assert_called_once()
+    else:
+        controller.configure_slide_show_monitor.assert_not_called()
+    assert document._slideshow_started
+    assert main_window.activateWindow.called is restore_focus
+    assert main_window.raise_.called is restore_focus
+
+
+def test_powerpoint_mac_script_positions_only_windowed_shows():
+    from openlp.plugins.presentations.lib.powerpointmaccontroller import POWERPOINT_MAC_APPLESCRIPT
+
+    start_script = POWERPOINT_MAC_APPLESCRIPT.split('on start_presentation(', 1)[1].split('end start_presentation')[0]
+    assert 'slide show type window' in start_script
+    assert 'slide show type speaker' in start_script
+    presenter_branch = start_script.split('if fullScreen and separateDisplays then', 1)[1].split('else if', 1)[0]
+    assert 'slide show type presenter' in presenter_branch
+    assert 'set show with presenter of slide show settings of targetPresentation to true' in presenter_branch
+    assert 'if not fullScreen then\n            my position_slide_show(' in start_script
+    assert start_script.index('my position_slide_show(') < start_script.index('activate')
 
 
 def test_powerpoint_mac_keeps_running_if_initial_slide_jump_fails(settings, tmp_path):
@@ -477,7 +534,7 @@ def test_powerpoint_escape_marks_live_output_hidden(settings, tmp_path):
     assert not document._slideshow_started
 
 
-def test_powerpoint_mac_logo_hides_and_restores_same_show(settings, tmp_path):
+def test_powerpoint_mac_logo_keeps_same_show_underneath_overlay(settings, tmp_path):
     from openlp.plugins.presentations.lib.powerpointmaccontroller import (
         POWERPOINT_MAC_APPLESCRIPT, PowerPointMacDocument)
 
@@ -488,17 +545,20 @@ def test_powerpoint_mac_logo_hides_and_restores_same_show(settings, tmp_path):
     with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(native, source)
     document.file_path = source
+    document._slideshow_started = True
     document._stop_window_capture = MagicMock()
 
     document.hide_for_overlay()
     assert document._hidden_for_overlay
+    native.applescript.call.assert_not_called()
+    document.hide_for_overlay()
     document.show_after_overlay()
 
     assert not document._hidden_for_overlay
     assert document._slideshow_window_title == 'PowerPoint Slide Show – [slides]'
+    assert document._slideshow_started
     document._stop_window_capture.assert_called_once_with()
     assert native.applescript.call.call_args_list == [
-        call('hide_application'), call('show_application'),
         call('get_slide_show_window_title', 'slides.pptx')]
     active_handler = POWERPOINT_MAC_APPLESCRIPT.split('on is_active(', 1)[1].split('end is_active', 1)[0]
     assert 'showState is slide show state black screen' in active_handler
@@ -520,7 +580,7 @@ def test_powerpoint_mac_can_disable_slide_timings(settings, tmp_path):
 
     start_call = controller.applescript.call.call_args_list[0]
     assert start_call.args[0] == 'start_presentation'
-    assert start_call.args[-2] is False
+    assert start_call.args[-3] is False
 
 
 def test_powerpoint_mac_timed_deck_starts_with_manual_advance(settings, tmp_path):
@@ -546,7 +606,7 @@ def test_powerpoint_mac_timed_deck_starts_with_manual_advance(settings, tmp_path
 
     assert document._use_openlp_timing
     assert document.use_slide_timings is False
-    assert controller.applescript.call.call_args_list[0].args[-2:] == (False, True)
+    assert controller.applescript.call.call_args_list[0].args[-3] is False
     assert not document._automatic_slide_timer.isActive()
 
 

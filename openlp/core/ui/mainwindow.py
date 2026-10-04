@@ -469,6 +469,11 @@ class Ui_MainWindow(object):
         self.import_language_item.setVisible(False)
         self.export_language_item.setVisible(False)
         self.set_lock_panel(panel_locked)
+        if advanced_docking:
+            self.preview_controller_dock.setDockVisible(preview_visible)
+            self.live_controller_dock.setDockVisible(live_visible)
+            self.preview_controller_dock.visibilityChanged.connect(self.set_preview_panel_visibility)
+            self.live_controller_dock.visibilityChanged.connect(self.set_live_panel_visibility)
         self.settings_replaced = False
 
     def retranslate_ui(self, main_window):
@@ -1500,9 +1505,9 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.view_media_manager_item.setChecked(show_library)
         self.view_service_manager_item.setChecked(show_service)
         self.view_theme_manager_item.setChecked(show_themes)
-        self.preview_controller.panel.setVisible(preview_panel)
+        self.set_controller_panel_visible('preview', preview_panel)
         self.view_preview_panel.setChecked(preview_panel)
-        self.live_controller.panel.setVisible(live_panel)
+        self.set_controller_panel_visible('live', live_panel)
         self.view_live_panel.setChecked(live_panel)
         show_projectors = show_projectors and not Registry().get_flag('projector_disabled')
         _set_dock_visible(self.projector_manager_dock, show_projectors)
@@ -1709,7 +1714,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 False - Hidden
 
         """
-        self.preview_controller.panel.setVisible(is_visible)
+        self.set_controller_panel_visible('preview', is_visible)
         self.settings.setValue('user interface/preview panel', is_visible)
         self.view_preview_panel.setChecked(is_visible)
         if update_preset_layout_flag:
@@ -1744,6 +1749,11 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.view_projector_manager_item.setEnabled(True)
             self.view_preview_panel.setEnabled(True)
             self.view_live_panel.setEnabled(True)
+        for name in ('preview_controller_dock', 'live_controller_dock'):
+            dock = getattr(self, name, None)
+            if dock is not None:
+                dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+                                 if is_locked else all_dock_features)
         self.settings.setValue('user interface/lock panel', is_locked)
 
     def _left_dock_visibility_from_settings(self) -> tuple[bool, bool, bool]:
@@ -1860,6 +1870,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     self.settings.value(_window_state_storage_key(self._modern_appearance)))
                 if getattr(self, '_reset_dock_layout', False):
                     skip_for_saved_preset = False
+                    self.reset_controller_docks()
                     self._reset_dock_layout = False
             with self._mute_left_dock_visibility_signals():
                 if not skip_for_saved_preset:
@@ -1982,7 +1993,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 True - Visible
                 False - Hidden
         """
-        self.live_controller.panel.setVisible(is_visible)
+        self.set_controller_panel_visible('live', is_visible)
         self.settings.setValue('user interface/live panel', is_visible)
         self.view_live_panel.setChecked(is_visible)
         if update_preset_layout_flag:

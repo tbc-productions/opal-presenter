@@ -532,7 +532,7 @@ class Ui_ServiceManager(object):
         self.time_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Start Time'),
                                                 icon=UiIcons().time, triggers=self.on_start_time_form)
         self.auto_start_action = create_widget_action(self.menu, text='',
-                                                      icon=UiIcons().active,
+                                                      icon=fluent_icon('ic_fluent_play_circle_sparkle_24_regular'),
                                                       triggers=self.on_auto_start)
         # Add already existing delete action to the menu.
         self.menu.addAction(self.delete_action)
@@ -1890,9 +1890,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.auto_start_action.setVisible(True)
             if service_item['service_item'].will_auto_start:
                 self.auto_start_action.setText(translate('OpenLP.ServiceManager', '&Auto Start - active'))
-                self.auto_start_action.setIcon(UiIcons().active)
             else:
-                self.auto_start_action.setIcon(UiIcons().inactive)
                 self.auto_start_action.setText(translate('OpenLP.ServiceManager', '&Auto Start - inactive'))
         if hasattr(self, 'transition_action') and self._service_item_supports_transition(service_item['service_item']):
             transition_settings = self._get_service_item_transition_settings(service_item['service_item'])

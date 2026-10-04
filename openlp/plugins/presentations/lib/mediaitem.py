@@ -168,6 +168,42 @@ class PresentationMediaItem(FolderLibraryItem):
         self.list_view.removeAction(self.convert_pdf_action)
         self.list_view.insertAction(show_in_folder_action, self.convert_pdf_action)
         self.convert_pdf_action.setVisible(False)
+        self.powerpoint_settings_action = create_widget_action(
+            self.list_view, 'powerpoint_settings_action',
+            text=translate('PresentationPlugin.MediaItem', 'PowerPoint slideshow settings…'),
+            triggers=self.on_powerpoint_slide_show_settings)
+        self.list_view.removeAction(self.powerpoint_settings_action)
+        self.list_view.insertAction(self.convert_pdf_action, self.powerpoint_settings_action)
+        self.powerpoint_settings_action.setVisible(False)
+
+    def _powerpoint_settings_selection(self):
+        """Find a single PowerPoint deck that can be opened in the macOS setup dialog."""
+        controller = self.controllers.get('PowerPointMac')
+        selected = self.list_view.selectedItems()
+        if controller is None or not controller.enabled() or len(selected) != 1:
+            return None
+        item = selected[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if not isinstance(item, Item):
+            return None
+        path = Path(item.file_path)
+        if path.suffix.lower() not in {'.ppt', '.pptx', '.pptm', '.pps', '.ppsx'} or not path.is_file():
+            return None
+        return path, controller
+
+    def on_powerpoint_slide_show_settings(self):
+        selection = self._powerpoint_settings_selection()
+        if selection is None:
+            return
+        path, controller = selection
+        try:
+            controller.show_slide_show_settings(path)
+        except Exception:
+            log.exception('Could not open PowerPoint slideshow settings')
+            critical_error_message_box(
+                translate('PresentationPlugin.MediaItem', 'PowerPoint slideshow settings'),
+                translate('PresentationPlugin.MediaItem',
+                          'Could not open Set Up Show. Stop any running slideshow and allow OpenLP+ in macOS '
+                          'Accessibility settings, or open Slide Show → Set Up Show directly in PowerPoint.'))
 
     def _pdf_export_selection(self):
         """Find an enabled exporter for one accessible PPTX/ODP library item."""
@@ -191,6 +227,7 @@ class PresentationMediaItem(FolderLibraryItem):
 
     def context_menu(self, point):
         self.convert_pdf_action.setVisible(self._pdf_export_selection() is not None)
+        self.powerpoint_settings_action.setVisible(self._powerpoint_settings_selection() is not None)
         super().context_menu(point)
 
     def on_convert_to_pdf(self):

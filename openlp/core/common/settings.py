@@ -497,6 +497,7 @@ class Settings(QtCore.QSettings):
         'presentations/presentations files': [],
         'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint control window': QtCore.Qt.CheckState.Unchecked,
+        'presentations/powerpoint auto select display': QtCore.Qt.CheckState.Checked,
         'presentations/powerpoint use slide timings': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint slide timings by file': {},
         'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,

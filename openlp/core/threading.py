@@ -45,7 +45,7 @@ class ThreadWorker(QtCore.QObject, LogMixin):
         raise NotImplementedError('Your base class needs to override this method and run self.quit.emit() at the end.')
 
 
-def run_thread(worker, thread_name, can_start=True, queued_connections=None):
+def run_thread(worker, thread_name, can_start=True, queued_connections=None, on_finished=None):
     """
     Create a thread and assign a worker to it. This removes a lot of boilerplate code from the codebase.
 
@@ -59,6 +59,7 @@ def run_thread(worker, thread_name, can_start=True, queued_connections=None):
     :param bool can_start: Start the thread. Defaults to True.
     :param queued_connections: Iterable of (signal, slot) pairs to connect with Qt.QueuedConnection after the worker
                                has been moved to its thread.
+    :param on_finished: Optional callback on the calling thread after the finished thread is removed from the registry.
     """
     if not thread_name:
         raise ValueError('A thread_name is required when calling the "run_thread" function')
@@ -86,7 +87,7 @@ def run_thread(worker, thread_name, can_start=True, queued_connections=None):
     if main_window:
         worker.error.connect(main_window.error_message, QtCore.Qt.ConnectionType.QueuedConnection)
     thread.finished.connect(thread.deleteLater, QtCore.Qt.ConnectionType.QueuedConnection)
-    thread.finished.connect(make_remove_thread(thread_name), QtCore.Qt.ConnectionType.QueuedConnection)
+    thread.finished.connect(make_remove_thread(thread_name, on_finished), QtCore.Qt.ConnectionType.QueuedConnection)
     if can_start:
         thread.start()
 
@@ -122,11 +123,12 @@ def is_thread_finished(thread_name):
         return True
 
 
-def make_remove_thread(thread_name):
+def make_remove_thread(thread_name, on_finished=None):
     """
     Create a function to remove the thread once the thread is finished.
 
     :param str thread_name: The name of the thread which should be removed from the thread registry.
+    :param on_finished: Optional callback to run after removal, when the thread name can be reused.
     :returns: A function which will remove the thread from the thread registry.
     """
 
@@ -140,4 +142,6 @@ def make_remove_thread(thread_name):
         if application and thread_name in application.worker_threads:
             log.debug(f'Removing thread {thread_name}')
             del application.worker_threads[thread_name]
+            if on_finished is not None:
+                on_finished()
     return remove_thread

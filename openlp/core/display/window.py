@@ -665,6 +665,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             # Forcing visibility can trigger a Qt abort, so only force-show the live display.
             if self.is_display and self.isHidden():
                 self.setVisible(True)
+            if self.is_display:
+                # Cover native presentation windows while the transparent output fades in.
+                # The presentation must stay visible underneath until the cover is opaque.
+                self.raise_()
         if mode == HideMode.Screen:
             # Show the desktop by hiding the output window after its fade completes.
             self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,

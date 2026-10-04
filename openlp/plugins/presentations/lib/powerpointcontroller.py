@@ -34,6 +34,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.ui import critical_error_message_box, translate
 from openlp.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument
+from openlp.plugins.presentations.lib.applicationdiscovery import is_com_registered
 
 
 if is_win():
@@ -76,14 +77,9 @@ class PowerpointController(PresentationController):
         if is_win():
             # Entry postfixes are for versions 16=2016-2021, 15=2013, 14=2010, 12=2007, 17=future?
             for entry in ['', '.16', '.17', '.15', '.14', '.12']:
-                try:
-                    process = Dispatch('PowerPoint.Application' + entry)
+                if is_com_registered('PowerPoint.Application' + entry):
                     self.com_obj_name = 'PowerPoint.Application' + entry
-                    if process.Presentations.Count == 0:
-                        process.Quit()
                     return True
-                except (AttributeError, pywintypes.com_error):
-                    pass
         return False
 
     if is_win():

@@ -31,6 +31,7 @@ from openlp.core.common.i18n import translate
 
 from openlp.core.lib.ui import create_action
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.media import format_play_time
 
 
 log = logging.getLogger(__name__)
@@ -344,7 +345,7 @@ class MediaToolbar(QtWidgets.QWidget):
             self.position_label.setObjectName(self.action_prefixes + 'position_label')
             self._seek_toolbar.add_toolbar_widget(self.position_label)
 
-            self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+            self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal, value_formatter=format_play_time)
             self.seek_slider.setMaximum(1000)
             self.seek_slider.setTracking(True)
             self.seek_slider.setMouseTracking(True)

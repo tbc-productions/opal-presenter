@@ -45,7 +45,7 @@ from openlp.core.lib.theme import Theme
 from openlp.core.lib.ui import add_list_view_mode_items_to_toolbar, create_widget_action, \
     critical_error_message_box, set_list_view_mode_toolbar_state
 from openlp.core.display.screens import ScreenList
-from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
+from openlp.core.threading import ThreadWorker, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.themeform import ThemeForm
@@ -332,7 +332,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         if current_dimensions and current_dimensions != self._thumbnail_dimensions:
             self._thumbnail_dimensions = current_dimensions
             if self._theme_list:
-                if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+                if self._thumbnail_refresh_worker is not None:
                     self._thumbnail_refresh_pending = True
                 else:
                     # Screen-size-triggered regeneration should run silently in the background.
@@ -1028,16 +1028,18 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         if not theme_name_list:
             return
         self._show_thumbnail_refresh_status = show_status
-        self._thumbnail_refresh_pending = False
-        if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+        # Keep the worker reserved until QThread cleanup has released its registry entry.
+        if self._thumbnail_refresh_worker is not None:
+            self._thumbnail_refresh_pending = True
             return
+        self._thumbnail_refresh_pending = False
         worker = ThemeThumbnailRefreshWorker(theme_name_list)
-        worker.thumbnail_requested.connect(self._refresh_thumbnail_for_theme)
-        worker.status_changed.connect(self._set_thumbnail_status)
-        worker.finished.connect(self._thumbnail_refresh_finished)
         worker.finished.connect(worker.quit.emit)
         self._thumbnail_refresh_worker = worker
-        run_thread(worker, 'theme_thumbnail_refresh')
+        run_thread(worker, 'theme_thumbnail_refresh', queued_connections=[
+            (worker.thumbnail_requested, self._refresh_thumbnail_for_theme),
+            (worker.status_changed, self._set_thumbnail_status)
+        ], on_finished=self._thumbnail_refresh_finished)
 
     def _get_themes_requiring_preview_refresh(self):
         """

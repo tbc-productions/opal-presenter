@@ -127,6 +127,33 @@ describe("Display transition contract", function () {
     });
   });
 
+  it('fades a logo over a native window and back without replacing the transparent backdrop', function (done) {
+    scenario(done, async function (win) {
+      render(win, 'horizontal song', 'outgoing');
+      await wait(60);
+      win.Display.finishWithCurrentItem();
+      await win.Display.toTransparent(true);
+      win.Display.updateItemTransitionSettings(true, 0.4, 'linear');
+      var cover = win.Display.toLogo('#123456', null, 'contain');
+      await wait(140);
+      var opacity = Number(win.getComputedStyle(win.document.body).opacity);
+      expect(opacity).toBeGreaterThan(0);
+      expect(opacity).toBeLessThan(1);
+      expect(win.Display._logoScreen.classList.contains('show')).toBe(true);
+      expect(win.getComputedStyle(win.Display._slidesContainer).opacity).toBe('0');
+      await cover;
+      expect(win.getComputedStyle(win.document.body).opacity).toBe('1');
+      var uncover = win.Display.toTransparent();
+      await wait(140);
+      opacity = Number(win.getComputedStyle(win.document.body).opacity);
+      expect(opacity).toBeGreaterThan(0);
+      expect(opacity).toBeLessThan(1);
+      expect(win.Display._logoScreen.classList.contains('show')).toBe(true);
+      await uncover;
+      expect(win.getComputedStyle(win.document.body).opacity).toBe('0');
+    });
+  });
+
   it('cancels a desktop completion when another mode takes over', function (done) {
     scenario(done, async function (win) {
       render(win, 'image', 'original');

@@ -465,11 +465,37 @@ def test_update_preview_images(theme_manager: ThemeManager):
 
     # THEN: The worker should be started and connected correctly
     mocked_worker.assert_called_once_with(['Default', 'Test'])
-    worker.thumbnail_requested.connect.assert_called_once_with(theme_manager._refresh_thumbnail_for_theme)
-    worker.status_changed.connect.assert_called_once_with(theme_manager._set_thumbnail_status)
-    assert worker.finished.connect.call_args_list == [call(theme_manager._thumbnail_refresh_finished),
-                                                      call(worker.quit.emit)]
-    mocked_run_thread.assert_called_once_with(worker, 'theme_thumbnail_refresh')
+    worker.finished.connect.assert_called_once_with(worker.quit.emit)
+    mocked_run_thread.assert_called_once_with(worker, 'theme_thumbnail_refresh', queued_connections=[
+        (worker.thumbnail_requested, theme_manager._refresh_thumbnail_for_theme),
+        (worker.status_changed, theme_manager._set_thumbnail_status)
+    ], on_finished=theme_manager._thumbnail_refresh_finished)
+
+
+def test_thumbnail_refresh_waits_for_thread_cleanup(theme_manager, qtbot):
+    """A screen change during thumbnail rendering queues a refresh after the old thread is removed."""
+    from PySide6 import QtCore
+
+    theme_manager._theme_list = {'Default': MagicMock()}
+    theme_manager.get_theme_names = MagicMock(return_value=['Default'])
+    theme_manager.load_themes = MagicMock()
+    render_threads = []
+
+    def render(_theme, _force):
+        render_threads.append(QtCore.QThread.currentThread())
+        if len(render_threads) == 1:
+            theme_manager.update_preview_images()
+            theme_manager.update_preview_images()
+
+    theme_manager._get_theme_data = MagicMock()
+    theme_manager.generate_image = render
+    theme_manager.update_preview_images()
+    qtbot.waitUntil(lambda: theme_manager._thumbnail_refresh_worker is None, timeout=5000)
+
+    assert len(render_threads) == 2
+    assert all(thread == theme_manager.thread() for thread in render_threads)
+    assert 'theme_thumbnail_refresh' not in Registry().get('application').worker_threads
+    theme_manager.load_themes.assert_called_once_with()
 
 
 def test_theme_manager_initialise(theme_manager):

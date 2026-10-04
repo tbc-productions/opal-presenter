@@ -1,7 +1,8 @@
 """ADS integration for the Modern workspace; Classic keeps Qt's dock widgets."""
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.common.i18n import translate
+from openlp.core.common.i18n import UiStrings
+from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluentstyle import get_fluent_dock_stylesheet
 
 import PySide6QtAds as ads
@@ -69,18 +70,66 @@ class AdvancedDockingMixin:
         ads.CDockManager.setConfigFlags(
             ads.CDockManager.eConfigFlag.DefaultOpaqueConfig |
             ads.CDockManager.eConfigFlag.FocusHighlighting |
+            ads.CDockManager.eConfigFlag.AlwaysShowTabs |
             ads.CDockManager.eConfigFlag.EqualSplitOnInsertion |
             ads.CDockManager.eConfigFlag.DockAreaHideDisabledButtons |
-            ads.CDockManager.eConfigFlag.HideSingleCentralWidgetTitleBar)
+            ads.CDockManager.eConfigFlag.DockAreaDynamicTabsMenuButtonVisibility)
         ads.CDockManager.setAutoHideConfigFlags(ads.CDockManager.eAutoHideFlag.DefaultAutoHideConfig)
-        content = self.takeCentralWidget()
+        self.takeCentralWidget()
         self.dock_manager = ads.CDockManager(self)
         self.dock_manager.setStyleSheet(self.dock_manager.styleSheet() + get_fluent_dock_stylesheet())
         self.setCentralWidget(self.dock_manager)
-        self.controller_dock = ads.CDockWidget(translate('OpenLP.MainWindow', 'Slide controllers'))
-        self.controller_dock.setObjectName('slide_controllers_dock')
-        self.controller_dock.setWidget(content, ads.CDockWidget.eInsertMode.ForceNoScrollArea)
-        self.dock_manager.setCentralWidget(self.controller_dock)
+        # Every workspace pane is an ordinary dock, including both controllers.
+        self.preview_controller_dock = AdvancedDockWidget(self, 'preview_controller_dock', UiIcons().preview)
+        self.preview_controller_dock.setWindowTitle(UiStrings().Preview)
+        self.live_controller_dock = AdvancedDockWidget(self, 'live_controller_dock', UiIcons().live)
+        self.live_controller_dock.setWindowTitle(UiStrings().Live)
+        self.reset_controller_docks()
+
+    def reset_controller_docks(self):
+        """Place Preview and Live side by side for a factory layout."""
+        docks = (self.preview_controller_dock, self.live_controller_dock)
+        opened = [dock.isDockOpen() for dock in docks]
+        blockers = [QtCore.QSignalBlocker(dock) for dock in docks]
+        for dock in docks:
+            if dock.isAutoHide():
+                dock.setAutoHide(False)
+            if dock.dockManager():
+                self.dock_manager.removeDockWidget(dock)
+        self.dock_manager.addDockWidget(ads.RightDockWidgetArea, self.preview_controller_dock)
+        self.dock_manager.addDockWidget(
+            ads.RightDockWidgetArea, self.live_controller_dock, self.preview_controller_dock.dockAreaWidget())
+        self._show_dock_titles()
+        for dock, visible in zip(docks, opened):
+            dock.setDockVisible(visible)
+        del blockers
+
+    def dock_slide_controller(self, controller):
+        """Attach a controller after its UI has been initialised."""
+        dock = self.live_controller_dock if controller.is_live else self.preview_controller_dock
+        dock.setWidget(controller.panel, ads.CDockWidget.eInsertMode.ForceNoScrollArea)
+        self._show_dock_titles()
+        # The dock tab supplies the controller name; keep the item title/status in the panel.
+        controller.top_icon.hide()
+        controller.type_label.hide()
+
+    def _show_dock_titles(self):
+        """Keep pane names and drag handles visible, including in older saved layouts."""
+        for index in range(self.dock_manager.dockAreaCount()):
+            area = self.dock_manager.dockArea(index)
+            area.setDockAreaFlag(ads.CDockAreaWidget.eDockAreaFlag.HideSingleWidgetTitleBar, False)
+            area.updateTitleBarVisibility()
+
+    def set_controller_panel_visible(self, controller, visible):
+        """Use workspace visibility rather than hiding a dock's content widget."""
+        dock = getattr(self, f'{controller}_controller_dock', None)
+        if dock is not None:
+            # Menu/preset callers update settings themselves. Only user dock actions
+            # should emit a visibility change back into those callers.
+            with QtCore.QSignalBlocker(dock):
+                dock.setDockVisible(visible)
+        else:
+            getattr(self, f'{controller}_controller').panel.setVisible(visible)
 
     def addDockWidget(self, area, dock, *args):
         if not getattr(self, 'dock_manager', None):
@@ -147,4 +196,11 @@ class AdvancedDockingMixin:
             return super().restoreState(state, version)
         if not state:
             return False
-        return self.dock_manager.restoreState(state, version)
+        restored = self.dock_manager.restoreState(state, version)
+        # Earlier layouts saved both controllers as one fixed central widget.
+        # ADS can restore their other panes, but the new docks need placement.
+        for dock in (self.preview_controller_dock, self.live_controller_dock):
+            if dock.dockAreaWidget() is None and not dock.isAutoHide():
+                self.dock_manager.addDockWidget(ads.RightDockWidgetArea, dock)
+        self._show_dock_titles()
+        return restored

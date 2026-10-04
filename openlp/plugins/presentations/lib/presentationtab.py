@@ -67,6 +67,9 @@ class PresentationTab(SettingsTab):
         self.ppt_window_check_box = QtWidgets.QCheckBox(self.powerpoint_group_box)
         self.ppt_window_check_box.setObjectName('ppt_window_check_box')
         self.powerpoint_layout.addWidget(self.ppt_window_check_box)
+        self.ppt_auto_display_check_box = QtWidgets.QCheckBox(self.powerpoint_group_box)
+        self.ppt_auto_display_check_box.setObjectName('ppt_auto_display_check_box')
+        self.powerpoint_layout.addWidget(self.ppt_auto_display_check_box)
         self.left_layout.addWidget(self.powerpoint_group_box)
         # Impress
         self.impress_group_box = QtWidgets.QGroupBox(self.left_column)
@@ -98,6 +101,13 @@ class PresentationTab(SettingsTab):
         self.ppt_window_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Let PowerPoint control the size and monitor of the presentations'))
+        self.ppt_auto_display_check_box.setText(
+            translate('PresentationPlugin.PresentationTab', 'Automatically select the output display'))
+        self.ppt_auto_display_check_box.setToolTip(translate(
+            'PresentationPlugin.PresentationTab',
+            'Use OpenLP+’s selected output screen for fullscreen PowerPoint presentations. '
+            'Supports the primary display or a single secondary display. Turn off to choose a monitor '
+            'in PowerPoint’s Set Up Show dialog. Requires macOS Accessibility access.'))
         self.impress_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'Impress options'))
         self.odp_display_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
@@ -134,6 +144,11 @@ class PresentationTab(SettingsTab):
         self.ppt_window_check_box.setChecked(
             self.settings.value('presentations/powerpoint control window') == QtCore.Qt.CheckState.Checked)
         self.ppt_window_check_box.setEnabled(powerpoint_available)
+        self.ppt_window_check_box.setVisible(not powerpoint_mac_available)
+        self.ppt_auto_display_check_box.setChecked(
+            self.settings.value('presentations/powerpoint auto select display') == QtCore.Qt.CheckState.Checked)
+        self.ppt_auto_display_check_box.setEnabled(powerpoint_mac_available)
+        self.ppt_auto_display_check_box.setVisible(powerpoint_mac_available)
         # Load Impress settings
         self.odp_display_check_box.setChecked(
             self.settings.value('presentations/impress use display setting') == QtCore.Qt.CheckState.Checked)
@@ -155,9 +170,7 @@ class PresentationTab(SettingsTab):
                 if self.settings.value(setting_key) != checkbox.checkState():
                     changed = True
                     self.settings.setValue(setting_key, checkbox.checkState())
-                    if checkbox.isChecked():
-                        controller.start_process()
-                    else:
+                    if not checkbox.isChecked():
                         controller.kill()
         # Save powerpoint settings
         setting_key = 'presentations/powerpoint slide click advance'
@@ -168,7 +181,12 @@ class PresentationTab(SettingsTab):
         if self.settings.value(setting_key) != self.ppt_window_check_box.checkState():
             self.settings.setValue(setting_key, self.ppt_window_check_box.checkState())
             changed = True
-        # Save impress setting
+        # Save macOS PowerPoint monitor selection
+        setting_key = 'presentations/powerpoint auto select display'
+        if self.settings.value(setting_key) != self.ppt_auto_display_check_box.checkState():
+            self.settings.setValue(setting_key, self.ppt_auto_display_check_box.checkState())
+            changed = True
+        # Save Impress setting
         setting_key = 'presentations/impress use display setting'
         if self.settings.value(setting_key) != self.odp_display_check_box.checkState():
             self.settings.setValue(setting_key, self.odp_display_check_box.checkState())
