@@ -25,7 +25,7 @@ from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
 
-from fluentqt import FontIcon
+from fluentqt import FontIcon, FontRole
 from fluentqt.design import Spacing
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
@@ -92,8 +92,9 @@ class InfoLabel(QtWidgets.QLabel):
         """
         painter = QtGui.QPainter(self)
         metrics = QtGui.QFontMetrics(self.font())
-        elided = metrics.elidedText(self.text(), QtCore.Qt.TextElideMode.ElideRight, self.width())
-        painter.drawText(self.rect(), QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter, elided)
+        rect = self.contentsRect()
+        elided = metrics.elidedText(self.text(), QtCore.Qt.TextElideMode.ElideRight, rect.width())
+        painter.drawText(rect, QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter, elided)
 
     def setText(self, text):
         """
@@ -249,7 +250,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.type_label.setText(UiStrings().Preview)
         # Info label for the title of the current item, at the top of the slide controller
         self.info_label = InfoLabel(self.panel)
-        self.info_label.setStyleSheet('font-style: italic;')
+        self.info_label.setFluentTypography(FontRole.BodyStrong)
+        self.info_label.setContentsMargins(Spacing.Small, 0, Spacing.Small, 0)
         self.info_label.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Preferred)
         self.top_label_horizontal.addWidget(self.top_icon)
         self.top_label_horizontal.addWidget(self.type_label)
