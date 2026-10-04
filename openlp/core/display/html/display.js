@@ -419,6 +419,7 @@ function _applyBackgroundFitToRenderedSlides(fit) {
     backgroundContent.style.backgroundRepeat = fit.repeat;
     backgroundContent.style.backgroundPosition = fit.position;
   });
+  Display._applyDesignBackgroundImages();
 }
 
 /**
@@ -1377,6 +1378,7 @@ var Display = {
     }
     renderedSlides.forEach(function (slide, index) {
       slide_html = Display._createTextSlide(slide.verse, slide.text);
+      slide_html._slideTheme = slide.theme || null;
       slide_html.setAttribute('data-slide', index);
       if (layout.isVertical) {
         parentSection.appendChild(slide_html);
@@ -2038,8 +2040,9 @@ var Display = {
     }
     var lyrics = design.lyrics || {};
     content.dataset.designId = 'lyrics';
-    content.style.transform = `rotate(${lyrics.rotation || 0}deg)`;
+    content.style.transform = Display._designTransform(lyrics);
     content.style.opacity = (lyrics.opacity === undefined ? 100 : lyrics.opacity) / 100;
+    Display._applyDesignEffects(content, lyrics, 'lyrics');
     var defaultOrder = (design.elements || []).map(element => element.id).concat('lyrics');
     var order = (Array.isArray(design.order) ? design.order : []).filter((id, index, ids) =>
       defaultOrder.includes(id) && ids.indexOf(id) === index);
@@ -2052,7 +2055,7 @@ var Display = {
       Object.assign(node.style, {
         position: 'absolute', boxSizing: 'border-box', margin: '0', padding: '0',
         left: `${element.x}%`, top: `${element.y}%`, width: `${element.width}%`, height: `${element.height}%`,
-        zIndex: String(order.indexOf(element.id) + 1), transform: `rotate(${element.rotation || 0}deg)`,
+        zIndex: String(order.indexOf(element.id) + 1), transform: Display._designTransform(element),
         opacity: (element.opacity === undefined ? 100 : element.opacity) / 100,
         border: `${element.border_width || 0}px solid ${element.border_colour || '#ffffff'}`,
         maxWidth: 'none', maxHeight: 'none', boxShadow: 'none', textShadow: 'none',
@@ -2075,38 +2078,116 @@ var Display = {
       } else {
         node.style.backgroundColor = element.fill || '#315efb';
       }
+      Display._applyDesignEffects(node, element, element.kind);
       slide.appendChild(node);
     });
     Display._bindDesignEditor(slide);
   },
 
-  /** Enable editing only inside the song editor's own display window. */
+  _designTransform: function (properties) {
+    return `rotate(${properties.rotation || 0}deg) scale(${properties.flip_horizontal ? -1 : 1}, ` +
+      `${properties.flip_vertical ? -1 : 1})`;
+  },
+
+  /** Effects use design pixels, scaled to the output; text outlines follow glyphs, not the text box. */
+  _applyDesignEffects: function (node, properties, kind) {
+    var scale = (Display._theme.song_design_output_height || 1080) /
+      ((Display._theme.song_design || {}).canvas_height || 1080);
+    if (properties.outline === undefined && properties.border_width && kind !== 'text' && kind !== 'lyrics') {
+      properties = Object.assign({outline: true, outline_width: properties.border_width,
+        outline_colour: properties.border_colour || '#ffffff'}, properties);
+    }
+    var theme = Display._theme;
+    var inherited = kind === 'lyrics';
+    var defaults = inherited ? {
+      outline: theme.font_main_outline, outline_width: (theme.font_main_outline_size || 0) * 4 / 3 / scale,
+      outline_colour: theme.font_main_outline_color, shadow: theme.font_main_shadow,
+      shadow_x: (theme.font_main_shadow_size || 0) * 4 / 3 / scale,
+      shadow_y: (theme.font_main_shadow_size || 0) * 4 / 3 / scale,
+      shadow_blur: (theme.font_main_shadow_blur || 0) * 4 / 3 / scale, shadow_colour: theme.font_main_shadow_color
+    } : {};
+    var effect = Object.assign({outline_width: 2, outline_colour: '#000000', shadow_x: 4,
+      shadow_y: 4, shadow_blur: 4, shadow_colour: '#000000'}, defaults, properties);
+    var shadow = `${(effect.shadow_x || 0) * scale}px ${(effect.shadow_y || 0) * scale}px ` +
+      `${(effect.shadow_blur || 0) * scale}px ${effect.shadow_colour || '#000000'}`;
+    if (inherited || kind === 'text') {
+      // Preserve the original theme effect exactly unless this text has an explicit override.
+      if (inherited && !Object.keys(properties).some(key => key.startsWith('outline') || key.startsWith('shadow'))) return;
+      var shadows = [];
+      if (effect.outline && effect.outline_width > 0) {
+        var radius = effect.outline_width * scale;
+        var steps = Math.max(8, Math.ceil(2 * Math.PI * radius));
+        for (var index = 0; index < steps; index++) {
+          var angle = index * 2 * Math.PI / steps;
+          shadows.push(`${Math.cos(angle) * radius}px ${Math.sin(angle) * radius}px 0px ` +
+            `${effect.outline_colour || '#000000'}`);
+        }
+      }
+      if (effect.shadow) shadows.push(shadow);
+      node.style.textShadow = shadows.length ? shadows.join(', ') : 'none';
+      if (kind === 'text') node.style.overflow = 'visible';
+    } else {
+      // Use a border on shapes/images so ellipse outlines follow their contour.
+      if (effect.outline !== undefined) {
+        node.style.border = `${effect.outline ? effect.outline_width * scale : 0}px solid ` +
+          `${effect.outline_colour || '#000000'}`;
+      }
+      node.style.filter = effect.shadow ? `drop-shadow(${shadow})` : 'none';
+    }
+  },
+
+  /** Report a completed designer frame without exposing intermediate formatting passes. */
+  waitForDesignPreview: async function (revision) {
+    // Qt keeps the previous preview over the browser until assets and Reveal's deferred layout settle.
+    await Promise.all([Display._waitForSlideImages(), document.fonts.ready]);
+    await new Promise(function (resolve) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(resolve);
+        });
+      });
+    });
+    return revision;
+  },
+
+  /** Enable editing only inside the designer's own display window. Accept one id or a selection. */
   setDesignEditor: function (selected) {
     Display._designEditor = selected !== null;
-    Display._designSelected = selected;
+    Display._designSelection = Array.isArray(selected) ? selected.slice() : selected ? [selected] : [];
+    Display._designSelected = Display._designSelection[Display._designSelection.length - 1] || null;
     document.querySelectorAll('.text-slide').forEach(Display._bindDesignEditor);
   },
 
   _bindDesignEditor: function (slide) {
-    slide.querySelectorAll('.design-resize-handle, .design-selection-outline').forEach(node => node.remove());
+    slide.onpointerdown = Display._designEditor ? event => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      Display.setDesignEditor('');
+      displayWatcher.dispatchEvent('songDesignChanged', {id: null, ids: [], changed: false});
+    } : null;
+    slide.querySelectorAll('.design-selection-outline').forEach(node => node.remove());
+    var selection = Display._designSelection || [];
+    var zoom = slide.getBoundingClientRect().width / slide.offsetWidth || 1;
+    var handleSize = 8 / zoom, borderSize = 1 / zoom;
     slide.querySelectorAll('[data-design-id]').forEach(node => {
       node.style.outline = '';
       node.style.cursor = '';
+      node.style.userSelect = '';
       node.onpointerdown = null;
       if (!Display._designEditor) return;
       node.style.cursor = 'move';
       node.style.userSelect = 'none';
-      if (node.dataset.designId === Display._designSelected) {
-        // Keep a covered layer selectable and movable without altering its saved stacking order.
+      if (selection.includes(node.dataset.designId)) {
+        // Selection chrome lives above the layers, but its interior never intercepts other objects.
         var outline = document.createElement('div');
         outline.className = 'design-selection-outline';
+        outline.dataset.selectionId = node.dataset.designId;
         Object.assign(outline.style, {
           position: 'absolute', left: `${node.offsetLeft}px`, top: `${node.offsetTop}px`,
-          width: `${node.offsetWidth}px`, height: `${node.offsetHeight}px`,
-          transform: node.style.transform, outline: '3px solid #51a7ff', zIndex: '201',
+          width: `${node.offsetWidth}px`, height: `${node.offsetHeight}px`, boxSizing: 'border-box',
+          transform: `rotate(${Display._designRotation(node)}deg)`, outline: `${borderSize}px solid #51a7ff`, zIndex: '201',
           cursor: 'move', pointerEvents: 'none'
         });
-        // Only the outline edges capture drags: its interior must not cover other selectable objects.
         [{left: '-8px', top: '-8px', width: 'calc(100% + 16px)', height: '16px'},
           {left: '-8px', bottom: '-8px', width: 'calc(100% + 16px)', height: '16px'},
           {left: '-8px', top: '8px', width: '16px', height: 'calc(100% - 16px)'},
@@ -2117,18 +2198,52 @@ var Display = {
         });
         slide.appendChild(outline);
         outline.onpointerdown = event => Display._startDesignDrag(event, node, false);
-        // Images are replaced elements; use a sibling handle instead of a child.
-        var handle = document.createElement('div');
-        handle.className = 'design-resize-handle';
-        Object.assign(handle.style, {
-          position: 'absolute', width: '18px', height: '18px', background: '#ffffff',
-          border: '3px solid #217aff', boxSizing: 'border-box', zIndex: '202', cursor: 'nwse-resize',
-          left: `${node.offsetLeft + node.offsetWidth - 9}px`, top: `${node.offsetTop + node.offsetHeight - 9}px`
-        });
-        slide.appendChild(handle);
-        handle.onpointerdown = event => Display._startDesignDrag(event, node, true);
+        if (selection.length === 1) {
+          // Handles are siblings of the object, so images and slide text have identical controls.
+          [['nw', 0, 0], ['n', 50, 0], ['ne', 100, 0], ['e', 100, 50],
+            ['se', 100, 100], ['s', 50, 100], ['sw', 0, 100], ['w', 0, 50]].forEach(([edge, x, y]) => {
+            var handle = document.createElement('div');
+            handle.className = 'design-resize-handle';
+            handle.dataset.edge = edge;
+            Object.assign(handle.style, {
+              position: 'absolute', width: `${handleSize}px`, height: `${handleSize}px`, background: '#ffffff',
+              border: `${borderSize}px solid #217aff`, boxSizing: 'border-box', pointerEvents: 'auto',
+              cursor: `${edge}-resize`, left: `calc(${x}% - ${handleSize / 2}px)`,
+              top: `calc(${y}% - ${handleSize / 2}px)`
+            });
+            outline.appendChild(handle);
+            handle.onpointerdown = event => Display._startDesignDrag(event, node, edge);
+          });
+        }
       }
       node.onpointerdown = event => Display._startDesignDrag(event, node, false);
+    });
+  },
+
+  _designRotation: function (node) {
+    var match = /rotate\(([-\d.]+)deg\)/.exec(node.style.transform);
+    return match ? Number(match[1]) : 0;
+  },
+
+  /** Keep the image in Reveal's background plane, including when text is blanked. */
+  _applyDesignBackgroundImages: function () {
+    document.querySelectorAll('.reveal .slides section').forEach(section => {
+      var background = section.slideBackgroundElement;
+      var content = background && background.querySelector('.slide-background-content');
+      if (!content) return;
+      content.querySelectorAll('.song-design-background-image').forEach(node => node.remove());
+      var source = section.dataset.designBackgroundImage;
+      if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source || '')) return;
+      var fit = _resolveBackgroundFit(section.dataset.designBackgroundFit || 'cover');
+      var image = document.createElement('div');
+      image.className = 'song-design-background-image';
+      Object.assign(image.style, {
+        position: 'absolute', inset: '0', pointerEvents: 'none',
+        backgroundImage: `url("${source}")`, backgroundSize: fit.size,
+        backgroundRepeat: fit.repeat, backgroundPosition: fit.position,
+        opacity: String(Math.max(0, Math.min(100, Number(section.dataset.designBackgroundOpacity))) / 100)
+      });
+      content.appendChild(image);
     });
   },
 
@@ -2136,56 +2251,94 @@ var Display = {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    var id = node.dataset.designId;
+    var selection = (Display._designSelection || []).slice();
+    var modified = event.shiftKey || event.ctrlKey || event.metaKey;
+    if (modified && !resizing) {
+      selection = selection.includes(id) ? selection.filter(value => value !== id) : selection.concat(id);
+      Display.setDesignEditor(selection);
+      displayWatcher.dispatchEvent('songDesignChanged', {id: selection[selection.length - 1] || null,
+        ids: selection, changed: false});
+      return;
+    }
+    if (!selection.includes(id) || resizing) selection = [id];
+    Display._designSelection = selection;
+    Display._designSelected = id;
     var slide = node.parentElement;
     var bounds = slide.getBoundingClientRect();
     var width = slide.clientWidth;
     var height = slide.clientHeight;
     if (!width || !height || !bounds.width || !bounds.height) return;
-    var start = {x: node.offsetLeft / width * 100, y: node.offsetTop / height * 100,
-      width: node.offsetWidth / width * 100, height: node.offsetHeight / height * 100};
-    var changed = Object.assign({}, start);
-    var clientX = event.clientX;
-    var clientY = event.clientY;
+    var nodes = Array.from(slide.querySelectorAll('[data-design-id]')).filter(item =>
+      selection.includes(item.dataset.designId));
+    var starts = {}, changed = {};
+    nodes.forEach(item => {
+      var style = getComputedStyle(item);
+      starts[item.dataset.designId] = {x: parseFloat(style.left) / width * 100, y: parseFloat(style.top) / height * 100,
+        width: parseFloat(style.width) / width * 100, height: parseFloat(style.height) / height * 100};
+      changed[item.dataset.designId] = Object.assign({}, starts[item.dataset.designId]);
+    });
+    var start = starts[id];
+    var clientX = event.clientX, clientY = event.clientY;
     var target = event.currentTarget;
+    if (target === node) Display._bindDesignEditor(slide);
     target.setPointerCapture(event.pointerId);
     var clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    var paint = geometries => {
+      nodes.forEach(item => {
+        var geometry = geometries[item.dataset.designId];
+        ['x', 'y', 'width', 'height'].forEach(key => {
+          item.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${geometry[key]}%`, 'important');
+        });
+        var outline = Array.from(slide.querySelectorAll('.design-selection-outline')).find(chrome =>
+          chrome.dataset.selectionId === item.dataset.designId);
+        if (outline) Object.assign(outline.style, {
+          left: `${item.offsetLeft}px`, top: `${item.offsetTop}px`,
+          width: `${item.offsetWidth}px`, height: `${item.offsetHeight}px`
+        });
+      });
+    };
     target.onpointermove = move => {
       var dx = (move.clientX - clientX) / bounds.width * 100;
       var dy = (move.clientY - clientY) / bounds.height * 100;
       if (resizing) {
-        changed.width = clamp(start.width + dx, 1, 100 - start.x);
-        changed.height = clamp(start.height + dy, 1, 100 - start.y);
+        var edge = resizing === true ? 'se' : resizing;
+        var radians = Display._designRotation(node) * Math.PI / 180;
+        var cos = Math.cos(radians), sin = Math.sin(radians);
+        // Work in local output pixels so rotated boxes resize along their visible axes.
+        var localX = (dx * width / 100 * cos + dy * height / 100 * sin) / width * 100;
+        var localY = (-dx * width / 100 * sin + dy * height / 100 * cos) / height * 100;
+        var next = changed[id];
+        next.width = clamp(start.width + (edge.includes('e') ? localX : edge.includes('w') ? -localX : 0), 100 / width, 100);
+        next.height = clamp(start.height + (edge.includes('s') ? localY : edge.includes('n') ? -localY : 0), 100 / height, 100);
+        var offsetX = (next.width - start.width) * width / 200 * (edge.includes('w') ? -1 : 1);
+        var offsetY = (next.height - start.height) * height / 200 * (edge.includes('n') ? -1 : 1);
+        next.x = start.x + (start.width - next.width) / 2 + (offsetX * cos - offsetY * sin) / width * 100;
+        next.y = start.y + (start.height - next.height) / 2 + (offsetX * sin + offsetY * cos) / height * 100;
+        next.x = clamp(next.x, 0, 100 - next.width);
+        next.y = clamp(next.y, 0, 100 - next.height);
       } else {
-        changed.x = clamp(start.x + dx, 0, 100 - start.width);
-        changed.y = clamp(start.y + dy, 0, 100 - start.height);
-      }
-      ['x', 'y', 'width', 'height'].forEach(key => {
-        node.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${changed[key]}%`, 'important');
-      });
-      var outline = slide.querySelector('.design-selection-outline');
-      if (outline) Object.assign(outline.style, {
-        left: `${node.offsetLeft}px`, top: `${node.offsetTop}px`,
-        width: `${node.offsetWidth}px`, height: `${node.offsetHeight}px`
-      });
-      var handle = slide.querySelector('.design-resize-handle');
-      if (handle) Object.assign(handle.style, {
-        left: `${node.offsetLeft + node.offsetWidth - 9}px`, top: `${node.offsetTop + node.offsetHeight - 9}px`
-      });
-    };
-    var finish = cancelled => {
-      if (cancelled) {
-        ['x', 'y', 'width', 'height'].forEach(key => {
-          node.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${start[key]}%`, 'important');
+        var boxes = Object.values(starts);
+        dx = clamp(dx, -Math.min(...boxes.map(box => box.x)), 100 - Math.max(...boxes.map(box => box.x + box.width)));
+        dy = clamp(dy, -Math.min(...boxes.map(box => box.y)), 100 - Math.max(...boxes.map(box => box.y + box.height)));
+        nodes.forEach(item => {
+          var key = item.dataset.designId;
+          changed[key].x = starts[key].x + dx;
+          changed[key].y = starts[key].y + dy;
         });
       }
+      paint(changed);
+    };
+    var finish = cancelled => {
+      if (cancelled) paint(starts);
       target.onpointermove = null;
       target.onpointerup = null;
       target.onpointercancel = null;
-      Display._designSelected = node.dataset.designId;
       Display._bindDesignEditor(slide);
       displayWatcher.dispatchEvent('songDesignChanged', {
-        id: node.dataset.designId, geometry: cancelled ? start : changed,
-        changed: !cancelled && JSON.stringify(changed) !== JSON.stringify(start)
+        id: id, ids: selection, geometry: cancelled ? starts[id] : changed[id],
+        geometries: cancelled ? starts : changed,
+        changed: !cancelled && JSON.stringify(changed) !== JSON.stringify(starts)
       });
     };
     target.onpointerup = () => finish(false);
@@ -2283,6 +2436,21 @@ var Display = {
    * @param is_text Used to decide if the main area constraints should be applied
    */
   applyTheme: function (targetElement, is_text=true) {
+    var previous = Display._theme;
+    try {
+      if (targetElement._slideTheme) Display._theme = targetElement._slideTheme;
+      Display._applyTheme(targetElement, is_text);
+      if (targetElement.matches('section.text-slides')) {
+        Array.from(targetElement.children).forEach(function (slide) {
+          if (slide._slideTheme) Display.applyTheme(slide, is_text);
+        });
+      }
+    } finally {
+      Display._theme = previous;
+    }
+  },
+
+  _applyTheme: function (targetElement, is_text=true) {
     Display._themeApplied = true;
     if (!Display._theme) {
       return;
@@ -2364,6 +2532,17 @@ var Display = {
     // Set the background
     var backgroundContent = "";
     var backgroundHtml = "";
+    var designBackground = is_text && Display._theme.song_design && Display._theme.song_design.background;
+    ['image', 'opacity', 'fit'].forEach(key => targetElement.removeAttribute(`data-design-background-${key}`));
+    if (designBackground) {
+      targetElement.removeAttribute('data-background-image');
+      targetElement.removeAttribute('data-background-color');
+      if (designBackground.image) {
+        targetElement.dataset.designBackgroundImage = designBackground.image;
+        targetElement.dataset.designBackgroundOpacity = designBackground.image_opacity;
+        targetElement.dataset.designBackgroundFit = designBackground.fit;
+      }
+    }
     var fit = _resolveBackgroundFit(Display._theme.background_fit || "cover");
     switch (Display._theme.background_type) {
       case BackgroundType.Transparent:
@@ -2431,6 +2610,14 @@ var Display = {
     targetElement.setAttribute("data-background-position", fit.position);
     requestAnimationFrame(function () {
       _applyBackgroundFitToRenderedSlides(fit);
+      // Per-slide layouts carry their own image fit, independent of the last layout styled.
+      document.querySelectorAll('.text-slide').forEach(function (slide) {
+        if (!slide._slideTheme || !slide.slideBackgroundContentElement) return;
+        var localFit = _resolveBackgroundFit(slide._slideTheme.background_fit);
+        Object.assign(slide.slideBackgroundContentElement.style, {
+          backgroundSize: localFit.size, backgroundRepeat: localFit.repeat, backgroundPosition: localFit.position
+        });
+      });
     });
 
     // set up the main area
@@ -2555,9 +2742,18 @@ var Display = {
       ].join(", ")
     };
 
+    var footerTarget = Display._footerContainer;
+    if (document.querySelector('.text-slide') &&
+        Array.from(document.querySelectorAll('.text-slide')).some(slide => slide._slideTheme)) {
+      footerTarget.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%';
+      footerTarget = Display._footerContainer.querySelector(
+        '.footer-item[data-slide="' + targetElement.getAttribute('data-slide') + '"]');
+    }
     for (var footerKey in footerStyle) {
       if (footerStyle.hasOwnProperty(footerKey)) {
-        Display._footerContainer.style.setProperty(footerKey, footerStyle[footerKey]);
+        if (footerTarget && (footerTarget === Display._footerContainer || footerKey !== 'display')) {
+          footerTarget.style.setProperty(footerKey, footerStyle[footerKey]);
+        }
       }
     }
   },

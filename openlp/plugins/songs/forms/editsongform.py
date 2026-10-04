@@ -54,7 +54,7 @@ from openlp.core.widgets.edits import FormattingTagDelegate
 from openlp.core.widgets.comboboxes import create_combo_box
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.lib.slidedesign import normalise_design
-from openlp.plugins.songs.forms.editverseform import EditVerseForm
+from openlp.core.widgets.slideeditor import get_slide_editor
 from openlp.plugins.songs.forms.mediafilesform import MediaFilesForm
 from openlp.plugins.songs.lib import VerseType, clean_song
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
@@ -125,7 +125,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.button_box.clicked.connect(self.on_preview)
         # Create other objects and forms
         self.manager = manager
-        self.verse_form = EditVerseForm(self)
+        self.verse_form = get_slide_editor(self, 'song')
         self.media_form = MediaFilesForm(self)
         self.initialise()
         self.authors_list_view.setSortingEnabled(False)
@@ -1351,6 +1351,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.verse_delete_action.setEnabled(True)
 
     def on_verse_add_button_clicked(self):
+        self.verse_form = get_slide_editor(self, 'song', self.verse_form)
         self.verse_form.set_verse('', True)
         if self.verse_form.exec():
             after_text, verse_tag, verse_num = self.verse_form.get_verse()
@@ -1365,6 +1366,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.on_verse_order_text_changed(self.verse_order_edit.text())
 
     def on_verse_edit_button_clicked(self):
+        self.verse_form = get_slide_editor(self, 'song', self.verse_form)
         item = self.verse_list_widget.currentItem()
         if item:
             temp_text = item.text()
@@ -1398,6 +1400,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
 
         :return:
         """
+        self.verse_form = get_slide_editor(self, 'song', self.verse_form)
         verse_list = ''
         if self.verse_list_widget.rowCount() > 0:
             for row in range(self.verse_list_widget.rowCount()):

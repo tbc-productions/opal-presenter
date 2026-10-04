@@ -73,7 +73,8 @@ def test_on_add_button_clicked(form: EditCustomForm):
     Test the on_add_button_clicked_test method / add_button button.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('openlp.core.widgets.fluent.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'), \
+            patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', return_value=1):
         # WHEN: Add a new slide.
         form.add_action.trigger()
 

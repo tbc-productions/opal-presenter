@@ -519,6 +519,7 @@ class Settings(QtCore.QSettings):
         'SettingsImport/Make_Changes': 'At_Own_RISK',
         'SettingsImport/type': 'OpenLP_settings_export',
         'SettingsImport/version': '',
+        'slide_designer/status': PluginStatus.Active,
         'songs/status': PluginStatus.Inactive,
         'songs/db type': 'sqlite',
         'songs/db username': '',

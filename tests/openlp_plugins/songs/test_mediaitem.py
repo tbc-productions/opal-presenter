@@ -1098,8 +1098,9 @@ def test_song_first_slide_creation_works(mocked_get_verses: MagicMock,
 
     # THEN: The copyright symbol should not be in the footer
     if first_slide_mode == SongFirstSlideMode.Default:
-        # No metadata is needed on default slide mode (at least for now)
-        assert 'metadata' not in service_item.slides[0]
+        # Source identity keeps per-page design options independent of verse order.
+        assert 'design_section' in service_item.slides[0]['metadata']
+        assert service_item.slides[0]['metadata']['design_split'] == 0
     else:
         assert service_item.slides[0]['metadata']['songs_first_slide_type'] == first_slide_mode
     if first_slide_mode == SongFirstSlideMode.Songbook:

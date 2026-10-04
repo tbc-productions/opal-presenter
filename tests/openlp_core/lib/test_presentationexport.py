@@ -706,3 +706,47 @@ def test_export_menu_has_separate_presentation_formats(request):
     main_window.export_opendocument_item.trigger()
     calls = main_window.service_manager_contents.on_export_presentation.call_args_list
     assert [call.args[0] for call in calls] == ['.pptx', '.odp']
+
+
+def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(tmp_path):
+    import base64
+    from pptx import Presentation
+    from PySide6.QtCore import QSize
+    from openlp.core.lib.presentationexport import _image_bytes
+    from openlp.core.lib.slidedesign import apply_design
+
+    picture = QtGui.QImage(80, 40, QtGui.QImage.Format.Format_ARGB32)
+    picture.fill(QtGui.QColor('#ff0000'))
+    uri = 'data:image/png;base64,' + base64.b64encode(_image_bytes(picture)).decode()
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
+              'lyrics': {'x': 10, 'y': 10, 'width': 80, 'height': 20, 'outline': True,
+                         'outline_width': 2, 'shadow': True, 'rotation': 5},
+              'background': {'type': 'gradient', 'colour': '#123456', 'end_colour': '#654321',
+                             'image': uri, 'image_opacity': 30},
+              'order': ['ellipse', 'lyrics', 'caption', 'image'],
+              'elements': [
+                  {'id': 'ellipse', 'kind': 'ellipse', 'x': 10, 'y': 30, 'width': 20, 'height': 20,
+                   'fill': '#00ff00', 'opacity': 40, 'outline': True, 'outline_width': 4, 'shadow': True},
+                  {'id': 'caption', 'kind': 'text', 'text': 'Editable caption', 'x': 35, 'y': 60,
+                   'width': 30, 'height': 20, 'font_size': 36, 'opacity': 60,
+                   'outline': True, 'shadow': True, 'shadow_x': -8, 'flip_vertical': True},
+                  {'id': 'image', 'kind': 'image', 'src': uri, 'x': 70, 'y': 50, 'width': 20, 'height': 30,
+                   'opacity': 50, 'flip_horizontal': True, 'outline': True, 'outline_width': 3, 'shadow': True}]}
+    theme = apply_design(_theme(), design, QSize(1920, 1080))
+    destination = tmp_path / 'rich.pptx'
+    _write_pptx([PresentationPage(theme=theme, text='Slide lyrics', footer='')], destination, 1920, 1080)
+    deck = Presentation(str(destination))
+    shapes = deck.slides[0].shapes
+    assert [shape.name for shape in shapes][1:] == ['Ellipse', 'Slide text', 'Text box', 'Image']
+    assert shapes[2].text == 'Slide lyrics'
+    assert shapes[3].text == 'Editable caption'
+    assert shapes[2].rotation == 5
+    assert shapes[1].width == pytest.approx(deck.slide_width * .2, abs=1)
+    assert shapes[3]._element.xpath('./p:spPr/a:scene3d/a:camera/a:rot')[0].get('lat') == '10800000'
+    assert shapes[4]._element.xpath('./p:spPr/a:xfrm')[0].get('flipH') == '1'
+    assert shapes[4]._element.xpath('./p:blipFill/a:blip/a:alphaModFix')[0].get('amt') == '50000'
+    assert shapes[1]._element.xpath('./p:spPr/a:solidFill/a:srgbClr/a:alpha')[0].get('val') == '40000'
+    assert shapes[1]._element.xpath('./p:spPr/a:effectLst/a:outerShdw')
+    assert shapes[3]._element.xpath('.//a:rPr/a:ln/a:solidFill')
+    assert shapes[3]._element.xpath('.//a:rPr/a:effectLst/a:outerShdw')
+    assert len(shapes) == 5  # Background plus four editable objects, without a footer.

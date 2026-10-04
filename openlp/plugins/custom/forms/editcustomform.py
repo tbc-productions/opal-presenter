@@ -29,7 +29,7 @@ from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib.ui import critical_error_message_box, find_and_set_in_combo_box
 from openlp.plugins.custom.forms.editcustomdialog import Ui_CustomEditDialog
-from openlp.plugins.custom.forms.editcustomslideform import EditCustomSlideForm
+from openlp.core.widgets.slideeditor import get_slide_editor
 from openlp.plugins.custom.lib.customxmlhandler import CustomXML
 from openlp.plugins.custom.lib.db import CustomSlide
 
@@ -55,7 +55,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         self.slide_design = {}
         self.setup_ui(self)
         # Create other objects and forms.
-        self.edit_slide_form = EditCustomSlideForm(self)
+        self.edit_slide_form = get_slide_editor(self, 'custom')
         # Connecting signals and slots
         self.preview_button.clicked.connect(self.on_preview_button_clicked)
         self.add_action.triggered.connect(self.on_add_button_clicked)
@@ -149,6 +149,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         """
         selected_row = self.slide_list_view.currentRow()
         if selected_row != 0:
+            self.remap_footer_sections({selected_row: selected_row - 1, selected_row - 1: selected_row})
             qw = self.slide_list_view.takeItem(selected_row)
             self.slide_list_view.insertItem(selected_row - 1, qw)
             self.slide_list_view.setCurrentRow(selected_row - 1)
@@ -160,6 +161,7 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         selected_row = self.slide_list_view.currentRow()
         # zero base arrays
         if selected_row != self.slide_list_view.count() - 1:
+            self.remap_footer_sections({selected_row: selected_row + 1, selected_row + 1: selected_row})
             qw = self.slide_list_view.takeItem(selected_row)
             self.slide_list_view.insertItem(selected_row + 1, qw)
             self.slide_list_view.setCurrentRow(selected_row + 1)
@@ -168,6 +170,8 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         """
         Add a new blank slide.
         """
+        self.edit_slide_form = get_slide_editor(self, 'custom', self.edit_slide_form)
+        self.edit_slide_form.designer_slide_offset = self.slide_list_view.count()
         self.edit_slide_form.set_text('')
         if self.edit_slide_form.exec():
             self.slide_list_view.addItems(self.edit_slide_form.get_text())
@@ -176,6 +180,8 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         """
         Edit the currently selected slide.
         """
+        self.edit_slide_form = get_slide_editor(self, 'custom', self.edit_slide_form)
+        self.edit_slide_form.designer_slide_offset = self.slide_list_view.currentRow()
         self.edit_slide_form.set_text(self.slide_list_view.currentItem().text())
         if self.edit_slide_form.exec():
             self.update_slide_list(self.edit_slide_form.get_text())
@@ -184,12 +190,14 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         """
         Edits all slides.
         """
+        self.edit_slide_form = get_slide_editor(self, 'custom', self.edit_slide_form)
         slide_text = ''
         for row in range(self.slide_list_view.count()):
             item = self.slide_list_view.item(row)
             slide_text += item.text()
             if row != self.slide_list_view.count() - 1:
                 slide_text += '\n[===]\n'
+        self.edit_slide_form.designer_slide_offset = 0
         self.edit_slide_form.set_text(slide_text)
         if self.edit_slide_form.exec():
             self.update_slide_list(self.edit_slide_form.get_text(), True)
@@ -209,6 +217,12 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         :param slides: A list of all slides which have been edited.
         :param edit_all:  Indicates if all slides or only one slide has been edited.
         """
+        if not getattr(self.edit_slide_form, 'uses_slide_designer', False):
+            from openlp.core.lib.slidedesign import remap_custom_footers
+            before = ([self.slide_list_view.item(row).text() for row in range(self.slide_list_view.count())]
+                      if edit_all else [self.slide_list_view.currentItem().text()])
+            self.slide_design = remap_custom_footers(
+                self.slide_design, before, slides, 0 if edit_all else self.slide_list_view.currentRow())
         if edit_all:
             self.slide_list_view.clear()
             self.slide_list_view.addItems(slides)
@@ -229,8 +243,29 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         """
         Removes the current row from the list.
         """
-        self.slide_list_view.takeItem(self.slide_list_view.currentRow())
+        row = self.slide_list_view.currentRow()
+        self.remap_footer_sections({i: (None if i == row else i - 1)
+                                    for i in range(row, self.slide_list_view.count())})
+        self.slide_list_view.takeItem(row)
         self.on_current_row_changed(self.slide_list_view.currentRow())
+
+    def remap_footer_sections(self, mapping):
+        def remap(key):
+            section, split, page = key.split(':')
+            if section.startswith('custom-'):
+                index = int(section[7:]) - 1
+                destination = mapping.get(index, index)
+                if destination is None:
+                    return None
+                section = f'custom-{destination + 1}'
+            return f'{section}:{split}:{page}'
+        if 'hidden_footers' in self.slide_design:
+            self.slide_design['hidden_footers'] = [target for key in self.slide_design['hidden_footers']
+                                                   if (target := remap(key)) is not None]
+        for collection in ('assignments', 'overrides'):
+            if collection in self.slide_design:
+                self.slide_design[collection] = {target: value for key, value in self.slide_design[collection].items()
+                                                 if (target := remap(key)) is not None}
 
     def on_current_row_changed(self, row):
         """

@@ -190,6 +190,7 @@ class CustomMediaItem(MediaManagerItem):
         """
         Handle the New item event
         """
+        self.ensure_available_editor()
         self.edit_custom_form.load_custom(0)
         self.edit_custom_form.exec()
         self.on_clear_text_button_click()
@@ -206,6 +207,7 @@ class CustomMediaItem(MediaManagerItem):
         custom_id = int(custom_id)
         valid = self.plugin.db_manager.get_object(CustomSlide, custom_id)
         if valid:
+            self.ensure_available_editor()
             self.edit_custom_form.load_custom(custom_id, preview)
             if self.edit_custom_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 self.remote_triggered = True
@@ -228,12 +230,17 @@ class CustomMediaItem(MediaManagerItem):
         Edit a custom item
         """
         if check_item_selected(self.list_view, UiStrings().SelectEdit):
+            self.ensure_available_editor()
             item = self.list_view.currentItem()
             item_id = item.data(QtCore.Qt.ItemDataRole.UserRole)
             self.edit_custom_form.load_custom(item_id, False)
             self.edit_custom_form.exec()
             self.auto_select_id = -1
             self.on_search_text_button_clicked()
+
+    def ensure_available_editor(self):
+        if getattr(self.edit_custom_form, '_designer_open', False) is True:
+            self.edit_custom_form = EditCustomForm(self, self.main_window, self.plugin.db_manager)
 
     def on_delete_click(self):
         """

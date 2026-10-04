@@ -22,6 +22,7 @@ The :mod:`serviceitem` provides the service item functionality including the
 type and capability of an item.
 """
 import datetime
+import json
 import logging
 import ntpath
 import os
@@ -122,12 +123,13 @@ class ServiceItem(RegistryProperties):
         self._new_item()
         self.metadata = []
 
-    def get_theme_data(self, theme_level=None):
+    def get_theme_data(self, theme_level=None, include_design=True):
         """
         Get the theme appropriate for this item
 
         :param theme_level: The theme_level to use,
                             the value in Settings is used when this value is missinig
+        :param include_design: Apply item customisations; disable when packaging the base theme.
         """
         if theme_level is None:
             theme_level = self.settings.value('themes/theme level')
@@ -143,6 +145,8 @@ class ServiceItem(RegistryProperties):
         if self.is_capable(ItemCapabilities.ProvidesOwnTheme) or theme_level == ThemeLevel.Song and self.theme:
             theme = self.theme
         theme = theme_manager.get_theme_data(theme)
+        if not include_design:
+            return theme
         theme = design_theme(theme, self.slide_design)
         # Clean up capabilities and reload from the theme.
         if self.is_text():
@@ -168,6 +172,10 @@ class ServiceItem(RegistryProperties):
         """
         self.unique_identifier = str(uuid.uuid1())
         self.validate_item()
+
+    def get_slide_theme(self, page):
+        from openlp.core.lib.slidelayouts import slide_design
+        return apply_design(self.get_theme_data(include_design=False), slide_design(self.slide_design, page))
 
     def add_capability(self, capability):
         """
@@ -243,7 +251,7 @@ class ServiceItem(RegistryProperties):
         else:
             bible_chapter_hint_from_row_tag = None
             row_label_from_raw_page_text = None
-        for raw_slide in self.slides:
+        for raw_index, raw_slide in enumerate(self.slides):
             verse_tag = raw_slide.get('verse', str(index + 1))
             if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                 pages = previous_pages[verse_tag][1]
@@ -255,13 +263,18 @@ class ServiceItem(RegistryProperties):
                 if self.name == 'bibles' and bible_chapter_hint_from_row_tag
                 else None
             )
-            for page in pages:
+            for page_index, page in enumerate(pages):
                 footer_html = None
                 has_footer_html = 'footer_html' in raw_slide
                 if has_footer_html:
                     footer_html = raw_slide['footer_html']
                 else:
                     footer_html = self.footer_html
+                metadata = raw_slide.get('metadata', {})
+                section = metadata.get('design_section', f'custom-{raw_index + 1}')
+                split = metadata.get('design_split', 0)
+                if f'{section}:{split}:{page_index}' in self.slide_design.get('hidden_footers', []):
+                    footer_html = ''
                 rendered_slide = {
                     'title': raw_slide['title'],
                     'text': render_tags(page),
@@ -269,6 +282,10 @@ class ServiceItem(RegistryProperties):
                     'verse': index,
                     'footer': footer_html
                 }
+                if any(self.slide_design.get(key) for key in ('masters', 'assignments', 'overrides')):
+                    rendered_slide['design_key'] = f'{section}:{split}:{page_index}'
+                    rendered_slide['theme'] = json.loads(
+                        self.get_slide_theme(rendered_slide['design_key']).export_theme(is_js=True))
                 self._rendered_slides.append(rendered_slide)
                 display_verse = verse_tag
                 if self.name == 'bibles' and row_label_from_raw_page_text:
@@ -460,7 +477,8 @@ class ServiceItem(RegistryProperties):
             'name': self.name,
             'plugin': self.name,
             'theme': self.theme,
-            'slide_design': package_design(self.slide_design, self.get_theme_data()) if self.slide_design else {},
+            'slide_design': package_design(self.slide_design, self.get_theme_data(include_design=False))
+            if self.slide_design else {},
             'title': self.title,
             'footer': self.raw_footer,
             'type': self.service_item_type,

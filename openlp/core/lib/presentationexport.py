@@ -9,6 +9,7 @@
 ##########################################################################
 """Export rendered service pages as editable PPTX or ODP presentations."""
 import html
+import base64
 import mimetypes
 from dataclasses import dataclass, replace
 from io import BytesIO
@@ -239,7 +240,8 @@ def service_pages(items, insert_logo=False, *, native_pptx=False, progress=None)
             theme = item.get_theme_data()
             for rendered, displayed in zip(item.rendered_slides, item.display_slides):
                 footer_html = _expand_footer_tags(rendered.get('footer') or '')
-                item_pages.append(PresentationPage(theme=theme, text=html.unescape(displayed['text']),
+                page_theme = item.get_slide_theme(rendered['design_key']) if rendered.get('design_key') else theme
+                item_pages.append(PresentationPage(theme=page_theme, text=html.unescape(displayed['text']),
                                                    footer=_plain_text(footer_html),
                                                    html_text=rendered.get('text') or '',
                                                    html_footer=footer_html,
@@ -280,6 +282,8 @@ def _page_sections(pages):
 
 def _load_image(path):
     path = str(path)
+    if path.startswith('data:image/png;base64,'):
+        return QtGui.QImage.fromData(base64.b64decode(path.split(',', 1)[1]))
     if path.lower().endswith('.svg'):
         renderer = QtSvg.QSvgRenderer(path)
         if renderer.isValid():
@@ -304,6 +308,12 @@ def _image_bytes(image):
 
 def _fit_image(painter, image, width, height, fit='cover'):
     if image.isNull():
+        return
+    if fit == 'stretch':
+        painter.drawImage(QtCore.QRectF(0, 0, width, height), image)
+        return
+    if fit == 'repeat':
+        painter.fillRect(QtCore.QRectF(0, 0, width, height), QtGui.QBrush(image))
         return
     scale = (max if fit == 'cover' else min)(width / image.width(), height / image.height())
     target_width, target_height = image.width() * scale, image.height() * scale
@@ -356,7 +366,8 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         filename = getattr(theme, 'background_filename', None)
         fit = getattr(theme, 'background_fit', 'cover')
         kind = theme.background_type
-    if kind == 'solid' or (kind not in ('image', 'gradient') and not logo):
+    overlay = (getattr(theme, 'song_design', {}) or {}).get('background', {}) if not logo else {}
+    if (kind == 'solid' or (kind not in ('image', 'gradient') and not logo)) and not overlay.get('image'):
         return str(color), None
     image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_ARGB32)
     image.fill(QtGui.QColor(color))
@@ -365,6 +376,12 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         direction = getattr(theme, 'background_direction', 'vertical')
         if direction == 'horizontal':
             gradient = QtGui.QLinearGradient(0, 0, width, 0)
+        elif direction == 'leftTop':
+            gradient = QtGui.QLinearGradient(0, 0, width, height)
+        elif direction == 'leftBottom':
+            gradient = QtGui.QLinearGradient(0, height, width, 0)
+        elif direction == 'circular':
+            gradient = QtGui.QRadialGradient(width / 2, height / 2, max(width, height) / 2)
         else:
             gradient = QtGui.QLinearGradient(0, 0, 0, height)
         gradient.setColorAt(0, QtGui.QColor(theme.background_start_color))
@@ -372,6 +389,9 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         painter.fillRect(0, 0, width, height, gradient)
     elif filename:
         _fit_image(painter, _load_image(filename), width, height, fit)
+    if overlay.get('image'):
+        painter.setOpacity(overlay.get('image_opacity', 100) / 100)
+        _fit_image(painter, _load_image(overlay['image']), width, height, overlay.get('fit', 'cover'))
     painter.end()
     return str(color), _image_bytes(image)
 
@@ -467,6 +487,9 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
     from pptx import Presentation
     from pptx.dml.color import RGBColor
     from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.enum.shapes import MSO_SHAPE
+    from openlp.core.lib.slidedesign import layer_order
+    from openlp.core.lib.pptxdesign import apply_object_properties, text_properties, element_theme
     from pptx.oxml.ns import qn
     from pptx.opc.constants import RELATIONSHIP_TYPE as RT
     from pptx.util import Inches, Pt
@@ -486,7 +509,7 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
     backgrounds = {}
     posters = {}
 
-    def add_text(slide, markup, theme, part):
+    def add_text(slide, markup, theme, part, properties=None):
         if not markup:
             return
         x, y, w, h = _geometry(theme, part, width, height)
@@ -502,7 +525,10 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
         vertical = getattr(theme, 'display_vertical_align' + ('_footer' if part == 'footer' else ''), 0)
         frame.vertical_anchor = (MSO_ANCHOR.TOP, MSO_ANCHOR.MIDDLE, MSO_ANCHOR.BOTTOM)[vertical]
         align = getattr(theme, 'display_horizontal_align' + ('_footer' if part == 'footer' else ''), 0)
-        for index, line in enumerate(_styled_lines(markup, _base_text_style(theme, part))):
+        base = _base_text_style(theme, part)
+        if properties is not None:
+            base = replace(base, size=base.size * 4 / 3)
+        for index, line in enumerate(_styled_lines(markup, base)):
             paragraph = frame.paragraphs[0] if index == 0 else frame.add_paragraph()
             paragraph.alignment = (PP_ALIGN.LEFT, PP_ALIGN.RIGHT, PP_ALIGN.CENTER, PP_ALIGN.JUSTIFY)[align]
             paragraph.space_before = paragraph.space_after = Pt(0)
@@ -515,10 +541,52 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
                 font.bold = run_style.bold
                 font.italic = run_style.italic
                 font.underline = run_style.underline
-                font.color.rgb = RGBColor.from_string(_hex_color(_run_color(run_style, theme)).upper())
+                font.color.rgb = RGBColor.from_string(_hex_color(
+                    run_style.color if properties is not None else _run_color(run_style, theme)).upper())
+                if properties is not None and run_style.opacity < 1:
+                    colour = run._r.get_or_add_rPr().find(qn('a:solidFill'))[0]
+                    etree.SubElement(colour, qn('a:alpha'), val=str(round(run_style.opacity * 100000)))
                 if run_style.baseline:
                     baseline = '30000' if run_style.baseline == 'super' else '-25000'
                     run._r.get_or_add_rPr().set('baseline', baseline)
+        if properties is not None:
+            apply_object_properties(box, properties, presentation.slide_width / width, text=True)
+        return box
+
+    def add_element(slide, theme, element, scale):
+        properties = dict(element)
+        for key in ('outline_width', 'border_width', 'shadow_x', 'shadow_y', 'shadow_blur'):
+            if key in properties:
+                properties[key] *= scale
+        if element['kind'] == 'text':
+            element_style = element_theme(theme, element, width, height, scale)
+            box = add_text(slide, html.escape(element.get('text', '')).replace('\n', '<br>'),
+                           element_style, 'main', properties)
+            if box is not None:
+                box.name = 'Text box'
+            return
+        x, y = round(element['x'] / 100 * presentation.slide_width), \
+            round(element['y'] / 100 * presentation.slide_height)
+        w, h = round(element['width'] / 100 * presentation.slide_width), \
+            round(element['height'] / 100 * presentation.slide_height)
+        if element['kind'] == 'image':
+            # Transparent padding preserves contain-fit and the editable image object's full bounding box.
+            image = QtGui.QImage(max(1, round(element['width'] / 100 * width)),
+                                 max(1, round(element['height'] / 100 * height)),
+                                 QtGui.QImage.Format.Format_ARGB32)
+            image.fill(QtCore.Qt.GlobalColor.transparent)
+            painter = QtGui.QPainter(image)
+            painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+            _fit_image(painter, _load_image(element.get('src', '')), image.width(), image.height(), 'contain')
+            painter.end()
+            shape = slide.shapes.add_picture(BytesIO(_image_bytes(image)), x, y, w, h)
+        else:
+            shape = slide.shapes.add_shape(MSO_SHAPE.OVAL if element['kind'] == 'ellipse' else MSO_SHAPE.RECTANGLE,
+                                           x, y, w, h)
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = RGBColor.from_string(element.get('fill', '#315efb').lstrip('#'))
+        shape.name = element['kind'].capitalize()
+        apply_object_properties(shape, properties, presentation.slide_width / width)
 
     for page_index, page in enumerate(pages):
         _progress(progress, 'Embedding media' if page.media else 'Building presentation',
@@ -561,8 +629,19 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
             fill.solid()
             fill.fore_color.rgb = RGBColor.from_string(_hex_color(color).upper())
         if page.theme:
-            add_text(slide, page.html_text or html.escape(page.text).replace('\n', '<br>'), page.theme, 'main')
-            add_text(slide, page.html_footer or html.escape(page.footer).replace('\n', '<br>'), page.theme, 'footer')
+            design = getattr(page.theme, 'song_design', {}) or {}
+            elements = {element['id']: element for element in design.get('elements', [])}
+            scale = getattr(page.theme, 'song_design_output_height', height) / design.get('canvas_height', height)
+            for identifier in layer_order(design):
+                if identifier == 'lyrics':
+                    box = add_text(slide, page.html_text or html.escape(page.text).replace('\n', '<br>'),
+                                   page.theme, 'main', text_properties(page.theme, 'main', design) if design else None)
+                    if box is not None:
+                        box.name = 'Slide text'
+                else:
+                    add_element(slide, page.theme, elements[identifier], scale)
+            add_text(slide, page.html_footer or html.escape(page.footer).replace('\n', '<br>'), page.theme, 'footer',
+                     text_properties(page.theme, 'footer') if design else None)
     _progress(progress, 'Building presentation', len(pages), len(pages))
     sections = _page_sections(pages)
     if sections:

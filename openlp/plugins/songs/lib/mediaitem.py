@@ -682,6 +682,7 @@ class SongMediaItem(MediaManagerItem):
 
     def on_new_click(self):
         log.debug('on_new_click')
+        self.ensure_available_editor()
         self.edit_song_form.new_song()
         self.edit_song_form.exec()
         self.on_clear_text_button_click()
@@ -702,6 +703,7 @@ class SongMediaItem(MediaManagerItem):
         song_id = int(song_id)
         valid = self.plugin.manager.get_object(Song, song_id)
         if valid:
+            self.ensure_available_editor()
             self.edit_song_form.load_song(song_id, preview)
             if self.edit_song_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 self.auto_select_id = -1
@@ -724,6 +726,7 @@ class SongMediaItem(MediaManagerItem):
         """
         log.debug('on_edit_click')
         if check_item_selected(self.list_view, UiStrings().SelectEdit):
+            self.ensure_available_editor()
             self.edit_item = self.list_view.currentItem()
             item_id = self.edit_item.data(QtCore.Qt.ItemDataRole.UserRole)
             self.edit_song_form.load_song(item_id, False)
@@ -731,6 +734,10 @@ class SongMediaItem(MediaManagerItem):
             self.auto_select_id = -1
             self.on_song_list_load()
         self.edit_item = None
+
+    def ensure_available_editor(self):
+        if getattr(self.edit_song_form, '_designer_open', False) is True:
+            self.edit_song_form = EditSongForm(self, self.main_window, self.plugin.manager)
 
     def on_delete_click(self):
         """
@@ -858,10 +865,12 @@ class SongMediaItem(MediaManagerItem):
                 verse_tag = VerseType.translated_tags[verse_index].upper()
                 verse_def = '{tag}{label}'.format(tag=verse_tag, label=verse[0]['label'])
                 force_verse = verse[1].split('[--}{--]\n')
-                for split_verse in force_verse:
+                for split_index, split_verse in enumerate(force_verse):
                     if uppercase:
                         split_verse = "{uc}" + split_verse + "{/uc}"
-                    service_item.add_from_text(split_verse, verse_def)
+                    service_item.add_from_text(split_verse, verse_def, metadata={
+                        'design_section': VerseType.tags[verse_index] + verse[0]['label'],
+                        'design_split': split_index})
         else:
             # Loop through the verse list and expand the song accordingly.
             order_list = song.verse_order.lower().split()
@@ -942,7 +951,9 @@ class SongMediaItem(MediaManagerItem):
                             if uppercase:
                                 split_verse = "{uc}" + split_verse + "{/uc}"
 
-                            service_item.add_from_text(split_verse, verse_def)
+                            service_item.add_from_text(split_verse, verse_def, metadata={
+                                'design_section': VerseType.tags[verse_index] + verse[0]['label'],
+                                'design_split': i})
 
         service_item.data_string = {
             'title': song.search_title,
