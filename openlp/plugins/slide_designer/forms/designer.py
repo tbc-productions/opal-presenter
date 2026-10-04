@@ -113,6 +113,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.base_theme = None
         self._background_image_cache = {}
         self.display = None
+        self._creating_display = False
         self.pages = ['']
         self.page_index = 0
         self._refreshing = False
@@ -819,15 +820,26 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def showEvent(self, event):
         super().showEvent(event)
         # Deferred creation avoids a WebEngine process for song import/maintenance dialogs.
-        if self.display is None and isinstance(self.resolve_theme(), Theme):
-            self.display = ThemePreviewRenderer(self.viewport, embedded=True, can_show_startup_screen=False,
-                                                after_loaded_callback=self.schedule_refresh)
-            self.display.allow_theme_transitions = False
-            self.display.allow_item_transitions = False
-            self.display.display_watcher.register_event_listener('songDesignChanged', self.canvas_changed, False)
-            self.display.display_watcher.register_event_listener('designPreviewReady', self.preview_ready, False)
-            self.display.show()
-            self.fit_canvas()
+        if self._creating_display:
+            return
+        if self.display is None:
+            # WebEngine startup processes native events and can re-enter showEvent before
+            # the constructor returns. A second renderer would obscure the preview.
+            self._creating_display = True
+            try:
+                if isinstance(self.resolve_theme(), Theme):
+                    self.display = ThemePreviewRenderer(self.viewport, embedded=True, can_show_startup_screen=False,
+                                                        after_loaded_callback=self.schedule_refresh)
+                    self.display.allow_theme_transitions = False
+                    self.display.allow_item_transitions = False
+                    self.display.display_watcher.register_event_listener(
+                        'songDesignChanged', self.canvas_changed, False)
+                    self.display.display_watcher.register_event_listener(
+                        'designPreviewReady', self.preview_ready, False)
+                    self.display.show()
+                    self.fit_canvas()
+            finally:
+                self._creating_display = False
         self.schedule_refresh()
 
     def hideEvent(self, event):

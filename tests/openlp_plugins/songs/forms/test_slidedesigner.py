@@ -3,7 +3,7 @@ import copy
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from openlp.core.common import ThemeLevel
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import Theme
@@ -115,6 +115,40 @@ def test_preview_uses_unsaved_verse_and_design(designer):
     designer.display.load_verses.assert_called_with(
         [{'verse': 'designer', 'text': 'New lyrics', 'footer': 'Draft footer'}])
     form.design_owner.manager.save_object.assert_not_called()
+
+
+def test_preview_creation_survives_reentrant_show_event(designer):
+    renderer = MagicMock()
+
+    def create_renderer(*args, **kwargs):
+        designer.showEvent(QtGui.QShowEvent())
+        return renderer
+
+    with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
+            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+                  side_effect=create_renderer) as create:
+        designer.showEvent(QtGui.QShowEvent())
+        designer.showEvent(QtGui.QShowEvent())
+
+    create.assert_called_once()
+    assert designer.display is renderer
+    assert not designer._creating_display
+    renderer.show.assert_called_once()
+    assert renderer.display_watcher.register_event_listener.call_count == 2
+
+
+def test_preview_creation_can_retry_after_failure(designer):
+    with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
+            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+                  side_effect=[RuntimeError('Startup failed'), MagicMock()]) as create:
+        with pytest.raises(RuntimeError, match='Startup failed'):
+            designer.showEvent(QtGui.QShowEvent())
+        assert not designer._creating_display
+        assert designer.display is None
+        designer.showEvent(QtGui.QShowEvent())
+
+    assert create.call_count == 2
+    assert designer.display is not None
 
 
 def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
