@@ -26,6 +26,7 @@ from pathlib import Path, PurePath
 from threading import Lock
 
 from fluentqt import FontIcon
+from fluentqt.design import Spacing
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -256,6 +257,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.top_icon.setStyleSheet('padding: 0;')
             self.top_label_horizontal.addStrut(28)
             if self.is_live:
+                self.top_label_horizontal.setContentsMargins(0, 4, Spacing.Medium, 4)
                 self.output_status_icon = FontIcon('ic_fluent_record_24_regular', self.panel)
                 self.output_status_icon.setObjectName('output_status_icon')
                 self.output_status_icon.setIconSize(16)
