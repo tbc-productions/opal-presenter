@@ -40,9 +40,10 @@ from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.common.utils import wait_for
 from openlp.core.display.render import (
-    remove_html_and_strip, remove_tags, remove_unknown_tags, render_tags, render_chords_for_printing
+    remove_html_and_strip, remove_tags, remove_unknown_tags, render_tags
 )
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
+from openlp.core.lib.serviceprint import render_print_text
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
@@ -331,7 +332,7 @@ class ServiceItem(RegistryProperties):
                 for page in pages:
                     slide = {
                         'title': raw_slide['title'],
-                        'text': render_chords_for_printing(remove_tags(page), '\n'),
+                        'text': render_print_text(page.replace('\n', '{br}'), render_chords=True),
                         'verse': index,
                         'footer': self.raw_footer,
                     }

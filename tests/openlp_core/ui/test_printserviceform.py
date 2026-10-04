@@ -23,10 +23,14 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 import fluentqt
 
-from openlp.core.ui.printserviceform import PrintServiceForm
+from openlp.core.ui.printserviceform import PrintServiceForm, SERVICE_ICONS
+from openlp.core.lib.serviceprint import white_contrast
+from openlp.core.lib.serviceitem import ServiceItem
+from openlp.core.common.enum import ServiceItemType
+from openlp.core.common.registry import Registry
 
 
 @pytest.fixture
@@ -87,7 +91,7 @@ def test_options_pane_and_single_command_bar(print_form):
     print_form.show()
     assert print_form.findChildren(fluentqt.CommandBar) == [print_form.toolbar]
     assert not hasattr(print_form, 'options_button')
-    assert print_form.options_group_box.title() == ''
+    assert print_form.options_group_box.title() == 'Options'
     for width in (1100, 800):
         print_form.resize(width, 600)
         QtWidgets.QApplication.processEvents()
@@ -133,3 +137,66 @@ def test_options_update_preview_and_settings(print_form, settings):
     assert update_preview.call_count >= 5
     for key in ('print slide text', 'add page break', 'print notes', 'print file meta data'):
         assert settings.value('advanced/' + key) is True
+
+
+@pytest.fixture
+def song_item(print_form):
+    renderer = MagicMock()
+    renderer.format_slide.side_effect = lambda text, item: [text]
+    Registry().register('renderer', renderer)
+    item = ServiceItem()
+    item.name = 'songs'
+    item.service_item_type = ServiceItemType.Text
+    item.title = 'Amazing Grace'
+    item.slides = [{'title': 'Verse 1', 'text': '{st}{w}Amazing{/w}{/st} {it}grace{/it}\n{mystery}how sweet{/mystery}',
+                    'verse': 'v1'}]
+    print_form.service_manager.service_items = [{'service_item': item}]
+    print_form.parentWidget().clipboard = MagicMock()
+    print_form.slide_text_check_box.setChecked(True)
+    print_form.update_preview_text()
+    return item
+
+
+def test_show_icons_defaults_on_and_is_saved(print_form, song_item, settings):
+    assert print_form.show_icons_check_box.isChecked()
+    assert '♫ Amazing Grace' in print_form.clipboard_document.toPlainText()
+    assert 'Fluent' in print_form.document.toHtml()
+    print_form.show_icons_check_box.setChecked(False)
+    assert '♫' not in print_form.clipboard_document.toPlainText()
+    assert 'FluentQtIcons' not in print_form.document.toHtml()
+    assert settings.value('advanced/print icons') is False
+
+
+@pytest.mark.parametrize('item_type', list(SERVICE_ICONS))
+def test_service_type_icons_copy_as_unicode(print_form, song_item, item_type):
+    song_item.name = item_type
+    print_form.update_preview_text()
+    expected = SERVICE_ICONS[item_type][1]
+    print_form.copy_text()
+    copied = print_form.main_window.clipboard.setText.call_args.args[0]
+    assert expected + ' Amazing Grace' in copied
+    assert not any(0xE000 <= ord(char) <= 0xF8FF or ord(char) >= 0xF0000 for char in copied)
+    print_form.copy_html_text()
+    copied_html = print_form.main_window.clipboard.setText.call_args.args[0]
+    assert expected in copied_html
+    assert 'FluentQtIcons' not in copied_html
+
+
+def test_print_output_preserves_formatting_without_markers(print_form, song_item):
+    for document in (print_form.document, print_form.clipboard_document):
+        text = document.toPlainText()
+        assert '{' not in text and '}' not in text
+        assert 'Amazing grace' in text and 'how sweet' in text
+        cursor = QtGui.QTextCursor(document)
+        cursor.setPosition(text.index('Amazing grace'))
+        cursor.setPosition(cursor.position() + len('Amazing'), QtGui.QTextCursor.MoveMode.KeepAnchor)
+        char_format = cursor.charFormat()
+        assert char_format.fontWeight() >= QtGui.QFont.Weight.Bold
+        color = char_format.foreground().color()
+        assert white_contrast(color) >= 4.0
+        assert color.name() != '#ffffff'
+        assert document.find('grace', 0, QtGui.QTextDocument.FindFlag.FindCaseSensitively).charFormat().fontItalic()
+    print_form.copy_text()
+    assert '{' not in print_form.main_window.clipboard.setText.call_args.args[0]
+    print_form.copy_html_text()
+    assert 'font-weight:700' in print_form.main_window.clipboard.setText.call_args.args[0]
