@@ -27,6 +27,7 @@ from pathlib import Path
 
 from PySide6 import QtCore, QtGui
 import fluentqt
+from fluentqt import Spacing
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
@@ -324,7 +325,22 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
     suitable for read-only list/table views that display lyrics or slides.
     """
 
-    HORIZONTAL_PADDING = 6
+    HORIZONTAL_PADDING = 2 * Spacing.Small
+    VERTICAL_PADDING = Spacing.Small
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._theme_host = fluentqt.FluentWidget(parent)
+        self._theme_host.hide()
+
+    def _paint_separator(self, painter, option, index):
+        """Separate neighbouring slides across the full text column."""
+        if index.row() >= index.model().rowCount(index.parent()) - 1:
+            return
+        painter.save()
+        painter.setPen(QtGui.QPen(self._theme_host.theme_tokens().colors.strokeDivider, 1))
+        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.restore()
 
     @staticmethod
     def _tags_to_html(text):
@@ -333,8 +349,14 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         HTML special characters in the source text are escaped first so that
         ampersands and angle brackets in lyrics are not mis-interpreted.
         """
+        tags = FormattingTags.get_html_tags()
+        known_tokens = {tag[key] for tag in tags for key in ('start tag', 'end tag')}
+        # Unregistered tags still belong in the stored source, but read-only
+        # previews must show their content without leaking the marker syntax.
+        text = re.sub(r'\{/?[^{}\s]+\}',
+                      lambda match: match.group(0) if match.group(0) in known_tokens else '', text)
         html = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        for tag in FormattingTags.get_html_tags():
+        for tag in tags:
             start_html = tag['start html'].replace('-webkit-text-fill-color', 'color')
             end_html = tag['end html']
             html = html.replace(tag['start tag'], start_html)
@@ -398,22 +420,22 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         painter.save()
         painter.setPen(pen)
         y = int(y_top + self._marker_line_height(painter.font()) / 2)
-        painter.drawLine(rect.left() + self.HORIZONTAL_PADDING, y,
-                         rect.right() - self.HORIZONTAL_PADDING, y)
+        painter.drawLine(rect.left(), y, rect.right(), y)
         painter.restore()
 
     def paint(self, painter, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
         if text is None or text == '':
             super().paint(painter, option, index)
+            self._paint_separator(painter, option, index)
             return
         painter.save()
         style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
         style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
-        available_width = max(0, option.rect.width() - 4)
-        x = option.rect.left() + 2
-        y = option.rect.top() + 2
+        available_width = max(0, option.rect.width() - 2 * self.HORIZONTAL_PADDING)
+        x = option.rect.left() + self.HORIZONTAL_PADDING
+        y = option.rect.top() + self.VERTICAL_PADDING
         base_color = option.palette.color(QtGui.QPalette.ColorRole.Text)
         font = option.font
         marker_height = self._marker_line_height(font)
@@ -431,6 +453,7 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
                 painter.restore()
                 y += int(doc.size().height())
         painter.restore()
+        self._paint_separator(painter, option, index)
 
     def sizeHint(self, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
@@ -445,7 +468,7 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
             width = view.columnWidth(index.column())
         if width <= 0:
             width = 200
-        available_width = max(0, width - 4)
+        available_width = max(0, width - 2 * self.HORIZONTAL_PADDING)
         font = option.font
         marker_height = self._marker_line_height(font)
 
@@ -458,7 +481,7 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
                 doc = self._build_text_document(font, payload, available_width)
                 total_height += int(doc.size().height())
                 ideal_width = max(ideal_width, int(doc.idealWidth()))
-        return QtCore.QSize(ideal_width, total_height + 4)
+        return QtCore.QSize(ideal_width + 2 * self.HORIZONTAL_PADDING, total_height + 2 * self.VERTICAL_PADDING)
 
 
 class FormattingToolbar(OpenLPToolbar):

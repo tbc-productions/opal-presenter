@@ -60,13 +60,15 @@ def test_verse_rows_fit_visible_lyrics_on_first_show(qapp, qtbot, settings):
     QtWidgets.QApplication.processEvents()
 
     delegate = widget.itemDelegate()
-    document = delegate._build_text_document(widget.font(), lyrics, widget.columnWidth(0) - 4)
-    assert abs(widget.rowHeight(0) - (int(document.size().height()) + 4)) <= 1
+    document = delegate._build_text_document(widget.font(), lyrics,
+                                             widget.columnWidth(0) - 2 * delegate.HORIZONTAL_PADDING)
+    padded_height = int(document.size().height()) + 2 * delegate.VERTICAL_PADDING
+    assert abs(widget.rowHeight(0) - padded_height) <= 1
     assert widget.columnWidth(0) == widget.viewport().width()
 
     widget.resize(300, 500)
     QtWidgets.QApplication.processEvents()
-    assert widget.rowHeight(0) > int(document.size().height()) + 4
+    assert widget.rowHeight(0) > padded_height
 
 
 def test_selection_control_mnemonics(qapp):

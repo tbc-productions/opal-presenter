@@ -34,7 +34,7 @@ from openlp.core.common.path import path_to_str
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter
+from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter, FormattingTagDelegate
 from openlp.core.widgets.enums import PathEditType
 
 
@@ -523,6 +523,22 @@ def test_highlighter_format_from_start_html_maps_css(mock_settings):
     assert text_format.fontPointSize() > 0
     assert text_format.foreground().color().isValid() is True
     assert text_format.foreground().color().alphaF() == pytest.approx(0.5, rel=0.05)
+
+
+@pytest.mark.parametrize('text, expected', [
+    ("{tt}The Lord's Prayer{/tt}", "The Lord's Prayer"),
+    ('{tt}{st}Title & <lyrics>{/st}{/tt}', 'Title & <lyrics>'),
+    ('{tt}Unclosed tag', 'Unclosed tag'),
+    ('Closing tag{/tt}', 'Closing tag'),
+])
+def test_read_only_formatting_preview_hides_unregistered_tags(settings, text, expected):
+    """Read-only previews hide unknown markers while retaining text and known styles."""
+    document = FormattingTagDelegate._build_text_document(QtGui.QFont(), text, 500)
+    assert document.toPlainText() == expected
+    if '{st}' in text:
+        cursor = QtGui.QTextCursor(document)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.NextCharacter)
+        assert cursor.charFormat().fontWeight() == QtGui.QFont.Weight.Bold
 
 
 def test_highlighter_unknown_tag_opacity(mock_settings):
