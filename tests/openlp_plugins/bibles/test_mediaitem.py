@@ -1849,3 +1849,23 @@ def test_generate_slide_data_whole_verse_continuous_can_word_split(media_item: B
 
     service_item.add_capability.assert_any_call(ItemCapabilities.NoLineBreaks)
     service_item.add_capability.assert_any_call(ItemCapabilities.CanWordSplit)
+
+
+def test_bible_service_item_title_consolidates_chapters(media_item):
+    service_item = MagicMock()
+    media_item.format_verse = MagicMock(return_value='')
+    media_item.settings_tab = MagicMock(layout_style=LayoutStyle.Continuous, bible_theme='')
+    rows = [dict(book='Genesis', chapter=chapter, verse=verse, version='NIV', copyright='',
+                 permissions='', second_bible='', text='Verse text')
+            for chapter, count in enumerate([31, 25, 24, 26, 3], start=1)
+            for verse in range(1, count + 1)]
+
+    separators = {'sep_v_display': ':', 'sep_r_display': '-', 'sep_l_display': ','}
+    with patch('openlp.plugins.bibles.lib.versereferencelist.get_reference_separator',
+               side_effect=separators.__getitem__), \
+            patch('openlp.plugins.bibles.lib.mediaitem.get_reference_separators',
+                  return_value={'verse': ':', 'range': '-', 'list': ','}), \
+            patch.object(media_item, '_render_bible_reference', return_value=''):
+        media_item.populate_bible_service_item(service_item, rows)
+
+    assert service_item.title == 'Genesis 1:1-5:3 (NIV)'

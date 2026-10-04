@@ -99,20 +99,92 @@ def remove_url_prefix(filename):
     return filename.replace('file://', '')
 
 
+SLIDE_ROW_MAX_LINES = 4
+SLIDE_TEXT_HTML_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
+
+
+class _SlideBackgroundModel(QtCore.QIdentityProxyModel):
+    """Let the Fluent delegate paint row chrome without its single-line text."""
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            return ''
+        return super().data(index, role)
+
+
 class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
-    """Keep native Fluent cell painting with room above and below slide text."""
+    """Paint the first four wrapped lines of slide text inside Fluent rows."""
     def __init__(self, view):
         super().__init__(view)
         self._view = view
         self._native_delegate = view.itemDelegate()
+        self._background_model = _SlideBackgroundModel(self)
+        self._background_model.setSourceModel(view.model())
+
+    def _document(self, option, index):
+        document = QtGui.QTextDocument()
+        document.setDocumentMargin(0)
+        document.setDefaultFont(option.font)
+        text_option = document.defaultTextOption()
+        text_option.setWrapMode(QtGui.QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        document.setDefaultTextOption(text_option)
+        html = index.data(SLIDE_TEXT_HTML_ROLE)
+        if html:
+            document.setHtml(html)
+        else:
+            document.setPlainText(index.data(QtCore.Qt.ItemDataRole.DisplayRole) or '')
+        document.setTextWidth(max(1, self._view.columnWidth(index.column()) - 4 * Spacing.Small))
+        # Measure the wrapped layout before trimming so the limit follows the panel width.
+        document.size()
+        block = document.begin()
+        line_count = 0
+        while block.isValid():
+            layout = block.layout()
+            for line_index in range(layout.lineCount()):
+                line_count += 1
+                if line_count == SLIDE_ROW_MAX_LINES:
+                    line = layout.lineAt(line_index)
+                    end = block.position() + line.textStart() + line.textLength()
+                    if end >= document.characterCount() - 1:
+                        return document
+                    cursor = QtGui.QTextCursor(document)
+                    cursor.setPosition(end)
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.End,
+                                        QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    cursor.removeSelectedText()
+                    while cursor.position() and document.characterAt(cursor.position() - 1).isspace():
+                        cursor.deletePreviousChar()
+                    ellipsis_format = cursor.charFormat()
+                    ellipsis_format.setVerticalAlignment(QtGui.QTextCharFormat.VerticalAlignment.AlignNormal)
+                    cursor.insertText('…', ellipsis_format)
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.PreviousCharacter)
+                    # Make room for the ellipsis without wrapping it onto a fifth line.
+                    document.size()
+                    while document.lineCount() > SLIDE_ROW_MAX_LINES and cursor.position():
+                        cursor.deletePreviousChar()
+                        document.size()
+                    return document
+            block = block.next()
+        return document
 
     def paint(self, painter, option, index):
-        self._native_delegate.paint(painter, option, index)
+        if not self._view.service_item.is_text():
+            self._native_delegate.paint(painter, option, index)
+            return
+        self._native_delegate.paint(painter, option, self._background_model.mapFromSource(index))
+        document = self._document(option, index)
+        context = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        context.palette = option.palette
+        painter.save()
+        painter.setClipRect(option.rect)
+        painter.translate(option.rect.left() + 2 * Spacing.Small,
+                          option.rect.top() + (option.rect.height() - document.size().height()) / 2)
+        document.documentLayout().draw(painter, context)
+        painter.restore()
 
     def sizeHint(self, option, index):
         hint = self._native_delegate.sizeHint(option, index)
         if self._view.service_item.is_text():
-            hint.setHeight(hint.height() + 2 * Spacing.Small)
+            hint.setHeight(int(self._document(option, index).size().height() + 2 * Spacing.Small))
         return hint
 
 
@@ -153,7 +225,17 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setWordWrap(True)
+        self.setTextElideMode(QtCore.Qt.TextElideMode.ElideNone)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        scrollbar = self.verticalFluentScrollBar()
+        # Fluent animates its overlay independently of Qt's scrollbar policy.
+        # Keep the native thumb visible so slide-list progress is always available.
+        for animation in scrollbar.findChildren(QtCore.QPropertyAnimation):
+            if animation.targetObject() == scrollbar and bytes(animation.propertyName()) == b'opacity':
+                animation.valueChanged.connect(lambda value, bar=scrollbar: bar.setOpacity(1.0))
+        scrollbar.setOpacity(1.0)
         self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
@@ -334,6 +416,8 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
                     row += 1
                     header_colors.append(None)
                 item.setText(slide['text'])
+                if isinstance(slide.get('text_html'), str):
+                    item.setData(SLIDE_TEXT_HTML_ROLE, slide['text_html'])
             else:
                 label = QtWidgets.QLabel()
                 label.setContentsMargins(4, 4, 4, 4)
@@ -392,9 +476,9 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
             header_item = self.verticalHeaderItem(row)
             if header_item:
                 header_item.setBackground(QtGui.QBrush(color))
+        self.setColumnWidth(0, self.viewport().width())
         if self.service_item.is_text():
             self.resizeRowsToContents()
-        self.setColumnWidth(0, self.viewport().width())
         self.change_slide(slide_number)
 
     def change_slide(self, slide):

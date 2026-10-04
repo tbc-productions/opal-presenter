@@ -56,9 +56,9 @@ VALID_TEXT_SEARCH = re.compile(r'\w\w\w')
 
 def _bible_slide_row_label(first_data, last_data, seps):
     """
-    Short label for the slide controller: chapter+verse_sep+verse, with range or list sep when needed.
+    Short chapter/verse range for the slide controller.
     """
-    vsep, rsep, lsep = seps['verse'], seps['range'], seps['list']
+    vsep, rsep = seps['verse'], seps['range']
     if first_data['chapter'] == last_data['chapter']:
         ch = first_data['chapter']
         if first_data['verse'] == last_data['verse']:
@@ -67,7 +67,7 @@ def _bible_slide_row_label(first_data, last_data, seps):
             ch=ch, v=vsep, start=first_data['verse'], r=rsep, end=last_data['verse'])
     a = '{ch}{v}{verse}'.format(ch=first_data['chapter'], v=vsep, verse=first_data['verse'])
     b = '{ch}{v}{verse}'.format(ch=last_data['chapter'], v=vsep, verse=last_data['verse'])
-    return '{a}{l}{b}'.format(a=a, l=lsep, b=b)
+    return '{a}{r}{b}'.format(a=a, r=rsep, b=b)
 
 
 def get_reference_separators():
@@ -1138,7 +1138,7 @@ class BibleMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.CanEditTitle)
         # Service Item: Title
         service_item.title = '{verse} ({version})'.format(
-            verse=verses.format_verses(),
+            verse=verses.format_verses(consolidate_chapters=True),
             version=verses.format_versions(copyright=False, permission=False)
         )
         # Service Item: Theme

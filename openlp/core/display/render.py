@@ -197,6 +197,15 @@ def remove_tags(text, can_remove_chords=False):
     return text
 
 
+def remove_unknown_tags(text):
+    """Strip remaining paired OpenLP formatting markers, preserving their content."""
+    previous = None
+    while text != previous:
+        previous = text
+        text = UNKNOWN_TAG_PAIR_PATTERN.sub(lambda match: match.group('content'), text)
+    return text
+
+
 def has_valid_tags(text):
     """
     The :func:`~openlp.core.display.render.has_valid_tags` function validates the tags within ``text``.

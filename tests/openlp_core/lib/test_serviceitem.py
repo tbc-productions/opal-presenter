@@ -1223,3 +1223,37 @@ def test_update_theme(registry: Registry, is_text: bool, is_clear_called: bool):
         service_item._clear_slides_cache.assert_called_once()
     else:
         service_item._clear_slides_cache.assert_not_called()
+
+
+def test_bible_slide_labels_keep_chapter_between_pages(settings, registry):
+    from openlp.plugins.bibles.lib import update_reference_separators
+
+    update_reference_separators()
+    renderer = MagicMock()
+    Registry().register('renderer', renderer)
+    renderer.format_slide.return_value = [
+        '{su}1:30&nbsp;{/su}Thirty {su}31&nbsp;{/su}Thirty-one '
+        '{su}2:1&nbsp;{/su}One {su}5&nbsp;{/su}Five',
+        '{su}6&nbsp;{/su}Six {su}7&nbsp;{/su}Seven',
+    ]
+    item = ServiceItem()
+    item.name = 'bibles'
+    item.add_from_text('Passage', '1:30-2:7', metadata={'bible_book': 'Genesis'})
+
+    assert [slide['verse'] for slide in item.display_slides] == ['1:30-2:5', '2:6-7']
+    assert '<sup>6 </sup>' in item.display_slides[1]['text_html']
+    assert item.display_slides[1]['text'] == '6 Six 7 Seven'
+
+
+def test_slide_row_strips_unregistered_formatting_tags(settings, registry):
+    renderer = MagicMock()
+    Registry().register('renderer', renderer)
+    text = '{cg}Go in peace, to love and serve the Lord{/cg}\nIn the name of Christ, Amen'
+    renderer.format_slide.return_value = [text]
+    item = ServiceItem()
+    item.name = 'custom'
+    item.add_from_text(text)
+
+    assert item.display_slides[0]['text'] == (
+        'Go in peace, to love and serve the Lord\nIn the name of Christ, Amen')
+    assert item.slides[0]['text'] == text

@@ -504,3 +504,10 @@ def test_generate_preview_disables_theme_transitions_during_screenshot(
     assert preview_renderer.allow_theme_transitions is True
     assert call('setAllowThemeTransitions', False, is_sync=True) in preview_renderer.run_in_display.call_args_list
     assert call('setAllowThemeTransitions', True, is_sync=True) in preview_renderer.run_in_display.call_args_list
+
+
+def test_remove_unknown_tags_preserves_content_and_literal_braces():
+    from openlp.core.display.render import remove_unknown_tags
+
+    assert remove_unknown_tags('{cg}Go {custom}in peace{/custom}\nAmen{/cg} {literal}') == (
+        'Go in peace\nAmen {literal}')

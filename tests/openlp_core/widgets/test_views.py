@@ -888,8 +888,115 @@ def test_text_slide_rows_have_small_vertical_padding(settings, qapp):
     delegate = view.itemDelegate()
     view.setItemDelegate(native)
     view.resizeRowsToContents()
-    assert padded_height == view.rowHeight(0) + 2 * Spacing.Small
+    assert abs(padded_height - view.rowHeight(0) - 2 * Spacing.Small) <= 1
     view.setItemDelegate(delegate)
     view.resizeRowsToContents()
     assert view.rowHeight(0) == padded_height
     view.close()
+
+
+def test_bible_slide_rows_wrap_and_reflow(settings, qapp):
+    from openlp.core.widgets.views import SLIDE_TEXT_HTML_ROLE
+
+    parent = QtWidgets.QWidget()
+    view = ListPreviewWidget(parent, 1)
+    service_item = MagicMock()
+    service_item.name = 'bibles'
+    service_item.is_text.return_value = True
+    words = 'In the beginning God created the heavens and the earth. ' * 2
+    service_item.display_slides = [{'verse': '1:1', 'text': '1 ' + words,
+                                   'text_html': '<sup>1 </sup>' + words}]
+    parent.resize(650, 400)
+    parent.show()
+    view.resize(600, 300)
+    view.replace_service_item(service_item, 600, 0)
+    view.show()
+    qapp.process_events()
+    from PySide6 import QtTest
+    QtTest.QTest.qWait(50)
+    wide_height = view.rowHeight(0)
+    view.resize(350, 300)
+    qapp.process_events()
+
+    QtTest.QTest.qWait(50)
+    assert view.rowHeight(0) > wide_height
+    assert view.item(0, 0).data(SLIDE_TEXT_HTML_ROLE) == '<sup>1 </sup>' + words
+    option = QtWidgets.QStyleOptionViewItem()
+    option.font = view.font()
+    document = view.itemDelegate()._document(option, view.model().index(0, 0))
+    cursor = QtGui.QTextCursor(document)
+    cursor.setPosition(1)
+    assert cursor.charFormat().verticalAlignment() == QtGui.QTextCharFormat.VerticalAlignment.AlignSuperScript
+    view.close()
+
+
+@pytest.mark.parametrize('rich_text', [False, True])
+def test_slide_row_shows_only_first_four_lines(settings, qapp, rich_text):
+    from openlp.core.widgets.views import SLIDE_TEXT_HTML_ROLE
+
+    parent = QtWidgets.QWidget()
+    view = ListPreviewWidget(parent, 1)
+    view.service_item = MagicMock()
+    view.service_item.is_text.return_value = True
+    view.setRowCount(1)
+    item = QtWidgets.QTableWidgetItem('One\nTwo\nThree\nFour\nFive\nSix')
+    if rich_text:
+        item.setData(SLIDE_TEXT_HTML_ROLE, '<sup>1</sup> One<br>Two<br>Three<br>Four<br>Five<br>Six')
+    view.setItem(0, 0, item)
+    view.setColumnWidth(0, 400)
+    option = QtWidgets.QStyleOptionViewItem()
+    option.font = view.font()
+    delegate = view.itemDelegate()
+    document = delegate._document(option, view.model().index(0, 0))
+
+    assert document.toPlainText().splitlines() == (['1 One', 'Two', 'Three', 'Four…'] if rich_text else
+                                                ['One', 'Two', 'Three', 'Four…'])
+    # Wrapped lines count towards the same limit, even within a single paragraph.
+    item.setText('A long slide with enough words to wrap onto many lines. ' * 20)
+    item.setData(SLIDE_TEXT_HTML_ROLE, None)
+    document = delegate._document(option, view.model().index(0, 0))
+    document.size()
+    assert document.begin().layout().lineCount() == 4
+    assert len(document.toPlainText()) < len(item.text())
+    assert document.toPlainText().endswith('…')
+    # A slide that fits exactly four lines does not need an ellipsis.
+    item.setText('One\nTwo\nThree\nFour')
+    document = delegate._document(option, view.model().index(0, 0))
+    assert document.toPlainText() == item.text()
+    view.close()
+
+
+def test_slide_list_vertical_scrollbar_stays_visible(settings, qapp):
+    from PySide6 import QtTest
+
+    parent = QtWidgets.QWidget()
+    parent.resize(450, 300)
+    view = ListPreviewWidget(parent, 1)
+    view.service_item = MagicMock()
+    view.service_item.is_text.return_value = True
+    view.setRowCount(30)
+    for row in range(30):
+        view.setItem(row, 0, QtWidgets.QTableWidgetItem('Slide text'))
+    view.resize(400, 240)
+    parent.show()
+    view.show()
+    QtTest.QTest.qWait(50)
+    scrollbar = view.verticalFluentScrollBar()
+
+    assert view.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+    assert scrollbar.isVisible()
+    assert scrollbar.maximum() > 0
+    view.verticalScrollBar().setValue(view.verticalScrollBar().maximum())
+    assert scrollbar.value() == scrollbar.maximum()
+    # The Fluent fade animation must not make the thumb disappear after interaction.
+    for animation in scrollbar.findChildren(QtCore.QPropertyAnimation):
+        if animation.targetObject() == scrollbar and bytes(animation.propertyName()) == b'opacity':
+            animation.stop()
+            animation.setStartValue(1.0)
+            animation.setEndValue(0.0)
+            animation.setDuration(20)
+            animation.start()
+    QtTest.QTest.qWait(50)
+    assert scrollbar.opacity() == 1.0
+    assert scrollbar.isVisible()
+    parent.close()

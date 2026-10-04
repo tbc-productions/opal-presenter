@@ -39,7 +39,9 @@ from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.common.utils import wait_for
-from openlp.core.display.render import remove_html_and_strip, remove_tags, render_tags, render_chords_for_printing
+from openlp.core.display.render import (
+    remove_html_and_strip, remove_tags, remove_unknown_tags, render_tags, render_chords_for_printing
+)
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
@@ -230,6 +232,8 @@ class ServiceItem(RegistryProperties):
         if self.name == 'bibles':
             from openlp.plugins.bibles.lib.slidelabel import (
                 bible_chapter_hint_from_row_tag,
+                bible_preview_html,
+                page_verse_references,
                 row_label_from_raw_page_text,
             )
         else:
@@ -265,13 +269,17 @@ class ServiceItem(RegistryProperties):
                 display_verse = verse_tag
                 if self.name == 'bibles' and row_label_from_raw_page_text:
                     computed = row_label_from_raw_page_text(page, default_chapter=chapter_hint)
-                    if computed:
-                        display_verse = computed
+                    display_verse = computed or verse_tag
+                    refs = page_verse_references(page, chapter_hint)
+                    if refs:
+                        chapter_hint = refs[-1][0]
                 display_slide = {
                     'title': raw_slide['title'],
-                    'text': remove_html_and_strip(remove_tags(page, can_remove_chords=True)),
+                    'text': remove_html_and_strip(remove_unknown_tags(remove_tags(page, can_remove_chords=True))),
                     'verse': display_verse,
                 }
+                if self.name == 'bibles':
+                    display_slide['text_html'] = bible_preview_html(page)
                 self._display_slides.append(display_slide)
                 index += 1
         self._creating_slides = False
