@@ -41,8 +41,8 @@ def print_form(settings, registry, qtbot, temp_folder):
     registry.register('service_manager', service_manager)
     with patch('openlp.core.ui.printserviceform.AppLocation.get_data_path', return_value=Path(temp_folder)):
         form = PrintServiceForm()
-    qtbot.addWidget(form)
-    return form
+        qtbot.addWidget(form)
+        yield form
 
 
 @pytest.mark.parametrize('close_method', ['button', 'escape', 'caption'])
@@ -57,7 +57,8 @@ def test_print_window_closes_and_can_reopen(print_form, close_method):
             assert print_form.isWindow()
             assert print_form.isVisible()
             assert print_form.windowModality() == QtCore.Qt.WindowModality.ApplicationModal
-            close_button = print_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Close)
+            close_button = next(widget for widget in print_form.toolbar.findChildren(QtWidgets.QWidget)
+                                if widget.property('commandAction') is print_form.close_button)
             assert close_button.isVisible() and close_button.isEnabled()
             bottom_right = close_button.mapTo(print_form, close_button.rect().bottomRight())
             assert print_form.rect().contains(bottom_right)
@@ -79,3 +80,56 @@ def test_print_window_closes_and_can_reopen(print_form, close_method):
         assert not print_form.isVisible()
         assert print_form.windowModality() == original_modality
     assert closed == [close_method, close_method]
+
+
+def test_options_pane_and_single_command_bar(print_form):
+    """Settings stay alongside the preview, including when the window is resized."""
+    print_form.show()
+    assert print_form.findChildren(fluentqt.CommandBar) == [print_form.toolbar]
+    assert not hasattr(print_form, 'options_button')
+    assert print_form.options_group_box.title() == ''
+    for width in (1100, 800):
+        print_form.resize(width, 600)
+        QtWidgets.QApplication.processEvents()
+        assert print_form.options_widget.isVisible()
+        options_right = print_form.options_scroll_area.mapTo(print_form, QtCore.QPoint(
+            print_form.options_scroll_area.width(), 0)).x()
+        preview_left = print_form.preview_widget.mapTo(print_form, QtCore.QPoint()).x()
+        assert options_right <= preview_left
+
+
+@pytest.mark.parametrize('parent_position', [(100, 80), (1400, 120), (-1200, 100)])
+def test_print_window_opens_centred_over_main_window(print_form, parent_position):
+    """Opening and reopening use the main window's current global position."""
+    parent = print_form.parentWidget()
+    for offset in (QtCore.QPoint(), QtCore.QPoint(200, 50)):
+        parent.move(QtCore.QPoint(*parent_position) + offset)
+        print_form.show()
+        delta = print_form.frameGeometry().center() - parent.frameGeometry().center()
+        # QRect centre rounding can differ by one pixel at negative screen coordinates.
+        assert abs(delta.x()) <= 1 and abs(delta.y()) <= 1
+        print_form.close()
+
+
+def test_text_edits_update_preview(print_form):
+    """Title and service notes apply without toggling an Options button."""
+    print_form.title_line_edit.setText('Sunday service')
+    assert 'Sunday service' in print_form.document.toPlainText()
+    print_form.footer_text_edit.setPlainText('Please stay for morning tea.')
+    assert 'Please stay for morning tea.' in print_form.document.toPlainText()
+
+
+def test_options_update_preview_and_settings(print_form, settings):
+    """Checkboxes refresh the document and preserve the selected print options."""
+    with patch.object(print_form, 'update_preview_text') as update_preview:
+        print_form.slide_text_check_box.setChecked(False)
+        assert not print_form.page_break_after_text.isEnabled()
+        print_form.slide_text_check_box.setChecked(True)
+        assert print_form.page_break_after_text.isEnabled()
+        print_form.page_break_after_text.setChecked(True)
+        print_form.notes_check_box.setChecked(True)
+        print_form.meta_data_check_box.setChecked(True)
+        print_form.show_chords_check_box.setChecked(True)
+    assert update_preview.call_count >= 5
+    for key in ('print slide text', 'add page break', 'print notes', 'print file meta data'):
+        assert settings.value('advanced/' + key) is True
