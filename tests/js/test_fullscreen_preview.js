@@ -5,6 +5,52 @@ describe("Presentation preview backgrounds", function () {
     frame.remove();
   });
 
+  [false, true].forEach(function (isDisplay) {
+    it("keeps fading images visible over a white canvas in " + (isDisplay ? "output" : "preview"), function (done) {
+      frame = document.createElement("iframe");
+      frame.onload = function () {
+        var win = frame.contentWindow;
+        spyOn(win.history, "replaceState");
+        win.Display.init({isDisplay: isDisplay, allowThemeTransitions: true, doItemTransitions: true});
+        win.Reveal.addEventListener("ready", function () {
+          win.Display.setTheme({display_slide_transition: true,
+            display_slide_transition_type: win.TransitionType.Fade,
+            background_type: win.BackgroundType.Solid, background_color: "#000"});
+          var imageUrl = "/base/tests/js/fixtures/" + encodeURIComponent("Preview images") + "/" +
+            encodeURIComponent("Slide #1 (100%) — café.svg");
+          win.Display.setImageSlides([{path: imageUrl + "?one"}, {path: imageUrl + "?two"}], "contain", "#ffffff");
+          setTimeout(function () {
+            win.Reveal.slide(0, 1);
+            setTimeout(function () {
+              try {
+                var slide = win.Reveal.getCurrentSlide();
+                var background = slide.slideBackgroundElement;
+                expect(win.getComputedStyle(background).mixBlendMode).toBe("normal");
+                expect(win.getComputedStyle(background).opacity).toBe("1");
+                expect(win.getComputedStyle(background.parentElement).backgroundColor).toBe("rgb(255, 255, 255)");
+                var image = new win.Image();
+                image.onload = function () { done(); };
+                image.onerror = function () { done.fail("Fade image did not load"); };
+                image.src = slide.slideBackgroundContentElement.style.backgroundImage.slice(5, -2);
+              } catch (error) {
+                done.fail(error);
+              }
+            }, 1000);
+          }, 1000);
+        });
+      };
+      frame.srcdoc = '<link rel="stylesheet" href="/base/openlp/core/display/html/reveal.css">' +
+        '<link rel="stylesheet" href="/base/openlp/core/display/html/display.css">' +
+        '<div class="reveal"><div class="slides"><section></section></div><div class="footer"></div></div>' +
+        '<div id="logo-screen"></div><div id="logo-screen-image"></div>' +
+        '<script src="/base/tests/js/fake_webchannel.js"></script>' +
+        '<script src="/base/openlp/core/display/html/reveal.js"></script>' +
+        '<script src="/base/openlp/core/display/html/display-init.js"></script>' +
+        '<script src="/base/openlp/core/display/html/display.js"></script>';
+      document.body.appendChild(frame);
+    });
+  });
+
   it("loads a thumbnail from an encoded library path, including after a background refresh", function (done) {
     frame = document.createElement("iframe");
     frame.onload = function () {

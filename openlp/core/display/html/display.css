@@ -203,7 +203,10 @@ body.presentation-slide-transition .reveal[data-background-transition=none] .sli
 .reveal[data-background-transition=fade] .backgrounds {
   isolation: isolate;
 }
-.reveal[data-background-transition=fade] .backgrounds:not(.no-transition) .slide-background {
+/* Blend complete horizontal slides, not their nested image backgrounds.
+   Additive blending inside a coloured stack would add the canvas colour to
+   every image pixel (a white canvas makes the entire image white). */
+.reveal[data-background-transition=fade] .backgrounds:not(.no-transition) > .slide-background {
   mix-blend-mode: plus-lighter;
 }
 

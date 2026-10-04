@@ -131,11 +131,11 @@ class UiIcons(metaclass=Singleton):
             'light_bulb': {'icon': 'ic_fluent_lightbulb_24_regular'},
             'live': {'icon': 'ic_fluent_projection_screen_24_regular'},
             'live_presentation': {'icon': 'ic_fluent_slide_text_24_regular'},
-            'live_theme': {'icon': 'ic_fluent_slide_hide_24_regular'},
+            'live_theme': {'icon': 'ic_fluent_slide_eraser_24_regular'},
             # Retained by request alongside the application branding.
             'live_logo': {'icon': 'op.live-logo'},
             'live_black': {'icon': 'ic_fluent_rectangle_landscape_24_regular'},
-            'live_desktop': {'icon': 'ic_fluent_desktop_24_regular'},
+            'live_desktop': {'icon': 'ic_fluent_slide_hide_24_regular'},
             'lock': {'icon': 'ic_fluent_lock_closed_24_regular'},
             'loop': {'icon': 'ic_fluent_arrow_counterclockwise_24_regular'},
             'manual': {'icon': 'ic_fluent_hat_graduation_24_regular'},

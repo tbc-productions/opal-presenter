@@ -738,6 +738,38 @@ def test_update_slide_action_enabled_state_preview(settings: Settings):
     slide_controller.add_to_service_action.setEnabled.assert_called_with(True)
 
 
+def test_preview_add_action_hidden_for_service_items(settings: Settings):
+    controller = SlideController(None)
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 2
+    controller.add_to_service_action = MagicMock()
+    controller.service_item = ServiceItem()
+    controller.service_item.from_service = True
+
+    controller._update_slide_action_enabled_state()
+    controller.add_to_service_action.setVisible.assert_called_with(False)
+
+    controller.service_item = ServiceItem()
+    controller._update_slide_action_enabled_state()
+    controller.add_to_service_action.setVisible.assert_called_with(True)
+
+
+def test_preview_add_action_hidden_after_adding(settings: Settings):
+    controller = SlideController(None)
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 2
+    controller.add_to_service_action = MagicMock()
+    controller.service_item = ServiceItem()
+    manager = MagicMock()
+    Registry().register('service_manager', manager)
+    manager.add_service_item.side_effect = lambda item: setattr(item, 'from_service', True)
+
+    controller.on_preview_add_to_service()
+
+    manager.add_service_item.assert_called_once_with(controller.service_item)
+    controller.add_to_service_action.setVisible.assert_called_with(False)
+
+
 def test_powerpoint_timing_action_remembers_each_presentation(settings: Settings):
     controller = SlideController(None)
     controller.is_live = True

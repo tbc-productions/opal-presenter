@@ -418,8 +418,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.slide_layout.setObjectName('SlideLayout')
         # Set up the preview display
         self.preview_display = DisplayWindow(self, window_title='Live' if self.is_live else 'Preview', embedded=True)
-        # Live mirrors output transitions; the operator's Preview changes instantly.
-        self.preview_display.allow_theme_transitions = self.is_live
+        # Both controller previews honour the configured slide and item transitions.
+        self.preview_display.allow_theme_transitions = True
         self.slide_layout.addWidget(self.preview_display)
         self.slide_layout.resize.connect(self.on_preview_resize)
         # Actual preview screen
@@ -576,6 +576,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                 self.go_live_action.setEnabled(has_slides)
             if hasattr(self, 'add_to_service_action'):
                 self.add_to_service_action.setEnabled(has_slides)
+                self.add_to_service_action.setVisible(not (has_item and self.service_item.from_service))
         else:
             self._sync_live_hide_action_state(has_item)
             live_actions = ['show_screen', 'theme_screen', 'logo_screen', 'blank_screen', 'play_slides_loop',
@@ -2117,6 +2118,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if self.service_item:
             self.service_manager.add_service_item(self.service_item)
+            self._update_slide_action_enabled_state()
 
     def on_preview_double_click(self):
         """
