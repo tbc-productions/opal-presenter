@@ -7,14 +7,28 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6.QtCore import QSize
 
-from openlp.core.lib.slidedesign import apply_design, normalise_design
+from openlp.core.lib.slidedesign import apply_design, normalise_design, layer_order
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.common.enum import ServiceItemType
 
 
 DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 'font_size': 48},
+          'order': ['lyrics', 'shape-1'],
           'elements': [{'id': 'shape-1', 'kind': 'rectangle', 'x': 5, 'y': 20, 'width': 90,
                         'height': 40, 'fill': '#123456'}]}
+
+
+def test_legacy_designs_keep_lyrics_above_decorations():
+    legacy = copy.deepcopy(DESIGN)
+    del legacy['order']
+    assert layer_order(normalise_design(legacy)) == ['shape-1', 'lyrics']
+
+
+@pytest.mark.parametrize('order', [['lyrics', 'missing', 'lyrics', {}, 3], None, 'lyrics'])
+def test_layer_order_rejects_unknown_or_duplicate_ids_and_preserves_all_objects(order):
+    result = normalise_design({**DESIGN, 'order': order})
+    assert len(result['order']) == 2
+    assert set(result['order']) == {'shape-1', 'lyrics'}
 
 
 @pytest.mark.parametrize('value', [None, '', 'not json', [], {'version': 2}, {'version': 1, 'elements': None}])

@@ -35,7 +35,7 @@ describe('Portable slide designs', function () {
     expect(elements[0].style.width).toBe('80%');
     expect(elements[1].textContent).toBe('<script>unsafe</script>');
     expect(elements[1].querySelector('script')).toBe(null);
-    expect(text.style.zIndex).toBe('101');
+    expect(text.style.zIndex).toBe('3');
     expect(slide.querySelector('.design-resize-handle')).toBe(null);
   });
   it('does not duplicate layers on repeated layout passes and clears them for an inherited theme', function () {
@@ -60,6 +60,42 @@ describe('Portable slide designs', function () {
     Display.setDesignEditor(null);
     expect(slide.querySelectorAll('.design-resize-handle').length).toBe(0);
     expect(text.onpointerdown).toBe(null);
+    expect(slide.querySelector('.design-selection-outline')).toBe(null);
+  });
+  it('uses the same saved layer order for output and editing, including slide text', function () {
+    Display._theme.song_design.order = ['caption', 'lyrics', 'shape'];
+    Display._applySongDesign(slide);
+    expect(text.style.zIndex).toBe('2');
+    expect(slide.querySelector('[data-design-id="shape"]').style.zIndex).toBe('3');
+    expect(slide.querySelector('[data-design-id="caption"]').style.zIndex).toBe('1');
+    Display.setDesignEditor('caption');
+    expect(slide.querySelector('[data-design-id="caption"]').style.zIndex).toBe('1');
+    expect(slide.querySelector('.design-selection-outline').style.zIndex).toBe('201');
+    Display.setDesignEditor(null);
+    expect(slide.querySelector('[data-design-id="caption"]').style.zIndex).toBe('1');
+  });
+  it('can drag an obscured shape selected from the layer list without raising it', function () {
+    Display._applySongDesign(slide);
+    Display.setDesignEditor('shape');
+    var outline = slide.querySelector('.design-selection-outline');
+    var shape = slide.querySelector('[data-design-id="shape"]');
+    outline.setPointerCapture = function () {};
+    var received;
+    displayWatcher.dispatchEvent = function (name, data) { received = data; };
+    outline.dispatchEvent(new PointerEvent('pointerdown', {button: 0, clientX: 0, clientY: 0, pointerId: 1}));
+    outline.onpointermove({clientX: slide.getBoundingClientRect().width * 0.05, clientY: 0});
+    outline.onpointerup();
+    expect(received.id).toBe('shape');
+    expect(received.geometry.x).toBeCloseTo(10, 1);
+    expect(shape.style.zIndex).toBe('1');
+  });
+  it('does not let the selected text outline block a shape in front of it', function () {
+    Display._theme.song_design.order = ['lyrics', 'shape', 'caption'];
+    Display._applySongDesign(slide);
+    Display.setDesignEditor('lyrics');
+    var bounds = slide.getBoundingClientRect();
+    var hit = document.elementFromPoint(bounds.left + bounds.width * 0.3, bounds.top + bounds.height * 0.25);
+    expect(hit.dataset.designId).toBe('shape');
   });
   it('reports a complete drag as one geometry change in output percentages', function () {
     Display._applySongDesign(slide);

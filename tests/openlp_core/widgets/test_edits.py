@@ -888,7 +888,7 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
     # Only the color tag should appear in the dropdown.
     assert editor._color_tags == ['{r}']
     assert isinstance(editor._custom_formatting_combo, QtWidgets.MultiSelectComboBox)
-    assert editor._custom_formatting_combo.placeholderText() == 'Custom formatting'
+    assert editor._custom_formatting_combo.placeholderText() == 'Styles'
 
 
 @patch('openlp.core.widgets.edits.FormattingTagForm')

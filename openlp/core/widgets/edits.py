@@ -846,9 +846,9 @@ class SpellTextEdit(QtWidgets.QWidget):
         self._toolbar.layout().setStretch(self._toolbar.layout().indexOf(self._formatting_command_bar), 1)
 
         self._custom_formatting_combo = QtWidgets.MultiSelectComboBox(self._toolbar)
-        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
+        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Styles'))
         self._custom_formatting_combo.setSelectAllVisible(False)
         self._custom_formatting_combo.setMaximumVisibleItems(9)
         self._custom_formatting_combo.setFixedWidth(190)

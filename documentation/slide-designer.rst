@@ -3,7 +3,7 @@ Slide designer
 
 Open a song or custom item, then choose Edit or Edit All. The designer replaces
 that inner text-editing dialog. The outer Song Editor and Custom Slides windows
-retain their read-only lists and do not show the canvas or inspector.
+retain their read-only lists and do not show the canvas or design panes.
 
 Edit words on the left and select a section to preview it. The centre canvas
 uses the projection renderer and its pagination. Preview the current output,
@@ -11,10 +11,13 @@ global, assigned item or current service theme. The Theme selector assigns an
 item theme, subject to OpenLP+'s existing theme-level setting.
 
 Add text boxes, rectangles, ellipses and images with the toolbar. Select an
-element on the canvas or in the inspector. Drag to move it and drag its lower
-right handle to resize it. The inspector controls geometry, rotation, opacity,
-font, alignment, colours and borders. Decorations can be reordered relative to
-one another; lyrics remain above them. Undo, redo and reset operate on the design.
+element on the canvas or in Layers. The top row in Layers is the frontmost object;
+drag rows to reorder them, or use the arrow buttons and the Arrange menu. Slide
+text is a layer too, and new objects are added at the front. Selecting a covered
+object in Layers shows an outline that can be dragged without raising the object.
+Drag its lower right handle to resize it. Properties controls geometry, rotation,
+opacity, font, alignment, colours and borders. Layers and Properties can be shown
+independently. Undo, redo and Reset design in the toolbar operate on the design.
 
 Designs currently apply to every slide in the item. In Edit All, the section
 selector and text cursor select the preview; they do not create individual-slide
@@ -32,6 +35,9 @@ exports include it in an ``olp:design`` extension with namespace
 ``https://openlp.org/ns/slide-design/1``. Custom items store the same extension
 inside their existing XML and preserve it through their existing ``.osz`` export
 and import route. Service headers also retain the design.
+Layer order is saved with the design and used by the projection renderer. Older
+designs without an explicit order retain their original text-above-decorations
+appearance.
 
 Added images are decoded and embedded as PNG data URIs. Large images are scaled
 to fit 1920 x 1080, with an 8 MB encoded-image limit. Exports include a snapshot of

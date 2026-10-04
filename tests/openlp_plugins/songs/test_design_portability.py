@@ -31,7 +31,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     registry.register('theme_manager', manager)
     lyrics = SongXML()
     lyrics.add_verse_to_lyrics('v', '1', 'Amazing grace\nHow sweet the sound')
-    design = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 20}, 'elements': [
+    design = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 20}, 'order': ['lyrics', 'image-1'], 'elements': [
         {'id': 'image-1', 'kind': 'image', 'src': uri, 'x': 5, 'y': 5, 'width': 20, 'height': 20}]}
     song = Song(title='Amazing Grace', lyrics=lyrics.extract_xml().decode(), last_modified=datetime(2026, 10, 4),
                 slide_design=json.dumps(design), theme_name='Original theme')
@@ -47,6 +47,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
         imported = handler.xml_to_song(exported)
     restored = normalise_design(imported.slide_design)
     assert restored['elements'][0]['src'] == uri
+    assert restored['order'] == ['lyrics', 'image-1']
     assert 'Amazing grace' in imported.lyrics
     rendered_theme = apply_design(Theme(), restored, QtCore.QSize(1280, 720))
     assert rendered_theme.background_filename == uri
@@ -59,10 +60,12 @@ def test_custom_xml_retains_design_with_and_without_title():
     custom = CustomXML()
     custom.add_verse_to_lyrics('custom', 1, 'Welcome')
     custom.add_title_and_credit('Welcome', 'Church')
-    custom.set_design({'version': 1, 'lyrics': {'x': 12}, 'elements': []})
+    custom.set_design({'version': 1, 'lyrics': {'x': 12}, 'order': ['lyrics', 'box'],
+                       'elements': [{'id': 'box', 'kind': 'rectangle'}]})
     for include_title in (False, True):
         restored = CustomXML(custom.extract_xml(include_title).decode())
         assert restored.get_design()['lyrics']['x'] == 12
+        assert restored.get_design()['order'] == ['lyrics', 'box']
         assert restored.get_verses()[0][1] == 'Welcome'
     restored.set_design({})
     assert restored.get_design() == {}

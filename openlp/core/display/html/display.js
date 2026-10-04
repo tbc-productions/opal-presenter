@@ -2040,15 +2040,19 @@ var Display = {
     content.dataset.designId = 'lyrics';
     content.style.transform = `rotate(${lyrics.rotation || 0}deg)`;
     content.style.opacity = (lyrics.opacity === undefined ? 100 : lyrics.opacity) / 100;
-    content.style.zIndex = '101';
-    (design.elements || []).forEach((element, index) => {
+    var defaultOrder = (design.elements || []).map(element => element.id).concat('lyrics');
+    var order = (Array.isArray(design.order) ? design.order : []).filter((id, index, ids) =>
+      defaultOrder.includes(id) && ids.indexOf(id) === index);
+    order = order.concat(defaultOrder.filter(id => !order.includes(id)));
+    content.style.zIndex = String(order.indexOf('lyrics') + 1);
+    (design.elements || []).forEach(element => {
       var node = document.createElement(element.kind === 'image' ? 'img' : 'div');
       node.className = 'song-design-element';
       node.dataset.designId = element.id;
       Object.assign(node.style, {
         position: 'absolute', boxSizing: 'border-box', margin: '0', padding: '0',
         left: `${element.x}%`, top: `${element.y}%`, width: `${element.width}%`, height: `${element.height}%`,
-        zIndex: String(index + 1), transform: `rotate(${element.rotation || 0}deg)`,
+        zIndex: String(order.indexOf(element.id) + 1), transform: `rotate(${element.rotation || 0}deg)`,
         opacity: (element.opacity === undefined ? 100 : element.opacity) / 100,
         border: `${element.border_width || 0}px solid ${element.border_colour || '#ffffff'}`,
         maxWidth: 'none', maxHeight: 'none', boxShadow: 'none', textShadow: 'none',
@@ -2084,7 +2088,7 @@ var Display = {
   },
 
   _bindDesignEditor: function (slide) {
-    slide.querySelectorAll('.design-resize-handle').forEach(node => node.remove());
+    slide.querySelectorAll('.design-resize-handle, .design-selection-outline').forEach(node => node.remove());
     slide.querySelectorAll('[data-design-id]').forEach(node => {
       node.style.outline = '';
       node.style.cursor = '';
@@ -2093,13 +2097,32 @@ var Display = {
       node.style.cursor = 'move';
       node.style.userSelect = 'none';
       if (node.dataset.designId === Display._designSelected) {
-        node.style.outline = '3px solid #51a7ff';
+        // Keep a covered layer selectable and movable without altering its saved stacking order.
+        var outline = document.createElement('div');
+        outline.className = 'design-selection-outline';
+        Object.assign(outline.style, {
+          position: 'absolute', left: `${node.offsetLeft}px`, top: `${node.offsetTop}px`,
+          width: `${node.offsetWidth}px`, height: `${node.offsetHeight}px`,
+          transform: node.style.transform, outline: '3px solid #51a7ff', zIndex: '201',
+          cursor: 'move', pointerEvents: 'none'
+        });
+        // Only the outline edges capture drags: its interior must not cover other selectable objects.
+        [{left: '-8px', top: '-8px', width: 'calc(100% + 16px)', height: '16px'},
+          {left: '-8px', bottom: '-8px', width: 'calc(100% + 16px)', height: '16px'},
+          {left: '-8px', top: '8px', width: '16px', height: 'calc(100% - 16px)'},
+          {right: '-8px', top: '8px', width: '16px', height: 'calc(100% - 16px)'}].forEach(edge => {
+          var grip = document.createElement('div');
+          Object.assign(grip.style, {position: 'absolute', pointerEvents: 'auto'}, edge);
+          outline.appendChild(grip);
+        });
+        slide.appendChild(outline);
+        outline.onpointerdown = event => Display._startDesignDrag(event, node, false);
         // Images are replaced elements; use a sibling handle instead of a child.
         var handle = document.createElement('div');
         handle.className = 'design-resize-handle';
         Object.assign(handle.style, {
           position: 'absolute', width: '18px', height: '18px', background: '#ffffff',
-          border: '3px solid #217aff', boxSizing: 'border-box', zIndex: '200', cursor: 'nwse-resize',
+          border: '3px solid #217aff', boxSizing: 'border-box', zIndex: '202', cursor: 'nwse-resize',
           left: `${node.offsetLeft + node.offsetWidth - 9}px`, top: `${node.offsetTop + node.offsetHeight - 9}px`
         });
         slide.appendChild(handle);
@@ -2139,6 +2162,15 @@ var Display = {
       ['x', 'y', 'width', 'height'].forEach(key => {
         node.style.setProperty(({x: 'left', y: 'top'})[key] || key, `${changed[key]}%`, 'important');
       });
+      var outline = slide.querySelector('.design-selection-outline');
+      if (outline) Object.assign(outline.style, {
+        left: `${node.offsetLeft}px`, top: `${node.offsetTop}px`,
+        width: `${node.offsetWidth}px`, height: `${node.offsetHeight}px`
+      });
+      var handle = slide.querySelector('.design-resize-handle');
+      if (handle) Object.assign(handle.style, {
+        left: `${node.offsetLeft + node.offsetWidth - 9}px`, top: `${node.offsetTop + node.offsetHeight - 9}px`
+      });
     };
     var finish = cancelled => {
       if (cancelled) {
@@ -2150,6 +2182,7 @@ var Display = {
       target.onpointerup = null;
       target.onpointercancel = null;
       Display._designSelected = node.dataset.designId;
+      Display._bindDesignEditor(slide);
       displayWatcher.dispatchEvent('songDesignChanged', {
         id: node.dataset.designId, geometry: cancelled ? start : changed,
         changed: !cancelled && JSON.stringify(changed) !== JSON.stringify(start)

@@ -47,6 +47,17 @@ def _properties(source):
     return result
 
 
+def layer_order(design):
+    """Return all selectable layers from back to front, including the main slide text."""
+    defaults = [element['id'] for element in design.get('elements', [])] + ['lyrics']
+    requested = design.get('order', [])
+    order = []
+    for identifier in requested if isinstance(requested, list) else []:
+        if isinstance(identifier, str) and identifier in defaults and identifier not in order:
+            order.append(identifier)
+    return order + [identifier for identifier in defaults if identifier not in order]
+
+
 def normalise_design(value):
     """Return a detached, validated v1 document, or an empty inherited design."""
     if isinstance(value, str):
@@ -81,6 +92,8 @@ def normalise_design(value):
                 continue
             clean['src'] = image
         result['elements'].append(clean)
+    if 'order' in value:
+        result['order'] = layer_order({**result, 'order': value['order']})
     embedded_theme = _normalise_theme(value.get('theme'))
     if embedded_theme:
         result['theme'] = embedded_theme

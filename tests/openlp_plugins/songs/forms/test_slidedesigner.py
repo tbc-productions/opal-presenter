@@ -69,7 +69,7 @@ def test_save_flushes_pending_text_and_song_switch_clears_it(designer):
 def test_switch_layer_preserves_pending_text_and_selection(designer):
     designer.add_element('text')
     designer.text.setPlainText('New caption')
-    designer.layers.setCurrentIndex(0)
+    designer.layers.setCurrentIndex(designer.layers.model().index(designer.layers.identifiers().index('lyrics'), 0))
     assert designer.selected == 'lyrics'
     assert designer.design['elements'][0]['text'] == 'New caption'
 
@@ -167,3 +167,118 @@ def test_assigning_theme_releases_imported_snapshot(designer):
     assert 'theme' not in designer.design
     assert designer.design['lyrics']['x'] == 15
     assert designer.theme_source.currentIndex() == 2
+
+
+def test_fluent_inspector_edits_keep_precision_and_undo(designer):
+    designer.fields['x'].setValue(12.5)
+    designer.fields['bold'].click()
+    assert designer.design['lyrics']['x'] == 12.5
+    assert designer.design['lyrics']['bold'] is True
+    designer.undo_stack.undo()
+    assert not designer.fields['bold'].isChecked()
+    assert designer.fields['x'].value() == 12.5
+    designer.undo_stack.undo()
+    assert designer.design == {}
+
+
+def test_inspector_follows_selected_object(designer):
+    designer.add_element('rectangle')
+    assert designer.text_section.isHidden()
+    assert not designer.field_rows['fill'].isHidden()
+    assert designer.back_button.isEnabled()
+    designer.layers.setCurrentIndex(designer.layers.model().index(designer.layers.identifiers().index('lyrics'), 0))
+    assert not designer.text_section.isHidden()
+    assert designer.field_rows['fill'].isHidden()
+    assert designer.front_button.isEnabled()
+    designer.add_element('text')
+    assert not designer.text.isHidden()
+    assert designer.field_rows['fill'].isHidden()
+
+
+def test_custom_sidebar_commands_still_insert_slides(designer):
+    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    owner = EditCustomForm(MagicMock(), None, MagicMock())
+    dialog = owner.edit_slide_form
+    dialog.set_text('First')
+    cursor = dialog.slide_text_edit.textCursor()
+    cursor.setPosition(2)
+    dialog.slide_text_edit.setTextCursor(cursor)
+    dialog.insert_button.click()
+    assert dialog.get_text() == ['Fi', 'rst']
+    assert dialog.button_box.buttonRole(dialog.insert_button) == dialog.button_box.ButtonRole.InvalidRole
+    dialog.deleteLater()
+    owner.deleteLater()
+
+
+def test_default_theme_has_a_label_without_changing_inheritance(designer):
+    from openlp.core.widgets.fluent_dialogs import TextEditorDialog
+    owner = designer.source_form.design_owner
+    owner.theme_combo_box.clear()
+    owner.theme_combo_box.addItems(['', 'Song'])
+
+    def accept(dialog):
+        assert dialog.theme_combo_box.currentText() == 'Default theme'
+        assert dialog.designer_theme_name() == ''
+        return 1
+
+    with patch.object(TextEditorDialog, 'exec', new=accept):
+        designer.source_form.exec()
+    assert owner.theme_combo_box.currentText() == ''
+
+
+def test_layers_include_slide_text_and_new_objects_start_at_front(designer):
+    from openlp.core.lib.slidedesign import layer_order
+    designer.add_element('rectangle')
+    shape = designer.selected
+    assert layer_order(designer.design) == ['lyrics', shape]
+    assert designer.layers.identifiers() == [shape, 'lyrics']
+    designer.arrange('back')
+    assert layer_order(designer.design) == [shape, 'lyrics']
+    designer.layers.setCurrentIndex(designer.layers.model().index(0, 0))
+    assert designer.selected == 'lyrics'
+    designer.arrange('backward')
+    assert layer_order(designer.design) == ['lyrics', shape]
+    designer.undo_stack.undo()
+    assert layer_order(designer.design) == [shape, 'lyrics']
+    designer.undo_stack.redo()
+    assert layer_order(designer.design) == ['lyrics', shape]
+
+
+def test_dragging_layer_rows_is_one_undoable_change_and_preserves_selection(designer):
+    designer.add_element('rectangle')
+    shape = designer.selected
+    designer.add_element('text')
+    caption = designer.selected
+    designer.text.setPlainText('Saved caption')
+    designer.commit_text()
+    before = designer.undo_stack.count()
+    designer.layers.move_row(0, 3)
+    assert designer.layers.identifiers() == [shape, 'lyrics', caption]
+    assert designer.selected == caption
+    assert designer.undo_stack.count() == before + 1
+    assert designer.design['elements'][1]['text'] == 'Saved caption'
+    designer.undo_stack.undo()
+    assert designer.layers.identifiers() == [caption, shape, 'lyrics']
+    designer.layers.move_row(0, 1)
+    assert designer.layers.identifiers() == [caption, shape, 'lyrics']
+    designer.delete_element()
+    assert caption not in designer.serialised_design()['order']
+
+
+def test_layer_drop_uses_row_boundary(designer):
+    designer.add_element('rectangle')
+    shape = designer.selected
+    index = designer.layers.model().index(1, 0)
+    event = MagicMock()
+    event.source.return_value = designer.layers
+    event.position.return_value = QtCore.QPointF(10, 40)
+    with patch.object(designer.layers, 'indexAt', return_value=index), \
+            patch.object(designer.layers, 'visualRect', return_value=QtCore.QRect(0, 30, 200, 30)):
+        designer.layers.dropEvent(event)
+    assert designer.layers.identifiers() == [shape, 'lyrics']
+    event.position.return_value = QtCore.QPointF(10, 58)
+    with patch.object(designer.layers, 'indexAt', return_value=index), \
+            patch.object(designer.layers, 'visualRect', return_value=QtCore.QRect(0, 30, 200, 30)):
+        designer.layers.dropEvent(event)
+    assert designer.layers.identifiers() == ['lyrics', shape]
+    event.accept.assert_called()
