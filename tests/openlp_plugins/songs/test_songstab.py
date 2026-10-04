@@ -95,7 +95,6 @@ def test_save_check_box_settings(form):
     """
     # GIVEN: A arrangement of enabled/disabled check boxes
     form.on_search_as_type_check_box_changed(QtCore.Qt.CheckState.Unchecked)
-    form.on_tool_bar_active_check_box_changed(QtCore.Qt.CheckState.Checked)
     form.on_update_on_edit_check_box_changed(QtCore.Qt.CheckState.Unchecked)
     form.on_add_from_service_check_box_changed(QtCore.Qt.CheckState.Checked)
     form.on_disable_chords_import_check_box_changed(QtCore.Qt.CheckState.Unchecked)
@@ -115,7 +114,6 @@ def test_save_check_box_settings(form):
     form.save()
     # THEN: The correct values should be stored in the settings
     # song_search is currently unused
-    assert form.settings.value('songs/display songbar') is True
     assert form.settings.value('songs/update service on edit') is False
     assert form.settings.value('songs/add song from service') is True
     assert form.settings.value('songs/disable chords import') is False

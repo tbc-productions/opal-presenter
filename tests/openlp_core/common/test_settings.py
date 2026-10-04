@@ -517,3 +517,39 @@ def test_upgrade_preserves_custom_live_shortcut(settings, monkeypatch):
     settings.setValue('shortcuts/listViewImagesLiveItem', custom)
     settings.upgrade_settings()
     assert settings.value('shortcuts/listViewImagesLiveItem') == custom
+
+
+def test_retired_settings_upgrade(settings, monkeypatch):
+    """Cleanup removes retired keys while retaining the recent-file preference."""
+    monkeypatch.setattr(modsettings, '__version__', 6)
+    settings.setValue('settings/version', 5)
+    for key, _, _ in Settings.__setting_upgrade_6__:
+        settings.setValue(key, True)
+    settings.setValue('advanced/recent file count', 7)
+    settings.setValue('core/update check', False)
+    settings.setValue('api/update check', True)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 6
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_6__)
+    assert settings.value('advanced/recent file count') == 7
+    assert settings.value('core/update check') is False
+    assert settings.value('api/update check') is True
+
+
+def test_presentation_and_display_override_upgrade(settings, monkeypatch):
+    """Retired overrides are removed without changing enabled controllers or output settings."""
+    monkeypatch.setattr(modsettings, '__version__', 7)
+    settings.setValue('settings/version', 6)
+    for key, _, _ in Settings.__setting_upgrade_7__:
+        settings.setValue(key, True)
+    settings.setValue('presentations/Powerpoint', QtCore.Qt.CheckState.Checked)
+    settings.setValue('advanced/x11 bypass wm', False)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 7
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_7__)
+    assert settings.value('presentations/Powerpoint') == QtCore.Qt.CheckState.Checked
+    assert settings.value('advanced/x11 bypass wm') is False

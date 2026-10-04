@@ -268,7 +268,6 @@ def service_manager(registry: Registry, settings: Settings):
     registry.register('live_controller', MagicMock())
     registry.register('renderer', MagicMock())
     registry.register('plugin_manager', MagicMock())
-    settings.setValue('advanced/new service message', False)
 
     # Service manager
     svc_manager = ServiceManager()
@@ -1628,29 +1627,34 @@ def test_on_new_service_clicked_not_saved_false_save(registry: Registry):
 
 
 @patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox')
-def test_on_new_service_clicked_unmodified_blank_service(MockQMessageBox: MagicMock, registry: Registry):
-    """Test that when the click the new button with an unmodified service, it shows you a message"""
-    # GIVEN: A service manager with no service items and a bunch of mocks
-    mocked_message_box = MagicMock()
-    mocked_message_box.checkbox.return_value.isChecked.return_value = True
-    MockQMessageBox.return_value = mocked_message_box
-    mocked_settings = MagicMock()
-    mocked_settings.value.return_value = True
-    registry.register('settings', mocked_settings)
-    service_manager = ServiceManager(None)
-    service_manager.is_modified = MagicMock(return_value=False)
+def test_on_new_service_clicked_unmodified_blank_service(mocked_message_box, registry):
+    """New on an untouched blank service is a no-op, without an alert."""
+    manager = ServiceManager(None)
+    manager.new_file = MagicMock()
+    assert manager.on_new_service_clicked() is False
+    mocked_message_box.assert_not_called()
+    manager.new_file.assert_not_called()
+
+
+def test_new_service_actions_follow_service_state(service_manager):
+    """Toolbar and menu disable for a blank service and enable after adding an item."""
+    toolbar_action = service_manager.toolbar.actions_map['newService']
+    menu_action = service_manager.main_window.file_new_item
     service_manager.service_items = []
-    service_manager.new_file = MagicMock()
+    service_manager._service_path = None
+    service_manager.set_modified(False)
+    assert not toolbar_action.isEnabled()
+    menu_action.setEnabled.assert_called_with(False)
 
-    # WHEN: on_new_service_clicked() is called
-    service_manager.on_new_service_clicked()
+    service_manager.service_items = [MagicMock()]
+    service_manager.set_modified(True)
+    assert toolbar_action.isEnabled()
+    menu_action.setEnabled.assert_called_with(True)
 
-    # THEN: The message box should have been shown, and the message supressed
-    mocked_settings.value.assert_called_once_with('advanced/new service message')
-    assert mocked_message_box.setCheckBox.call_count == 1, 'setCheckBox was called to place the checkbox'
-    mocked_message_box.exec.assert_called_once_with()
-    mocked_settings.setValue.assert_called_once_with('advanced/new service message', False)
-    service_manager.new_file.assert_called_once_with()
+    service_manager.service_items = []
+    service_manager.set_modified(False)
+    assert not toolbar_action.isEnabled()
+    menu_action.setEnabled.assert_called_with(False)
 
 
 def test_on_delete_from_service_confirmation_disabled(settings: Settings, service_manager: ServiceManager):
@@ -2778,7 +2782,8 @@ def test_click_on_new_service(service_manager: ServiceManager):
     """
     Test the on_new_service event handler is called by the UI
     """
-    # GIVEN: An initial form
+    service_manager.service_items = [MagicMock()]
+    service_manager.set_modified(False)
     with patch.object(service_manager, 'new_file') as mocked_new_file:
 
         # WHEN displaying the UI and pressing cancel

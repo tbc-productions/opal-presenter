@@ -659,16 +659,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             if self.is_display and self.isHidden():
                 self.setVisible(True)
         if mode == HideMode.Screen:
-            if self.settings.value('advanced/disable transparent display'):
-                # Hide window only after all webview CSS ransitions are done
-                self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,
-                                                             lambda _: self.setVisible(False))
-                self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
-            else:
-                if self._disable_hide_transition():
-                    self.run_in_display('toTransparent', True)
-                else:
-                    self.run_in_display('toTransparent')
+            # Show the desktop by hiding the output window after its fade completes.
+            self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,
+                                                         lambda _: self.setVisible(False))
+            self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
         elif mode == HideMode.Blank:
             if self._disable_hide_transition():
                 self.run_in_display('toBlack', True)

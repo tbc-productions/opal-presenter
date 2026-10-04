@@ -418,12 +418,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.slide_layout.setObjectName('SlideLayout')
         # Set up the preview display
         self.preview_display = DisplayWindow(self, window_title='Live' if self.is_live else 'Preview', embedded=True)
-        # Live preview always shows transitions; service preview shows transitions based on setting
-        # Check window_title since is_live might not be finalized yet for subclasses
-        if self.preview_display.window_title == 'Live':
-            self.preview_display.allow_theme_transitions = True
-        else:
-            self.preview_display.allow_theme_transitions = self.settings.value('core/live preview shows slide transitions')
+        # Live mirrors output transitions; the operator's Preview changes instantly.
+        self.preview_display.allow_theme_transitions = self.is_live
         self.slide_layout.addWidget(self.preview_display)
         self.slide_layout.resize.connect(self.on_preview_resize)
         # Actual preview screen
@@ -486,7 +482,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                                      self.on_slide_unblank)
         Registry().register_function('slidecontroller_update_slide_limits', self.update_slide_limits)
         Registry().register_function('slidecontroller_preview_display_show_display', self.preview_display.show_display)
-        Registry().register_function('slidecontroller_update_preview_transitions', self._update_preview_transitions)
         Registry().register_function('slidecontroller_update_item_transitions', self._update_item_transitions)
         getattr(self, 'slidecontroller_{text}_set'.format(text=self.type_prefix)).connect(self.on_slide_selected_index)
         getattr(self, 'slidecontroller_{text}_next'.format(text=self.type_prefix)).connect(self.on_slide_selected_next)
@@ -907,16 +902,6 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         self.slide_limits = self.settings.value('advanced/slide limits')
 
-    def _update_preview_transitions(self):
-        """
-        Updates the preview display transitions setting when settings change.
-        Only applies to service (non-live) preview displays.
-        """
-        if not self.is_live and self.preview_display and self.preview_display._is_initialised:
-            new_value = self.settings.value('core/live preview shows slide transitions')
-            self.preview_display.allow_theme_transitions = new_value
-            # Update JavaScript side to reapply the theme with new transition setting
-            self.preview_display.run_in_display('setAllowThemeTransitions', new_value)
 
     def _update_item_transitions(self):
         """
@@ -963,7 +948,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.play_slides_loop.setIcon(UiIcons().loop)
         self.play_slides_loop.setText(UiStrings().PlaySlidesInLoop)
         self.toolbar.set_widget_visible('song_menu', bool(
-            item.is_text() and self.settings.value('songs/display songbar') and not self.song_menu.isEmpty()))
+            item.is_text() and not self.song_menu.isEmpty()))
         self.toolbar.set_widget_visible(LOOP_LIST, item.is_capable(ItemCapabilities.CanLoop) and len(item.slides) > 1)
         self.mediabar.setVisible(item.is_media() or item.is_capable(ItemCapabilities.HasBackgroundAudio))
         self.previous_item.setEnabled(not item.is_media())
@@ -1791,8 +1776,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             # stale or misaligned desktop frames, particularly on macOS.
             return self._capture_maindisplay_window()
         # Wayland needs screenshot fallback even when OpenLP is running on X11/xcb mode.
-        fallback_to_windowed = is_wayland_compositor() or \
-            self.settings.value('advanced/prefer windowed screen capture')
+        fallback_to_windowed = is_wayland_compositor()
         if not fallback_to_windowed:
             # Check if display screen is outside real screen bounds
             # OpenLP can't take reliable screenshots when any of these conditions happens

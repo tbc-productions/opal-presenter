@@ -18,26 +18,30 @@
 ##########################################################################
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
+import fluentqt
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import get_file_type_glob
+from openlp.core.common import get_file_type_glob, sha256_file_hash
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib import ServiceItemContext, build_icon, create_thumb, validate_thumb
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, critical_error_message_box
+from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
 from openlp.core.widgets.views import FileTreeWidgetItem
+from openlp.core.widgets.fluent_tree import LIBRARY_FILE_TYPE_ICON_ROLE
 
 from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.messagelistener import MessageListener
 from openlp.plugins.presentations.lib.pdfcontroller import PDF_CONTROLLER_FILETYPES
+from openlp.plugins.presentations.lib.pdfexport import PDF_EXPORT_CONTROLLERS, PdfExportWorker, pdf_export_error_text
 
 
 log = logging.getLogger(__name__)
@@ -49,6 +53,41 @@ def _format_file_size(size: int) -> str:
         if size >= threshold:
             return f'{size / threshold:.1f} {unit}'
     return f'{size} B'
+
+
+class PdfConversionProgressDialog(QtWidgets.QProgressDialog):
+    """Keep the dialog visible until native application calls finish safely."""
+    conversion_running = True
+
+    def cancel(self):
+        if self.conversion_running and not self.wasCanceled():
+            self._cancel_requested = True
+            self.setLabelText(translate('PresentationPlugin.MediaItem', 'Cancelling…'))
+            self.setCancelButtonText('')
+            self.canceled.emit()
+
+    def wasCanceled(self):
+        return getattr(self, '_cancel_requested', False)
+
+    def reject(self):
+        if self.conversion_running:
+            self.cancel()
+        else:
+            super().reject()
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape and self.conversion_running:
+            self.cancel()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        if self.conversion_running:
+            self.cancel()
+            event.ignore()
+        else:
+            super().closeEvent(event)
 
 
 class PresentationMediaItem(FolderLibraryItem):
@@ -111,7 +150,9 @@ class PresentationMediaItem(FolderLibraryItem):
         self.list_view.setIndentation(self.list_view.default_indentation)
         self.list_view.allow_internal_dnd = True
         self.list_view.setIconSize(QtCore.QSize(20, 20))
-        self.load_list(self.manager.get_all_objects(Item, order_by_ref=Item.file_path), is_initial_load=True)
+        items = self.manager.get_all_objects(Item, order_by_ref=Item.file_path)
+        self._repair_converted_pdf_names(items)
+        self.load_list(items, is_initial_load=True)
         self.populate_display_types()
 
     def add_custom_context_actions(self):
@@ -119,6 +160,100 @@ class PresentationMediaItem(FolderLibraryItem):
         Add custom actions to the context menu.
         """
         super().add_custom_context_actions()
+        show_in_folder_action = self.list_view.actions()[-1]
+        self.convert_pdf_action = create_widget_action(
+            self.list_view, 'convert_pdf_action',
+            text=translate('PresentationPlugin.MediaItem', 'Convert to PDF'),
+            icon=UiIcons().pdf, triggers=self.on_convert_to_pdf)
+        self.list_view.removeAction(self.convert_pdf_action)
+        self.list_view.insertAction(show_in_folder_action, self.convert_pdf_action)
+        self.convert_pdf_action.setVisible(False)
+
+    def _pdf_export_selection(self):
+        """Find an enabled exporter for one accessible PPTX/ODP library item."""
+        selected = self.list_view.selectedItems()
+        if len(selected) != 1:
+            return None
+        item = selected[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if not isinstance(item, Item):
+            return None
+        path = Path(item.file_path)
+        suffix = path.suffix.lower().lstrip('.')
+        if suffix not in {'pptx', 'odp'} or not path.is_file() or not os.access(path, os.R_OK):
+            return None
+        controllers = [controller for controller in self.controllers.values()
+                       if controller.name in PDF_EXPORT_CONTROLLERS and controller.enabled()]
+        for support in ('supports', 'also_supports'):
+            for controller in controllers:
+                if suffix in getattr(controller, support):
+                    return item, controller
+        return None
+
+    def context_menu(self, point):
+        self.convert_pdf_action.setVisible(self._pdf_export_selection() is not None)
+        super().context_menu(point)
+
+    def on_convert_to_pdf(self):
+        """Export a PDF copy and select it in the original item's library folder."""
+        selection = self._pdf_export_selection()
+        if selection is None:
+            return
+        source_item, controller = selection
+        worker = PdfExportWorker(controller, Path(source_item.file_path), source_item.name)
+        dialog = PdfConversionProgressDialog(
+            translate('PresentationPlugin.MediaItem', 'Converting to PDF…'), UiStrings().Cancel, 0, 0, self.main_window)
+        dialog.canceled.connect(worker.cancel)
+        dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        dialog.setMinimumDuration(0)
+        loop = QtCore.QEventLoop()
+
+        def finish_conversion():
+            dialog.conversion_running = False
+            dialog.accept()
+            loop.quit()
+
+        worker.finished.connect(finish_conversion, QtCore.Qt.ConnectionType.QueuedConnection)
+        dialog.show()
+        worker.start()
+        loop.exec()
+        dialog.conversion_running = False
+        dialog.close()
+        worker.wait()
+        dialog.deleteLater()
+        if worker.cancelled:
+            if worker.output:
+                worker.output.unlink(missing_ok=True)
+            return
+        try:
+            if worker.error:
+                raise worker.error
+            if not worker.output:
+                raise RuntimeError('The presentation application did not create a PDF.')
+            stored_path = self._prepare_library_file(worker.output)
+            pdf_item = Item(name=worker.output.name, file_path=str(stored_path), folder_id=source_item.folder_id,
+                            file_hash=sha256_file_hash(stored_path))
+            if not self.manager.save_object(pdf_item):
+                raise RuntimeError('Could not save the converted PDF to the library')
+            folder = self.manager.get_object(Folder, source_item.folder_id) if source_item.folder_id else None
+            self._insert_saved_items([pdf_item], folder)
+            self.list_view.clearSelection()
+            pending = [self.list_view.invisibleRootItem()]
+            while pending:
+                parent = pending.pop()
+                for index in range(parent.childCount()):
+                    tree_item = parent.child(index)
+                    if tree_item.data(0, QtCore.Qt.ItemDataRole.UserRole) is pdf_item:
+                        self.list_view.setCurrentItem(tree_item)
+                        tree_item.setSelected(True)
+                        self.list_view.scrollToItem(tree_item)
+                        return
+                    pending.append(tree_item)
+        except Exception as error:
+            log.exception('Could not add converted presentation to the library')
+            critical_error_message_box(
+                translate('PresentationPlugin.MediaItem', 'Conversion Failed'),
+                translate('PresentationPlugin.MediaItem', 'The presentation could not be converted to PDF.') +
+                '\n\n' + pdf_export_error_text(error))
 
     def add_middle_header_bar(self):
         """
@@ -160,8 +295,7 @@ class PresentationMediaItem(FolderLibraryItem):
 
     def populate_display_types(self):
         """
-        Load the combobox with the enabled presentation controllers, allowing user to select a specific app if settings
-        allow.
+        Offer a controller selector when multiple presentation applications are enabled.
         """
         self.display_type_combo_box.clear()
         for item in self.controllers:
@@ -174,10 +308,7 @@ class PresentationMediaItem(FolderLibraryItem):
         if self.display_type_combo_box.count() > 1:
             self.display_type_combo_box.insertItem(0, self.automatic, userData='automatic')
             self.display_type_combo_box.setCurrentIndex(0)
-        if self.settings.value('presentations/override app') == QtCore.Qt.CheckState.Checked:
-            self.presentation_widget.show()
-        else:
-            self.presentation_widget.hide()
+        self.presentation_widget.setVisible(self.display_type_combo_box.count() > 1)
 
     def _selected_controller_name(self):
         """Return the controller key stored with the selected display label."""
@@ -212,7 +343,7 @@ class PresentationMediaItem(FolderLibraryItem):
         display_name = Path(file_name).stem
         if not file_path.exists() or not os.access(file_path, os.R_OK):
             tree_item = FileTreeWidgetItem([display_name])
-            tree_item.setIcon(0, UiIcons().delete)
+            tree_item.setIcon(0, UiIcons().document_question_mark)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
         else:
@@ -226,14 +357,14 @@ class PresentationMediaItem(FolderLibraryItem):
                     preview_path = self._ensure_first_thumbnail(doc)
                 doc.close_presentation()
                 if not (preview_path and preview_path.exists()):
-                    icon = UiIcons().delete
+                    icon = UiIcons().document_question_mark
                 else:
                     if validate_thumb(preview_path, thumbnail_path):
                         icon = build_icon(thumbnail_path)
                     else:
                         icon = create_thumb(preview_path, thumbnail_path)
             else:
-                icon = UiIcons().delete
+                icon = UiIcons().document_question_mark
             tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
@@ -248,7 +379,31 @@ class PresentationMediaItem(FolderLibraryItem):
                 tree_item.set_sort_data(1, mtime)
             except OSError:
                 pass
+        suffix = file_path.suffix.lower().lstrip('.')
+        if suffix in {'ppt', 'pptx', 'pptm', 'pps', 'ppsx'}:
+            type_icon = UiIcons().slide_text_person
+        elif suffix == 'key':
+            type_icon = UiIcons().slide_text_sparkle
+        elif suffix == 'pdf':
+            type_icon = UiIcons().pdf
+        else:
+            type_icon = UiIcons().slide_text
+        tree_item.setData(0, LIBRARY_FILE_TYPE_ICON_ROLE, type_icon)
         return tree_item
+
+    def _repair_converted_pdf_names(self, items):
+        """Recover labels for PDF copies previously named after a managed source's hash."""
+        sources = {Path(item.file_path).with_suffix(''): item for item in items
+                   if Path(item.file_path).suffix.lower() in {'.pptx', '.odp'} and item.name}
+        for item in items:
+            path = Path(item.file_path)
+            match = re.fullmatch(r'([0-9a-f]{64})( \(\d+\))?', Path(item.name or path.name).stem)
+            if path.suffix.lower() != '.pdf' or not match:
+                continue
+            source = sources.get(path.with_name(match.group(1)))
+            if source:
+                item.name = f'{Path(source.name).stem}{match.group(2) or ""}.pdf'
+                self.manager.save_object(item)
 
     def delete_item(self, item):
         """
@@ -283,15 +438,30 @@ class PresentationMediaItem(FolderLibraryItem):
                 doc.close_presentation()
 
     def should_render_as_images(self, file_path, processor=None):
-        """Whether a presentation should use OpenLP's image display."""
-        if file_path.suffix.lower()[1:] in PDF_CONTROLLER_FILETYPES:
-            return True
-        if self.settings.value('presentations/render slide images') != QtCore.Qt.CheckState.Checked:
-            return False
-        if not processor or processor == self.automatic:
-            processor = self.find_controller_by_type(file_path)
-        controller = self.controllers.get(processor)
-        return bool(controller and controller.supports_slide_images)
+        """PDF formats use OpenLP's image display; native presentations use their controller."""
+        return file_path.suffix.lower()[1:] in PDF_CONTROLLER_FILETYPES
+
+    def _show_unavailable_presentation(self, file_path, remote=False):
+        """Explain why an existing library presentation cannot be opened."""
+        if not remote:
+            dialog = fluentqt.ContentDialog(self.main_window)
+            dialog.setSmokeEnabled(True)
+            dialog.setDragEnabled(False)
+            dialog.setMinimumWidth(420)
+            dialog.setMaximumWidth(560)
+            dialog.setTitle(translate('PresentationPlugin.MediaItem', 'Presentation Unavailable'))
+            message = QtWidgets.QLabel(
+                translate('PresentationPlugin.MediaItem', 'No presentation application is available.'))
+            message.setWordWrap(True)
+            dialog.setContent(message)
+            dialog.setPrimaryButtonText(translate('OpenLP.Ui', 'OK'))
+            dialog.setSecondaryButtonText(translate('PresentationPlugin.MediaItem', 'Open Settings'))
+            dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+            result = dialog.exec()
+            dialog.deleteLater()
+            if result == fluentqt.ContentDialog.ResultSecondary:
+                Registry().get('settings_form').exec(
+                    translate('PresentationPlugin', 'Presentations', 'container title'))
 
     def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
                             file_path=None, **kwargs):
@@ -329,7 +499,18 @@ class PresentationMediaItem(FolderLibraryItem):
         file_type = file_path.suffix.lower()[1:]
         selected_display_type = self._selected_controller_name()
         if not selected_display_type:
+            self._show_unavailable_presentation(file_path, remote)
             return False
+        if selected_display_type == 'automatic':
+            if not self.find_controller_by_type(file_path):
+                self._show_unavailable_presentation(file_path, remote)
+                return False
+        elif file_type not in PDF_CONTROLLER_FILETYPES:
+            controller = self.controllers.get(selected_display_type)
+            if (not controller or not controller.enabled() or
+                    file_type not in controller.supports + controller.also_supports):
+                self._show_unavailable_presentation(file_path, remote)
+                return False
         service_item.add_capability(ItemCapabilities.CanEditTitle)
         selected_processor = item.processor if isinstance(item, ServiceItem) else None
         if not selected_processor and selected_display_type != 'automatic':

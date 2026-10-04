@@ -166,7 +166,7 @@ class MediaMediaItem(FolderLibraryItem):
         self.icon_path = 'images/image'
         self.background = False
         self.automatic = ''
-        self.error_icon = UiIcons().delete
+        self.error_icon = UiIcons().document_question_mark
         self.clapperboard = UiIcons().clapperboard
 
     @staticmethod
@@ -424,7 +424,7 @@ class MediaMediaItem(FolderLibraryItem):
             display_name = Path(file_name).stem
             tree_item = FileTreeWidgetItem([display_name])
             tree_item.setText(0, display_name)
-            tree_item.setIcon(0, UiIcons().error)
+            tree_item.setIcon(0, UiIcons().document_question_mark)
             tree_item.setToolTip(0, track_str)
         elif track_info.isFile():
             # Normal media file handling.

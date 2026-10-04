@@ -1,4 +1,4 @@
-"""Tests for presenting exported slides in OpenLP instead of a separate slideshow."""
+"""Tests for native presentation playback, image caches, and PDF conversion."""
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -12,18 +12,13 @@ from openlp.plugins.presentations.lib.db import Item
 from openlp.plugins.presentations.lib.presentationcontroller import PresentationDocument
 
 
-def test_image_mode_is_opt_in(media_item):
-    file_path = Path('slides.pptx')
-    controller = MagicMock(supports_slide_images=True)
-    media_item.controllers = {'Powerpoint': controller}
-    media_item.automatic = 'Automatic'
-
-    assert not media_item.should_render_as_images(file_path, 'Powerpoint')
+def test_native_presentations_use_controller_playback(media_item):
+    """A legacy image-rendering preference cannot override native controller playback."""
     media_item.settings.setValue('presentations/render slide images', QtCore.Qt.CheckState.Checked)
-    assert media_item.should_render_as_images(file_path, 'Powerpoint')
-    controller.supports_slide_images = False
-    assert not media_item.should_render_as_images(file_path, 'Powerpoint')
+    for suffix in ('ppt', 'pptx', 'pptm', 'pps', 'ppsx', 'odp', 'key'):
+        assert not media_item.should_render_as_images(Path(f'slides.{suffix}'), 'Powerpoint')
     assert media_item.should_render_as_images(Path('slides.pdf'), 'Pdf')
+    assert media_item.should_render_as_images(Path('slides.PDF'), 'Pdf')
 
 
 def test_powerpoint_snapshot_captures_only_the_named_window(settings):
@@ -82,43 +77,6 @@ def test_slide_image_cache_requires_complete_set_and_matching_screen(settings, t
         assert document.get_slide_image_paths() == []
 
 
-def test_native_presentation_can_be_rendered_as_openlp_images(media_item, tmp_path):
-    source = tmp_path / 'slides.pptx'
-    source.write_bytes(b'presentation')
-    images = [tmp_path / 'slide1.png', tmp_path / 'slide2.png']
-    for image in images:
-        image.write_bytes(b'image')
-    controller = MagicMock(supports_slide_images=True)
-    document = controller.add_document.return_value
-    document.get_slide_image_paths.side_effect = [[], images]
-    document.load_presentation.return_value = True
-    document.create_slide_images.return_value = True
-    document.get_titles_and_notes.return_value = (['One', 'Two'], ['', 'Note'])
-    document.get_thumbnail_path.side_effect = lambda number, exists: images[number - 1]
-    media_item.controllers = {'Powerpoint': controller}
-    media_item.automatic = 'Automatic'
-    media_item.find_controller_by_type = MagicMock(return_value='Powerpoint')
-    media_item.settings.setValue('presentations/render slide images', QtCore.Qt.CheckState.Checked)
-    media_item.display_type_combo_box = MagicMock()
-    media_item.display_type_combo_box.currentText.return_value = 'Powerpoint'
-    media_item.display_type_combo_box.itemData.return_value = 'automatic'
-    tree_item = QtWidgets.QTreeWidgetItem(None)
-    tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, Item(id=1, file_path=str(source)))
-    service_item = ServiceItem(None)
-
-    assert media_item.generate_slide_data(service_item, item=tree_item, file_path=source)
-    assert service_item.is_image()
-    assert service_item.is_valid
-    assert service_item.processor is None
-    assert [slide['path'] for slide in service_item.slides] == images
-    assert [slide['display_title'] for slide in service_item.slides] == ['One', 'Two']
-    assert all(slide['use_background_image'] for slide in service_item.slides)
-    assert service_item.is_capable(ItemCapabilities.CanPreview)
-    document.load_presentation.assert_called_once()
-    document.create_slide_images.assert_called_once()
-    document.close_presentation.assert_called_once()
-
-
 def test_powerpoint_exports_visible_slides_at_screen_resolution(settings, tmp_path):
     from openlp.plugins.presentations.lib.powerpointcontroller import PowerpointDocument
 
@@ -175,19 +133,6 @@ def test_applescript_export_does_not_close_unrelated_front_document(settings, tm
 
     controller.applescript.call.assert_not_called()
     controller.remove_doc.assert_called_once_with(document)
-
-
-def test_render_mode_checkbox_saves_setting(settings):
-    from openlp.core.common.registry import Registry
-    from openlp.plugins.presentations.lib.presentationtab import PresentationTab
-
-    Registry().register('settings_form', MagicMock())
-    tab = PresentationTab(None, 'Presentations', None, {}, None)
-    assert not tab.render_slide_images_check_box.isChecked()
-    tab.activated = True
-    tab.render_slide_images_check_box.setChecked(True)
-    tab.save()
-    assert settings.value('presentations/render slide images') == QtCore.Qt.CheckState.Checked
 
 
 def test_failed_image_export_keeps_native_service_item(media_item, tmp_path):

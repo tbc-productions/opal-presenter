@@ -385,7 +385,7 @@ def test_load_item_file_not_exist(mocked_create_thumb: MagicMock, media_item: Im
     # WHEN load_item() is called with the Item
     result = media_item.load_item(item)
 
-    # THEN: A QTreeWidgetItem with a "delete" icon should be returned
+    # THEN: A QTreeWidgetItem marking the inaccessible document should be returned
     assert isinstance(result, QtWidgets.QTreeWidgetItem)
     assert result.text(0) == 'myimage'
     mocked_create_thumb.assert_not_called()
@@ -436,7 +436,7 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
         assert isinstance(result, QtWidgets.QTreeWidgetItem)
         assert result.text(0) == 'tractor'
         assert result.toolTip(0).splitlines()[0] == str(image_path)
-        mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'), size=QtCore.QSize(-1, 400))
+        mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'))
 
 
 @patch('openlp.plugins.images.lib.mediaitem.validate_thumb')

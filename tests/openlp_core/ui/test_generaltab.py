@@ -28,7 +28,6 @@ from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
 
 
 def test_creation(settings):
@@ -43,23 +42,6 @@ def test_creation(settings):
 
     # THEN:
     assert "Core" == general_tab.tab_title, 'The tab title should be Core'
-
-
-def test_slide_max_height_combo_is_left_aligned(settings):
-    """
-    Test that max height combo does not expand and remains left-aligned in form layout.
-    """
-    # GIVEN: A new General Tab
-    settings_form = SettingsForm(None)
-    general_tab = GeneralTab(settings_form)
-
-    # WHEN/THEN: The combo should use a fixed horizontal size policy
-    assert general_tab.slide_max_height_combo_box.sizePolicy().horizontalPolicy() == QtWidgets.QSizePolicy.Policy.Fixed
-    assert general_tab.slide_max_height_combo_box.parent() == general_tab.slide_max_height_row_widget
-    assert general_tab.slide_max_height_row_layout.count() == 2
-    assert general_tab.slide_max_height_row_layout.itemAt(1).spacerItem() is not None
-    assert general_tab.slide_max_height_label.wordWrap() is True
-    assert '\n' not in general_tab.slide_max_height_label.text()
 
 
 def test_change_search_as_type(settings):
@@ -95,24 +77,6 @@ def test_slide_numbers_in_footer(settings):
 
     # THEN: the settings should be updated
     assert settings.value('advanced/slide numbers in footer') is True
-
-
-def test_new_service_message(settings):
-    """
-    Test that when the new service message option is changed then the settings are updated
-    """
-    # GIVEN: Settings, a settings form and a general tab
-    settings.setValue('advanced/new service message', True)
-    settings_form = SettingsForm(None)
-    general_tab = GeneralTab(settings_form)
-    settings_form.insert_tab(general_tab, is_visible=True)
-
-    # WHEN: I click the checkbox and then save
-    QtTest.QTest.mouseClick(general_tab.new_service_message_check_box, QtCore.Qt.MouseButton.LeftButton)
-    settings_form.accept()
-
-    # THEN: the settings should be updated
-    assert settings.value('advanced/new service message') is False
 
 
 def test_logo_fit_setting_is_saved(settings):

@@ -444,8 +444,7 @@ def use_alternate_rows():
     service_list = getattr(registry, 'service_list', None)
     if not service_list:
         return False
-    settings = registry.get('settings')
-    return False if settings is None else bool(settings.value('advanced/alternate rows'))
+    return True
 
 
 def get_application_stylesheet():

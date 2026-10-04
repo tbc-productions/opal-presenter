@@ -409,11 +409,8 @@ class UiStrings(metaclass=Singleton):
         self.LayoutStyle = translate('OpenLP.Ui', 'Layout style:')
         self.Left = translate('OpenLP.ThemeWizard', 'Left')
         self.Live = translate('OpenLP.Ui', 'Live')
-        self.LivePreviewShowsBlankScreen = translate('OpenLP.ServiceTab', 'Live preview shows blank screen')
         self.LivePreviewShowsPresentationScreen = translate('OpenLP.ServiceTab',
                                                             'Live preview always shows presentation screen')
-        self.LivePreviewShowsSlideTransitions = translate('OpenLP.ServiceTab',
-                                                          'Live preview shows slide transitions')
         self.LiveStream = translate('OpenLP.Ui', 'Live Stream')
         self.LiveBGError = translate('OpenLP.Ui', 'Live Background Error')
         self.LiveToolbar = translate('OpenLP.Ui', 'Live Toolbar')

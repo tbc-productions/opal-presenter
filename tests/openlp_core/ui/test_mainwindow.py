@@ -569,8 +569,7 @@ def test_mainwindow_configuration(main_window):
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
                              'authentication_token', 'web_socket_server'}
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
-                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons',
-                               'alternate_rows_changed']
+                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons']
     assert set(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \
@@ -860,8 +859,7 @@ def test_restore_current_media_manager_item(main_window_reduced):
     """
     Regression test for bug #1152509.
     """
-    # save current plugin: True; current media plugin: 2
-    main_window_reduced.settings.setValue('advanced/save current plugin', True)
+    # The last-used Library tab is always restored.
     main_window_reduced.settings.setValue('advanced/current media plugin', 2)
     main_window_reduced.media_tool_box.setCurrentIndex = MagicMock()
 

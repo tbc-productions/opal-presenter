@@ -701,7 +701,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         Registry().register_function('theme_change_global', self.default_theme_changed)
         Registry().register_function('config_screen_changed', self.screen_changed)
         Registry().register_function('media_dock_refresh_icons', self.refresh_media_dock_icons)
-        Registry().register_function('alternate_rows_changed', self.alternate_rows_changed)
         Registry().register_function('bootstrap_post_set_up', self.bootstrap_post_set_up)
         # Reset the cursor
         self.application.set_normal_cursor()
@@ -782,15 +781,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         """
         self.media_dock_manager.refresh_item_icons()
 
-    def alternate_rows_changed(self):
-        """
-        Update alternating row colors on all open item views.
-        """
-        use_alternate_rows = self.settings.value('advanced/alternate rows')
-        for widget in QtWidgets.QApplication.allWidgets():
-            if isinstance(widget, QtWidgets.QAbstractItemView):
-                widget.setAlternatingRowColors(use_alternate_rows)
-
     def bootstrap_post_set_up(self):
         """
         process the bootstrap post setup request
@@ -840,10 +830,9 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         Called on start up to restore the last active media plugin.
         """
         self.log_info('Load data from Settings')
-        if self.settings.value('advanced/save current plugin'):
-            saved_plugin_id = self.settings.value('advanced/current media plugin')
-            if saved_plugin_id != -1:
-                self.media_tool_box.setCurrentIndex(saved_plugin_id)
+        saved_plugin_id = self.settings.value('advanced/current media plugin')
+        if saved_plugin_id != -1:
+            self.media_tool_box.setCurrentIndex(saved_plugin_id)
 
     def on_search_shortcut_triggered(self):
         """
@@ -1010,15 +999,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         # Check if any Bibles downloaded.  If there are, they will be processed.
         Registry().execute('bibles_load_list')
         self.application.set_normal_cursor()
-
-    def is_display_blank(self):
-        """
-        Check and display message if screen blank on setup.
-        """
-        if self.settings.value('core/screen blank'):
-            if self.settings.value('core/blank warning'):
-                QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP+ Main Display Blanked'),
-                                               translate('OpenLP.MainWindow', 'The Main Display has been blanked out'))
 
     def error_message(self, title: str, message: str):
         """
@@ -1409,8 +1389,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 # End nested modal loop so shutdown is not blocked (ThemeForm uses QDialog.exec).
                 theme_form.reject()
         if save_settings:
-            if self.settings.value('advanced/save current plugin'):
-                self.settings.setValue('advanced/current media plugin', self.media_tool_box.currentIndex())
+            self.settings.setValue('advanced/current media plugin', self.media_tool_box.currentIndex())
         # Call the cleanup method to shutdown plugins.
         self.log_info('cleanup plugins')
         self.plugin_manager.finalise_plugins()

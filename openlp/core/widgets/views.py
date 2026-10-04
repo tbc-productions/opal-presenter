@@ -39,13 +39,6 @@ from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
-SCROLL_HINT = {
-    0: QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible,
-    1: QtWidgets.QAbstractItemView.ScrollHint.PositionAtTop,
-    2: QtWidgets.QAbstractItemView.ScrollHint.PositionAtCenter,
-    3: QtWidgets.QAbstractItemView.ScrollHint.PositionAtBottom
-}
-
 SONG_SECTION_DEFAULT_COLORS = {
     'intro': '#4ADE80',
     'verse': '#60A5FA',
@@ -323,16 +316,8 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
             # Sort out image heights.
             else:
                 height = self.viewport().width() // self.screen_ratio
-                max_img_row_height = self.settings.value('advanced/slide max height')
-                # Adjust for row height cap if in use.
-                if isinstance(max_img_row_height, int):
-                    if 0 < max_img_row_height < height:
-                        height = max_img_row_height
-                    elif max_img_row_height < 0:
-                        # If auto setting, show that number of slides, or if the resulting slides too small, 100px.
-                        # E.g. If setting is -4, 4 slides will be visible, unless those slides are < 100px high.
-                        self.auto_row_height = max(self.viewport().height() / (-1 * max_img_row_height), 100)
-                        height = min(height, self.auto_row_height)
+                self.auto_row_height = max(self.viewport().height() / 4, 100)
+                height = min(height, self.auto_row_height)
                 # Apply new height to slides
                 for slide_index in range(len(self.service_item.slides)):
                     self.setRowHeight(slide_index, int(height))
@@ -341,9 +326,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         """
         Will scale non-image slides.
         """
-        # Only for non-text slides when row height cap in use
-        max_img_row_height = self.settings.value('advanced/slide max height')
-        if self.service_item.is_text() or not isinstance(max_img_row_height, int) or max_img_row_height == 0:
+        if self.service_item.is_text():
             return
         # Get and validate label widget containing slide & adjust max width
         try:
@@ -445,15 +428,8 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
                 layout.addWidget(label)
                 container.setLayout(layout)
                 slide_height = width // self.screen_ratio
-                max_img_row_height = self.settings.value('advanced/slide max height')
-                if isinstance(max_img_row_height, int):
-                    if 0 < max_img_row_height < slide_height:
-                        slide_height = max_img_row_height
-                    elif max_img_row_height < 0:
-                        # If auto setting, show that number of slides, or if the resulting slides too small, 100px.
-                        # E.g. If setting is -4, 4 slides will be visible, unless those slides are < 100px high.
-                        self.auto_row_height = max(self.viewport().height() / (-1 * max_img_row_height), 100)
-                        slide_height = min(slide_height, self.auto_row_height)
+                self.auto_row_height = max(self.viewport().height() / 4, 100)
+                slide_height = min(slide_height, self.auto_row_height)
                 self.setCellWidget(slide_index, 0, container)
                 row += 1
                 header_colors.append(None)
@@ -485,25 +461,10 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         """
         Switches to the given row.
         """
-        # Retrieve setting
-        auto_scrolling = self.settings.value('advanced/autoscrolling')
-        # Check if auto-scroll disabled (None) and validate value as dict containing 'dist' and 'pos'
-        # 'dist' represents the slide to scroll to relative to the new slide (-1 = previous, 0 = current, 1 = next)
-        # 'pos' represents the vert position of of the slide (0 = in view, 1 = top, 2 = middle, 3 = bottom)
-        if not (isinstance(auto_scrolling, dict) and 'dist' in auto_scrolling and 'pos' in auto_scrolling and
-                isinstance(auto_scrolling['dist'], int) and isinstance(auto_scrolling['pos'], int)):
-            # Even when auto-scroll is disabled/misconfigured, we must still change the selected slide.
-            self.selectRow(slide)
-            return
-        # prevent scrolling past list bounds
-        scroll_to_slide = slide + auto_scrolling['dist']
-        if scroll_to_slide < 0:
-            scroll_to_slide = 0
-        if scroll_to_slide >= self.slide_count():
-            scroll_to_slide = self.slide_count() - 1
-        # Scroll to item if possible.
-        self.scrollToItem(self.item(scroll_to_slide, 0), SCROLL_HINT[auto_scrolling['pos']])
         self.selectRow(slide)
+        item = self.item(slide, 0)
+        if item is not None:
+            self.scrollToItem(item, QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible)
 
     def keyPressEvent(self, event):
         """

@@ -49,7 +49,7 @@ if is_win():
 
 log = logging.getLogger(__name__)
 
-__version__ = 5
+__version__ = 7
 
 
 class ProxyMode(IntEnum):
@@ -324,9 +324,6 @@ class Settings(QtCore.QSettings):
     __default_settings__ = {
         'settings/version': 0,
         'advanced/add page break': False,
-        'advanced/disable transparent display': True,
-        'advanced/alternate rows': True,
-        'advanced/autoscrolling': {'dist': 1, 'pos': 0},
         'advanced/current media plugin': -1,
         'advanced/data path': None,
         # 7 stands for now, 0 to 6 is Monday to Sunday.
@@ -340,10 +337,8 @@ class Settings(QtCore.QSettings):
         'advanced/enable exit confirmation': True,
         'advanced/expand service item': False,
         'advanced/hide mouse': True,
-        'advanced/ignore aspect ratio': False,
         'advanced/is portable': False,
         'advanced/max recent files': 20,
-        'advanced/new service message': True,
         'advanced/print file meta data': False,
         'advanced/print notes': False,
         'advanced/print slide text': False,
@@ -355,14 +350,11 @@ class Settings(QtCore.QSettings):
         'advanced/proxy username': '',
         'advanced/proxy password': '',
         'advanced/recent file count': 4,
-        'advanced/save current plugin': False,
         'advanced/slide limits': SlideLimits.End,
-        'advanced/slide max height': -4,
         'advanced/slide numbers in footer': False,
         'advanced/single click preview': True,
         'advanced/single click service preview': True,
         'advanced/x11 bypass wm': X11_BYPASS_DEFAULT,
-        'advanced/prefer windowed screen capture': False,
         'advanced/search as type': True,
         'advanced/ui_theme_name': UiThemes.Automatic,
         'advanced/interface style': 'modern',
@@ -415,7 +407,6 @@ class Settings(QtCore.QSettings):
         'bibles/list separator': '',
         'bibles/end separator': '',
         'bibles/last directory import': None,
-        'bibles/hide combined quick error': False,
         'bibles/is search while typing enabled': True,
         'crashreport/last directory': None,
         'custom/db type': 'sqlite',
@@ -432,20 +423,16 @@ class Settings(QtCore.QSettings):
         'core/auto preview': False,
         'core/auto unblank': False,
         'core/click live slide to unblank': False,
-        'core/blank warning': False,
         'core/ccli number': '',
         'core/has run wizard': False,
         'core/language': '[en]',
         'core/last version test': '',
-        'core/live preview shows blank screen': True,
         'core/live preview shows presentation screen': False,
-        'core/live preview shows slide transitions': False,
         'core/loop delay': 5,
         'core/recent files': [],
         'core/screens': '{}',
         'core/layout startup pending': False,
         'core/screen blank': False,
-        'core/show splash': True,
         'core/logo background color': '#ffffff',
         'core/logo file': Path(':/graphics/openlp-logo-background.svg'),
         'core/logo fit': 'contain',
@@ -499,8 +486,6 @@ class Settings(QtCore.QSettings):
         'planningcenter/default_service_type_name': '-- none --',
         'planningcenter/default_service_type_id': '',
         'presentations/status': PluginStatus.Inactive,
-        'presentations/override app': QtCore.Qt.CheckState.Unchecked,
-        'presentations/render slide images': QtCore.Qt.CheckState.Unchecked,
         'presentations/maclo': QtCore.Qt.CheckState.Checked,
         'presentations/Impress': QtCore.Qt.CheckState.Checked,
         'presentations/Powerpoint': QtCore.Qt.CheckState.Checked,
@@ -544,7 +529,6 @@ class Settings(QtCore.QSettings):
         'songs/add song from service': True,
         'songs/favourites_toggled': False,
         'songs/first slide mode': SongFirstSlideMode.Default,
-        'songs/display songbar': True,
         'songs/last directory import': None,
         'songs/last directory export': None,
         'songs/songselect username': '',
@@ -731,6 +715,29 @@ class Settings(QtCore.QSettings):
         (f'shortcuts/listView{plugin}LiveItem', f'shortcuts/listView{plugin}LiveItem',
          [(upgrade_live_shortcuts, [[]])])
         for plugin in ('Bibles', 'Custom', 'Images', 'Media', 'Presentations', 'Songs')
+    ]
+
+    # Retire redundant settings and preferences replaced by automatic behaviour.
+    __setting_upgrade_6__ = [
+        ('core/live preview shows slide transitions', '', []),
+        ('advanced/new service message', '', []),
+        ('advanced/ignore aspect ratio', '', []),
+        ('bibles/hide combined quick error', '', []),
+        ('core/live preview shows blank screen', '', []),
+        ('core/show splash', '', []),
+        ('advanced/save current plugin', '', []),
+        ('advanced/alternate rows', '', []),
+        ('songs/display songbar', '', []),
+        ('presentations/override app', '', []),
+        ('core/blank warning', '', []),
+        ('advanced/autoscrolling', '', []),
+        ('advanced/slide max height', '', []),
+    ]
+
+    __setting_upgrade_7__ = [
+        ('presentations/render slide images', '', []),
+        ('advanced/disable transparent display', '', []),
+        ('advanced/prefer windowed screen capture', '', [])
     ]
 
     @staticmethod

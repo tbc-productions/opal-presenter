@@ -840,7 +840,7 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     display_window.setVisible = MagicMock()
@@ -850,15 +850,18 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
     display_window.hide_display()
 
     # THEN: Should hide the display with the js transparency function (not setVisible)
-    display_window.setVisible.call_count == 0
-    display_window.run_in_display.assert_called_once_with('toTransparent', True)
+    display_window.setVisible.assert_not_called()
+    display_window.display_watcher.dispatchEvent(TRANSITION_END_EVENT_NAME, {})
+    display_window.setVisible.assert_called_once_with(False)
+    display_window.run_in_display.assert_called_once_with(
+        'toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
 
 
 def test_hide_display_to_blank(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     mock_settings.value.return_value = False
@@ -890,7 +893,7 @@ def test_hide_display_to_theme(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     mock_settings.value.return_value = False
@@ -933,7 +936,6 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
             'core/logo file': logo_path,
             'core/logo fit': 'repeat',
             'themes/item transitions': False,
-            'advanced/disable transparent display': False
         }
         return values.get(key, False)
 
@@ -956,7 +958,7 @@ def test_hide_display_to_transparent(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     display_window.setVisible = MagicMock()
@@ -966,7 +968,8 @@ def test_hide_display_to_transparent(display_window_env, mock_settings):
     display_window.hide_display(HideMode.Screen)
 
     # THEN: Should run the correct javascript on the display and not set the visiblity
-    display_window.run_in_display.assert_called_once_with('toTransparent', True)
+    display_window.run_in_display.assert_called_once_with(
+        'toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
     assert display_window.setVisible.call_count == 0
 
 
@@ -1099,10 +1102,9 @@ def test_display_watcher_generates_event_names(display_window_env, mock_settings
 
 def test_hide_transparent_to_screen(display_window_env, mock_settings):
     """
-    Test that when going transparent, and the disable transparent setting is enabled,
-    the screen mode should be used.
+    Showing the desktop hides the output window after the transition completes.
     """
-    # GIVEN: Display window, setting advanced/disable transparent display = True and mocked run_in_display
+    # GIVEN: A display window and mocked transition completion
     display_window = DisplayWindow()
     display_window.setVisible = MagicMock()
     has_ran_event = False

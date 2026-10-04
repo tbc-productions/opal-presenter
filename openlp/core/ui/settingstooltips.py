@@ -101,11 +101,6 @@ def apply_settings_tooltips(tab):
         'OpenLP.SettingsTooltips',
         'Separate alternative markers with |. Leave the field empty to use the default marker.')
     hints = {
-        'GeneralTab': [
-            ('autoscroll_combo_box', 'autoscroll_label', translate(
-                'OpenLP.SettingsTooltips',
-                'Choose how the slide controller scrolls as slides change.')),
-        ],
         'ServiceTab': [
             ('service_name_edit', 'service_name_label', translate(
                 'OpenLP.SettingsTooltips',
@@ -192,14 +187,9 @@ def apply_settings_tooltips(tab):
                 'Credits still appear in the footer when they are present.')),
         ],
         'PresentationTab': [
-            ('render_slide_images_check_box', None, translate(
-                'PresentationPlugin.PresentationTab', 'Animations and videos will not play.')),
             ('ppt_window_check_box', None, translate(
                 'PresentationPlugin.PresentationTab',
                 'This may fix PowerPoint scaling issues in Windows 8 and 10.')),
-            ('override_app_check_box', None, translate(
-                'OpenLP.SettingsTooltips',
-                'Choose a presentation application from the Library toolbar.')),
         ],
     }.get(type(tab).__name__, ())
     for control_name, label_name, tip in hints:

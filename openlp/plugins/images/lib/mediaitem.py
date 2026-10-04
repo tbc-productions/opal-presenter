@@ -22,7 +22,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
@@ -174,7 +173,7 @@ class ImageMediaItem(FolderLibraryItem):
         display_name = Path(file_name).stem
         if not file_path.exists():
             tree_item = FileTreeWidgetItem([display_name])
-            tree_item.setIcon(0, UiIcons().delete)
+            tree_item.setIcon(0, UiIcons().document_question_mark)
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
         else:
@@ -183,11 +182,7 @@ class ImageMediaItem(FolderLibraryItem):
             if validate_thumb(file_path, thumbnail_path):
                 icon = build_icon(thumbnail_path)
             else:
-                size: Union[QtCore.QSize, None] = None
-                slide_height: Union[int, None] = self.settings.value('advanced/slide max height')
-                if slide_height and slide_height > 0:
-                    size = QtCore.QSize(-1, slide_height)
-                icon = create_thumb(file_path, thumbnail_path, size=size)
+                icon = create_thumb(file_path, thumbnail_path)
             tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)

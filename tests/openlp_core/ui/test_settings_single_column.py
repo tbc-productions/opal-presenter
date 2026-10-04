@@ -69,8 +69,7 @@ def test_presentations_fit_without_horizontal_scrollbar(settings, qtbot):
     assert tab.ppt_window_check_box.width() >= tab.ppt_window_check_box.minimumSizeHint().width()
     assert '\n' not in tab.ppt_window_check_box.text()
     for control, explanation in (
-            (tab.render_slide_images_check_box, 'Animations and videos will not play.'),
-            (tab.ppt_window_check_box, 'This may fix PowerPoint scaling issues in Windows 8 and 10.')):
+            (tab.ppt_window_check_box, 'This may fix PowerPoint scaling issues in Windows 8 and 10.'),):
         help_button = control.parentWidget().findChild(fluent.QToolButton, 'settings_help_icon')
         assert help_button.help_text == explanation
         help_button.click()

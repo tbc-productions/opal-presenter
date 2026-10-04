@@ -51,6 +51,8 @@ def test_presentation_paths_survive_service_save_and_reload(tmp_path, monkeypatc
     document.get_titles_and_notes.return_value = (['First', 'Second'], ['Notes', ''])
     controller = MagicMock()
     controller.add_document.return_value = document
+    controller.supports = ['pptx']
+    controller.also_supports = []
     media_item = SimpleNamespace(
         display_type_combo_box=MagicMock(currentText=lambda: 'Powerpoint', itemData=lambda index: 'Powerpoint'),
         controllers={'Powerpoint': controller},

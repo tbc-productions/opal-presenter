@@ -46,9 +46,6 @@ class SongsTab(SettingsTab):
         self.mode_group_box.setObjectName('mode_group_box')
         self.mode_layout = QtWidgets.QVBoxLayout(self.mode_group_box)
         self.mode_layout.setObjectName('mode_layout')
-        self.tool_bar_active_check_box = QtWidgets.QCheckBox(self.mode_group_box)
-        self.tool_bar_active_check_box.setObjectName('tool_bar_active_check_box')
-        self.mode_layout.addWidget(self.tool_bar_active_check_box)
         self.update_on_edit_check_box = QtWidgets.QCheckBox(self.mode_group_box)
         self.update_on_edit_check_box.setObjectName('update_on_edit_check_box')
         self.mode_layout.addWidget(self.update_on_edit_check_box)
@@ -260,7 +257,6 @@ class SongsTab(SettingsTab):
         self.right_layout.addStretch()
 
         # Connect all the signals!
-        self.tool_bar_active_check_box.stateChanged.connect(self.on_tool_bar_active_check_box_changed)
         self.update_on_edit_check_box.stateChanged.connect(self.on_update_on_edit_check_box_changed)
         self.add_from_service_check_box.stateChanged.connect(self.on_add_from_service_check_box_changed)
         self.first_slide_mode_combobox.currentIndexChanged.connect(self.on_first_slide_mode_combo_box_changed)
@@ -300,8 +296,6 @@ class SongsTab(SettingsTab):
 
     def retranslate_ui(self):
         self.mode_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Song related settings'))
-        self.tool_bar_active_check_box.setText(translate('SongsPlugin.SongsTab',
-                                                         'Enable "Go to verse" button in Live panel'))
         self.update_on_edit_check_box.setText(translate('SongsPlugin.SongsTab', 'Update service from song edit'))
         self.add_from_service_check_box.setText(translate('SongsPlugin.SongsTab',
                                                           'Import missing songs from Service files'))
@@ -402,8 +396,6 @@ class SongsTab(SettingsTab):
     def on_search_as_type_check_box_changed(self, check_state):
         self.song_search = (check_state == QtCore.Qt.CheckState.Checked)
 
-    def on_tool_bar_active_check_box_changed(self, check_state):
-        self.tool_bar = (check_state == QtCore.Qt.CheckState.Checked)
 
     def on_update_on_edit_check_box_changed(self, check_state):
         self.update_edit = (check_state == QtCore.Qt.CheckState.Checked)
@@ -494,7 +486,6 @@ class SongsTab(SettingsTab):
         """
         Load the songs settings
         """
-        self.tool_bar = self.settings.value('songs/display songbar')
         self.update_edit = self.settings.value('songs/update service on edit')
         self.update_load = self.settings.value('songs/add song from service')
         self.first_slide_mode = self.settings.value('songs/first slide mode')
@@ -504,7 +495,6 @@ class SongsTab(SettingsTab):
         self.chord_notation = self.settings.value('songs/chord notation')
         self.disable_chords_import = self.settings.value('songs/disable chords import')
         self.song_key_warning = self.settings.value('songs/warn about missing song key')
-        self.tool_bar_active_check_box.setChecked(self.tool_bar)
         self.update_on_edit_check_box.setChecked(self.update_edit)
         self.add_from_service_check_box.setChecked(self.update_load)
         self.auto_play_check_box.setChecked(self.auto_play)
@@ -570,7 +560,6 @@ class SongsTab(SettingsTab):
         """
         Save the song settings
         """
-        self.settings.setValue('songs/display songbar', self.tool_bar)
         self.settings.setValue('songs/update service on edit', self.update_edit)
         self.settings.setValue('songs/add song from service', self.update_load)
         self.settings.setValue('songs/auto play audio', self.auto_play)

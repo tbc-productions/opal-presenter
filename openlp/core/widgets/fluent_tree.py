@@ -7,6 +7,7 @@ view's public reveal and selection-indicator animation APIs.
 from PySide6 import QtCore, QtGui, QtWidgets
 from fluentqt import FluentWidget
 
+LIBRARY_FILE_TYPE_ICON_ROLE = QtCore.Qt.ItemDataRole.UserRole + 101
 
 class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
     """Paint compact, indented file rows with Fluent disclosure controls."""
@@ -39,7 +40,8 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         return QtCore.QRectF(left, option.rect.top() + 2, 20, option.rect.height() - 4)
 
     def trailingIcons(self, index):
-        return []
+        icon = index.data(LIBRARY_FILE_TYPE_ICON_ROLE) if index.column() == 0 else None
+        return [icon] if isinstance(icon, QtGui.QIcon) and not icon.isNull() else []
 
     def _text_layout(self, option, index):
         background = self._background_rect(option)
@@ -115,6 +117,8 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         painter.setPen(text_color)
         alignment = QtCore.Qt.AlignmentFlag.AlignRight if rtl else QtCore.Qt.AlignmentFlag.AlignLeft
         painter.drawText(text_rect, alignment | QtCore.Qt.AlignmentFlag.AlignVCenter, text)
+        if isinstance(index.data(LIBRARY_FILE_TYPE_ICON_ROLE), QtGui.QIcon):
+            painter.setOpacity(painter.opacity() * 0.65)
         for icon, rect in zip(trailing_icons, trailing_rects):
             icon.paint(painter, rect.toRect(), QtCore.Qt.AlignmentFlag.AlignCenter,
                        QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled)

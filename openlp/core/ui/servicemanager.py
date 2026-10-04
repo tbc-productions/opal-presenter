@@ -504,6 +504,7 @@ class Ui_ServiceManager(object):
         self.service_theme = self.settings.value('servicemanager/service theme')
         self.service_path = AppLocation.get_section_data_path('servicemanager')
         self._update_unsaved_changes_indicator()
+        self._update_new_service_actions()
         self._update_move_actions()
         # build the drag and drop context menu
         self.dnd_menu = QtWidgets.QMenu()
@@ -767,6 +768,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_note_form = ServiceNoteForm()
         self.service_item_edit_form = ServiceItemEditForm()
         self.start_time_form = StartTimeForm()
+        self._update_new_service_actions()
 
     def on_export_presentation(self, suffix):
         """Export the current service, with the configured logo between items."""
@@ -823,7 +825,22 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             service_file = translate('OpenLP.ServiceManager', 'Untitled Service')
         self.main_window.set_service_modified(modified, service_file)
         self._update_unsaved_changes_indicator()
+        self._update_new_service_actions()
         self.servicemanager_changed.emit()
+
+    def _can_create_new_service(self):
+        """An untouched empty service already provides a blank canvas."""
+        return bool(self.service_items or self.is_modified())
+
+    def _update_new_service_actions(self):
+        """Keep the toolbar and File menu New actions in sync."""
+        enabled = self._can_create_new_service()
+        toolbar = getattr(self, 'toolbar', None)
+        if toolbar is not None:
+            toolbar.actions_map['newService'].setEnabled(enabled)
+        action = getattr(self.main_window, 'file_new_item', None)
+        if action is not None:
+            action.setEnabled(enabled)
 
     def _update_unsaved_changes_indicator(self):
         """
@@ -960,6 +977,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Create a new service.
         """
+        if not self._can_create_new_service():
+            return False
         if self.is_modified():
             result = self.save_modified_service()
             if result == QtWidgets.QMessageBox.StandardButton.Cancel:
@@ -967,18 +986,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             elif result == QtWidgets.QMessageBox.StandardButton.Save:
                 if not self.decide_save_method():
                     return False
-        if not self.service_items and self.settings.value('advanced/new service message'):
-            do_not_show_again = QtWidgets.QCheckBox(translate('OpenLP.Ui', 'Do not show this message again'), None)
-            message_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Information,
-                                                translate('OpenLP.Ui', 'Create a new service.'),
-                                                translate('OpenLP.Ui', 'You already have a blank new service.\n'
-                                                                       'Add some items to it then press Save'),
-                                                QtWidgets.QMessageBox.StandardButton.Ok,
-                                                self)
-            message_box.setCheckBox(do_not_show_again)
-            message_box.exec()
-            if message_box.checkBox().isChecked():
-                self.settings.setValue('advanced/new service message', False)
         self.new_file()
 
     def on_load_service_clicked(self, checked):

@@ -129,20 +129,11 @@ class ServiceTab(SettingsTab):
         self.auto_preview_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
         self.auto_preview_check_box.setObjectName('auto_preview_check_box')
         self.slide_controller_layout.addRow(self.auto_preview_check_box)
-        self.live_preview_shows_blank_screen_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
-        self.live_preview_shows_blank_screen_check_box.setObjectName('live_preview_shows_blank_screen_check_box')
-        self.slide_controller_layout.addRow(self.live_preview_shows_blank_screen_check_box)
-        self.live_preview_shows_blank_screen_check_box.hide()
         self.live_preview_shows_presentation_screen_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
         self.live_preview_shows_presentation_screen_check_box.setObjectName(
             'live_preview_shows_presentation_screen_check_box'
         )
         self.slide_controller_layout.addRow(self.live_preview_shows_presentation_screen_check_box)
-        self.live_preview_shows_slide_transitions_check_box = QtWidgets.QCheckBox(self.slide_controller_groupbox)
-        self.live_preview_shows_slide_transitions_check_box.setObjectName(
-            'live_preview_shows_slide_transitions_check_box'
-        )
-        self.slide_controller_layout.addRow(self.live_preview_shows_slide_transitions_check_box)
         self.timeout_label = QtWidgets.QLabel(self.slide_controller_groupbox)
         self.timeout_label.setObjectName('timeout_label')
         self.timeout_spin_box = QtWidgets.QSpinBox(self.slide_controller_groupbox)
@@ -262,12 +253,8 @@ class ServiceTab(SettingsTab):
                                                                            'items to Live'))
         self.auto_preview_check_box.setText(translate('OpenLP.ServiceTab',
                                                       'Automatically preview the next item in service'))
-        self.live_preview_shows_blank_screen_check_box.setText(UiStrings().LivePreviewShowsBlankScreen)
         self.live_preview_shows_presentation_screen_check_box.setText(
             UiStrings().LivePreviewShowsPresentationScreen
-        )
-        self.live_preview_shows_slide_transitions_check_box.setText(
-            UiStrings().LivePreviewShowsSlideTransitions
         )
         self.timeout_label.setText(translate('OpenLP.ServiceTab', 'Timed slide interval:'))
         self.timeout_spin_box.setSuffix(translate('OpenLP.ServiceTab', ' sec'))
@@ -308,13 +295,8 @@ class ServiceTab(SettingsTab):
         self.auto_unblank_check_box.setChecked(self.settings.value('core/auto unblank'))
         self.click_live_slide_to_unblank_check_box.setChecked(self.settings.value('core/click live slide to unblank'))
         self.auto_preview_check_box.setChecked(self.settings.value('core/auto preview'))
-        self.live_preview_shows_blank_screen_check_box.setChecked(True)
-        self.settings.setValue('core/live preview shows blank screen', True)
         self.live_preview_shows_presentation_screen_check_box.setChecked(
             self.settings.value('core/live preview shows presentation screen')
-        )
-        self.live_preview_shows_slide_transitions_check_box.setChecked(
-            self.settings.value('core/live preview shows slide transitions')
         )
         self.timeout_spin_box.setValue(self.settings.value('core/loop delay'))
         # Service Item Wrapping
@@ -356,12 +338,8 @@ class ServiceTab(SettingsTab):
         self.settings.setValue('core/click live slide to unblank',
                                self.click_live_slide_to_unblank_check_box.isChecked())
         self.settings.setValue('core/auto preview', self.auto_preview_check_box.isChecked())
-        self.settings.setValue('core/live preview shows blank screen', True)
         self.settings.setValue('core/live preview shows presentation screen',
                                self.live_preview_shows_presentation_screen_check_box.isChecked())
-        self.settings.setValue('core/live preview shows slide transitions',
-                               self.live_preview_shows_slide_transitions_check_box.isChecked())
-        self.settings_form.register_post_process('slidecontroller_update_preview_transitions')
         self.settings.setValue('core/loop delay', self.timeout_spin_box.value())
         # Service Item Wrapping
         self.settings.setValue('advanced/slide limits', self.slide_limits)

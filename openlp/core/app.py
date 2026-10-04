@@ -155,7 +155,7 @@ class OpenLP(QtCore.QObject, LogMixin):
             else:
                 QtCore.QCoreApplication.exit()
                 sys.exit()
-        can_show_splash = self.settings.value('core/show splash')
+        can_show_splash = True
         if can_show_splash:
             self.splash = SplashScreen()
             Registry().register_function('startup_progress', self.splash.set_stage_progress)
@@ -216,7 +216,6 @@ class OpenLP(QtCore.QObject, LogMixin):
             check_for_update(self.main_window)
         if self.settings.value('api/update check') and not Registry().get_flag('no_web_server'):
             check_for_remote_update(self.main_window)
-        self.main_window.is_display_blank()
         Registry().execute('bootstrap_completion')
         if layout_recovered:
             self.main_window.show_status_message(

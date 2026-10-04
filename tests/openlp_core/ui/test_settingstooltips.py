@@ -20,15 +20,6 @@ def test_general_settings_show_help_only_for_useful_hints(settings):
     assert form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
     assert 'OpenLP+' in general_tab.check_for_updates_check_box.text()
     assert 'OpenLP+' in general_tab.check_for_remote_updates_check_box.text()
-    assert not general_tab.autoscroll_combo_box.toolTip()
-    autoscroll_help = general_tab.autoscroll_label.parentWidget().findChild(QtWidgets.QToolButton,
-                                                                            'settings_help_icon')
-    assert 'slide controller' in autoscroll_help.help_text
-    assert autoscroll_help.text() == ''
-    assert not autoscroll_help.icon().isNull()
-    row = autoscroll_help.parentWidget().layout()
-    assert row.itemAt(0).widget() is general_tab.autoscroll_label
-    assert row.itemAt(1).widget() is autoscroll_help
     assert not general_tab.auto_open_check_box.property('settings_help_icon_added')
     assert not general_tab.single_click_preview_check_box.property('settings_help_icon_added')
 

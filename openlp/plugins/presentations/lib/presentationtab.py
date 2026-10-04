@@ -22,7 +22,7 @@
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.i18n import translate
 from openlp.core.lib.settingstab import SettingsTab
 
 
@@ -56,18 +56,6 @@ class PresentationTab(SettingsTab):
             self.presenter_check_boxes[controller.name] = checkbox
             self.controllers_layout.addWidget(checkbox)
         self.left_layout.addWidget(self.controllers_group_box)
-        # Advanced
-        self.advanced_group_box = QtWidgets.QGroupBox(self.left_column)
-        self.advanced_group_box.setObjectName('advanced_group_box')
-        self.advanced_layout = QtWidgets.QVBoxLayout(self.advanced_group_box)
-        self.advanced_layout.setObjectName('advanced_layout')
-        self.override_app_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
-        self.override_app_check_box.setObjectName('override_app_check_box')
-        self.advanced_layout.addWidget(self.override_app_check_box)
-        self.render_slide_images_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
-        self.render_slide_images_check_box.setObjectName('render_slide_images_check_box')
-        self.advanced_layout.addWidget(self.render_slide_images_check_box)
-        self.left_layout.addWidget(self.advanced_group_box)
         # PowerPoint
         self.powerpoint_group_box = QtWidgets.QGroupBox(self.left_column)
         self.powerpoint_group_box.setObjectName('powerpoint_group_box')
@@ -103,13 +91,7 @@ class PresentationTab(SettingsTab):
             controller = self.controllers[key]
             checkbox = self.presenter_check_boxes[controller.name]
             self.set_controller_text(checkbox, controller)
-        self.advanced_group_box.setTitle(UiStrings().Advanced)
         self.powerpoint_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'PowerPoint options'))
-        self.override_app_check_box.setText(
-            translate('PresentationPlugin.PresentationTab', 'Allow presentation application to be overridden'))
-        self.render_slide_images_check_box.setText(
-            translate('PresentationPlugin.PresentationTab',
-                      'Show presentation slides in OpenLP+'))
         self.ppt_slide_click_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Clicking on the current slide advances to the next effect'))
@@ -145,10 +127,6 @@ class PresentationTab(SettingsTab):
                 powerpoint_mac_available = True
             if controller.name == 'Impress' and controller.is_available():
                 impress_available = True
-        self.override_app_check_box.setChecked(
-            self.settings.value('presentations/override app') == QtCore.Qt.CheckState.Checked)
-        self.render_slide_images_check_box.setChecked(
-            self.settings.value('presentations/render slide images') == QtCore.Qt.CheckState.Checked)
         # Load PowerPoint settings
         self.ppt_slide_click_check_box.setChecked(
             self.settings.value('presentations/powerpoint slide click advance') == QtCore.Qt.CheckState.Checked)
@@ -181,14 +159,6 @@ class PresentationTab(SettingsTab):
                         controller.start_process()
                     else:
                         controller.kill()
-        setting_key = 'presentations/override app'
-        if self.settings.value(setting_key) != self.override_app_check_box.checkState():
-            self.settings.setValue(setting_key, self.override_app_check_box.checkState())
-            changed = True
-        setting_key = 'presentations/render slide images'
-        if self.settings.value(setting_key) != self.render_slide_images_check_box.checkState():
-            self.settings.setValue(setting_key, self.render_slide_images_check_box.checkState())
-            changed = True
         # Save powerpoint settings
         setting_key = 'presentations/powerpoint slide click advance'
         if self.settings.value(setting_key) != self.ppt_slide_click_check_box.checkState():
