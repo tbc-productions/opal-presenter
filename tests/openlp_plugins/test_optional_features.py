@@ -50,7 +50,7 @@ def test_plugin_manager_lists_features_and_explains_restart(settings, state, reg
     form.load()
     assert form.plugin_list_widget.count() == 2
     assert form.status_checkbox.isEnabled()
-    with patch('openlp.core.ui.pluginform.QtWidgets.QMessageBox.information') as message:
+    with patch('openlp.core.ui.pluginform.show_restart_message') as message:
         form.status_checkbox.setChecked(True)
         assert projector.is_active()
         message.assert_called_once()

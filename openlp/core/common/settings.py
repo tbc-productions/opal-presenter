@@ -70,6 +70,20 @@ if is_linux():                                                                  
         X11_BYPASS_DEFAULT = False
 
 
+def get_default_alert_font():
+    """Choose an installed sans-serif family for both the Qt preview and web display."""
+    families = {family.casefold(): family for family in QtGui.QFontDatabase.families()}
+    preferred = ['Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Noto Sans', 'DejaVu Sans', 'Liberation Sans']
+    if is_macosx():
+        preferred.insert(0, 'Helvetica Neue')
+    for family in preferred:
+        if family.casefold() in families:
+            return families[family.casefold()]
+    font = QtGui.QFont('sans-serif')
+    font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
+    return QtGui.QFontInfo(font).family()
+
+
 def media_players_conv(string):
     """
     If phonon is in the setting string replace it with system
@@ -749,6 +763,8 @@ class Settings(QtCore.QSettings):
         # function was not set up as this stage).
         from openlp.core.common.i18n import UiStrings
         Settings.__default_settings__['advanced/default service name'] = UiStrings().DefaultServiceName
+        # Font discovery requires the QApplication created before this startup hook.
+        Settings.__default_settings__['alerts/font face'] = get_default_alert_font()
 
     def __init__(self, *args):
         """
@@ -1003,14 +1019,16 @@ class Settings(QtCore.QSettings):
         :return: The value stored by the setting.
         """
         # if group() is not empty the group has not been specified together with the key.
-        if self.group():
-            default_value = Settings.__default_settings__[self.group() + '/' + key]
-        else:
-            default_value = Settings.__default_settings__[key]
+        full_key = self.group() + '/' + key if self.group() else key
+        default_value = Settings.__default_settings__[full_key]
         try:
             setting = super().value(key, default_value)
         except TypeError:
             setting = default_value
+        # Older installs could save an empty family from QFont() before QApplication existed.
+        # Resolve it here so the settings dropdown and projected alerts use the same font.
+        if full_key == 'alerts/font face' and (not setting or not str(setting).strip()):
+            setting = get_default_alert_font()
         return self._convert_value(setting, default_value)
 
     def setValue(self, key, value):

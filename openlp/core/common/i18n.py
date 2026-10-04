@@ -303,7 +303,8 @@ class LanguageManager(object):
         Registry().get('settings').setValue('core/language', language)
         log.info("Language file: '{language}' written to conf file".format(language=language))
         if message:
-            QtWidgets.QMessageBox.information(None,
+            from openlp.core.common.restart import show_restart_message
+            show_restart_message(None,
                                               translate('OpenLP.LanguageManager', 'Language'),
                                               translate('OpenLP.LanguageManager',
                                                         'Please restart OpenLP+ to use your new language setting.'))

@@ -72,7 +72,7 @@ def test_save_new_value(settings):
     assert Settings().value('core/has run wizard') is True, 'The saved value should have been returned'
 
 
-def test_set_up_default_values():
+def test_set_up_default_values(qapp):
     """Test that the default values are updated"""
     # GIVEN: A Settings object with defaults
     # WHEN: set_up_default_values() is called
@@ -80,6 +80,38 @@ def test_set_up_default_values():
 
     # THEN: The default values should have been added to the dictionary
     assert 'advanced/default service name' in Settings.__default_settings__
+
+
+@pytest.mark.parametrize(('macos', 'families', 'expected'), [
+    (True, ['Arial', 'Helvetica Neue', 'Segoe UI'], 'Helvetica Neue'),
+    (False, ['Arial', 'Roboto', 'Segoe UI'], 'Segoe UI'),
+    (False, ['Arial', 'Roboto'], 'Roboto'),
+    (False, ['Noto Sans', 'DejaVu Sans'], 'Noto Sans'),
+    (False, ['arial'], 'arial'),
+])
+def test_default_alert_font_uses_installed_family(macos, families, expected):
+    """The default uses the first available sans-serif font, preserving its installed name."""
+    with patch.object(modsettings, 'is_macosx', return_value=macos), \
+            patch.object(modsettings.QtGui.QFontDatabase, 'families', return_value=families):
+        assert modsettings.get_default_alert_font() == expected
+
+
+def test_default_alert_font_falls_back_to_resolved_sans_serif(qapp):
+    """An installation without the preferred fonts still gets a concrete font family."""
+    with patch.object(modsettings.QtGui.QFontDatabase, 'families', return_value=[]):
+        family = modsettings.get_default_alert_font()
+    assert family
+    assert family in modsettings.QtGui.QFontDatabase.families()
+
+
+def test_default_alert_font_preserves_saved_choice(settings):
+    """Refreshing startup defaults does not overwrite the user's saved font."""
+    settings.setValue('alerts/font face', 'Custom Font')
+    with patch.dict(Settings.__default_settings__), \
+            patch.object(modsettings, 'get_default_alert_font', return_value='Roboto'):
+        Settings.set_up_default_values()
+        assert settings.get_default_value('alerts/font face') == 'Roboto'
+        assert settings.value('alerts/font face') == 'Custom Font'
 
 
 def test_get_default_value():

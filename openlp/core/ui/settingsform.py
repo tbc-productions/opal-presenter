@@ -30,6 +30,7 @@ from openlp.core.state import State
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
+from openlp.core.common.restart import show_restart_message
 from openlp.core.lib import build_icon
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.generaltab import GeneralTab
@@ -284,11 +285,14 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # Plugin activation is part of the installation state. Clearing it hides plugin settings tabs
         # (including Songs) and disables their Library sections after the next restart.
         preserved_keys = set(self.RESET_PRESERVED_KEYS)
-        preserved_keys.update(key for key in self.settings.allKeys() if key.endswith('/status'))
-        preserved = {key: self.settings.value(key) for key in preserved_keys if self.settings.contains(key)}
+        preserved_keys.update(key for key in self.settings.__default_settings__ if key.endswith('/status'))
+        # Preserve the stored representation without decoding and re-encoding library paths.
+        # Status keys without registered defaults belong to removed plugins and are cleared.
+        preserved = {key: QtCore.QSettings.value(self.settings, key)
+                     for key in preserved_keys if self.settings.contains(key)}
         self.settings.clear()
         for key, value in preserved.items():
-            self.settings.setValue(key, value)
+            QtCore.QSettings.setValue(self.settings, key, value)
         self.settings.sync()
         if self.settings.status() != QtCore.QSettings.Status.NoError:
             QtWidgets.QMessageBox.critical(
@@ -299,9 +303,9 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         if main_window is not None:
             main_window.settings_replaced = True
         self.processes = []
-        QtWidgets.QMessageBox.information(
-            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
         QtWidgets.QDialog.reject(self)
+        show_restart_message(
+            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
 
     def accept(self):
         """
@@ -337,7 +341,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 Registry().execute(process)
         result = QtWidgets.QDialog.accept(self)
         if tuple(self.settings.value(key) for key in theme_keys) != previous_theme:
-            QtWidgets.QMessageBox.information(
+            show_restart_message(
                 self, translate('OpenLP.SettingsForm', 'Restart required'),
                 translate('OpenLP.SettingsForm',
                           'Your interface theme has been saved. Restart OpenLP+ to apply it.'))

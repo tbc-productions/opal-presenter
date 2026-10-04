@@ -34,6 +34,7 @@ from openlp.core.api.deploy import download_and_install, download_version_info, 
 from openlp.core.common import get_network_interfaces
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
+from openlp.core.common.restart import show_restart_message
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.threading import is_thread_finished
 from openlp.core.ui.icons import UiIcons
@@ -356,7 +357,7 @@ class ApiTab(SettingsTab):
         Save the configuration and update the server configuration if necessary
         """
         if self.settings.value('api/ip address') != self.address_edit.text():
-            QtWidgets.QMessageBox.information(self, translate('OpenLP.RemoteTab', 'Restart Required'),
+            show_restart_message(self, translate('OpenLP.RemoteTab', 'Restart Required'),
                                               translate('OpenLP.RemoteTab',
                                                         'This change will only take effect once OpenLP+ '
                                                         'has been restarted.'))

@@ -27,7 +27,7 @@ def test_changed_theme_prompts_after_saving(settings, form, index):
         assert settings.value('advanced/ui_theme_name') == GeneralTab.get_ui_theme_name(index)
         assert settings.value('advanced/interface style') == 'modern'
 
-    with patch.object(QtWidgets.QMessageBox, 'information', side_effect=check_saved_theme) as reminder:
+    with patch('openlp.core.ui.settingsform.show_restart_message', side_effect=check_saved_theme) as reminder:
         form.accept()
 
     reminder.assert_called_once_with(
@@ -41,7 +41,7 @@ def test_unchanged_theme_does_not_prompt(settings, form):
     tab.ui_theme_style_combo_box.setCurrentIndex(0)
     tab.number_edit.setText('12345')
 
-    with patch.object(QtWidgets.QMessageBox, 'information') as reminder:
+    with patch('openlp.core.ui.settingsform.show_restart_message') as reminder:
         form.accept()
 
     assert settings.value('core/ccli number') == '12345'
@@ -53,7 +53,7 @@ def test_cancelled_theme_change_does_not_prompt_or_save(settings, form):
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(1)
 
-    with patch.object(QtWidgets.QMessageBox, 'information') as reminder:
+    with patch('openlp.core.ui.settingsform.show_restart_message') as reminder:
         form.reject()
 
     assert settings.value('advanced/interface style') == 'modern'

@@ -31,6 +31,7 @@ def test_reset_to_defaults_keeps_library_location_and_setup_state(settings, tmp_
     settings.setValue('core/application version', '3.2.8')
     settings.setValue('songs/status', 1)
     settings.setValue('bibles/status', 1)
+    settings.setValue('librarysync/status', 0)
     settings.setValue('core/ccli number', '12345')
     settings.setValue('songs/update service on edit', False)
     settings.setValue('custom/plugin preference', 'saved')
@@ -38,7 +39,7 @@ def test_reset_to_defaults_keeps_library_location_and_setup_state(settings, tmp_
 
     with patch.object(QtWidgets.QMessageBox, 'warning',
                       return_value=QtWidgets.QMessageBox.StandardButton.Reset), \
-            patch.object(QtWidgets.QMessageBox, 'information') as information:
+            patch('openlp.core.ui.settingsform.show_restart_message') as information:
         form.reset_defaults_button.click()
 
     assert settings.value('advanced/data path') == library_path
@@ -48,6 +49,7 @@ def test_reset_to_defaults_keeps_library_location_and_setup_state(settings, tmp_
     assert settings.value('core/application version') == '3.2.8'
     assert settings.value('songs/status') == 1
     assert settings.value('bibles/status') == 1
+    assert not settings.contains('librarysync/status')
     assert settings.value('core/ccli number') == ''
     assert settings.value('songs/update service on edit') is True
     assert not settings.contains('custom/plugin preference')

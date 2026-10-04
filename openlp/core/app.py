@@ -78,6 +78,39 @@ class OpenLP(QtCore.QObject, LogMixin):
     worker_threads = {}
     settings = None
     busy_cursor_count = 0
+    restart_requested = False
+
+    def request_restart(self):
+        """Restart only if the main window's normal save/close confirmation succeeds."""
+        main_window = Registry().get('main_window')
+        if main_window is None or self.restart_requested:
+            return
+        self.restart_requested = True
+        if main_window.close():
+            QtCore.QCoreApplication.quit()
+        else:
+            self.restart_requested = False
+
+    def _restart_process(self):
+        """Relaunch the packaged executable or original Python invocation after releasing locks."""
+        if getattr(sys, 'frozen', False):
+            arguments = sys.argv[1:]
+        else:
+            arguments = getattr(sys, 'orig_argv', [sys.executable, *sys.argv])[1:]
+        process = QtCore.QProcess()
+        process.setProgram(sys.executable)
+        process.setArguments(arguments)
+        process.setWorkingDirectory(os.getcwd())
+        environment = QtCore.QProcessEnvironment.systemEnvironment()
+        if getattr(sys, 'frozen', False):
+            # PyInstaller must treat the relaunch as an independent application instance.
+            environment.insert('PYINSTALLER_RESET_ENVIRONMENT', '1')
+        process.setProcessEnvironment(environment)
+        started = process.startDetached()
+        if not started:
+            QtWidgets.QMessageBox.critical(
+                None, translate('OpenLP.Restart', 'Restart failed'),
+                translate('OpenLP.Restart', 'OpenLP+ could not restart automatically. Please start it again.'))
 
     def exec(self):
         """
@@ -89,6 +122,8 @@ class OpenLP(QtCore.QObject, LogMixin):
             self.data_dir_lock.release()
         if hasattr(self, 'server'):
             self.server.close_server()
+        if self.restart_requested:
+            self._restart_process()
         return result
 
     def run(self, args, app):
