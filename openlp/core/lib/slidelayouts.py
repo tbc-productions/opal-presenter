@@ -6,7 +6,7 @@ from openlp.core.lib.slidedesign import normalise_design
 
 
 PAGE_KEY = re.compile(r'[a-z0-9-]+:[0-9]+:[0-9]+')
-DOCUMENT_KEYS = {'masters', 'assignments', 'overrides', 'hidden_footers', 'custom_layout_name'}
+DOCUMENT_KEYS = {'masters', 'assignments', 'overrides', 'hidden_footers', 'custom_layout_name', 'default_layout'}
 
 
 def visual_design(value):
@@ -15,6 +15,8 @@ def visual_design(value):
 
 def normalise_layouts(value):
     result = {}
+    if value.get('default_layout') == 'theme':
+        result['default_layout'] = 'theme'
     name = value.get('custom_layout_name')
     if isinstance(name, str) and name.strip():
         result['custom_layout_name'] = name.strip()[:100]
@@ -86,6 +88,8 @@ def layout_for_slide(document, page):
     assigned = document.get('assignments', {}).get(page)
     if assigned is not None:
         return assigned
+    if document.get('default_layout') == 'theme':
+        return 'theme'
     return 'default' if visual_design(document) else 'theme'
 
 

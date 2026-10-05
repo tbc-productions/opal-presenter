@@ -93,7 +93,15 @@ sepia. Select an image to adjust its filters, or select the slide to filter its
 background without affecting text. Multiple selected images can be edited together;
 mixed values appear blank. The reset icon in each modified accordion restores that
 section. Filters are stored in the portable design and used by preview and live output.
-PPTX and ODP exports do not yet reproduce these CSS filters.
+PPTX exports preserve editable PowerPoint controls for blur, brightness, contrast
+and saturation; greyscale is represented by reduced saturation. Each supported
+image or background includes a lossless JPEG XR original and a rendered PNG
+preview. PowerPoint uses its own correction curves when the effects are edited,
+so the appearance can then differ slightly from the designer's CSS filters.
+Stacks containing hue rotation, invert, sepia, a filtered border or a blur radius
+beyond PowerPoint's range are baked in full to preserve their appearance and order.
+ODP exports bake all filters into the image pixels. In both formats, slide text
+remains editable and images remain separate movable objects.
 
 New slides use Theme by default. Theme locks design properties, object insertion
 and canvas manipulation; Show footer remains editable. Preview aspect ratios can
@@ -107,10 +115,10 @@ layout and other slides unchanged. New layout captures the current design for
 reuse on other slides. Layouts can be renamed; deleting one preserves its slides' appearance
 as local designs. Layouts and overrides are stored with the song/custom item.
 
-Reset is a split button: Reset slide clears the current slide's local changes and
-restores its assigned master; Reset all slides clears local changes throughout the
-item. Both ask for confirmation, preserve master layouts and assignments, and can
-be undone. Per-slide footer overrides are reset too.
+The toolbar Reset button changes every slide to Theme and clears local changes,
+including per-slide footer overrides. It asks for confirmation and supports undo.
+Saved layouts remain available to apply again. Reset is available when any slide
+needs resetting, even if the currently selected slide already uses Theme.
 
 Selecting a row or moving the text cursor selects the preview. Pagination follows
 the item's base layout so changing a named master does not renumber existing slide
@@ -149,5 +157,6 @@ OpenLyrics applications may ignore or reject the OpenLP+ extension. PPTX exports
 in their saved layer order, including geometry, opacity, rotation, flips, outlines
 and shadows. Static backgrounds are composited at output resolution to retain
 image opacity and gradients. Presentation applications can differ in their
-rendering of DrawingML text effects. ODP export does not yet preserve added
-design objects.
+rendering of DrawingML text effects. ODP exports preserve added image layers,
+including their opacity, rotation, flips, outlines, shadows and filters baked into
+the image pixels. Added text boxes and shapes are not yet preserved in ODP.

@@ -156,9 +156,10 @@ def normalise_design(value, include_layouts=True):
     if include_layouts:
         from openlp.core.lib.slidelayouts import normalise_layouts
         result.update(normalise_layouts(value))
+    layout_keys = ('masters', 'assignments', 'overrides', 'custom_layout_name', 'default_layout')
     return result if result['lyrics'] or result['elements'] or embedded_theme or background or \
         filters or result.get('hidden_footers') or 'canvas_width' in result or any(
-            result.get(key) for key in ('masters', 'assignments', 'overrides', 'custom_layout_name')) else {}
+            result.get(key) for key in layout_keys) else {}
 
 
 def apply_design(theme, value, size=None):

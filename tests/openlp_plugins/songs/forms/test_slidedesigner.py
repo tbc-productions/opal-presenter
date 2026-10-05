@@ -617,20 +617,40 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
     assert designer.document == original
 
 
-def test_reset_all_keeps_masters_and_assignments_and_supports_undo(designer):
-    from openlp.core.lib.slidelayouts import set_slide_design
+def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer):
+    from openlp.core.lib.slidelayouts import set_slide_design, layout_for_slide
     load_editable_design(designer, {'version': 1, 'lyrics': {'font_size': 40}, 'elements': []})
     document = set_slide_design(designer.document, 'v1:0:0', {'version': 1, 'lyrics': {'font_size': 60}})
     document = set_slide_design(document, 'v2:0:0', {'version': 1, 'lyrics': {'font_size': 80}})
     load_editable_design(designer, document)
+    designer.clear_selection()
+    # Reset must remain available when another slide has customisations.
+    with patch.object(designer, 'footer_key', return_value='v3:0:0'):
+        designer.document.setdefault('assignments', {})['v3:0:0'] = 'theme'
+        designer.switch_design_context()
+        assert designer.reset_button.isEnabled()
+    document = copy.deepcopy(designer.document)
     with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
+        dialog.return_value.exec.return_value = 0
+        designer.reset_button.click()
+        assert designer.document == document
         dialog.return_value.exec.return_value = 1
-        designer.reset_design(True)
+        designer.reset_button.click()
     assert 'overrides' not in designer.document
-    assert designer.document['lyrics']['font_size'] == 40
+    assert 'assignments' not in designer.document
+    assert designer.document['masters'] == document['masters']
+    for page in ('v1:0:0', 'v2:0:0', 'v3:0:0', 'v4:0:0'):
+        assert layout_for_slide(designer.document, page) == 'theme'
+        assert not slide_design(designer.document, page)
+    assert designer.layout_combo.currentText() == 'Theme'
+    assert not designer.reset_button.isEnabled()
     designer.undo_stack.undo()
     assert designer.document == document
+    designer.undo_stack.redo()
+    saved = designer.serialised_design()
+    designer.load_design(saved)
+    assert designer.layout_combo.currentText() == 'Theme'
 
 
 def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):

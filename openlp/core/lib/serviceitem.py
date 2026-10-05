@@ -46,6 +46,7 @@ from openlp.core.display.render import (
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
 from openlp.core.lib.serviceprint import render_print_text
 from openlp.core.lib.slidedesign import apply_design, normalise_design, design_theme, package_design
+from openlp.core.lib.slidelayouts import master_design
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
@@ -164,7 +165,7 @@ class ServiceItem(RegistryProperties):
             if theme.background_type == BackgroundType.to_string(BackgroundType.Video):
                 self.video_file_name = theme.background_filename
                 self.add_capability(ItemCapabilities.HasBackgroundVideo)
-        return apply_design(theme, self.slide_design)
+        return apply_design(theme, master_design(self.slide_design, self.slide_design.get('default_layout', 'default')))
 
     def _new_item(self):
         """

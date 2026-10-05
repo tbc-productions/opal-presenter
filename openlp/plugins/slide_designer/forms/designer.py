@@ -309,7 +309,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.inspector_button.setChecked(False)
         toolbar.addWidget(self.inspector_button)
         self.reset_button = self.tool_button(tr('Reset'), fluent_icon('ic_fluent_arrow_reset_24_regular'))
-        self.reset_button.setToolTip(tr('Reset all slides to their assigned layout'))
+        self.reset_button.setToolTip(tr('Reset all slides to Theme'))
         self.reset_button.clicked.connect(lambda: self.reset_design(all_slides=True))
         toolbar.addWidget(self.reset_button)
 
@@ -475,7 +475,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def reset_design(self, all_slides=False):
         dialog = fluentqt.ContentDialog(self.window())
         dialog.setTitle(tr('Reset all slides?') if all_slides else tr('Reset slide?'))
-        message = (tr('Reset all slides to their assigned master layouts?') if all_slides else
+        message = (tr('Change all slides to the Theme layout and clear their customisations?') if all_slides else
                    tr('Reset this slide to its assigned master layout?'))
         label = QtWidgets.QLabel(message)
         label.setWordWrap(True)
@@ -490,6 +490,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_text()
         document = copy.deepcopy(self.document)
         if all_slides:
+            document['default_layout'] = 'theme'
+            document.pop('assignments', None)
             document.pop('overrides', None)
             document.pop('hidden_footers', None)
         else:
@@ -1125,7 +1127,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             theme = apply_design(self.base_theme, preview_design, self.canvas_size())
             self.display.run_in_display('setDesignEditor', None)
             # Keep page identities stable when a master or local text box is customised.
-            pagination_theme = apply_design(self.base_theme, master_design(self.document), self.canvas_size())
+            pagination_theme = apply_design(
+                self.base_theme, master_design(self.document, self.document.get('default_layout', 'default')),
+                self.canvas_size())
             self.display.set_theme(pagination_theme, is_sync=True)
             text = self.source_form.designer_text()
             self.pages = []
@@ -1398,7 +1402,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         editable = self.design_editable()
         self.background_section.setEnabled(editable)
         self.layers_panel.setEnabled(editable)
-        self.reset_button.setEnabled(editable)
+        self.reset_button.setEnabled(bool(
+            self.document.get('overrides') or self.document.get('hidden_footers') or
+            any(layout != 'theme' for layout in self.document.get('assignments', {}).values()) or
+            layout_for_slide(self.document, '') != 'theme'))
         for button in [*self.insert_object_buttons, self.shape_button, self.arrange_button, self.align_button]:
             button.setEnabled(editable)
         if not editable:

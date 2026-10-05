@@ -102,6 +102,7 @@ def test_custom_xml_retains_named_masters_assignments_and_local_images():
 
     source = document()
     source['custom_layout_name'] = 'Opening slides'
+    source['default_layout'] = 'theme'
     source['background_filters'] = {'sepia': 50}
     local = slide_design(source, 'custom-1:0:0')
     local['elements'].append({'id': 'photo', 'kind': 'image', 'src': 'data:image/png;base64,AAAA',
@@ -124,3 +125,24 @@ def test_default_layout_is_theme_without_discarding_saved_shared_designs():
     legacy = {'version': 1, 'lyrics': {'font_size': 60}}
     assert layout_for_slide(legacy, 'v1:0:0') == 'default'
     assert slide_design(legacy, 'v1:0:0')['lyrics']['font_size'] == 60
+
+
+def test_reset_theme_is_used_for_service_pagination_and_every_frame(settings, registry):
+    from openlp.core.lib.theme import Theme
+    from openlp.core.lib.serviceitem import ServiceItem
+    from openlp.core.common.enum import ServiceItemType
+
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
+        theme = Theme()
+    theme.font_main_size = 42
+    manager = MagicMock()
+    manager.get_theme_data.return_value = theme
+    registry.register('theme_manager', manager)
+    item = ServiceItem()
+    item.service_item_type = ServiceItemType.Text
+    item.slide_design = normalise_design({'version': 1, 'default_layout': 'theme',
+                                         'lyrics': {'font_size': 90}})
+    assert item.get_theme_data().font_main_size == 42
+    for page in ('v1:0:0', 'v2:1:0', 'custom-1:0:0'):
+        assert item.get_slide_theme(page).font_main_size == 42
