@@ -22,11 +22,13 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from shutil import copy2, rmtree
+from tempfile import mkdtemp
 
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import delete_file, get_images_filter
+from openlp.core.common import delete_file, get_images_filter, sha256_file_hash
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.enum import ImageThemeMode
 from openlp.core.common.i18n import UiStrings, translate
@@ -207,6 +209,29 @@ class ImageMediaItem(FolderLibraryItem):
         if file_path.exists():
             delete_file(self.service_path / file_path.name)
             delete_file(self.generate_thumbnail_path(item))
+
+    def add_generated_images(self, images, folder=None):
+        """Store generated PNGs permanently, even when copying imported files is disabled."""
+        if not images:
+            return
+        library = AppLocation.get_section_data_path(self.settings_section) / 'library'
+        library.mkdir(parents=True, exist_ok=True)
+        destination = Path(mkdtemp(prefix='slides-', dir=library))
+        saved = []
+        try:
+            for index, (source, name) in enumerate(images):
+                # Separate storage allows identical slide titles and repeated exports without overwriting files.
+                target = destination / str(index) / source.name
+                target.parent.mkdir()
+                copy2(source, target)
+                saved.append(Item(name=name, file_path=str(target), file_hash=sha256_file_hash(target), folder=folder))
+            if not self.manager.save_objects(saved):
+                raise OSError('Could not save the images to the library.')
+        except Exception:
+            rmtree(destination)
+            raise
+        # Saving the items also saves a newly chosen folder through the relationship.
+        self._insert_saved_items(saved, folder)
 
     def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
                             **kwargs):

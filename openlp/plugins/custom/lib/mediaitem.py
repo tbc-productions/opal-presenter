@@ -19,6 +19,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 import logging
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from PySide6 import QtCore
@@ -106,6 +108,10 @@ class CustomMediaItem(MediaManagerItem):
         for label, suffix in formats:
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        image_action = self.export_presentation_menu.addAction(
+            translate('CustomPlugin.MediaItem', 'Save to Image library…'))
+        image_action.setIcon(UiIcons().image_plus)
+        image_action.triggered.connect(self.on_save_to_image_library)
         self.list_view.addAction(self.export_presentation_menu.menuAction())
         create_widget_action(
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
@@ -135,6 +141,51 @@ class CustomMediaItem(MediaManagerItem):
             export_item_dialog(
                 self, default_path, '.osz', translate('CustomPlugin.MediaItem', 'OpenLP+ Service (*.osz)'),
                 lambda path, service_item=service_item: write_item_service(path, service_item))
+
+    def on_save_to_image_library(self):
+        """Render selected custom slides into the Image library, optionally inside a folder."""
+        from openlp.core.lib.pluginmanager import PluginManager
+        from openlp.core.lib.slideimageexport import render_slide_images
+        from openlp.core.ui.folders import ChooseFolderForm
+        from openlp.core.ui.presentationexportdialog import ExportProgressDialog
+        from openlp.plugins.images.lib.db import Folder
+
+        title = translate('CustomPlugin.MediaItem', 'Save to Image library')
+        selected = self.list_view.selectedItems()
+        if not selected:
+            return
+        plugin = PluginManager.get_plugin_by_name('images')
+        if not plugin or not plugin.is_active():
+            QtWidgets.QMessageBox.information(
+                self, title, translate('CustomPlugin.MediaItem', 'Enable the Images plugin to save slides as images.'))
+            return
+        library = plugin.media_item
+        chooser = ChooseFolderForm(self, library.manager, Folder)
+        chooser.setWindowTitle(title)
+        chooser.folder_button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        try:
+            if chooser.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+                return
+            folder = chooser.folder
+        finally:
+            chooser.deleteLater()
+        progress = ExportProgressDialog(self)
+        progress.setWindowTitle(title)
+        progress.show()
+        error_message = None
+        try:
+            items = [self.build_service_item(item=item) for item in selected]
+            items = [item for item in items if item]
+            with TemporaryDirectory(prefix='openlp-slide-images-') as temporary:
+                images = render_slide_images(items, Path(temporary), progress.update_progress)
+                library.add_generated_images(images, folder)
+        except Exception as error:
+            log.exception('Could not save custom slides to the Image library')
+            error_message = str(error)
+        finally:
+            progress.finish()
+        if error_message:
+            QtWidgets.QMessageBox.critical(self, title, error_message)
 
     def config_update(self):
         """

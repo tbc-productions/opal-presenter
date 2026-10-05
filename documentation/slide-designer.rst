@@ -160,3 +160,12 @@ image opacity and gradients. Presentation applications can differ in their
 rendering of DrawingML text effects. ODP exports preserve added image layers,
 including their opacity, rotation, flips, outlines, shadows and filters baked into
 the image pixels. Added text boxes and shapes are not yet preserved in ODP.
+
+Custom slides can also be saved as PNG images directly into the Image library.
+Select the custom item(s), then choose ``Export > Save to Image library…``.
+Choose no folder, an existing folder, or a new folder. Each rendered slide is
+captured at the current output resolution, including its theme, custom objects,
+effects and footer visibility. Images use the custom item's title, followed by
+``(2)``, ``(3)`` and so on for subsequent slides. Numbering restarts for each item.
+These images are stored permanently in OpenLP+'s data folder; repeated saves do
+not overwrite existing images. The original custom slides remain editable.
