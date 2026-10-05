@@ -286,7 +286,7 @@ class BibleDB(DBManager):
         :param ref_id: The reference id of the book to return.
         """
         log.debug('BibleDB.get_book_by_book_ref_id("{ref}")'.format(ref=ref_id))
-        return self.get_object_filtered(self.Book, self.Book.book_reference_id.like(ref_id))
+        return self.get_object_filtered(self.Book, self.Book.book_reference_id == ref_id)
 
     def get_book_ref_id_by_localised_name(self, book: str, language_selection):
         """

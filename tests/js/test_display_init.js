@@ -4,12 +4,19 @@ describe("The CommunicationBridge object", () => {
     /** @type {CommunicationBridge} */
     let testCommunicationBridge;
     let SimpleTarget;
+    let originalWatcher;
 
     beforeEach(() => {
+        originalWatcher = window.displayWatcher;
+        window.displayWatcher = {setInitialised: function () {}, dispatchEvent: function () {}};
         testCommunicationBridge = new CommunicationBridge();
         SimpleTarget = class {
             _handleNativeCall(action, ...values) {}
         }
+    });
+
+    afterEach(() => {
+        window.displayWatcher = originalWatcher;
     });
 
     it("should exist", () => {

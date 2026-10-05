@@ -200,7 +200,7 @@ test-display:
   image: $IMAGE_BASE/angular
   script: |
     pnpm install
-    pnpm test --browsers ChromiumHeadlessCI
+    pnpm test
   rules:
     - if: $CI_COMMIT_TAG == null
 

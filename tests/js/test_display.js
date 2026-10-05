@@ -1088,7 +1088,8 @@ describe("Display.setTextSlides", function () {
 
     const mainSection = document.querySelector('.slides .slide-text-content');
     expect(_buildTextShadow(2, 0, "#000", 8).length).toEqual(1);
-    expect(mainSection.style['text-shadow']).toEqual(_buildTextShadow(2, 0, "#000", 8).join(', '));
+    // CSSOM serialises a hex colour as rgb(), irrespective of the test runner.
+    expect(mainSection.style['text-shadow']).toEqual('rgb(0, 0, 0) 2pt 2pt 8pt');
   })
 
   it("should widen the shadow to cover the outline when the outline is enabled", function () {
@@ -1107,7 +1108,7 @@ describe("Display.setTextSlides", function () {
 
     const mainSection = document.querySelector('.slides .slide-text-content');
     expect(mainSection.style['text-shadow']).toEqual(
-      _buildTextOutline(2, 'red').concat(_buildTextShadow(2, 2, "#000", 0)).join(', '));
+      _buildTextOutline(2, 'red').concat(_buildTextShadow(2, 2, "rgb(0, 0, 0)", 0)).join(', '));
   })
 
   it("should correctly set slide size position to theme size when adding a text slide", function () {
