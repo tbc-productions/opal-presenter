@@ -2860,7 +2860,8 @@ var Display = {
         ),
         ...(
           Display._theme.font_main_shadow ?
-          _buildTextShadow(Display._theme.font_main_shadow_size, Display._theme.font_main_outline_size || 0,
+          _buildTextShadow(Display._theme.font_main_shadow_size,
+            Display._theme.font_main_outline ? (Display._theme.font_main_outline_size || 0) : 0,
             Display._theme.font_main_shadow_color, Display._theme.font_main_shadow_blur || 0) :
           []
         )
@@ -2922,7 +2923,8 @@ var Display = {
         ),
         ...(
           Display._theme.font_footer_shadow ?
-          _buildTextShadow(Display._theme.font_footer_shadow_size, Display._theme.font_footer_outline_size || 0,
+          _buildTextShadow(Display._theme.font_footer_shadow_size,
+            Display._theme.font_footer_outline ? (Display._theme.font_footer_outline_size || 0) : 0,
             Display._theme.font_footer_shadow_color, Display._theme.font_footer_shadow_blur || 0) :
           []
         )

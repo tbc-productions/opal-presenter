@@ -56,6 +56,7 @@ from openlp.core.widgets.themeviews import ThemeViews
 
 THEME_LIST_ICON_WIDTH = 124
 THEME_LIST_ICON_HEIGHT = 70
+DEFAULT_BUILTIN_THEME = 'Bold Sans Dark'
 
 
 class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
@@ -782,17 +783,33 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 theme_path = self.theme_path / theme_path
                 new_themes.append(self.unzip_theme(theme_path))
                 delete_file(theme_path)
-            # No themes have been found so create one
+            # No themes have been found so install the built-in themes
             if not theme_paths:
-                theme = Theme()
-                theme.theme_name = UiStrings().Default
-                self.save_theme(theme)
-                self.settings.setValue('themes/global theme', theme.theme_name)
-                new_themes = [theme.theme_name]
+                new_themes = self.install_builtin_themes()
+                self.settings.setValue('themes/global theme', DEFAULT_BUILTIN_THEME)
             if new_themes:
                 self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
         finally:
             self.application.set_normal_cursor()
+
+    def install_builtin_themes(self):
+        """
+        Install the themes bundled in core/lib/json/themes, skipping any that already exist so user edits are kept.
+
+        :return: The names of the themes that were installed.
+        :rtype: list[str]
+        """
+        installed = []
+        json_path = AppLocation.get_directory(AppLocation.AppDir) / 'core' / 'lib' / 'json' / 'themes'
+        for theme_file in sorted(json_path.glob('*.json')):
+            theme = Theme()
+            theme.load_theme(get_text_file_string(theme_file))
+            if (self.theme_path / theme.theme_name).exists():
+                continue
+            theme.set_default_header_footer()
+            self.save_theme(theme)
+            installed.append(theme.theme_name)
+        return installed
 
     def load_themes(self):
         """

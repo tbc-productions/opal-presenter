@@ -771,3 +771,65 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
         (('Loading library and themes',), ['a', 'b'])
     ]
     theme_manager._push_themes.assert_called_once_with()
+
+
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_install_builtin_themes(mock_defaults, theme_manager, tmp_path):
+    """
+    Test that every bundled theme is installed and loads with a cross-platform font and no background image.
+    """
+    # GIVEN: An empty theme directory
+    theme_manager.theme_path = tmp_path
+
+    # WHEN: The built-in themes are installed
+    installed = theme_manager.install_builtin_themes()
+
+    # THEN: All six themes are saved, including the default, and round-trip through the theme loader
+    assert sorted(installed) == ['Bold Sans Dark', 'Bold Sans Light', 'Classic Serif Dark', 'Classic Serif Light',
+                                 'Modern Sans Dark', 'Modern Sans Light']
+    for name in installed:
+        theme = Theme()
+        theme.load_theme((tmp_path / name / f'{name}.json').read_text())
+        assert theme.theme_name == name
+        assert theme.background_type in ('solid', 'gradient')
+        assert theme.background_filename is None
+        assert theme.font_main_name in ('Trebuchet MS', 'Georgia', 'Arial')
+        assert theme.font_main_letter_adjustment == 0
+        assert theme.font_footer_name == theme.font_main_name
+
+
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_install_builtin_themes_keeps_existing(mock_defaults, theme_manager, tmp_path):
+    """
+    Test that installing the built-in themes does not overwrite a theme the user has already edited.
+    """
+    # GIVEN: An edited copy of Modern Sans Dark
+    theme_dir = tmp_path / 'Modern Sans Dark'
+    theme_dir.mkdir()
+    (theme_dir / 'Modern Sans Dark.json').write_text('edited')
+    theme_manager.theme_path = tmp_path
+
+    # WHEN: The built-in themes are installed
+    installed = theme_manager.install_builtin_themes()
+
+    # THEN: The edited theme is left alone
+    assert 'Modern Sans Dark' not in installed
+    assert (theme_dir / 'Modern Sans Dark.json').read_text() == 'edited'
+
+
+def test_load_first_time_themes_defaults_to_bold_sans_dark(theme_manager):
+    """
+    Test that, with no downloaded themes, the first run installs the built-in themes and selects Bold Sans Dark.
+    """
+    # GIVEN: No downloaded theme archives
+    theme_manager.install_builtin_themes = MagicMock(return_value=['Bold Sans Dark'])
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
+
+    # WHEN: The first time themes are loaded
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[]):
+        theme_manager.load_first_time_themes()
+
+    # THEN: Bold Sans Dark becomes the global theme
+    assert theme_manager.settings.value('themes/global theme') == 'Bold Sans Dark'
+    theme_manager._regenerate_previews_with_progress_dialog.assert_called_once_with(
+        ['Bold Sans Dark'], reason='first_time_import')

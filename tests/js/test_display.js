@@ -1072,6 +1072,44 @@ describe("Display.setTextSlides", function () {
     //
     const theme = {
       'font_main_y': 789,
+  it("should draw a single shadow when the outline is disabled", function () {
+    const slides = [textSlides[0]];
+    const theme = {
+      'font_main_shadow': true,
+      'font_main_shadow_color': "#000",
+      'font_main_shadow_size': 2,
+      'font_main_shadow_blur': 8,
+      'font_main_outline': false,
+      'font_main_outline_size': 2
+    };
+
+    Display.setTheme(theme);
+    Display.setTextSlides(slides);
+
+    const mainSection = document.querySelector('.slides .slide-text-content');
+    expect(_buildTextShadow(2, 0, "#000", 8).length).toEqual(1);
+    expect(mainSection.style['text-shadow']).toEqual(_buildTextShadow(2, 0, "#000", 8).join(', '));
+  })
+
+  it("should widen the shadow to cover the outline when the outline is enabled", function () {
+    const slides = [textSlides[0]];
+    const theme = {
+      'font_main_shadow': true,
+      'font_main_shadow_color': "#000",
+      'font_main_shadow_size': 2,
+      'font_main_outline': true,
+      'font_main_outline_color': "red",
+      'font_main_outline_size': 2
+    };
+
+    Display.setTheme(theme);
+    Display.setTextSlides(slides);
+
+    const mainSection = document.querySelector('.slides .slide-text-content');
+    expect(mainSection.style['text-shadow']).toEqual(
+      _buildTextOutline(2, 'red').concat(_buildTextShadow(2, 2, "#000", 0)).join(', '));
+  })
+
       'font_main_x': 1000,
       'font_main_width': 1230,
       'font_main_height': 4560
