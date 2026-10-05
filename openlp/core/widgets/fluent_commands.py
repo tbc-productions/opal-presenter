@@ -116,9 +116,7 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self._layout.setStretch(self._layout.count() - 1, 0 if expanding or self._spaced_group else 1)
 
     def _add_divider(self, action):
-        divider = QtWidgets.QFrame(self)
-        divider.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-        divider.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        divider = fluentqt.Divider(QtCore.Qt.Orientation.Vertical, self)
         divider.setFixedSize(1, 24)
         self._layout.insertWidget(self._layout.count() - 1, divider)
         self._separator_widgets[action] = divider
@@ -180,7 +178,10 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             action.changed.connect(group.schedule_alignment)
             group.schedule_alignment()
             self._command_actions[action] = group
-            action.changed.connect(lambda: self._sync_group_visibility(group))
+            # Actions can move between groups when a toolbar is recomposed.
+            # Ignore connections retained by a removed (and possibly deleted) group.
+            action.changed.connect(lambda: self._sync_group_visibility(group)
+                                   if self._command_actions.get(action) is group else None)
             self._sync_group_visibility(group)
         QtWidgets.QWidget.addAction(self, action)
         return action
@@ -197,10 +198,15 @@ class FluentCommandToolbar(QtWidgets.QWidget):
         self.addAction(action)
         return action
 
-    def addSeparator(self):
+    def addSeparator(self, *, standalone=False):
         action = QtGui.QAction(self)
         action.setSeparator(True)
-        self.addAction(action)
+        if standalone:
+            self._command_group = None
+            self._add_divider(action)
+            QtWidgets.QWidget.addAction(self, action)
+        else:
+            self.addAction(action)
         return action
 
     def add_spacer(self):

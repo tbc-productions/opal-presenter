@@ -42,7 +42,8 @@ def mocked_qapp():
 
 @pytest.fixture
 def app_main_env(mocked_qapp):
-    with patch('openlp.core.app.Settings') as mock_settings, \
+    with patch('openlp.core.app.OpenLPApplication', mocked_qapp), \
+            patch('openlp.core.app.Settings') as mock_settings, \
             patch('openlp.core.app.Registry') as mock_registry, \
             patch('openlp.core.app.AppLocation') as mock_apploc, \
             patch('openlp.core.app.LanguageManager'), \

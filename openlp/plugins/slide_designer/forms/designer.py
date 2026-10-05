@@ -8,16 +8,15 @@ import fluentqt
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import ThemeLevel
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.display.render import ThemePreviewRenderer, render_tags
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.slidedesign import (
-    apply_design, normalise_design, design_theme, image_to_png_uri, layer_order, remap_custom_footers
+    apply_design, normalise_design, design_theme, image_to_png_uri, layer_order, remap_custom_footers, FILTER_RANGES
 )
 from openlp.core.lib.theme import Theme
-from openlp.core.lib.slidelayouts import DOCUMENT_KEYS, master_design, slide_design, set_slide_design, visual_design
+from openlp.core.lib.slidelayouts import layout_for_slide, master_design, slide_design, set_slide_design, visual_design
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.dialogs import FileDialog
@@ -25,6 +24,66 @@ from openlp.core.widgets.dialogs import FileDialog
 
 def tr(text):
     return translate('SongsPlugin.SlideDesigner', text)
+
+
+class CommandSurface(fluentqt.FluentWidget):
+    """One Fluent surface for both command rows."""
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.fillRect(self.rect(), self.theme_tokens().colors.bgCanvas)
+
+
+class PropertyDrawer(fluentqt.Expander):
+    """A section reset occupies the header's trailing action slot."""
+    def __init__(self, caption, expanded=False):
+        super().__init__(headerText=caption, expanded=expanded)
+        self.setAccessibleName(caption)
+        header = self.findChild(QtWidgets.QWidget, 'fluentExpanderHeader')
+        self.reset_button = QtWidgets.QPushButton(header)
+        self.reset_button.setIcon(fluent_icon('ic_fluent_arrow_reset_24_regular'))
+        self.reset_button.setAccessibleName(tr('Reset {section}').format(section=caption))
+        self.reset_button.setToolTip(self.reset_button.accessibleName())
+        self.reset_button.setFluentSize(fluentqt.Button.ButtonSize.Small)
+        self.reset_button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+        header.layout().insertWidget(header.layout().count() - 1, self.reset_button)
+        self.reset_button.hide()
+        self.disabled_opacity = QtWidgets.QGraphicsOpacityEffect(self)
+        self.disabled_opacity.setOpacity(0.65)
+        self.setGraphicsEffect(self.disabled_opacity)
+        self.disabled_opacity.setEnabled(not self.isEnabled())
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QtCore.QEvent.Type.EnabledChange and hasattr(self, 'disabled_opacity'):
+            self.disabled_opacity.setEnabled(not self.isEnabled())
+
+
+class PaneHandle(QtWidgets.QSplitterHandle):
+    """A visible pane boundary with the splitter's native drag interaction."""
+    def __init__(self, orientation, parent):
+        super().__init__(orientation, parent)
+        self._theme_host = fluentqt.FluentWidget(self)
+        self._theme_host.hide()
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setPen(QtGui.QPen(self._theme_host.theme_tokens().colors.strokeStrong, 1))
+        if self.orientation() == QtCore.Qt.Orientation.Horizontal:
+            painter.drawLine(self.width() // 2, 0, self.width() // 2, self.height())
+        else:
+            painter.drawLine(0, self.height() // 2, self.width(), self.height() // 2)
+
+
+class PaneSplitter(QtWidgets.QSplitter):
+    def createHandle(self):
+        return PaneHandle(self.orientation(), self)
+
+
+class PreviewBorder(fluentqt.FluentWidget):
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setPen(QtGui.QPen(self.theme_tokens().colors.strokeStrong, 1))
+        painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
 
 
 class DesignCommand(QtGui.QUndoCommand):
@@ -128,9 +187,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self.tools = QtWidgets.Card()
+        self.tools = CommandSurface()
         toolbar = QtWidgets.QHBoxLayout(self.tools)
-        toolbar.setContentsMargins(8, 6, 8, 6)
+        toolbar.setContentsMargins(8, 4, 8, 2)
         toolbar.setSpacing(4)
         toolbar.addWidget(QtWidgets.QLabel(tr('Theme')))
         # The assigned-theme picker is inserted here by the owning dialog.
@@ -189,43 +248,37 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.align_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
         toolbar.addWidget(self.align_button)
         toolbar.addStretch()
+        self.history_shortcuts = []
+        self.history_actions = []
         for caption, icon, callback, signal in (
                 (tr('Undo'), UiIcons().undo, self.undo_stack.undo, self.undo_stack.canUndoChanged),
                 (tr('Redo'), UiIcons().redo, self.undo_stack.redo, self.undo_stack.canRedoChanged)):
-            button = self.tool_button(caption, icon, icon_only=True)
-            button.clicked.connect(callback)
-            button.setEnabled(False)
-            signal.connect(button.setEnabled)
-            toolbar.addWidget(button)
+            action = QtGui.QAction(icon, caption, self)
+            action.triggered.connect(callback)
+            action.setEnabled(False)
+            signal.connect(action.setEnabled)
+            self.history_actions.append(action)
+            key = QtGui.QKeySequence.StandardKey.Undo if caption == tr('Undo') else QtGui.QKeySequence.StandardKey.Redo
+            shortcut = QtGui.QShortcut(QtGui.QKeySequence(key), self)
+            shortcut.activated.connect(callback)
+            self.history_shortcuts.append(shortcut)
         toolbar.addSpacing(8)
-        self.layers_button = self.tool_button(tr('Layers'), fluent_icon('ic_fluent_layer_24_regular'))
-        self.layers_button.setCheckable(True)
-        self.layers_button.setChecked(True)
-        toolbar.addWidget(self.layers_button)
         self.inspector_button = self.tool_button(tr('Properties'), fluent_icon('ic_fluent_panel_right_24_regular'))
         self.inspector_button.setCheckable(True)
+        self.inspector_button.setChecked(False)
         toolbar.addWidget(self.inspector_button)
-        self.reset_button = fluentqt.SplitButton(tr('Reset'))
-        self.reset_button.setFluentSize(fluentqt.Button.ButtonSize.Small)
-        self.reset_button.setAccessibleName(tr('Reset'))
-        self.reset_button.clicked.connect(lambda: self.reset_design(False))
-        reset_menu = QtWidgets.QMenu(self.reset_button)
-        for caption, all_slides in ((tr('Reset slide'), False), (tr('Reset all slides'), True)):
-            action = reset_menu.addAction(UiIcons().undo, caption)
-            action.triggered.connect(lambda checked=False, all_slides=all_slides: self.reset_design(all_slides))
-        self.reset_button.setMenu(reset_menu)
+        self.reset_button = self.tool_button(tr('Reset'), fluent_icon('ic_fluent_arrow_reset_24_regular'))
+        self.reset_button.setToolTip(tr('Reset all slides to their assigned layout'))
+        self.reset_button.clicked.connect(lambda: self.reset_design(all_slides=True))
         toolbar.addWidget(self.reset_button)
 
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.splitter = PaneSplitter(QtCore.Qt.Orientation.Horizontal)
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setHandleWidth(8)
         canvas_panel = QtWidgets.QWidget()
         canvas_layout = QtWidgets.QVBoxLayout(canvas_panel)
-        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_layout.setContentsMargins(12, 6, 12, 12)
         canvas_layout.setSpacing(8)
-        theme_row = QtWidgets.QHBoxLayout()
-        theme_row.setSpacing(8)
-        theme_row.addWidget(self.heading(tr('Preview')))
         self.canvas_combo = QtWidgets.QComboBox()
         for caption, dimensions in ((tr('Full HD · 16:9'), (1920, 1080)),
                                     ('16:10 · 1920 × 1200', (1920, 1200)),
@@ -235,25 +288,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.canvas_combo.setAccessibleName(tr('Canvas size'))
         self.canvas_combo.setFixedWidth(185)
         self.canvas_combo.currentIndexChanged.connect(self.change_canvas)
-        theme_row.addWidget(self.canvas_combo)
-        self.theme_source = QtWidgets.QComboBox()
-        self.theme_source.addItems([tr('Current output'), tr('Global theme'), tr('Item theme'), tr('Service theme')])
-        self.theme_source.setAccessibleName(tr('Preview theme'))
-        self.theme_source.setFixedWidth(170)
-        theme_row.addStretch()
-        theme_row.addWidget(self.theme_source)
-        canvas_layout.addLayout(theme_row)
-        layout_row = QtWidgets.QHBoxLayout()
+        layout_row = self.layout_row = QtWidgets.QHBoxLayout()
         layout_row.addWidget(self.heading(tr('Layout')))
         self.layout_combo = QtWidgets.QComboBox()
         self.layout_combo.setAccessibleName(tr('Master layout'))
         self.layout_combo.currentIndexChanged.connect(self.assign_layout)
-        layout_row.addWidget(self.layout_combo, 1)
-        self.edit_layout_button = self.tool_button(tr('Edit layout'), UiIcons().edit)
-        self.edit_layout_button.setCheckable(True)
-        self.edit_layout_button.setChecked(True)
-        self.edit_layout_button.toggled.connect(self.switch_design_context)
-        layout_row.addWidget(self.edit_layout_button)
+        self.layout_combo.setFixedWidth(220)
+        layout_row.addWidget(self.layout_combo)
         self.new_layout_button = self.tool_button(tr('New layout'), UiIcons().new, icon_only=True)
         self.new_layout_button.clicked.connect(self.new_layout)
         layout_row.addWidget(self.new_layout_button)
@@ -263,12 +304,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.delete_layout_button = self.tool_button(tr('Delete layout'), UiIcons().delete, icon_only=True)
         self.delete_layout_button.clicked.connect(self.delete_layout)
         layout_row.addWidget(self.delete_layout_button)
+        layout_row.addStretch()
         canvas_layout.addLayout(layout_row)
-        self.theme_name = QtWidgets.QLabel()
-        self.theme_name.setMaximumWidth(230)
         self.viewport = QtWidgets.QWidget()
         self.viewport.setMinimumSize(280, 180)
-        self.viewport.setStyleSheet('background: #181b20; border-radius: 8px;')
+        self.preview_border = PreviewBorder(self.viewport)
+        self.preview_border.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.preview_border.hide()
         self.viewport.installEventFilter(self)
         self.preview_cover = QtWidgets.QLabel(self.viewport)
         self.preview_cover.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -277,49 +319,57 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.preview_timeout.setSingleShot(True)
         self.preview_timeout.setInterval(5000)
         self.preview_timeout.timeout.connect(self.clear_preview_cover)
+        self.preview_footer = QtWidgets.QWidget(self.viewport)
+        footer_layout = QtWidgets.QHBoxLayout(self.preview_footer)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(8)
+        footer_layout.addStretch()
+        footer_layout.addWidget(QtWidgets.QLabel(tr('Preview')))
+        footer_layout.addWidget(self.canvas_combo)
         canvas_layout.addWidget(self.viewport, 1)
-        navigation = QtWidgets.QHBoxLayout()
-        navigation.setSpacing(4)
-        navigation.addWidget(self.theme_name)
-        navigation.addStretch()
-        self.previous_button = self.tool_button(tr('Previous slide'), UiIcons().arrow_left, icon_only=True)
-        self.previous_button.clicked.connect(lambda: self.change_page(-1))
-        navigation.addWidget(self.previous_button)
-        self.page_label = QtWidgets.QLabel(tr('1 / 1'))
-        self.page_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.page_label.setMinimumWidth(64)
-        navigation.addWidget(self.page_label)
-        self.next_button = self.tool_button(tr('Next slide'), UiIcons().arrow_right, icon_only=True)
-        self.next_button.clicked.connect(lambda: self.change_page(1))
-        navigation.addWidget(self.next_button)
-        canvas_layout.addLayout(navigation)
         self.splitter.addWidget(canvas_panel)
-        self.sidebar = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
-        self.sidebar.setFixedWidth(280)
-        self.sidebar.setChildrenCollapsible(False)
-        self.sidebar.setHandleWidth(8)
+        self.sidebar = QtWidgets.QWidget()
+        self.sidebar.setMinimumWidth(260)
+        pane_layout = QtWidgets.QVBoxLayout(self.sidebar)
+        pane_layout.setContentsMargins(12, 6, 12, 12)
+        pane_layout.setSpacing(8)
+        self.properties_heading = self.heading(tr('Properties'))
+        pane_layout.addWidget(self.properties_heading)
+        self.sidebar_scroll = QtWidgets.QScrollArea()
+        self.sidebar_scroll.setWidgetResizable(True)
+        self.sidebar_scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.sidebar_scroll.setAutoFillBackground(False)
+        self.sidebar_scroll.viewport().setAutoFillBackground(False)
+        self.sidebar_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        pane_layout.addWidget(self.sidebar_scroll, 1)
+        sidebar_content = QtWidgets.QWidget()
+        sidebar_layout = QtWidgets.QVBoxLayout(sidebar_content)
+        sidebar_layout.setContentsMargins(0, 0, 4, 0)
+        sidebar_layout.setSpacing(8)
         self.build_layers()
         self.build_inspector()
-        self.sidebar.addWidget(self.inspector)
-        self.sidebar.addWidget(self.layers_panel)
-        self.sidebar.setStretchFactor(0, 1)
-        self.sidebar.setSizes([540, 180])
+        sidebar_layout.addWidget(self.inspector)
+        sidebar_layout.addWidget(self.layers_panel)
+        sidebar_layout.addStretch()
+        self.sidebar_scroll.setWidget(sidebar_content)
+        sidebar_content.setAutoFillBackground(False)
         self.splitter.addWidget(self.sidebar)
         self.splitter.setStretchFactor(0, 1)
-        self.inspector.hide()
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.setSizes([700, 280])
         self.inspector_button.toggled.connect(self.update_sidebar)
-        self.layers_button.toggled.connect(self.update_sidebar)
+        self.update_sidebar()
         layout.addWidget(self.splitter, 1)
         self.layers.selectionModel().selectionChanged.connect(self.select_layer)
         self.layers.orderChanged.connect(self.reorder_layers)
         self.layers.selectionCleared.connect(self.clear_selection)
-        self.theme_source.currentIndexChanged.connect(self.schedule_refresh)
         self.populate_inspector()
 
     @staticmethod
     def heading(caption):
         label = QtWidgets.QLabel(caption)
         label.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        label.setMinimumHeight(32)
         return label
 
     @staticmethod
@@ -338,14 +388,16 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             button.setFixedWidth(32)
         return button
 
-    def inspector_section(self, caption):
-        card = QtWidgets.Card()
-        layout = QtWidgets.QVBoxLayout(card)
+    def inspector_section(self, caption, expanded=False):
+        drawer = PropertyDrawer(caption, expanded)
+        drawer.setAccessibleName(caption)
+        content = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(content)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
-        layout.addWidget(self.heading(caption))
-        self.inspector_layout.addWidget(card)
-        return card, layout
+        drawer.setOwnedContentWidget(content)
+        self.properties_accordion.addOwnedItem(drawer)
+        return drawer, layout
 
     def labelled_field(self, caption, field):
         container = QtWidgets.QWidget()
@@ -360,22 +412,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         return container
 
     def update_sidebar(self):
-        self.layers_panel.setVisible(self.layers_button.isChecked())
-        self.inspector.setVisible(self.inspector_button.isChecked())
-        self.sidebar.setVisible(self.layers_button.isChecked() or self.inspector_button.isChecked())
+        self.sidebar.setVisible(self.inspector_button.isChecked())
 
     def build_layers(self):
-        self.layers_panel = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(self.layers_panel)
-        layout.setContentsMargins(0, 0, 0, 0)
+        self.layers_panel = PropertyDrawer(tr('Layers'), expanded=True)
+        self.layers_panel.setAccessibleName(tr('Layers'))
+        content = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(content)
+        layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
-        header = QtWidgets.QHBoxLayout()
-        header.addWidget(self.heading(tr('Layers')))
-        header.addStretch()
-        close = self.tool_button(tr('Close layers'), UiIcons().close, icon_only=True)
-        close.clicked.connect(lambda: self.layers_button.setChecked(False))
-        header.addWidget(close)
-        layout.addLayout(header)
         self.layers = LayerList()
         layout.addWidget(self.layers, 1)
         controls = QtWidgets.QHBoxLayout()
@@ -390,6 +435,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.delete_button.clicked.connect(self.delete_element)
         controls.addWidget(self.delete_button)
         layout.addLayout(controls)
+        self.layers_panel.setOwnedContentWidget(content)
 
     def reset_design(self, all_slides=False):
         dialog = fluentqt.ContentDialog(self.window())
@@ -415,16 +461,14 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             document.get('overrides', {}).pop(self.footer_key(), None)
             document['hidden_footers'] = [key for key in document.get('hidden_footers', [])
                                           if key != self.footer_key()]
-        self.edit_layout_button.setChecked(False)
         self.commit_document(document, tr('Reset all slides') if all_slides else tr('Reset slide'))
 
     def active_layout(self):
-        return self.document.get('assignments', {}).get(self.footer_key(), 'default')
+        return layout_for_slide(self.document, self.footer_key())
 
     def switch_design_context(self):
         self.commit_text()
-        self.design = (master_design(self.document, self.active_layout()) if self.edit_layout_button.isChecked()
-                       else slide_design(self.document, self.footer_key()))
+        self.design = slide_design(self.document, self.footer_key())
         if self.document.get('hidden_footers'):
             self.design.update(version=1, hidden_footers=copy.deepcopy(self.document['hidden_footers']))
         self.sync_canvas()
@@ -434,15 +478,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def populate_layouts(self):
         with QtCore.QSignalBlocker(self.layout_combo):
             self.layout_combo.clear()
-            self.layout_combo.addItem(tr('Shared layout'), 'default')
             self.layout_combo.addItem(tr('Theme'), 'theme')
+            if visual_design(self.document) or 'default' in self.document.get('assignments', {}).values():
+                self.layout_combo.addItem(self.document.get('custom_layout_name', tr('Custom')), 'default')
             for identifier, master in self.document.get('masters', {}).items():
                 self.layout_combo.addItem(master['name'], identifier)
             self.layout_combo.setCurrentIndex(self.layout_combo.findData(self.active_layout()))
         named = self.active_layout() not in ('default', 'theme')
-        self.rename_layout_button.setEnabled(named)
+        self.rename_layout_button.setEnabled(self.active_layout() != 'theme')
         self.delete_layout_button.setEnabled(named)
-        self.edit_layout_button.setEnabled(self.active_layout() != 'theme')
 
     def assign_layout(self):
         identifier = self.layout_combo.currentData()
@@ -451,12 +495,40 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_text()
         document = copy.deepcopy(self.document) or {'version': 1}
         document.setdefault('assignments', {})[self.footer_key()] = identifier
-        with QtCore.QSignalBlocker(self.edit_layout_button):
-            self.edit_layout_button.setChecked(False)
         self.commit_document(document, tr('Apply master layout'))
 
+    def prompt_layout_name(self, title, name=''):
+        dialog = fluentqt.ContentDialog(self.window())
+        dialog.setObjectName('layout_name_dialog')
+        dialog.setTitle(title)
+        dialog.graphicsEffect().setEnabled(False)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        dialog.setMaximumWidth(560)
+        field = QtWidgets.QLineEdit()
+        field.setObjectName('layout_name_edit')
+        field.setAccessibleName(tr('Layout name'))
+        field.setPlaceholderText(tr('Name'))
+        field.setText(name)
+        field.selectAll()
+        dialog.setContent(field)
+        caption = tr('Rename') if name else tr('Create')
+        dialog.setPrimaryButtonText(caption)
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        primary = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == caption)
+        field.textChanged.connect(lambda text: primary.setEnabled(bool(text.strip())))
+        primary.setEnabled(bool(name.strip()))
+        QtCore.QTimer.singleShot(0, field, field.setFocus)
+        try:
+            accepted = dialog.exec() == dialog.ResultPrimary
+            return field.text().strip(), accepted
+        finally:
+            dialog.deleteLater()
+
     def new_layout(self):
-        name, accepted = QtWidgets.QInputDialog.getText(self.window(), tr('New layout'), tr('Name'))
+        name, accepted = self.prompt_layout_name(tr('New layout'))
         if not accepted or not name.strip():
             return
         self.commit_text()
@@ -465,20 +537,22 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         document.setdefault('masters', {})[identifier] = {'name': name.strip(), 'design': visual_design(self.design)}
         document.setdefault('assignments', {})[self.footer_key()] = identifier
         document.get('overrides', {}).pop(self.footer_key(), None)
-        with QtCore.QSignalBlocker(self.edit_layout_button):
-            self.edit_layout_button.setChecked(True)
         self.commit_document(document, tr('Create master layout'))
 
     def rename_layout(self):
         identifier = self.active_layout()
         master = self.document.get('masters', {}).get(identifier)
-        if not master:
+        if identifier != 'default' and not master:
             return
-        name, accepted = QtWidgets.QInputDialog.getText(
-            self.window(), tr('Rename layout'), tr('Name'), text=master['name'])
+        current_name = (self.document.get('custom_layout_name', tr('Custom'))
+                        if identifier == 'default' else master['name'])
+        name, accepted = self.prompt_layout_name(tr('Rename layout'), current_name)
         if accepted and name.strip():
             document = copy.deepcopy(self.document)
-            document['masters'][identifier]['name'] = name.strip()
+            if identifier == 'default':
+                document['custom_layout_name'] = name.strip()
+            else:
+                document['masters'][identifier]['name'] = name.strip()
             self.commit_document(document, tr('Rename master layout'))
 
     def delete_layout(self):
@@ -496,27 +570,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_document(document, tr('Delete master layout'))
 
     def build_inspector(self):
-        self.inspector = QtWidgets.QScrollArea()
-        self.inspector.setWidgetResizable(True)
-        self.inspector.setFixedWidth(280)
-        self.inspector.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.inspector.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        content = QtWidgets.QWidget()
-        self.inspector_layout = QtWidgets.QVBoxLayout(content)
-        self.inspector_layout.setContentsMargins(0, 0, 4, 0)
+        self.inspector = QtWidgets.QWidget()
+        self.inspector_layout = QtWidgets.QVBoxLayout(self.inspector)
+        self.inspector_layout.setContentsMargins(0, 0, 0, 0)
         self.inspector_layout.setSpacing(8)
-        header = QtWidgets.QHBoxLayout()
-        header.addWidget(self.heading(tr('Properties')))
-        header.addStretch()
-        close = self.tool_button(tr('Close properties'), UiIcons().close, icon_only=True)
-        close.clicked.connect(lambda: self.inspector_button.setChecked(False))
-        header.addWidget(close)
-        self.inspector_layout.addLayout(header)
         self.selected_label = self.heading(tr('Slide text'))
-        self.inspector_layout.addWidget(self.selected_label)
-        self.reset_text_button = QtWidgets.QPushButton(tr('Reset to theme'))
-        self.reset_text_button.clicked.connect(self.reset_slide_text)
-        self.inspector_layout.addWidget(self.reset_text_button)
+        self.selected_label.hide()
+        self.properties_accordion = fluentqt.Accordion()
+        self.properties_accordion.setExpansionMode(fluentqt.Accordion.ExpansionMode.Multiple)
+        self.inspector_layout.addWidget(self.properties_accordion)
         self.build_background_properties()
         self.fields = {}
         self.field_rows = {}
@@ -527,14 +589,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                 ('font_size', tr('Size (pt)'), 1, 400)):
             field = fluentqt.NumberBox()
             field.setRange(low, high)
-            field.setDisplayPrecision(1)
+            field.setDisplayPrecision(0)
             field.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
             field.setMinimumWidth(0)
             field.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
             field.valueChanged.connect(lambda value, k=key: self.set_field_property(k, value))
             self.fields[key] = field
             self.field_rows[key] = self.labelled_field(caption, field)
-        self.inspector_layout.addWidget(self.field_rows['opacity'])
         self.position_section, position_layout = self.inspector_section(tr('Position'))
         grid = QtWidgets.QGridLayout()
         grid.setSpacing(8)
@@ -544,7 +605,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         grid.setColumnStretch(1, 1)
         position_layout.addLayout(grid)
 
-        self.text_section, text_layout = self.inspector_section(tr('Text'))
+        self.text_section, text_layout = self.inspector_section(tr('Typography'))
         self.font = QtWidgets.QFontComboBox()
         self.font.setMinimumWidth(0)
         self.font.setAccessibleName(tr('Font'))
@@ -578,6 +639,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self._pending_text = None
 
         self.appearance_section, appearance_layout = self.inspector_section(tr('Appearance'))
+        appearance_layout.addWidget(self.field_rows['opacity'])
         for key, caption in (('colour', tr('Text colour')), ('fill', tr('Fill'))):
             field = QtWidgets.QPushButton()
             field.setFluentSize(fluentqt.Button.ButtonSize.Small)
@@ -613,7 +675,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             for index, (key, label, low, high) in enumerate(parameters):
                 field = fluentqt.NumberBox()
                 field.setRange(low, high)
-                field.setDisplayPrecision(1)
+                field.setDisplayPrecision(0)
                 field.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
                 field.setMinimumWidth(0)
                 field.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
@@ -621,8 +683,64 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                 self.fields[key] = field
                 self.field_rows[key] = self.labelled_field(label, field)
                 grid.addWidget(self.field_rows[key], index // 2, index % 2)
-        self.inspector_layout.addStretch()
-        self.inspector.setWidget(content)
+
+        self.build_filter_properties()
+        self.reset_sections = {
+            'effects': (self.filters_section, ()),
+            'slide': (self.slide_section, ()),
+            'background': (self.background_section, ('type', 'colour', 'end_colour', 'direction',
+                                                     'image', 'image_opacity', 'fit')),
+            'position': (self.position_section, ('x', 'y', 'width', 'height', 'rotation',
+                                                 'flip_horizontal', 'flip_vertical')),
+            'typography': (self.text_section, ('font', 'font_size', 'bold', 'italic', 'align')),
+            'appearance': (self.appearance_section, ('opacity', 'colour', 'fill')),
+            'outline': (self.effect_sections[0], ('outline', 'outline_width', 'outline_colour')),
+            'shadow': (self.effect_sections[1], ('shadow', 'shadow_x', 'shadow_y', 'shadow_blur', 'shadow_colour')),
+            'layers': (self.layers_panel, ())}
+        for key, (drawer, _) in self.reset_sections.items():
+            drawer.reset_button.clicked.connect(lambda checked=False, key=key: self.reset_section(key))
+
+    def build_filter_properties(self):
+        self.filters_section, layout = self.inspector_section(tr('Effects'))
+        self.filter_fields = {}
+        captions = {'blur': tr('Blur (px)'), 'brightness': tr('Brightness (%)'), 'contrast': tr('Contrast (%)'),
+                    'grayscale': tr('Greyscale (%)'), 'hue-rotate': tr('Hue (°)'), 'invert': tr('Invert (%)'),
+                    'saturate': tr('Saturation (%)'), 'sepia': tr('Sepia (%)')}
+        for key, (default, low, high) in FILTER_RANGES.items():
+            field = fluentqt.NumberBox()
+            field.setRange(low, high)
+            field.setDisplayPrecision(0)
+            field.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
+            field.setValue(default)
+            field.setAccessibleName(captions[key])
+            field.valueChanged.connect(lambda value, key=key: self.set_filter(key, value))
+            layout.addWidget(self.labelled_field(captions[key], field))
+            self.filter_fields[key] = field
+
+    def filter_targets(self, design):
+        if not self.selection:
+            return [design]
+        return [element for element in design.get('elements', [])
+                if element['id'] in self.selection and element['kind'] == 'image']
+
+    def populate_filters(self):
+        targets = self.filter_targets(self.design)
+        self.filters_section.setEnabled(bool(targets))
+        property_name = 'filters' if self.selection else 'background_filters'
+        for key, field in self.filter_fields.items():
+            values = [target.get(property_name, {}).get(key, FILTER_RANGES[key][0]) for target in targets]
+            common = values[0] if values and all(value == values[0] for value in values) else float('nan')
+            with QtCore.QSignalBlocker(field):
+                field.setValue(common)
+
+    def set_filter(self, key, value):
+        if not math.isfinite(value):
+            return
+        design = self.editable_design()
+        property_name = 'filters' if self.selection else 'background_filters'
+        for target in self.filter_targets(design):
+            target.setdefault(property_name, {})[key] = value
+        self.commit(design, tr('Change effects'))
 
     def build_background_properties(self):
         self.slide_section, slide_layout = self.inspector_section(tr('Slide'))
@@ -657,7 +775,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             lambda: self.set_background_property('direction', self.background_direction.currentData()))
         self.background_rows['direction'] = self.labelled_field(tr('Direction'), self.background_direction)
         layout.addWidget(self.background_rows['direction'])
-        self.background_image_section, image_layout = self.inspector_section(tr('Background image'))
+        layout.addWidget(fluentqt.Divider(QtCore.Qt.Orientation.Horizontal))
+        image_layout = layout
         row = QtWidgets.QHBoxLayout()
         self.background_image_button = self.tool_button(tr('Choose image'), UiIcons().blank_theme)
         self.background_image_button.clicked.connect(self.choose_background_image)
@@ -668,7 +787,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         image_layout.addLayout(row)
         self.background_image_opacity = fluentqt.NumberBox()
         self.background_image_opacity.setRange(0, 100)
-        self.background_image_opacity.setDisplayPrecision(1)
+        self.background_image_opacity.setDisplayPrecision(0)
         self.background_image_opacity.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.background_image_opacity.valueChanged.connect(
             lambda value: self.set_background_property('image_opacity', value))
@@ -681,8 +800,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             lambda: self.set_background_property('fit', self.background_fit.currentData()))
         image_layout.addWidget(self.labelled_field(tr('Image size'), self.background_fit))
 
-    def background_properties(self):
-        if self.design.get('background'):
+    def background_properties(self, defaults=False):
+        if not defaults and self.design.get('background'):
             return copy.deepcopy(self.design['background'])
         theme = self.base_theme or self.resolve_theme()
         result = {'type': 'solid', 'colour': '#000000', 'end_colour': '#ffffff',
@@ -862,12 +981,22 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         if self._display_canvas_size is not None and size != self._display_canvas_size:
             self.freeze_preview()
         self._display_canvas_size = QtCore.QSize(size)
-        scale = min(max(1, self.viewport.width() - 32) / size.width(),
-                    max(1, self.viewport.height() - 32) / size.height())
+        footer_height = self.preview_footer.sizeHint().height()
+        gap = 10
+        total_footer_space = footer_height + gap
+        avail_h = max(1, self.viewport.height() - 24 - total_footer_space)
+        scale = min(max(1, self.viewport.width() - 24) / size.width(),
+                    avail_h / size.height())
         width, height = round(size.width() * scale), round(size.height() * scale)
-        self.display.setGeometry((self.viewport.width() - width) // 2, (self.viewport.height() - height) // 2,
-                                 width, height)
+        left = (self.viewport.width() - width) // 2
+        top = max(4, (self.viewport.height() - (height + total_footer_space)) // 2)
+        self.display.setGeometry(left, top, width, height)
         self.display.set_scale(scale)
+        self.preview_border.setGeometry(left - 1, top - 1, width + 2, height + 2)
+        self.preview_border.show()
+        self.preview_border.raise_()
+        self.preview_footer.setGeometry(left, top + height + gap, width, footer_height)
+        self.preview_footer.raise_()
         self.preview_cover.setGeometry(self.viewport.rect())
         if not self.preview_cover.isHidden():
             self.preview_cover.raise_()
@@ -910,12 +1039,6 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         names = manager.get_theme_names()
         if theme_name not in names:
             theme_name = global_name
-        mode = self.theme_source.currentIndex()
-        if mode == 3:
-            theme_name = self.settings.value('servicemanager/service theme') or global_name
-        if mode == 1 or (mode == 0 and self.settings.value('themes/theme level') != ThemeLevel.Song):
-            theme_name = global_name
-        self.theme_name.setText(str(theme_name))
         return manager.get_theme_data(theme_name)
 
     def schedule_refresh(self, *args):
@@ -942,11 +1065,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                     attr = 'font_' + part + '_' + key
                     setattr(self.base_theme, attr, getattr(self.base_theme, attr) * current / previous)
             preview_design = copy.deepcopy(self.design)
-            if self.theme_source.currentIndex() != 0:
-                preview_design.pop('theme', None)
             self.base_theme = design_theme(self.base_theme, preview_design, self.canvas_size())
-            if preview_design.get('theme'):
-                self.theme_name.setText(tr('Embedded theme'))
             theme = apply_design(self.base_theme, preview_design, self.canvas_size())
             self.display.run_in_display('setDesignEditor', None)
             # Keep page identities stable when a master or local text box is customised.
@@ -955,11 +1074,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             text = self.source_form.designer_text()
             self.pages = []
             self.page_keys = []
-            for split_index, section in enumerate(text.split('[--}{--]\n')):
-                pages = self.display.format_slide(section, None)
+            for split_index, section in enumerate(text.split('[--}{--]')):
+                pages = self.display.format_slide(section.lstrip('\n'), None) or ['']
                 self.pages.extend(pages)
                 self.page_keys.extend((split_index, index) for index in range(len(pages)))
             self.pages = self.pages or ['']
+            if hasattr(self.source_form, '_preview_split'):
+                split = self.source_form._preview_split
+                self.page_index = next((i for i, key in enumerate(self.page_keys) if key[0] == split), 0)
+                del self.source_form._preview_split
             self.page_index = min(self.page_index, len(self.pages) - 1)
             self.display.set_theme(theme, is_sync=True)
             self.show_page()
@@ -977,7 +1100,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
 
     def footer_key(self):
         section = self.source_form.designer_section_key()
-        split, page = self.page_keys[self.page_index] if getattr(self, 'page_keys', []) else (0, 0)
+        split, page = (self.page_keys[self.page_index] if getattr(self, 'page_keys', [])
+                       else (getattr(self.source_form, '_preview_split', 0), 0))
         return f'{section}:{split}:{page}'
 
     def set_footer_visible(self, visible):
@@ -995,10 +1119,6 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                    else self.source_form.designer_footer()}])
         self.display.go_to_slide('designer', raise_window=False)
         self.display.run_in_display('setDesignEditor', self.selection or '')
-        caption = f'{self.page_index + 1} / {len(self.pages)}'
-        self.page_label.setText(caption)
-        self.previous_button.setEnabled(self.page_index > 0)
-        self.next_button.setEnabled(self.page_index < len(self.pages) - 1)
 
     def change_page(self, delta):
         self.commit_text()
@@ -1012,11 +1132,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.page_index = 0
         self.page_keys = []
         self.document = normalise_design(value)
-        with QtCore.QSignalBlocker(self.edit_layout_button):
-            self.edit_layout_button.setChecked(not any(self.document.get(key)
-                                                       for key in ('masters', 'assignments', 'overrides')))
-        self.design = (master_design(self.document, self.active_layout()) if self.edit_layout_button.isChecked()
-                       else slide_design(self.document, self.footer_key()))
+        self.design = slide_design(self.document, self.footer_key())
         if self.document.get('hidden_footers'):
             self.design.update(version=1, hidden_footers=copy.deepcopy(self.document['hidden_footers']))
         self._canvas_size = (ScreenList().current.display_geometry.size() if self.design and
@@ -1040,14 +1156,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
 
     def commit(self, design, caption):
         document = copy.deepcopy(self.document) or {'version': 1}
-        if self.edit_layout_button.isChecked() and self.active_layout() != 'theme':
-            if self.active_layout() == 'default':
-                metadata = {key: value for key, value in document.items() if key in DOCUMENT_KEYS}
-                document = {**visual_design(design), **metadata}
-            else:
-                document['masters'][self.active_layout()]['design'] = visual_design(design)
-        else:
-            document = set_slide_design(document, self.footer_key(), design)
+        document = set_slide_design(document, self.footer_key(), design)
         if design.get('hidden_footers'):
             document['hidden_footers'] = copy.deepcopy(design['hidden_footers'])
         else:
@@ -1075,7 +1184,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def selected(self, identifier):
         self.selection = [identifier] if identifier else []
 
-    def selected_properties(self, identifier=None):
+    def selected_properties(self, identifier=None, defaults=False):
         identifier = identifier or self.selected
         if identifier == 'lyrics':
             theme = self.base_theme
@@ -1095,7 +1204,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                   shadow_y=theme.font_main_shadow_size * 4 / 3,
                                   shadow_blur=theme.font_main_shadow_blur * 4 / 3,
                                   shadow_colour=theme.font_main_shadow_color)
-            properties.update(self.design.get('lyrics', {}))
+            if not defaults:
+                properties.update(self.design.get('lyrics', {}))
             return properties
         properties = dict(next((e for e in self.design.get('elements', []) if e['id'] == identifier), {}))
         if properties.get('kind') in ('rectangle', 'ellipse', 'image') and properties.get('border_width'):
@@ -1135,6 +1245,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                         selection.setCurrentIndex(item.index(), QtCore.QItemSelectionModel.SelectionFlag.NoUpdate)
                         self.selected_label.setText(label)
             selection.blockSignals(False)
+            self.layers.setFixedHeight(max(108, min(240, model.rowCount() * 40 + 8)))
         order = layer_order(self.design)
         can_forward = any(identifier in self.selection and order[index + 1] not in self.selection
                           for index, identifier in enumerate(order[:-1]))
@@ -1150,15 +1261,12 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         for action in self.flip_actions:
             action.setEnabled(bool(self.selection))
         self.delete_button.setEnabled(any(identifier != 'lyrics' for identifier in self.selection))
-        self.reset_text_button.setVisible(self.selection == ['lyrics'])
-        self.reset_text_button.setEnabled(bool(self.design.get('lyrics')))
         selected = [self.selected_properties(identifier) for identifier in self.selection]
         has_text = any(self.supports_property(identifier, 'font') for identifier in self.selection)
-        has_shapes = any(properties.get('kind') in ('rectangle', 'ellipse') for properties in selected)
-        self.position_section.setVisible(bool(self.selection))
-        self.appearance_section.setVisible(has_text or has_shapes)
+        self.position_section.setEnabled(bool(self.selection))
+        self.appearance_section.setEnabled(bool(self.selection))
         for section in self.effect_sections:
-            section.setVisible(bool(self.selection))
+            section.setEnabled(bool(self.selection))
         if self.selected is not None:
             for index in range(self.layers.model().rowCount()):
                 item = self.layers.model().item(index)
@@ -1167,15 +1275,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                     break
         if multiple:
             self.selected_label.setText(tr('{count} objects').format(count=len(self.selection)))
-        self.slide_section.setVisible(self.selected is None)
         with QtCore.QSignalBlocker(self.show_footer):
             self.show_footer.setChecked(self.footer_key() not in self.design.get('hidden_footers', []))
-        self.background_section.setVisible(self.selected is None)
-        self.background_image_section.setVisible(self.selected is None)
+        self.populate_background()
+        self.populate_filters()
         if self.selected is None:
             self.layers.clearSelection()
             self.selected_label.setText(tr('Slide'))
-            self.populate_background()
         defaults = {'opacity': 100, 'outline_width': 2, 'shadow_x': 4, 'shadow_y': 4, 'shadow_blur': 4,
                     'font_size': 40, 'font': 'Arial', 'align': 'center', 'text': '', 'fill': '#315efb',
                     'colour': '#ffffff', 'outline_colour': '#000000', 'shadow_colour': '#000000'}
@@ -1209,11 +1315,12 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                 field.setIcon(QtGui.QIcon(swatch) if value is not None else QtGui.QIcon())
             field.blockSignals(False)
             visible = any(self.supports_property(identifier, key) for identifier in self.selection)
+            field.setEnabled(visible)
             if key in self.field_rows:
-                self.field_rows[key].setVisible(visible)
+                self.field_rows[key].setEnabled(visible)
             if key.startswith(('outline_', 'shadow_')):
                 enabled = common_value(key.split('_')[0])
-                field.setEnabled(enabled is None or bool(enabled))
+                field.setEnabled(visible and (enabled is None or bool(enabled)))
         for widget in (self.font, self.align, self.text):
             widget.blockSignals(True)
         font = common_value('font')
@@ -1226,8 +1333,77 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.text.setPlainText(common_value('text') or '')
         for widget in (self.font, self.align, self.text):
             widget.blockSignals(False)
-        self.text_section.setVisible(has_text)
-        self.text.setVisible(any(properties.get('kind') == 'text' for properties in selected))
+        self.text_section.setEnabled(has_text)
+        self.text.setEnabled(any(properties.get('kind') == 'text' for properties in selected))
+        for key, (drawer, _) in self.reset_sections.items():
+            drawer.reset_button.setVisible(self.section_modified(key))
+
+    def property_defaults(self, identifier):
+        defaults = {'x': 10, 'y': 10, 'width': 35, 'height': 20, 'rotation': 0, 'opacity': 100,
+                    'font_size': 40, 'font': 'Arial', 'align': 'center', 'bold': False, 'italic': False,
+                    'colour': '#ffffff', 'fill': '#315efb', 'flip_horizontal': False, 'flip_vertical': False,
+                    'outline': False, 'outline_width': 2, 'outline_colour': '#000000',
+                    'shadow': False, 'shadow_x': 4, 'shadow_y': 4, 'shadow_blur': 4, 'shadow_colour': '#000000'}
+        if identifier == 'lyrics':
+            defaults.update(self.selected_properties(identifier, defaults=True))
+        return defaults
+
+    def section_modified(self, section):
+        if section == 'effects':
+            key = 'filters' if self.selection else 'background_filters'
+            return any(target.get(key) for target in self.filter_targets(self.design))
+        if section == 'slide':
+            return self.footer_key() in self.design.get('hidden_footers', [])
+        if section == 'layers':
+            return layer_order(self.design) != layer_order({**self.design, 'order': []})
+        keys = self.reset_sections[section][1]
+        if section == 'background':
+            current, defaults = self.background_properties(), self.background_properties(defaults=True)
+            return any(current.get(key) != defaults.get(key) for key in keys)
+        for identifier in self.selection:
+            current, defaults = self.selected_properties(identifier), self.property_defaults(identifier)
+            if any(self.supports_property(identifier, key) and current.get(key, defaults[key]) != defaults[key]
+                   for key in keys):
+                return True
+        return False
+
+    def reset_section(self, section):
+        self.commit_text()
+        design = self.editable_design()
+        keys = self.reset_sections[section][1]
+        if section == 'effects':
+            key = 'filters' if self.selection else 'background_filters'
+            for target in self.filter_targets(design):
+                target.pop(key, None)
+        elif section == 'slide':
+            design['hidden_footers'] = [key for key in design.get('hidden_footers', []) if key != self.footer_key()]
+        elif section == 'layers':
+            design.pop('order', None)
+        elif section == 'background':
+            background, defaults = self.background_properties(), self.background_properties(defaults=True)
+            for key in keys:
+                if key in defaults:
+                    background[key] = defaults[key]
+                else:
+                    background.pop(key, None)
+            if background == defaults:
+                design.pop('background', None)
+            else:
+                design['background'] = background
+        else:
+            for identifier in self.selection:
+                target = self.design_target(design, identifier)
+                defaults = self.property_defaults(identifier)
+                for key in keys:
+                    if self.supports_property(identifier, key):
+                        if identifier == 'lyrics':
+                            target.pop(key, None)
+                        else:
+                            target[key] = defaults[key]
+                if section == 'outline':
+                    target.pop('border_width', None)
+                    target.pop('border_colour', None)
+        self.commit(design, tr('Reset {section}').format(section=self.reset_sections[section][0].headerText()))
 
     def select_layer(self, current, previous):
         identifiers = [index.data(QtCore.Qt.ItemDataRole.UserRole)
@@ -1347,7 +1523,6 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         design['order'] = layer_order(design) + [element['id']]
         design['elements'].append(element)
         self.commit(design, tr('Add element'))
-        self.layers_button.setChecked(True)
         self.inspector_button.setChecked(True)
 
     def delete_element(self):
@@ -1444,45 +1619,40 @@ class SlideDesignerDialogMixin:
         self.theme_combo_box.currentIndexChanged.connect(self.designer_theme_changed)
         self.dialog_layout.setSpacing(12)
         self.dialog_layout.removeWidget(editor)
-        self.editor_splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.editor_splitter = PaneSplitter(QtCore.Qt.Orientation.Horizontal)
         self.editor_splitter.setChildrenCollapsible(False)
         self.editor_splitter.setHandleWidth(12)
         text_panel = QtWidgets.QWidget()
         text_panel.setMinimumWidth(300)
         text_layout = QtWidgets.QVBoxLayout(text_panel)
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        self.section_combo_box = QtWidgets.QComboBox()
+        text_layout.setContentsMargins(12, 6, 12, 12)
+        text_layout.setSpacing(8)
+        self.section_combo_box = QtWidgets.QComboBox(self)
         self.section_combo_box.setToolTip(tr('Select the verse or slide to preview'))
         self.section_combo_box.currentIndexChanged.connect(self.designer_select_section)
         text_header = QtWidgets.QHBoxLayout()
         text_header.addWidget(self.slide_designer.heading(tr('Lyrics') if kind == 'song' else tr('Slides')))
-        text_header.addStretch()
-        self.section_combo_box.setMinimumWidth(160)
-        text_header.addWidget(self.section_combo_box)
+        self.section_combo_box.hide()
         text_layout.addLayout(text_header)
-        if editor._toolbar:
-            formatting_row = QtWidgets.QHBoxLayout()
-            formatting_row.setSpacing(8)
-            # Keep the native command bar wide enough for direct formatting commands.
-            for action in list(editor._toolbar.actions()):
-                widget = editor._toolbar.widgetForAction(action)
-                if isinstance(action, QtWidgets.QWidgetAction) and widget is not None:
-                    editor._toolbar.removeAction(action)
-                    formatting_row.addWidget(widget)
-                    widget.show()
-            editor._toolbar.layout().setStretch(editor._toolbar.layout().count() - 1, 0)
-            editor._custom_formatting_combo.setMinimumWidth(0)
-            editor._custom_formatting_combo.setMaximumWidth(16777215)
-            editor._custom_formatting_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                                          QtWidgets.QSizePolicy.Policy.Fixed)
-            text_layout.addLayout(formatting_row)
-        text_layout.addWidget(editor, 1)
+        from openlp.plugins.slide_designer.forms.slidegrid import SlideGrid
+        editor.hide()
+        self.slide_grid = SlideGrid(self, editor, kind)
+        text_layout.addWidget(self.slide_grid, 1)
         self.designer_text_controls(text_layout, kind)
+        split_buttons = ((self.insert_button, self.split_button) if kind == 'custom' else
+                         (self.insert_button, self.forced_split_button, self.overflow_split_button))
+        for button in split_buttons:
+            button.clicked.connect(lambda: self.slide_grid.cell_editor.setFocus())
         self.editor_splitter.addWidget(text_panel)
         self.editor_splitter.addWidget(self.slide_designer)
         self.editor_splitter.setStretchFactor(1, 1)
-        self.editor_splitter.setSizes([340, 980])
-        self.dialog_layout.insertWidget(0, self.slide_designer.tools)
+        self.editor_splitter.setSizes([408, 912])
+        self.command_rows = QtWidgets.QVBoxLayout()
+        self.command_rows.setSpacing(0)
+        self.command_rows.setContentsMargins(0, 0, 0, 0)
+        self.command_rows.addWidget(self.slide_designer.tools)
+        self.command_rows.addWidget(self.slide_grid.formatting_bar)
+        self.dialog_layout.insertLayout(0, self.command_rows)
         self.dialog_layout.insertWidget(1, self.editor_splitter, 1)
         editor.textChanged.connect(self.designer_cursor_changed)
         editor.cursorPositionChanged.connect(self.designer_cursor_changed)
@@ -1519,14 +1689,10 @@ class SlideDesignerDialogMixin:
             verse_row.addWidget(self.insert_button)
             layout.addLayout(verse_row)
             self.dialog_layout.removeWidget(self.transpose_widget)
-            self.transpose_layout.setContentsMargins(0, 0, 0, 0)
-            for button in (self.transpose_up_button, self.transpose_down_button):
-                button.setToolTip(button.text())
-                button.setAccessibleName(button.text())
-                button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
-                button.setFixedSize(32, 32)
-            self.transpose_layout.addStretch()
-            layout.addWidget(self.transpose_widget)
+            # Legacy set_verse() may show this when chords are enabled. Keep it
+            # under the hidden source editor so it cannot reappear in the designer.
+            self.transpose_widget.setParent(self.design_text_editor)
+            self.transpose_widget.hide()
         split_row.addStretch()
         layout.addLayout(split_row)
         for index in range(split_row.count()):
@@ -1546,6 +1712,8 @@ class SlideDesignerDialogMixin:
             self.theme_combo_box.setCurrentIndex(self.theme_combo_box.findData(current))
             self.theme_combo_box.blockSignals(False)
             self.slide_designer.load_design(self.design_owner.slide_design)
+            self.slide_grid.record_history = True
+            self.slide_grid.reload()
             self._footer_sections = [section[1] for section in self.designer_sections()]
             self.designer_cursor_changed()
         if hasattr(self, 'slide_designer'):
@@ -1556,6 +1724,8 @@ class SlideDesignerDialogMixin:
         if result and hasattr(self, 'slide_designer'):
             self.design_owner.slide_design = self.slide_designer.serialised_design()
             self.design_owner.theme_combo_box.setCurrentText(self.designer_theme_name())
+        if hasattr(self, 'slide_grid'):
+            self.slide_grid.record_history = False
         return result
 
     def designer_theme_name(self):
@@ -1572,7 +1742,6 @@ class SlideDesignerDialogMixin:
             for part in ('base', 'design'):
                 override[part].pop('theme', None)
         self.slide_designer.commit_document(design, tr('Change base theme'))
-        self.slide_designer.theme_source.setCurrentIndex(2)
         self.slide_designer.schedule_refresh()
 
     def designer_sections(self):
@@ -1596,6 +1765,7 @@ class SlideDesignerDialogMixin:
     def designer_cursor_changed(self):
         if not hasattr(self, 'slide_designer'):
             return
+        from openlp.plugins.slide_designer.forms.slidegrid import qt_length
         self.slide_designer.commit_text()
         sections = self.designer_sections()
         texts = [section[1] for section in sections]
@@ -1605,13 +1775,17 @@ class SlideDesignerDialogMixin:
             self.slide_designer.document = design
             for index in range(self.slide_designer.undo_stack.count()):
                 command = self.slide_designer.undo_stack.command(index)
+                if not isinstance(command, DesignCommand):
+                    continue
                 for attribute in ('before', 'after'):
                     setattr(command, attribute, remap_custom_footers(
                         getattr(command, attribute), self._footer_sections, texts,
                         getattr(self, 'designer_slide_offset', 0)))
         self._footer_sections = texts
         position = self.design_text_editor.textCursor().position()
-        index = max((i for i, section in enumerate(sections) if section[2] <= position), default=0)
+        source = self.design_text_editor.toPlainText()
+        index = max((i for i, section in enumerate(sections)
+                     if qt_length(source[:section[2]]) <= position), default=0)
         self.section_combo_box.blockSignals(True)
         self.section_combo_box.clear()
         self.section_combo_box.addItems([section[0].replace(':', ' ') for section in sections])
@@ -1619,13 +1793,16 @@ class SlideDesignerDialogMixin:
         self.section_combo_box.blockSignals(False)
         self.slide_designer.page_index = 0
         self.slide_designer.page_keys = []
+        if hasattr(self, 'slide_grid') and self.slide_grid.rows:
+            self._preview_split = self.slide_grid.rows[self.slide_grid.active_row].split
         self.slide_designer.switch_design_context()
 
     def designer_select_section(self, index):
+        from openlp.plugins.slide_designer.forms.slidegrid import qt_length
         sections = self.designer_sections()
         if 0 <= index < len(sections):
             cursor = self.design_text_editor.textCursor()
-            cursor.setPosition(sections[index][3])
+            cursor.setPosition(qt_length(self.design_text_editor.toPlainText()[:sections[index][3]]))
             self.design_text_editor.setTextCursor(cursor)
             self.design_text_editor.setFocus()
 

@@ -665,3 +665,33 @@ def test_progress_bar_and_trailing_label_share_available_width(qapp, qtbot):
     qapp.process_events()
     assert progress._label.isHidden()
     assert progress._bar.width() == progress.contentsRect().width()
+
+
+@pytest.mark.parametrize('asynchronous', [False, True])
+def test_relocated_editor_dialog_uses_its_host(qapp, qtbot, asynchronous):
+    """Resolve the draft's presentation window before Fluent captures its overlay host."""
+    from openlp.core.widgets.fluent_dialogs import FluentDialog
+    owner = QtWidgets.QWidget()
+    host = QtWidgets.QWidget()
+    qtbot.addWidget(owner)
+    qtbot.addWidget(host)
+    host.resize(800, 600)
+    host.show()
+    child = QtWidgets.QWidget(owner)
+    owner._fluent_dialog_host = host
+    dialog = FluentDialog(child)
+    dialog.setAnimationEnabled(False)
+    observed = []
+
+    def dismiss():
+        observed.append((dialog.parentWidget() is host, dialog.isVisible()))
+        dialog.accept()
+
+    if asynchronous:
+        dialog.open()
+        dismiss()
+    else:
+        QtCore.QTimer.singleShot(0, dismiss)
+        dialog.exec()
+    assert observed == [(True, True)]
+    assert not dialog.isVisible()

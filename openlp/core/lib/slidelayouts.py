@@ -6,7 +6,7 @@ from openlp.core.lib.slidedesign import normalise_design
 
 
 PAGE_KEY = re.compile(r'[a-z0-9-]+:[0-9]+:[0-9]+')
-DOCUMENT_KEYS = {'masters', 'assignments', 'overrides', 'hidden_footers'}
+DOCUMENT_KEYS = {'masters', 'assignments', 'overrides', 'hidden_footers', 'custom_layout_name'}
 
 
 def visual_design(value):
@@ -15,6 +15,9 @@ def visual_design(value):
 
 def normalise_layouts(value):
     result = {}
+    name = value.get('custom_layout_name')
+    if isinstance(name, str) and name.strip():
+        result['custom_layout_name'] = name.strip()[:100]
     masters = {}
     source = value.get('masters', {})
     for identifier, master in list(source.items())[:100] if isinstance(source, dict) else []:
@@ -78,8 +81,16 @@ def _merge_changes(before, after, current):
     return result
 
 
+def layout_for_slide(document, page):
+    """New slides inherit the theme; retain legacy shared designs already saved on an item."""
+    assigned = document.get('assignments', {}).get(page)
+    if assigned is not None:
+        return assigned
+    return 'default' if visual_design(document) else 'theme'
+
+
 def slide_design(document, page):
-    master = master_design(document, document.get('assignments', {}).get(page, 'default'))
+    master = master_design(document, layout_for_slide(document, page))
     override = document.get('overrides', {}).get(page)
     if override:
         master = normalise_design(_merge_changes(override['base'], override['design'], master), False)
@@ -91,7 +102,7 @@ def slide_design(document, page):
 
 def set_slide_design(document, page, design):
     result = copy.deepcopy(document) or {'version': 1}
-    base = master_design(document, document.get('assignments', {}).get(page, 'default'))
+    base = master_design(document, layout_for_slide(document, page))
     design = visual_design(design)
     overrides = result.setdefault('overrides', {})
     if design == base:

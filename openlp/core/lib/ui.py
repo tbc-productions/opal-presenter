@@ -198,6 +198,8 @@ def critical_error_message_box(title=None, message=None, parent=None, question=F
                                               QtWidgets.QMessageBox.StandardButton(
             QtWidgets.QMessageBox.StandardButton.Yes |
             QtWidgets.QMessageBox.StandardButton.No))
+    if parent is not None:
+        return QtWidgets.QMessageBox.critical(parent, title if title else UiStrings().Error, message)
     # If used before the main window is created, fall back to direct use of QMessageBox
     main_window = Registry().get('main_window')
     if main_window:

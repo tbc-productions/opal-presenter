@@ -2,24 +2,32 @@ Slide designer
 ==============
 
 Slide Designer is an optional plugin, enabled by default. Enable or disable it
-in Plugin Manager. The next Edit or Edit All dialog uses the selected editor,
+in Plugin Manager. Creating or editing an item opens directly in Slide Designer,
 without restarting OpenLP+. When disabled, songs and custom slides use their
-original basic text editors. Saved designs and their projection/export behaviour
-remain intact; enabling the plugin makes those designs editable again.
+original dialogs and basic text editors. Saved designs and their projection/export
+behaviour remain intact; enabling the plugin makes those designs editable again.
 
-Open a song or custom item, then choose Edit or Edit All. The designer replaces
-that inner text-editing dialog. The outer Song Editor and Custom Slides windows
-retain their read-only lists and do not show the canvas or design panes.
 The designer opens in its own Fluent window, which can be minimised or maximised.
-The outer editor is hidden while its draft is open, allowing the main OpenLP+
-window and other library items to be used without replacing the draft.
-Its window title is the item name followed by ``- OpenLP+``, with ``New Song`` or
-``New Custom Slide`` used for unnamed items.
+The main OpenLP+ window and other library items remain available without replacing
+the draft. Its window title is the item name followed by ``- OpenLP+``, with
+``New Song`` or ``New Custom Slide`` used for unnamed items. While any designer
+is open, Exit/Quit and closing the main window restore and focus the most recently
+used designer instead. Close all designers before exiting OpenLP+.
 
-Edit words on the left and select a section to preview it. The centre canvas
-uses the projection renderer and its pagination. Preview the current output,
-global, assigned item or current service theme. The Theme selector assigns an
-item theme, subject to OpenLP+'s existing theme-level setting.
+Songs have a collapsible navigation rail for Slides, Authors/Topics/Songbooks,
+Copyright/Flags/Comments and Linked Audio. Metadata controls, validation and saving
+use the existing Songs plugin. Custom Slides has a single workspace with Credits
+below its slide list. Title and, for songs, Alternative title are in the top
+command row. Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect-ratio
+selector aligned to the right. The preview uses the assigned theme, falling back
+to the global theme. Imported theme snapshots remain in use until a new theme is chosen.
+
+Edit words in the left sidebar. Section headings can be typed directly, forced
+splits create separate rows and optional splits appear as dotted lines. Shift-click
+selects a range of whole slides; Ctrl/Command-click toggles slides in the selection.
+Drag across rows to select text spanning slides. Cut, copy, paste and delete work
+with either selection. The context menu can paste whole slides before or after the
+selection. Lyrics and design changes share the formatting command row's undo/redo.
 
 New designs start with a Full HD 1920 × 1080 canvas. The preview's canvas selector
 also offers 1920 × 1200 (16:10), 2560 × 1080 (ultrawide) and 1440 × 1080 (4:3).
@@ -43,12 +51,14 @@ drag rows to reorder them, or use the arrow buttons and the Arrange menu. Slide
 text is a layer too, and new objects are added at the front. Selecting a covered
 object in Layers shows an outline that can be dragged without raising the object.
 Drag any corner or edge handle to resize its box, including the slide text.
-For slide text, Reset to theme in Properties restores the theme position, size,
-font and effects without changing the other layers or background. Properties
+Properties accordions show Reset beside the chevron when their values differ
+from the defaults. Reset restores only that section; for slide text, defaults
+come from the theme. Properties
 controls geometry, rotation, opacity, font, alignment, colours, outlines and
 shadows. Text outlines follow the letters; shape and image outlines follow their
-boundaries. Shadows have colour, horizontal/vertical offsets and blur controls. Layers and Properties can be shown
-independently. Undo and redo operate on the design.
+boundaries. Shadows have colour, horizontal/vertical offsets and blur controls.
+Properties starts closed and its toolbar button toggles the whole sidebar,
+including Layers. Unavailable accordions are disabled at 65% opacity.
 
 Shift-, Ctrl- or Command-click objects on the canvas to select more than one.
 Layers also supports multiple selection and Shift ranges. Drag selected objects
@@ -76,11 +86,19 @@ gradient underneath without fading the slide text. Select any text, shape or
 image layer to change that object's opacity. Background images are embedded in
 the saved design, using the same portable PNG format as image objects.
 
-Existing designs become the Shared layout. Use New layout to create a named master
+Effects combines blur, brightness, contrast, greyscale, hue, invert, saturation and
+sepia. Select an image to adjust its filters, or select the slide to filter its
+background without affecting text. Multiple selected images can be edited together;
+mixed values appear blank. The reset icon in each modified accordion restores that
+section. Filters are stored in the portable design and used by preview and live output.
+PPTX and ODP exports do not yet reproduce these CSS filters.
+
+New slides use Theme by default. Earlier saved shared designs remain available
+as Custom, which can also be renamed. Use New layout to create a named master
 from the current design, and the Layout selector to apply it to the previewed slide.
-Edit layout toggles between editing that master and making changes to the current
-slide. Master changes reach all slides using it, while properties changed locally
-remain local. Masters can be renamed; deleting one preserves its slides' appearance
+Canvas and property edits customise only the current slide, leaving its assigned
+layout and other slides unchanged. New layout captures the current design for
+reuse on other slides. Layouts can be renamed; deleting one preserves its slides' appearance
 as local designs. Layouts and overrides are stored with the song/custom item.
 
 Reset is a split button: Reset slide clears the current slide's local changes and
@@ -88,14 +106,15 @@ restores its assigned master; Reset all slides clears local changes throughout t
 item. Both ask for confirmation, preserve master layouts and assignments, and can
 be undone. Per-slide footer overrides are reset too.
 
-In Edit All, the section selector and text cursor select the preview. Previous and
-Next move between overflow pages. Pagination follows the Shared layout so changing
-a named master does not renumber existing slide assignments. Repeated song verse
-pages share their assigned layout and local customisations.
+Selecting a row or moving the text cursor selects the preview. Pagination follows
+the item's base layout so changing a named master does not renumber existing slide
+assignments. Repeated song verse pages share their assigned layout and local
+customisations.
 
-Accepting an inner editor updates the outer dialog's draft. Cancelling the inner
-editor discards its changes; cancelling the outer dialog leaves the library
-unchanged. Saving writes the design along with the lyrics.
+Save validates the complete item and writes metadata, lyrics and design together.
+Validation errors keep the workspace open and select the relevant song page.
+Cancel leaves the library item unchanged. Save and Preview is available when
+editing an item already in preview and explicitly saves the current draft.
 
 Portability
 -----------

@@ -18,6 +18,14 @@ DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 
                         'height': 40, 'fill': '#123456'}]}
 
 
+def test_filters_are_validated_and_background_only_effects_are_preserved():
+    from openlp.core.lib.slidedesign import normalise_filters
+    assert normalise_filters({'blur': 500, 'hue-rotate': -400, 'brightness': 100, 'sepia': float('nan'),
+                              'contrast': 'url(https://invalid)', 'unknown': 10}) == {'blur': 100, 'hue-rotate': -180}
+    source = {'version': 1, 'background_filters': {'sepia': 75, 'brightness': 90}}
+    assert normalise_design(source)['background_filters'] == source['background_filters']
+
+
 def test_legacy_designs_keep_lyrics_above_decorations():
     legacy = copy.deepcopy(DESIGN)
     del legacy['order']

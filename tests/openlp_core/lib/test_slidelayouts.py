@@ -101,11 +101,26 @@ def test_custom_xml_retains_named_masters_assignments_and_local_images():
     from openlp.plugins.custom.lib.customxmlhandler import CustomXML
 
     source = document()
+    source['custom_layout_name'] = 'Opening slides'
+    source['background_filters'] = {'sepia': 50}
     local = slide_design(source, 'custom-1:0:0')
-    local['elements'].append({'id': 'photo', 'kind': 'image', 'src': 'data:image/png;base64,AAAA'})
+    local['elements'].append({'id': 'photo', 'kind': 'image', 'src': 'data:image/png;base64,AAAA',
+                              'filters': {'blur': 4, 'brightness': 80}})
     source = set_slide_design(source, 'custom-1:0:0', local)
     xml = CustomXML()
     xml.add_verse_to_lyrics('custom', 1, 'Welcome')
     xml.set_design(source)
     restored = CustomXML(xml.extract_xml().decode('utf-8'))
     assert restored.get_design() == source
+
+
+def test_default_layout_is_theme_without_discarding_saved_shared_designs():
+    from openlp.core.lib.slidelayouts import layout_for_slide
+    assert layout_for_slide({}, 'v1:0:0') == 'theme'
+    source = set_slide_design({}, 'v1:0:0', {'version': 1, 'lyrics': {'x': 20}})
+    assert layout_for_slide(source, 'v1:0:0') == 'theme'
+    assert slide_design(source, 'v1:0:0')['lyrics']['x'] == 20
+    assert slide_design(source, 'v2:0:0') == {}
+    legacy = {'version': 1, 'lyrics': {'font_size': 60}}
+    assert layout_for_slide(legacy, 'v1:0:0') == 'default'
+    assert slide_design(legacy, 'v1:0:0')['lyrics']['font_size'] == 60

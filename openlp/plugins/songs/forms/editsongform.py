@@ -54,7 +54,7 @@ from openlp.core.widgets.edits import FormattingTagDelegate
 from openlp.core.widgets.comboboxes import create_combo_box
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.lib.slidedesign import normalise_design
-from openlp.core.widgets.slideeditor import get_slide_editor
+from openlp.core.widgets.slideeditor import get_slide_editor, exec_item_editor
 from openlp.plugins.songs.forms.mediafilesform import MediaFilesForm
 from openlp.plugins.songs.lib import VerseType, clean_song
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
@@ -136,6 +136,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.find_verse_split = re.compile(r'---\[\]---\n')
         self.whitespace = re.compile(r'\W+')
         self.find_tags = re.compile(r'\{/?\w+\}')
+
+    def exec(self):
+        result = exec_item_editor(self, 'song')
+        return super().exec() if result is None else result
 
     def setup_ui(self):
         self.setObjectName('edit_song_form')
@@ -648,6 +652,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             if author is not None:
                 if self._add_author_if_missing(author, author_type) is False:
                     critical_error_message_box(
+                        parent=self,
                         message=translate('SongsPlugin.EditSongForm', 'This author is already in the list.'))
                 self._reset_authors_combo_box()
                 return
@@ -667,6 +672,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             author = self.manager.get_object(Author, item_id)
             if not self._add_author_if_missing(author, author_type):
                 critical_error_message_box(
+                    parent=self,
                     message=translate('SongsPlugin.EditSongForm', 'This author is already in the list.'))
             self._reset_authors_combo_box()
             return
@@ -744,7 +750,9 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
                                 'There is no verse corresponding to "{invalid}". Valid entries are {valid}.\n'
                                 'Please enter the verses separated by spaces.').format(invalid=invalid_verses[0],
                                                                                        valid=valid)
-            critical_error_message_box(title=translate('SongsPlugin.EditSongForm', 'Invalid Verse Order'), message=msg)
+            critical_error_message_box(
+                parent=self,
+                title=translate('SongsPlugin.EditSongForm', 'Invalid Verse Order'), message=msg)
         return len(invalid_verses) == 0
 
     def _validate_song(self):
@@ -761,19 +769,23 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             self.song_tab_widget.setCurrentIndex(0)
             self.title_edit.setFocus()
             critical_error_message_box(
+                parent=self,
                 message=translate('SongsPlugin.EditSongForm', 'You need to type in a song title.'))
             return False
         if self.verse_list_widget.rowCount() == 0:
             self.song_tab_widget.setCurrentIndex(0)
             self.verse_list_widget.setFocus()
             critical_error_message_box(
+                parent=self,
                 message=translate('SongsPlugin.EditSongForm', 'You need to type in at least one verse.'))
             return False
         if self.authors_list_view.count() == 0:
             self.song_tab_widget.setCurrentIndex(1)
             self.authors_list_view.setFocus()
-            critical_error_message_box(message=translate('SongsPlugin.EditSongForm',
-                                                         'You need to have an author for this song.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('SongsPlugin.EditSongForm',
+                                  'You need to have an author for this song.'))
             return False
         if self.verse_order_edit.text():
             result = self._validate_verse_list(self.verse_order_edit.text(), self.verse_list_widget.rowCount())
@@ -799,6 +811,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             show_key_warning(self)
         if misplaced_tags:
             critical_error_message_box(
+                parent=self,
                 message=translate('SongsPlugin.EditSongForm',
                                   'There are misplaced formatting tags in the following verses:\n\n{tag}\n\n'
                                   'Please correct these tags before continuing.').format(tag=', '.join(misplaced_tags)))
@@ -807,18 +820,22 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             if verse_tags.count(tag) > 26:
                 # lp#1310523: OpenLyrics allows only a-z variants of one verse:
                 # http://openlyrics.info/dataformat.html#verse-name
-                critical_error_message_box(message=translate(
-                    'SongsPlugin.EditSongForm',
-                    'You have {count} verses named {name} {number}. You can have at most '
-                    '26 verses with the same name').format(count=verse_tags.count(tag),
-                                                           name=VerseType.translated_name(tag[0]),
-                                                           number=tag[1:]))
+                critical_error_message_box(
+                    parent=self,
+                    message=translate(
+                        'SongsPlugin.EditSongForm',
+                        'You have {count} verses named {name} {number}. You can have at most '
+                        '26 verses with the same name').format(count=verse_tags.count(tag),
+                                                               name=VerseType.translated_name(tag[0]),
+                                                               number=tag[1:]))
                 return False
         if self.audio_list_widget.count() > 1:
             self.song_tab_widget.setCurrentIndex(3)
-            critical_error_message_box(message=translate('SongsPlugin.EditSongForm',
-                                                         'Cannot link more than one audio file. Remove items from '
-                                                         'Linked Audio other than the one you wish to keep.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('SongsPlugin.EditSongForm',
+                                  'Cannot link more than one audio file. Remove items from '
+                                  'Linked Audio other than the one you wish to keep.'))
             return False
         return True
 
@@ -1214,7 +1231,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         if item is None:
             return
         author_id, author_type = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        dialog = fluentqt.ContentDialog(self)
+        dialog = fluentqt.ContentDialog(getattr(self, '_fluent_dialog_host', self))
         dialog.setObjectName('author_type_dialog')
         dialog.graphicsEffect().setEnabled(False)
         dialog.setSmokeEnabled(True)
@@ -1280,6 +1297,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             topic = self.manager.get_object(Topic, item_id)
             if self.topics_list_view.findItems(str(topic.name), QtCore.Qt.MatchFlag.MatchExactly):
                 critical_error_message_box(
+                    parent=self,
                     message=translate('SongsPlugin.EditSongForm', 'This topic is already in the list.'))
             else:
                 topic_item = QtWidgets.QListWidgetItem(str(topic.name))
@@ -1325,6 +1343,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             songbook = self.manager.get_object(SongBook, item_id)
             if self.songbooks_list_view.findItems(str(songbook.name), QtCore.Qt.MatchFlag.MatchExactly):
                 critical_error_message_box(
+                    parent=self,
                     message=translate('SongsPlugin.EditSongForm', 'This Songbook is already in the list.'))
             else:
                 self.add_songbook_entry_to_list(songbook.id, songbook.name, self.songbook_entry_edit.text())
@@ -1416,7 +1435,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
             self.verse_form.set_verse('')
         if not self.verse_form.exec():
             return
-        verse_list = self.verse_form.get_all_verses()
+        self.set_verse_text(self.verse_form.get_all_verses())
+
+    def set_verse_text(self, verse_list):
+        """Update the song draft from the canonical section-marked lyrics."""
         verse_list = str(verse_list.replace('\r\n', '\n'))
         self.verse_list_widget.clear()
         self.verse_list_widget.setRowCount(0)
@@ -1533,8 +1555,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         Loads file(s) from the filesystem.
         """
         if self.audio_list_widget.count() > 0:
-            critical_error_message_box(message=translate('SongsPlugin.EditSongForm',
-                                                         'Cannot link more than one audio file.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('SongsPlugin.EditSongForm',
+                                  'Cannot link more than one audio file.'))
             return
         filters = '{text} (*)'.format(text=UiStrings().AllFiles)
         file_paths, filter_used = FileDialog.getOpenFileNames(
@@ -1549,8 +1573,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         Loads file(s) from the media plugin.
         """
         if self.audio_list_widget.count() > 0:
-            critical_error_message_box(message=translate('SongsPlugin.EditSongForm',
-                                                         'Cannot link more than one audio file.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('SongsPlugin.EditSongForm',
+                                  'Cannot link more than one audio file.'))
             return
         if self.media_form.exec():
             for file_path in self.media_form.get_selected_files():

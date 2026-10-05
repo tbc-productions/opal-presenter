@@ -2089,6 +2089,20 @@ var Display = {
       `${properties.flip_vertical ? -1 : 1})`;
   },
 
+  _designFilters: function (filters) {
+    var scale = (Display._theme.song_design_output_height || 1080) /
+      ((Display._theme.song_design || {}).canvas_height || 1080);
+    var ranges = {blur: [0, 100, 'px'], brightness: [0, 200, '%'], contrast: [0, 200, '%'],
+      grayscale: [0, 100, '%'], 'hue-rotate': [-180, 180, 'deg'], invert: [0, 100, '%'],
+      saturate: [0, 200, '%'], sepia: [0, 100, '%']};
+    return Object.keys(ranges).filter(key => filters && typeof filters[key] === 'number' &&
+      Number.isFinite(filters[key])).map(key => {
+      var range = ranges[key];
+      var value = Math.max(range[0], Math.min(range[1], filters[key]));
+      return `${key}(${key === 'blur' ? value * scale : value}${range[2]})`;
+    }).join(' ');
+  },
+
   /** Effects use design pixels, scaled to the output; text outlines follow glyphs, not the text box. */
   _applyDesignEffects: function (node, properties, kind) {
     var scale = (Display._theme.song_design_output_height || 1080) /
@@ -2132,7 +2146,8 @@ var Display = {
         node.style.border = `${effect.outline ? effect.outline_width * scale : 0}px solid ` +
           `${effect.outline_colour || '#000000'}`;
       }
-      node.style.filter = effect.shadow ? `drop-shadow(${shadow})` : 'none';
+      var filters = kind === 'image' ? Display._designFilters(properties.filters) : '';
+      node.style.filter = [filters, effect.shadow ? `drop-shadow(${shadow})` : ''].filter(Boolean).join(' ') || 'none';
     }
   },
 
@@ -2229,8 +2244,10 @@ var Display = {
   _applyDesignBackgroundImages: function () {
     document.querySelectorAll('.reveal .slides section').forEach(section => {
       var background = section.slideBackgroundElement;
-      var content = background && background.querySelector('.slide-background-content');
+      var content = background && typeof background.querySelector === 'function' &&
+        background.querySelector('.slide-background-content');
       if (!content) return;
+      background.style.filter = section.dataset.designBackgroundFilters || 'none';
       content.querySelectorAll('.song-design-background-image').forEach(node => node.remove());
       var source = section.dataset.designBackgroundImage;
       if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source || '')) return;
@@ -2533,6 +2550,8 @@ var Display = {
     var backgroundContent = "";
     var backgroundHtml = "";
     var designBackground = is_text && Display._theme.song_design && Display._theme.song_design.background;
+    targetElement.dataset.designBackgroundFilters = is_text ?
+      Display._designFilters((Display._theme.song_design || {}).background_filters) : '';
     ['image', 'opacity', 'fit'].forEach(key => targetElement.removeAttribute(`data-design-background-${key}`));
     if (designBackground) {
       targetElement.removeAttribute('data-background-image');

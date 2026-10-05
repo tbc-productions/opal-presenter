@@ -7,6 +7,7 @@ from PySide6 import QtCore, QtGui
 from openlp.core.common import ThemeLevel
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import Theme
+from openlp.core.lib.slidelayouts import slide_design
 from openlp.plugins.songs.forms.editsongform import EditSongForm
 
 
@@ -59,7 +60,8 @@ def test_drag_gesture_is_one_undo_and_does_not_change_input(designer):
 def test_save_flushes_pending_text_and_song_switch_clears_it(designer):
     designer.add_element('text')
     designer.text.setPlainText('Final unsaved keystrokes')
-    assert designer.serialised_design()['elements'][0]['text'] == 'Final unsaved keystrokes'
+    saved = slide_design(designer.serialised_design(), designer.footer_key())
+    assert saved['elements'][0]['text'] == 'Final unsaved keystrokes'
     designer.text.setPlainText('Discard this draft')
     designer.load_design(None)
     designer.commit_text()
@@ -77,24 +79,18 @@ def test_switch_layer_preserves_pending_text_and_selection(designer):
     assert designer.design['elements'][0]['text'] == 'New caption'
 
 
-def test_preview_theme_sources_follow_output_level(designer, settings):
+def test_preview_uses_assigned_theme_with_global_fallback(designer, settings):
     form = designer.source_form
-    form.theme_combo_box.addItems(['Song'])
+    form.theme_combo_box.addItems(['Song', 'Missing theme'])
     form.theme_combo_box.setCurrentText('Song')
-    designer.theme_source.setCurrentIndex(0)
     settings.setValue('themes/theme level', ThemeLevel.Global)
     designer.resolve_theme()
-    designer.theme_manager.get_theme_data.assert_called_with('Global')
-    settings.setValue('themes/theme level', ThemeLevel.Song)
-    designer.resolve_theme()
     designer.theme_manager.get_theme_data.assert_called_with('Song')
-    designer.theme_source.setCurrentIndex(1)
+    form.theme_combo_box.setCurrentText('Missing theme')
     designer.resolve_theme()
     designer.theme_manager.get_theme_data.assert_called_with('Global')
-    settings.setValue('servicemanager/service theme', 'Service')
-    designer.theme_source.setCurrentIndex(3)
-    designer.resolve_theme()
-    designer.theme_manager.get_theme_data.assert_called_with('Service')
+    assert not hasattr(designer, 'theme_source')
+    assert designer.canvas_combo.parentWidget() is designer.preview_footer
 
 
 def test_preview_uses_unsaved_verse_and_design(designer):
@@ -219,7 +215,7 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
 
     with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', new=edit_and_finish):
         designer.source_form.exec()
-    assert owner.slide_design['lyrics']['x'] == (35 if accepted else 10)
+    assert slide_design(owner.slide_design, designer.footer_key())['lyrics']['x'] == (35 if accepted else 10)
     if not accepted:
         assert owner.slide_design == original
     owner.manager.save_object.assert_not_called()
@@ -245,10 +241,15 @@ def test_assigning_theme_releases_imported_snapshot(designer):
     designer.source_form.theme_combo_box.addItem('Song')
     assert 'theme' not in designer.design
     assert designer.design['lyrics']['x'] == 15
-    assert designer.theme_source.currentIndex() == 2
+    designer.resolve_theme()
+    designer.theme_manager.get_theme_data.assert_called_with('Song')
 
 
 def test_fluent_inspector_edits_keep_precision_and_undo(designer):
+    import fluentqt
+    numeric_fields = [field for field in designer.fields.values() if isinstance(field, fluentqt.NumberBox)]
+    numeric_fields.append(designer.background_image_opacity)
+    assert all(field.displayPrecision() == 0 for field in numeric_fields)
     designer.fields['x'].setValue(12.5)
     designer.fields['bold'].click()
     assert designer.design['lyrics']['x'] == pytest.approx(12.5 / 1920 * 100)
@@ -262,18 +263,63 @@ def test_fluent_inspector_edits_keep_precision_and_undo(designer):
 
 def test_inspector_follows_selected_object(designer):
     designer.add_element('rectangle')
-    assert designer.text_section.isHidden()
+    assert not designer.text_section.isEnabled()
     assert not designer.field_rows['fill'].isHidden()
     assert designer.back_button.isEnabled()
     designer.layers.selectionModel().setCurrentIndex(
         designer.layers.model().index(designer.layers.identifiers().index('lyrics'), 0),
         QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect)
     assert not designer.text_section.isHidden()
-    assert designer.field_rows['fill'].isHidden()
+    assert not designer.field_rows['fill'].isEnabled()
     assert designer.front_button.isEnabled()
     designer.add_element('text')
     assert not designer.text.isHidden()
-    assert designer.field_rows['fill'].isHidden()
+    assert not designer.field_rows['fill'].isEnabled()
+
+
+def test_unavailable_drawers_disable_and_reenable_with_selection(designer):
+    object_drawers = [designer.position_section, designer.text_section, designer.appearance_section,
+                      *designer.effect_sections]
+    designer.clear_selection()
+    assert all(not drawer.isEnabled() for drawer in object_drawers)
+    assert all(drawer.disabled_opacity.isEnabled() for drawer in object_drawers)
+    assert all(drawer.disabled_opacity.opacity() == 0.65 for drawer in object_drawers)
+    assert all(not drawer.isHidden() for drawer in object_drawers)
+    assert designer.slide_section.isEnabled()
+    assert designer.background_section.isEnabled()
+    designer.add_element('rectangle')
+    assert designer.position_section.isEnabled()
+    assert designer.appearance_section.isEnabled()
+    assert all(drawer.isEnabled() for drawer in designer.effect_sections)
+    assert not designer.text_section.isEnabled()
+    designer.select_object('lyrics')
+    assert all(drawer.isEnabled() for drawer in object_drawers)
+    assert all(not drawer.disabled_opacity.isEnabled() for drawer in object_drawers)
+
+
+def test_properties_header_stays_fixed_and_pane_can_resize(designer, qtbot):
+    designer.inspector_button.setChecked(True)
+    designer.setParent(None)
+    qtbot.addWidget(designer)
+    designer.display = MagicMock()
+    designer.display._is_initialised = False
+    designer.resize(1050, 550)
+    designer.show()
+    for drawer, _ in designer.reset_sections.values():
+        drawer.setExpanded(True)
+    scroll = designer.sidebar_scroll.verticalScrollBar()
+    qtbot.waitUntil(lambda: scroll.maximum() > 0)
+    heading_position = designer.properties_heading.mapTo(designer, QtCore.QPoint())
+    scroll.setValue(scroll.maximum())
+    assert designer.properties_heading.mapTo(designer, QtCore.QPoint()) == heading_position
+    assert designer.properties_heading.parentWidget() is designer.sidebar
+    assert not any(button.accessibleName() == 'Close properties'
+                   for button in designer.sidebar.findChildren(type(designer.inspector_button)))
+    before = designer.sidebar.width()
+    handle = designer.splitter.handle(1)
+    designer.splitter.moveSplitter(handle.x() - 80, 1)
+    assert designer.sidebar.width() > before
+    designer.hide()
 
 
 def test_custom_sidebar_commands_still_insert_slides(designer):
@@ -343,7 +389,7 @@ def test_dragging_layer_rows_is_one_undoable_change_and_preserves_selection(desi
     designer.layers.move_row(0, 1)
     assert designer.layers.identifiers() == [caption, shape, 'lyrics']
     designer.delete_element()
-    assert caption not in designer.serialised_design()['order']
+    assert caption not in slide_design(designer.serialised_design(), designer.footer_key())['order']
 
 
 def test_layer_drop_uses_row_boundary(designer):
@@ -370,12 +416,12 @@ def test_empty_selection_shows_slide_properties_and_keeps_editor_interactive(des
     designer.clear_selection()
     assert designer.selected is None
     assert not designer.background_section.isHidden()
-    assert designer.position_section.isHidden()
-    assert designer.field_rows['opacity'].isHidden()
+    assert not designer.position_section.isEnabled()
+    assert not designer.field_rows['opacity'].isEnabled()
     assert not designer.delete_button.isEnabled()
     designer.display.run_in_display.assert_called_with('setDesignEditor', '')
     designer.canvas_changed({'id': 'lyrics', 'changed': False})
-    assert designer.background_section.isHidden()
+    assert not designer.background_section.isHidden()
     assert not designer.position_section.isHidden()
     designer.canvas_changed({'id': None, 'changed': False})
     assert designer.selected_label.text() == 'Slide'
@@ -408,7 +454,7 @@ def test_object_opacity_is_editable_without_changing_background(designer, kind):
     designer.select_object('object')
     assert not designer.field_rows['opacity'].isHidden()
     designer.fields['opacity'].setValue(0)
-    assert designer.serialised_design()['elements'][0]['opacity'] == 0
+    assert slide_design(designer.serialised_design(), designer.footer_key())['elements'][0]['opacity'] == 0
     assert designer.design['background']['colour'] == '#123456'
     designer.undo_stack.undo()
     assert designer.fields['opacity'].value() == 100
@@ -421,15 +467,66 @@ def test_reset_slide_text_restores_theme_without_touching_other_layers(designer)
                           'elements': [{'id': 'shape', 'kind': 'rectangle'}], 'order': ['lyrics', 'shape']})
     designer.select_object('lyrics')
     original = copy.deepcopy(designer.design)
-    assert designer.reset_text_button.isEnabled()
-    designer.reset_text_button.click()
+    assert not designer.text_section.reset_button.isHidden()
+    designer.text_section.reset_button.click()
+    assert designer.design['lyrics']['x'] == 40
+    assert 'font' not in designer.design['lyrics']
+    designer.position_section.reset_button.click()
+    designer.effect_sections[1].reset_button.click()
     assert designer.design['lyrics'] == {}
     for key in ('background', 'elements', 'order'):
         assert designer.design[key] == original[key]
     assert designer.selection == ['lyrics']
-    assert not designer.reset_text_button.isEnabled()
+    assert designer.text_section.reset_button.isHidden()
+    designer.undo_stack.undo()
+    designer.undo_stack.undo()
     designer.undo_stack.undo()
     assert designer.design == original
+
+
+def test_section_reset_edits_multiple_objects_and_only_its_fields(designer):
+    designer.load_design({'version': 1, 'elements': [
+        {'id': 'a', 'kind': 'text', 'font_size': 60, 'x': 20, 'opacity': 35},
+        {'id': 'b', 'kind': 'text', 'font_size': 80, 'x': 60, 'opacity': 75}]})
+    designer.select_objects(['a', 'b'])
+    original = copy.deepcopy(designer.design)
+    assert not designer.text_section.reset_button.isHidden()
+    expanded = designer.text_section.isExpanded()
+    designer.text_section.reset_button.click()
+    assert designer.text_section.isExpanded() == expanded
+    assert designer.text_section.reset_button.isHidden()
+    assert [e['font_size'] for e in designer.design['elements']] == [40, 40]
+    assert [e['x'] for e in designer.design['elements']] == [20, 60]
+    assert [e['opacity'] for e in designer.design['elements']] == [35, 75]
+    designer.undo_stack.undo()
+    assert designer.design == original
+    assert not designer.text_section.reset_button.isHidden()
+
+
+def test_background_reset_restores_fill_and_image_properties_together(designer):
+    designer.set_background_property('colour', '#123456')
+    designer.set_background_property('image_opacity', 35)
+    original = copy.deepcopy(designer.design)
+    assert not designer.background_section.reset_button.isHidden()
+    assert not hasattr(designer, 'background_image_section')
+    assert designer.background_section.isAncestorOf(designer.background_image_opacity)
+    designer.background_section.reset_button.click()
+    assert designer.background_section.reset_button.isHidden()
+    assert 'background' not in designer.design
+    designer.undo_stack.undo()
+    assert designer.design == original
+
+
+def test_section_reset_tracks_actual_theme_values(designer):
+    designer.select_object('lyrics')
+    defaults = designer.property_defaults('lyrics')
+    designer.set_property('font_size', defaults['font_size'])
+    assert designer.text_section.reset_button.isHidden()
+    designer.set_property('font_size', defaults['font_size'] + 10)
+    assert not designer.text_section.reset_button.isHidden()
+    designer.text_section.reset_button.click()
+    assert designer.selected_properties('lyrics')['font_size'] == defaults['font_size']
+    assert designer.text_section.reset_button.isHidden()
 
 
 def select_three_objects(designer):
@@ -475,24 +572,24 @@ def test_multiple_properties_show_mixed_values_and_edit_applicable_objects_toget
     assert designer.document == original
 
 
-def test_master_edits_propagate_while_slide_properties_and_reset_stay_local(designer):
+def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(designer):
     from openlp.core.lib.slidelayouts import slide_design
     designer.add_element('text')
     identifier = designer.selected
-    with patch('openlp.plugins.slide_designer.forms.designer.QtWidgets.QInputDialog.getText',
-               return_value=('Welcome', True)):
+    with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
         designer.new_layout()
     master = designer.active_layout()
     page = designer.footer_key()
+    master_before = copy.deepcopy(designer.document['masters'][master]['design'])
+    designer.document.setdefault('assignments', {})['v2:0:0'] = master
     designer.set_property('font_size', 36)
-    designer.edit_layout_button.setChecked(False)
     designer.set_property('colour', '#123456')
     assert page in designer.document['overrides']
-    designer.edit_layout_button.setChecked(True)
     designer.set_property('font_size', 72)
-    designer.edit_layout_button.setChecked(False)
     assert designer.selected_properties(identifier)['font_size'] == 72
     assert designer.selected_properties(identifier)['colour'] == '#123456'
+    assert designer.document['masters'][master]['design'] == master_before
+    assert slide_design(designer.document, 'v2:0:0') == master_before
     original = copy.deepcopy(designer.document)
     with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
@@ -614,7 +711,7 @@ def test_native_layers_multiselection_updates_properties_without_rebuilding_mode
     assert len(selection.selectedRows()) == 2
     designer.select_objects(['lyrics', 'a'])
     assert len(selection.selectedRows()) == 2
-    assert not designer.reset_text_button.isVisible()
+    assert not hasattr(designer, 'reset_text_button')
 
 
 def test_multi_drag_flip_and_layer_order_preserve_selection_and_undo(designer):
@@ -654,7 +751,7 @@ def test_outline_shadow_and_flip_controls_persist_and_undo(designer, kind):
     designer.fields['shadow_x'].setValue(-8)
     designer.fields['shadow_blur'].setValue(12)
     designer.flip_objects('vertical')
-    element = designer.serialised_design()['elements'][0]
+    element = slide_design(designer.serialised_design(), designer.footer_key())['elements'][0]
     assert element['outline_width'] == 3.5
     assert element['outline_colour'] == '#123456'
     assert element['shadow'] is True
@@ -797,3 +894,118 @@ def test_repeated_aspect_switches_return_to_original_geometry(designer):
     for first, second in zip(original, designer.design['elements']):
         for key in ('x', 'y', 'width', 'height', 'font_size'):
             assert second[key] == pytest.approx(first[key])
+
+
+@pytest.mark.parametrize('accepted', [True, False])
+def test_layout_name_content_dialog_has_header_and_rejects_blank_names(designer, accepted):
+    import fluentqt
+    from openlp.core.widgets import fluent as QtWidgets
+
+    def inspect(dialog):
+        assert dialog.title() == 'New layout'
+        assert dialog.primaryButtonText() == 'Create'
+        assert dialog.closeButtonText() == 'Cancel'
+        field = dialog.findChild(QtWidgets.QLineEdit, 'layout_name_edit')
+        primary = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == 'Create')
+        assert not primary.isEnabled()
+        field.setText('   ')
+        assert not primary.isEnabled()
+        field.setText('  Welcome  ')
+        assert primary.isEnabled()
+        return dialog.ResultPrimary if accepted else dialog.ResultNone
+
+    before = copy.deepcopy(designer.document)
+    with patch.object(fluentqt.ContentDialog, 'exec', inspect):
+        designer.new_layout()
+    if accepted:
+        assert designer.document['masters'][designer.active_layout()]['name'] == 'Welcome'
+    else:
+        assert designer.document == before
+
+
+def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
+    import fluentqt
+    from openlp.core.widgets import fluent as QtWidgets
+
+    def inspect(dialog):
+        assert dialog.title() == 'Rename layout'
+        assert dialog.primaryButtonText() == 'Rename'
+        field = dialog.findChild(QtWidgets.QLineEdit, 'layout_name_edit')
+        assert field.text() == 'Welcome'
+        assert field.selectedText() == 'Welcome'
+        field.setText('Closing')
+        return dialog.ResultPrimary
+
+    with patch.object(fluentqt.ContentDialog, 'exec', inspect):
+        assert designer.prompt_layout_name('Rename layout', 'Welcome') == ('Closing', True)
+
+
+def test_new_slide_uses_theme_before_and_after_local_edits(designer):
+    designer.load_design({})
+    assert designer.active_layout() == 'theme'
+    assert designer.layout_combo.currentText() == 'Theme'
+    assert designer.layout_combo.findData('default') == -1
+    designer.add_element('text')
+    saved = designer.serialised_design()
+    designer.load_design(saved)
+    assert designer.layout_combo.currentData() == 'theme'
+    assert designer.design['elements'][0]['kind'] == 'text'
+    with patch.object(designer, 'footer_key', return_value='v2:0:0'):
+        designer.switch_design_context()
+        assert designer.layout_combo.currentData() == 'theme'
+        assert not designer.design.get('elements')
+
+
+def test_custom_layout_can_be_renamed_saved_and_undone(designer):
+    designer.load_design({'version': 1, 'lyrics': {'font_size': 60}})
+    original = copy.deepcopy(designer.design)
+    assert designer.layout_combo.currentText() == 'Custom'
+    assert designer.rename_layout_button.isEnabled()
+    assert not designer.delete_layout_button.isEnabled()
+    with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)) as prompt:
+        designer.rename_layout()
+    prompt.assert_called_once_with('Rename layout', 'Custom')
+    assert designer.layout_combo.currentText() == 'Welcome'
+    assert designer.active_layout() == 'default'
+    assert designer.design == original
+    designer.undo_stack.undo()
+    assert designer.layout_combo.currentText() == 'Custom'
+    designer.undo_stack.redo()
+    designer.load_design(designer.serialised_design())
+    assert designer.layout_combo.currentText() == 'Welcome'
+    assert designer.design == original
+    designer.layout_combo.setCurrentIndex(designer.layout_combo.findData('theme'))
+    assert not designer.rename_layout_button.isEnabled()
+
+
+def test_effects_target_background_and_images_with_mixed_selection_and_undo(designer):
+    designer.load_design({'version': 1, 'elements': [
+        {'id': 'a', 'kind': 'image', 'src': 'data:image/png;base64,AAAA', 'filters': {'blur': 5}},
+        {'id': 'b', 'kind': 'image', 'src': 'data:image/png;base64,AAAA'},
+        {'id': 'text', 'kind': 'text'}]})
+    designer.select_objects(['a', 'b', 'text'])
+    assert designer.filters_section.isEnabled()
+    import math
+    assert math.isnan(designer.filter_fields['blur'].value())
+    designer.filter_fields['contrast'].setValue(125)
+    assert [element.get('filters', {}).get('contrast') for element in designer.design['elements']] == [125, 125, None]
+    assert designer.design['elements'][0]['filters']['blur'] == 5
+    designer.select_object('text')
+    assert not designer.filters_section.isEnabled()
+    designer.clear_selection()
+    assert designer.filters_section.isEnabled()
+    designer.filter_fields['sepia'].setValue(50)
+    designer.filter_fields['brightness'].setValue(80)
+    assert designer.design['background_filters'] == {'brightness': 80, 'sepia': 50}
+    assert designer.section_modified('effects')
+    designer.reset_section('effects')
+    assert 'background_filters' not in designer.design
+    assert not designer.section_modified('effects')
+    designer.undo_stack.undo()
+    saved = designer.serialised_design()
+    designer.load_design(saved)
+    assert designer.design['background_filters'] == {'brightness': 80, 'sepia': 50}
+    assert designer.design['elements'][0]['filters'] == {'blur': 5, 'contrast': 125}
+    for drawer, _ in designer.reset_sections.values():
+        assert drawer.reset_button.text() == ''
+        assert not drawer.reset_button.icon().isNull()

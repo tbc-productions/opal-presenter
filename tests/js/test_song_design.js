@@ -173,7 +173,10 @@ describe('Portable slide designs', function () {
     slide.dataset.designBackgroundImage = 'data:image/png;base64,AAAA';
     slide.dataset.designBackgroundOpacity = '35';
     slide.dataset.designBackgroundFit = 'contain';
+    slide.dataset.designBackgroundFilters = 'sepia(50%) contrast(120%)';
     Display._applyDesignBackgroundImages();
+    expect(background.style.filter).toBe('sepia(50%) contrast(120%)');
+    expect(text.style.filter).toBe('');
     var content = background.firstElementChild;
     expect(content.firstElementChild.style.opacity).toBe('0.35');
     expect(content.firstElementChild.style.backgroundSize).toBe('contain');
@@ -184,8 +187,10 @@ describe('Portable slide designs', function () {
     Display._applyDesignBackgroundImages();
     expect(content.children.length).toBe(1);
     expect(content.firstElementChild.style.opacity).toBe('0');
+    delete slide.dataset.designBackgroundFilters;
     slide.removeAttribute('data-design-background-image');
     Display._applyDesignBackgroundImages();
+    expect(background.style.filter).toBe('none');
     expect(content.children.length).toBe(0);
   });
   it('reports a complete drag as one geometry change in output percentages', function () {
@@ -295,5 +300,18 @@ describe('Portable slide designs', function () {
     Display._applySongDesign(slide);
     expect(text.style.textShadow).toBe(inherited);
     expect(slide.querySelector('[data-design-id="shape"]').style.borderWidth).toBe('3px');
+  });
+  it('combines image filters with shadows and scales blur to the output', function () {
+    Display._theme.song_design.canvas_height = 1200;
+    Display._theme.song_design.elements.push({id: 'photo', kind: 'image', shadow: true,
+      filters: {blur: 8, grayscale: 100, brightness: 80, url: 'https://invalid', contrast: Infinity}});
+    Display._applySongDesign(slide);
+    var image = slide.querySelector('[data-design-id="photo"]');
+    expect(image.style.filter).toContain('blur(4px)');
+    expect(image.style.filter).toContain('grayscale(100%)');
+    expect(image.style.filter).toContain('brightness(80%)');
+    expect(image.style.filter).toContain('drop-shadow');
+    expect(image.style.filter).not.toContain('url');
+    expect(image.style.filter).not.toContain('contrast');
   });
 });

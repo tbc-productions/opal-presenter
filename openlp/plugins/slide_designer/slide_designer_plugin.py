@@ -20,6 +20,7 @@ class SlideDesignerPlugin(Plugin):
 
     @staticmethod
     def about():
-        return translate('SlideDesignerPlugin', 'Design song and custom slides with backgrounds, images, shapes, '
-                         'text boxes and layers. When disabled, Edit and Edit All use the basic text editor. '
+        return translate('SlideDesignerPlugin',
+                         'Edit songs and custom slides in one window with metadata, backgrounds, '
+                         'images, shapes, text boxes and layers. When disabled, the original editing dialogs are used. '
                          'Saved designs remain available. Changes take effect the next time an editor is opened.')

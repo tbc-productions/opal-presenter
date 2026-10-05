@@ -490,3 +490,13 @@ def test_set_list_view_mode_toolbar_state_view_mode_icon_mode(settings):
     # THEN: Assert correct icons are checked or not
     assert toolbar.actions_map['listView'].isChecked() is False
     assert toolbar.actions_map['gridView'].isChecked() is True
+
+
+@patch('openlp.core.lib.ui.Registry')
+@patch('openlp.core.lib.ui.QtWidgets.QMessageBox.critical')
+def test_critical_error_respects_explicit_parent(mocked_critical, registry):
+    """Errors with an owner must not be redirected to the main window."""
+    parent = MagicMock()
+    critical_error_message_box('Error', 'Missing title', parent=parent)
+    mocked_critical.assert_called_once_with(parent, 'Error', 'Missing title')
+    registry.return_value.get.return_value.error_message.assert_not_called()

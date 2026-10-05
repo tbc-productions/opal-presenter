@@ -306,8 +306,9 @@ def test_on_transpose_up_button_clicked_with_keyerror(mocked_critical_error: Mag
     edit_verse_form.on_transpose_up_button_clicked()
 
     # THEN An error message should have been shown
-    mocked_critical_error.assert_called_once_with(title='Transposing failed', message='Transposing failed because of '
-                                                  'invalid chord:\n\'"A" not found in "chords"\'')
+    mocked_critical_error.assert_called_once_with(
+        parent=edit_verse_form, title='Transposing failed',
+        message='Transposing failed because of invalid chord:\n\'"A" not found in "chords"\'')
 
 
 @patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
@@ -359,8 +360,9 @@ def test_on_transpose_down_button_clicked_keyerror(mocked_critical_error: MagicM
     edit_verse_form.on_transpose_down_button_clicked()
 
     # THEN An error message should have been shown
-    mocked_critical_error.assert_called_once_with(title='Transposing failed', message='Transposing failed because of '
-                                                  'invalid chord:\n\'"A" not found in "chords"\'')
+    mocked_critical_error.assert_called_once_with(
+        parent=edit_verse_form, title='Transposing failed',
+        message='Transposing failed because of invalid chord:\n\'"A" not found in "chords"\'')
 
 
 def test_set_verse_single(settings: Settings, edit_verse_form: EditVerseForm):

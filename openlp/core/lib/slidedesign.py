@@ -15,6 +15,21 @@ DESIGN_VERSION = 1
 COLOUR = re.compile(r'^#[0-9a-fA-F]{6}$')
 IMAGE = re.compile(r'^data:image/png;base64,[A-Za-z0-9+/=]+$')
 KINDS = {'text', 'rectangle', 'ellipse', 'image'}
+FILTER_RANGES = {'blur': (0, 0, 100), 'brightness': (100, 0, 200), 'contrast': (100, 0, 200),
+                 'grayscale': (0, 0, 100), 'hue-rotate': (0, -180, 180), 'invert': (0, 0, 100),
+                 'saturate': (100, 0, 200), 'sepia': (0, 0, 100)}
+
+
+def normalise_filters(value):
+    """Keep supported numeric CSS filters only, omitting neutral values."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    for key, limits in FILTER_RANGES.items():
+        number = _number(value.get(key), *limits)
+        if number != limits[0]:
+            result[key] = number
+    return result
 
 
 def _number(value, default, low, high):
@@ -123,6 +138,9 @@ def normalise_design(value, include_layouts=True):
             if not isinstance(image, str) or len(image) > 8_000_000 or not IMAGE.fullmatch(image):
                 continue
             clean['src'] = image
+            filters = normalise_filters(element.get('filters'))
+            if filters:
+                clean['filters'] = filters
         result['elements'].append(clean)
     if 'order' in value:
         result['order'] = layer_order({**result, 'order': value['order']})
@@ -132,12 +150,15 @@ def normalise_design(value, include_layouts=True):
     background = normalise_background(value.get('background'))
     if background:
         result['background'] = background
+    filters = normalise_filters(value.get('background_filters'))
+    if filters:
+        result['background_filters'] = filters
     if include_layouts:
         from openlp.core.lib.slidelayouts import normalise_layouts
         result.update(normalise_layouts(value))
     return result if result['lyrics'] or result['elements'] or embedded_theme or background or \
-        result.get('hidden_footers') or 'canvas_width' in result or any(
-            result.get(key) for key in ('masters', 'assignments', 'overrides')) else {}
+        filters or result.get('hidden_footers') or 'canvas_width' in result or any(
+            result.get(key) for key in ('masters', 'assignments', 'overrides', 'custom_layout_name')) else {}
 
 
 def apply_design(theme, value, size=None):

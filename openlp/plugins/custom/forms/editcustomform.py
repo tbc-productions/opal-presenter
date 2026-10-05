@@ -29,7 +29,7 @@ from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib.ui import critical_error_message_box, find_and_set_in_combo_box
 from openlp.plugins.custom.forms.editcustomdialog import Ui_CustomEditDialog
-from openlp.core.widgets.slideeditor import get_slide_editor
+from openlp.core.widgets.slideeditor import get_slide_editor, exec_item_editor
 from openlp.plugins.custom.lib.customxmlhandler import CustomXML
 from openlp.plugins.custom.lib.db import CustomSlide
 
@@ -68,6 +68,10 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         self.slide_list_view.doubleClicked.connect(self.on_edit_button_clicked)
         self.theme_combo_box.activated.connect(lambda: self.slide_design.pop('theme', None))
         Registry().register_function('theme_update_list', self.load_themes)
+
+    def exec(self):
+        result = exec_item_editor(self, 'custom')
+        return super().exec() if result is None else result
 
     def designer_footer(self):
         settings = Registry().get('settings')
@@ -293,12 +297,16 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         # We must have a title.
         if not self.title_edit.displayText():
             self.title_edit.setFocus()
-            critical_error_message_box(message=translate('CustomPlugin.EditCustomForm', 'You need to type in a title.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('CustomPlugin.EditCustomForm', 'You need to type in a title.'))
             return False
         # We must have at least one slide.
         if self.slide_list_view.count() == 0:
-            critical_error_message_box(message=translate('CustomPlugin.EditCustomForm',
-                                                         'You need to add at least one slide.'))
+            critical_error_message_box(
+                parent=self,
+                message=translate('CustomPlugin.EditCustomForm',
+                                  'You need to add at least one slide.'))
             return False
         return True
 

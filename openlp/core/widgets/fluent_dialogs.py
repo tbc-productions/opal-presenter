@@ -11,6 +11,15 @@ class _DialogSizingMixin:
     def __init__(self, parent=None, flags=QtCore.Qt.WindowType(0)):
         # Native Dialog owns its same-window presentation. Legacy title-bar
         # flags must not turn an embedded dialog back into a separate Qt window.
+        # Fluent resolves and retains the overlay window at construction time.
+        # Draft editors can be hidden while their controls live in another window.
+        ancestor = parent
+        while ancestor is not None:
+            host = getattr(ancestor, '_fluent_dialog_host', None)
+            if isinstance(host, _qt.QWidget):
+                parent = host
+                break
+            ancestor = ancestor.parentWidget()
         super().__init__(parent)
         # Qt's opacity-effect capture conflicts with accelerated WebEngine views
         # on macOS, leaving dialog children blank until a later repaint. Keep the

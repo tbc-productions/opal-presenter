@@ -4,26 +4,31 @@ import fluentqt
 
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import translate
+from openlp.plugins.slide_designer.forms.exitguard import designer_exit_guard
 
 
 class DesignerWindow(fluentqt.Window):
     def __init__(self, editor):
         super().__init__()
         self.editor = editor
-        title = editor.design_owner.title_edit.text().strip()
-        if not title:
-            title = translate('SongsPlugin.SlideDesigner',
-                              'New Song' if editor.design_kind == 'song' else 'New Custom Slide')
-        self.setWindowTitle(f'{title} - OpenLP+')
-        heading = QtWidgets.QLabel(self.windowTitle())
-        heading.setContentsMargins(12, 0, 12, 0)
-        heading.setFluentTypography(fluentqt.FontRole.BodyStrong)
-        self.titleBar().setContentWidget(heading)
+        self.heading = QtWidgets.QLabel()
+        self.heading.setContentsMargins(12, 0, 12, 0)
+        self.heading.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        self.titleBar().setContentWidget(self.heading)
+        self.update_item_title()
         self.setWindowModality(QtCore.Qt.WindowModality.NonModal)
         self.host = QtWidgets.QWidget()
         self.host.setLayout(editor.dialog_layout)
         self.setContentWidget(self.host)
         self.resize(1440, 900)
+
+    def update_item_title(self):
+        title = self.editor.design_owner.title_edit.text().strip()
+        if not title:
+            title = translate('SongsPlugin.SlideDesigner',
+                              'New Song' if self.editor.design_kind == 'song' else 'New Custom Slide')
+        self.setWindowTitle(f'{title} - OpenLP+')
+        self.heading.setText(self.windowTitle())
 
     def closeEvent(self, event):
         self.editor.reject()
@@ -38,11 +43,16 @@ def exec_designer_window(editor):
     owner.hide()
     window = DesignerWindow(editor)
     editor.designer_window = window
+    owner._fluent_dialog_host = window
+    editor._fluent_dialog_host = window
     loop = QtCore.QEventLoop()
     result = [0]
+    exit_guard = designer_exit_guard()
+    exit_guard.add(window)
 
     def finished(code):
         result[0] = code
+        exit_guard.remove(window)
         window.hide()
         loop.quit()
 
@@ -51,11 +61,14 @@ def exec_designer_window(editor):
         window.show()
         loop.exec()
     finally:
+        exit_guard.remove(window)
         editor.finished.disconnect(finished)
         editor.setLayout(window.host.layout())
         window.hide()
         window.deleteLater()
         editor.designer_window = None
+        del owner._fluent_dialog_host
+        del editor._fluent_dialog_host
         owner._designer_open = False
         if owner_visible:
             owner.show()

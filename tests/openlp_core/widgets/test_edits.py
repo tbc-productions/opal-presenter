@@ -969,9 +969,20 @@ def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock
     ]
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
     item = editor._color_model.item(0)
-    assert item.text() == 'Red {r}'
+    assert item.text() == 'Red'
     assert item.data(QtCore.Qt.ItemDataRole.UserRole) == '{r}'
     assert item.foreground().color() == QtGui.QColor('red')
+
+
+@pytest.mark.parametrize('foreground, background', [
+    ('#ffffff', '#ffffff'), ('#ffff00', '#ffffff'), ('#000000', '#202020'), ('#ff0000', '#ffffff')])
+def test_style_preview_adds_a_contrasting_background(foreground, background):
+    from openlp.core.widgets.edits import FormattingStyleDelegate
+    foreground, background = QtGui.QColor(foreground), QtGui.QColor(background)
+    patch = FormattingStyleDelegate.preview_background(foreground, background)
+    assert patch is not None
+    assert FormattingStyleDelegate.contrast_ratio(foreground, patch) >= 4
+    assert FormattingStyleDelegate.preview_background(foreground, patch) is None
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
@@ -1470,7 +1481,7 @@ def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, 
     try:
         assert len(editor._toolbar.findChildren(fluentqt.CommandBar)) == 1
         item = editor._color_model.item(0)
-        assert item.text() == 'Emphasis {em}'
+        assert item.text() == 'Emphasis'
         assert item.font().bold() and item.font().italic()
         assert item.foreground().color() == QtGui.QColor('blue')
         view = window.findChild(QtWidgets.QAbstractItemView, 'MultiSelectComboBox.ListView')

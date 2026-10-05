@@ -99,7 +99,7 @@ def test_validate_not_valid_part1(form: EditCustomForm):
         # THEN: The validate method should have returned False.
         assert not result, 'The _validate() method should have retured False'
         mocked_setFocus.assert_called_with()
-        mocked_critical_error_message_box.assert_called_with(message='You need to type in a title.')
+        mocked_critical_error_message_box.assert_called_with(parent=form, message='You need to type in a title.')
 
 
 def test_validate_not_valid_part2(form: EditCustomForm):
@@ -117,7 +117,7 @@ def test_validate_not_valid_part2(form: EditCustomForm):
 
         # THEN: The validate method should have returned False.
         assert not result, 'The _validate() method should have retured False'
-        mocked_critical_error_message_box.assert_called_with(message='You need to add at least one slide.')
+        mocked_critical_error_message_box.assert_called_with(parent=form, message='You need to add at least one slide.')
 
 
 def test_update_slide_list(form: EditCustomForm):

@@ -507,6 +507,24 @@ class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):
         self._checkbox.setFixedSize(32, 32)
         self._checkbox.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self._checkbox.hide()
+        self._theme_host = fluentqt.FluentWidget(parent)
+        self._theme_host.hide()
+
+    @staticmethod
+    def contrast_ratio(first, second):
+        def luminance(colour):
+            channels = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+                        for value in (colour.redF(), colour.greenF(), colour.blueF())]
+            return sum(value * weight for value, weight in zip(channels, (0.2126, 0.7152, 0.0722)))
+        light, dark = sorted((luminance(first), luminance(second)), reverse=True)
+        return (light + 0.05) / (dark + 0.05)
+
+    @classmethod
+    def preview_background(cls, foreground, background):
+        if cls.contrast_ratio(foreground, background) >= 4:
+            return None
+        return max((QtGui.QColor('#202020'), QtGui.QColor('#ffffff')),
+                   key=lambda colour: cls.contrast_ratio(foreground, colour))
 
     def paint(self, painter, option, index):
         """Paint the normal Fluent checkbox and keep the preview's own text colour."""
@@ -524,11 +542,19 @@ class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):
         painter.drawPixmap(checkbox_position, checkbox_image)
         text_rect = styled.rect.adjusted(44, 0, -12, 0)
         foreground = index.data(QtCore.Qt.ItemDataRole.ForegroundRole)
-        painter.setPen(foreground.color() if foreground is not None else
-                       styled.palette.color(QtGui.QPalette.ColorRole.Text))
+        colour = foreground.color() if foreground is not None else styled.palette.color(QtGui.QPalette.ColorRole.Text)
         painter.setFont(styled.font)
         text = QtGui.QFontMetrics(styled.font).elidedText(
             styled.text, QtCore.Qt.TextElideMode.ElideRight, max(0, text_rect.width()))
+        background = self.preview_background(colour, self._theme_host.theme_tokens().colors.bgLayerOverlay)
+        if background is not None:
+            metrics = QtGui.QFontMetrics(styled.font)
+            patch = QtCore.QRectF(text_rect.left() - 4, text_rect.center().y() - metrics.height() / 2 - 2,
+                                  min(text_rect.width(), metrics.horizontalAdvance(text)) + 8, metrics.height() + 4)
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(background)
+            painter.drawRoundedRect(patch, 3, 3)
+        painter.setPen(colour)
         painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft, text)
         painter.restore()
 
@@ -890,7 +916,7 @@ class SpellTextEdit(QtWidgets.QWidget):
         self._mode_switch.setToolTip(translate('OpenLP.SpellTextEdit', 'Show formatting tags in the source text'))
 
     def _populate_color_menu(self):
-        """Populate styled colour and custom formatting options with their opening tags."""
+        """Populate named style previews; tag tokens remain internal model data."""
         blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
         self._color_model.clear()
         self._color_tags.clear()
@@ -909,9 +935,9 @@ class SpellTextEdit(QtWidgets.QWidget):
             if not has_colour and html.get('protected', True):
                 continue
             desc = html.get('desc', start_tag)
-            item = QtGui.QStandardItem(f'{desc} {start_tag}')
+            item = QtGui.QStandardItem(desc)
             item.setData(start_tag, QtCore.Qt.ItemDataRole.UserRole)
-            item.setToolTip(start_tag)
+            item.setToolTip(desc)
             preview_format = self.highlighter._format_from_start_html(start_html)
             item.setFont(preview_format.font().resolve(self.font()))
             if preview_format.foreground().style() != QtCore.Qt.BrushStyle.NoBrush:

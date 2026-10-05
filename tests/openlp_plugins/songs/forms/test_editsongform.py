@@ -66,7 +66,9 @@ def test_ui_defaults(form: EditSongForm):
 
 
 def test_song_editor_exec_opens_and_closes(form: EditSongForm):
-    """The Song Editor should open through the Fluent dialog sizing lifecycle."""
+    """With Slide Designer disabled, retain the original Fluent dialog lifecycle."""
+    from openlp.core.common.enum import PluginStatus
+    form.settings.setValue('slide_designer/status', PluginStatus.Inactive)
     parent = form.parentWidget()
     parent.resize(1200, 900)
     parent.show()
@@ -86,7 +88,8 @@ def test_song_editor_exec_opens_and_closes(form: EditSongForm):
 
 
 @pytest.mark.parametrize('accept', [True, False])
-def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept):
+@pytest.mark.parametrize('relocated', [True, False])
+def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept, relocated):
     """The custom combo saves on OK and preserves the author on Cancel."""
     author = Author(id=7, display_name='Test Author')
     form.manager.get_object.return_value = author
@@ -100,6 +103,13 @@ def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept):
     parent.show()
     form.setAnimationEnabled(False)
     form.show()
+    if relocated:
+        form.hide()
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        parent.resize(1200, 900)
+        parent.show()
+        form._fluent_dialog_host = parent
     observed = []
 
     def choose_type():
@@ -122,6 +132,8 @@ def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept):
         assert item.text() == (author.get_display_name(AuthorType.Music) if accept else original_text)
         assert form.author_edit_action.isEnabled()
     finally:
+        if relocated:
+            del form._fluent_dialog_host
         form.close()
         parent.close()
 

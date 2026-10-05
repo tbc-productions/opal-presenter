@@ -70,6 +70,16 @@ __all__ = ['OpenLP', 'main']
 log = logging.getLogger()
 
 
+class OpenLPApplication(QtWidgets.QApplication):
+    """Handle application Quit without globally filtering WebEngine's internal objects."""
+    def event(self, event):
+        if event.type() == QtCore.QEvent.Type.Quit:
+            if any(blocker() for blocker in tuple(getattr(self, 'exit_guards', ()))):
+                event.ignore()
+                return True
+        return super().event(event)
+
+
 class OpenLP(QtCore.QObject, LogMixin):
     """
     The core worker class. This class that holds the whole system together.
@@ -575,7 +585,7 @@ def main():
     init_webview_custom_schemes()
     import fluentqt
     fluentqt.prepare_high_dpi_application()
-    application = QtWidgets.QApplication([sys.argv[0]] + qt_args)
+    application = OpenLPApplication([sys.argv[0]] + qt_args)
     fluentqt.initialize_resources()
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     # Qt 6 scales fonts per monitor. Keep their logical sizes unchanged to avoid double scaling.

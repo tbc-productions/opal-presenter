@@ -145,10 +145,12 @@ class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
             self.verse_text_edit.setPlainText(transposed_lyrics)
         except KeyError as ke:
             # Transposing failed
-            critical_error_message_box(title=translate('SongsPlugin.EditVerseForm', 'Transposing failed'),
-                                       message=translate('SongsPlugin.EditVerseForm',
-                                                         'Transposing failed because of invalid chord:\n{err_msg}'
-                                                         .format(err_msg=ke)))
+            critical_error_message_box(
+                parent=self,
+                title=translate('SongsPlugin.EditVerseForm', 'Transposing failed'),
+                message=translate('SongsPlugin.EditVerseForm',
+                                  'Transposing failed because of invalid chord:\n{err_msg}'
+                                  .format(err_msg=ke)))
             return
         self.verse_text_edit.setFocus()
         self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
@@ -167,10 +169,12 @@ class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
             self.verse_text_edit.setPlainText(transposed_lyrics)
         except KeyError as ke:
             # Transposing failed
-            critical_error_message_box(title=translate('SongsPlugin.EditVerseForm', 'Transposing failed'),
-                                       message=translate('SongsPlugin.EditVerseForm',
-                                                         'Transposing failed because of invalid chord:\n{err_msg}'
-                                                         .format(err_msg=ke)))
+            critical_error_message_box(
+                parent=self,
+                title=translate('SongsPlugin.EditVerseForm', 'Transposing failed'),
+                message=translate('SongsPlugin.EditVerseForm',
+                                  'Transposing failed because of invalid chord:\n{err_msg}'
+                                  .format(err_msg=ke)))
             return
         self.verse_text_edit.setFocus()
         self.verse_text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
@@ -310,18 +314,20 @@ class EditVerseForm(TextEditorDialog, Ui_EditVerseDialog):
         return text
 
     def accept(self):
-        """
-        Test if any invalid chords has been entered before closing the verse editor
-        """
+        if self.validate_verse():
+            super().accept()
+
+    def validate_verse(self):
+        """Validate chords without closing the editor, including integrated item editing."""
         if Registry().get('settings').value('songs/enable chords'):
             try:
                 transpose_lyrics(self.verse_text_edit.toPlainText(), 0)
-                super().accept()
             except KeyError as ke:
-                # Transposing failed
-                critical_error_message_box(title=translate('SongsPlugin.EditVerseForm', 'Invalid Chord'),
-                                           message=translate('SongsPlugin.EditVerseForm',
-                                                             'An invalid chord was detected:\n{err_msg}'
-                                                             .format(err_msg=ke)))
-        else:
-            super().accept()
+                critical_error_message_box(
+                    parent=self,
+                    title=translate('SongsPlugin.EditVerseForm', 'Invalid Chord'),
+                    message=translate('SongsPlugin.EditVerseForm',
+                                      'An invalid chord was detected:\n{err_msg}'
+                                      .format(err_msg=ke)))
+                return False
+        return True
