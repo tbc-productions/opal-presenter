@@ -297,7 +297,10 @@ class Ui_FormattingTagDialog(object):
         self.start_html_edit.setToolTip(
             translate('OpenLP.FormattingTagDialog', 'Closing HTML is suggested automatically as you type.'))
         self.end_html_edit.setPlaceholderText('</span>')
-        self.hidden_checkbox.setText(translate('OpenLP.FormattingTagDialog', 'Hide text in slide list and printouts'))
+        self.hidden_checkbox.setText(translate(
+            'OpenLP.FormattingTagDialog', 'Hide tagged text in slide lists and printouts'))
         self.hidden_checkbox.setToolTip(translate(
-            'OpenLP.FormattingTagDialog', 'Text inside this style’s tags still appears on the projected slide.'))
+            'OpenLP.FormattingTagDialog',
+            'Text enclosed by this style is omitted from the Preview and Live slide lists and printed service sheets. '
+            'It remains in the lyrics/custom slide editor and on projected slides.'))
         self.preview_heading.setText(translate('OpenLP.FormattingTagDialog', 'Preview'))

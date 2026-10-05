@@ -522,8 +522,8 @@ class Ui_MainWindow(object):
         self.import_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.export_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.export_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
-        self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', 'Configure &Shortcuts...'))
-        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', '&Formatting styles...'))
+        self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', '&Shortcuts'))
+        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', '&Formatting styles'))
         self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP+...'))
         self.settings_export_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
