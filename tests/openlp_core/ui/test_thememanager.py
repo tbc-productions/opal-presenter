@@ -34,6 +34,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.lib.theme import Theme
 from openlp.core.ui.thememanager import ThemeManager
+from openlp.core.widgets.themeviews import ThemeViews
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -603,6 +604,83 @@ def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, them
                                                                                           'background.jpg'))
     theme_manager.update_preview_images.assert_called_once_with(['New Theme'])
     theme_manager.load_themes.assert_called_once_with()
+
+
+@pytest.mark.parametrize('view_mode', [QtWidgets.QListView.ViewMode.ListMode, QtWidgets.QListView.ViewMode.IconMode])
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_copy_theme_during_thumbnail_refresh_has_no_duplicates(mock_defaults, theme_manager, tmp_path, view_mode):
+    """Finishing a thumbnail refresh during copying must not overlap theme-list reloads."""
+    from PySide6 import QtCore, QtGui
+
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path / 'thumbnails'
+    theme_manager.global_theme = 'Original'
+    theme_manager.theme_list_widget = ThemeViews(theme_manager)
+    theme_manager.theme_list_widget.setViewMode(view_mode)
+    theme_manager.update_preview_images = MagicMock()
+    theme_manager.save_preview = MagicMock()
+    theme_manager._push_themes = MagicMock()
+    theme_manager.file_rename_form = MagicMock()
+    theme_manager.file_rename_form.file_name_edit.text.return_value = 'Copy of Original'
+    theme = Theme()
+    theme.theme_name = 'Original'
+    theme_manager.save_theme(theme)
+    refresh_finished = True
+
+    def generate_preview(*args):
+        nonlocal refresh_finished
+        refresh_finished = True
+        # Preview rendering processes UI events, including worker completion.
+        theme_manager._thumbnail_refresh_finished()
+        return QtGui.QPixmap(10, 10)
+
+    def find_theme_files(*args):
+        return [path.relative_to(tmp_path) for path in tmp_path.glob('*/*.json')]
+
+    theme_manager.generate_image = MagicMock(side_effect=generate_preview)
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+               side_effect=find_theme_files) as get_files, \
+            patch('openlp.core.ui.thememanager.validate_thumb', side_effect=lambda *args: refresh_finished), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        theme_manager.load_themes()
+        theme_manager.theme_list_widget.setCurrentRow(0)
+        refresh_finished = False
+
+        theme_manager.on_copy_theme()
+
+    # The worker's reload request is handled after the active reload finishes.
+    assert get_files.call_count == 3
+    view = theme_manager.theme_list_widget
+    assert [view.item(row).data(QtCore.Qt.ItemDataRole.UserRole) for row in range(view.count())] == [
+        'Copy of Original', 'Original'
+    ]
+    assert view.list_view.model().rowCount() == view.grid_view.model().rowCount() == 2
+    assert theme_manager.get_theme_names() == ['Copy of Original', 'Original']
+    assert (tmp_path / 'Original' / 'Original.json').exists()
+    assert (tmp_path / 'Copy of Original' / 'Copy of Original.json').exists()
+
+
+def test_load_themes_can_retry_after_error(theme_manager, tmp_path):
+    """A failed theme load must not prevent later refreshes."""
+    from PySide6 import QtGui
+
+    (tmp_path / 'Original.json').write_text('{}')
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path
+    theme_manager.global_theme = 'Original'
+    theme_manager.theme_list_widget = ThemeViews(theme_manager)
+    theme_manager._get_theme_data = MagicMock(side_effect=[ValueError('Invalid theme'), sentinel.original_theme])
+    theme_manager._push_themes = MagicMock()
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[Path('Original.json')]), \
+            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        with pytest.raises(ValueError, match='Invalid theme'):
+            theme_manager.load_themes()
+        theme_manager.load_themes()
+
+    assert theme_manager.theme_list_widget.count() == 1
+    assert theme_manager.get_theme_names() == ['Original']
+    theme_manager._push_themes.assert_called_once_with()
 
 
 @patch('openlp.core.ui.thememanager.State')

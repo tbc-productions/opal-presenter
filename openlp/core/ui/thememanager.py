@@ -253,6 +253,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         super(ThemeManager, self).__init__(parent)
         # Variables
         self._theme_list = {}
+        self._loading_themes = False
+        self._theme_reload_pending = False
         self.old_background_image_path = None
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
@@ -798,6 +800,23 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         events for the plugins.
         The plugins will call back in to get the real list if they want it.
         """
+        # Rendering previews processes events. A thumbnail worker can finish and
+        # request another reload while this one is still populating the list.
+        if self._loading_themes:
+            self._theme_reload_pending = True
+            return
+        self._loading_themes = True
+        try:
+            while True:
+                self._theme_reload_pending = False
+                self._load_themes()
+                if not self._theme_reload_pending:
+                    break
+        finally:
+            self._loading_themes = False
+
+    def _load_themes(self):
+        """Rebuild the theme collection for one non-overlapping reload."""
         self._theme_list.clear()
         self.theme_list_widget.clear()
         files = [file for file in AppLocation.get_files('themes', '/*.json')
