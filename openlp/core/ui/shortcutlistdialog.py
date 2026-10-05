@@ -21,7 +21,8 @@
 """
 The list of shortcuts within a dialog.
 """
-from PySide6 import QtCore
+from PySide6 import QtGui
+from fluentqt import CommandBar, FontRole
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -31,124 +32,170 @@ from openlp.core.ui.style import use_alternate_rows
 
 
 class CaptureShortcutButton(QtWidgets.QPushButton):
-    """
-    A class to encapsulate a ``QPushButton``.
-    """
+    """Show the current keys or an explicit prompt while capturing a shortcut."""
     def __init__(self, *args):
-        """
-        Constructor
-        """
-        super(CaptureShortcutButton, self).__init__(*args)
+        super().__init__(*args)
+        self._shortcut_text = ''
         self.setCheckable(True)
+        self.toggled.connect(self._refresh_caption)
+        self._refresh_caption()
+
+    def setText(self, text):
+        self._shortcut_text = text
+        self._refresh_caption()
+
+    def shortcutText(self):
+        return self._shortcut_text
+
+    def _refresh_caption(self):
+        caption = (translate('OpenLP.ShortcutListDialog', 'Press shortcut…') if self.isChecked()
+                   else self._shortcut_text or translate('OpenLP.ShortcutListDialog', 'Set shortcut'))
+        super().setText(caption)
+        self.setIcon(UiIcons().get_icon_variant('keyboard', color='white') if self.isChecked() else UiIcons().keyboard)
 
     def keyPressEvent(self, event):
-        """
-        Block the ``Key_Space`` key, so that the button will not change the
-        checked state.
-        """
-        if event.key() == QtCore.Qt.Key.Key_Space and self.isChecked():
-            # Ignore the event, so that the parent can take care of this.
+        # Bubble captured keys to the window, including Space and Return.
+        if self.isChecked():
             event.ignore()
+        else:
+            super().keyPressEvent(event)
 
 
-class ShortcutTreeWidget(QtWidgets.QTreeWidget):
-    def __init__(self, *args):
-        super(ShortcutTreeWidget, self).__init__(*args)
-
+class ShortcutDataGrid(QtWidgets.QTableWidget):
     def keyboardSearch(self, search):
-        """
-        Ignore searches to prevent single letter searches from highlighting items.
-
-        :param search: Search string
-        """
+        """Single letters are available as shortcuts rather than type-to-select."""
         pass
 
 
-class Ui_ShortcutListDialog(object):
-    """
-    The UI widgets for the shortcut dialog.
-    """
-    def setup_ui(self, shortcutListDialog):
-        """
-        Set up the UI
-        """
-        shortcutListDialog.setObjectName('shortcutListDialog')
-        shortcutListDialog.setWindowIcon(UiIcons().main_icon)
-        shortcutListDialog.resize(500, 438)
-        self.shortcut_list_layout = QtWidgets.QVBoxLayout(shortcutListDialog)
-        self.shortcut_list_layout.setObjectName('shortcut_list_layout')
-        self.description_label = QtWidgets.QLabel(shortcutListDialog)
-        self.description_label.setObjectName('description_label')
-        self.description_label.setWordWrap(True)
-        self.shortcut_list_layout.addWidget(self.description_label)
-        self.tree_widget = ShortcutTreeWidget(shortcutListDialog)
-        self.tree_widget.setObjectName('tree_widget')
-        self.tree_widget.setAlternatingRowColors(use_alternate_rows())
-        self.tree_widget.setColumnCount(3)
-        self.tree_widget.setColumnWidth(0, 250)
-        self.shortcut_list_layout.addWidget(self.tree_widget)
-        self.details_layout = QtWidgets.QGridLayout()
-        self.details_layout.setObjectName('details_layout')
-        self.details_layout.setContentsMargins(-1, 0, -1, -1)
-        self.default_radio_button = QtWidgets.QRadioButton(shortcutListDialog)
-        self.default_radio_button.setObjectName('default_radio_button')
-        self.default_radio_button.setChecked(True)
-        self.details_layout.addWidget(self.default_radio_button, 0, 0, 1, 1)
-        self.custom_radio_button = QtWidgets.QRadioButton(shortcutListDialog)
-        self.custom_radio_button.setObjectName('custom_radio_button')
-        self.details_layout.addWidget(self.custom_radio_button, 1, 0, 1, 1)
-        self.primary_layout = QtWidgets.QHBoxLayout()
-        self.primary_layout.setObjectName('primary_layout')
-        self.primary_push_button = CaptureShortcutButton(shortcutListDialog)
-        self.primary_push_button.setObjectName('primary_push_button')
-        self.primary_push_button.setMinimumSize(QtCore.QSize(84, 0))
-        self.primary_push_button.setIcon(UiIcons().shortcuts)
-        self.primary_layout.addWidget(self.primary_push_button)
-        self.clear_primary_button = QtWidgets.QToolButton(shortcutListDialog)
-        self.clear_primary_button.setObjectName('clear_primary_button')
-        self.clear_primary_button.setMinimumSize(QtCore.QSize(0, 16))
-        self.clear_primary_button.setIcon(UiIcons().settings)
-        self.primary_layout.addWidget(self.clear_primary_button)
-        self.details_layout.addLayout(self.primary_layout, 1, 1, 1, 1)
-        self.alternate_layout = QtWidgets.QHBoxLayout()
-        self.alternate_layout.setObjectName('alternate_layout')
-        self.alternate_push_button = CaptureShortcutButton(shortcutListDialog)
-        self.alternate_push_button.setObjectName('alternate_push_button')
-        self.alternate_push_button.setIcon(UiIcons().settings)
-        self.alternate_layout.addWidget(self.alternate_push_button)
-        self.clear_alternate_button = QtWidgets.QToolButton(shortcutListDialog)
-        self.clear_alternate_button.setObjectName('clear_alternate_button')
-        self.clear_alternate_button.setIcon(UiIcons().settings)
-        self.alternate_layout.addWidget(self.clear_alternate_button)
-        self.details_layout.addLayout(self.alternate_layout, 1, 2, 1, 1)
-        self.primary_label = QtWidgets.QLabel(shortcutListDialog)
-        self.primary_label.setObjectName('primary_label')
-        self.details_layout.addWidget(self.primary_label, 0, 1, 1, 1)
-        self.alternate_label = QtWidgets.QLabel(shortcutListDialog)
-        self.alternate_label.setObjectName('alternate_label')
-        self.details_layout.addWidget(self.alternate_label, 0, 2, 1, 1)
-        self.shortcut_list_layout.addLayout(self.details_layout)
-        self.button_box = create_button_box(shortcutListDialog, 'button_box', ['cancel', 'ok', 'defaults'])
-        self.button_box.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.shortcut_list_layout.addWidget(self.button_box)
-        self.retranslate_ui(shortcutListDialog)
+class Ui_ShortcutListDialog:
+    """Searchable action browser beside clearly labelled shortcut controls."""
+    def setup_ui(self, window):
+        window.setObjectName('shortcutListDialog')
+        window.setWindowIcon(UiIcons().main_icon)
+        window.setMinimumSize(900, 600)
+        self.window_title_label = QtWidgets.QLabel()
+        self.window_title_label.setContentsMargins(12, 0, 12, 0)
+        self.window_title_label.setFluentTypography(FontRole.BodyStrong)
+        window.titleBar().setContentWidget(self.window_title_label)
+        self.content_widget = QtWidgets.QWidget()
+        window.setContentWidget(self.content_widget)
+        self.shortcut_list_layout = QtWidgets.QVBoxLayout(self.content_widget)
+        self.shortcut_list_layout.setContentsMargins(24, 20, 24, 20)
+        self.shortcut_list_layout.setSpacing(16)
+        self.content_splitter = QtWidgets.QSplitter()
+        self.content_splitter.setChildrenCollapsible(False)
+        self.shortcut_list_layout.addWidget(self.content_splitter, 1)
 
-    def retranslate_ui(self, shortcutListDialog):
-        """
-        Translate the UI on the fly
-        """
-        shortcutListDialog.setWindowTitle(translate('OpenLP.ShortcutListDialog', 'Shortcuts'))
-        self.description_label.setText(
-            translate('OpenLP.ShortcutListDialog', 'Select an action and click one of the buttons below to start '
-                      'capturing a new primary or alternate shortcut, respectively.'))
-        self.tree_widget.setHeaderLabels([translate('OpenLP.ShortcutListDialog', 'Action'),
-                                         translate('OpenLP.ShortcutListDialog', 'Shortcut'),
-                                         translate('OpenLP.ShortcutListDialog', 'Alternate')])
-        self.default_radio_button.setText(translate('OpenLP.ShortcutListDialog', 'Default'))
-        self.custom_radio_button.setText(translate('OpenLP.ShortcutListDialog', 'Custom'))
-        self.primary_push_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Capture shortcut.'))
-        self.alternate_push_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Capture shortcut.'))
-        self.clear_primary_button.setToolTip(translate('OpenLP.ShortcutListDialog',
-                                             'Restore the default shortcut of this action.'))
-        self.clear_alternate_button.setToolTip(translate('OpenLP.ShortcutListDialog',
-                                               'Restore the default shortcut of this action.'))
+        browser = QtWidgets.QWidget()
+        self.content_splitter.addWidget(browser)
+        browser.setMinimumWidth(460)
+        browser_layout = QtWidgets.QVBoxLayout(browser)
+        browser_layout.setContentsMargins(0, 0, 0, 0)
+        browser_layout.setSpacing(12)
+        self.search_edit = QtWidgets.QLineEdit(browser)
+        self.search_edit.setClearButtonEnabled(True)
+        browser_layout.addWidget(self.search_edit)
+        self.list_command_bar = self._command_bar(browser)
+        self.restore_all_action = QtGui.QAction(
+            UiIcons().undo, translate('OpenLP.ShortcutListDialog', 'Restore all defaults'), self.list_command_bar)
+        self.list_command_bar.addPrimaryAction(self.restore_all_action)
+        self.shortcut_grid = ShortcutDataGrid(browser)
+        self.shortcut_grid.setObjectName('shortcut_grid')
+        self.shortcut_grid.setAlternatingRowColors(use_alternate_rows())
+        self.shortcut_grid.setColumnCount(4)
+        self.shortcut_grid.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.shortcut_grid.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.shortcut_grid.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.shortcut_grid.verticalHeader().hide()
+        self.shortcut_grid.setCornerButtonEnabled(False)
+        self.shortcut_grid.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        for column in (1, 2, 3):
+            self.shortcut_grid.setColumnWidth(column, 100)
+        browser_layout.addWidget(self.shortcut_grid, 1)
+        browser_layout.addWidget(self.list_command_bar)
+
+        self.editor_card = QtWidgets.Card()
+        self.editor_card.setMinimumWidth(330)
+        self.content_splitter.addWidget(self.editor_card)
+        editor_layout = QtWidgets.QVBoxLayout(self.editor_card)
+        editor_layout.setContentsMargins(20, 16, 20, 16)
+        editor_layout.setSpacing(16)
+        self.action_label = QtWidgets.QLabel(self.editor_card)
+        self.action_label.setFluentTypography(FontRole.Subtitle)
+        self.action_label.setWordWrap(True)
+        editor_layout.addWidget(self.action_label)
+        self.editor_controls = QtWidgets.QWidget(self.editor_card)
+        editor_layout.addWidget(self.editor_controls)
+        controls_layout = QtWidgets.QVBoxLayout(self.editor_controls)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(16)
+        self.primary_label = QtWidgets.QLabel(self.editor_controls)
+        self.alternate_label = QtWidgets.QLabel(self.editor_controls)
+        self.primary_push_button = CaptureShortcutButton(self.editor_controls)
+        self.alternate_push_button = CaptureShortcutButton(self.editor_controls)
+        self.clear_primary_button = QtWidgets.QPushButton(self.editor_controls)
+        self.clear_alternate_button = QtWidgets.QPushButton(self.editor_controls)
+        for label, capture, clear in ((self.primary_label, self.primary_push_button, self.clear_primary_button),
+                                      (self.alternate_label, self.alternate_push_button, self.clear_alternate_button)):
+            label.setFluentTypography(FontRole.BodyStrong)
+            label.setBuddy(capture)
+            controls_layout.addWidget(label)
+            row = QtWidgets.QHBoxLayout()
+            row.setSpacing(8)
+            capture.setIcon(UiIcons().keyboard)
+            capture.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+            clear.setIcon(UiIcons().delete)
+            row.addWidget(capture, 1)
+            row.addWidget(clear)
+            controls_layout.addLayout(row)
+        self.editor_command_bar = self._command_bar(self.editor_controls)
+        self.restore_action = QtGui.QAction(
+            UiIcons().undo, translate('OpenLP.ShortcutListDialog', 'Restore defaults'), self.editor_command_bar)
+        self.editor_command_bar.addPrimaryAction(self.restore_action)
+        controls_layout.addWidget(self.editor_command_bar)
+        editor_layout.addStretch()
+        self.content_splitter.setSizes([650, 380])
+
+        self.button_box = create_button_box(window, 'button_box', ['cancel', 'save'])
+        self.save_button = self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Save)
+        self.save_button.setIcon(UiIcons().get_icon_variant('save', color='white'))
+        self.save_button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Accent)
+        footer = QtWidgets.QHBoxLayout()
+        footer.addStretch()
+        footer.addWidget(self.button_box)
+        self.shortcut_list_layout.addLayout(footer)
+        self.retranslate_ui(window)
+        window.resize(1100, 760)
+
+    def _command_bar(self, parent):
+        bar = CommandBar(parent)
+        bar.setLabelPosition(CommandBar.LabelPosition.Right)
+        bar.setBackgroundVisible(True)
+        bar.setDynamicOverflowEnabled(True)
+        bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        return bar
+
+    def retranslate_ui(self, window):
+        window.setWindowTitle(translate('OpenLP.ShortcutListDialog', 'Shortcuts'))
+        self.window_title_label.setText(window.windowTitle())
+        self.search_edit.setPlaceholderText(translate('OpenLP.ShortcutListDialog', 'Search actions or shortcuts'))
+        self.search_edit.setAccessibleName(translate('OpenLP.ShortcutListDialog', 'Search shortcuts'))
+        self.shortcut_grid.setHorizontalHeaderLabels([
+            translate('OpenLP.ShortcutListDialog', 'Action'),
+            translate('OpenLP.ShortcutListDialog', 'Primary'),
+            translate('OpenLP.ShortcutListDialog', 'Alternate'),
+            translate('OpenLP.ShortcutListDialog', 'Category')])
+        self.primary_label.setText(translate('OpenLP.ShortcutListDialog', 'Primary'))
+        self.alternate_label.setText(translate('OpenLP.ShortcutListDialog', 'Alternate'))
+        self.primary_push_button.setAccessibleName(translate('OpenLP.ShortcutListDialog', 'Primary shortcut'))
+        self.alternate_push_button.setAccessibleName(translate('OpenLP.ShortcutListDialog', 'Alternate shortcut'))
+        for capture in (self.primary_push_button, self.alternate_push_button):
+            capture.setToolTip(translate(
+                'OpenLP.ShortcutListDialog', 'Click, then press the shortcut. Click again to cancel.'))
+        self.clear_primary_button.setText(translate('OpenLP.ShortcutListDialog', 'Clear'))
+        self.clear_primary_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Remove the primary shortcut'))
+        self.clear_alternate_button.setText(translate('OpenLP.ShortcutListDialog', 'Clear'))
+        self.clear_alternate_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Remove the alternate shortcut'))
+        self.restore_action.setText(translate('OpenLP.ShortcutListDialog', 'Restore defaults'))
+        self.restore_all_action.setText(translate('OpenLP.ShortcutListDialog', 'Restore all defaults'))
+        self.save_button.setText(translate('OpenLP.ShortcutListDialog', 'Save changes'))

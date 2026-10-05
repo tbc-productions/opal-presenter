@@ -25,7 +25,7 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore
 
-from openlp.core.ui.shortcutlistdialog import CaptureShortcutButton, ShortcutTreeWidget
+from openlp.core.ui.shortcutlistdialog import CaptureShortcutButton, ShortcutDataGrid
 
 
 def test_key_press_event(mock_settings):
@@ -47,10 +47,10 @@ def test_key_press_event(mock_settings):
 
 def test_keyboard_search(mock_settings):
     """
-    Test the keyboardSearch method of the ShortcutTreeWidget
+    Test the keyboardSearch method of the ShortcutDataGrid
     """
-    # GIVEN: A ShortcutTreeWidget
-    widget = ShortcutTreeWidget()
+    # GIVEN: A ShortcutDataGrid
+    widget = ShortcutDataGrid()
 
     # WHEN: keyboardSearch() is called
     widget.keyboardSearch('')
