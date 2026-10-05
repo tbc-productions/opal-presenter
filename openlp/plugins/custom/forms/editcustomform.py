@@ -213,6 +213,8 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
         log.debug('onPreview')
         if self.save_custom():
             Registry().execute('custom_preview')
+            return True
+        return False
 
     def update_slide_list(self, slides, edit_all=False):
         """

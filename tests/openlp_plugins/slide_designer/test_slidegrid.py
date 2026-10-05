@@ -105,7 +105,8 @@ def test_formatting_command_bar_targets_active_cell(form):
     grid.cell_editor.selectAll()
     grid.cell_editor._tag_actions['st'].trigger()
     assert '{st}Chorus{/st}' in form.get_all_verses()
-    assert grid.formatting_bar.parentWidget() is form
+    assert grid.formatting_bar.parentWidget() is form.command_surface
+    assert grid.formatting_bar.background_role == 'bgLayer'
     assert form.command_rows.indexOf(grid.formatting_bar) == 1
     assert form.command_rows.spacing() == 0
     assert not grid.cell_editor._custom_formatting_combo.isHidden()
@@ -127,6 +128,8 @@ def test_formatting_command_bar_targets_active_cell(form):
 
 
 def test_text_and_design_undo_in_order(form):
+    form.slide_designer.load_design({'version': 1, 'masters': {'test': {'name': 'Test', 'design': {}}},
+                                    'assignments': {form.slide_designer.footer_key(): 'test'}})
     grid = form.slide_grid
     grid.cell_editor.insertPlainText('A')
     form.slide_designer.add_element('rectangle')
@@ -192,6 +195,8 @@ def test_custom_slide_split_merge_and_design_undo(form, qtbot):
 
 
 def test_keyboard_undo_uses_shared_history(form, qtbot):
+    form.slide_designer.load_design({'version': 1, 'masters': {'test': {'name': 'Test', 'design': {}}},
+                                    'assignments': {form.slide_designer.footer_key(): 'test'}})
     grid = form.slide_grid
     grid.cell_editor.insertPlainText('A')
     form.slide_designer.add_element('rectangle')

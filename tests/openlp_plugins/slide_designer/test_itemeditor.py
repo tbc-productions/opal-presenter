@@ -49,10 +49,15 @@ def integrated(settings, request):
 def test_integrated_controls_and_metadata_navigation(integrated):
     owner, editor = integrated
     assert editor.slide_designer.tools.layout().itemAt(0).widget() is owner.title_edit
-    footer = editor.slide_designer.preview_footer.layout()
-    assert footer.itemAt(1).widget() is editor.theme_combo_box
-    assert footer.itemAt(2).spacerItem() is not None
-    assert footer.itemAt(footer.count() - 1).widget() is editor.slide_designer.canvas_combo
+    footer = editor.slide_designer.preview_footer
+    assert editor.theme_combo_box.parentWidget() is footer.theme_group
+    assert editor.slide_designer.canvas_combo.parentWidget() is footer.preview_group
+    wide_height = footer.reflow(700)
+    narrow_height = footer.reflow(300)
+    assert narrow_height > wide_height
+    assert footer.layout().getItemPosition(footer.layout().indexOf(footer.preview_group))[0] == 1
+    footer.reflow(700)
+    assert footer.layout().getItemPosition(footer.layout().indexOf(footer.preview_group))[0] == 0
     assert not editor.slide_designer.inspector_button.isChecked()
     if editor.design_kind == 'song':
         assert editor.alternative_field is owner.alternative_edit
@@ -92,6 +97,87 @@ def test_save_syncs_content_design_and_theme_before_existing_validation(integrat
         assert owner.slide_list_view.item(0).text() == 'Edited'
     owner.accepted.emit()
     finished.assert_called_once_with(QtWidgets.QDialog.DialogCode.Accepted)
+
+
+def test_dirty_state_compares_content_metadata_design_and_undo(integrated):
+    owner, editor = integrated
+    editor.mark_saved()
+    assert not editor.has_unsaved_changes()
+    title = owner.title_edit.text()
+    owner.title_edit.setText('Changed')
+    assert editor.has_unsaved_changes()
+    owner.title_edit.setText(title)
+    assert not editor.has_unsaved_changes()
+    editor.slide_designer.set_footer_visible(False)
+    assert editor.has_unsaved_changes()
+    editor.slide_designer.undo_stack.undo()
+    assert not editor.has_unsaved_changes()
+    editor.slide_designer.canvas_combo.setCurrentIndex(2)
+    assert not editor.has_unsaved_changes()  # Theme preview aspect ratio is view state.
+    if editor.design_kind == 'song':
+        owner.comments_edit.setPlainText('Notes')
+        assert editor.has_unsaved_changes()
+        owner.comments_edit.clear()
+        editor.mark_saved()
+        item = QtWidgets.QListWidgetItem('An author')
+        item.setData(QtCore.Qt.ItemDataRole.UserRole, [4, 'words'])
+        owner.authors_list_view.addItem(item)
+        assert editor.has_unsaved_changes()
+    else:
+        owner.credit_edit.setText('Changed credits')
+        assert editor.has_unsaved_changes()
+
+
+@pytest.mark.parametrize('choice,save_succeeds', [
+    ('unchanged', True), ('cancel', True), ('discard', True), ('save', True), ('save', False)])
+def test_exit_prompt_respects_save_discard_cancel_and_validation(integrated, qtbot, choice, save_succeeds):
+    import fluentqt
+    from openlp.plugins.slide_designer.forms.window import DesignerWindow
+    owner, editor = integrated
+    window = DesignerWindow(editor)
+    qtbot.addWidget(window)
+    if choice != 'unchanged':
+        owner.title_edit.setText('Unsaved item')
+    prompts = []
+
+    def inspect(dialog):
+        prompts.append(dialog)
+        assert dialog.parentWidget() is window
+        assert dialog.title() == ('Save Song?' if editor.design_kind == 'song' else 'Save Custom Slides?')
+        assert dialog.primaryButtonText() == 'Save'
+        assert dialog.secondaryButtonText() == 'Discard'
+        assert dialog.closeButtonText() == 'Cancel'
+        return {'save': dialog.ResultPrimary, 'discard': dialog.ResultSecondary,
+                'cancel': dialog.ResultNone}[choice]
+
+    def accept():
+        if save_succeeds:
+            owner.accepted.emit()
+
+    try:
+        with patch.object(fluentqt.ContentDialog, 'exec', inspect), \
+                patch.object(owner, 'accept', side_effect=accept) as save, patch.object(editor, 'reject') as discard:
+            assert window.request_close_for_exit() == (choice in ('unchanged', 'discard') or
+                                                       choice == 'save' and save_succeeds)
+            assert len(prompts) == (choice != 'unchanged')
+            assert save.call_count == (choice == 'save')
+            assert discard.call_count == (choice in ('unchanged', 'discard'))
+    finally:
+        editor.setLayout(window.host.layout())
+
+
+@pytest.mark.parametrize('success', [True, False])
+def test_save_and_preview_marks_clean_only_after_success(integrated, success):
+    owner, editor = integrated
+    editor.mark_saved()
+    owner.title_edit.setText('Updated')
+    if editor.design_kind == 'song':
+        with patch.object(owner, '_validate_song', return_value=success), patch.object(owner, 'on_preview'):
+            editor.save_and_preview()
+    else:
+        with patch.object(owner, 'on_preview_button_clicked', return_value=success):
+            editor.save_and_preview()
+    assert editor.has_unsaved_changes() == (not success)
 
 
 @pytest.mark.parametrize('kind', ['song', 'custom'])

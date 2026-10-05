@@ -20,8 +20,7 @@ class ItemEditorMixin:
         tools = self.slide_designer.tools.layout()
         theme_label = tools.takeAt(0).widget()
         tools.removeWidget(self.theme_combo_box)
-        self.slide_designer.preview_footer.layout().insertWidget(0, theme_label)
-        self.slide_designer.preview_footer.layout().insertWidget(1, self.theme_combo_box)
+        self.slide_designer.preview_footer.set_theme(theme_label, self.theme_combo_box)
         self.title_field = self.borrow(owner.title_edit)
         self.title_field.setPlaceholderText(tr('Title'))
         self.title_field.setAccessibleName(tr('Title'))
@@ -119,10 +118,8 @@ class ItemEditorMixin:
         slides_layout = QtWidgets.QVBoxLayout(self.slides_page)
         slides_layout.setContentsMargins(0, 0, 0, 0)
         slides_layout.setSpacing(0)
-        self.command_rows.removeWidget(self.slide_designer.tools)
-        self.command_rows.removeWidget(self.slide_grid.formatting_bar)
-        slides_layout.addWidget(self.slide_designer.tools)
-        slides_layout.addWidget(self.slide_grid.formatting_bar)
+        self.dialog_layout.removeWidget(self.command_surface)
+        slides_layout.addWidget(self.command_surface)
         slides_layout.addWidget(self.editor_splitter, 1)
         host = self.navigation.contentHost()
         host.addOwnedPage(self.slides_page)
@@ -163,6 +160,24 @@ class ItemEditorMixin:
     def sync_lyrics(self):
         self.design_owner.set_verse_text(self.get_all_verses())
 
+    def draft_state(self):
+        state = super().draft_state()
+        owner = self.design_owner
+        state['title'] = owner.title_edit.text()
+        if self.design_kind == 'custom':
+            state['credits'] = owner.credit_edit.text()
+        else:
+            for key in ('alternative_edit', 'verse_order_edit', 'ccli_number_edit'):
+                state[key] = getattr(owner, key).text()
+            for key in ('copyright_edit', 'comments_edit'):
+                state[key] = getattr(owner, key).toPlainText()
+            state['favourite'] = owner.favourite_checkbox.isChecked()
+            for key in ('authors_list_view', 'topics_list_view', 'songbooks_list_view', 'audio_list_widget'):
+                widget = getattr(owner, key)
+                state[key] = [(widget.item(row).text(), widget.item(row).data(QtCore.Qt.ItemDataRole.UserRole))
+                              for row in range(widget.count())]
+        return state
+
     def sync_draft(self):
         owner = self.design_owner
         if self.design_kind == 'song':
@@ -193,8 +208,10 @@ class ItemEditorMixin:
         if self.design_kind == 'song':
             if owner._validate_song():
                 owner.on_preview(owner.preview_button)
+                self.mark_saved()
         else:
-            owner.on_preview_button_clicked()
+            if owner.on_preview_button_clicked():
+                self.mark_saved()
 
     def update_title(self):
         window = getattr(self, 'designer_window', None)

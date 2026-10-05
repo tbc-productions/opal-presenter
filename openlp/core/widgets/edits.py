@@ -489,13 +489,14 @@ class FormattingToolbar(OpenLPToolbar):
     def __init__(self, parent):
         super().__init__(parent)
         self._theme_host = fluentqt.FluentWidget(self)
+        self.background_role = 'bgCanvas'
         self._theme_host.hide()
         self.layout().setContentsMargins(0, 0, 12, 0)
 
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QtGui.QPainter(self)
-        painter.fillRect(self.rect(), self._theme_host.theme_tokens().colors.bgCanvas)
+        painter.fillRect(self.rect(), getattr(self._theme_host.theme_tokens().colors, self.background_role))
 
 
 class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):

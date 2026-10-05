@@ -7,8 +7,17 @@ from PySide6 import QtCore, QtGui
 from openlp.core.common import ThemeLevel
 from openlp.core.common.registry import Registry
 from openlp.core.lib.theme import Theme
-from openlp.core.lib.slidelayouts import slide_design
+from openlp.core.lib.slidelayouts import slide_design, visual_design
 from openlp.plugins.songs.forms.editsongform import EditSongForm
+
+
+def load_editable_design(designer, value):
+    """Canvas-editing tests explicitly select a user-created layout."""
+    document = copy.deepcopy(value) or {'version': 1}
+    if designer.footer_key() not in document.get('assignments', {}):
+        document.setdefault('masters', {})['editing'] = {'name': 'Editing', 'design': visual_design(document)}
+        document.setdefault('assignments', {})[designer.footer_key()] = 'editing'
+    designer.load_design(document)
 
 
 @pytest.fixture
@@ -20,6 +29,7 @@ def designer(settings):
     form = EditSongForm(MagicMock(), None, MagicMock())
     with patch('openlp.plugins.slide_designer.forms.designer.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QtCore.QSize(1920, 1080)
+        load_editable_design(form.verse_form.slide_designer, {})
         form.verse_form.slide_designer.select_object('lyrics')
         yield form.verse_form.slide_designer
     form.verse_form.slide_designer.refresh_timer.stop()
@@ -47,7 +57,7 @@ def test_add_edit_undo_redo_and_reset(designer):
 def test_drag_gesture_is_one_undo_and_does_not_change_input(designer):
     original = {'version': 1, 'lyrics': {'width': 80}, 'elements': []}
     before = copy.deepcopy(original)
-    designer.load_design(original)
+    load_editable_design(designer, original)
     designer.canvas_changed({'id': 'lyrics', 'changed': True,
                              'geometry': {'x': 5, 'y': 15, 'width': 80, 'height': 60}})
     assert designer.design['lyrics']['y'] == 15
@@ -63,7 +73,7 @@ def test_save_flushes_pending_text_and_song_switch_clears_it(designer):
     saved = slide_design(designer.serialised_design(), designer.footer_key())
     assert saved['elements'][0]['text'] == 'Final unsaved keystrokes'
     designer.text.setPlainText('Discard this draft')
-    designer.load_design(None)
+    load_editable_design(designer, None)
     designer.commit_text()
     assert designer.design == {}
     assert designer.undo_stack.count() == 0
@@ -90,7 +100,7 @@ def test_preview_uses_assigned_theme_with_global_fallback(designer, settings):
     designer.resolve_theme()
     designer.theme_manager.get_theme_data.assert_called_with('Global')
     assert not hasattr(designer, 'theme_source')
-    assert designer.canvas_combo.parentWidget() is designer.preview_footer
+    assert designer.canvas_combo.parentWidget() is designer.preview_footer.preview_group
 
 
 def test_preview_uses_unsaved_verse_and_design(designer):
@@ -105,7 +115,7 @@ def test_preview_uses_unsaved_verse_and_design(designer):
     form = designer.source_form
     form.designer_footer = lambda: 'Draft footer'
     form.verse_text_edit.setPlainText('New lyrics')
-    designer.load_design({'version': 1, 'lyrics': {'x': 25}, 'elements': []})
+    load_editable_design(designer, {'version': 1, 'lyrics': {'x': 25}, 'elements': []})
     designer.refresh()
     assert designer.display.set_theme.call_args.args[0].font_main_x == 480
     designer.display.load_verses.assert_called_with(
@@ -209,6 +219,8 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
 
     def edit_and_finish(dialog):
         assert dialog.slide_designer.design['lyrics']['x'] == 10
+        with patch.object(dialog.slide_designer, 'prompt_layout_name', return_value=('Welcome', True)):
+            dialog.slide_designer.new_layout()
         dialog.slide_designer.select_object('lyrics')
         dialog.slide_designer.set_property('x', 35)
         return int(accepted)
@@ -236,7 +248,7 @@ def test_bulk_preview_follows_section_selection(designer, settings):
 
 
 def test_assigning_theme_releases_imported_snapshot(designer):
-    designer.load_design({'version': 1, 'lyrics': {'x': 15}, 'theme': {
+    load_editable_design(designer, {'version': 1, 'lyrics': {'x': 15}, 'theme': {
         'background_type': 'solid', 'background_color': '#123456'}})
     designer.source_form.theme_combo_box.addItem('Song')
     assert 'theme' not in designer.design
@@ -449,8 +461,8 @@ def test_slide_fill_and_image_opacity_are_independent_and_undoable(designer):
 
 @pytest.mark.parametrize('kind', ['image', 'rectangle', 'ellipse', 'text'])
 def test_object_opacity_is_editable_without_changing_background(designer, kind):
-    designer.load_design({'version': 1, 'background': {'type': 'solid', 'colour': '#123456'},
-                          'elements': [{'id': 'object', 'kind': kind, 'src': 'data:image/png;base64,AAAA'}]})
+    load_editable_design(designer, {'version': 1, 'background': {'type': 'solid', 'colour': '#123456'},
+                                    'elements': [{'id': 'object', 'kind': kind, 'src': 'data:image/png;base64,AAAA'}]})
     designer.select_object('object')
     assert not designer.field_rows['opacity'].isHidden()
     designer.fields['opacity'].setValue(0)
@@ -461,10 +473,10 @@ def test_object_opacity_is_editable_without_changing_background(designer, kind):
 
 
 def test_reset_slide_text_restores_theme_without_touching_other_layers(designer):
-    designer.load_design({'version': 1, 'lyrics': {
+    load_editable_design(designer, {'version': 1, 'lyrics': {
         'x': 40, 'width': 20, 'font': 'Courier', 'font_size': 18, 'shadow': False, 'flip_vertical': True},
-                          'background': {'type': 'solid', 'colour': '#123456'},
-                          'elements': [{'id': 'shape', 'kind': 'rectangle'}], 'order': ['lyrics', 'shape']})
+                                    'background': {'type': 'solid', 'colour': '#123456'},
+                                    'elements': [{'id': 'shape', 'kind': 'rectangle'}], 'order': ['lyrics', 'shape']})
     designer.select_object('lyrics')
     original = copy.deepcopy(designer.design)
     assert not designer.text_section.reset_button.isHidden()
@@ -485,7 +497,7 @@ def test_reset_slide_text_restores_theme_without_touching_other_layers(designer)
 
 
 def test_section_reset_edits_multiple_objects_and_only_its_fields(designer):
-    designer.load_design({'version': 1, 'elements': [
+    load_editable_design(designer, {'version': 1, 'elements': [
         {'id': 'a', 'kind': 'text', 'font_size': 60, 'x': 20, 'opacity': 35},
         {'id': 'b', 'kind': 'text', 'font_size': 80, 'x': 60, 'opacity': 75}]})
     designer.select_objects(['a', 'b'])
@@ -530,7 +542,7 @@ def test_section_reset_tracks_actual_theme_values(designer):
 
 
 def select_three_objects(designer):
-    designer.load_design({'version': 1, 'elements': [
+    load_editable_design(designer, {'version': 1, 'elements': [
         {'id': 'a', 'kind': 'rectangle', 'x': 10, 'y': 15, 'width': 10, 'height': 10},
         {'id': 'b', 'kind': 'text', 'x': 35, 'y': 30, 'width': 20, 'height': 20},
         {'id': 'c', 'kind': 'ellipse', 'x': 75, 'y': 70, 'width': 15, 'height': 15}],
@@ -539,7 +551,7 @@ def select_three_objects(designer):
 
 
 def test_multiple_properties_show_mixed_values_and_edit_applicable_objects_together(designer):
-    designer.load_design({'version': 1, 'lyrics': {'font_size': 40}, 'elements': [
+    load_editable_design(designer, {'version': 1, 'lyrics': {'font_size': 40}, 'elements': [
         {'id': 'a', 'kind': 'text', 'font_size': 24, 'opacity': 50, 'text': 'First', 'outline': True},
         {'id': 'b', 'kind': 'text', 'font_size': 48, 'text': 'Second', 'outline': False},
         {'id': 'shape', 'kind': 'rectangle'}]})
@@ -607,10 +619,10 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
 
 def test_reset_all_keeps_masters_and_assignments_and_supports_undo(designer):
     from openlp.core.lib.slidelayouts import set_slide_design
-    designer.load_design({'version': 1, 'lyrics': {'font_size': 40}, 'elements': []})
+    load_editable_design(designer, {'version': 1, 'lyrics': {'font_size': 40}, 'elements': []})
     document = set_slide_design(designer.document, 'v1:0:0', {'version': 1, 'lyrics': {'font_size': 60}})
     document = set_slide_design(document, 'v2:0:0', {'version': 1, 'lyrics': {'font_size': 80}})
-    designer.load_design(document)
+    load_editable_design(designer, document)
     with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 1
@@ -623,7 +635,7 @@ def test_reset_all_keeps_masters_and_assignments_and_supports_undo(designer):
 
 def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
     from openlp.core.lib.slidelayouts import slide_design
-    designer.load_design({'version': 1, 'masters': {'welcome': {'name': 'Welcome', 'design': {
+    load_editable_design(designer, {'version': 1, 'masters': {'welcome': {'name': 'Welcome', 'design': {
         'version': 1, 'lyrics': {'font_size': 72}, 'elements': []}}},
         'assignments': {'v1:0:0': 'welcome', 'v2:0:0': 'welcome'}})
     before = {key: slide_design(designer.document, key) for key in ('v1:0:0', 'v2:0:0')}
@@ -739,8 +751,8 @@ def test_multi_drag_flip_and_layer_order_preserve_selection_and_undo(designer):
 
 @pytest.mark.parametrize('kind', ['text', 'rectangle', 'ellipse', 'image'])
 def test_outline_shadow_and_flip_controls_persist_and_undo(designer, kind):
-    designer.load_design({'version': 1, 'elements': [{'id': 'object', 'kind': kind,
-                                                     'src': 'data:image/png;base64,AAAA'}]})
+    load_editable_design(designer, {'version': 1, 'elements': [{'id': 'object', 'kind': kind,
+                                                               'src': 'data:image/png;base64,AAAA'}]})
     designer.select_object('object')
     assert not designer.effect_sections[0].isHidden()
     assert not designer.fields['outline_width'].isEnabled()
@@ -797,11 +809,11 @@ def test_pixel_coordinates_and_canvas_change_preserve_shape_proportions(designer
 @pytest.mark.parametrize('alignment', ['left', 'center', 'right', 'top', 'middle', 'bottom',
                                        'horizontal', 'vertical'])
 def test_aspect_changes_preserve_aligned_layout_with_different_box_sizes(designer, alignment):
-    designer.load_design({'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
-                          'lyrics': {'x': 50, 'y': 65, 'width': 45, 'height': 20, 'font_size': 48},
-                          'elements': [
-                              {'id': 'date', 'kind': 'text', 'x': 45, 'y': 15, 'width': 40, 'height': 12},
-                              {'id': 'title', 'kind': 'text', 'x': 55, 'y': 35, 'width': 30, 'height': 18}]})
+    load_editable_design(designer, {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
+                                    'lyrics': {'x': 50, 'y': 65, 'width': 45, 'height': 20, 'font_size': 48},
+                                    'elements': [
+                                        {'id': 'date', 'kind': 'text', 'x': 45, 'y': 15, 'width': 40, 'height': 12},
+                                        {'id': 'title', 'kind': 'text', 'x': 55, 'y': 35, 'width': 30, 'height': 18}]})
     designer.select_objects(['date', 'title', 'lyrics'])
     designer.alignment_actions[alignment].trigger()
     original = copy.deepcopy(designer.design)
@@ -889,7 +901,7 @@ def test_repeated_aspect_switches_return_to_original_geometry(designer):
     # The reference survives closing/reopening the editor on a different aspect ratio.
     designer.canvas_combo.setCurrentIndex(3)
     saved = designer.serialised_design()
-    designer.load_design(saved)
+    load_editable_design(designer, saved)
     designer.canvas_combo.setCurrentIndex(0)
     for first, second in zip(original, designer.design['elements']):
         for key in ('x', 'y', 'width', 'height', 'font_size'):
@@ -940,23 +952,50 @@ def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
         assert designer.prompt_layout_name('Rename layout', 'Welcome') == ('Closing', True)
 
 
-def test_new_slide_uses_theme_before_and_after_local_edits(designer):
+def test_new_slide_uses_theme_and_locks_all_design_changes(designer):
     designer.load_design({})
     assert designer.active_layout() == 'theme'
     assert designer.layout_combo.currentText() == 'Theme'
     assert designer.layout_combo.findData('default') == -1
+    before = copy.deepcopy(designer.document)
     designer.add_element('text')
-    saved = designer.serialised_design()
-    designer.load_design(saved)
-    assert designer.layout_combo.currentData() == 'theme'
-    assert designer.design['elements'][0]['kind'] == 'text'
-    with patch.object(designer, 'footer_key', return_value='v2:0:0'):
-        designer.switch_design_context()
-        assert designer.layout_combo.currentData() == 'theme'
-        assert not designer.design.get('elements')
+    designer.select_object('lyrics')
+    designer.set_property('x', 20)
+    designer.set_background_property('colour', '#123456')
+    designer.set_filter('blur', 5)
+    designer.canvas_changed({'id': 'lyrics', 'changed': True, 'geometry': {'x': 50}})
+    assert designer.document == before
+    for key, (drawer, _) in designer.reset_sections.items():
+        assert drawer.isEnabled() == (key == 'slide')
+    designer.set_footer_visible(False)
+    assert designer.footer_key() in designer.document['hidden_footers']
+    designer.reset_section('slide')
+    assert not designer.document.get('hidden_footers')
+    designer.canvas_combo.setCurrentIndex(2)
+    assert designer.canvas_size() == QtCore.QSize(2560, 1080)
+    assert not designer.document.get('overrides')
+    with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
+        designer.new_layout()
+    assert designer.design_editable()
+    designer.add_element('text')
+    assert len(designer.design['elements']) == 1
+    designer.layout_combo.setCurrentIndex(designer.layout_combo.findData('theme'))
+    assert not designer.design.get('elements')
+    assert not designer.design_editable()
+
+
+def test_song_does_not_invent_a_custom_layout_for_saved_formatting(designer):
+    source = {'version': 1, 'lyrics': {'font_size': 60}, 'custom_layout_name': 'Previous design'}
+    designer.load_design(source)
+    assert designer.layout_combo.count() == 1
+    assert designer.layout_combo.currentText() == 'Theme'
+    assert not designer.rename_layout_button.isEnabled()
+    assert designer.design['lyrics']['font_size'] == 60
+    assert not designer.design_editable()
 
 
 def test_custom_layout_can_be_renamed_saved_and_undone(designer):
+    designer.source_form.design_kind = 'custom'
     designer.load_design({'version': 1, 'lyrics': {'font_size': 60}})
     original = copy.deepcopy(designer.design)
     assert designer.layout_combo.currentText() == 'Custom'
@@ -979,7 +1018,7 @@ def test_custom_layout_can_be_renamed_saved_and_undone(designer):
 
 
 def test_effects_target_background_and_images_with_mixed_selection_and_undo(designer):
-    designer.load_design({'version': 1, 'elements': [
+    load_editable_design(designer, {'version': 1, 'elements': [
         {'id': 'a', 'kind': 'image', 'src': 'data:image/png;base64,AAAA', 'filters': {'blur': 5}},
         {'id': 'b', 'kind': 'image', 'src': 'data:image/png;base64,AAAA'},
         {'id': 'text', 'kind': 'text'}]})
@@ -1003,7 +1042,7 @@ def test_effects_target_background_and_images_with_mixed_selection_and_undo(desi
     assert not designer.section_modified('effects')
     designer.undo_stack.undo()
     saved = designer.serialised_design()
-    designer.load_design(saved)
+    load_editable_design(designer, saved)
     assert designer.design['background_filters'] == {'brightness': 80, 'sepia': 50}
     assert designer.design['elements'][0]['filters'] == {'blur': 5, 'contrast': 125}
     for drawer, _ in designer.reset_sections.values():

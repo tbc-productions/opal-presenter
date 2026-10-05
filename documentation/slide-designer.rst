@@ -10,9 +10,11 @@ behaviour remain intact; enabling the plugin makes those designs editable again.
 The designer opens in its own Fluent window, which can be minimised or maximised.
 The main OpenLP+ window and other library items remain available without replacing
 the draft. Its window title is the item name followed by ``- OpenLP+``, with
-``New Song`` or ``New Custom Slide`` used for unnamed items. While any designer
-is open, Exit/Quit and closing the main window restore and focus the most recently
-used designer instead. Close all designers before exiting OpenLP+.
+``New Song`` or ``New Custom Slide`` used for unnamed items. Exit/Quit and closing
+the main window check each open designer for unsaved changes. Changed items offer
+Save, Discard and Cancel in a ContentDialog; unchanged items close without a prompt.
+Cancel or a validation failure stops quitting. Once the designers close, OpenLP+
+continues its normal unsaved-service and exit-confirmation behaviour.
 
 Songs have a collapsible navigation rail for Slides, Authors/Topics/Songbooks,
 Copyright/Flags/Comments and Linked Audio. Metadata controls, validation and saving
@@ -93,8 +95,12 @@ mixed values appear blank. The reset icon in each modified accordion restores th
 section. Filters are stored in the portable design and used by preview and live output.
 PPTX and ODP exports do not yet reproduce these CSS filters.
 
-New slides use Theme by default. Earlier saved shared designs remain available
-as Custom, which can also be renamed. Use New layout to create a named master
+New slides use Theme by default. Theme locks design properties, object insertion
+and canvas manipulation; Show footer remains editable. Preview aspect ratios can
+still be changed without modifying the saved design. Songs do not automatically
+offer a Custom layout, and existing saved formatting is preserved. Earlier shared
+designs in custom slide items remain available as Custom, which can be renamed.
+Use New layout to create a named master
 from the current design, and the Layout selector to apply it to the previewed slide.
 Canvas and property edits customise only the current slide, leaving its assigned
 layout and other slides unchanged. New layout captures the current design for

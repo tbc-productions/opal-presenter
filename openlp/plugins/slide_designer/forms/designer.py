@@ -30,7 +30,46 @@ class CommandSurface(fluentqt.FluentWidget):
     """One Fluent surface for both command rows."""
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
-        painter.fillRect(self.rect(), self.theme_tokens().colors.bgCanvas)
+        painter.fillRect(self.rect(), self.theme_tokens().colors.bgLayer)
+
+
+class PreviewFooter(QtWidgets.QWidget):
+    """Keep each label with its picker and wrap the preview group when space is tight."""
+    def __init__(self, combo, parent):
+        super().__init__(parent)
+        layout = QtWidgets.QGridLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        self.theme_group = None
+        self.preview_group = self.group(QtWidgets.QLabel(tr('Preview')), combo)
+        self.reflow(1000)
+
+    def group(self, label, combo):
+        group = QtWidgets.QWidget(self)
+        row = QtWidgets.QHBoxLayout(group)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        row.addWidget(label)
+        row.addWidget(combo)
+        return group
+
+    def set_theme(self, label, combo):
+        self.theme_group = self.group(label, combo)
+        self.reflow(self.width())
+
+    def reflow(self, width):
+        layout = self.layout()
+        wrapped = self.theme_group is not None and width < (
+            self.theme_group.sizeHint().width() + self.preview_group.sizeHint().width() + layout.spacing())
+        layout.removeWidget(self.preview_group)
+        if self.theme_group is not None:
+            layout.removeWidget(self.theme_group)
+            layout.addWidget(self.theme_group, 0, 0, 1, 2 if wrapped else 1,
+                             QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.preview_group, 1 if wrapped else 0, 0 if wrapped else 1, 1, 2 if wrapped else 1,
+                         QtCore.Qt.AlignmentFlag.AlignRight)
+        layout.setColumnStretch(0, 1)
+        return layout.sizeHint().height()
 
 
 class PropertyDrawer(fluentqt.Expander):
@@ -194,11 +233,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         toolbar.addWidget(QtWidgets.QLabel(tr('Theme')))
         # The assigned-theme picker is inserted here by the owning dialog.
         toolbar.addSpacing(12)
+        self.insert_object_buttons = []
         for caption, kind, icon in ((tr('Text'), 'text', fluent_icon('ic_fluent_textbox_24_regular')),
                                     (tr('Image'), 'image', UiIcons().blank_theme)):
             button = self.tool_button(caption, icon)
             button.clicked.connect(lambda checked=False, k=kind: self.add_element(k))
             toolbar.addWidget(button)
+            self.insert_object_buttons.append(button)
         self.shape_button = self.tool_button(tr('Shape'), fluent_icon('ic_fluent_shapes_24_regular'))
         shape_menu = QtWidgets.QMenu(self.shape_button)
         for caption, kind in ((tr('Rectangle'), 'rectangle'), (tr('Ellipse'), 'ellipse')):
@@ -319,13 +360,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.preview_timeout.setSingleShot(True)
         self.preview_timeout.setInterval(5000)
         self.preview_timeout.timeout.connect(self.clear_preview_cover)
-        self.preview_footer = QtWidgets.QWidget(self.viewport)
-        footer_layout = QtWidgets.QHBoxLayout(self.preview_footer)
-        footer_layout.setContentsMargins(0, 0, 0, 0)
-        footer_layout.setSpacing(8)
-        footer_layout.addStretch()
-        footer_layout.addWidget(QtWidgets.QLabel(tr('Preview')))
-        footer_layout.addWidget(self.canvas_combo)
+        self.preview_footer = PreviewFooter(self.canvas_combo, self.viewport)
         canvas_layout.addWidget(self.viewport, 1)
         self.splitter.addWidget(canvas_panel)
         self.sidebar = QtWidgets.QWidget()
@@ -464,7 +499,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_document(document, tr('Reset all slides') if all_slides else tr('Reset slide'))
 
     def active_layout(self):
-        return layout_for_slide(self.document, self.footer_key())
+        identifier = layout_for_slide(self.document, self.footer_key())
+        if identifier == 'default' and self.source_form.design_kind == 'song':
+            return 'theme'
+        return identifier
+
+    def design_editable(self):
+        return self.active_layout() != 'theme'
 
     def switch_design_context(self):
         self.commit_text()
@@ -479,7 +520,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         with QtCore.QSignalBlocker(self.layout_combo):
             self.layout_combo.clear()
             self.layout_combo.addItem(tr('Theme'), 'theme')
-            if visual_design(self.document) or 'default' in self.document.get('assignments', {}).values():
+            if self.source_form.design_kind != 'song' and (
+                    visual_design(self.document) or 'default' in self.document.get('assignments', {}).values()):
                 self.layout_combo.addItem(self.document.get('custom_layout_name', tr('Custom')), 'default')
             for identifier, master in self.document.get('masters', {}).items():
                 self.layout_combo.addItem(master['name'], identifier)
@@ -495,6 +537,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_text()
         document = copy.deepcopy(self.document) or {'version': 1}
         document.setdefault('assignments', {})[self.footer_key()] = identifier
+        if identifier == 'theme':
+            document.get('overrides', {}).pop(self.footer_key(), None)
         self.commit_document(document, tr('Apply master layout'))
 
     def prompt_layout_name(self, title, name=''):
@@ -895,6 +939,11 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         if not dimensions or tuple(dimensions) == (self.canvas_size().width(), self.canvas_size().height()):
             return
         self.commit_text()
+        if not self.design_editable():
+            self._canvas_size = QtCore.QSize(*dimensions)
+            self.fit_canvas()
+            self.schedule_refresh()
+            return
         old = self.canvas_size()
         width, height = dimensions
         design = self.editable_design()
@@ -981,13 +1030,20 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         if self._display_canvas_size is not None and size != self._display_canvas_size:
             self.freeze_preview()
         self._display_canvas_size = QtCore.QSize(size)
-        footer_height = self.preview_footer.sizeHint().height()
+        footer_height = self.preview_footer.reflow(max(1, self.viewport.width() - 24))
         gap = 10
         total_footer_space = footer_height + gap
         avail_h = max(1, self.viewport.height() - 24 - total_footer_space)
         scale = min(max(1, self.viewport.width() - 24) / size.width(),
                     avail_h / size.height())
         width, height = round(size.width() * scale), round(size.height() * scale)
+        wrapped_height = self.preview_footer.reflow(width)
+        if wrapped_height != footer_height:
+            footer_height = wrapped_height
+            total_footer_space = footer_height + gap
+            scale = min(max(1, self.viewport.width() - 24) / size.width(),
+                        max(1, self.viewport.height() - 24 - total_footer_space) / size.height())
+            width, height = round(size.width() * scale), round(size.height() * scale)
         left = (self.viewport.width() - width) // 2
         top = max(4, (self.viewport.height() - (height + total_footer_space)) // 2)
         self.display.setGeometry(left, top, width, height)
@@ -1105,11 +1161,11 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         return f'{section}:{split}:{page}'
 
     def set_footer_visible(self, visible):
-        design = self.editable_design()
-        hidden = set(design.get('hidden_footers', []))
+        document = copy.deepcopy(self.document) or {'version': 1}
+        hidden = set(document.get('hidden_footers', []))
         hidden.discard(self.footer_key()) if visible else hidden.add(self.footer_key())
-        design['hidden_footers'] = sorted(hidden)
-        self.commit(design, tr('Change slide footer'))
+        document['hidden_footers'] = sorted(hidden)
+        self.commit_document(document, tr('Change slide footer'))
 
     def show_page(self):
         if not self.display or not self.display._is_initialised:
@@ -1118,7 +1174,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                    'footer': '' if self.footer_key() in self.design.get('hidden_footers', [])
                                    else self.source_form.designer_footer()}])
         self.display.go_to_slide('designer', raise_window=False)
-        self.display.run_in_display('setDesignEditor', self.selection or '')
+        self.display.run_in_display('setDesignEditor', (self.selection or '') if self.design_editable() else None)
 
     def change_page(self, delta):
         self.commit_text()
@@ -1155,6 +1211,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.switch_design_context()
 
     def commit(self, design, caption):
+        if not self.design_editable():
+            return
         document = copy.deepcopy(self.document) or {'version': 1}
         document = set_slide_design(document, self.footer_key(), design)
         if design.get('hidden_footers'):
@@ -1337,6 +1395,16 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.text.setEnabled(any(properties.get('kind') == 'text' for properties in selected))
         for key, (drawer, _) in self.reset_sections.items():
             drawer.reset_button.setVisible(self.section_modified(key))
+        editable = self.design_editable()
+        self.background_section.setEnabled(editable)
+        self.layers_panel.setEnabled(editable)
+        self.reset_button.setEnabled(editable)
+        for button in [*self.insert_object_buttons, self.shape_button, self.arrange_button, self.align_button]:
+            button.setEnabled(editable)
+        if not editable:
+            for key, (drawer, _) in self.reset_sections.items():
+                if key != 'slide':
+                    drawer.setEnabled(False)
 
     def property_defaults(self, identifier):
         defaults = {'x': 10, 'y': 10, 'width': 35, 'height': 20, 'rotation': 0, 'opacity': 100,
@@ -1368,6 +1436,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         return False
 
     def reset_section(self, section):
+        if section == 'slide':
+            self.set_footer_visible(True)
+            return
         self.commit_text()
         design = self.editable_design()
         keys = self.reset_sections[section][1]
@@ -1417,7 +1488,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         # Do not rebuild the model during a native selection gesture (Shift/Ctrl/Command).
         self.populate_inspector(rebuild_layers=rebuild)
         if self.display and self.display._is_initialised:
-            self.display.run_in_display('setDesignEditor', self.selection or '')
+            self.display.run_in_display('setDesignEditor', (self.selection or '') if self.design_editable() else None)
 
     def select_object(self, identifier):
         self.select_objects([identifier] if identifier else [])
@@ -1480,6 +1551,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.commit(design, tr('Edit text box'))
 
     def canvas_changed(self, value):
+        if not self.design_editable():
+            return
         if hasattr(value, 'toVariant'):
             value = value.toVariant()
         self.commit_text()
@@ -1494,9 +1567,11 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.commit(design, tr('Move or resize elements'))
         self.populate_inspector()
         if self.display and self.display._is_initialised:
-            self.display.run_in_display('setDesignEditor', self.selection or '')
+            self.display.run_in_display('setDesignEditor', (self.selection or '') if self.design_editable() else None)
 
     def add_element(self, kind):
+        if not self.design_editable():
+            return
         self.commit_text()
         design = self.editable_design()
         if len(design['elements']) >= 100:
@@ -1602,6 +1677,17 @@ def designer_dialog_parent(owner):
 
 
 class SlideDesignerDialogMixin:
+    def draft_state(self):
+        """Compare persisted content, excluding selection, preview size and other view state."""
+        return {'text': self.design_text_editor.toPlainText(), 'theme': self.designer_theme_name(),
+                'design': self.slide_designer.serialised_design()}
+
+    def mark_saved(self):
+        self._saved_draft = copy.deepcopy(self.draft_state())
+
+    def has_unsaved_changes(self):
+        return self.draft_state() != self._saved_draft
+
     """Install the designer only in Edit/Edit All dialogs; list windows hold draft data only."""
     def setup_slide_designer(self, owner, editor, kind):
         self.design_owner = owner
@@ -1646,13 +1732,16 @@ class SlideDesignerDialogMixin:
         self.editor_splitter.addWidget(text_panel)
         self.editor_splitter.addWidget(self.slide_designer)
         self.editor_splitter.setStretchFactor(1, 1)
-        self.editor_splitter.setSizes([408, 912])
+        self.editor_splitter.setSizes([520, 800])
         self.command_rows = QtWidgets.QVBoxLayout()
         self.command_rows.setSpacing(0)
         self.command_rows.setContentsMargins(0, 0, 0, 0)
         self.command_rows.addWidget(self.slide_designer.tools)
         self.command_rows.addWidget(self.slide_grid.formatting_bar)
-        self.dialog_layout.insertLayout(0, self.command_rows)
+        self.slide_grid.formatting_bar.background_role = 'bgLayer'
+        self.command_surface = CommandSurface()
+        self.command_surface.setLayout(self.command_rows)
+        self.dialog_layout.insertWidget(0, self.command_surface)
         self.dialog_layout.insertWidget(1, self.editor_splitter, 1)
         editor.textChanged.connect(self.designer_cursor_changed)
         editor.cursorPositionChanged.connect(self.designer_cursor_changed)

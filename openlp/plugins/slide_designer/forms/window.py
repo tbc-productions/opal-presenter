@@ -21,6 +21,49 @@ class DesignerWindow(fluentqt.Window):
         self.host.setLayout(editor.dialog_layout)
         self.setContentWidget(self.host)
         self.resize(1440, 900)
+        editor.mark_saved()
+
+    def request_close_for_exit(self):
+        """Use the normal save contract; failed validation or cancellation stops app exit."""
+        if not self.editor.has_unsaved_changes():
+            self.editor.reject()
+            return True
+
+        def tr(text):
+            return translate('SongsPlugin.SlideDesigner', text)
+
+        dialog = fluentqt.ContentDialog(self)
+        dialog.setObjectName('designer_exit_dialog')
+        dialog.setTitle(tr('Save Song?') if self.editor.design_kind == 'song' else tr('Save Custom Slides?'))
+        title = self.editor.design_owner.title_edit.text().strip()
+        message = tr('Save changes to “{title}” before exiting OpenLP+?').format(title=title) if title else \
+            tr('Save your changes before exiting OpenLP+?')
+        label = QtWidgets.QLabel(message)
+        label.setWordWrap(True)
+        dialog.setContent(label)
+        dialog.setPrimaryButtonText(tr('Save'))
+        dialog.setSecondaryButtonText(tr('Discard'))
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        try:
+            choice = dialog.exec()
+        finally:
+            dialog.deleteLater()
+        if choice == dialog.ResultSecondary:
+            self.editor.reject()
+            return True
+        if choice != dialog.ResultPrimary:
+            return False
+        finished = []
+        self.editor.finished.connect(finished.append)
+        try:
+            self.editor.accept()
+        finally:
+            self.editor.finished.disconnect(finished.append)
+        return finished == [QtWidgets.QDialog.DialogCode.Accepted]
 
     def update_item_title(self):
         title = self.editor.design_owner.title_edit.text().strip()
