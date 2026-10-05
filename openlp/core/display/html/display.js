@@ -2180,6 +2180,24 @@ var Display = {
     document.querySelectorAll('.text-slide').forEach(Display._bindDesignEditor);
   },
 
+  /** Theme Designer gestures update bounds without clearing slides or restarting backgrounds. */
+  setThemePreviewAreas: function (areas) {
+    if (!Display._theme) return;
+    ['main', 'footer'].forEach(area => {
+      var geometry = areas[area];
+      if (!geometry) return;
+      var nodes = area === 'main' ? document.querySelectorAll('.text-slide .slide-text-content') :
+        [Display._footerContainer].filter(Boolean);
+      ['x', 'y', 'width', 'height'].forEach(field => {
+        var value = geometry[field];
+        Display._theme[`font_${area}_${field}`] = value;
+        var property = ({x: 'left', y: 'top'})[field] || field;
+        nodes.forEach(node => node.style.setProperty(property, `${value}px`,
+          area === 'main' && (field === 'x' || field === 'y') ? 'important' : ''));
+      });
+    });
+  },
+
   _startDesignTextEdit: function (event, node) {
     event.stopPropagation();
     if (Display._designTextEdit) return;

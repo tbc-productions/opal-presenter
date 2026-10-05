@@ -139,8 +139,8 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self.area_overlay.gestureFinished.connect(self.on_area_gesture_finished)
             self.area_preview_timer = QtCore.QTimer(self)
             self.area_preview_timer.setSingleShot(True)
-            self.area_preview_timer.setInterval(100)
-            self.area_preview_timer.timeout.connect(self.refresh_preview)
+            self.area_preview_timer.setInterval(16)
+            self.area_preview_timer.timeout.connect(self.update_preview_area_geometry)
             self.canvas_combo.currentIndexChanged.connect(self.on_preview_size_changed)
             self.on_area_selected('main')
 
@@ -480,9 +480,18 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         finally:
             self._updating_page_values = False
         self.update_theme()
-        # Rendering is expensive; coalesce pointer events while retaining live bounds.
+        # Move existing text in place; pagination rebuilds the slide only after the gesture.
         if not self.area_preview_timer.isActive():
             self.area_preview_timer.start()
+
+    def update_preview_area_geometry(self):
+        """Keep the current slide and background mounted throughout a drag or resize."""
+        if not getattr(self.preview_box, 'is_initialised', True):
+            return
+        theme = self._preview_theme()
+        self.preview_box.run_in_display('setThemePreviewAreas', {
+            area: {field: getattr(theme, f'font_{area}_{field}') for field in ('x', 'y', 'width', 'height')}
+            for area in ('main', 'footer')})
 
     def on_area_gesture_finished(self):
         self.area_preview_timer.stop()

@@ -54,6 +54,44 @@ describe('Portable slide designs', function () {
     Display._designSelection = [];
     Display._theme = null;
   });
+  it('moves Theme Designer areas in place without replacing text or footer content', function () {
+    var previousFooter = Display._footerContainer;
+    var previousStyles = Array.from(document.querySelectorAll('.text-slide .slide-text-content'))
+      .map(node => [node, node.getAttribute('style')]);
+    var footer = document.createElement('div');
+    footer.innerHTML = '<span>Footer</span>';
+    host.appendChild(footer);
+    Display._footerContainer = footer;
+    text.innerHTML = '<p><strong>Lyrics</strong></p>';
+    text.style.color = 'red';
+    var paragraph = text.firstChild, footerContent = footer.firstChild;
+    try {
+      Display.setThemePreviewAreas({main: {x: 200, y: 100, width: 600, height: 300},
+        footer: {x: 50, y: 500, width: 800, height: 80}});
+      Display.setThemePreviewAreas({main: {x: 250, y: 150, width: 700, height: 350},
+        footer: {x: 75, y: 480, width: 750, height: 90}});
+      expect(text.firstChild).toBe(paragraph);
+      expect(footer.firstChild).toBe(footerContent);
+      expect(text.style.left).toBe('250px');
+      expect(text.style.top).toBe('150px');
+      expect(text.style.width).toBe('700px');
+      expect(text.style.height).toBe('350px');
+      expect(text.style.getPropertyPriority('left')).toBe('important');
+      expect(text.style.color).toBe('red');
+      expect(footer.style.left).toBe('75px');
+      expect(footer.style.top).toBe('480px');
+      expect(footer.style.width).toBe('750px');
+      expect(footer.style.height).toBe('90px');
+      expect(Display._theme.font_main_x).toBe(250);
+      expect(Display._theme.font_footer_width).toBe(750);
+    } finally {
+      Display._footerContainer = previousFooter;
+      previousStyles.forEach(([node, style]) => {
+        if (style === null) node.removeAttribute('style');
+        else node.setAttribute('style', style);
+      });
+    }
+  });
   it('edits text in place without dragging, commits once, and restores the rendered markup', function () {
     Display._applySongDesign(slide);
     Display.setDesignEditor('lyrics');

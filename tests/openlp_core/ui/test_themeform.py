@@ -805,6 +805,33 @@ def test_canvas_gesture_turns_default_area_into_custom_geometry(interactive_them
     assert form.area_overlay.areas['main'] == QtCore.QRectF(450, 200, 800, 450)
 
 
+@pytest.mark.parametrize('area', ['main', 'footer'])
+@pytest.mark.parametrize('preview_index', [0, 3])
+def test_drag_updates_existing_preview_without_rebuilding_it(interactive_theme_form, qtbot, area, preview_index):
+    form = interactive_theme_form
+    form.canvas_combo.setCurrentIndex(preview_index)
+    preview = form.preview_box
+    for method in (preview.run_in_display, preview.clear_slides, preview.generate_preview):
+        method.reset_mock()
+    manager = Registry().get('theme_manager')
+    manager.generate_image.reset_mock()
+
+    for rect in (QtCore.QRect(150, 200, 450, 300), QtCore.QRect(225, 250, 600, 400)):
+        form.on_area_geometry_changed(area, rect)
+        qtbot.waitUntil(lambda: not form.area_preview_timer.isActive())
+        action, bounds = preview.run_in_display.call_args.args
+        assert action == 'setThemePreviewAreas'
+        assert bounds[area] == {'x': rect.x(), 'y': rect.y(), 'width': rect.width(), 'height': rect.height()}
+        preview.clear_slides.assert_not_called()
+        preview.generate_preview.assert_not_called()
+        manager.generate_image.assert_not_called()
+
+    form.on_area_gesture_finished()
+    preview.clear_slides.assert_called_once()
+    preview.generate_preview.assert_called_once()
+    manager.generate_image.assert_called_once_with(form.theme, True)
+
+
 def test_theme_window_close_releases_modal_loop(interactive_theme_form):
     form = interactive_theme_form
     finished = []
