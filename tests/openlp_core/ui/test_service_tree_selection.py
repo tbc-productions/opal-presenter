@@ -1,5 +1,5 @@
 """Service tree clicks select individual items and disclose their slides."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore, QtWidgets
 import fluentqt
@@ -37,6 +37,49 @@ def test_service_tree_row_and_child_selection(qapp, qtbot):
     assert view.selectedItems() == [child]
     assert view.currentItem() is child
     assert changes
+
+
+def test_service_tree_click_keeps_selection_without_native_focus_ring(qapp, qtbot):
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    item = fluent.QTreeWidgetItem(view, ['Song'])
+    view.resize(400, 200)
+    view.show()
+    QtWidgets.QApplication.processEvents()
+    qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=view.visualItemRect(item).center())
+    assert not view.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect)
+    assert view.selectedItems() == [item]
+    assert view.selectedIndicatorRect().isValid()
+    assert view.focusPolicy() != QtCore.Qt.FocusPolicy.NoFocus
+
+
+def test_service_tree_double_click_live_and_subsequent_preview(settings, qtbot):
+    """The real mouse signal sequence previews promptly, goes Live once, then accepts another click."""
+    settings.setValue('advanced/single click service preview', True)
+    manager = ServiceManager(None)
+    qtbot.addWidget(manager)
+    view = ServiceManagerList(manager)
+    qtbot.addWidget(view)
+    first = fluent.QTreeWidgetItem(view, ['First song'])
+    second = fluent.QTreeWidgetItem(view, ['Second song'])
+    view.clicked.connect(manager.on_single_click_preview)
+    view.doubleClicked.connect(manager.on_double_click_live)
+    view.resize(400, 200)
+    view.show()
+    QtWidgets.QApplication.processEvents()
+    with patch.object(manager, 'make_preview') as preview, patch.object(manager, 'make_live') as live:
+        point = view.visualItemRect(first).center()
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+        preview.assert_called_once_with()
+        qtbot.mouseDClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+        qtbot.mouseRelease(view.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+        live.assert_called_once_with()
+        preview.assert_called_once_with()
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=view.visualItemRect(second).center())
+        assert preview.call_count == 2
+        assert view.currentItem() is second
 
 
 def test_service_notes_indicator_allows_row_clicks(settings, qtbot):

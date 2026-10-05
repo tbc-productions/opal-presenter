@@ -1119,6 +1119,58 @@ def test_add_service_item_without_song_edit(settings: Settings):
     mocked_process_item.assert_called_once_with(mocked_item, 0)
 
 
+@mark.parametrize('is_live, item_type, slide_no, reuse', [
+    (False, 'text', -1, True),
+    (False, 'image', -1, True),
+    (False, 'media', -1, False),
+    (True, 'text', -1, False),
+    (True, 'image', -1, False),
+    (False, 'text', 2, True),
+    (True, 'text', 2, True),
+])
+def test_add_service_manager_item_reuses_loaded_preview(settings, is_live, item_type, slide_no, reuse):
+    """Repeated text/image Preview clicks reuse slides; Live and media parent clicks still restart."""
+    controller = SlideController(None)
+    controller.is_live = is_live
+    controller.preview_widget = MagicMock()
+    controller._process_item = MagicMock()
+    controller.slide_selected = MagicMock()
+    item = MagicMock()
+    item.is_text.return_value = item_type == 'text'
+    item.is_image.return_value = item_type == 'image'
+    item.auto_play_slides_loop = False
+    item.auto_play_slides_once = False
+    controller.service_item = item
+
+    controller.add_service_manager_item(item, slide_no, service_list_index=3)
+
+    assert controller._service_manager_item_index == 3
+    slide_num = max(0, slide_no)
+    if reuse:
+        controller._process_item.assert_not_called()
+        controller.preview_widget.change_slide.assert_called_once_with(slide_num)
+        controller.slide_selected.assert_called_once_with()
+    else:
+        controller._process_item.assert_called_once_with(item, slide_num)
+        controller.preview_widget.change_slide.assert_not_called()
+
+
+def test_add_service_manager_item_loads_new_preview(settings):
+    """Clicking a different text item still loads its content and theme."""
+    controller = SlideController(None)
+    controller.is_live = False
+    controller.preview_widget = MagicMock()
+    controller._process_item = MagicMock()
+    controller.service_item = None
+    item = MagicMock()
+    item.is_text.return_value = True
+
+    controller.add_service_manager_item(item, -1)
+
+    controller._process_item.assert_called_once_with(item, 0)
+    controller.preview_widget.change_slide.assert_not_called()
+
+
 def test_replace_service_manager_item_different_items(settings: Settings):
     """
     Test that when the service items are not the same, nothing happens

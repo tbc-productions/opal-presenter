@@ -868,85 +868,22 @@ def test_build_presentation_non_pdf_context_menu(settings: Settings):
         'Should have be called once'
 
 
-@patch('openlp.core.ui.servicemanager.QtCore.QTimer.singleShot')
-def test_single_click_preview_true(mocked_singleShot: MagicMock, settings: Settings):
-    """
-    Test that when "Preview items when clicked in Service Manager" enabled the preview timer starts
-    """
-    # GIVEN: A setting to enable "Preview items when clicked in Service Manager" and a service manager.
+def test_single_click_preview_true(settings: Settings):
+    """An enabled single-click Preview loads synchronously, without a double-click timeout."""
     settings.setValue('advanced/single click service preview', True)
     service_manager = ServiceManager(None)
-    # WHEN: on_single_click_preview() is called
-    service_manager.on_single_click_preview()
-    # THEN: timer should have been started
-    mocked_singleShot.assert_called_with(QtWidgets.QApplication.instance().doubleClickInterval(),
-                                         service_manager.on_single_click_preview_timeout)
+    with patch.object(service_manager, 'make_preview') as make_preview:
+        service_manager.on_single_click_preview()
+        make_preview.assert_called_once_with()
 
 
-@patch('openlp.core.ui.servicemanager.QtCore.QTimer.singleShot')
-def test_single_click_preview_false(mocked_singleShot: MagicMock, settings: Settings):
-    """
-    Test that when "Preview items when clicked in Service Manager" disabled the preview timer doesn't start
-    """
-    # GIVEN: A setting to enable "Preview items when clicked in Service Manager" and a service manager.
+def test_single_click_preview_false(settings: Settings):
+    """Disabling single-click Preview prevents loading the clicked item."""
     settings.setValue('advanced/single click service preview', False)
     service_manager = ServiceManager(None)
-    # WHEN: on_single_click_preview() is called
-    service_manager.on_single_click_preview()
-    # THEN: timer should not be started
-    assert mocked_singleShot.call_count == 0, 'Should not be called'
-
-
-@patch('openlp.core.ui.servicemanager.QtCore.QTimer.singleShot')
-def test_single_click_preview_double(mocked_singleShot: MagicMock, settings: Settings):
-    """
-    Test that when a double click has registered the preview timer doesn't start
-    """
-    # GIVEN: A setting to enable "Preview items when clicked in Service Manager" and a service manager.
-    settings.setValue('advanced/single click service preview', True)
-    service_manager = ServiceManager(None)
-
-    # WHEN: on_single_click_preview() is called following a double click
-    with patch.object(service_manager, 'make_live') as mocked_make_live:
-        service_manager.on_double_click_live()
+    with patch.object(service_manager, 'make_preview') as make_preview:
         service_manager.on_single_click_preview()
-
-    # THEN: timer should not be started
-    mocked_make_live.assert_called_with()
-    assert mocked_singleShot.call_count == 0, 'Should not be called'
-
-
-def test_single_click_timeout_single(settings: Settings):
-    """
-    Test that when a single click has been registered, the item is sent to preview
-    """
-    # GIVEN: A service manager.
-    service_manager = ServiceManager(None)
-
-    # WHEN: on_single_click_preview() is called
-    with patch.object(service_manager, 'make_preview') as mocked_make_preview:
-        service_manager.on_single_click_preview_timeout()
-
-    # THEN: make_preview() should have been called
-    assert mocked_make_preview.call_count == 1, 'ServiceManager.make_preview() should have been called once'
-
-
-def test_single_click_timeout_double(settings: Settings):
-    """
-    Test that when a double click has been registered, the item does not goes to preview
-    """
-    # GIVEN: A service manager.
-    service_manager = ServiceManager(None)
-
-    # WHEN: on_single_click_preview() is called after a double click
-    with patch.object(service_manager, 'make_preview') as mocked_make_preview, \
-            patch.object(service_manager, 'make_live') as mocked_make_live:
-        service_manager.on_double_click_live()
-        service_manager.on_single_click_preview_timeout()
-
-    # THEN: make_preview() should not have been called
-    assert mocked_make_preview.call_count == 0, 'ServiceManager.make_preview() should not be called'
-    assert mocked_make_live.call_count == 1, 'ServiceManager.make_live() should have been called once'
+        make_preview.assert_not_called()
 
 
 @patch('openlp.core.ui.servicemanager.zipfile')

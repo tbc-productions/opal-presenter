@@ -116,6 +116,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         Constructor
         """
         super(ServiceManagerList, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionIndicatorVisible(True)
@@ -717,7 +718,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._modified = False
         self._service_path = None
         self.service_has_all_original_files = True
-        self.list_double_clicked = False
         self.servicefile_version = None
         self.tree_widget_items = []
         self._internal_drag_item = None
@@ -3080,29 +3080,16 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Send the current item to the Live slide controller but triggered by a tablewidget click event.
         """
-        self.list_double_clicked = True
         self.make_live()
 
     def on_single_click_preview(self):
         """
-        If single click previewing is enabled, and triggered by a tablewidget click event,
-        start a timeout to verify a double-click hasn't triggered.
+        Preview the clicked item immediately when single-click previewing is enabled.
+
+        The tree emits clicked for the first click and doubleClicked for the second,
+        so a double-click can still send the item Live without delaying Preview.
         """
         if self.settings.value('advanced/single click service preview'):
-            if not self.list_double_clicked:
-                # If a double click has not registered start a timer, otherwise wait for the existing timer to finish.
-                QtCore.QTimer.singleShot(QtWidgets.QApplication.instance().doubleClickInterval(),
-                                         self.on_single_click_preview_timeout)
-
-    def on_single_click_preview_timeout(self):
-        """
-        If a single click ok, but double click not triggered, send the current item to the Preview slide controller.
-        """
-        if self.list_double_clicked:
-            # If a double click has registered, clear it.
-            self.list_double_clicked = False
-        else:
-            # Otherwise preview the item.
             self.make_preview()
 
     def make_live(self, row=-1):

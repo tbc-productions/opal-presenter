@@ -1097,8 +1097,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         slide_num = slide_no
         if slide_no == -1:
             slide_num = 0
-        # If service item is the same as the current one, only change slide
-        if slide_no >= 0 and item == self.service_item:
+        # Text/image Preview rows can return to their first slide without reloading
+        # the theme and rebuilding the slide list. Live and media retain their restart behaviour.
+        reuse_preview = not self.is_live and (item.is_text() or item.is_image())
+        if (slide_no >= 0 or reuse_preview) and item == self.service_item:
             self.preview_widget.change_slide(slide_num)
             self.slide_selected()
         else:
