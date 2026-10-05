@@ -91,6 +91,13 @@ def test_classic_navigation_and_spacing(main_window):
     assert main_window.main_content_layout.contentsMargins().left() == 0
 
 
+def test_window_menu_is_before_help(main_window):
+    menus = [action.menu() for action in main_window.menu_bar.actions()]
+    assert menus[-2:] == [main_window.window_menu, main_window.help_menu]
+    assert main_window.window_menu.title() == '&Window'
+    assert main_window.window_menu_controller.menu is main_window.window_menu
+
+
 def test_modern_presets_restore_autohide_without_touching_classic(modern_appearance, main_window, settings):
     import PySide6QtAds as ads
     main_window._preview_controller = _DummyController()

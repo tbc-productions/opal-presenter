@@ -67,6 +67,7 @@ from openlp.core.ui.style import get_library_stylesheet
 from openlp.core.ui.modernstyle import is_modern_style
 from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
 from openlp.core.ui.thememanager import ThemeManager
+from openlp.core.ui.windowmenu import WindowMenu
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.docks import MediaDockManager, MediaToolBox, OpenLPDockWidget
@@ -181,6 +182,8 @@ class Ui_MainWindow(object):
         self.settings_language_menu = QtWidgets.create_application_menu(self.settings_menu)
         self.settings_language_menu.setIcon(UiIcons().translation)
         self.settings_language_menu.setObjectName('settingsLanguageMenu')
+        self.window_menu_controller = WindowMenu(main_window, self.menu_bar)
+        self.window_menu = self.window_menu_controller.menu
         # Help Menu
         self.help_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.help_menu.setObjectName('helpMenu')
@@ -453,7 +456,9 @@ class Ui_MainWindow(object):
         add_actions(self.tools_menu, [self.update_theme_images])
         add_actions(self.help_menu, (self.user_manual_item, None, self.web_site_item, self.about_item))
         add_actions(self.menu_bar, (self.file_menu.menuAction(), self.view_menu.menuAction(),
-                    self.tools_menu.menuAction(), self.settings_menu.menuAction(), self.help_menu.menuAction()))
+                    self.tools_menu.menuAction(), self.settings_menu.menuAction(), self.window_menu.menuAction(),
+                    self.help_menu.menuAction()))
+        self.window_menu_controller.share_on_macos(self.menu_bar)
         add_actions(self, [self.search_shortcut_action])
         # Initialise the translation
         self.retranslate_ui(main_window)
@@ -490,6 +495,7 @@ class Ui_MainWindow(object):
         self.tools_menu.setTitle(translate('OpenLP.MainWindow', '&Tools'))
         self.settings_menu.setTitle(translate('OpenLP.MainWindow', '&Settings'))
         self.settings_language_menu.setTitle(translate('OpenLP.MainWindow', '&Language'))
+        self.window_menu_controller.sync_actions()
         self.help_menu.setTitle(translate('OpenLP.MainWindow', '&Help'))
         self.service_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Service'))
         self.media_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Library'))
