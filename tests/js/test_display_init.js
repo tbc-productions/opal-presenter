@@ -45,6 +45,39 @@ describe("The CommunicationBridge object", () => {
         testCommunicationBridge.setDisplayTarget(new SimpleTarget());
         testCommunicationBridge.requestAction('init', {do_init: true});
     });
+    it("waits for asynchronous display startup before notifying the native app", (done) => {
+        let finishStartup;
+        const target = new SimpleTarget();
+        target._handleNativeCall = () => new Promise((resolve) => { finishStartup = resolve; });
+        const notify = jasmine.createSpy('setInitialised');
+        displayWatcher.setInitialised = notify;
+        testCommunicationBridge.setDisplayTarget(target);
+
+        const startup = testCommunicationBridge.requestAction('init', {});
+        expect(notify).not.toHaveBeenCalled();
+        finishStartup();
+        startup.then(() => {
+            expect(notify).toHaveBeenCalledWith(true);
+            done();
+        });
+    });
+    it("waits for readiness when replaying init to a newly attached display", (done) => {
+        let finishStartup;
+        const startup = new Promise((resolve) => { finishStartup = resolve; });
+        const target = new SimpleTarget();
+        target._handleNativeCall = () => startup;
+        testCommunicationBridge.requestAction('init', {});
+        const notify = jasmine.createSpy('setInitialised');
+        displayWatcher.setInitialised = notify;
+
+        testCommunicationBridge.setDisplayTarget(target);
+        expect(notify).not.toHaveBeenCalled();
+        finishStartup();
+        startup.then(() => {
+            expect(notify).toHaveBeenCalledWith(true);
+            done();
+        });
+    });
     it("should dispatch event on async call and promise-based handlers", (done) => {
         const target = new SimpleTarget()
         target._handleNativeCall = (action, ...values) => {

@@ -1,0 +1,25 @@
+Reveal.js 6.0.2
+==============
+
+Source: https://registry.npmjs.org/reveal.js/-/reveal.js-6.0.2.tgz
+Release: https://github.com/hakimel/reveal.js/releases/tag/6.0.2
+Licence: reveal.LICENSE (MIT)
+
+Vendored assets are package/dist/reveal.js and package/dist/reveal.css.
+OpenLP+ loads the UMD bundle locally; it does not require npm or a CDN at runtime.
+
+Local patch in reveal.js (SlideContent.load background-image URL handling):
+  m(decodeURI(e.trim()))
+becomes:
+  m(e.trim()).replace(/%25([0-9a-f]{2})/gi,`%$1`)
+
+This keeps existing percent escapes intact while encoding raw characters and
+retaining upstream RFC 3986 escaping. Upstream decodeURI preserves reserved
+escapes such as %23, which are then encoded again as %2523. OpenLP+ library
+filenames containing # must keep %23; decoding it to # would turn it into a
+URL fragment. Existing rendering tests cover spaces, #, %, parentheses and
+non-ASCII characters, including after a full Reveal.sync().
+
+When updating, replace both assets together, retain or re-evaluate this patch,
+and run the JavaScript rendering suite. Display.init() awaits Reveal readiness;
+scrollActivationWidth is disabled so small previews keep the slide DOM.

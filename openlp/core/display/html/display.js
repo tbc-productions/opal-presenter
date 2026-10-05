@@ -500,6 +500,7 @@ var Display = {
   _clearAfterNativeHandoff: false,
   _displayMode: 'show',
   _isInitialised: false,
+  _initialisationPromise: null,
   _initialisedSlidesContainer: null,
   _themeApplied: true,
   _isDisplayOutput: false,
@@ -521,6 +522,8 @@ var Display = {
     transition: "none",
     backgroundTransition: "none",
     viewDistance: 9999,
+    // Keep controller previews in slide mode, including narrow viewports.
+    scrollActivationWidth: null,
     width: "100%",
     height: "100%"
   },
@@ -587,14 +590,18 @@ var Display = {
       Display._initialisedSlidesContainer === Display._slidesContainer;
     if (Display._isInitialised && isSameSlidesContainer) {
       Display.setItemTransition(enableItemTransitions, itemTransitionSpeed, itemTransitionType);
-      return;
+      return Display._initialisationPromise;
     }
-    Reveal.initialize(Display._revealConfig);
+    var initialisation = Reveal.initialize(Display._revealConfig);
     Reveal.addEventListener('slidechanged', Display._onSlideChanged);
     Display._isInitialised = true;
     Display._initialisedSlidesContainer = Display._slidesContainer;
     Display.setItemTransition(enableItemTransitions, itemTransitionSpeed, itemTransitionType);
-    displayWatcher.setInitialised(true);
+    Display._initialisationPromise = Promise.resolve(initialisation).then(function () {
+      Display._backgroundsContainer = $(".backgrounds")[0];
+      displayWatcher.setInitialised(true);
+    });
+    return Display._initialisationPromise;
   },
   /**
    * Reinitialise Reveal
@@ -1700,11 +1707,15 @@ var Display = {
   /**
    * Go to the next slide in the list
   */
-  next: Reveal.nextFragment,
+  next: function () {
+    return Reveal.nextFragment();
+  },
   /**
    * Go to the previous slide in the list
   */
-  prev: Reveal.prevFragment,
+  prev: function () {
+    return Reveal.prevFragment();
+  },
   /** Change output modes without changing any slide's theme/background data. */
   _setOutputMode: function (mode, disableTransitions, logo) {
     // Auto-unblank also sends Show for already visible items. It must not

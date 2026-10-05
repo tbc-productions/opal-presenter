@@ -12,7 +12,8 @@
   }
 }
 
-body {
+body,
+body.reveal-viewport {
   background: transparent;
   color: rgb(255, 255, 255) !important;
   --item-transition-ms: 800ms;

@@ -1,3 +1,7 @@
+// Reveal 4+ exposes the full API on a deck instance. Unit tests spy on
+// these methods without starting a real deck; rendering tests use iframes.
+Object.assign(Reveal, new Reveal(document.createElement("div")));
+
 beforeEach(function () {
   spyOn(Reveal, "sync");
   spyOn(Reveal, "slide");
@@ -172,6 +176,7 @@ describe("The Display object", function () {
       transition: "none",
       backgroundTransition: "none",
       viewDistance: 9999,
+      scrollActivationWidth: null,
       width: "100%",
       height: "100%"
     });
@@ -1067,11 +1072,6 @@ describe("Display.setTextSlides", function () {
     expect(mainSection.style['text-shadow']).toEqual('');
   })
 
-  it("should correctly set slide size position to theme size when adding a text slide", function () {
-    const slides = [textSlides[0]];
-    //
-    const theme = {
-      'font_main_y': 789,
   it("should draw a single shadow when the outline is disabled", function () {
     const slides = [textSlides[0]];
     const theme = {
@@ -1110,6 +1110,11 @@ describe("Display.setTextSlides", function () {
       _buildTextOutline(2, 'red').concat(_buildTextShadow(2, 2, "#000", 0)).join(', '));
   })
 
+  it("should correctly set slide size position to theme size when adding a text slide", function () {
+    const slides = [textSlides[0]];
+    //
+    const theme = {
+      'font_main_y': 789,
       'font_main_x': 1000,
       'font_main_width': 1230,
       'font_main_height': 4560
