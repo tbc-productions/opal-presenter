@@ -179,6 +179,7 @@ class ItemEditorMixin:
         return state
 
     def sync_draft(self):
+        self.slide_designer.commit_text()
         owner = self.design_owner
         if self.design_kind == 'song':
             self.sync_lyrics()
@@ -190,6 +191,7 @@ class ItemEditorMixin:
         owner.theme_combo_box.setCurrentText(self.designer_theme_name())
 
     def accept(self):
+        self.slide_designer.commit_text()
         if self.design_kind == 'song' and not self.validate_verse():
             self.select_page(0)
             return
@@ -200,6 +202,7 @@ class ItemEditorMixin:
         self.done(QtWidgets.QDialog.DialogCode.Accepted)
 
     def save_and_preview(self):
+        self.slide_designer.commit_text()
         if self.design_kind == 'song' and not self.validate_verse():
             self.select_page(0)
             return

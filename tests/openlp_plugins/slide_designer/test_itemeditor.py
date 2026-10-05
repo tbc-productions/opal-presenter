@@ -76,6 +76,27 @@ def test_integrated_controls_and_metadata_navigation(integrated):
         assert owner.credit_edit.parentWidget() is editor.editor_splitter.widget(0)
 
 
+def test_save_flushes_inline_lyrics_before_syncing_owner(integrated):
+    owner, editor = integrated
+    designer = editor.slide_designer
+    editor.designer_select_section(0)
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['First']
+    designer.page_keys = [(0, 0)]
+    designer.prepare_canvas_text()
+    designer.canvas_text_editing(True)
+    designer.display.run_in_display.return_value = {'id': 'lyrics', 'before': 'First', 'text': 'Canvas edit'}
+    with patch.object(owner, 'accept') as save:
+        editor.accept()
+        save.assert_called_once()
+    assert 'Canvas edit' in editor.design_text_editor.toPlainText()
+    if editor.design_kind == 'song':
+        assert owner.verse_list_widget.item(0, 0).text() == 'Canvas edit\n[--}{--]\nSecond'
+    else:
+        assert owner.slide_list_view.item(0).text() == 'Canvas edit'
+        assert owner.slide_list_view.item(1).text() == 'Second'
+
+
 def test_save_syncs_content_design_and_theme_before_existing_validation(integrated):
     owner, editor = integrated
     editor.theme_combo_box.addItem('Ocean', 'Ocean')

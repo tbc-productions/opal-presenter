@@ -226,3 +226,18 @@ def test_pixel_canvas_accepts_one_pixel_textbox_and_imported_theme_scales_once()
     result = apply_design(SimpleNamespace(), design, QSize(1280, 720))
     assert result.font_main_size == 32
     assert result.font_main_width == pytest.approx(2 / 3)
+
+
+def test_slide_bold_override_supersedes_theme_weight():
+    theme = SimpleNamespace(font_main_weight=500, font_main_bold=False)
+    result = apply_design(theme, {'version': 1, 'lyrics': {'bold': True}}, QSize(1920, 1080))
+    assert result.font_main_bold is True
+    assert result.font_main_weight == 0
+    assert theme.font_main_weight == 500
+
+
+def test_portable_theme_preserves_font_weights():
+    design = normalise_design({
+        'version': 1, 'theme': {'background_type': 'solid', 'font_main_weight': 500, 'font_footer_weight': 800}})
+    assert design['theme']['font_main_weight'] == 500
+    assert design['theme']['font_footer_weight'] == 800

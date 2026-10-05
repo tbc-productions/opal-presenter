@@ -21,6 +21,7 @@
 """
 The Create/Edit theme dialog
 """
+import fluentqt
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.toolbar import OpenLPToolbar
@@ -33,13 +34,24 @@ from openlp.core.pages.areaposition import AreaPositionPage
 from openlp.core.pages.background import BackgroundPage
 from openlp.core.pages.fontselect import FontSelectPage
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.fluenticons import fluent_icon
+from openlp.core.widgets.themeeditor import ThemeAreaOverlay
 from openlp.core.widgets.layouts import AspectRatioLayout
 
 
-class _ThemePageStackHost(QtWidgets.QWidget):
+class ThemeDesignerPreview(ThemePreviewRenderer):
+    """Capture the embedded slide without moving it or including editor handles."""
+    def save_screenshot(self, fname=None):
+        pixmap = self.webview.grab()
+        if fname:
+            pixmap.save(str(fname))
+        else:
+            return pixmap
+
+
+class _SelectedFontHost(QtWidgets.QWidget):
     """
-    Holds theme editor pages like QStackedWidget, but only the current page is in the
-    layout so height follows the visible page (QStackedWidget uses max of all pages).
+    Keep the typography height tied to the selected area's font controls.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -90,6 +102,51 @@ class _ThemePageStackHost(QtWidgets.QWidget):
         self.setCurrentIndex(index)
 
 
+class _ThemePropertySection(fluentqt.Expander):
+    """Keep Fluent's clip and drawer height in sync with changing form contents."""
+    def __init__(self, caption, widget, expanded=False):
+        super().__init__(headerText=caption, expanded=expanded)
+        self.setAccessibleName(caption)
+        self._height_timer = QtCore.QTimer(self)
+        self._height_timer.setSingleShot(True)
+        self._height_timer.timeout.connect(self._fit_content)
+        QtWidgets.QWidget.layout(widget).setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetMinimumSize)
+        self.setOwnedContentWidget(widget)
+        widget.installEventFilter(self)
+        self.expandedChanged.connect(self._queue_fit)
+        self._queue_fit()
+
+    def _queue_fit(self, *args):
+        self._height_timer.start(0)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QtCore.QEvent.Type.LayoutRequest, QtCore.QEvent.Type.Resize,
+                            QtCore.QEvent.Type.Show, QtCore.QEvent.Type.FontChange):
+            self._queue_fit()
+        return super().eventFilter(watched, event)
+
+    def _fit_content(self):
+        if not self.isExpanded():
+            return
+        # Let the native opening animation finish before correcting its cached target.
+        if any(animation.state() == QtCore.QAbstractAnimation.State.Running
+               for animation in self.findChildren(QtCore.QAbstractAnimation)):
+            self._height_timer.start(16)
+            return
+        content = self.contentWidget()
+        QtWidgets.QWidget.layout(content).activate()
+        height = max(content.sizeHint().height(), content.minimumSizeHint().height())
+        if content.hasHeightForWidth():
+            height = max(height, content.heightForWidth(content.width()))
+        clip = content.parentWidget()
+        if clip.minimumHeight() != height or clip.maximumHeight() != height or content.height() != height:
+            clip.setFixedHeight(height)
+            self.setFixedHeight(clip.y() + height)
+            content.resize(clip.width(), height)
+            self.updateGeometry()
+            self.layoutHeightChanged.emit(self.height())
+
+
 class Ui_ThemeWizard(object):
     """
     The Create/Edit theme dialog
@@ -100,9 +157,14 @@ class Ui_ThemeWizard(object):
         """
         theme_dialog.setObjectName('OpenLP.ThemeWizard')
         theme_dialog.setWindowIcon(UiIcons().main_icon)
-        theme_dialog.setModal(True)
-        theme_dialog.resize(1100, 640)
-        self.dialog_main_layout = QtWidgets.QVBoxLayout(theme_dialog)
+        theme_dialog.resize(1440, 900)
+        self.window_title_label = QtWidgets.QLabel()
+        self.window_title_label.setContentsMargins(12, 0, 12, 0)
+        self.window_title_label.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        theme_dialog.titleBar().setContentWidget(self.window_title_label)
+        self.content_widget = QtWidgets.QWidget()
+        theme_dialog.setContentWidget(self.content_widget)
+        self.dialog_main_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.dialog_main_layout.setObjectName('dialog_main_layout')
         self.dialog_main_layout.setContentsMargins(0, 0, 0, 0)
         self.dialog_main_layout.setSpacing(0)
@@ -115,67 +177,62 @@ class Ui_ThemeWizard(object):
         self.dialog_layout.setVerticalSpacing(10)
         self.dialog_main_layout.addWidget(self.dialog_layout_widget)
 
-        self.theme_name_layout = QtWidgets.QFormLayout()
-        self.theme_name_layout.setObjectName('theme_name_layout')
-        self.theme_name_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-        self.theme_name_layout.setHorizontalSpacing(8)
-        self.theme_name_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        self.theme_name_layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop)
-        self.theme_name_label = QtWidgets.QLabel(theme_dialog)
-        self.theme_name_label.setObjectName('theme_name_label')
-        self.theme_name_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.theme_name_edit = QtWidgets.QLineEdit(theme_dialog)
+        self.command_row = QtWidgets.QHBoxLayout()
+        self.command_row.setSpacing(12)
+        self.theme_name_label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', 'Theme name:'))
+        self.theme_name_edit = QtWidgets.QLineEdit()
         self.theme_name_edit.setValidator(QtGui.QRegularExpressionValidator(
             QtCore.QRegularExpression(r'[^/\\?*|<>\[\]":<>+%]+'), theme_dialog))
         self.theme_name_edit.setObjectName('ThemeNameEdit')
-        self.theme_name_edit.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        self.theme_name_layout.addRow(self.theme_name_label, self.theme_name_edit)
-        self.dialog_layout.addLayout(self.theme_name_layout, 0, 0, 1, 3)
+        self.theme_name_edit.setMaximumWidth(320)
+        self.theme_name_edit.setMinimumWidth(180)
+        self.theme_name_label.setBuddy(self.theme_name_edit)
+        self.command_row.addWidget(self.theme_name_label)
+        self.command_row.addWidget(self.theme_name_edit, 1)
+        self.command_bar = OpenLPToolbar(self.content_widget)
+        self.command_bar.setObjectName('theme_command_bar')
+        self.command_bar.setFloatable(False)
+        self.command_bar.setMovable(False)
+        self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.command_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.command_row.addWidget(self.command_bar, 1)
+        self.dialog_layout.addLayout(self.command_row, 0, 0, 1, 2)
 
-        self.page_list_widget = QtWidgets.QListWidget(theme_dialog)
-        self.page_list_widget.setObjectName('page_list_widget')
-        self.page_list_widget.setUniformItemSizes(True)
-        self.page_list_widget.setAlternatingRowColors(True)
-        self.page_list_widget.setMinimumSize(QtCore.QSize(210, 0))
-        self.page_list_widget.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.page_list_widget.setStyleSheet('QListWidget::item { padding: 9px 11px; }')
-        self.dialog_layout.addWidget(self.page_list_widget, 1, 0, 1, 1)
-
-        self.editor_widget = QtWidgets.QWidget(theme_dialog)
-        self.editor_widget.setObjectName('editor_widget')
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setHandleWidth(8)
+        self.dialog_layout.addWidget(self.splitter, 1, 0, 1, 2)
+        self.editor_widget = QtWidgets.QWidget()
+        self.editor_widget.setObjectName('theme_properties')
+        self.editor_widget.setMinimumWidth(360)
         self.editor_layout = QtWidgets.QVBoxLayout(self.editor_widget)
-        self.editor_layout.setObjectName('editor_layout')
-        self.editor_layout.setContentsMargins(0, 0, 0, 0)
-        self.editor_layout.setSpacing(10)
-        self.page_stack = _ThemePageStackHost(self.editor_widget)
-        self.page_stack.setObjectName('page_stack')
-        self.page_stack_scroll_area = QtWidgets.QScrollArea(self.editor_widget)
-        self.page_stack_scroll_area.setObjectName('page_stack_scroll_area')
-        self.page_stack_scroll_area.setWidgetResizable(True)
-        self.page_stack_scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.page_stack_scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.page_stack_scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-        self.page_stack_scroll_area.setWidget(self.page_stack)
-        self.editor_layout.addWidget(self.page_stack_scroll_area)
-        self.dialog_layout.addWidget(self.editor_widget, 1, 1, 1, 1)
+        self.editor_layout.setContentsMargins(12, 6, 0, 0)
+        self.editor_layout.setSpacing(8)
+        self.properties_label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', 'Properties'))
+        self.properties_label.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        self.properties_label.setMinimumHeight(32)
+        self.editor_layout.addWidget(self.properties_label)
+        self.properties_accordion = fluentqt.Accordion()
+        self.properties_accordion.setExpansionMode(fluentqt.Accordion.ExpansionMode.Multiple)
+        self.inspector = QtWidgets.QWidget()
+        inspector_layout = QtWidgets.QVBoxLayout(self.inspector)
+        inspector_layout.setContentsMargins(0, 0, 0, 0)
+        inspector_layout.addWidget(self.properties_accordion)
+        inspector_layout.addStretch()
+        self.sidebar_scroll = QtWidgets.QScrollArea(self.editor_widget)
+        self.sidebar_scroll.setWidgetResizable(True)
+        self.sidebar_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.sidebar_scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.sidebar_scroll.setWidget(self.inspector)
+        self.editor_layout.addWidget(self.sidebar_scroll)
 
         self.preview_panel = QtWidgets.QWidget(theme_dialog)
         self.preview_panel.setObjectName('preview_panel')
-        self.preview_panel.setMinimumWidth(320)
-        self.preview_panel.setMaximumWidth(520)
+        self.preview_panel.setMinimumWidth(360)
         self.preview_panel_layout = QtWidgets.QVBoxLayout(self.preview_panel)
         self.preview_panel_layout.setObjectName('preview_panel_layout')
         self.preview_panel_layout.setContentsMargins(0, 0, 0, 0)
         self.preview_panel_layout.setSpacing(0)
-        self.preview_label = QtWidgets.QLabel(self.preview_panel)
-        self.preview_label.setObjectName('preview_label')
-        self.preview_panel_layout.addWidget(self.preview_label)
-        self.preview_toolbar = OpenLPToolbar(self.preview_panel)
-        self.preview_toolbar.setObjectName('preview_toolbar')
-        self.preview_toolbar.setFloatable(False)
-        self.preview_toolbar.setMovable(False)
-        self.preview_toolbar.setIconSize(QtCore.QSize(16, 16))
-        self.preview_toolbar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.preview_area = QtWidgets.QWidget(self.preview_panel)
         self.preview_area.setObjectName('PreviewArea')
         self.preview_area.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
@@ -184,102 +241,218 @@ class Ui_ThemeWizard(object):
         self.preview_area_layout.margin = 8
         self.preview_area_layout.setSpacing(0)
         self.preview_area_layout.setObjectName('preview_web_layout')
-        self.preview_box = ThemePreviewRenderer(theme_dialog, window_title='Theme Editor Preview')
+        self.preview_box = ThemeDesignerPreview(
+            theme_dialog, window_title='Theme Designer Preview', embedded=True, can_show_startup_screen=False)
         self.preview_box.setObjectName('preview_box')
         self.preview_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Ignored)
-        self.preview_area_layout.addWidget(self.preview_box)
-        self.preview_area_layout.setAlignment(self.preview_box, QtCore.Qt.AlignmentFlag.AlignTop)
-        self.preview_panel_layout.addWidget(self.preview_area)
-        self.preview_panel_layout.addWidget(self.preview_toolbar)
+        self.preview_canvas = QtWidgets.QWidget()
+        canvas_layout = QtWidgets.QGridLayout(self.preview_canvas)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_layout.setSpacing(0)
+        canvas_layout.addWidget(self.preview_box, 0, 0)
+        self.area_overlay = ThemeAreaOverlay(self.preview_canvas)
+        canvas_layout.addWidget(self.area_overlay, 0, 0)
+        self.area_overlay.raise_()
+        self.preview_area_layout.addWidget(self.preview_canvas)
+        self.preview_panel_layout.addWidget(self.preview_area, 1)
+        self.preview_footer = QtWidgets.QHBoxLayout()
+        self.preview_footer.setSpacing(8)
+        self.preview_footer.addStretch()
+        self.preview_footer.addWidget(QtWidgets.QLabel(translate('OpenLP.ThemeWizard', 'Preview')))
+        self.canvas_combo = QtWidgets.QComboBox()
+        self.canvas_combo.setAccessibleName(translate('OpenLP.ThemeWizard', 'Preview aspect ratio'))
+        for caption, dimensions in (
+                (translate('OpenLP.ThemeWizard', 'Full HD · 16:9'), (1920, 1080)),
+                ('16:10 · 1920 × 1200', (1920, 1200)),
+                ('21:9 · 2560 × 1080', (2560, 1080)),
+                ('4:3 · 1440 × 1080', (1440, 1080))):
+            self.canvas_combo.addItem(caption, dimensions)
+        self.preview_footer.addWidget(self.canvas_combo)
+        self.preview_panel_layout.addLayout(self.preview_footer)
+        self.align_button = QtWidgets.QToolButton(self.command_bar)
+        self.align_button.setText(translate('OpenLP.ThemeWizard', 'Align'))
+        self.align_button.setIcon(fluent_icon('ic_fluent_align_left_24_regular'))
+        self.align_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.align_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
+        align_menu = QtWidgets.QMenu(self.align_button)
+        self.alignment_actions = {}
+        for caption, operation, icon in (
+                ('Align left', 'left', 'align_left'),
+                ('Align centre', 'center', 'align_center_horizontal'),
+                ('Align right', 'right', 'align_right'),
+                ('Align top', 'top', 'align_top'),
+                ('Align middle', 'middle', 'align_center_vertical'),
+                ('Align bottom', 'bottom', 'align_bottom')):
+            if operation == 'top':
+                align_menu.addSeparator()
+            action = align_menu.addAction(fluent_icon(f'ic_fluent_{icon}_24_regular'),
+                                          translate('OpenLP.ThemeWizard', caption))
+            action.triggered.connect(lambda checked=False, op=operation: theme_dialog.align_area(op))
+            self.alignment_actions[operation] = action
+        self.align_button.setMenu(align_menu)
+        self.command_bar.addWidget(self.align_button)
         self.layout_guide_action = QtGui.QAction(
-            UiIcons().border_all,
+            fluent_icon('ic_fluent_border_all_24_regular'),
             '',
-            self.preview_toolbar)
+            self.command_bar)
         self.layout_guide_action.setCheckable(True)
-        self.preview_toolbar.addAction(self.layout_guide_action)
+        self.command_bar.addAction(self.layout_guide_action)
         self.layout_guide_button = self.layout_guide_action
-        self.preview_toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.refresh_preview_action = QtGui.QAction(UiIcons().refresh, '', self.preview_toolbar)
-        self.preview_toolbar.addAction(self.refresh_preview_action)
-        self.refresh_preview_button = self.refresh_preview_action
-        self.play_transition_action = QtGui.QAction(UiIcons().play, '', self.preview_toolbar)
+        self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.play_transition_action = QtGui.QAction(fluent_icon('ic_fluent_play_24_regular'), '', self.command_bar)
         self.play_transition_action.setVisible(False)
-        self.preview_toolbar.addAction(self.play_transition_action)
+        self.command_bar.addAction(self.play_transition_action)
         self.play_transition_button = self.play_transition_action
         self.play_transition_button.setVisible(False)
-        self.preview_panel_layout.addStretch(1)
-        self.dialog_layout.addWidget(self.preview_panel, 1, 2, 1, 1)
+        self.splitter.addWidget(self.preview_panel)
+        self.splitter.addWidget(self.editor_widget)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.setSizes([980, 400])
+        self.dialog_layout.setRowStretch(1, 1)
 
-        self.dialog_layout.setColumnStretch(0, 0)
-        self.dialog_layout.setColumnStretch(1, 1)
-        self.dialog_layout.setColumnStretch(2, 1)
-
-        # Background Page
         self.background_page = BackgroundPage()
-        self.background_page.setObjectName('background_page')
-        self.page_stack.addWidget(self.background_page)
-        # Main Area Page
-        self.main_area_page = FontSelectPage()
-        self.main_area_page.setObjectName('main_area_page')
+        background = self.background_page
+        background.background_label.hide()
+        background.background_combo_box.setAccessibleName(translate('OpenLP.ThemeWizard', 'Background type'))
+        background.background_type_group_box.hide()
+        background.layout.removeWidget(background.background_type_group_box)
+        background.layout.addWidget(background.background_combo_box, 0, 0, 1, 2)
+        background.layout.addWidget(background.background_fit_label, 1, 0, 1, 2)
+        background.layout.addWidget(background.background_fit_combo_box, 2, 0, 1, 2)
+        background.layout.addWidget(background.background_style_group_box, 3, 0, 1, 2)
+        background.layout.addWidget(background.background_media_group_box, 4, 0, 1, 2)
+        background.layout.removeItem(background.layout_spacer)
+        background.layout.setContentsMargins(12, 12, 12, 12)
+        self.background_section = self.add_property_section('Background', self.background_page)
+        # Keep the page objects as the value/signal owners; present their controls
+        # in compact, selection-aware drawers instead of nested page group boxes.
+        self.property_sources = QtWidgets.QWidget(self.content_widget)
+        self.property_sources.hide()
+        self.main_area_page = FontSelectPage(self.property_sources)
         self.main_area_page.disable_features(FontSelectPage.Wrap)
-        self.page_stack.addWidget(self.main_area_page)
-        # Footer Area Page
-        self.footer_area_page = FontSelectPage()
-        self.footer_area_page.setObjectName('footer_area_page')
-        self.page_stack.addWidget(self.footer_area_page)
-        # Alignment Page
-        self.alignment_page = AlignmentPage()
-        self.alignment_page.setObjectName('alignment_page')
-        self.page_stack.addWidget(self.alignment_page)
-        # Transitions Page
+        self.footer_area_page = FontSelectPage(self.property_sources)
+        self.alignment_page = AlignmentPage(self.property_sources)
+        self.area_position_page = AreaPositionPage(self.property_sources)
+        self.area_property_stacks = []
+        self.position_section, self.position_stack, position_layouts = self.add_area_section('Position')
+        self.typography_section, self.typography_stack, typography_layouts = self.add_area_section(
+            'Typography', expanded=True)
+        self.spacing_section, self.spacing_stack, spacing_layouts = self.add_area_section('Spacing & alignment')
+        self.effects_section, self.effects_stack, effects_layouts = self.add_area_section('Text effects')
+        for index, area in enumerate(('main', 'footer')):
+            font_page = getattr(self, f'{area}_area_page')
+            typography = typography_layouts[index]
+            typography.addWidget(self.labelled_field('Font', font_page.font_name_combobox), 1, 0, 1, 2)
+            style = QtWidgets.QWidget()
+            style_row = QtWidgets.QHBoxLayout(style)
+            style_row.setContentsMargins(0, 0, 0, 0)
+            style_row.setSpacing(8)
+            style_row.addWidget(font_page.font_weight_combo, 1)
+            style_row.addWidget(font_page.style_bold_button)
+            style_row.addWidget(font_page.style_italic_button)
+            typography.addWidget(self.labelled_field('Weight and style', style), 2, 0, 1, 2)
+            typography.addWidget(self.labelled_field('Size', font_page.font_size_spinbox), 3, 0)
+            typography.addWidget(self.labelled_field('Colour', font_page.font_color_button), 3, 1)
+
+            spacing = spacing_layouts[index]
+            spacing.addWidget(self.labelled_field('Line spacing', font_page.line_spacing_spinbox), 1, 0)
+            spacing.addWidget(self.labelled_field('Letter spacing', font_page.letter_spacing_spinbox), 1, 1)
+            prefix = '' if area == 'main' else 'footer_'
+            horizontal = getattr(self.alignment_page, f'{prefix}horizontal_combo_box')
+            vertical = getattr(self.alignment_page, f'{prefix}vertical_combo_box')
+            spacing.addWidget(self.labelled_field('Horizontal alignment', horizontal), 2, 0)
+            spacing.addWidget(self.labelled_field('Vertical alignment', vertical), 2, 1)
+            if area == 'footer':
+                spacing.addWidget(font_page.wrap_check_box, 3, 0, 1, 2)
+            else:
+                self.main_line_count_label = QtWidgets.QLabel()
+                self.main_line_count_label.setWordWrap(True)
+                spacing.addWidget(self.main_line_count_label, 3, 0, 1, 2)
+
+            effects = effects_layouts[index]
+            effects.addWidget(font_page.outline_groupbox, 1, 0, 1, 2)
+            effects.addWidget(font_page.shadow_groupbox, 2, 0, 1, 2)
+            position = position_layouts[index]
+            position.addWidget(getattr(self.area_position_page, f'{area}_position_check_box'), 1, 0, 1, 2)
+            for field_index, (field, caption) in enumerate((('x', 'X position'), ('y', 'Y position'),
+                                                           ('width', 'Width'), ('height', 'Height'))):
+                widget = getattr(self.area_position_page, f'{area}_{field}_spin_box')
+                position.addWidget(self.labelled_field(caption, widget), 2 + field_index // 2, field_index % 2)
         self.transitions_page = TransitionsPage()
-        self.transitions_page.setObjectName('transitions_page')
-        self.page_stack.addWidget(self.transitions_page)
-        # Area Position Page
-        self.area_position_page = AreaPositionPage()
-        self.area_position_page.setObjectName('area_position_page')
-        self.page_stack.addWidget(self.area_position_page)
+        self.transitions_section = self.add_property_section('Transitions', self.transitions_page)
+        # Reverse direction is a theme-wide transition setting.
+        self.transitions_page.layout.addWidget(self.alignment_page.transition_reverse_check_box, 1, 0, 1, 4)
 
-        self.page_list_widget.addItems(['', '', '', '', '', ''])
-        self.page_list_widget.setCurrentRow(0)
-
+        self.help_action = QtGui.QAction(
+            fluent_icon('ic_fluent_question_circle_24_regular'),
+            translate('OpenLP.ThemeWizard', 'Help'), self.command_bar)
+        self.export_theme_action = QtGui.QAction(
+            fluent_icon('ic_fluent_arrow_export_24_regular'),
+            translate('OpenLP.ThemeWizard', 'Export Theme'), self.command_bar)
+        self.command_bar.addAction(self.help_action)
+        self.command_bar.addAction(self.export_theme_action)
         self.button_box = create_button_box(theme_dialog, 'button_box', ['cancel', 'save'])
-        self.help_button = QtWidgets.QPushButton(theme_dialog)
-        self.help_button.setObjectName('help_button')
-        self.export_theme_button = QtWidgets.QPushButton(theme_dialog)
-        self.export_theme_button.setObjectName('export_theme_button')
         self.footer_buttons_layout = QtWidgets.QHBoxLayout()
         self.footer_buttons_layout.setObjectName('footer_buttons_layout')
         self.footer_buttons_layout.setContentsMargins(0, 0, 0, 0)
         self.footer_buttons_layout.setSpacing(8)
-        self.footer_buttons_layout.addWidget(self.help_button)
-        self.footer_buttons_layout.addWidget(self.export_theme_button)
         self.footer_buttons_layout.addStretch(1)
         self.footer_buttons_layout.addWidget(self.button_box)
-        self.dialog_layout.addLayout(self.footer_buttons_layout, 2, 0, 1, 3)
+        self.dialog_layout.addLayout(self.footer_buttons_layout, 2, 0, 1, 2)
         self.retranslate_ui(theme_dialog)
 
     def retranslate_ui(self, theme_dialog):
         """
         Translate the UI on the fly
         """
-        theme_dialog.setWindowTitle(translate('OpenLP.ThemeWizard', 'Theme Editor'))
-        self.page_list_widget.item(0).setText(translate('OpenLP.ThemeWizard', 'Background'))
-        self.page_list_widget.item(1).setText(translate('OpenLP.ThemeWizard', 'Main Text'))
-        self.page_list_widget.item(2).setText(translate('OpenLP.ThemeWizard', 'Footer Text'))
-        self.page_list_widget.item(3).setText(translate('OpenLP.ThemeWizard', 'Formatting'))
-        self.page_list_widget.item(4).setText(translate('OpenLP.ThemeWizard', 'Transitions'))
-        self.page_list_widget.item(5).setText(translate('OpenLP.ThemeWizard', 'Positions'))
-        self.preview_label.setText(translate('OpenLP.ThemeWizard', 'Preview'))
+        theme_dialog.setWindowTitle(translate('OpenLP.ThemeWizard', 'Theme Designer'))
+        self.window_title_label.setText(theme_dialog.windowTitle())
         self.layout_guide_action.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
         self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
         self.layout_guide_button.setToolTip(translate('OpenLP.ThemeWizard', 'Show layout guide'))
-        self.refresh_preview_action.setText(translate('OpenLP.ThemeWizard', 'Refresh'))
-        self.refresh_preview_button.setText(translate('OpenLP.ThemeWizard', 'Refresh'))
-        self.refresh_preview_button.setToolTip(translate('OpenLP.ThemeWizard', 'Reload preview'))
         self.play_transition_action.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setToolTip(translate('OpenLP.ThemeWizard', 'Preview transition'))
         self.theme_name_label.setText(translate('OpenLP.ThemeWizard', 'Theme name:'))
-        self.help_button.setText(translate('OpenLP.ThemeWizard', 'Help'))
-        self.export_theme_button.setText(translate('OpenLP.ThemeWizard', 'Export Theme'))
+
+    def add_property_section(self, caption, widget, expanded=False):
+        caption = translate('OpenLP.ThemeWizard', caption)
+        section = _ThemePropertySection(caption, widget, expanded)
+        self.properties_accordion.addOwnedItem(section)
+        return section
+
+    @staticmethod
+    def labelled_field(caption, widget):
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', caption))
+        label.setBuddy(widget)
+        widget.setAccessibleName(label.text())
+        widget.setMinimumWidth(0)
+        widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        layout.addWidget(label)
+        layout.addWidget(widget)
+        return container
+
+    def add_area_section(self, caption, expanded=False):
+        stack = _SelectedFontHost()
+        self.area_property_stacks.append(stack)
+        layouts = []
+        for name in ('Main text', 'Footer text'):
+            content = QtWidgets.QWidget()
+            grid = QtWidgets.QGridLayout(content)
+            grid.setContentsMargins(12, 12, 12, 12)
+            grid.setHorizontalSpacing(12)
+            grid.setVerticalSpacing(10)
+            grid.setColumnStretch(0, 1)
+            grid.setColumnStretch(1, 1)
+            label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', name))
+            label.setObjectName('selected_area_label')
+            label.setFluentTypography(fluentqt.FontRole.BodyStrong)
+            grid.addWidget(label, 0, 0, 1, 2)
+            stack.addWidget(content)
+            layouts.append(grid)
+        return self.add_property_section(caption, stack, expanded), stack, layouts

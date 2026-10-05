@@ -20,6 +20,7 @@ from openlp.core.lib.slidelayouts import layout_for_slide, master_design, slide_
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.dialogs import FileDialog
+from .textediting import visible_text, replace_visible_text
 
 
 def tr(text):
@@ -215,6 +216,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.pages = ['']
         self.page_index = 0
         self._refreshing = False
+        self._canvas_editing = False
+        self._canvas_text_context = None
         self._preview_revision = 0
         self._display_canvas_size = None
         self._capturing_preview = False
@@ -1002,10 +1005,16 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                                         after_loaded_callback=self.schedule_refresh)
                     self.display.allow_theme_transitions = False
                     self.display.allow_item_transitions = False
+                    self.display.webview.setToolTip(tr('Double-click lyrics or a text box to edit. '
+                                                       'Hold Alt while dragging to bypass snapping.'))
                     self.display.display_watcher.register_event_listener(
                         'songDesignChanged', self.canvas_changed, False)
                     self.display.display_watcher.register_event_listener(
                         'designPreviewReady', self.preview_ready, False)
+                    self.display.display_watcher.register_event_listener(
+                        'songDesignTextEditing', self.canvas_text_editing, False)
+                    self.display.display_watcher.register_event_listener(
+                        'songDesignTextChanged', self.canvas_text_changed, False)
                     self.display.show()
                     self.fit_canvas()
             finally:
@@ -1107,7 +1116,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.refresh_timer.start()
 
     def refresh(self):
-        if not self.display or not self.display._is_initialised or not self.isVisible() or self._refreshing:
+        if (not self.display or not self.display._is_initialised or not self.isVisible()
+                or self._refreshing or self._canvas_editing):
             return
         self._refreshing = True
         revision = self._preview_revision
@@ -1179,6 +1189,91 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                    else self.source_form.designer_footer()}])
         self.display.go_to_slide('designer', raise_window=False)
         self.display.run_in_display('setDesignEditor', (self.selection or '') if self.design_editable() else None)
+        self.prepare_canvas_text()
+
+    def prepare_canvas_text(self):
+        """Map this rendered page to its source, including automatic pagination and repeated lines."""
+        from .slidegrid import slide_rows
+        source = self.source_form.design_text_editor.toPlainText()
+        section = max(0, self.source_form.section_combo_box.currentIndex())
+        split = self.page_keys[self.page_index][0] if getattr(self, 'page_keys', []) else 0
+        row = next((row for row in slide_rows(source, self.source_form.design_kind)
+                    if row.section == section and row.split == split), None)
+        sources = {}
+        self._canvas_text_context = None
+        if row:
+            plain, spans = visible_text(source[row.start:row.end])
+            offset = 0
+            for index, page in enumerate(self.pages):
+                if getattr(self, 'page_keys', []) and self.page_keys[index][0] != split:
+                    continue
+                text = visible_text(page)[0].strip('\n')
+                start = plain.find(text, offset)
+                if start < 0:
+                    break
+                offset = start + len(text)
+                if index == self.page_index:
+                    sources['lyrics'] = text
+                    self._canvas_text_context = (source, text,
+                                                 [(a + row.start, b + row.start) for a, b in
+                                                  spans[start:offset]], row.start)
+                    break
+        if self.design_editable():
+            sources.update({element['id']: element.get('text', '') for element in self.design.get('elements', [])
+                            if element['kind'] == 'text'})
+        self.display.run_in_display('setDesignTextSources', sources)
+
+    def canvas_text_editing(self, editing):
+        self._canvas_editing = bool(editing)
+        if editing:
+            self.refresh_timer.stop()
+        # Chromium owns normal text undo/redo until the editing session is committed.
+        for shortcut in self.history_shortcuts:
+            shortcut.setEnabled(not editing)
+
+    def canvas_text_changed(self, value):
+        if hasattr(value, 'toVariant'):
+            value = value.toVariant()
+        self.canvas_text_editing(False)
+        if not isinstance(value, dict) or value.get('cancelled') or value.get('text') == value.get('before'):
+            return
+        identifier, text = value.get('id'), value.get('text')
+        if not isinstance(text, str):
+            return
+        if identifier == 'lyrics' and self._canvas_text_context:
+            from .slidegrid import qt_length
+            source, before, spans, empty_position = self._canvas_text_context
+            editor = self.source_form.design_text_editor
+            if source != editor.toPlainText() or before != value.get('before'):
+                self.schedule_refresh()
+                return
+            if spans:
+                updated = replace_visible_text(source, spans, before, text)
+            else:
+                import html
+                updated = source[:empty_position] + html.escape(text, quote=False) + source[empty_position:]
+            # One source edit produces one shared undo command and updates the Lyrics/Slides sidebar.
+            prefix = 0
+            while prefix < min(len(source), len(updated)) and source[prefix] == updated[prefix]:
+                prefix += 1
+            suffix = 0
+            while (suffix < min(len(source), len(updated)) - prefix
+                   and source[len(source) - suffix - 1] == updated[len(updated) - suffix - 1]):
+                suffix += 1
+            with QtCore.QSignalBlocker(editor):
+                cursor = editor.textCursor()
+                cursor.setPosition(qt_length(source[:prefix]))
+                cursor.setPosition(qt_length(source[:len(source) - suffix]), QtGui.QTextCursor.MoveMode.KeepAnchor)
+                cursor.insertText(updated[prefix:len(updated) - suffix])
+                editor.setTextCursor(cursor)
+            editor.textChanged.emit()
+        elif self.design_editable():
+            design = self.editable_design()
+            target = self.design_target(design, identifier)
+            if target and target.get('kind') == 'text' and target.get('text', '') == value.get('before'):
+                target['text'] = text
+                self.commit(design, tr('Edit text box'))
+        self.schedule_refresh()
 
     def change_page(self, delta):
         self.commit_text()
@@ -1186,6 +1281,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.switch_design_context()
 
     def load_design(self, value):
+        if self._canvas_editing and self.display and self.display._is_initialised:
+            self.display.run_in_display('finishDesignTextEdit', True, False, is_sync=True)
+        self.canvas_text_editing(False)
+        self._canvas_text_context = None
         self.text_timer.stop()
         self._pending_text = None
         self.selected = None
@@ -1547,6 +1646,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.text_timer.start()
 
     def commit_text(self):
+        if self._canvas_editing and self.display and self.display._is_initialised:
+            value = self.display.run_in_display('finishDesignTextEdit', False, False, is_sync=True)
+            self.canvas_text_changed(value)
         self.text_timer.stop()
         if self._pending_text:
             identifiers, text = self._pending_text
@@ -1686,8 +1788,14 @@ def designer_dialog_parent(owner):
 class SlideDesignerDialogMixin:
     def draft_state(self):
         """Compare persisted content, excluding selection, preview size and other view state."""
+        self.slide_designer.commit_text()
         return {'text': self.design_text_editor.toPlainText(), 'theme': self.designer_theme_name(),
                 'design': self.slide_designer.serialised_design()}
+
+    def accept(self):
+        if hasattr(self, 'slide_designer'):
+            self.slide_designer.commit_text()
+        return super().accept()
 
     def mark_saved(self):
         self._saved_draft = copy.deepcopy(self.draft_state())

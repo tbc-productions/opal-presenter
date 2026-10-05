@@ -25,9 +25,11 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
-from openlp.core.lib.theme import BackgroundType
+from openlp.core.lib.theme import BackgroundType, HorizontalType
 from openlp.core.pages.alignment import AlignmentPage, AlignmentTransitionsPage
 from openlp.core.ui.themeform import ThemeForm
 
@@ -86,8 +88,6 @@ def test_setup(settings):
     theme_form.layout_guide_button.triggered = MagicMock()
     theme_form.play_transition_button = MagicMock()
     theme_form.play_transition_button.triggered = MagicMock()
-    theme_form.page_list_widget = MagicMock()
-    theme_form.page_list_widget.currentRowChanged = MagicMock()
     theme_form.area_position_page = MagicMock()
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
@@ -103,7 +103,6 @@ def test_setup(settings):
     theme_form.layout_guide_button.triggered.connect.assert_called_once_with(
         theme_form.on_toggle_layout_guide_clicked)
     theme_form.play_transition_button.triggered.connect.assert_called_once_with(theme_form.preview_transition)
-    theme_form.page_list_widget.currentRowChanged.connect.assert_called_once_with(theme_form.on_current_id_changed)
     theme_form.main_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.line_spacing_changed.connect.assert_called_once_with(theme_form.calculate_lines)
@@ -155,7 +154,6 @@ def test_set_defaults(mocked_setup, settings):
     """
     # GIVEN: A ThemeForm instance with mocked methods
     theme_form = ThemeForm(None)
-    theme_form.page_list_widget = MagicMock()
     theme_form.set_background_page_values = MagicMock()
     theme_form.set_main_area_page_values = MagicMock()
     theme_form.set_footer_area_page_values = MagicMock()
@@ -168,7 +166,6 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_defaults()
 
     # THEN: all the mocks are called
-    theme_form.page_list_widget.setCurrentRow.assert_called_once_with(0)
     theme_form.set_background_page_values.assert_called_once()
     theme_form.set_main_area_page_values.assert_called_once()
     theme_form.set_footer_area_page_values.assert_called_once()
@@ -178,7 +175,7 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_preview_page_values.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.QDialog.exec')
+@patch('openlp.core.ui.themeform.ThemeForm._exec_window')
 @patch('openlp.core.ui.themeform.ScreenList')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, mocked_dialog_exec, settings):
@@ -250,7 +247,7 @@ def test_update_lines_text(mocked_setup, settings):
     theme_form.main_line_count_label.setText.assert_called_once_with('(approximately 10 lines per slide)')
 
 
-@patch('openlp.core.ui.themeform.QDialog.resizeEvent')
+@patch('openlp.core.ui.themeform.FluentWindow.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -275,7 +272,7 @@ def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, setting
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.QDialog.resizeEvent')
+@patch('openlp.core.ui.themeform.FluentWindow.resizeEvent')
 @patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
@@ -300,7 +297,7 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.QDialog.exec', return_value=0)
+@patch('openlp.core.ui.themeform.ThemeForm._exec_window', return_value=0)
 @patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_shot, mocked_dialog_exec, settings):
@@ -401,7 +398,6 @@ def test_validate_current_page_with_image(mocked_setup, mocked_is_not_image_file
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock(background_type=BackgroundType.to_string(BackgroundType.Image),
                                            image_path=Path('picture.jpg'))
-    theme_form.page_stack = MagicMock(**{'currentWidget.return_value': theme_form.background_page})
     mocked_is_not_image_file.return_value = True
 
     # WHEN: validateCurrentPage() is called
@@ -422,32 +418,12 @@ def test_validate_current_page(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.background_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'currentWidget.return_value': MagicMock()})
 
     # WHEN: validateCurrentPage() is called
     result = theme_form.validateCurrentPage()
 
     # THEN: The right methods were called, and the result is False
     assert result is True
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_on_current_id_changed_preview(mocked_setup, settings):
-    """
-    Test the on_current_id_changed() method
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.area_position_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'count.return_value': 5, 'currentWidget.return_value': theme_form.area_position_page})
-    theme_form.refresh_preview = MagicMock()
-
-    # WHEN: on_current_id_changed() is called
-    theme_form.on_current_id_changed(1)
-
-    # THEN: The right options should have been set
-    theme_form.page_stack.setCurrentIndex.assert_called_once_with(1)
-    theme_form.refresh_preview.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
@@ -489,106 +465,6 @@ def test_on_shadow_toggled(mocked_setup, settings):
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_initialise_page_background(mocked_setup, settings):
-    """
-    Test the initializePage() method with the background page
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.background_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.background_page})
-    theme_form.set_background_page_values = MagicMock()
-
-    # WHEN: on_shadow_toggled is called
-    theme_form.initializePage(0)
-
-    # THEN: Everything is working right
-    theme_form.set_background_page_values.assert_called_once()
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_initialise_page_main_area(mocked_setup, settings):
-    """
-    Test the initializePage() method with the main_area page
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.background_page = MagicMock()
-    theme_form.main_area_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.main_area_page})
-    theme_form.set_main_area_page_values = MagicMock()
-
-    # WHEN: on_shadow_toggled is called
-    theme_form.initializePage(0)
-
-    # THEN: Everything is working right
-    theme_form.set_main_area_page_values.assert_called_once()
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_initialise_page_footer_area(mocked_setup, settings):
-    """
-    Test the initializePage() method with the footer_area page
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.background_page = MagicMock()
-    theme_form.main_area_page = MagicMock()
-    theme_form.footer_area_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.footer_area_page})
-    theme_form.set_footer_area_page_values = MagicMock()
-
-    # WHEN: on_shadow_toggled is called
-    theme_form.initializePage(0)
-
-    # THEN: Everything is working right
-    theme_form.set_footer_area_page_values.assert_called_once()
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_initialise_page_alignment(mocked_setup, settings):
-    """
-    Test the initializePage() method with the alignment page
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.background_page = MagicMock()
-    theme_form.main_area_page = MagicMock()
-    theme_form.footer_area_page = MagicMock()
-    theme_form.alignment_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.alignment_page})
-    theme_form.set_alignment_page_values = MagicMock()
-
-    # WHEN: on_shadow_toggled is called
-    theme_form.initializePage(0)
-
-    # THEN: Everything is working right
-    theme_form.set_alignment_page_values.assert_called_once()
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-def test_initialise_page_area_position(mocked_setup, settings):
-    """
-    Test the initializePage() method with the area_position page
-    """
-    # GIVEN: An instance of ThemeForm with some mocks
-    theme_form = ThemeForm(None)
-    theme_form.background_page = MagicMock()
-    theme_form.main_area_page = MagicMock()
-    theme_form.footer_area_page = MagicMock()
-    theme_form.alignment_page = MagicMock()
-    theme_form.area_position_page = MagicMock()
-    theme_form.page_stack = MagicMock(**{'widget.return_value': theme_form.area_position_page})
-    theme_form.set_position_page_values = MagicMock()
-
-    # WHEN: on_shadow_toggled is called
-    theme_form.initializePage(0)
-
-    # THEN: Everything is working right
-    theme_form.set_position_page_values.assert_called_once()
-
-
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
 def test_update_theme_static(mocked_setup, settings):
     """
     Test that the update_theme() method correctly sets all the "static" theme variables
@@ -608,7 +484,8 @@ def test_update_theme_static(mocked_setup, settings):
                                             is_outline_enabled=True, outline_color='#0f0', outline_size=2,
                                             is_shadow_enabled=True, shadow_color='#222', shadow_size=4,
                                             shadow_blur=2)
-    theme_form.alignment_page = MagicMock(horizontal_align='left', vertical_align='top', is_transition_enabled=True,
+    theme_form.alignment_page = MagicMock(horizontal_align='left', vertical_align='top',
+                                          is_transition_enabled=True,
                                           transition_type='fade', transition_speed='normal',
                                           transition_direction='horizontal', is_transition_reverse_enabled=False)
     theme_form.area_position_page = MagicMock(use_main_default_location=True, use_footer_default_location=True)
@@ -723,7 +600,8 @@ def test_set_transition_page_values_updates_play_button_visibility(mocked_setup,
     theme_form.theme = MagicMock(display_horizontal_align='left', display_vertical_align='top',
                                  display_horizontal_align_footer='left', display_vertical_align_footer='top',
                                  display_slide_transition=True, display_slide_transition_type='slide',
-                                 display_slide_transition_speed='normal', display_slide_transition_direction='horizontal',
+                                 display_slide_transition_speed='normal',
+                                 display_slide_transition_direction='horizontal',
                                  display_slide_transition_reverse=False)
     theme_form.alignment_page = MagicMock()
     theme_form.transitions_page = MagicMock()
@@ -837,3 +715,297 @@ def test_update_theme_cannot_update(mocked_setup, settings):
 
     # THEN: The theme should be correct
     # TODO: Figure out a way to check this
+
+
+@pytest.fixture
+def interactive_theme_form(settings):
+    """Exercise real property widgets and native chrome without starting WebEngine."""
+    from PySide6 import QtWidgets
+    from openlp.core.lib.theme import Theme
+
+    renderer = MagicMock()
+    renderer.width.return_value = 1920
+    renderer.height.return_value = 1080
+    Registry().register('renderer', renderer)
+    Registry().register('theme_manager', MagicMock())
+    display = QtWidgets.QWidget()
+    for name in ('run_in_display', 'set_theme', 'set_scale', 'generate_preview', 'clear_slides', 'save_screenshot'):
+        setattr(display, name, MagicMock())
+    with patch('openlp.core.ui.themewizard.ThemeDesignerPreview', return_value=display) as preview_constructor:
+        form = ThemeForm(None)
+    preview_constructor.assert_called_once_with(form, window_title='Theme Designer Preview',
+                                                embedded=True, can_show_startup_screen=False)
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        form.theme = Theme()
+    form.theme.theme_name = 'Sunday'
+    form.theme.font_main_override = True
+    form.theme.font_footer_override = True
+    for area, rect in (('main', (100, 100, 600, 300)), ('footer', (100, 900, 600, 100))):
+        for field, value in zip(('x', 'y', 'width', 'height'), rect):
+            setattr(form.theme, f'font_{area}_{field}', value)
+    form.can_update_theme = False
+    form.set_defaults()
+    form.can_update_theme = True
+    form.edit_mode = True
+    form.update_area_overlay()
+    yield form
+    form.reject()
+    form.deleteLater()
+
+
+def test_native_theme_layout_keeps_properties_on_right(interactive_theme_form):
+    import fluentqt
+    form = interactive_theme_form
+    assert isinstance(form, fluentqt.Window)
+    assert form.splitter.widget(0) is form.preview_panel
+    assert form.splitter.widget(1) is form.editor_widget
+    assert not form.splitter.childrenCollapsible()
+    assert form.typography_section.headerText() == 'Typography'
+    assert form.position_section.headerText() == 'Position'
+    assert form.maximumHeight() > 900
+    assert form.align_button.menu().actions()
+
+
+@pytest.mark.parametrize('area', ['main', 'footer'])
+@pytest.mark.parametrize('operation, expected', [
+    ('left', (0, 100)), ('center', (660, 100)), ('right', (1320, 100)),
+    ('top', (100, 0)), ('middle', (100, 390)), ('bottom', (100, 780))])
+def test_align_area_updates_position_fields_and_saved_theme(interactive_theme_form, area, operation, expected):
+    form = interactive_theme_form
+    # Both areas start at the same bounds for these alignment checks.
+    rect = QtCore.QRect(100, 100, 600, 300)
+    form.on_area_geometry_changed(area, rect)
+    form.area_overlay.select_area(area)
+    form.align_area(operation)
+    assert (getattr(form.theme, f'font_{area}_x'), getattr(form.theme, f'font_{area}_y')) == expected
+    assert getattr(form.theme, f'font_{area}_override') is True
+    assert getattr(form.area_position_page, f'{area}_width') == 600
+    assert getattr(form.area_position_page, f'{area}_height') == 300
+    assert getattr(form.area_position_page, f'use_{area}_default_location') is False
+    assert not form.area_preview_timer.isActive()
+    form.accept()
+    Registry().get('theme_manager').save_theme.assert_called_once_with(form.theme)
+    assert form.result() == QtWidgets.QDialog.DialogCode.Accepted
+
+
+def test_canvas_gesture_turns_default_area_into_custom_geometry(interactive_theme_form):
+    form = interactive_theme_form
+    form.can_update_theme = False
+    form.area_position_page.use_main_default_location = True
+    form.can_update_theme = True
+    form.on_area_geometry_changed('main', QtCore.QRect(450, 200, 800, 450))
+    assert not form.area_position_page.use_main_default_location
+    assert form.area_position_page.main_x == 450
+    assert form.theme.font_main_override
+    assert form.theme.font_main_width == 800
+    assert form.area_preview_timer.isActive()
+    form.on_area_gesture_finished()
+    Registry().get('theme_manager').generate_image.assert_called_once_with(form.theme, True)
+    assert form.area_overlay.areas['main'] == QtCore.QRectF(450, 200, 800, 450)
+
+
+def test_theme_window_close_releases_modal_loop(interactive_theme_form):
+    form = interactive_theme_form
+    finished = []
+    form.finished.connect(finished.append)
+    QtCore.QTimer.singleShot(0, form.close)
+    assert form._exec_window() == QtWidgets.QDialog.DialogCode.Rejected
+    assert finished == [QtWidgets.QDialog.DialogCode.Rejected]
+    assert form._event_loop is None
+    assert not form.isVisible()
+
+
+def test_embedded_theme_preview_capture_excludes_handles():
+    from openlp.core.ui.themewizard import ThemeDesignerPreview
+    preview = MagicMock()
+    screenshot = ThemeDesignerPreview.save_screenshot(preview)
+    assert screenshot is preview.webview.grab.return_value
+    preview.grab.assert_not_called()
+    preview.setGeometry.assert_not_called()
+    preview.hide.assert_not_called()
+
+
+@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+def test_initial_theme_refresh_waits_for_webengine(mocked_timer, mocked_setup, settings):
+    form = ThemeForm(None)
+    form._initial_preview_refresh_pending = True
+    form.preview_box = MagicMock(is_initialised=False)
+    form.refresh_preview = MagicMock()
+    form._refresh_preview_when_ready()
+    form.refresh_preview.assert_not_called()
+    mocked_timer.assert_called_once_with(25, form._refresh_preview_when_ready)
+
+
+def test_theme_window_restores_painting_on_open(interactive_theme_form):
+    """A preconstructed window must recover the update state inherited from its dock."""
+    form = interactive_theme_form
+    form.setUpdatesEnabled(False)
+    assert not form.content_widget.updatesEnabled()
+    observed = []
+
+    def dismiss():
+        observed.append((form.updatesEnabled(), form.content_widget.updatesEnabled(),
+                         form.theme_name_edit.updatesEnabled(), form.preview_box.updatesEnabled()))
+        form.reject()
+
+    QtCore.QTimer.singleShot(0, dismiss)
+    assert form._exec_window() == QtWidgets.QDialog.DialogCode.Rejected
+    assert observed == [(True, True, True, True)]
+
+
+def test_theme_commands_share_top_command_bar(interactive_theme_form):
+    form = interactive_theme_form
+    groups = form.command_bar._command_groups
+    assert len(groups) == 1
+    assert groups[0].primaryActions() == [form.layout_guide_action, form.play_transition_action,
+                                          form.help_action, form.export_theme_action]
+    assert not form.help_action.icon().isNull()
+    assert not form.export_theme_action.icon().isNull()
+    assert form.area_overlay.snapping
+    assert not hasattr(form, 'snap_action')
+    assert not hasattr(form, 'area_selector')
+    assert not hasattr(form, 'refresh_preview_action')
+
+
+def test_preview_selection_controls_typography_and_position(interactive_theme_form):
+    form = interactive_theme_form
+    form.area_overlay.select_area('footer')
+    assert form.typography_stack.currentWidget().isAncestorOf(form.footer_area_page.font_name_combobox)
+    assert form.position_stack.currentWidget().isAncestorOf(form.area_position_page.footer_x_spin_box)
+    assert form.spacing_stack.currentWidget().isAncestorOf(form.alignment_page.footer_horizontal_combo_box)
+    form.footer_area_page.font_size = 32
+    form.alignment_page.horizontal_align_footer = 'right'
+    form.area_position_page.footer_x = 240
+    assert form.theme.font_footer_size == 32
+    assert form.theme.display_horizontal_align_footer == HorizontalType.Right
+    assert form.theme.font_footer_x == 240
+    assert form.theme.font_main_x == 100
+    form.area_overlay.select_area('main')
+    assert form.typography_stack.currentWidget().isAncestorOf(form.main_area_page.font_name_combobox)
+    assert form.position_stack.currentWidget().isAncestorOf(form.area_position_page.main_x_spin_box)
+    form.main_area_page.font_size = 54
+    assert form.theme.font_main_size == 54
+    assert form.theme.font_footer_size == 32
+    form.area_overlay.select_area('footer')
+    assert form.footer_area_page.font_size == 32
+
+
+def test_preview_aspect_ratio_preserves_theme_and_maps_gestures(interactive_theme_form):
+    form = interactive_theme_form
+    form.canvas_combo.setCurrentIndex(3)  # 4:3 at 1440 x 1080
+    preview = form.preview_box.generate_preview.call_args.args[0]
+    assert (preview.display_size_width, preview.display_size_height) == (1440, 1080)
+    assert preview.font_main_x == 75
+    assert preview.font_main_width == 450
+    assert form.theme.font_main_x == 100
+    assert form.theme.font_main_width == 600
+    assert form.area_overlay.canvas_size == QtCore.QSize(1440, 1080)
+    assert form.area_overlay.areas['main'] == QtCore.QRectF(75, 100, 450, 300)
+    form.on_area_geometry_changed('main', QtCore.QRect(150, 200, 600, 400))
+    form.on_area_gesture_finished()
+    assert form.theme.font_main_x == 200
+    assert form.theme.font_main_width == 800
+    form.canvas_combo.setCurrentIndex(0)
+    assert form.area_overlay.areas['main'] == QtCore.QRectF(200, 200, 800, 400)
+
+
+def test_saving_alternate_preview_uses_output_thumbnail(interactive_theme_form):
+    form = interactive_theme_form
+    form.canvas_combo.setCurrentIndex(3)
+    form.accept()
+    manager = Registry().get('theme_manager')
+    manager.generate_image.assert_called_with(form.theme)
+    manager.save_preview.assert_called_once_with('Sunday', manager.generate_image.return_value)
+    assert form.theme.font_main_width == 600
+
+
+def test_selected_font_weight_survives_save_and_reload(interactive_theme_form):
+    from openlp.core.lib.theme import Theme
+    form = interactive_theme_form
+    page = form.footer_area_page
+    with patch.object(page, 'supported_weights', return_value=[300, 400, 500, 600, 700]):
+        page._populate_font_weights()
+    form.area_overlay.select_area('footer')
+    page.font_weight_combo.setCurrentIndex(3)
+    assert form.theme.font_footer_weight == 600
+    assert form.theme.font_main_weight == 400
+    assert form.preview_box.generate_preview.call_args.args[0].font_footer_weight == 600
+    form.accept()
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        restored = Theme()
+        restored.load_theme(form.theme.export_theme())
+    form.theme = restored
+    form.can_update_theme = False
+    form.set_defaults()
+    assert page.font_weight == 600
+    assert page.font_weight_combo.currentData() == 600
+
+
+def test_drawers_follow_selection_with_consistent_content_insets(interactive_theme_form):
+    form = interactive_theme_form
+    for area in ('main', 'footer'):
+        form.area_overlay.select_area(area)
+        for stack in form.area_property_stacks:
+            content = stack.currentWidget()
+            grid = content.layout()
+            assert grid.contentsMargins() == QtCore.QMargins(12, 12, 12, 12)
+            assert grid.itemAtPosition(0, 0).widget().text() == ('Main text' if area == 'main' else 'Footer text')
+        assert form.effects_stack.currentWidget().isAncestorOf(getattr(form, f'{area}_area_page').outline_groupbox)
+    assert form.theme_name_edit.maximumWidth() == 320
+
+
+def test_expanded_background_resizes_for_gradient_controls(interactive_theme_form):
+    from PySide6 import QtTest
+    form = interactive_theme_form
+    form.show()
+    form.background_section.setExpanded(True)
+    QtTest.QTest.qWait(300)
+    form.background_page.background_type = 'gradient'
+    QtTest.QTest.qWait(300)
+    page = form.background_page
+    assert page.gradient_start_button.height() >= page.gradient_start_button.sizeHint().height()
+    assert page.gradient_end_label.y() >= page.gradient_start_button.geometry().bottom()
+    assert page.height() >= page.minimumSizeHint().height()
+    assert form.background_section.height() >= page.height() + 40
+
+
+def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_theme_form):
+    from PySide6 import QtTest
+    form = interactive_theme_form
+    form.can_update_theme = False
+    form.resize(1100, 650)
+    form.show()
+    sections = [form.background_section, form.position_section, form.typography_section,
+                form.spacing_section, form.effects_section, form.transitions_section]
+    for section in sections:
+        section.setExpanded(True)
+    QtTest.QTest.qWait(350)
+    heights = {}
+    for background in ('solid', 'gradient', 'image', 'video', 'stream', 'transparent', 'gradient', 'solid'):
+        form.background_page.background_type = background
+        form.area_overlay.select_area('footer' if background == 'gradient' else 'main')
+        form.transitions_page.is_transition_enabled = True
+        form.transitions_page.transition_type = 'fade' if background == 'solid' else 'slide'
+        QtTest.QTest.qWait(60)
+        for section in sections:
+            content = section.contentWidget()
+            assert not section._height_timer.isActive(), section.headerText()
+            assert content.height() >= content.minimumSizeHint().height(), section.headerText()
+            assert content.parentWidget().height() >= content.height(), section.headerText()
+            assert section.height() >= content.mapTo(section, QtCore.QPoint()).y() + content.height()
+        for first, second in zip(sections, sections[1:]):
+            assert first.geometry().bottom() < second.y()
+        assert form.sidebar_scroll.verticalScrollBar().maximum() > 0
+        heights[background] = form.background_section.height()
+    assert heights['gradient'] > heights['solid'] > heights['transparent']
+    assert form.background_page.background_label.isHidden()
+    assert form.background_page.background_type_group_box.isHidden()
+    form.background_section.setExpanded(False)
+    QtTest.QTest.qWait(300)
+    form.background_page.background_type = 'gradient'
+    form.background_section.setExpanded(True)
+    QtTest.QTest.qWait(300)
+    assert form.background_section.height() == heights['gradient']

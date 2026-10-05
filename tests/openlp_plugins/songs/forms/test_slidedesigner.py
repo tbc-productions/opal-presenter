@@ -67,6 +67,73 @@ def test_drag_gesture_is_one_undo_and_does_not_change_input(designer):
     assert designer.design['lyrics'] == {'width': 80}
 
 
+def test_canvas_text_box_edit_is_one_undo_and_flushes_before_save(designer):
+    designer.add_element('text')
+    identifier = designer.selected
+    designer.display = MagicMock(_is_initialised=True)
+    designer.canvas_text_editing(True)
+    designer.display.run_in_display.return_value = {
+        'id': identifier, 'before': 'Text box', 'text': 'Direct edit\nSecond line'}
+    saved = slide_design(designer.serialised_design(), designer.footer_key())
+    assert saved['elements'][0]['text'] == 'Direct edit\nSecond line'
+    assert designer.text.toPlainText() == 'Direct edit\nSecond line'
+    assert not designer._canvas_editing
+    designer.undo_stack.undo()
+    assert designer.design['elements'][0]['text'] == 'Text box'
+    designer.undo_stack.redo()
+    assert designer.design['elements'][0]['text'] == 'Direct edit\nSecond line'
+
+
+def test_canvas_lyrics_edit_preserves_other_pages_tags_and_undo(designer, settings):
+    from openlp.plugins.songs.songsplugin import song_footer
+    settings.extend_default_settings(song_footer)
+    form = designer.source_form
+    source = '---[Verse:1]---\n{st}Repeat 😀\nRepeat 😀{/st}\n[--}{--]\nNext slide\n---[Chorus:1]---\nChorus'
+    form.verse_text_edit.setPlainText(source)
+    form.designer_select_section(0)
+    form.slide_grid.record_history = True
+    designer.undo_stack.clear()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['{st}Repeat 😀{/st}', '{st}Repeat 😀{/st}', 'Next slide']
+    designer.page_keys = [(0, 0), (0, 1), (1, 0)]
+    designer.page_index = 1
+    designer.prepare_canvas_text()
+    designer.display.run_in_display.assert_called_with('setDesignTextSources', {'lyrics': 'Repeat 😀'})
+    designer.canvas_text_changed({'id': 'lyrics', 'before': 'Repeat 😀', 'text': 'Changed 😀\nNew line'})
+    expected = source.replace('Repeat 😀{/st}', 'Changed 😀\nNew line{/st}')
+    assert form.verse_text_edit.toPlainText() == expected
+    assert designer.undo_stack.count() == 1
+    designer.undo_stack.undo()
+    assert form.verse_text_edit.toPlainText() == source
+    designer.undo_stack.redo()
+    assert form.verse_text_edit.toPlainText() == expected
+
+
+def test_canvas_lyrics_edit_rejects_stale_source_and_cancel(designer):
+    form = designer.source_form
+    form.verse_text_edit.setPlainText('Before')
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['Before']
+    designer.prepare_canvas_text()
+    designer.canvas_text_changed({'id': 'lyrics', 'before': 'Before', 'text': 'Cancelled', 'cancelled': True})
+    assert form.verse_text_edit.toPlainText() == 'Before'
+    form.verse_text_edit.setPlainText('Sidebar edit')
+    designer.canvas_text_changed({'id': 'lyrics', 'before': 'Before', 'text': 'Stale edit'})
+    assert form.verse_text_edit.toPlainText() == 'Sidebar edit'
+
+
+def test_canvas_can_edit_empty_lyrics_in_theme_layout(designer):
+    form = designer.source_form
+    form.verse_text_edit.setPlainText('')
+    designer.load_design({})
+    assert not designer.design_editable()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['']
+    designer.prepare_canvas_text()
+    designer.canvas_text_changed({'id': 'lyrics', 'before': '', 'text': 'New lyrics'})
+    assert form.verse_text_edit.toPlainText() == 'New lyrics'
+
+
 def test_save_flushes_pending_text_and_song_switch_clears_it(designer):
     designer.add_element('text')
     designer.text.setPlainText('Final unsaved keystrokes')
@@ -140,7 +207,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
     assert designer.display is renderer
     assert not designer._creating_display
     renderer.show.assert_called_once()
-    assert renderer.display_watcher.register_event_listener.call_count == 2
+    assert renderer.display_watcher.register_event_listener.call_count == 4
 
 
 def test_preview_creation_can_retry_after_failure(designer):

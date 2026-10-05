@@ -983,6 +983,20 @@ describe("Display.setTextSlides", function () {
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
+  it("should render numeric theme weights for main text and footer", function () {
+    Display.setTheme({font_main_weight: 500, font_footer_weight: 800, font_main_bold: true});
+    Display.setTextSlides([textSlides[0]]);
+    expect(document.querySelector('.slide-text-content').style.fontWeight).toEqual('500');
+    expect(document.querySelector('.footer').style.fontWeight).toEqual('800');
+  });
+
+  it("should preserve bold settings for legacy themes without weights", function () {
+    Display.setTheme({font_main_weight: 0, font_main_bold: true, font_footer_bold: false});
+    Display.setTextSlides([textSlides[0]]);
+    expect(document.querySelector('.slide-text-content').style.fontWeight).toEqual('bold');
+    expect(document.querySelector('.footer').style.fontWeight).toEqual('normal');
+  });
+
   it("should correctly set outline width", function () {
     const slides = [textSlides[0]];
     const theme = {

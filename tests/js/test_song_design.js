@@ -20,7 +20,10 @@ describe('Portable slide designs', function () {
   var host, slide, text, originalDispatch;
   beforeEach(function () {
     originalDispatch = displayWatcher.dispatchEvent;
+    displayWatcher.dispatchEvent = function () {};
     Display._designSelection = [];
+    Display._designTextSources = {};
+    Display._lastDesignClick = null;
     host = document.createElement('div');
     host.style.cssText = 'position:fixed;left:0;top:0;width:1000px;height:600px';
     document.body.appendChild(host);
@@ -42,12 +45,120 @@ describe('Portable slide designs', function () {
     }};
   });
   afterEach(function () {
+    Display.finishDesignTextEdit(true, false);
+    Display._designTextSources = {};
     host.remove();
     displayWatcher.dispatchEvent = originalDispatch;
     Display._designEditor = false;
     Display._designSelected = null;
     Display._designSelection = [];
     Display._theme = null;
+  });
+  it('edits text in place without dragging, commits once, and restores the rendered markup', function () {
+    Display._applySongDesign(slide);
+    Display.setDesignEditor('lyrics');
+    Display.setDesignTextSources({lyrics: 'Lyrics'});
+    var events = [];
+    displayWatcher.dispatchEvent = (name, value) => events.push({name, value});
+    text.dispatchEvent(new MouseEvent('dblclick', {bubbles: true}));
+    expect(text.contentEditable).toBe('plaintext-only');
+    expect(text.style.userSelect).toBe('text');
+    expect(slide.querySelector('.design-selection-outline')).toBe(null);
+    var pointer = new PointerEvent('pointerdown', {bubbles: true, cancelable: true});
+    text.dispatchEvent(pointer);
+    expect(pointer.defaultPrevented).toBe(false);
+    text.textContent = 'New lyrics\nAnother line <script>';
+    Display.setDesignEditor('lyrics');
+    expect(text.textContent).toBe('New lyrics\nAnother line <script>');
+    text.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', ctrlKey: true, bubbles: true}));
+    expect(events[events.length - 1]).toEqual({name: 'songDesignTextChanged', value: {
+      id: 'lyrics', before: 'Lyrics', text: 'New lyrics\nAnother line <script>', cancelled: false}});
+    expect(text.hasAttribute('contenteditable')).toBe(false);
+    expect(text.textContent).toBe('Lyrics');
+    expect(Display.finishDesignTextEdit(false)).toBe(null);
+  });
+  it('allows lyrics editing with a locked theme layout and cancels on Escape', function () {
+    Display._applySongDesign(slide);
+    Display.setDesignEditor(null);
+    Display.setDesignTextSources({lyrics: 'Lyrics'});
+    expect(text.onpointerdown).toBe(null);
+    text.dispatchEvent(new MouseEvent('dblclick'));
+    text.textContent = 'Discard';
+    var received;
+    displayWatcher.dispatchEvent = (name, value) => { received = value; };
+    text.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
+    expect(received.cancelled).toBe(true);
+    expect(text.textContent).toBe('Lyrics');
+  });
+  it('edits text boxes and returns the pending text synchronously for saving', function () {
+    Display._applySongDesign(slide);
+    Display.setDesignEditor('caption');
+    Display.setDesignTextSources({caption: '<script>unsafe</script>'});
+    var caption = slide.querySelector('[data-design-id="caption"]');
+    caption.dispatchEvent(new MouseEvent('dblclick'));
+    expect(caption.querySelector('script')).toBe(null);
+    caption.textContent = 'Caption';
+    expect(Display.finishDesignTextEdit(false, false).text).toBe('Caption');
+    expect(caption.hasAttribute('contenteditable')).toBe(false);
+  });
+  it('retains inline formatting while editing and restores it on cancellation', function () {
+    text.innerHTML = '<p><strong>Lyrics</strong></p>';
+    Display._applySongDesign(slide);
+    Display.setDesignTextSources({lyrics: 'Lyrics'});
+    text.dispatchEvent(new MouseEvent('dblclick'));
+    expect(text.querySelector('strong')).not.toBe(null);
+    text.querySelector('strong').textContent = 'Changed';
+    Display.finishDesignTextEdit(true, false);
+    expect(text.innerHTML).toBe('<p><strong>Lyrics</strong></p>');
+  });
+  it('recognises two clicks even when pointer capture suppresses the native double-click', function () {
+    Display._applySongDesign(slide);
+    Display.setDesignEditor('lyrics');
+    Display.setDesignTextSources({lyrics: 'Lyrics'});
+    text.setPointerCapture = function () {};
+    text.dispatchEvent(new PointerEvent('pointerdown', {button: 0, clientX: 100, clientY: 100}));
+    text.onpointerup();
+    text.dispatchEvent(new PointerEvent('pointerdown', {button: 0, clientX: 100, clientY: 100}));
+    expect(text.contentEditable).toBe('plaintext-only');
+    expect(Display._designTextEdit.id).toBe('lyrics');
+  });
+  it('snaps a group to the slide centre without changing its spacing and cleans up guides', function () {
+    Display._applySongDesign(slide);
+    var starts = {lyrics: {x: 10, y: 10, width: 40, height: 30},
+      shape: {x: 5, y: 10, width: 80, height: 70}};
+    var changed = {lyrics: {x: 14.6, y: 10, width: 40, height: 30},
+      shape: {x: 9.6, y: 10, width: 80, height: 70}};
+    Display._snapDesignGeometry(slide, changed, starts, false, 'lyrics', false);
+    expect(changed.shape.x).toBeCloseTo(10);
+    expect(changed.lyrics.x - changed.shape.x).toBeCloseTo(5);
+    expect(slide.querySelectorAll('.design-snap-guide').length).toBeGreaterThan(0);
+    Display._snapDesignGeometry(slide, changed, starts, false, 'lyrics', true);
+    expect(slide.querySelector('.design-snap-guide')).toBe(null);
+  });
+  it('snaps resize edges to other objects without moving the opposite edge', function () {
+    Display._applySongDesign(slide);
+    var starts = {lyrics: {x: 10, y: 10, width: 40, height: 30}};
+    var changed = {lyrics: {x: 10, y: 10, width: 74.6, height: 30}};
+    Display._snapDesignGeometry(slide, changed, starts, 'e', 'lyrics', false);
+    expect(changed.lyrics.x).toBe(10);
+    expect(changed.lyrics.width).toBeCloseTo(75);
+    changed.lyrics = {x: 5.4, y: 10, width: 44.6, height: 30};
+    Display._snapDesignGeometry(slide, changed, starts, 'w', 'lyrics', false);
+    expect(changed.lyrics.x).toBeCloseTo(5);
+    expect(changed.lyrics.width).toBeCloseTo(45);
+  });
+  it('uses preview pixel tolerance and lets Alt temporarily bypass snapping', function () {
+    Display._applySongDesign(slide);
+    var starts = {lyrics: {x: 10, y: 10, width: 40, height: 30}};
+    var changed = {lyrics: {x: 30.8, y: 10, width: 40, height: 30}};
+    Display._snapDesignGeometry(slide, changed, starts, false, 'lyrics', false);
+    expect(changed.lyrics.x).toBeCloseTo(30.8);
+    host.style.width = '500px';
+    Display._snapDesignGeometry(slide, changed, starts, false, 'lyrics', false);
+    expect(changed.lyrics.x).toBeCloseTo(30);
+    changed.lyrics.x = 30.8;
+    Display._snapDesignGeometry(slide, changed, starts, false, 'lyrics', true);
+    expect(changed.lyrics.x).toBeCloseTo(30.8);
   });
   it('renders shapes and plain text as children of the slide for normal blanking and transitions', function () {
     Display._applySongDesign(slide);

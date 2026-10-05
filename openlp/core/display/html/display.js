@@ -2174,6 +2174,67 @@ var Display = {
     document.querySelectorAll('.text-slide').forEach(Display._bindDesignEditor);
   },
 
+  /** Plain source text for the current designer page; never enabled on a live display. */
+  setDesignTextSources: function (sources) {
+    Display._designTextSources = sources;
+    document.querySelectorAll('.text-slide').forEach(Display._bindDesignEditor);
+  },
+
+  _startDesignTextEdit: function (event, node) {
+    event.stopPropagation();
+    if (Display._designTextEdit) return;
+    var source = (Display._designTextSources || {})[node.dataset.designId];
+    if (typeof source !== 'string') return;
+    var target = node.querySelector('p') || node;
+    Display._designTextEdit = {node, target, html: target.innerHTML, style: target.getAttribute('style'),
+      id: node.dataset.designId, before: source};
+    node.parentElement.querySelectorAll('.design-selection-outline').forEach(outline => outline.remove());
+    // Retain inline formatting whenever the rendered text matches the editable source.
+    // Transformed text (for example uppercase lyrics) is edited in its original case.
+    if (target.innerText !== source) target.textContent = source;
+    target.contentEditable = 'plaintext-only';
+    target.style.whiteSpace = 'pre-wrap';
+    target.style.minHeight = '1em';
+    node.style.userSelect = 'text';
+    node.style.cursor = 'text';
+    node.onpointerdown = pointer => pointer.stopPropagation();
+    target.onkeydown = key => {
+      key.stopPropagation();
+      if (key.key === 'Escape' || (key.key === 'Enter' && (key.ctrlKey || key.metaKey))) {
+        key.preventDefault();
+        Display.finishDesignTextEdit(key.key === 'Escape');
+      }
+    };
+    target.onblur = () => Display.finishDesignTextEdit(false);
+    window.addEventListener('blur', target.onblur);
+    target.focus();
+    var caret = document.caretRangeFromPoint(event.clientX, event.clientY);
+    if (caret && target.contains(caret.startContainer)) {
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(caret);
+    }
+    displayWatcher.dispatchEvent('songDesignTextEditing', true);
+  },
+
+  /** Also called synchronously by Qt before saving or switching pages. */
+  finishDesignTextEdit: function (cancelled, notify = true) {
+    var edit = Display._designTextEdit;
+    if (!edit) return null;
+    Display._designTextEdit = null;
+    var result = {id: edit.id, text: cancelled ? edit.before : edit.target.innerText,
+      before: edit.before, cancelled: !!cancelled};
+    window.removeEventListener('blur', edit.target.onblur);
+    edit.target.onblur = null;
+    edit.target.onkeydown = null;
+    edit.target.removeAttribute('contenteditable');
+    edit.target.innerHTML = edit.html;
+    if (edit.style === null) edit.target.removeAttribute('style');
+    else edit.target.setAttribute('style', edit.style);
+    Display._bindDesignEditor(edit.node.parentElement);
+    if (notify) displayWatcher.dispatchEvent('songDesignTextChanged', result);
+    return result;
+  },
+
   _bindDesignEditor: function (slide) {
     slide.onpointerdown = Display._designEditor ? event => {
       if (event.button !== 0) return;
@@ -2186,10 +2247,13 @@ var Display = {
     var zoom = slide.getBoundingClientRect().width / slide.offsetWidth || 1;
     var handleSize = 8 / zoom, borderSize = 1 / zoom;
     slide.querySelectorAll('[data-design-id]').forEach(node => {
+      if (Display._designTextEdit && Display._designTextEdit.node === node) return;
       node.style.outline = '';
       node.style.cursor = '';
       node.style.userSelect = '';
       node.onpointerdown = null;
+      var editableText = typeof (Display._designTextSources || {})[node.dataset.designId] === 'string';
+      node.ondblclick = editableText ? event => Display._startDesignTextEdit(event, node) : null;
       if (!Display._designEditor) return;
       node.style.cursor = 'move';
       node.style.userSelect = 'none';
@@ -2270,6 +2334,17 @@ var Display = {
     event.preventDefault();
     event.stopPropagation();
     var id = node.dataset.designId;
+    var lastClick = Display._lastDesignClick;
+    Display._lastDesignClick = null;
+    // Pointer capture retargets clicks from nested text spans to their box and can
+    // suppress the browser's dblclick. Recognise two completed clicks as well.
+    if (!resizing && !event.shiftKey && !event.ctrlKey && !event.metaKey && lastClick &&
+        lastClick.node === node && performance.now() - lastClick.time < 500 &&
+        Math.hypot(event.clientX - lastClick.x, event.clientY - lastClick.y) < 6 &&
+        typeof (Display._designTextSources || {})[id] === 'string') {
+      Display._startDesignTextEdit(event, node);
+      return;
+    }
     var selection = (Display._designSelection || []).slice();
     var modified = event.shiftKey || event.ctrlKey || event.metaKey;
     if (modified && !resizing) {
@@ -2345,6 +2420,7 @@ var Display = {
           changed[key].y = starts[key].y + dy;
         });
       }
+      Display._snapDesignGeometry(slide, changed, starts, resizing, id, move.altKey);
       paint(changed);
     };
     var finish = cancelled => {
@@ -2352,15 +2428,75 @@ var Display = {
       target.onpointermove = null;
       target.onpointerup = null;
       target.onpointercancel = null;
+      slide.querySelectorAll('.design-snap-guide').forEach(guide => guide.remove());
+      var hasChanged = JSON.stringify(changed) !== JSON.stringify(starts);
+      Display._lastDesignClick = !cancelled && !resizing && !hasChanged ?
+        {node, x: clientX, y: clientY, time: performance.now()} : null;
       Display._bindDesignEditor(slide);
       displayWatcher.dispatchEvent('songDesignChanged', {
         id: id, ids: selection, geometry: cancelled ? starts[id] : changed[id],
         geometries: cancelled ? starts : changed,
-        changed: !cancelled && JSON.stringify(changed) !== JSON.stringify(starts)
+        changed: !cancelled && hasChanged
       });
     };
     target.onpointerup = () => finish(false);
     target.onpointercancel = () => finish(true);
+  },
+
+  /** Snap in preview pixels, so the attraction distance stays consistent at any zoom. */
+  _snapDesignGeometry: function (slide, changed, starts, resizing, id, bypass) {
+    slide.querySelectorAll('.design-snap-guide').forEach(guide => guide.remove());
+    if (bypass) return;
+    var bounds = slide.getBoundingClientRect();
+    var targets = {x: [0, 50, 100], y: [0, 50, 100]};
+    slide.querySelectorAll('[data-design-id]').forEach(node => {
+      if (starts[node.dataset.designId] || Display._designRotation(node)) return;
+      var style = getComputedStyle(node);
+      var x = parseFloat(style.left) / slide.clientWidth * 100;
+      var y = parseFloat(style.top) / slide.clientHeight * 100;
+      var width = parseFloat(style.width) / slide.clientWidth * 100;
+      var height = parseFloat(style.height) / slide.clientHeight * 100;
+      targets.x.push(x, x + width / 2, x + width);
+      targets.y.push(y, y + height / 2, y + height);
+    });
+    if (resizing && Display._designRotation(Array.from(slide.querySelectorAll('[data-design-id]'))
+      .find(node => node.dataset.designId === id))) return;
+    var boxes = Object.values(changed);
+    ['x', 'y'].forEach(axis => {
+      var size = axis === 'x' ? 'width' : 'height';
+      var low = Math.min(...boxes.map(box => box[axis]));
+      var high = Math.max(...boxes.map(box => box[axis] + box[size]));
+      var edge = resizing === true ? 'se' : resizing;
+      var leading = edge && edge.includes(axis === 'x' ? 'w' : 'n');
+      var trailing = edge && edge.includes(axis === 'x' ? 'e' : 's');
+      if (resizing && !leading && !trailing) return;
+      var anchors = resizing ? [leading ? low : high] : [low, (low + high) / 2, high];
+      var nearest = null, distance = 6 / bounds[size] * 100;
+      anchors.forEach(anchor => targets[axis].forEach(target => {
+        var delta = target - anchor;
+        if (Math.abs(delta) > distance) return;
+        if (resizing) {
+          var length = changed[id][size] + (leading ? -delta : delta);
+          if (length < 100 / (axis === 'x' ? slide.clientWidth : slide.clientHeight) ||
+              low + (leading ? delta : 0) < 0 || high + (trailing ? delta : 0) > 100) return;
+        } else if (low + delta < 0 || high + delta > 100) return;
+        distance = Math.abs(delta);
+        nearest = {delta, target};
+      }));
+      if (!nearest) return;
+      if (resizing) {
+        changed[id][size] += leading ? -nearest.delta : nearest.delta;
+        if (leading) changed[id][axis] += nearest.delta;
+      } else boxes.forEach(box => { box[axis] += nearest.delta; });
+      var guide = document.createElement('div');
+      guide.className = 'design-snap-guide';
+      Object.assign(guide.style, {position: 'absolute', pointerEvents: 'none', zIndex: '202',
+        background: '#ef5da8', left: axis === 'x' ? `${nearest.target}%` : '0',
+        top: axis === 'y' ? `${nearest.target}%` : '0',
+        width: axis === 'x' ? `${slide.clientWidth / bounds.width}px` : '100%',
+        height: axis === 'y' ? `${slide.clientHeight / bounds.height}px` : '100%'});
+      slide.appendChild(guide);
+    });
   },
 
   /**
@@ -2679,7 +2815,7 @@ var Display = {
       "font-family": Display._theme.font_main_name,
       "font-size": mainFontSizeCss,
       "font-style": Display._theme.font_main_italics ? "italic" : "",
-      "font-weight": Display._theme.font_main_bold ? "bold" : "",
+      "font-weight": Display._theme.font_main_weight || (Display._theme.font_main_bold ? "bold" : "normal"),
       "line-height": `${100 + Display._theme.font_main_line_adjustment}%`,
       "letter-spacing": `${Display._theme.font_main_letter_adjustment}px`,
 
@@ -2743,7 +2879,7 @@ var Display = {
       "font-family": Display._theme.font_footer_name,
       "font-size": footerFontSizeCss,
       "font-style": Display._theme.font_footer_italics ? "italic" : "",
-      "font-weight": Display._theme.font_footer_bold ? "bold" : "",
+      "font-weight": Display._theme.font_footer_weight || (Display._theme.font_footer_bold ? "bold" : "normal"),
       "line-height": `${100 + Display._theme.font_footer_line_adjustment}%`,
       "letter-spacing": `${Display._theme.font_footer_letter_adjustment}px`,
       "white-space": Display._theme.font_footer_wrap ? "normal" : "nowrap",

@@ -187,6 +187,8 @@ def apply_design(theme, value, size=None):
     for key, attribute in (('font', 'name'), ('colour', 'color'), ('bold', 'bold'), ('italic', 'italics')):
         if key in lyrics:
             setattr(result, 'font_main_' + attribute, lyrics[key])
+    if 'bold' in lyrics:
+        result.font_main_weight = 0  # An explicit slide override supersedes the theme's weight.
     if 'font_size' in lyrics:
         result.font_main_size = lyrics['font_size'] * size.height() / design['canvas_height']
     if 'align' in lyrics:
@@ -255,6 +257,8 @@ def _normalise_theme(value):
         if re.fullmatch(r'font_(main|footer)_(x|y|width|height|size|outline_size|shadow_size|shadow_blur|'
                         r'line_adjustment|letter_adjustment)', key):
             result[key] = _number(data, 0, -16384, 16384)
+        elif re.fullmatch(r'font_(main|footer)_weight', key):
+            result[key] = int(_number(data, 0, 0, 1000))
         elif re.fullmatch(r'font_(main|footer)_(bold|italics|override|outline|shadow|wrap)', key):
             if isinstance(data, bool):
                 result[key] = data
