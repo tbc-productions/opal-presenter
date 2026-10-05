@@ -25,6 +25,7 @@ import json
 from pathlib import Path
 
 import pytest
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 from unittest.mock import MagicMock, patch
 
@@ -300,7 +301,10 @@ def test_normalize_preview_html_converts_weight_size_and_opacity(tagform_env, mo
 def test_dialog_uses_fluent_editor_components(style_form):
     """The style browser and text fields are native Fluent controls."""
     import fluentqt
+    assert isinstance(style_form, fluentqt.Window)
     assert style_form.windowTitle() == 'Formatting styles'
+    assert style_form.titleBar().contentWidget().text() == 'Formatting styles'
+    assert [style_form.style_tabs.tabText(index) for index in range(2)] == ['Built-in', 'Custom']
     assert style_form.save_button.text() == 'Save changes'
     assert isinstance(style_form.editor_card, fluentqt.Card)
     assert isinstance(style_form.tag_table_widget, fluentqt.DataGrid)
@@ -320,9 +324,112 @@ def test_dialog_uses_fluent_editor_components(style_form):
     assert style_form.tag_table_widget.isColumnHidden(EditColumn.EndHtml)
 
 
+def test_search_badges_count_both_collections(style_form):
+    """Badges always show counts, filter both collections and restore totals when cleared."""
+    from fluentqt import InfoBadge
+    badges = style_form.style_tabs.match_badges
+    total_builtins = style_form.tag_table_widget_read.rowCount()
+    assert all(isinstance(badge, InfoBadge) and not badge.isHidden() for badge in badges)
+    assert [badge.value() for badge in badges] == [total_builtins, 0]
+    style_form.search_edit.setText('bold')
+    assert [badge.value() for badge in badges] == [1, 0]
+    assert all(not badge.isHidden() for badge in badges)
+    assert all(badge.displayMode() == InfoBadge.InfoBadgeDisplayMode.Value for badge in badges)
+    style_form.on_copy_clicked()
+    style_form.search_edit.setText('BOLD')
+    assert [badge.value() for badge in badges] == [1, 1]
+    style_form.search_edit.setText('no matching style')
+    assert [badge.value() for badge in badges] == [0, 0]
+    for query in ('', '   '):
+        style_form.search_edit.setText(query)
+        assert all(not badge.isHidden() for badge in badges)
+        assert [badge.value() for badge in badges] == [total_builtins, 1]
+
+
+def test_fluent_window_opens_with_default_size(settings, qtbot):
+    """Constructing before the parent is shown still opens a correctly sized native window."""
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    form = FormattingTagForm(parent)
+    qtbot.addWidget(form)
+    parent.resize(1280, 900)
+    parent.show()
+    form.resize(form.minimumSize())
+    sizes = []
+
+    def measure_and_close():
+        try:
+            sizes.append((form.size(), form.windowHandle().size()))
+        finally:
+            form.reject()
+
+    QtCore.QTimer.singleShot(50, measure_and_close)
+    form.exec()
+    assert sizes == [(QtCore.QSize(1160, 780), QtCore.QSize(1160, 780))]
+    assert form.content_splitter.sizes()[0] > form.content_splitter.sizes()[1]
+
+
+@pytest.mark.parametrize('action', ['accept', 'reject', 'close', 'escape'])
+def test_fluent_window_modal_result_and_default_tab(style_form, settings, qtbot, action):
+    """Native window exits preserve modal results and reopen on Built-in with saved data only."""
+    opened = []
+    finished = []
+    closed = []
+    style_form.finished.connect(finished.append)
+    style_form.style_tabs.setCurrentIndex(style_form.CustomTab)
+
+    def edit_and_finish():
+        try:
+            opened.append((style_form.isVisible(), style_form.style_tabs.currentIndex()))
+            style_form.on_new_clicked()
+            if action == 'escape':
+                qtbot.keyClick(style_form, QtCore.Qt.Key.Key_Escape)
+            else:
+                getattr(style_form, action)()
+            closed.append(not style_form.isVisible())
+        finally:
+            if style_form.isVisible():
+                style_form.reject()
+
+    QtCore.QTimer.singleShot(50, edit_and_finish)
+    result = style_form.exec()
+    expected = (QtWidgets.QDialog.DialogCode.Accepted if action == 'accept'
+                else QtWidgets.QDialog.DialogCode.Rejected)
+    assert result == style_form.result() == expected
+    assert finished == [expected]
+    assert opened == [(True, style_form.BuiltInTab)]
+    assert closed == [True]
+    assert not style_form.isVisible()
+    assert bool(settings.value('formattingTags/html_tags')) == (action == 'accept')
+
+    QtCore.QTimer.singleShot(50, style_form.reject)
+    assert style_form.exec() == QtWidgets.QDialog.DialogCode.Rejected
+    assert style_form.style_tabs.currentIndex() == style_form.BuiltInTab
+    assert style_form.tag_table_widget.rowCount() == (1 if action == 'accept' else 0)
+
+
+def test_invalid_save_keeps_fluent_window_open(style_form):
+    """An invalid Save leaves the modal window active until the user cancels."""
+    stayed_open = []
+
+    def invalid_save_and_cancel():
+        try:
+            style_form.accept()
+            stayed_open.append(style_form.isVisible())
+        finally:
+            style_form.reject()
+
+    with (patch.object(style_form, '_validate_tags_for_save', return_value=False),
+          patch.object(style_form.services, 'save_tags') as save_tags):
+        QtCore.QTimer.singleShot(0, invalid_save_and_cancel)
+        assert style_form.exec() == QtWidgets.QDialog.DialogCode.Rejected
+    assert stayed_open == [True]
+    save_tags.assert_not_called()
+
+
 def test_builtin_styles_are_read_only_and_copyable(style_form):
     """Built-ins cannot be changed or deleted, but copying makes an independent custom style."""
-    style_form.style_tabs.setCurrentIndex(1)
+    style_form.style_tabs.setCurrentIndex(style_form.BuiltInTab)
     style_form.search_edit.setText('bold')
     assert style_form.name_edit.text() == 'Bold'
     assert style_form.name_edit.isReadOnly()
@@ -339,7 +446,7 @@ def test_builtin_styles_are_read_only_and_copyable(style_form):
     style_form.on_delete_clicked()
     assert style_form.tag_table_widget_read.rowCount() == built_in_count
     style_form.on_copy_clicked()
-    assert style_form.style_tabs.currentIndex() == 0
+    assert style_form.style_tabs.currentIndex() == style_form.CustomTab
     assert style_form.search_edit.text() == ''
     assert not style_form.name_edit.isReadOnly()
     assert style_form.read_only_icon.isHidden()
@@ -431,7 +538,7 @@ def test_no_search_results_disable_actions_and_can_recover(style_form):
     assert not style_form.delete_button.isEnabled()
     assert not style_form.copy_button.isEnabled()
     assert style_form.tag_table_widget.currentRow() == -1
-    assert 'No matching styles' in style_form.list_status_label.text()
+    assert style_form.style_tabs.match_badges[style_form.CustomTab].value() == 0
     style_form.search_edit.clear()
     assert style_form.tag_table_widget.currentRow() == 0
     assert style_form.delete_button.isEnabled()

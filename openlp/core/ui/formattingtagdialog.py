@@ -20,12 +20,68 @@
 ##########################################################################
 """Fluent style browser and editor for inline text formatting."""
 from PySide6 import QtCore, QtGui
-from fluentqt import CommandBar, FontIcon, FontRole, TextEdit
+from fluentqt import CommandBar, FontIcon, FontRole, InfoBadge, TextEdit
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
+
+
+class StyleTabs(QtWidgets.QTabWidget):
+    """Native Fluent tabs with result badges positioned inside each tab's trailing space."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.match_badges = []
+        self._badge_timer = QtCore.QTimer(self)
+        self._badge_timer.setSingleShot(True)
+        self._badge_timer.timeout.connect(self._position_badges)
+        self._tabs.installEventFilter(self)
+        self._tabs.tabsChanged.connect(self._schedule_badges)
+
+    def addTab(self, page, label):
+        index = super().addTab(page, label)
+        badge = InfoBadge(self._tabs)
+        badge.setDisplayMode(InfoBadge.InfoBadgeDisplayMode.Value)
+        badge.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.match_badges.append(badge)
+        return index
+
+    def set_match_counts(self, counts, searching):
+        for index, (badge, count) in enumerate(zip(self.match_badges, counts)):
+            label = self.tabText(index)
+            badge.setValue(count)
+            badge.show()
+            space_width = max(1, self._tabs.fontMetrics().horizontalAdvance(' '))
+            padding = ' ' * ((badge.sizeHint().width() + 8 + space_width - 1) // space_width)
+            self._tabs.setTabText(index, label + padding)
+            count_label = (translate('OpenLP.FormattingTagDialog', '{tab}: {count} matches') if searching
+                           else translate('OpenLP.FormattingTagDialog', '{tab}: {count} styles'))
+            accessible_name = count_label.format(tab=label, count=count)
+            self._tabs.setTabAccessibleName(index, accessible_name)
+        self._schedule_badges()
+
+    def _schedule_badges(self):
+        self._badge_timer.start(0)
+
+    def _position_badges(self):
+        for index, badge in enumerate(self.match_badges):
+            if badge.isHidden():
+                continue
+            rect = self._tabs.tabGeometry(index)
+            badge.resize(badge.sizeHint())
+            if self.layoutDirection() == QtCore.Qt.LayoutDirection.RightToLeft:
+                x = rect.left() + 8
+            else:
+                x = rect.right() - badge.width() - 8
+            badge.move(x, rect.center().y() - badge.height() // 2)
+            badge.raise_()
+
+    def eventFilter(self, watched, event):
+        if watched is self._tabs and event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show,
+                                                      QtCore.QEvent.Type.LayoutDirectionChange):
+            self._schedule_badges()
+        return super().eventFilter(watched, event)
 
 
 class Ui_FormattingTagDialog(object):
@@ -34,14 +90,16 @@ class Ui_FormattingTagDialog(object):
     def setup_ui(self, formatting_tag_dialog):
         formatting_tag_dialog.setObjectName('formatting_tag_dialog')
         formatting_tag_dialog.setWindowIcon(UiIcons().main_icon)
-        formatting_tag_dialog.resize(1040, 780)
         formatting_tag_dialog.setMinimumSize(860, 640)
-        self.list_data_grid_layout = QtWidgets.QVBoxLayout(formatting_tag_dialog)
+        self.content_widget = QtWidgets.QWidget()
+        formatting_tag_dialog.setContentWidget(self.content_widget)
+        self.list_data_grid_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.list_data_grid_layout.setContentsMargins(24, 20, 24, 20)
         self.list_data_grid_layout.setSpacing(16)
-        self.title_label = QtWidgets.QLabel(formatting_tag_dialog)
-        self.title_label.setFluentTypography(FontRole.Title)
-        self.list_data_grid_layout.addWidget(self.title_label)
+        self.window_title_label = QtWidgets.QLabel()
+        self.window_title_label.setContentsMargins(12, 0, 12, 0)
+        self.window_title_label.setFluentTypography(FontRole.BodyStrong)
+        formatting_tag_dialog.titleBar().setContentWidget(self.window_title_label)
 
         self.content_splitter = QtWidgets.QSplitter(formatting_tag_dialog)
         self.content_splitter.setChildrenCollapsible(False)
@@ -54,21 +112,21 @@ class Ui_FormattingTagDialog(object):
         self.search_edit = QtWidgets.QLineEdit(browser)
         self.search_edit.setClearButtonEnabled(True)
         browser_layout.addWidget(self.search_edit)
-        self.style_tabs = QtWidgets.QTabWidget(browser)
-        browser_layout.addWidget(self.style_tabs, 1)
+        collection = QtWidgets.QWidget(browser)
+        collection_layout = QtWidgets.QVBoxLayout(collection)
+        collection_layout.setContentsMargins(0, 0, 0, 0)
+        collection_layout.setSpacing(0)
+        self.style_tabs = StyleTabs(collection)
         self.tag_table_widget = self._create_style_table('tag_table_widget', 6)
         self.tag_table_widget_read = self._create_style_table('tag_table_widget_read', 5)
-        for table in (self.tag_table_widget, self.tag_table_widget_read):
+        for table in (self.tag_table_widget_read, self.tag_table_widget):
             page = QtWidgets.QWidget()
             layout = QtWidgets.QVBoxLayout(page)
             layout.setContentsMargins(0, 12, 0, 0)
             layout.setSpacing(8)
             layout.addWidget(table, 1)
             self.style_tabs.addTab(page, '')
-        self.list_status_label = QtWidgets.QLabel(browser)
-        self.list_status_label.setWordWrap(True)
-        browser_layout.addWidget(self.list_status_label)
-        self.style_command_bar = self._create_command_bar(browser, 'style_command_bar')
+        self.style_command_bar = self._create_command_bar(collection, 'style_command_bar')
         self.new_button = self._create_command(
             self.style_command_bar, 'new_button', UiIcons().new,
             UiStrings().New)
@@ -80,7 +138,9 @@ class Ui_FormattingTagDialog(object):
             self.style_command_bar, 'import_button', UiIcons().download, UiStrings().Import)
         self.export_button = self._create_command(
             self.style_command_bar, 'export_button', UiIcons().upload, UiStrings().Export)
-        browser_layout.insertWidget(1, self.style_command_bar)
+        collection_layout.addWidget(self.style_command_bar)
+        collection_layout.addWidget(self.style_tabs, 1)
+        browser_layout.addWidget(collection, 1)
 
         editor_scroll = QtWidgets.QScrollArea(self.content_splitter)
         editor_scroll.setWidgetResizable(True)
@@ -147,7 +207,7 @@ class Ui_FormattingTagDialog(object):
         self.hidden_checkbox = QtWidgets.QCheckBox(self.editor_fields)
         fields_layout.addWidget(self.hidden_checkbox)
         editor_layout.addStretch()
-        self.content_splitter.setSizes([420, 560])
+        self.content_splitter.setSizes([640, 480])
 
         footer = QtWidgets.QHBoxLayout()
         footer.addStretch()
@@ -159,6 +219,7 @@ class Ui_FormattingTagDialog(object):
         footer.addWidget(self.button_box)
         self.list_data_grid_layout.addLayout(footer)
         self.retranslate_ui(formatting_tag_dialog)
+        formatting_tag_dialog.resize(1160, 780)
 
     def _create_command_bar(self, parent, name):
         bar = CommandBar(parent)
@@ -197,11 +258,11 @@ class Ui_FormattingTagDialog(object):
 
     def retranslate_ui(self, formatting_tag_dialog):
         formatting_tag_dialog.setWindowTitle(translate('OpenLP.FormattingTagDialog', 'Formatting styles'))
-        self.title_label.setText(translate('OpenLP.FormattingTagDialog', 'Formatting styles'))
+        self.window_title_label.setText(formatting_tag_dialog.windowTitle())
         self.search_edit.setPlaceholderText(translate('OpenLP.FormattingTagDialog', 'Search styles by name or tag'))
         self.search_edit.setAccessibleName(translate('OpenLP.FormattingTagDialog', 'Search styles'))
-        self.style_tabs.setTabText(0, translate('OpenLP.FormattingTagDialog', 'Custom'))
-        self.style_tabs.setTabText(1, translate('OpenLP.FormattingTagDialog', 'Built-in'))
+        self.style_tabs.setTabText(0, translate('OpenLP.FormattingTagDialog', 'Built-in'))
+        self.style_tabs.setTabText(1, translate('OpenLP.FormattingTagDialog', 'Custom'))
         self.new_button.setText(UiStrings().New)
         self.copy_button.setText(translate('OpenLP.FormattingTagDialog', 'Copy'))
         self.delete_button.setText(UiStrings().Delete)
@@ -236,5 +297,7 @@ class Ui_FormattingTagDialog(object):
         self.start_html_edit.setToolTip(
             translate('OpenLP.FormattingTagDialog', 'Closing HTML is suggested automatically as you type.'))
         self.end_html_edit.setPlaceholderText('</span>')
-        self.hidden_checkbox.setText(translate('OpenLP.FormattingTagDialog', 'Hide styled text in operator views'))
+        self.hidden_checkbox.setText(translate('OpenLP.FormattingTagDialog', 'Hide text in slide list and printouts'))
+        self.hidden_checkbox.setToolTip(translate(
+            'OpenLP.FormattingTagDialog', 'Text inside this style’s tags still appears on the projected slide.'))
         self.preview_heading.setText(translate('OpenLP.FormattingTagDialog', 'Preview'))
