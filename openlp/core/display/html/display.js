@@ -1045,7 +1045,7 @@ var Display = {
         if (section.classList.contains("use-background-image")) {
           return false;
         }
-        return !!section.querySelector("p");
+        return !!section._setImage || !!section.querySelector("p");
       });
   },
 
@@ -1379,6 +1379,7 @@ var Display = {
     renderedSlides.forEach(function (slide, index) {
       slide_html = Display._createTextSlide(slide.verse, slide.text);
       slide_html._slideTheme = slide.theme || null;
+      slide_html._setImage = slide.set_image || null;
       slide_html.setAttribute('data-slide', index);
       if (layout.isVertical) {
         parentSection.appendChild(slide_html);
@@ -2546,6 +2547,18 @@ var Display = {
       slides[i].setAttribute("data-transition", slide_transition_type);
       slides[i].setAttribute("data-transition-speed", new_transition_speed);
     }
+    // Set images must travel with their section for convex/slide/zoom transitions.
+    // Reveal backgrounds animate separately and only support a fade.
+    if (targetElement._setImage) {
+      var imageFit = _resolveBackgroundFit(Display._theme.background_fit || 'contain');
+      var imageColour = Display._theme.background_border_color || '#000';
+      var imageKey = JSON.stringify([targetElement._setImage, imageFit, imageColour]);
+      if (targetElement._setImageContentKey !== imageKey) {
+        _applyImageSlideContent(targetElement, targetElement._setImage, false, imageFit, imageColour);
+        targetElement._setImageContentKey = imageKey;
+      }
+      return;
+    }
     // Set the background
     var backgroundContent = "";
     var backgroundHtml = "";
@@ -2702,6 +2715,7 @@ var Display = {
 
     var textTargets = targetElement.matches("section.text-slides") ? Array.from(targetElement.children) : [targetElement];
     Array.from(textTargets).forEach(function (slideElement) {
+      if (slideElement._setImage) return;
       var contentElement = slideElement.querySelector(".slide-text-content") || slideElement;
       contentElement.style.cssText = "";
       for (var mainKey in mainStyle) {

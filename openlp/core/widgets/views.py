@@ -374,7 +374,11 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
             item = QtWidgets.QTableWidgetItem()
             slide_height = 0
             if self.service_item.is_text():
-                if self.service_item.name == 'custom':
+                collection = getattr(self.service_item, 'is_slide_set', False) is True
+                if collection:
+                    row = str(slide['verse'])
+                    header_colors.append(None)
+                elif self.service_item.name == 'custom':
                     # Split pages share a source slide tag, so append a letter only when needed.
                     verse = slide['verse']
                     row = str(verse)
@@ -398,8 +402,8 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
                 else:
                     row += 1
                     header_colors.append(None)
-                item.setText(slide['text'])
-                if isinstance(slide.get('text_html'), str):
+                item.setText(slide['title'] if collection else slide['text'])
+                if not collection and isinstance(slide.get('text_html'), str):
                     item.setData(SLIDE_TEXT_HTML_ROLE, slide['text_html'])
             else:
                 label = QtWidgets.QLabel()

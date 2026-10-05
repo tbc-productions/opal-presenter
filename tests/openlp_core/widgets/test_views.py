@@ -831,3 +831,13 @@ def test_slide_list_vertical_scrollbar_stays_visible(settings, qapp):
     assert scrollbar.opacity() == 1.0
     assert scrollbar.isVisible()
     parent.close()
+
+
+def test_collection_custom_label_is_shown_in_preview_and_live(preview_widget):
+    item = MagicMock(is_slide_set=True, name='images')
+    item.is_text.return_value = True
+    item.display_slides = [{'title': 'Welcome label', 'text': 'Projected custom slide words', 'verse': '1',
+                           'text_html': '<b>Projected words</b>'}]
+    preview_widget.replace_service_item(item, 0, 0)
+    assert preview_widget.item(0, 0).text() == 'Welcome label'
+    assert item.display_slides[0]['text'] == 'Projected custom slide words'

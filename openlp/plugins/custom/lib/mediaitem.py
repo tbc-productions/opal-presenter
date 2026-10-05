@@ -74,6 +74,10 @@ class CustomMediaItem(MediaManagerItem):
         if edit_action_name in self.toolbar.actions_map:
             self.toolbar.actions_map[edit_action_name].setEnabled(False)
 
+    def required_icons(self):
+        super().required_icons()
+        self.add_to_service_item = True
+
     def on_selection_change(self):
         """
         Update common toolbar action states and enable Edit only when an item is selected.
@@ -335,6 +339,7 @@ class CustomMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.CanSoftBreak)
         service_item.add_capability(ItemCapabilities.OnLoadUpdate)
         service_item.add_capability(ItemCapabilities.CanWordSplit)
+        service_item.add_capability(ItemCapabilities.CanAppend)
         custom_slide = self.plugin.db_manager.get_object(CustomSlide, item_id)
         title = custom_slide.title
         credit = custom_slide.credits

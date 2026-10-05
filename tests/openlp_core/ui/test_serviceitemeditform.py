@@ -22,255 +22,217 @@
 Package to test the :mod:`~openlp.core.ui.serviceitemeditform` package.
 """
 import pytest
+import fluentqt
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtTest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
 from openlp.core.ui.serviceitemeditform import ServiceItemEditForm
+from openlp.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture
-def form(registry: Registry, settings: Settings):
-    Registry().register('main_window', None)
+def form(registry, settings):
+    registry.register('main_window', None)
     frm = ServiceItemEditForm()
-    return frm
+    yield frm
+    frm.deleteLater()
 
 
-def test_basic_display(form: ServiceItemEditForm):
-    """Test that the ServiceItemEditForm is displayed"""
-    # GIVEN: A dialog
-    # WHEN: Displaying the UI
-    with patch('openlp.core.ui.serviceitemeditform.QtWidgets.QDialog.exec'):
-        form.exec()
-    ok_widget = form.button_box.button(form.button_box.StandardButton.Save)
-    QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: Everything should be fine
-    assert form.item_list == [], 'The item list should be empty'
+def populate(form):
+    item = MagicMock(title='Sunday announcements', is_slide_set=False)
+    item.is_image.return_value = True
+    item.slides = [{'title': 'First', 'path': 'first.png'}, {'title': 'Second', 'path': 'second.png'},
+                   {'title': 'Third', 'path': 'third.png'}]
+    form.set_service_item(item)
+    return item
 
 
-def test_set_service_item(form: ServiceItemEditForm):
-    """Test that the ServiceItemEditForm.set_service_item() method works correctly"""
-    # GIVEN: A form with some methods mocked out
-    mocked_item = MagicMock(**{'is_image.return_value': True, 'slides': ['slide1.jpg']})
-    form.load_data = MagicMock()
-    form.list_widget.setCurrentItem = MagicMock()
-
-    # WHEN: set_service_item() is called
-    form.set_service_item(mocked_item)
-
-    # THEN: The item should be set and the correct methods called
-    assert form.item is mocked_item, 'form.item should be mocked_item'
-    mocked_item.is_image.assert_called_once_with()
-    assert form.data is True, 'The data attribute should be true'
-    assert form.item_list == ['slide1.jpg'], 'form.item_list should be a list of 1 item'
-    form.load_data.assert_called_once_with()
-    form.list_widget.setCurrentItem.assert_called_once_with(None)
-
-
-def test_get_service_item(form: ServiceItemEditForm):
-    """Test that the ServiceItemEditForm.get_service_item() works correctly"""
-    # GIVEN: A form with some methods mocked out
-    form.data = True
-    form.item = MagicMock(slides=['slide1.jpg', 'slide2.jpg'])
-    form.item_list = [
-        {'path': '../slide1.jpg', 'title': 'slide1.jpg'},
-        {'path': '../slide2.jpg', 'title': 'slide2.jpg'}
-    ]
-
-    # WHEN: get_service_item() is called
-    item = form.get_service_item()
-
-    # THEN: The item should be returned and the correct methods called
-    assert item is form.item, 'The returned item should be form.item'
-    # FYI: list should be empty because it was cleared but never filled again due to the mock
-    assert item.slides == [], 'The list of slides should have been cleared'
-    assert item.add_from_image.call_args_list == [call('../slide1.jpg', 'slide1.jpg', None, None),
-                                                  call('../slide2.jpg', 'slide2.jpg', None, None)]
+def test_collection_window_and_grid_resize(form):
+    populate(form)
+    assert isinstance(form, fluentqt.Window)
+    assert isinstance(form.item_grid, fluentqt.DataGrid)
+    assert form.window_title_label.text() == form.windowTitle()
+    assert form.windowTitle() == 'Sunday announcements: Reorder/rename Collection items'
+    assert form.item_grid.horizontalHeader().isHidden()
+    assert form.item_grid.columnCount() == 2
+    assert form.item_grid.item(0, 0).text() == ''
+    assert form.item_grid.item(0, 1).text() == 'First'
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    before = form.item_grid.size()
+    label_width = form.item_grid.columnWidth(1)
+    form.resize(form.width() + 200, form.height() + 200)
+    QtWidgets.QApplication.processEvents()
+    assert form.item_grid.height() > before.height()
+    assert form.item_grid.columnWidth(1) > label_width
+    assert form.item_grid.columnWidth(0) == 148
+    form.hide()
 
 
-@patch('openlp.core.ui.serviceitemeditform.QtWidgets.QListWidgetItem')
-def test_load_data(MockQListWidgetItem: MagicMock, form: ServiceItemEditForm):
-    """Test that the ServiceItemEditForm.load_data() works correctly"""
-    # GIVEN: A form with some methods mocked out
-    MockQListWidgetItem.side_effect = lambda x: x
-    form.list_widget.clear = MagicMock()
-    form.list_widget.addItem = MagicMock()
-    form.item_list = [
-        {'path': '../slide1.jpg', 'title': 'slide1.jpg'},
-        {'path': '../slide2.jpg', 'title': 'slide2.jpg'}
-    ]
-
-    # WHEN: load_data() is called
-    form.load_data()
-
-    # THEN: The list widget should have the correct items added
-    form.list_widget.clear.assert_called_once_with()
-    assert form.list_widget.addItem.call_args_list == [call('slide1.jpg'), call('slide2.jpg')]
-
-
-def test_on_delete_button_clicked_no_item(form: ServiceItemEditForm):
-    """Test that nothing happens when the delete button is clicked but no item is selected"""
-    # GIVEN: A form with the currentItem() method mocked
-    form.list_widget.currentItem = MagicMock(return_value=None)
-    form.list_widget.row = MagicMock()
-
-    # WHEN: on_delete_button_clicked() is called but no items are selected
-    form.on_delete_button_clicked()
-
-    # THEN: Nothing should have happened
-    assert form.list_widget.row.call_count == 0, 'The row method should not have been called'
+def test_commands_follow_selected_row_in_either_column(form):
+    populate(form)
+    assert form.command_bar.primaryActions() == [form.rename_action, form.delete_action,
+                                                 form.up_action, form.down_action]
+    assert form.dialog_layout.indexOf(form.command_bar) < form.dialog_layout.indexOf(form.item_grid)
+    form.item_grid.setCurrentCell(0, 1)
+    assert not form.up_action.isEnabled()
+    assert form.down_action.isEnabled()
+    form.down_action.trigger()
+    assert [slide['title'] for slide in form.item_list] == ['Second', 'First', 'Third']
+    assert form.item_grid.currentRow() == 1
+    form.item_grid.setCurrentCell(1, 0)
+    with patch('openlp.core.ui.serviceitemeditform.RenameDialog.get_text', return_value=('Renamed', True)):
+        form.rename_action.trigger()
+    assert form.item_grid.item(1, 1).text() == 'Renamed'
+    form.delete_action.trigger()
+    assert [slide['title'] for slide in form.item_list] == ['Second', 'Third']
+    assert form.item_grid.currentRow() == 1
+    assert not form.down_action.isEnabled()
+    form.up_action.trigger()
+    assert [slide['title'] for slide in form.item_list] == ['Third', 'Second']
 
 
-def test_on_delete_button_clicked(form: ServiceItemEditForm):
-    """Test that clicking the delete button removes a row from the list"""
-    # GIVEN: A form with some items mocked out
-    mocked_list_item = MagicMock()
-    form.item_list = ['slide1', 'slide2']
-    form.list_widget.currentItem = MagicMock(return_value=mocked_list_item)
-    form.list_widget.row = MagicMock(return_value=1)
-    form.load_data = MagicMock()
-    form.list_widget.count = MagicMock(return_value=1)
-    form.list_widget.setCurrentRow = MagicMock()
-
-    # WHEN: on_delete_button_clicked() is called
-    form.on_delete_button_clicked()
-
-    # THEN: The correct methods should have been called
-    form.list_widget.currentItem.assert_called_once_with()
-    form.list_widget.row.assert_called_once_with(mocked_list_item)
-    assert form.item_list == ['slide1'], 'There should be only 1 slide in the list'
-    form.load_data.assert_called_once_with()
-    form.list_widget.count.assert_called_once_with()
-    form.list_widget.setCurrentRow.assert_called_once_with(0)
-
-
-def test_on_up_button_clicked(form: ServiceItemEditForm):
-    """Test that the the up button click calls the correct method"""
-    # GIVEN: A form with a mocked out method
-    form._ServiceItemEditForm__move_item = MagicMock()
-
-    # WHEN: The event handler is called
-    form.on_up_button_clicked()
-
-    # THEN: The method should be called correctly
-    form._ServiceItemEditForm__move_item.assert_called_once_with('up')
-
-
-def test_on_down_button_clicked(form: ServiceItemEditForm):
-    """Test that the the down button click calls the correct method"""
-    # GIVEN: A form with a mocked out method
-    form._ServiceItemEditForm__move_item = MagicMock()
-
-    # WHEN: The event handler is called
+@pytest.mark.parametrize('finish', ['save', 'cancel', 'close', 'escape'])
+def test_window_completion_preserves_save_cancel_contract(form, finish):
+    original = populate(form)
+    form.item_grid.selectRow(0)
     form.on_down_button_clicked()
-
-    # THEN: The method should be called correctly
-    form._ServiceItemEditForm__move_item.assert_called_once_with('down')
-
-
-def test_move_item_no_direction(form: ServiceItemEditForm):
-    """Test that the __move_item() method exits early if no direction is specified"""
-    # GIVEN: A form with am ocked out method
-    form.list_widget.currentItem = MagicMock()
-
-    # WHEN: __move_item() is called without a direction
-    form._ServiceItemEditForm__move_item()
-
-    # THEN: The method should exit early, thus currentItem() should not have been called
-    assert form.list_widget.currentItem.call_count == 0, 'currentItem() should not have been called'
-
-
-def test_move_item_no_item(form: ServiceItemEditForm):
-    """Test that the __move_item() method exits early if no item in the list is selected"""
-    # GIVEN: A form with am ocked out method
-    form.list_widget.currentItem = MagicMock(return_value=None)
-    form.list_widget.row = MagicMock()
-
-    # WHEN: __move_item() is called with a direction
-    form._ServiceItemEditForm__move_item('up')
-
-    # THEN: The method should exit early, thus row() should not have been called
-    assert form.list_widget.row.call_count == 0, 'row() should not have been called'
+    assert original.slides[0]['title'] == 'First'
+    def complete():
+        if finish == 'close':
+            form.close()
+        elif finish == 'escape':
+            QtTest.QTest.keyClick(form, QtCore.Qt.Key.Key_Escape)
+        else:
+            button = form.button_box.StandardButton.Save if finish == 'save' else form.button_box.StandardButton.Cancel
+            form.button_box.button(button).click()
+    QtCore.QTimer.singleShot(20, complete)
+    result = form.exec()
+    assert result == (QtWidgets.QDialog.DialogCode.Accepted if finish == 'save' else
+                      QtWidgets.QDialog.DialogCode.Rejected)
+    assert not form.isVisible()
+    assert original.slides[0]['title'] == 'First'
+    if result:
+        form.get_service_item()
+        assert original.add_from_image.call_args_list == [call('second.png', 'Second', None, None),
+                                                          call('first.png', 'First', None, None),
+                                                          call('third.png', 'Third', None, None)]
 
 
-def test_move_item_up(form: ServiceItemEditForm):
-    """Test that the __move_item() method moves an item up"""
-    # GIVEN: A form with am ocked out method
-    mocked_list_item = MagicMock()
-    form.item_list = ['slide1', 'slide2']
-    form.list_widget.currentItem = MagicMock(return_value=mocked_list_item)
-    form.list_widget.row = MagicMock(return_value=1)
-    form.load_data = MagicMock()
-    form.list_widget.setCurrentRow = MagicMock()
-
-    # WHEN: __move_item() is called with the direction set to "up"
-    form._ServiceItemEditForm__move_item('up')
-
-    # THEN: The internal list should be swapped around, and other methods should have been called
-    assert form.item_list == ['slide2', 'slide1'], 'The list should be swapped around'
-    form.list_widget.setCurrentRow.assert_called_once_with(0)
+def test_no_selection_or_single_item_disables_invalid_commands(form):
+    form.load_data()
+    assert not any(action.isEnabled() for action in form.command_bar.primaryActions())
+    form.on_delete_button_clicked()
+    form.on_up_button_clicked()
+    form.item_list = [{'title': 'Only slide'}]
+    form.load_data()
+    form.item_grid.selectRow(0)
+    assert form.rename_action.isEnabled()
+    assert not form.up_action.isEnabled()
+    assert not form.down_action.isEnabled()
+    assert not form.delete_action.isEnabled()
 
 
-def test_move_item_down(form: ServiceItemEditForm):
-    """Test that the __move_item() method moves an item down"""
-    # GIVEN: A form with am ocked out method
-    mocked_list_item = MagicMock()
-    form.item_list = ['slide1', 'slide2']
-    form.list_widget.currentItem = MagicMock(return_value=mocked_list_item)
-    form.list_widget.row = MagicMock(return_value=0)
-    form.load_data = MagicMock()
-    form.list_widget.setCurrentRow = MagicMock()
-
-    # WHEN: __move_item() is called with the direction set to "up"
-    form._ServiceItemEditForm__move_item('down')
-
-    # THEN: The internal list should be swapped around, and other methods should have been called
-    assert form.item_list == ['slide2', 'slide1'], 'The list should be swapped around'
-    form.list_widget.setCurrentRow.assert_called_once_with(1)
-
-
-def test_on_current_row_changed_no_selection(form: ServiceItemEditForm):
-    """Test that all buttons are disabled when there is no selected item"""
-    # GIVEN: A form and a row of -1
-    row = -1
-
-    # WHEN: on_current_row_changed() is called with the row
-    form.on_current_row_changed(row)
-
-    # THEN: All the buttons should be disabled
-    assert form.down_button.isEnabled() is False, 'Down button should be disabled'
-    assert form.up_button.isEnabled() is False, 'Up button should be disabled'
-    assert form.delete_button.isEnabled() is False, 'Delete button should be disabled'
+def test_exec_restores_opening_size_and_remembers_user_resize(form):
+    populate(form)
+    # Reproduce native startup replacing the hidden window's initial geometry.
+    form.resize(form.minimumSize())
+    observed = []
+    def first_open():
+        observed.append(form.size())
+        observed.append(form.item_grid.height())
+        form.resize(980, 780)
+        form.reject()
+    QtCore.QTimer.singleShot(20, first_open)
+    form.exec()
+    assert observed[0] == QtCore.QSize(760, 600)
+    assert observed[1] > 300
+    form.resize(form.minimumSize())
+    def second_open():
+        observed.append(form.size())
+        form.reject()
+    QtCore.QTimer.singleShot(20, second_open)
+    form.exec()
+    assert observed[2] == QtCore.QSize(980, 780)
+    assert form.windowTitle() == 'Sunday announcements: Reorder/rename Collection items'
 
 
-def test_on_current_row_changed_end_of_list(form: ServiceItemEditForm):
-    """Test that the down button is disabled at the end of the list"""
-    # GIVEN: A form with a couple of mocked methods and a row of 5
-    row = 5
-    form.list_widget.count = MagicMock(return_value=6)
+@pytest.mark.parametrize('rows', [[1, 2], [1, 3]])
+def test_move_multiple_rows_keeps_order_selection_and_draft(form, rows):
+    original = populate(form)
+    form.item_list = [{'title': str(i), 'metadata': {'source': i}} for i in range(5)]
+    form.load_data()
+    form._select_rows(rows)
+    selected = [form.item_list[i] for i in rows]
+    assert not form.rename_action.isEnabled()
+    form.on_up_button_clicked()
+    assert form.item_grid.selected_rows() == [i - 1 for i in rows]
+    assert [form.item_list[i] for i in form.item_grid.selected_rows()] == selected
+    assert not form.up_action.isEnabled()
+    form.on_down_button_clicked()
+    assert [frame['title'] for frame in form.item_list] == ['0', '1', '2', '3', '4']
+    assert form.item_grid.selected_rows() == rows
+    assert original.slides[0]['title'] == 'First'
 
-    # WHEN: on_current_row_changed() is called with the row
-    form.on_current_row_changed(row)
 
-    # THEN: Down button should be disabled, up and delete should be enabled
-    assert form.down_button.isEnabled() is False, 'Down button should be disabled'
-    assert form.up_button.isEnabled() is True, 'Up button should be enabled'
-    assert form.delete_button.isEnabled() is True, 'Delete button should be enabled'
+@pytest.mark.parametrize('rows,destination,expected', [
+    ([0, 2], 5, ['1', '3', '4', '0', '2']),
+    ([3, 4], 0, ['3', '4', '0', '1', '2']),
+    ([1, 2], 2, ['0', '1', '2', '3', '4'])
+])
+def test_drag_inserts_group_without_losing_items(form, rows, destination, expected):
+    form.item_list = [{'title': str(i), 'metadata': {'source': i}} for i in range(5)]
+    form.load_data()
+    selected = [form.item_list[i] for i in rows]
+    form.on_rows_dropped(rows, destination)
+    assert [frame['title'] for frame in form.item_list] == expected
+    assert [form.item_list[i] for i in form.item_grid.selected_rows()] == selected
+    assert len({id(frame) for frame in form.item_list}) == 5
+    assert all(frame['metadata']['source'] == int(frame['title']) for frame in form.item_list)
 
 
-def test_on_current_row_changed_beginning_of_list(form: ServiceItemEditForm):
-    """Test that the up button is disabled at the top of the list"""
-    # GIVEN: A form with a couple of mocked methods and a row of 0
-    row = 0
-    form.list_widget.count = MagicMock(return_value=6)
+def test_drag_events_move_selected_rows_and_reject_external_drops(form):
+    populate(form)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    form._select_rows([0, 1])
+    grid = form.item_grid
+    # Exercise the Qt drag lifecycle, including calculating a drop below the last row.
+    destination = grid.visualRect(grid.model().index(2, 0)).bottomLeft() + QtCore.QPoint(2, 0)
+    event = MagicMock()
+    event.source.return_value = grid
+    event.position.return_value = QtCore.QPointF(destination)
+    def drag_loop(*_):
+        grid.dragEnterEvent(event)
+        grid.dropEvent(event)
+        return QtCore.Qt.DropAction.MoveAction
+    with patch('openlp.core.ui.serviceitemeditdialog.QtGui.QDrag') as drag:
+        drag.return_value.exec.side_effect = drag_loop
+        grid.startDrag(QtCore.Qt.DropAction.MoveAction)
+    assert [frame['title'] for frame in form.item_list] == ['Third', 'First', 'Second']
+    assert grid.selected_rows() == [1, 2]
+    event.accept.assert_called()
+    assert grid._drag_rows == []
+    event.reset_mock()
+    event.source.return_value = None
+    grid.dropEvent(event)
+    event.ignore.assert_called_once()
+    form.hide()
 
-    # WHEN: on_current_row_changed() is called with the row
-    form.on_current_row_changed(row)
 
-    # THEN: Up button should be disabled, down and delete should be enabled
-    assert form.down_button.isEnabled() is True, 'Down button should be enabled'
-    assert form.up_button.isEnabled() is False, 'Up button should be disabled'
-    assert form.delete_button.isEnabled() is True, 'Delete button should be enabled'
+def test_shift_click_selects_multiple_rows(form):
+    populate(form)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    grid = form.item_grid
+    first = grid.visualRect(grid.model().index(0, 1)).center()
+    last = grid.visualRect(grid.model().index(2, 1)).center()
+    QtTest.QTest.mouseClick(grid.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=first)
+    QtTest.QTest.mouseClick(grid.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                           QtCore.Qt.KeyboardModifier.ShiftModifier, last)
+    QtTest.QTest.keyRelease(grid, QtCore.Qt.Key.Key_Shift)
+    assert grid.selected_rows() == [0, 1, 2]
+    assert not form.rename_action.isEnabled()
+    assert not form.delete_action.isEnabled()
+    form.hide()

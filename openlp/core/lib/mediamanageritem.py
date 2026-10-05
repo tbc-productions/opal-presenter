@@ -842,9 +842,26 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 QtWidgets.QMessageBox.information(self, UiStrings().NISs,
                                                   translate('OpenLP.MediaManagerItem',
                                                             'You must select an existing service item to add to.'))
+            elif self.plugin.name in ('images', 'custom') and service_item.can_append_plugin(self.plugin.name):
+                if self.plugin.name == 'images' and service_item.is_image():
+                    if self.generate_slide_data(service_item):
+                        self.service_manager.add_service_item(service_item, replace=item)
+                else:
+                    selected = self.list_view.selectedItems() if self.plugin.name == 'custom' else [None]
+                    additions = [self.build_service_item(selected_item, context=ServiceItemContext.Service)
+                                 for selected_item in selected]
+                    additions = [addition for addition in additions if addition is not None]
+                    if additions:
+                        try:
+                            service_item.append_to_set(additions)
+                        except (OSError, ValueError) as error:
+                            critical_error_message_box(translate('OpenLP.MediaManagerItem', 'Unable to Add Slides'),
+                                                       str(error))
+                            return
+                        self.service_manager.add_service_item(service_item, replace=item)
             elif self.plugin.name == service_item.name:
-                self.generate_slide_data(service_item)
-                self.service_manager.add_service_item(service_item, replace=item)
+                if self.generate_slide_data(service_item):
+                    self.service_manager.add_service_item(service_item, replace=item)
             else:
                 # Turn off the remote edit update message indicator
                 QtWidgets.QMessageBox.information(self, translate('OpenLP.MediaManagerItem', 'Invalid Service Item'),

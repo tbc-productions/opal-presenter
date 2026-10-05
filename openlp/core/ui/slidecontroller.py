@@ -1167,7 +1167,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         if not transition_settings.get('enabled', False):
             # Image/PDF collections expose an explicit Disabled choice. Songs
             # and custom slides continue to inherit their theme's transitions.
-            if service_item.is_image():
+            if service_item.is_image() or getattr(service_item, 'is_slide_set', False) is True:
                 theme_data.display_slide_transition = False
             return
         theme_data.display_slide_transition = True

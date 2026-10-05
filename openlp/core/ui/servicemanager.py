@@ -58,6 +58,7 @@ from openlp.core.ui.servicenoteform import ServiceNoteForm
 from openlp.core.ui.starttimeform import StartTimeForm
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
+from openlp.core.ui.renamedialog import RenameDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
 from openlp.core.ui.fluenticons import fluent_icon
@@ -425,7 +426,9 @@ class Ui_ServiceManager(object):
         self.service_manager_list.setObjectName('service_manager_list')
         # enable drop
         self.service_manager_list.dropEvent = self.drop_event
-        self.layout.addWidget(self.service_manager_list)
+        self.service_manager_list.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                QtWidgets.QSizePolicy.Policy.Expanding)
+        self.layout.addWidget(self.service_manager_list, 1)
         # Add the bottom toolbar
         self.order_toolbar = OpenLPToolbar(widget, single_command_bar=True)
         action_list = ActionList.get_instance()
@@ -523,9 +526,9 @@ class Ui_ServiceManager(object):
         self.rename_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Rename...'),
                                                   icon=UiIcons().edit,
                                                   triggers=self.on_service_item_rename)
-        self.maintain_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Reorder Item'),
-                                                    icon=UiIcons().edit,
-                                                    triggers=self.on_service_item_edit_form)
+        self.maintain_action = create_widget_action(
+            self.menu, text=translate('OpenLP.ServiceManager', '&Reorder/rename items'),
+            icon=UiIcons().edit, triggers=self.on_service_item_edit_form)
         self.notes_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Notes'),
                                                  icon=UiIcons().notes,
                                                  triggers=self.on_service_item_note_form)
@@ -1901,7 +1904,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             plugins = state.list_plugins()
         except AttributeError:
             plugins = []
-        if service_item['service_item'].is_text():
+        if service_item['service_item'].is_text() and not service_item['service_item'].is_slide_set:
             for plugin in plugins:
                 if plugin.name == 'custom' and plugin.status == PluginStatus.Active:
                     self.create_custom_action.setVisible(True)
@@ -1959,7 +1962,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             and getattr(service_item, 'service_item_type', None) == ServiceItemType.Command
             and str(getattr(service_item, 'title', '')).lower().endswith('.pdf')
         )
-        supports = service_item.is_image() or is_pdf_presentation
+        supports = (service_item.is_image() or getattr(service_item, 'is_slide_set', False) is True
+                    or is_pdf_presentation)
         return supports
 
     @staticmethod
@@ -1984,7 +1988,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
     def on_service_item_transition_form(self):
         """
-        Configure slide transition settings for the selected image/PDF service item.
+        Configure slide transitions for the selected image, mixed Collection or PDF item.
         """
         item_index = self.find_service_item()[0]
         if item_index < 0:
@@ -2042,6 +2046,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             'speed': speed_combo.currentData() if speed_combo.currentData() is not None else TransitionSpeed.Normal
         }
         self._sync_pdf_service_item_transition_settings(service_item)
+        if service_item.is_slide_set:
+            service_item._clear_slides_cache()
         self.repaint_service_list(item_index, -1)
         self.preview_controller.replace_service_manager_item(service_item, item_index)
         self.live_controller.replace_service_manager_item(service_item, item_index)
@@ -2796,21 +2802,24 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             image_path = slide.get('thumbnail') or slide.get('path')
             icon_pixmap = QtGui.QPixmap(64, 48)
             icon_pixmap.fill(QtCore.Qt.GlobalColor.transparent)
-            if image_path:
-                img_pixmap = QtGui.QPixmap(str(image_path))
-                if not img_pixmap.isNull():
-                    scaled_img = img_pixmap.scaled(64, 48, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                   QtCore.Qt.TransformationMode.SmoothTransformation)
-                    painter = QtGui.QPainter(icon_pixmap)
-                    x = (64 - scaled_img.width()) // 2
-                    y = (48 - scaled_img.height()) // 2
-                    painter.drawPixmap(x, y, scaled_img)
-                    # Draw a subtle 1px border around the scaled image
-                    pen = QtGui.QPen(QtGui.QColor(128, 128, 128, 180))
-                    pen.setWidth(1)
-                    painter.setPen(pen)
-                    painter.drawRect(x, y, scaled_img.width() - 1, scaled_img.height() - 1)
-                    painter.end()
+            if service_item.is_slide_set is True:
+                from openlp.core.lib.slideset import set_thumbnail
+                img_pixmap = set_thumbnail(service_item, int(slide['verse']) - 1)
+            else:
+                img_pixmap = QtGui.QPixmap(str(image_path)) if image_path else QtGui.QPixmap()
+            if not img_pixmap.isNull():
+                scaled_img = img_pixmap.scaled(64, 48, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                               QtCore.Qt.TransformationMode.SmoothTransformation)
+                painter = QtGui.QPainter(icon_pixmap)
+                x = (64 - scaled_img.width()) // 2
+                y = (48 - scaled_img.height()) // 2
+                painter.drawPixmap(x, y, scaled_img)
+                # Draw a subtle 1px border around the scaled image
+                pen = QtGui.QPen(QtGui.QColor(128, 128, 128, 180))
+                pen.setWidth(1)
+                painter.setPen(pen)
+                painter.drawRect(x, y, scaled_img.width() - 1, scaled_img.height() - 1)
+                painter.end()
             child.setIcon(0, QtGui.QIcon(icon_pixmap))
 
     def _update_item_indicators(self, tree_widget_item, service_item, tips):
@@ -3142,16 +3151,32 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Opens a dialog to rename the service item.
         """
-        item = self.find_service_item()[0]
-        if not self.service_items[item]['service_item'].is_capable(ItemCapabilities.CanEditTitle):
+        item, child = self.find_service_item()
+        if item < 0:
             return
-        title = self.service_items[item]['service_item'].title
-        title, ok = QtWidgets.QInputDialog.getText(self, translate('OpenLP.ServiceManager', 'Rename item title'),
-                                                   translate('OpenLP.ServiceManager', 'Title:'),
-                                                   QtWidgets.QLineEdit.EchoMode.Normal, self.tr(title))
-        if ok:
-            self.service_items[item]['service_item'].title = title
+        service_item = self.service_items[item]['service_item']
+        if not service_item.is_capable(ItemCapabilities.CanEditTitle):
+            return
+        slide_index = None
+        if child >= 0 and (service_item.is_image() or service_item.is_slide_set):
+            slide_index = service_item.get_frames()[child].get('raw_index', child)
+        title = service_item.title if slide_index is None else service_item.slides[slide_index]['title']
+        dialog_title = translate('OpenLP.ServiceManager', 'Rename item title') if slide_index is None else \
+            translate('OpenLP.ServiceManager', 'Rename slide label')
+        field_label = translate('OpenLP.ServiceManager', 'Title:') if slide_index is None else \
+            translate('OpenLP.ServiceManager', 'Label:')
+        title, ok = RenameDialog.get_text(self.main_window, dialog_title,
+                                         field_label, title)
+        if ok and title.strip():
+            if slide_index is None:
+                service_item.title = title.strip()
+            else:
+                service_item.slides[slide_index]['title'] = title.strip()
+                service_item._clear_slides_cache()
             self.repaint_service_list(item, -1)
+            if slide_index is not None:
+                self.preview_controller.replace_service_manager_item(service_item, item)
+                self.live_controller.replace_service_manager_item(service_item, item)
             self.set_modified()
 
     def create_custom(self):
@@ -3519,8 +3544,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     # we are over something so lets investigate
                     pos = get_parent_item_data(item) - 1
                     service_item = self.service_items[pos]
-                    if (plugin == service_item['service_item'].name and
-                            service_item['service_item'].is_capable(ItemCapabilities.CanAppend)):
+                    if service_item['service_item'].can_append_plugin(plugin):
                         action = self.dnd_menu.exec(QtGui.QCursor.pos())
                         # New action required
                         if action == self.new_action:

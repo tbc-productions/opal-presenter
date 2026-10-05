@@ -3306,3 +3306,17 @@ def test_regenerate_changed_service_items(service_manager: ServiceManager):
 
     # THEN: regenerate_service_items() should have been called with the changed parameter
     service_manager.regenerate_service_items.assert_called_once_with(changed=True)
+
+
+def test_service_list_fills_available_height(service_manager):
+    """The list grows while both command bars retain their natural height."""
+    service_manager.resize(650, 900)
+    service_manager.show()
+    QtWidgets.QApplication.processEvents()
+    tree = service_manager.service_manager_list
+    assert tree.height() > 700
+    assert service_manager.order_toolbar.height() < 100
+    service_manager.resize(650, 1100)
+    QtWidgets.QApplication.processEvents()
+    assert tree.height() > 900
+    service_manager.hide()

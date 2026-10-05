@@ -55,6 +55,53 @@ describe("Display transition contract", function () {
   }
   afterEach(function () { frame.remove(); });
 
+  ['Horizontal', 'Vertical'].forEach(function (direction) {
+    ['Convex', 'Concave', 'Zoom', 'Slide', 'Fade'].forEach(function (effect) {
+      it('animates mixed set image pixels with ' + direction + ' ' + effect, function (done) {
+        scenario(done, async function (win) {
+          var common = theme(win, {
+            display_slide_transition: true,
+            display_slide_transition_type: win.TransitionType[effect],
+            display_slide_transition_direction: win.TransitionDirection[direction]
+          });
+          win.Display.setTheme(common);
+          win.Display.setTextSlides([0, 1, 2, 3].map(function (index) {
+            return {verse: index, text: index === 3 ? 'Welcome' : '',
+              set_image: index === 3 ? null : imageUrl + '?set' + index,
+              theme: Object.assign({}, common, index === 3 ? {} : {
+                background_type: 'image', background_filename: imageUrl, background_fit: 'contain'
+              })};
+          }));
+          await wait(120);
+          var images = win.document.querySelectorAll('.text-slide > img');
+          expect(images.length).toBe(3);
+          expect(images[0].naturalWidth).toBeGreaterThan(0);
+          win.Display.goToSlide(1);
+          await wait(150);
+          var current = win.Reveal.getCurrentSlide();
+          expect(current.querySelector('img')).toBe(images[1]);
+          expect(current.dataset.transition).toBe(effect.toLowerCase());
+          expect(current.hasAttribute('data-background-image')).toBe(false);
+          var style = win.getComputedStyle(current);
+          if (effect === 'Fade') {
+            expect(Number(style.opacity)).toBeGreaterThan(0);
+            expect(Number(style.opacity)).toBeLessThan(1);
+          } else {
+            expect(style.transform).not.toBe('none');
+            expect(style.transform).not.toBe('matrix(1, 0, 0, 1, 0, 0)');
+          }
+          await wait(850);
+          var bounds = images[1].getBoundingClientRect();
+          expect(bounds.width).toBeGreaterThan(100);
+          expect(bounds.height).toBeGreaterThan(50);
+          win.Display.goToSlide(3);
+          await wait(900);
+          expect(win.Reveal.getCurrentSlide().textContent).toContain('Welcome');
+        });
+      });
+    });
+  });
+
   ['horizontal song', 'vertical song', 'image', 'PDF', 'media'].forEach(function (source) {
     ['horizontal song', 'vertical song', 'image', 'PDF', 'media'].forEach(function (target) {
       it('fades ' + source + ' to ' + target + ' without inheriting the slide transition', function (done) {

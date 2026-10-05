@@ -76,6 +76,8 @@ class ServiceItem(RegistryProperties):
         self._rendered_slides = None
         self._display_slides = None
         self._print_slides = None
+
+        self._set_thumbnails = {}
         self._creating_slides = False
         self.title = ''
         self.slides = []
@@ -107,6 +109,7 @@ class ServiceItem(RegistryProperties):
         self.from_service = False
         self.background_audio = []
         self.slide_design = {}
+        self.is_slide_set = False
         self.theme_overwritten = False
         self.temporary_edit = False
         self.auto_play_slides_once = False
@@ -235,6 +238,13 @@ class ServiceItem(RegistryProperties):
         self._creating_slides = True
         self._rendered_slides = []
         self._display_slides = []
+        if self.is_slide_set:
+            from openlp.core.lib.slideset import render_set
+            try:
+                self._rendered_slides, self._display_slides = render_set(self)
+            finally:
+                self._creating_slides = False
+            return
 
         # Save rendered pages to this dict. In the case that a slide is used twice we can use the pages saved to
         # the dict instead of rendering them again.
@@ -312,6 +322,8 @@ class ServiceItem(RegistryProperties):
         """
         self._display_slides = None
         self._rendered_slides = None
+        self._print_slides = None
+        self._set_thumbnails = {}
 
     @property
     def rendered_slides(self):
@@ -341,6 +353,13 @@ class ServiceItem(RegistryProperties):
         """
         if not self._print_slides:
             self._print_slides = []
+            if self.is_slide_set:
+                for index, slide in enumerate(self.rendered_slides):
+                    self._print_slides.append({
+                        'title': slide['title'], 'text': render_print_text(slide['text'] or slide['title']),
+                        'verse': str(index + 1), 'footer': slide['footer']
+                    })
+                return self._print_slides
             previous_pages = {}
             for index, raw_slide in enumerate(self.slides):
                 default_verse = f'v{index + 1}' if self.name == 'songs' else str(index + 1)
@@ -505,6 +524,8 @@ class ServiceItem(RegistryProperties):
             'stored_filename': stored_filename,
             'slide_transition_settings': self.slide_transition_settings
         }
+        if self.is_slide_set:
+            service_header['is_slide_set'] = True
         for file_path, file_hash in self.background_audio:
             if lite_save:
                 path_str = str(file_path)
@@ -568,6 +589,7 @@ class ServiceItem(RegistryProperties):
         """
         self._display_slides = []
         self._rendered_slides = []
+        self._set_thumbnails = {}
 
     def _resolve_extracted_file(self, extract_path, file_hash, title):
         """
@@ -660,12 +682,15 @@ class ServiceItem(RegistryProperties):
         self.service_item_type = ServiceItemType.parse(header['type'])
         self.theme = header['theme']
         self.slide_design = normalise_design(header.get('slide_design'))
+        self.is_slide_set = header.get('is_slide_set', False)
         self.add_icon()
         self.raw_footer = header['footer']
         self.audit = header['audit']
         self.notes = header['notes']
         self.from_plugin = header['from_plugin']
         self.capabilities = header['capabilities']
+        if self.is_slide_set and not self.is_capable(ItemCapabilities.HasDisplayTitle):
+            self.add_capability(ItemCapabilities.HasDisplayTitle)
         # Added later so may not be present in older services.
         self.search_string = header.get('search', '')
         self.data_string = header.get('data', '')
@@ -708,6 +733,8 @@ class ServiceItem(RegistryProperties):
                 footer_html = slide['footer_html'] if 'footer_html' in slide else None
                 metadata = slide['metadata'] if 'metadata' in slide and isinstance(slide['metadata'], dict) else None
                 self.add_from_text(slide['raw_slide'], slide['verseTag'], footer_html, metadata)
+                if self.is_slide_set:
+                    self.slides[-1]['title'] = slide['title']
             self._create_slides()
         elif self.service_item_type == ServiceItemType.Image:
             if path:
@@ -916,6 +943,17 @@ class ServiceItem(RegistryProperties):
         Confirms if the ServiceItem is text
         """
         return self.service_item_type == ServiceItemType.Text
+
+    def can_append_plugin(self, plugin):
+        """Whether a library plugin can add slides to this item."""
+        if plugin in ('images', 'custom') and self.name in ('images', 'custom'):
+            return self.is_slide_set or self.is_image() or self.is_text()
+        return plugin == self.name and self.is_capable(ItemCapabilities.CanAppend)
+
+    def append_to_set(self, items):
+        """Append detached image/custom items, retaining the set's title and order."""
+        from openlp.core.lib.slideset import append_to_set
+        append_to_set(self, items)
 
     def set_media_length(self, length):
         """
