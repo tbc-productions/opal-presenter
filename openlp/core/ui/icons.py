@@ -185,6 +185,7 @@ class UiIcons(metaclass=Singleton):
             'remote': {'icon': 'ic_fluent_cast_24_regular'},
             'library_sync': {'icon': 'ic_fluent_cloud_sync_24_regular'},
             'cloud_library': {'icon': 'ic_fluent_cloud_24_regular'},
+            'cloud_arrow_right': {'icon': 'ic_fluent_cloud_arrow_right_24_regular'},
             'refresh': {'icon': 'ic_fluent_arrow_clockwise_24_regular'},
             'repeat': {'icon': 'ic_fluent_arrow_repeat_all_24_regular'},
             'save': {'icon': 'ic_fluent_save_24_regular'},

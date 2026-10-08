@@ -32,24 +32,23 @@ def panel(settings, qtbot):
 
 def test_cloud_panel_has_simple_disconnected_state(panel):
     assert panel.roots.currentText() == 'Church Library'
-    assert panel.connect_button.text() == 'Connect'
+    assert panel.connect_action.text() == 'Connect'
     assert not panel.download_action.isEnabled()
     assert not panel.preview_action.isEnabled()
     assert panel.cancel_button.isHidden()
     assert panel.tree.topLevelItemCount() == 0
     assert panel.import_info.isHidden()
-    assert panel.connect_button.isEnabled()
+    assert panel.connect_action.isEnabled()
     assert panel.status.parentWidget() is panel.footer
     panel.set_status('Ready to connect')
     assert panel.status.toolTip() == 'Ready to connect'
     from openlp.core.widgets.docks import MediaToolBox
-    from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
     from fluentqt import Breadcrumb
     assert isinstance(panel.sections, MediaToolBox)
-    assert isinstance(panel.tree.itemDelegate(), FluentLibraryTreeDelegate)
+    assert isinstance(panel.tree, QtWidgets.QTreeDataGrid)
     assert isinstance(panel.breadcrumbs, Breadcrumb)
     assert [panel.sections.itemText(index) for index in range(panel.sections.count())] == [
-        'Songs', 'Images', 'Custom Slides', 'Media', 'Presentations', 'Themes']
+        'Songs', 'Presentations', 'Images', 'Media', 'Custom Slides', 'Themes']
     assert not hasattr(panel, 'preview_text') and not hasattr(panel, 'preview_image')
 
 
@@ -61,9 +60,9 @@ def test_no_connections_shows_import_infobar_and_disables_connect(panel, qtbot, 
     assert isinstance(empty.import_info, QtWidgets.fluentqt.InfoBar)
     assert isinstance(empty.import_info.actionWidget(), QtWidgets.fluentqt.HyperlinkButton)
     assert not empty.import_info.isHidden()
-    assert not empty.connect_button.isEnabled()
+    assert not empty.connect_action.isEnabled()
     assert not empty.roots.isEnabled()
-    assert empty.breadcrumbs.isHidden()
+    assert empty.navigation.isHidden()
     assert 'organisation' in empty.import_info.message()
     empty.resize(850, 600)
     empty.show()
@@ -295,7 +294,7 @@ def test_restart_restores_saved_connection_and_account_without_prompt(panel, qtb
     assert restored.profile == validate_profile(panel.profile)
     assert restored.connected
     assert restored.import_info.isHidden()
-    assert restored.connect_button.text() == 'Reconnect'
+    assert restored.connect_action.text() == 'Reconnect'
     imported.assert_not_called()
     opened.assert_not_called()
     provider.sign_in.assert_not_called()
@@ -460,6 +459,10 @@ def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, 
     panel.tree.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
     panel.tree.addTopLevelItem(FileTreeWidgetItem(['Middle']))
     assert [panel.tree.topLevelItem(i).text(0) for i in range(3)] == ['Alpha', 'Middle', 'Zeta']
+    panel.search.setText('middle')
+    assert [panel.tree.isRowHidden(i) for i in range(3)] == [True, False, True]
+    panel.search.clear()
+    assert not any(panel.tree.isRowHidden(i) for i in range(3))
 
 
 def test_cloud_write_context_actions_follow_item_permissions(panel):

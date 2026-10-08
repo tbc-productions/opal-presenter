@@ -6,8 +6,8 @@ from typing import Protocol
 from urllib.parse import urlparse
 
 
-CATEGORIES = {'songs': 'Songs', 'images': 'Images', 'custom': 'Custom Slides',
-              'media': 'Media', 'presentations': 'Presentations', 'themes': 'Themes'}
+CATEGORIES = {'songs': 'Songs', 'presentations': 'Presentations', 'images': 'Images',
+              'media': 'Media', 'custom': 'Custom Slides', 'themes': 'Themes'}
 
 
 def friendly_name(name):

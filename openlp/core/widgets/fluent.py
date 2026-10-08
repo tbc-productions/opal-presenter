@@ -591,7 +591,11 @@ class FluentTreeWidgetItem(_qt.QTreeWidgetItem):
         store = self.treeWidget()
         if store is not None and isinstance(store.parent(), (QTreeWidget, QTreeDataGrid)):
             index = store.indexFromItem(self)
-            store.parent().setRowHidden(index.row(), index.parent(), hidden)
+            view = store.parent()
+            if isinstance(view, QTreeDataGrid):
+                view.setRowHidden(index.row(), hidden)
+            else:
+                view.setRowHidden(index.row(), index.parent(), hidden)
 
 
 QTreeWidgetItem = FluentTreeWidgetItem

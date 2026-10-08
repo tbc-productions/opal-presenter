@@ -20,10 +20,11 @@ from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
 from openlp.core.widgets.docks import MediaToolBox
+from openlp.core.widgets.fluent_commands import SpacedCommandBar
 from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
 from openlp.core.widgets.libraryfooter import LibraryFooter
 from openlp.core.widgets.toolbar import OpenLPToolbar
-from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
+from openlp.core.widgets.views import DataGridWithDnD, FileTreeWidgetItem
 from openlp.plugins.librarysync.lib.connectionwizard import ConnectionWizard
 from openlp.plugins.librarysync.lib.profile import (
     deserialize_profile, read_profile, serialize_profile, validate_profile, write_profile)
@@ -53,9 +54,9 @@ class CloudDragData(QtCore.QMimeData):
                                         and item_category(item) == category for item in self.items)
 
 
-class CloudTree(TreeWidgetWithDnD):
+class CloudTree(DataGridWithDnD):
     def __init__(self, panel):
-        super().__init__(panel, 'images')
+        super().__init__(panel, 'librarysync')
         self.panel = panel
         self.setup_columns([tr('Name'), tr('Size'), tr('Updated')])
         self.setRootIsDecorated(False)
@@ -121,7 +122,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.imported = set()
         self.closing = False
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(6, 0, 6, 6)
         layout.setSpacing(6)
         self.import_info = QtWidgets.fluentqt.InfoBar(self)
         info_policy = self.import_info.sizePolicy()
@@ -133,14 +134,10 @@ class CloudLibrary(QtWidgets.QWidget):
         self.import_button.clicked.connect(self.import_connection)
         self.import_info.setActionWidget(self.import_button)
         layout.addWidget(self.import_info)
-        connection = QtWidgets.QHBoxLayout()
         self.roots = QtWidgets.QComboBox(self)
         self.roots.setAccessibleName(tr('Shared cloud folder'))
-        connection.addWidget(self.roots, 1)
-        self.connect_button = QtWidgets.QPushButton(tr('Connect'), self)
-        self.connect_button.clicked.connect(self.connect_drive)
-        connection.addWidget(self.connect_button)
-        layout.addLayout(connection)
+        self.roots.setMinimumWidth(180)
+        self.roots.setMaximumWidth(360)
         self.sections = MediaToolBox(self)
         self.type_icons = {'songs': UiIcons().music, 'images': UiIcons().picture, 'custom': UiIcons().custom,
                            'media': UiIcons().media, 'presentations': UiIcons().presentation, 'themes': UiIcons().theme}
@@ -155,27 +152,57 @@ class CloudLibrary(QtWidgets.QWidget):
         self.sections.currentChanged.connect(self.change_type)
         layout.addWidget(self.sections, 1)
         self.toolbar = OpenLPToolbar(self)
-        self.up_action = self.toolbar.addAction(UiIcons().back, tr('Up'), self.go_up)
+        self.toolbar.addWidget(self.roots)
+        self.connect_action = QtGui.QAction(UiIcons().cloud_arrow_right, tr('Connect'), self)
+        self.connect_action.triggered.connect(self.connect_drive)
+        self.toolbar.add_pinned_action(self.connect_action)
         self.refresh_action = self.toolbar.addAction(UiIcons().refresh, tr('Refresh'), self.refresh)
         self.download_action = self.toolbar.addAction(UiIcons().download, tr('Add to Library'), self.download_selected)
         self.preview_action = self.toolbar.addAction(UiIcons().preview, tr('Open cloud preview'), self.open_preview)
-        self.folder_action = self.toolbar.addAction(UiIcons().folder_plus, tr('New folder'), self.create_folder)
         self.settings_action = self.toolbar.addAction(UiIcons().settings, tr('Connection'), self.configure)
         self.rename_action = QtGui.QAction(UiIcons().edit, tr('Rename'), self)
         self.rename_action.triggered.connect(self.rename_selected)
         self.delete_action = QtGui.QAction(UiIcons().delete, tr('Delete'), self)
         self.delete_action.triggered.connect(self.delete_selected)
-        self.sections.layout().insertWidget(1, self.toolbar)
-        self.breadcrumbs = Breadcrumb(self)
+        controls = QtWidgets.QWidget(self)
+        controls_layout = QtWidgets.QVBoxLayout(controls)
+        controls_layout.setContentsMargins(0, 8, 0, 8)
+        controls_layout.setSpacing(0)
+        controls_layout.addWidget(self.toolbar)
+        self.navigation = QtWidgets.QWidget(controls)
+        navigation_layout = QtWidgets.QHBoxLayout(self.navigation)
+        navigation_layout.setContentsMargins(0, 0, 0, 0)
+        navigation_layout.setSpacing(8)
+        self.navigation_commands = SpacedCommandBar(self.navigation)
+        self.navigation_commands.setBackgroundVisible(False)
+        self.navigation_commands.setDynamicOverflowEnabled(False)
+        self.navigation_commands.setLabelPosition(QtWidgets.fluentqt.CommandBar.LabelPosition.Collapsed)
+        self.navigation_commands.setFixedHeight(QtWidgets.fluentqt.Spacing.ControlHeight.Large)
+        self.navigation_commands.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,
+                                               QtWidgets.QSizePolicy.Policy.Fixed)
+        self.up_action = QtGui.QAction(UiIcons().arrow_turn_left_up, tr('Up'), self)
+        self.up_action.triggered.connect(self.go_up)
+        self.folder_action = QtGui.QAction(UiIcons().folder_plus, tr('New folder'), self)
+        self.folder_action.triggered.connect(self.create_folder)
+        self.navigation_commands.addPrimaryAction(self.folder_action)
+        self.navigation_commands.addPrimaryAction(self.up_action)
+        navigation_layout.addWidget(self.navigation_commands)
+        self.breadcrumbs = Breadcrumb(self.navigation)
         self.breadcrumbs.setAutoTruncateOnItemClick(False)
         self.breadcrumbs.setOverflowMode(Breadcrumb.OverflowMode.Middle)
         self.breadcrumbs.itemActivated.connect(self.activate_breadcrumb)
-        self.sections.layout().insertWidget(2, self.breadcrumbs)
+        navigation_layout.addWidget(self.breadcrumbs, 1)
+        controls_layout.addWidget(self.navigation)
+        controls_layout.addSpacing(8)
         self.search = QtWidgets.QLineEdit(self)
+        self.search.setMinimumHeight(QtWidgets.fluentqt.Spacing.ControlHeight.Large)
+        search_icon = self.search.addAction(UiIcons().search, QtWidgets.QLineEdit.ActionPosition.LeadingPosition)
+        search_icon.setEnabled(False)
         self.search.setPlaceholderText(tr('Filter this folder…'))
         self.search.setAccessibleName(tr('Filter loaded cloud items'))
         self.search.textChanged.connect(self.filter_items)
-        self.sections.layout().insertWidget(3, self.search)
+        controls_layout.addWidget(self.search)
+        self.sections.layout().insertWidget(1, controls)
         self.more_button = QtWidgets.QPushButton(tr('Load more'), self)
         self.more_button.clicked.connect(self.load_more)
         self.more_button.hide()
@@ -501,9 +528,11 @@ class CloudLibrary(QtWidgets.QWidget):
         busy = self.busy()
         selected = self.selected_items() if hasattr(self, 'tree') else []
         self.import_info.setVisible(not self.profile)
-        self.breadcrumbs.setVisible(bool(self.profile))
-        self.connect_button.setEnabled(bool(self.profile) and not self.jobs)
-        self.connect_button.setText(tr('Reconnect') if self.connected else tr('Connect'))
+        self.navigation.setVisible(bool(self.profile))
+        self.connect_action.setEnabled(bool(self.profile) and not self.jobs)
+        self.connect_action.setText(tr('Reconnect') if self.connected else tr('Connect'))
+        self.connect_action.setIcon(UiIcons().library_sync if self.connected else UiIcons().cloud_arrow_right)
+        self.connect_action.setToolTip(self.connect_action.text())
         self.settings_action.setEnabled(not self.jobs)
         self.roots.setEnabled(bool(self.roots.count()) and not busy and not browsing)
         self.sections.setEnabled(not busy and not browsing)
