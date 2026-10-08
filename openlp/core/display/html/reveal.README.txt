@@ -8,7 +8,9 @@ Licence: reveal.LICENSE (MIT)
 Vendored assets are package/dist/reveal.js and package/dist/reveal.css.
 OpenLP+ loads the UMD bundle locally; it does not require npm or a CDN at runtime.
 
-Local patch in reveal.js (SlideContent.load background-image URL handling):
+Local patches in reveal.js:
+
+SlideContent.load background-image URL handling:
   m(decodeURI(e.trim()))
 becomes:
   m(e.trim()).replace(/%25([0-9a-f]{2})/gi,`%$1`)
@@ -20,6 +22,14 @@ filenames containing # must keep %23; decoding it to # would turn it into a
 URL fragment. Existing rendering tests cover spaces, #, %, parentheses and
 non-ASCII characters, including after a full Reveal.sync().
 
-When updating, replace both assets together, retain or re-evaluate this patch,
+Layout skips frames where the computed slide or presentation width/height is
+not positive, before calculating the scale. Hidden startup previews have zero
+dimensions; percentage slide sizes otherwise produce NaN. Since NaN !== NaN,
+each layout dispatches a bubbling resize event that re-enters Reveal's window
+resize handler until the call stack overflows. The guard retains the previous
+scale until a visible viewport can be laid out. The startup rendering test
+covers hidden initialisation and layout/navigation after showing the preview.
+
+When updating, replace both assets together, retain or re-evaluate these patches,
 and run the JavaScript rendering suite. Display.init() awaits Reveal readiness;
 scrollActivationWidth is disabled so small previews keep the slide DOM.

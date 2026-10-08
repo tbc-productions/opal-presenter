@@ -1,12 +1,15 @@
 describe("Reveal display startup", function () {
   var frame;
 
-  function loadDisplay(done, check) {
+  function loadDisplay(done, check, hidden) {
     frame = document.createElement('iframe');
     frame.style.width = '320px';
     frame.style.height = '180px';
+    if (hidden) frame.style.display = 'none';
     frame.onload = function () {
       var win = frame.contentWindow;
+      var errors = [];
+      win.addEventListener('error', function (event) { errors.push(event.message); });
       spyOn(win.displayWatcher, 'setInitialised');
       var startup = win.requestAction('init', {isDisplay: true});
       expect(win.displayWatcher.setInitialised).not.toHaveBeenCalled();
@@ -15,7 +18,7 @@ describe("Reveal display startup", function () {
         expect(win.Reveal.isReady()).toBe(true);
         expect(win.displayWatcher.setInitialised).toHaveBeenCalledWith(true);
         expect(win.Display._backgroundsContainer).toBe(win.Reveal.getBackgroundsElement());
-        check(win);
+        return check(win, errors);
       }).then(done, done.fail);
     };
     frame.srcdoc = '<link rel="stylesheet" href="/base/openlp/core/display/html/reveal.css">' +
@@ -50,5 +53,25 @@ describe("Reveal display startup", function () {
       expect(win.Display.prev()).toBe(true);
       expect(fragment.classList.contains('visible')).toBe(false);
     });
+  });
+
+  it("starts hidden previews without recursive resize errors and lays them out when shown", function (done) {
+    loadDisplay(done, function (win, errors) {
+      expect(errors).toEqual([]);
+      expect(win.Reveal.getScale()).toBe(1);
+      frame.style.display = '';
+      return new Promise(function (resolve) {
+        win.requestAnimationFrame(function () {
+          win.Reveal.layout();
+          expect(errors).toEqual([]);
+          expect(win.Reveal.getScale()).toBe(1);
+          var slides = win.Reveal.getSlidesElement();
+          expect(slides.clientWidth).toBe(win.document.querySelector('.reveal').offsetWidth);
+          expect(slides.clientHeight).toBe(win.document.querySelector('.reveal').offsetHeight);
+          expect(win.Display.next()).toBe(true);
+          resolve();
+        });
+      });
+    }, true);
   });
 });
