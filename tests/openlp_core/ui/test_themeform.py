@@ -25,7 +25,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
@@ -84,8 +84,6 @@ def test_setup(settings):
     with patch('openlp.core.ui.themeform.ThemeForm._setup'):
         theme_form = ThemeForm(None)
     theme_form.setup_ui = MagicMock()
-    theme_form.layout_guide_button = MagicMock()
-    theme_form.layout_guide_button.triggered = MagicMock()
     theme_form.play_transition_button = MagicMock()
     theme_form.play_transition_button.triggered = MagicMock()
     theme_form.area_position_page = MagicMock()
@@ -100,8 +98,6 @@ def test_setup(settings):
     theme_form.setup_ui.assert_called_once_with(theme_form)
     assert theme_form.can_update_theme is True
     assert theme_form.temp_background_filename is None
-    theme_form.layout_guide_button.triggered.connect.assert_called_once_with(
-        theme_form.on_toggle_layout_guide_clicked)
     theme_form.play_transition_button.triggered.connect.assert_called_once_with(theme_form.preview_transition)
     theme_form.main_area_page.font_name_changed.connect.assert_called_once_with(theme_form.calculate_lines)
     theme_form.main_area_page.font_size_changed.connect.assert_called_once_with(theme_form.calculate_lines)
@@ -191,7 +187,6 @@ def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, 
     theme_form.preview_box = MagicMock()
     theme_form.theme_name_label = MagicMock()
     theme_form.theme_name_edit = MagicMock()
-    theme_form.layout_guide_button = MagicMock()
     theme_form.setWindowTitle = MagicMock()
     current_screen = MagicMock()
     current_screen.display_geometry.width.return_value = 1920
@@ -312,7 +307,6 @@ def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_sho
     theme_form.theme_name_label = MagicMock()
     theme_form.theme_name_edit = MagicMock()
     theme_form.setWindowTitle = MagicMock()
-    theme_form.layout_guide_button = MagicMock()
 
     # WHEN: The dialog is opened
     theme_form.exec(True)
@@ -354,7 +348,7 @@ def test_refresh_preview_disables_theme_transitions(mocked_single_shot, mocked_s
     theme_form = ThemeForm(None)
     theme_form.theme = MagicMock()
     theme_form.preview_box = MagicMock()
-    theme_form.update_layout_guide_overlay = MagicMock()
+    theme_form.update_area_overlay = MagicMock()
 
     # WHEN: refresh_preview() is called
     theme_form.refresh_preview()
@@ -378,7 +372,7 @@ def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked
     mocked_theme_manager = MagicMock()
     Registry().register('theme_manager', mocked_theme_manager)
     theme_form.update_theme = MagicMock()
-    theme_form.update_layout_guide_overlay = MagicMock()
+    theme_form.update_area_overlay = MagicMock()
 
     # WHEN: preview_transition() is called
     theme_form.preview_transition()
@@ -843,6 +837,93 @@ def test_theme_window_close_releases_modal_loop(interactive_theme_form):
     assert not form.isVisible()
 
 
+def test_theme_dirty_state_ignores_preview_and_detects_reverted_edits(interactive_theme_form):
+    form = interactive_theme_form
+    form.mark_saved()
+    assert not form.has_unsaved_changes()
+    form.canvas_combo.setCurrentIndex(3)
+    form.on_area_selected('footer')
+    assert not form.has_unsaved_changes()
+    original_name = form.theme_name_edit.text()
+    form.theme_name_edit.setText('Renamed theme')
+    assert form.has_unsaved_changes()
+    form.theme_name_edit.setText(original_name)
+    assert not form.has_unsaved_changes()
+    original_size = form.main_area_page.font_size
+    form.main_area_page.font_size = original_size + 1
+    assert form.has_unsaved_changes()
+    form.main_area_page.font_size = original_size
+    assert not form.has_unsaved_changes()
+
+
+def test_clean_theme_closes_for_exit_without_a_prompt(interactive_theme_form):
+    form = interactive_theme_form
+    form.mark_saved()
+    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as dialog:
+        assert form.request_close_for_exit()
+    dialog.assert_not_called()
+    assert form.result() == QtWidgets.QDialog.DialogCode.Rejected
+
+
+@pytest.mark.parametrize('choice, closes, saves', [
+    ('save', True, True), ('discard', True, False), ('cancel', False, False)])
+def test_theme_exit_save_discard_cancel(interactive_theme_form, choice, closes, saves):
+    import fluentqt
+    form = interactive_theme_form
+    form.mark_saved()
+    form.theme_name_edit.setText('Changed theme')
+    result = {'save': fluentqt.ContentDialog.ResultPrimary,
+              'discard': fluentqt.ContentDialog.ResultSecondary,
+              'cancel': fluentqt.ContentDialog.ResultNone}[choice]
+    primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
+    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor:
+        dialog = constructor.return_value
+        dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary
+        dialog.exec.return_value = result
+        assert form.request_close_for_exit() is closes
+    constructor.assert_called_once_with(form)
+    dialog.setTitle.assert_called_once_with('Save Theme?')
+    assert Registry().get('theme_manager').save_theme.called is saves
+
+
+def test_failed_theme_save_keeps_app_exit_cancelled(interactive_theme_form):
+    import fluentqt
+    form = interactive_theme_form
+    form.mark_saved()
+    form.theme_name_edit.setText('')
+    primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
+    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor, \
+            patch('openlp.core.ui.themeform.critical_error_message_box') as error:
+        dialog = constructor.return_value
+        dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary
+        dialog.exec.return_value = primary
+        assert not form.request_close_for_exit()
+    assert error.call_args.kwargs['parent'] is form
+    Registry().get('theme_manager').save_theme.assert_not_called()
+
+
+def test_theme_exit_guard_unwinds_window_before_service_prompt(interactive_theme_form, qtbot):
+    from PySide6 import QtWidgets as NativeWidgets
+    form = interactive_theme_form
+    main = NativeWidgets.QWidget()
+    qtbot.addWidget(main)
+    Registry().register('main_window', main)
+    observed = []
+
+    def service_prompt():
+        observed.append((form.isVisible(), form._event_loop,
+                         main._closing_designers_for_exit))
+        return False  # A cancelled service save must keep OpenLP+ running.
+
+    with patch.object(main, 'close', side_effect=service_prompt):
+        # Sending a close event still exercises the guard installed by _exec_window().
+        QtCore.QTimer.singleShot(0, lambda: NativeWidgets.QApplication.sendEvent(main, QtGui.QCloseEvent()))
+        assert form._exec_window() == QtWidgets.QDialog.DialogCode.Rejected
+        qtbot.waitUntil(lambda: bool(observed))
+    assert observed == [(False, None, True)]
+    assert not form._exit_guard.windows
+
+
 def test_embedded_theme_preview_capture_excludes_handles():
     from openlp.core.ui.themewizard import ThemeDesignerPreview
     preview = MagicMock()
@@ -886,9 +967,7 @@ def test_theme_commands_share_top_command_bar(interactive_theme_form):
     form = interactive_theme_form
     groups = form.command_bar._command_groups
     assert len(groups) == 1
-    assert groups[0].primaryActions() == [form.layout_guide_action, form.play_transition_action,
-                                          form.help_action, form.export_theme_action]
-    assert not form.help_action.icon().isNull()
+    assert groups[0].primaryActions() == [form.play_transition_action, form.export_theme_action]
     assert not form.export_theme_action.icon().isNull()
     assert form.area_overlay.snapping
     assert not hasattr(form, 'snap_action')

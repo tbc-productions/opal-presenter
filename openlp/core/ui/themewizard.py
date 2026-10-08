@@ -172,7 +172,7 @@ class Ui_ThemeWizard(object):
         self.dialog_layout_widget.setObjectName('theme_wizard_content')
         self.dialog_layout = QtWidgets.QGridLayout(self.dialog_layout_widget)
         self.dialog_layout.setObjectName('dialog_layout')
-        self.dialog_layout.setContentsMargins(14, 14, 14, 12)
+        self.dialog_layout.setContentsMargins(14, 6, 14, 12)
         self.dialog_layout.setHorizontalSpacing(12)
         self.dialog_layout.setVerticalSpacing(10)
         self.dialog_main_layout.addWidget(self.dialog_layout_widget)
@@ -195,6 +195,7 @@ class Ui_ThemeWizard(object):
         self.command_bar.setMovable(False)
         self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.command_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.command_bar.setFixedHeight(52)
         self.command_row.addWidget(self.command_bar, 1)
         self.dialog_layout.addLayout(self.command_row, 0, 0, 1, 2)
 
@@ -292,13 +293,6 @@ class Ui_ThemeWizard(object):
             self.alignment_actions[operation] = action
         self.align_button.setMenu(align_menu)
         self.command_bar.addWidget(self.align_button)
-        self.layout_guide_action = QtGui.QAction(
-            fluent_icon('ic_fluent_border_all_24_regular'),
-            '',
-            self.command_bar)
-        self.layout_guide_action.setCheckable(True)
-        self.command_bar.addAction(self.layout_guide_action)
-        self.layout_guide_button = self.layout_guide_action
         self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.play_transition_action = QtGui.QAction(fluent_icon('ic_fluent_play_24_regular'), '', self.command_bar)
         self.play_transition_action.setVisible(False)
@@ -385,13 +379,9 @@ class Ui_ThemeWizard(object):
         # Reverse direction is a theme-wide transition setting.
         self.transitions_page.layout.addWidget(self.alignment_page.transition_reverse_check_box, 1, 0, 1, 4)
 
-        self.help_action = QtGui.QAction(
-            fluent_icon('ic_fluent_question_circle_24_regular'),
-            translate('OpenLP.ThemeWizard', 'Help'), self.command_bar)
         self.export_theme_action = QtGui.QAction(
             fluent_icon('ic_fluent_arrow_export_24_regular'),
             translate('OpenLP.ThemeWizard', 'Export Theme'), self.command_bar)
-        self.command_bar.addAction(self.help_action)
         self.command_bar.addAction(self.export_theme_action)
         self.button_box = create_button_box(theme_dialog, 'button_box', ['cancel', 'save'])
         self.footer_buttons_layout = QtWidgets.QHBoxLayout()
@@ -409,9 +399,6 @@ class Ui_ThemeWizard(object):
         """
         theme_dialog.setWindowTitle(translate('OpenLP.ThemeWizard', 'Theme Designer'))
         self.window_title_label.setText(theme_dialog.windowTitle())
-        self.layout_guide_action.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
-        self.layout_guide_button.setText(translate('OpenLP.ThemeWizard', 'Layout guide'))
-        self.layout_guide_button.setToolTip(translate('OpenLP.ThemeWizard', 'Show layout guide'))
         self.play_transition_action.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setToolTip(translate('OpenLP.ThemeWizard', 'Preview transition'))

@@ -141,25 +141,6 @@ body.transition #logo-screen {
   opacity: 0;
 }
 
-#layout-guide-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 6;
-  display: none;
-}
-
-#layout-guide-overlay.show-guides {
-  display: block;
-}
-
-#layout-guide-main,
-#layout-guide-footer {
-  position: absolute;
-  box-sizing: border-box;
-  border: 2px solid transparent;
-}
-
 body.presentation-slide-transition .reveal .slides section[data-transition] {
   transition-duration: var(--presentation-slide-transition-ms) !important;
 }

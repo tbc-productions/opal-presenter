@@ -19,7 +19,6 @@ class ThemeAreaOverlay(QtWidgets.QWidget):
         self.areas = {}
         self.selected = 'main'
         self.snapping = True
-        self.show_guides = False
         self._gesture = None
         self._dragged = False
         self._snap_lines = []
@@ -206,12 +205,6 @@ class ThemeAreaOverlay(QtWidgets.QWidget):
                                       QtCore.Qt.PenStyle.SolidLine if area == self.selected else
                                       QtCore.Qt.PenStyle.DashLine))
             painter.drawRect(bounds.adjusted(1, 1, -1, -1))
-            if self.show_guides:
-                caption = translate('OpenLP.ThemeWizard', 'Main text' if area == 'main' else 'Footer text')
-                label = QtCore.QRectF(bounds.left() + 4, bounds.top() + 4,
-                                      painter.fontMetrics().horizontalAdvance(caption) + 12, 24)
-                painter.fillRect(label, QtGui.QColor('#ffffff'))
-                painter.drawText(label, QtCore.Qt.AlignmentFlag.AlignCenter, caption)
             if area == self.selected:
                 painter.setBrush(QtGui.QColor('#ffffff'))
                 for centre in self.handles(bounds).values():

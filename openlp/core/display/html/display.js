@@ -381,23 +381,6 @@ function _applyImageSlideContent(section, imageUrl, useNativeBackground, fit, ba
 }
 
 /**
- * Ensure the layout guide overlay exists.
- * @private
- * @returns {HTMLElement} Overlay element
- */
-function _ensureLayoutGuideOverlay() {
-  var overlay = $("#layout-guide-overlay")[0];
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "layout-guide-overlay";
-    overlay.innerHTML = '<div id="layout-guide-main"></div><div id="layout-guide-footer"></div>';
-    var reveal = $(".reveal")[0] || document.body;
-    reveal.appendChild(overlay);
-  }
-  return overlay;
-}
-
-/**
  * Apply fit styling to reveal background elements after sync.
  * @private
  * @param {{size: string, repeat: string}} fit - Resolved fit settings
@@ -2606,39 +2589,6 @@ var Display = {
     targetElement.setAttribute("data-background-position", fit.position);
     Reveal.sync();
     _applyBackgroundFitToRenderedSlides(fit);
-  },
-  /**
-   * Show layout guide rectangles on the current preview.
-   * @param {{main: Object, footer: Object}} guideRects - Main and footer rectangles in theme pixels
-   */
-  setLayoutGuide: function (guideRects) {
-    var overlay = _ensureLayoutGuideOverlay();
-    var main = $("#layout-guide-main")[0];
-    var footer = $("#layout-guide-footer")[0];
-    if (!main || !footer) {
-      return;
-    }
-    [
-      { element: main, rect: guideRects.main, color: "#1f78ff" },
-      { element: footer, rect: guideRects.footer, color: "#ff4d4f" }
-    ].forEach(function (entry) {
-      var rect = entry.rect || {};
-      entry.element.style.left = (rect.x || 0) + "px";
-      entry.element.style.top = (rect.y || 0) + "px";
-      entry.element.style.width = Math.max(rect.width || 0, 0) + "px";
-      entry.element.style.height = Math.max(rect.height || 0, 0) + "px";
-      entry.element.style.borderColor = entry.color;
-    });
-    overlay.classList.add("show-guides");
-  },
-  /**
-   * Hide layout guide rectangles.
-   */
-  clearLayoutGuide: function () {
-    var overlay = $("#layout-guide-overlay")[0];
-    if (overlay) {
-      overlay.classList.remove("show-guides");
-    }
   },
   /**
    * Reset/reapply the theme

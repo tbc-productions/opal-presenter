@@ -26,6 +26,7 @@ import logging
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui
+import fluentqt
 from fluentqt import Window as FluentWindow
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -79,22 +80,17 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         self._applying_preview_layout_geometry = False
         self.temp_background_filename = None
         self._last_preview_scale = None
-        self.layout_guides_visible = False
         if hasattr(self, 'preview_area_layout'):
             try:
                 self.preview_area_layout.set_aspect_ratio(self.renderer.width() / self.renderer.height())
             except ZeroDivisionError:
                 self.preview_area_layout.set_aspect_ratio(1)
             self.preview_area_layout.resize.connect(self._on_preview_area_resized)
-        self.layout_guide_button.triggered.connect(self.on_toggle_layout_guide_clicked)
-        self._update_layout_guide_button_tooltip(False)
         if hasattr(self, 'play_transition_button'):
             self.play_transition_button.triggered.connect(self.preview_transition)
             self._set_play_transition_button_visible(False)
         if hasattr(self, 'preview_box'):
             self.preview_box.allow_theme_transitions = False
-        if hasattr(self, 'help_action'):
-            self.help_action.triggered.connect(self.provide_help)
         if hasattr(self, 'export_theme_action'):
             self.export_theme_action.triggered.connect(self.on_export_theme_clicked)
             self.export_theme_action.setEnabled(False)
@@ -144,12 +140,6 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self.canvas_combo.currentIndexChanged.connect(self.on_preview_size_changed)
             self.on_area_selected('main')
 
-    def provide_help(self):
-        """
-        Provide help within the wizard by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/themes.html"))
-
     def set_defaults(self):
         """
         Set up display at start of theme edit.
@@ -189,7 +179,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         self.preview_box.show()
         self.preview_box.generate_preview_two_slides(self._preview_theme())
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
         # Tell the JS side to handle the timed transition demo
         self.preview_box.run_in_display('previewTransition', 300, 3500)
 
@@ -258,27 +248,11 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
     def validate_background_page(self):
         return self.validateCurrentPage()
 
-    def on_toggle_layout_guide_clicked(self, is_checked=False):
-        """
-        Toggle the layout guide overlay in the preview.
-        """
-        self.layout_guides_visible = bool(is_checked)
-        self._update_layout_guide_button_tooltip(self.layout_guides_visible)
-        self.update_layout_guide_overlay()
-
     def on_refresh_preview_clicked(self):
         """
         Manually refresh the preview slide rendering.
         """
         self.refresh_preview()
-
-    def _update_layout_guide_button_tooltip(self, is_enabled):
-        """
-        Update tooltip text for the layout guide toggle button.
-        """
-        tooltip = translate('OpenLP.ThemeWizard', 'Hide layout guide') if is_enabled else \
-            translate('OpenLP.ThemeWizard', 'Show layout guide')
-        self.layout_guide_button.setToolTip(tooltip)
 
     def on_export_theme_clicked(self):
         """
@@ -354,12 +328,9 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         self.set_defaults()
         self.can_update_theme = True
         self.edit_mode = edit
-        self.layout_guides_visible = False
         self._last_preview_scale = None
         self._sync_preview_to_current_screen()
         self._apply_preview_layout_geometry()
-        self.layout_guide_button.setChecked(False)
-        self._update_layout_guide_button_tooltip(False)
         if edit:
             self.setWindowTitle(translate('OpenLP.ThemeWizard', 'Edit Theme - {name}'
                                           ).format(name=self.theme.theme_name))
@@ -376,6 +347,10 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
 
     def _exec_window(self):
         """Wait for Save/Cancel while displaying the native Fluent window."""
+        from openlp.core.ui.designerexitguard import designer_exit_guard
+        self.mark_saved()
+        self._exit_guard = designer_exit_guard()
+        self._exit_guard.add(self)
         self._result = QtWidgets.QDialog.DialogCode.Rejected
         loop = QtCore.QEventLoop(self)
         self._event_loop = loop
@@ -390,6 +365,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self.activateWindow()
             loop.exec()
         finally:
+            self._exit_guard.remove(self)
             self._event_loop = None
             loop.deleteLater()
         return self._result
@@ -399,6 +375,8 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
 
     def done(self, result):
         self._result = result
+        if getattr(self, '_exit_guard', None) is not None:
+            self._exit_guard.remove(self)
         self._initial_preview_refresh_pending = False
         if hasattr(self, 'area_preview_timer'):
             self.area_preview_timer.stop()
@@ -417,6 +395,68 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
     def closeEvent(self, event):
         self.reject()
         event.accept()
+
+    def _theme_state(self):
+        """Compare editable settings, excluding geometry derived from the output screen."""
+        self.update_theme()
+        state = copy.deepcopy(vars(self.theme))
+        state['theme_name'] = self.theme_name_edit.text()
+        for area in ('main', 'footer'):
+            if not state.get(f'font_{area}_override'):
+                for field in ('x', 'y', 'width', 'height'):
+                    state.pop(f'font_{area}_{field}', None)
+        return state
+
+    def mark_saved(self):
+        self._saved_theme_state = self._theme_state()
+
+    def has_unsaved_changes(self):
+        return self._theme_state() != self._saved_theme_state
+
+    def request_close_for_exit(self):
+        """Resolve this theme draft before the application's normal service-save prompt."""
+        focused = QtWidgets.QApplication.focusWidget()
+        if focused is not None and self.isAncestorOf(focused):
+            focused.clearFocus()
+        if not self.has_unsaved_changes():
+            self.reject()
+            return True
+
+        def tr(text):
+            return translate('OpenLP.ThemeWizard', text)
+
+        dialog = fluentqt.ContentDialog(self)
+        dialog.setObjectName('theme_exit_dialog')
+        dialog.setTitle(tr('Save Theme?'))
+        title = self.theme_name_edit.text().strip()
+        message = tr('Save changes to “{title}” before exiting OpenLP+?').format(title=title) if title else \
+            tr('Save your changes before exiting OpenLP+?')
+        label = QtWidgets.QLabel(message)
+        label.setWordWrap(True)
+        dialog.setContent(label)
+        dialog.setPrimaryButtonText(tr('Save'))
+        dialog.setSecondaryButtonText(tr('Discard'))
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        try:
+            choice = dialog.exec()
+        finally:
+            dialog.deleteLater()
+        if choice == dialog.ResultSecondary:
+            self.reject()
+            return True
+        if choice != dialog.ResultPrimary:
+            return False
+        finished = []
+        self.finished.connect(finished.append)
+        try:
+            self.accept()
+        finally:
+            self.finished.disconnect(finished.append)
+        return finished == [QtWidgets.QDialog.DialogCode.Accepted]
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Escape:
@@ -506,7 +546,6 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             area: QtCore.QRectF(*(float(getattr(theme, f'font_{area}_{field}'))
                                   for field in ('x', 'y', 'width', 'height')))
             for area in ('main', 'footer')})
-        self.area_overlay.show_guides = self.layout_guides_visible
         self.area_overlay.raise_()
 
     def align_area(self, operation):
@@ -615,7 +654,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         self.preview_box.show()
         self.preview_box.generate_preview(self._preview_theme(), bool(force_page), False)
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
 
     def _refresh_preview_when_ready(self):
         """
@@ -652,7 +691,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self._refresh_preview_when_ready()
             return
         self._set_preview_scale(size.width())
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
 
     def _apply_preview_layout_geometry(self):
         """
@@ -698,36 +737,6 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         if self._last_preview_scale is None or abs(scale - self._last_preview_scale) > 0.01:
             self._last_preview_scale = scale
             self.preview_box.set_scale(scale)
-
-    def update_layout_guide_overlay(self):
-        """
-        Update and paint layout guide rectangles over the preview.
-        """
-        if not hasattr(self, 'preview_box') or self.preview_box is None:
-            return
-        self.update_area_overlay()
-        if hasattr(self, 'area_overlay'):
-            self.preview_box.run_in_display('clearLayoutGuide')
-            return
-        if not self.layout_guides_visible:
-            self.preview_box.run_in_display('clearLayoutGuide')
-            return
-        if not hasattr(self, 'theme'):
-            return
-        self.preview_box.run_in_display('setLayoutGuide', {
-            'main': {
-                'x': int(self.theme.font_main_x),
-                'y': int(self.theme.font_main_y),
-                'width': int(self.theme.font_main_width),
-                'height': int(self.theme.font_main_height)
-            },
-            'footer': {
-                'x': int(self.theme.font_footer_x),
-                'y': int(self.theme.font_footer_y),
-                'width': int(self.theme.font_footer_width),
-                'height': int(self.theme.font_footer_height)
-            }
-        })
 
     def set_background_page_values(self):
         """
@@ -965,12 +974,12 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         if not self.theme.theme_name:
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Missing'),
-                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'), parent=self)
             return
         if self.theme.theme_name == '-1' or self.theme.theme_name == 'None':
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Invalid'),
-                translate('OpenLP.ThemeWizard', 'Please enter a valid theme name.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a valid theme name.'), parent=self)
             return
         destination_path = None
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Image) or \

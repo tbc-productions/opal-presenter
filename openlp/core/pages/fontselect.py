@@ -22,6 +22,7 @@
 The :mod:`~openlp.core.pages.fontselect` module contains the font selection page used in the theme wizard
 """
 from PySide6 import QtCore, QtGui
+import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
@@ -29,6 +30,7 @@ from openlp.core.pages import GridLayoutPage
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.labels import FormLabel
+from openlp.core.widgets.fluent_inputs import FontPreviewComboBox
 
 
 class FontSelectPage(GridLayoutPage):
@@ -49,7 +51,7 @@ class FontSelectPage(GridLayoutPage):
     font_size_changed = QtCore.Signal(int)
     wrap_changed = QtCore.Signal(bool)
     line_spacing_changed = QtCore.Signal(int)
-    letter_spacing_changed = QtCore.Signal(int)
+    letter_spacing_changed = QtCore.Signal(float)
     is_outline_enabled_changed = QtCore.Signal(bool)
     outline_color_changed = QtCore.Signal(str)
     outline_size_changed = QtCore.Signal(int)
@@ -114,7 +116,7 @@ class FontSelectPage(GridLayoutPage):
         self.style_bold_button.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Bold))
         self.style_bold_button.setObjectName('style_bold_button')
         self.style_layout.addWidget(self.style_bold_button)
-        self.font_weight_combo = QtWidgets.QComboBox(self)
+        self.font_weight_combo = FontPreviewComboBox(self)
         self.font_weight_combo.setAccessibleName(translate('OpenLP.FontSelectWidget', 'Font weight'))
         self.style_layout.addWidget(self.font_weight_combo)
         self.font_weight_combo.currentIndexChanged.connect(self._on_font_weight_changed)
@@ -159,9 +161,12 @@ class FontSelectPage(GridLayoutPage):
         self.letter_spacing_label.setObjectName('letter_spacing_label')
         self.spacing_layout.addWidget(self.letter_spacing_label, spacing_row, 0)
         spacing_row += 1
-        self.letter_spacing_spinbox = QtWidgets.QDoubleSpinBox(self)
-        self.letter_spacing_spinbox.setMinimum(-250)
-        self.letter_spacing_spinbox.setMaximum(250)
+        self.letter_spacing_spinbox = fluentqt.NumberBox(self)
+        self.letter_spacing_spinbox.setRange(-250, 250)
+        self.letter_spacing_spinbox.setDisplayPrecision(1)
+        self.letter_spacing_spinbox.setSmallChange(0.1)
+        self.letter_spacing_spinbox.setValue(0)
+        self.letter_spacing_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.letter_spacing_spinbox.setObjectName('letter_spacing_spinbox')
         self.spacing_layout.addWidget(self.letter_spacing_spinbox, spacing_row, 0)
         spacing_row += 1
@@ -357,7 +362,8 @@ class FontSelectPage(GridLayoutPage):
                        if 1 <= QtGui.QFontDatabase.weight(family, style) <= 1000})
 
     def _populate_font_weights(self, family=None):
-        weights = self.supported_weights(family or self.font_name)
+        family = family or self.font_name
+        weights = self.supported_weights(family)
         labels = {100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regular', 500: 'Medium',
                   600: 'Semi bold', 700: 'Bold', 800: 'Extra bold', 900: 'Black'}
         with QtCore.QSignalBlocker(self.font_weight_combo):
@@ -365,6 +371,12 @@ class FontSelectPage(GridLayoutPage):
             for weight in weights:
                 caption = translate('OpenLP.FontSelectWidget', labels.get(weight, 'Weight'))
                 self.font_weight_combo.addItem(f'{caption} ({weight})', weight)
+                font = QtGui.QFont(self.font_weight_combo.font())
+                font.setStyleName('')
+                font.setFamily(family)
+                font.setWeight(QtGui.QFont.Weight(weight))
+                self.font_weight_combo.setItemData(
+                    self.font_weight_combo.count() - 1, font, QtCore.Qt.ItemDataRole.FontRole)
         self.font_weight_combo.setVisible(len(weights) > 1)
         self.style_bold_button.setVisible(len(weights) <= 1)
         self.font_weight = min(weights, key=lambda weight: abs(weight - self._font_weight)) if len(weights) > 1 \

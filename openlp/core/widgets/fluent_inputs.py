@@ -1,4 +1,6 @@
 """Native Fluent input adapters retaining OpenLP field semantics."""
+from difflib import SequenceMatcher
+
 from PySide6 import QtCore, QtGui, QtWidgets as _qt
 import fluentqt
 from openlp.core.widgets.fluent_buttons import QCheckBox
@@ -44,17 +46,246 @@ class FluentCalendarWidget(fluentqt.CalendarView):
 QCalendarWidget = FluentCalendarWidget
 
 
-class FluentFontComboBox(fluentqt.ComboBox):
+class _FontOptionDelegate(_qt.QStyledItemDelegate):
+    """Paint font previews using the popup's Fluent tokens and selection indicator."""
+
+    def __init__(self, view):
+        super().__init__(view)
+        self._view = view
+        self._theme_host = fluentqt.FluentWidget(view)
+        self._theme_host.hide()
+
+    def sizeHint(self, option, index):
+        font = index.data(QtCore.Qt.ItemDataRole.FontRole)
+        metrics = QtGui.QFontMetrics(font if isinstance(font, QtGui.QFont) else option.font)
+        return QtCore.QSize(metrics.horizontalAdvance(str(index.data() or '')) + 32,
+                            max(40, metrics.height() + 16))
+
+    def paint(self, painter, option, index):
+        font = index.data(QtCore.Qt.ItemDataRole.FontRole)
+        if not isinstance(font, QtGui.QFont):
+            super().paint(painter, option, index)
+            return
+        colors = self._theme_host.theme_tokens().colors
+        text_rect = option.rect.adjusted(16, 0, -16, 0)
+        painter.save()
+        painter.setClipRect(option.rect, QtCore.Qt.ClipOperation.IntersectClip)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        enabled = bool(option.state & _qt.QStyle.StateFlag.State_Enabled)
+        active = bool(option.state & (_qt.QStyle.StateFlag.State_Selected | _qt.QStyle.StateFlag.State_MouseOver))
+        if enabled and active:
+            pressed = bool(option.state & _qt.QStyle.StateFlag.State_Sunken)
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(colors.subtleTertiary if pressed else colors.subtleSecondary)
+            painter.drawRoundedRect(QtCore.QRectF(option.rect.adjusted(0, 2, 0, -2)), 4, 4)
+        if enabled and self._view.selectionIndicatorVisible():
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(colors.accentDefault)
+            painter.drawRoundedRect(self._view.selectedIndicatorRect(), 1.5, 1.5)
+        painter.setFont(font)
+        painter.setPen(colors.textPrimary if enabled else colors.textDisabled)
+        rtl = option.direction == QtCore.Qt.LayoutDirection.RightToLeft
+        alignment = QtCore.Qt.AlignmentFlag.AlignRight if rtl else QtCore.Qt.AlignmentFlag.AlignLeft
+        text = QtGui.QFontMetrics(font).elidedText(
+            str(index.data() or ''), QtCore.Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, alignment | QtCore.Qt.AlignmentFlag.AlignVCenter, text)
+        painter.restore()
+
+
+class FontPreviewComboBox(fluentqt.ComboBox):
+    """Opt in to per-option fonts on the Fluent dropdown's actual ListView."""
+
+    def showPopup(self):
+        super().showPopup()
+        # The Fluent flyout belongs to the window, rather than the combo itself.
+        # Identify its visible list by the shared model; ignore Qt's hidden fallback.
+        for view in _qt.QApplication.allWidgets():
+            if (isinstance(view, _qt.QListView) and view.isVisible() and view.model() is self.model()
+                    and not isinstance(view.itemDelegate(), _FontOptionDelegate)):
+                view.setItemDelegate(_FontOptionDelegate(view))
+                view.doItemsLayout()
+
+
+class FluentFontComboBox(FontPreviewComboBox):
     currentFontChanged = QtCore.Signal(QtGui.QFont)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.addItems(QtGui.QFontDatabase.families())
+        self.addItems([family for family in QtGui.QFontDatabase.families() if not family.startswith('.')])
+        for index in range(self.count()):
+            self._set_item_font(index)
         self._font = QtGui.QFont(self.currentText())
-        self.currentTextChanged.connect(self._font_selected)
+        # Render the standard Fluent select chrome; its editable variant styles
+        # the arrow as a separate button and uses text-field padding.
+        self._select_chrome = fluentqt.ComboBox(self)
+        self._select_chrome.addItem('')
+        self._select_chrome.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self._select_chrome.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        # Keep the editor outside QComboBox's editable layout. Qt repositions its
+        # managed line edit on focus/popup changes, overriding Fluent's padding.
+        editor = self._font_editor = _qt.QLineEdit(self)
+        editor.setFrame(False)
+        editor.setStyleSheet('QLineEdit { background: transparent; border: none; padding: 0; }')
+        editor.setText(super().currentText())
+        self.setFocusProxy(editor)
+        self.setInsertPolicy(_qt.QComboBox.InsertPolicy.NoInsert)
+        completer = _qt.QCompleter(self.model(), editor)
+        completer.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
+        completer.setCompletionMode(_qt.QCompleter.CompletionMode.InlineCompletion)
+        editor.setCompleter(completer)
+        # Handle Enter/Escape before QCompleter consumes them.
+        editor.installEventFilter(self)
+        editor.textEdited.connect(self._highlight_font_match)
+        self.currentIndexChanged.connect(
+            lambda index: self._font_selected(self.itemText(index)) if index >= 0 else self.setCurrentText(''))
+        self.lineEdit().editingFinished.connect(self._commit_font_name)
+
+    def lineEdit(self):
+        return self._font_editor
+
+    def currentText(self):
+        if hasattr(self, '_font_editor'):
+            return self._font_editor.text()
+        return super().currentText()
+
+    def setCurrentText(self, text):
+        if hasattr(self, '_font_editor'):
+            self._font_editor.setText(text)
+        else:
+            super().setCurrentText(text)
+
+    def paintEvent(self, event):
+        if not hasattr(self, '_select_chrome'):
+            return super().paintEvent(event)
+        # The standard select child paints the whole surface, including the chevron.
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, '_select_chrome'):
+            self._select_chrome.setGeometry(self.rect())
+            padding = self._select_chrome.contentPaddingH()
+            trailing = padding * 2 + self.chevronSize()
+            self.lineEdit().setGeometry(padding, 0, max(0, self.width() - padding - trailing), self.height())
+            # Match the select's text inset, accounting for QLineEdit's extra inset.
+            self.lineEdit().setTextMargins(-2, 0, 0, 0)
+            self.lineEdit().raise_()
+
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        if hasattr(self, '_select_chrome'):
+            self._select_chrome.setAttribute(QtCore.Qt.WidgetAttribute.WA_UnderMouse, True)
+            self._select_chrome.enterEvent(event)
+            self.update()
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        if hasattr(self, '_select_chrome'):
+            self._select_chrome.setAttribute(QtCore.Qt.WidgetAttribute.WA_UnderMouse, False)
+            self._select_chrome.leaveEvent(event)
+            self.update()
+
+    def eventFilter(self, watched, event):
+        if watched is self.lineEdit() and event.type() == QtCore.QEvent.Type.MouseButtonPress:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                QtCore.QTimer.singleShot(0, self, self.showPopup)
+                QtCore.QTimer.singleShot(0, self, self.lineEdit().selectAll)
+        if (watched is self.lineEdit() and event.type() == QtCore.QEvent.Type.ShortcutOverride
+                and event.key() == QtCore.Qt.Key.Key_Escape):
+            # The Fluent flyout otherwise consumes Escape before the editor sees
+            # KeyPress. Restore the committed name and keep Escape in this field.
+            self.setCurrentText(self._font.family() if self.currentIndex() >= 0 else '')
+            self.hidePopup()
+            event.accept()
+            return True
+        if watched is self.lineEdit() and event.type() == QtCore.QEvent.Type.KeyPress:
+            if event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter):
+                self._commit_font_name()
+                self.hidePopup()
+                return True
+            if event.key() == QtCore.Qt.Key.Key_Escape:
+                self.setCurrentText(self._font.family() if self.currentIndex() >= 0 else '')
+                self.hidePopup()
+                return True
+            if event.key() in (QtCore.Qt.Key.Key_Up, QtCore.Qt.Key.Key_Down):
+                self._step_font(-1 if event.key() == QtCore.Qt.Key.Key_Up else 1)
+                return True
+        return super().eventFilter(watched, event)
+
+    def showPopup(self):
+        super().showPopup()
+        self._highlight_font_match(self.currentText())
+        self.lineEdit().setFocus(QtCore.Qt.FocusReason.PopupFocusReason)
+
+    def _font_list(self):
+        return next((view for view in _qt.QApplication.allWidgets()
+                     if isinstance(view, _qt.QListView) and view.isVisible() and view.model() is self.model()), None)
+
+    def _closest_font_index(self, text):
+        """Prefer exact names, prefixes and substrings before matching spelling."""
+        query = text.strip().casefold()
+        if not query:
+            return self.currentIndex()
+
+        def score(row):
+            family = self.itemText(row).casefold()
+            return (family == query, family.startswith(query), query in family,
+                    SequenceMatcher(None, query, family).ratio())
+
+        return max(range(self.count()), key=score, default=-1)
+
+    def _highlight_font_match(self, text):
+        view = self._font_list()
+        if view is None:
+            return
+        row = self._closest_font_index(text)
+        if row >= 0:
+            view.setCurrentIndex(self.model().index(row, 0))
+            view.scrollTo(view.currentIndex())
+
+    def _step_font(self, step):
+        view = self._font_list()
+        if view is None:
+            self.showPopup()
+            view = self._font_list()
+        if view is None:
+            return
+        row = view.currentIndex().row() + step
+        if 0 <= row < self.count():
+            view.setCurrentIndex(self.model().index(row, 0))
+            view.scrollTo(view.currentIndex())
+            self.setCurrentFont(QtGui.QFont(self.itemText(row)))
+            self.activated.emit(row)
+            self.lineEdit().selectAll()
+
+    def _commit_font_name(self):
+        """Apply a completed name, rather than re-rendering with each partially typed family."""
+        name = self.currentText().strip()
+        if not name:
+            if self.currentIndex() >= 0:
+                self.setCurrentText(self._font.family())
+            return
+        # Retain an existing hidden system family without adding it to the picker.
+        if name == self._font.family() and name.startswith('.'):
+            return
+        row = self._closest_font_index(name)
+        if row < 0:
+            return
+        match = self.itemText(row)
+        if match != self._font.family() or self.currentIndex() < 0:
+            self.setCurrentFont(QtGui.QFont(match))
+            self.activated.emit(self.currentIndex())
+        else:
+            self.setCurrentText(match)
+
+    def _set_item_font(self, index):
+        font = QtGui.QFont(self.font())
+        font.setStyleName('')
+        font.setFamily(self.itemText(index))
+        self.setItemData(index, font, QtCore.Qt.ItemDataRole.FontRole)
 
     def _font_selected(self, text):
         self._font.setFamily(text)
+        self.setCurrentText(text)
         self.currentFontChanged.emit(self.currentFont())
 
     def currentFont(self):
@@ -62,9 +293,13 @@ class FluentFontComboBox(fluentqt.ComboBox):
 
     def setCurrentFont(self, font):
         self._font = QtGui.QFont(font)
-        if self.findText(font.family()) < 0:
+        if self.findText(font.family()) < 0 and not font.family().startswith('.'):
             self.addItem(font.family())
+            self._set_item_font(self.count() - 1)
+        self.setCurrentIndex(self.findText(font.family()))
         self.setCurrentText(font.family())
+        if self.currentIndex() < 0:
+            self.currentFontChanged.emit(self.currentFont())
 
 
 QFontComboBox = FluentFontComboBox

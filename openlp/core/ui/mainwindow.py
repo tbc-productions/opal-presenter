@@ -1341,7 +1341,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 event.ignore()
         else:
             has_open_service = bool(self.service_manager_contents.service_items)
-            if self.settings.value('advanced/enable exit confirmation') and has_open_service:
+            if (self.settings.value('advanced/enable exit confirmation') and has_open_service
+                    and not getattr(self, '_closing_designers_for_exit', False)):
                 msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
                                                 translate('OpenLP.MainWindow', 'Exit OpenLP+'),
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP+?'),
