@@ -11,7 +11,7 @@ from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.ui.fluenticons import service_icon
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.widgets.dnd import ItemDragData, execute_drag
+from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
 from openlp.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
 from openlp.core.widgets.views import ListWidgetWithDnD
 
@@ -225,3 +225,86 @@ def test_preview_media_is_stopped_when_dropped_live(controller):
         assert controller.drop_item(ItemDragData(item=item, controller=source))
     execute.assert_called_once_with('songs_stop', [item, False])
     source.on_media_close.assert_called_once()
+
+
+@pytest.fixture()
+def theme_drag(qtbot):
+    view = QtWidgets.QListWidget()
+    qtbot.addWidget(view)
+    view.addItems(['Ocean (default)', 'Warm'])
+    view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Ocean')
+    view.item(1).setData(QtCore.Qt.ItemDataRole.UserRole, 'Warm')
+    view.setCurrentRow(0)
+    manager = SimpleNamespace(get_theme_names=lambda: ['Ocean', 'Warm'])
+    return view, ThemeDragData(manager, view.selectedIndexes())
+
+
+@pytest.mark.parametrize('name,accepted', [
+    ('songs', True), ('custom', True), ('bibles', True), ('images', False),
+    ('media', False), ('presentations', False)])
+def test_theme_payload_accepts_only_supported_text_items(theme_drag, name, accepted):
+    view, mime = theme_drag
+    item = song()
+    item.name = name
+    view.setCurrentRow(1)
+    assert mime.title == 'Ocean'
+    assert mime.can_drop(item) is accepted
+    assert not mime.can_drop(None)
+    item.is_valid = False
+    assert not mime.can_drop(item)
+
+
+@pytest.mark.parametrize('change', ['deleted', 'renamed', 'unloaded', 'multiple'])
+def test_theme_payload_rejects_stale_or_multiple_themes(theme_drag, change):
+    view, mime = theme_drag
+    if change == 'deleted':
+        view.takeItem(0)
+    elif change == 'renamed':
+        view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Renamed')
+    elif change == 'unloaded':
+        mime.manager.get_theme_names = lambda: ['Warm']
+    else:
+        view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        view.item(1).setSelected(True)
+        mime = ThemeDragData(mime.manager, view.selectedIndexes())
+    assert not mime.can_drop(song())
+
+
+@pytest.mark.parametrize('live', [False, True])
+@pytest.mark.parametrize('surface', ['panel', 'preview_widget', 'preview_display'])
+def test_controller_theme_drop_updates_current_item_only_on_release(controller, theme_drag, live, surface):
+    controller.is_live = live
+    _, mime = theme_drag
+    target = getattr(controller, surface)
+    item = controller.service_item
+    enter = QtGui.QDragEnterEvent(
+        QtCore.QPoint(30, 30), QtCore.Qt.DropAction.CopyAction, mime,
+        QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    controller.eventFilter(target, enter)
+    assert enter.isAccepted() and controller._drop_hint.isVisible()
+    assert controller._drop_hint.text() == 'Drop to apply theme'
+    controller.service_manager.apply_theme_to_item.assert_not_called()
+    drop = QtGui.QDropEvent(
+        QtCore.QPointF(30, 30), QtCore.Qt.DropAction.CopyAction, mime,
+        QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    controller.eventFilter(target, drop)
+    assert drop.isAccepted() and not controller._drop_hint.isVisible()
+    controller.service_manager.apply_theme_to_item.assert_called_once_with(item, 'Ocean')
+    controller.add_service_manager_item.assert_not_called()
+
+
+@pytest.mark.parametrize('live', [False, True])
+@pytest.mark.parametrize('name', [None, 'images', 'presentations', 'media'])
+def test_controller_rejects_theme_without_supported_current_item(controller, theme_drag, live, name):
+    controller.is_live = live
+    controller.service_item = song() if name else None
+    if name:
+        controller.service_item.name = name
+    _, mime = theme_drag
+    enter = QtGui.QDragEnterEvent(
+        QtCore.QPoint(30, 30), QtCore.Qt.DropAction.CopyAction, mime,
+        QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    controller.eventFilter(controller.panel, enter)
+    assert not enter.isAccepted() and not controller._drop_hint.isVisible()
+    assert not controller.drop_item(mime)
+    controller.service_manager.apply_theme_to_item.assert_not_called()

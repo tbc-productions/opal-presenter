@@ -31,7 +31,6 @@ import multiprocessing
 from openlp.core.app import main
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.path import create_paths
-from openlp.core.common.platform import is_win
 
 log = logging.getLogger(__name__)
 error_log_file = None
@@ -67,11 +66,9 @@ def start():
     """
     Instantiate and run the application.
     """
+    # PyInstaller's worker dispatch is required on every platform, before opening logs or settings.
+    multiprocessing.freeze_support()
     set_up_fault_handling()
-    # Add support for using multiprocessing from frozen Windows executable (built using PyInstaller),
-    # see https://docs.python.org/3/library/multiprocessing.html#multiprocessing.freeze_support
-    if is_win():
-        multiprocessing.freeze_support()
     main()
 
 

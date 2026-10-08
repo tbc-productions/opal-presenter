@@ -21,7 +21,7 @@
 """
 Test OpenLP's ``__main__`` module
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from openlp.__main__ import start, set_up_fault_handling, tear_down_fault_handling
 
@@ -72,13 +72,15 @@ def test_set_up_fault_handling_exception(mocked_unregister: MagicMock, mocked_re
 
 @patch('openlp.__main__.multiprocessing.freeze_support')
 @patch('openlp.__main__.set_up_fault_handling')
-@patch('openlp.__main__.is_win')
 @patch('openlp.__main__.main')
-def test_start(mocked_main: MagicMock, mocked_is_win: MagicMock, mocked_fault_handling: MagicMock,
+def test_start(mocked_main: MagicMock, mocked_fault_handling: MagicMock,
                mocked_freeze_support: MagicMock):
     """Test that the start method calls the correct functions"""
     # GIVEN: A bunch of mocks
-    mocked_is_win.return_value = True
+    calls = MagicMock()
+    calls.attach_mock(mocked_freeze_support, 'freeze_support')
+    calls.attach_mock(mocked_fault_handling, 'fault_handling')
+    calls.attach_mock(mocked_main, 'main')
 
     # WHEN: start() is called
     start()
@@ -87,3 +89,4 @@ def test_start(mocked_main: MagicMock, mocked_is_win: MagicMock, mocked_fault_ha
     mocked_fault_handling.assert_called_once()
     mocked_freeze_support.assert_called_once()
     mocked_main.assert_called_once()
+    assert calls.mock_calls == [call.freeze_support(), call.fault_handling(), call.main()]

@@ -48,6 +48,8 @@ class CloudItem:
     created: str = ''
     parents: tuple[str, ...] = ()
     can_move: bool = False
+    provider_name: str = ''
+    modified_by: str = ''
 
     @property
     def display_name(self):

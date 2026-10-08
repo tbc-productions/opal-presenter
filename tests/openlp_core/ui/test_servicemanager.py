@@ -22,6 +22,8 @@
 Package to test the openlp.core.ui.slidecontroller package.
 """
 import json
+from copy import copy
+from types import SimpleNamespace
 import threading
 from functools import partial
 from pathlib import Path
@@ -41,11 +43,13 @@ from openlp.core.state import State
 from openlp.core.common.enum import ServiceItemType
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from openlp.core.lib.theme import Theme
 from openlp.core.ui.servicemanager import ServiceManager, SERVICE_ITEM_INDICATORS_ROLE
+from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from tests.utils.constants import RESOURCE_PATH
-from openlp.core.widgets.dnd import ItemDragData
+from openlp.core.widgets.dnd import ItemDragData, ThemeDragData
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
@@ -1257,6 +1261,189 @@ def test_service_rejects_unknown_drag(drag_service, destination):
     else:
         drag_service.drop_event(event)
     event.ignore.assert_called_once()
+
+
+@pytest.fixture()
+def theme_drag(registry, qtbot):
+    themes = {}
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        for name in ('Original', 'Ocean'):
+            themes[name] = Theme()
+            themes[name].theme_name = name
+    manager = SimpleNamespace(global_theme='Original', get_theme_names=lambda: list(themes),
+                              get_theme_data=lambda name: themes.get(name, themes['Original']))
+    registry.register('theme_manager', manager)
+    view = QtWidgets.QListWidget()
+    qtbot.addWidget(view)
+    view.addItem('Ocean')
+    view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Ocean')
+    view.setCurrentRow(0)
+    return ThemeDragData(manager, view.selectedIndexes())
+
+
+@pytest.mark.parametrize('name', ['songs', 'custom', 'bibles'])
+@pytest.mark.parametrize('child', [False, True])
+def test_theme_drop_changes_target_row_without_changing_order_or_selection(drag_service, theme_drag, name, child):
+    manager = drag_service
+    view = manager.service_manager_list
+    target = manager.tree_widget_items[1]
+    target.setExpanded(True)
+    QtWidgets.QApplication.processEvents()
+    item = manager.service_items[1]['service_item']
+    item.name = name
+    position = view.visualItemRect(target.child(0) if child else target).center()
+    event = MagicMock()
+    event.mimeData.return_value = theme_drag
+    event.pos.return_value = position
+    assert view.theme_drop_item(position) is item
+    view.dragEnterEvent(event)
+    assert view._drop_line.isVisible()
+    assert view._drop_line.geometry().contains(position)
+    assert view._drop_line.geometry().bottom() < view.visualItemRect(manager.tree_widget_items[2]).top()
+    assert item.theme is None
+    assert view.theme_drop_item(position) is item
+    manager.drop_event(event)
+    assert item.theme == 'Ocean'
+    assert item.get_theme_data().theme_name == 'Ocean'
+    assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
+    assert manager.find_service_item()[0] == 0
+    assert manager.tree_widget_items[1].isExpanded()
+    assert manager.is_modified()
+    assert not view._drop_line.isVisible()
+    assert not view._drag_scroll_timer.isActive()
+    assert view._theme_drag_data is None
+
+
+@pytest.mark.parametrize('name', ['images', 'media', 'presentations', None])
+def test_theme_drop_rejects_unsupported_service_target(drag_service, theme_drag, name):
+    manager = drag_service
+    view = manager.service_manager_list
+    item = manager.service_items[0]['service_item']
+    item.name = name
+    event = MagicMock()
+    event.mimeData.return_value = theme_drag
+    event.pos.return_value = view.visualItemRect(manager.tree_widget_items[0]).center() if name else \
+        QtCore.QPoint(20, view.viewport().height() - 4)
+    manager.drop_event(event)
+    event.ignore.assert_called_once()
+    assert item.theme is None
+    assert not manager.is_modified()
+
+
+def test_theme_hover_leaving_or_moving_to_empty_space_does_not_apply(drag_service, theme_drag):
+    manager = drag_service
+    view = manager.service_manager_list
+    event = MagicMock()
+    event.mimeData.return_value = theme_drag
+    event.pos.return_value = view.visualItemRect(manager.tree_widget_items[0]).center()
+    view.dragEnterEvent(event)
+    event.pos.return_value = QtCore.QPoint(20, view.viewport().height() - 4)
+    view.dragMoveEvent(event)
+    assert not view._drop_line.isVisible()
+    view.dragLeaveEvent(MagicMock())
+    assert view._theme_drag_data is None
+    assert not view._drag_scroll_timer.isActive()
+    assert manager.service_items[0]['service_item'].theme is None
+    assert not manager.is_modified()
+
+
+@pytest.mark.parametrize('hot_reload', [False, True])
+def test_theme_drop_refreshes_matching_loaded_copies_even_without_hot_reload(drag_service, theme_drag, hot_reload):
+    manager = drag_service
+    manager.settings.setValue('themes/hot reload', hot_reload)
+    item = manager.service_items[1]['service_item']
+    identifier = item.unique_identifier
+    manager.preview_controller.service_item = copy(item)
+    manager.live_controller.service_item = copy(item)
+    assert manager.apply_theme_to_item(manager.preview_controller.service_item, 'Ocean')
+    assert item.theme == 'Ocean' and item.unique_identifier != identifier
+    for controller in (manager.preview_controller, manager.live_controller):
+        controller.refresh_service_item.assert_called_once_with(item)
+        assert controller._service_manager_item_index == 1
+    assert manager.is_modified()
+
+
+def test_same_effective_theme_drop_does_not_refresh_or_modify(drag_service, theme_drag):
+    manager = drag_service
+    item = manager.service_items[0]['service_item']
+    identifier = item.unique_identifier
+    manager.preview_controller.service_item = copy(item)
+    assert manager.apply_theme_to_item(item, 'Original')
+    assert item.unique_identifier == identifier
+    manager.preview_controller.refresh_service_item.assert_not_called()
+    manager.live_controller.refresh_service_item.assert_not_called()
+    assert not manager.is_modified()
+
+
+def test_theme_drop_refreshes_stale_pane_copy_without_detaching_from_service(drag_service, theme_drag):
+    manager = drag_service
+    item = manager.service_items[1]['service_item']
+    old_copy = copy(item)
+    manager.apply_theme_to_item(item, 'Ocean')
+    identifier = item.unique_identifier
+    manager.set_modified(False)
+    manager.preview_controller.service_item = old_copy
+    manager.preview_controller._service_manager_item_index = 1
+    assert manager.apply_theme_to_item(old_copy, 'Ocean')
+    manager.preview_controller.refresh_service_item.assert_called_once_with(item)
+    assert manager.preview_controller._service_manager_item_index == 1
+    assert item.unique_identifier == identifier
+    assert not manager.is_modified()
+
+
+def test_theme_drop_on_library_item_refreshes_only_its_pane(drag_service, theme_drag):
+    manager = drag_service
+    item = ServiceItem(SimpleNamespace(name='custom'))
+    item.add_from_text('Custom slide')
+    manager.preview_controller.service_item = item
+    manager.live_controller.service_item = manager.service_items[0]['service_item']
+    assert manager.apply_theme_to_item(item, 'Ocean')
+    assert item.theme == 'Ocean'
+    manager.preview_controller.refresh_service_item.assert_called_once_with(item)
+    assert manager.preview_controller._service_manager_item_index is None
+    manager.live_controller.refresh_service_item.assert_not_called()
+    assert not manager.is_modified()
+
+
+def test_default_theme_still_inherits_after_explicit_theme_drop(drag_service, theme_drag):
+    manager = drag_service
+    item = manager.service_items[0]['service_item']
+    manager.apply_theme_to_item(item, 'Ocean')
+    item.update_theme(None)
+    assert item.get_theme_data().theme_name == 'Original'
+
+
+@pytest.mark.parametrize('level', [ThemeLevel.Global, ThemeLevel.Service, ThemeLevel.Song])
+def test_theme_drop_overrides_only_the_item_at_every_theme_level(drag_service, theme_drag, level):
+    manager = drag_service
+    manager.settings.setValue('themes/theme level', level)
+    manager.settings.setValue('servicemanager/service theme', 'Original')
+    item = manager.service_items[0]['service_item']
+    assert manager.apply_theme_to_item(item, 'Ocean')
+    assert item.get_theme_data().theme_name == 'Ocean'
+    assert manager.settings.value('themes/theme level') == level
+    assert manager.settings.value('servicemanager/service theme') == 'Original'
+
+
+@pytest.mark.parametrize('live', [False, True])
+def test_theme_drop_refreshes_controller_without_resetting_selected_slide(drag_service, theme_drag, qtbot, live):
+    manager = drag_service
+    controller = SlideController()
+    qtbot.addWidget(controller)
+    controller.is_live = live
+    controller.selected_row = 2
+    item = manager.service_items[0]['service_item']
+    controller.service_item = copy(item)
+    controller._process_item = MagicMock()
+    controller.slide_selected = MagicMock()
+    if live:
+        manager._live_controller = controller
+    else:
+        manager._preview_controller = controller
+    assert manager.apply_theme_to_item(controller.service_item, 'Ocean')
+    controller._process_item.assert_called_once_with(item, 2, True)
+    controller.slide_selected.assert_called_once()
 
 
 def test_begin_external_drag_preview(service_manager: ServiceManager):

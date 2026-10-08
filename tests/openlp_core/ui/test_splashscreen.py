@@ -21,16 +21,20 @@
 """
 Package to test the openlp.core.ui package.
 """
+import hashlib
+import json
 import os
 import subprocess
 import sys
+import time
+from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore
+from PySide6 import QtCore, QtWidgets
 import fluentqt
 
-from openlp.core.ui.splashscreen import SplashScreen
+from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
 from openlp.core.resources import qInitResources
 
 
@@ -153,6 +157,187 @@ def test_empty_stage_preserves_overall_percentage(mock_settings: MagicMock, qtbo
     assert not splash.isIndeterminate()
     assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '75%'
     assert splash.text() == 'Loading themes'
+
+
+def _run_observed_splash(*args, samples_file):
+    """Observe painted frames in the helper without servicing the parent's Qt events."""
+    from openlp.core.ui.splashscreen import _run_splash
+
+    class ObservedSplash(SplashScreen):
+        def __init__(self):
+            super().__init__()
+            self.sample_timer = QtCore.QTimer(self)
+            self.sample_timer.timeout.connect(self.sample)
+            self.sample_timer.start(60)
+
+        def sample(self):
+            ring = self.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+            pixels = ring.grab().toImage()
+            sample = {'frame': hashlib.sha256(pixels.constBits()).hexdigest(), 'text': self.text(),
+                      'progress': self.progress(), 'visible': self.isVisible(),
+                      'theme': fluentqt.current_theme().value,
+                      'topmost': bool(self.windowFlags() & QtCore.Qt.WindowType.WindowStaysOnTopHint)}
+            if QtCore.QCoreApplication.instance().platformName() == 'cocoa':
+                import AppKit
+                native_app = AppKit.NSApplication.sharedApplication()
+                sample['accessory'] = native_app.activationPolicy() == 1
+                foreground = AppKit.NSWorkspace.sharedWorkspace().frontmostApplication()
+                sample['foreground_pid'] = foreground.processIdentifier()
+                native_window = next((window for window in native_app.windows()
+                                      if window.title() == self.windowTitle()), None)
+                if native_window is not None:
+                    sample['window_number'] = native_window.windowNumber()
+                    sample['geometry'] = [self.x(), self.y(), self.width(), self.height()]
+            with open(samples_file, 'a') as output:
+                output.write(json.dumps(sample) + '\n')
+
+    with patch('openlp.core.ui.splashscreen.SplashScreen', ObservedSplash):
+        _run_splash(*args)
+
+
+def test_splash_animates_during_blocked_startup(mock_settings, qtbot, tmp_path):
+    """Painted ring frames keep changing during synchronous work in the parent."""
+    samples_file = tmp_path / 'splash-frames.jsonl'
+    target = partial(_run_observed_splash, samples_file=str(samples_file))
+    with patch('openlp.core.ui.splashscreen._run_splash', target):
+        splash = SplashScreenProcess()
+    qtbot.addWidget(splash)
+    process = splash._process
+    try:
+        splash.show()
+        splash.set_status('Loading plugins', 55)
+        splash.set_stage_progress('Initialising plugins', 3, 8, progress_range=(55, 75))
+        # Deliberately do not process Qt events in the parent during the heavy task.
+        time.sleep(0.6)
+        samples = [json.loads(line) for line in samples_file.read_text().splitlines()]
+        frames = [sample for sample in samples if sample['text'] == 'Initialising plugins - 3 of 8']
+        assert len({sample['frame'] for sample in frames}) >= 3, (os.getpid(), frames)
+        assert all(sample['progress'] == 62 and sample['visible'] for sample in frames)
+        assert all(sample['theme'] == fluentqt.current_theme().value for sample in frames)
+        assert all(sample.get('accessory', True) for sample in frames)
+        assert all(sample['topmost'] == (QtWidgets.QApplication.platformName() == 'cocoa') for sample in frames)
+        assert splash.isVisible()
+
+        splash.hide()
+        time.sleep(0.15)
+        assert not splash.isVisible()
+        assert not json.loads(samples_file.read_text().splitlines()[-1])['visible']
+        splash.show()
+        time.sleep(0.15)
+        assert splash.isVisible()
+        assert json.loads(samples_file.read_text().splitlines()[-1])['visible']
+    finally:
+        splash.close()
+    assert not process.is_alive()
+    splash.close()
+
+
+def test_splash_exits_when_parent_connection_closes(mock_settings, qtbot):
+    """Startup exceptions and parent exit must not leave a stranded splash window."""
+    splash = SplashScreenProcess()
+    qtbot.addWidget(splash)
+    try:
+        splash.show()
+        splash._connection.close()
+        splash._process.join(3)
+        assert not splash._process.is_alive()
+        assert not splash.isVisible()
+    finally:
+        splash.close()
+
+
+def test_foreground_splash_yields_to_startup_dialog(mock_settings, qtbot):
+    """Modal prompts hide the helper temporarily without undoing an explicit hide."""
+    dialog = QtWidgets.QDialog()
+    dialog.setModal(True)
+    qtbot.addWidget(dialog)
+    splash = SplashScreenProcess()
+    qtbot.addWidget(splash)
+    try:
+        splash.show()
+        assert splash.isVisible()
+        dialog.show()
+        qtbot.waitUntil(lambda: not splash.isVisible())
+        dialog.hide()
+        qtbot.waitUntil(splash.isVisible)
+
+        splash.hide()
+        dialog.show()
+        dialog.hide()
+        qtbot.wait(100)
+        assert not splash.isVisible()
+    finally:
+        splash.close()
+
+
+def test_splash_cleans_up_failed_launch(mock_settings):
+    """A helper that never starts must release both pipe endpoints."""
+    with patch('openlp.core.ui.splashscreen.multiprocessing.get_context') as get_context:
+        context = get_context.return_value
+        parent, child = MagicMock(), MagicMock()
+        context.Pipe.return_value = (parent, child)
+        parent.closed = False
+        process = context.Process.return_value
+        process.pid = None
+        process.start.side_effect = OSError('Cannot launch helper')
+        with pytest.raises(OSError, match='Cannot launch helper'):
+            SplashScreenProcess()
+        parent.close.assert_called_once()
+        child.close.assert_called_once()
+        process.join.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform != 'darwin' or os.environ.get('QT_QPA_PLATFORM') == 'offscreen',
+                    reason='Requires native macOS window ordering')
+def test_native_splash_follows_parent_foreground(mock_settings, qtbot, tmp_path):
+    """Stay above OpenLP, but yield when another application becomes active during blocked startup."""
+    import AppKit
+
+    competing = QtWidgets.QWidget()
+    competing.setWindowTitle('Splash foreground regression')
+    qtbot.addWidget(competing)
+    samples_file = tmp_path / 'foreground.jsonl'
+    target = partial(_run_observed_splash, samples_file=str(samples_file))
+    with patch('openlp.core.ui.splashscreen._run_splash', target):
+        splash = SplashScreenProcess()
+    qtbot.addWidget(splash)
+    try:
+        splash.show()
+        qtbot.waitUntil(lambda: samples_file.exists() and 'window_number' in samples_file.read_text())
+        sample = json.loads(samples_file.read_text().splitlines()[-1])
+        splash_number = sample['window_number']
+        competing.setGeometry(*sample['geometry'])
+        competing.show()
+        competing.raise_()
+        competing.activateWindow()
+        native_app = AppKit.NSApplication.sharedApplication()
+        native_app.activateIgnoringOtherApps_(True)
+        window_number = next(window.windowNumber() for window in native_app.windows()
+                             if window.title() == competing.windowTitle())
+
+        def splash_is_above():
+            windows = list(AppKit.NSWindow.windowNumbersWithOptions_(AppKit.NSWindowNumberListAllApplications))
+            return splash_number in windows and windows.index(splash_number) < windows.index(window_number)
+
+        qtbot.waitUntil(splash_is_above)
+        qtbot.waitUntil(splash.is_foreground)
+        finder = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_('com.apple.finder')[0]
+        finder.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
+        # The helper must notice switching apps even when the parent's event loop is blocked.
+        time.sleep(0.4)
+        assert not json.loads(samples_file.read_text().splitlines()[-1])['visible']
+        sample = json.loads(samples_file.read_text().splitlines()[-1])
+        assert sample['foreground_pid'] == finder.processIdentifier()
+        assert not splash.is_foreground()
+        assert not splash_is_above()
+        native_app.activateIgnoringOtherApps_(True)
+        qtbot.waitUntil(splash_is_above)
+        splash.hide()
+        qtbot.waitUntil(lambda: not splash_is_above())
+        splash.show()
+        qtbot.waitUntil(splash_is_above)
+    finally:
+        splash.close()
 
 
 @pytest.mark.skipif(sys.platform != 'darwin' or os.environ.get('QT_QPA_PLATFORM') == 'offscreen',

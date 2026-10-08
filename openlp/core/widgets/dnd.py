@@ -62,9 +62,20 @@ class ThemeDragData(QtCore.QMimeData):
         self.names = tuple(index.data(QtCore.Qt.ItemDataRole.UserRole) or index.data() for index in self.indexes)
         self.title = self.names[0] if self.names else ''
         from openlp.core.ui.icons import UiIcons
-        self.icon = UiIcons().theme
+        self.icon = service_icon(UiIcons().theme, 'themes')
         self.setText('themes')
         self.setData('application/x-openlp-item-title', self.title.encode('utf-8'))
+
+    def can_drop(self, item):
+        return (len(self.indexes) == 1 and self.indexes[0].isValid()
+                and self.indexes[0].data(QtCore.Qt.ItemDataRole.UserRole) == self.title
+                and self.manager is not None and self.title in self.manager.get_theme_names()
+                and supports_theme_drop(item))
+
+
+def supports_theme_drop(item):
+    return (item is not None and item.is_valid and item.is_text()
+            and item.name in ('songs', 'custom', 'bibles'))
 
 
 def copy_service_item(item):

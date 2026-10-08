@@ -227,7 +227,9 @@ def test_preview_opens_inside_application_without_external_browser(panel, monkey
         preview_url='https://another-cloud.example/view/f'))
     panel.tree.addTopLevelItem(row)
     row.setSelected(True)
-    window = MagicMock()
+    window = QtWidgets.QDialog(panel)
+    QtWidgets.QVBoxLayout(window)
+    window.show = MagicMock()
     show = MagicMock(return_value=window)
     monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.show_preview', show)
     opened = MagicMock()
@@ -238,6 +240,60 @@ def test_preview_opens_inside_application_without_external_browser(panel, monkey
     assert show.call_args.args[0] is panel.window()
     window.show.assert_called_once()
     opened.assert_not_called()
+    panel.preview_windows.clear()
+
+
+@pytest.mark.parametrize('writable', [True, False])
+def test_viewer_commands_use_viewed_item_and_disable_read_only_writes(panel, writable):
+    window = QtWidgets.QDialog(panel)
+    QtWidgets.QVBoxLayout(window)
+    item = CloudItem('viewed', 'Welcome.xml', category='songs', can_edit=writable, can_delete=True)
+    panel.add_preview_commands(window, item)
+    panel.download, panel.rename_item, panel.delete_items = MagicMock(), MagicMock(), MagicMock()
+    panel.selected_items = MagicMock(return_value=[CloudItem('other', 'Other.xml', category='songs')])
+    window.cloud_commands['download'].trigger()
+    panel.download.assert_called_once_with([item])
+    assert window.cloud_commands['rename'].isEnabled() == writable
+    assert window.cloud_commands['delete'].isEnabled() == writable
+    if not writable:
+        panel.preview_command(window, 'rename')
+        panel.preview_command(window, 'delete')
+        panel.rename_item.assert_not_called()
+        panel.delete_items.assert_not_called()
+    panel.profile = None
+    panel.preview_command(window, 'download')
+    assert panel.download.call_count == 1
+
+
+def test_viewer_rename_keeps_original_folder_and_media_view_does_not_block_downloads(panel):
+    window = QtWidgets.QDialog(panel)
+    window.accept = MagicMock()
+    QtWidgets.QVBoxLayout(window)
+    folder = CloudItem('original', 'Songs', folder=True, category='songs')
+    panel.folder = folder
+    item = CloudItem('viewed', 'Welcome.xml', category='songs', can_edit=True, can_delete=True)
+    panel.add_preview_commands(window, item)
+    panel.preview_windows.add(window)
+    context = SimpleNamespace(preview_window=window)
+    worker = MagicMock()
+    panel.jobs['stream'] = {'kind': 'preview', 'context': context, 'worker': worker}
+    assert not panel.busy()
+    panel.cancel_previews()
+    worker.cancel.set.assert_not_called()
+    panel.folder = CloudItem('other', 'Images', folder=True, category='images')
+    panel.request_name = MagicMock(return_value='Renamed')
+    panel.start_job = MagicMock()
+    window.cloud_commands['rename'].trigger()
+    kind, operation = panel.start_job.call_args.args
+    assert kind == 'rename'
+    provider = MagicMock()
+    operation(provider)
+    provider.rename.assert_called_once_with(item, folder, 'Renamed')
+    window.accept.assert_called_once()
+    panel.jobs['download'] = {'kind': 'download'}
+    panel.update_actions()
+    assert not any(action.isEnabled() for action in window.cloud_commands.values())
+    panel.jobs.clear()
     panel.preview_windows.clear()
 
 
@@ -429,11 +485,13 @@ def test_song_round_trip_uses_native_export_and_real_database(settings, tmp_path
         manager.finalise()
 
 
-def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, qtbot):
+def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, qtbot, monkeypatch):
     from PySide6 import QtTest
     from openlp.core.widgets.views import FileTreeWidgetItem
     panel.resize(850, 650)
     panel.show()
+    zone = QtCore.QTimeZone(b'Australia/Sydney')
+    monkeypatch.setattr(QtCore.QTimeZone, 'systemTimeZone', lambda: zone)
     folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True)
     items = [CloudItem('a', 'Zeta.xml', category='songs', size=1024, modified='2026-10-08T01:00:00Z'),
              CloudItem('b', 'Alpha.xml', category='songs', size=4096, modified='2026-10-09T01:00:00Z')]
@@ -447,7 +505,8 @@ def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, 
     assert panel.tree.viewport().geometry().top() >= panel.tree.header().height()
     assert [panel.tree.topLevelItem(i).text(0) for i in range(2)] == ['Alpha', 'Zeta']
     assert panel.tree.topLevelItem(0).text(1) == '4 KB'
-    assert panel.tree.topLevelItem(0).text(2) != '—'
+    from openlp.plugins.librarysync.lib.preview import cloud_metadata
+    assert panel.tree.topLevelItem(0).text(2) == cloud_metadata(items[1])['Modified']
     assert not panel.folder_action.isEnabled()
     header = panel.tree.header()
     point = QtCore.QPoint(header.sectionViewportPosition(2) + header.sectionSize(2) // 2, header.height() // 2)
@@ -479,6 +538,57 @@ def test_cloud_write_context_actions_follow_item_permissions(panel):
     row.setData(0, QtCore.Qt.ItemDataRole.UserRole, replace(item, can_edit=True, can_delete=True))
     panel.update_actions()
     assert panel.rename_action.isEnabled() and panel.delete_action.isEnabled()
+
+
+@pytest.mark.parametrize('operation', ['rename', 'folder'])
+@pytest.mark.parametrize('accepted', [True, False])
+def test_cloud_names_use_content_dialog_and_cancel_without_writing(panel, monkeypatch, operation, accepted):
+    from openlp.core.widgets.views import FileTreeWidgetItem
+    folder = CloudItem('images', 'Images', folder=True, category='images', can_upload=True)
+    item = CloudItem('image', 'Welcome.png', category='images', can_edit=True)
+    panel.folder, panel.category = folder, 'images'
+    row = FileTreeWidgetItem(['Welcome'])
+    row.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+    panel.tree.addTopLevelItem(row)
+    row.setSelected(True)
+    panel.update_actions()
+    panel.start_job = MagicMock()
+
+    def respond(dialog):
+        assert isinstance(dialog, QtWidgets.fluentqt.ContentDialog)
+        assert dialog.primaryButtonText() == ('Rename' if operation == 'rename' else 'Create')
+        assert dialog.closeButtonText() == 'Cancel'
+        field = dialog.content().findChild(QtWidgets.QLineEdit)
+        assert field.text() == ('Welcome' if operation == 'rename' else '')
+        field.setText('New name')
+        return dialog.ResultPrimary if accepted else dialog.ResultNone
+
+    monkeypatch.setattr(QtWidgets.fluentqt.ContentDialog, 'exec', respond)
+    panel.rename_selected() if operation == 'rename' else panel.create_folder()
+    if accepted:
+        kind, run = panel.start_job.call_args.args
+        assert kind == operation
+        provider = MagicMock()
+        run(provider)
+        if operation == 'rename':
+            provider.rename.assert_called_once_with(item, folder, 'New name')
+        else:
+            provider.create_folder.assert_called_once_with(folder, 'images', 'New name')
+    else:
+        panel.start_job.assert_not_called()
+
+
+def test_connection_menu_order_icons_and_separator(panel, monkeypatch):
+    def inspect(menu, position):
+        actions = menu.actions()
+        assert [action.text() for action in actions] == [
+            'Import connection…', 'Export connection…', '', 'Create (Advanced)…', 'Disconnect…']
+        assert actions[2].isSeparator()
+        assert [action.icon().name() for action in actions if not action.isSeparator()] == [
+            'ic_fluent_arrow_import_24_regular', 'ic_fluent_arrow_export_24_regular',
+            'ic_fluent_add_24_regular', 'ic_fluent_plug_disconnected_24_regular']
+    monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
+    panel.configure()
 
 
 def test_upload_checks_duplicate_and_only_overwrites_after_confirmation(panel, tmp_path):
@@ -553,3 +663,88 @@ def test_cloud_move_collision_cannot_overwrite_without_permission_to_remove_orig
     panel.run_upload.assert_not_called()
     panel.confirm_overwrite.assert_not_called()
     assert not Path(temporary.name).exists()
+
+
+def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot, tmp_path):
+    from threading import Event
+    from openlp.plugins.librarysync.lib.preview import show_preview
+
+    source = tmp_path / 'original.png'
+    image = QtGui.QImage(1920, 1080, QtGui.QImage.Format.Format_RGB32)
+    image.fill(QtGui.QColor('blue'))
+    image.save(str(source))
+    item = CloudItem('image', 'Welcome.png', category='images', size=source.stat().st_size,
+                     thumbnail_url='https://drive.google.com/thumbnail')
+    panel.selected_items = MagicMock(return_value=[item])
+    panel.start_job = MagicMock()
+    panel.open_preview()
+    kind, operation, temporary = panel.start_job.call_args.args
+    provider = MagicMock()
+    provider.preview.return_value = ('image', b'low resolution thumbnail')
+    provider.download.side_effect = lambda item, destination, *args: destination.write_bytes(source.read_bytes())
+    try:
+        result_item, path, prepared = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert kind == 'preview'
+        provider.preview.assert_not_called()
+        provider.download.assert_called_once()
+        window = show_preview(panel, result_item, path, prepared)
+        qtbot.addWidget(window)
+        assert window.image.size() == image.size()
+        assert window.metadata['Resolution'].text() == '1920 × 1080'
+        assert 'Preview resolution' not in window.metadata
+        window.reject()
+    finally:
+        temporary.cleanup()
+
+
+def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
+    from PySide6 import QtTest
+    from openlp.plugins.librarysync.lib.preview import format_local_time
+
+    panel.resize(650, 500)
+    panel.show()
+    qtbot.wait(20)
+    header = panel.tree.header()
+    date = format_local_time(QtCore.QDateTime.currentDateTimeUtc().toString(QtCore.Qt.DateFormat.ISODate))
+    assert header.sectionSize(2) > panel.tree.fontMetrics().horizontalAdvance(date)
+    assert header.sectionResizeMode(2) == QtWidgets.QHeaderView.ResizeMode.Interactive
+    header.resizeSection(2, 360)
+    qtbot.wait(20)
+    scrollbar = panel.tree.horizontalScrollBar()
+    assert scrollbar.maximum() > 0
+    scrollbar.setValue(scrollbar.maximum())
+    qtbot.wait(20)
+    edge = QtCore.QPoint(header.sectionViewportPosition(2) + header.sectionSize(2) - 2, header.height() // 2)
+    assert header.viewport().rect().contains(edge)
+    end = edge - QtCore.QPoint(40, 0)
+    QtTest.QTest.mousePress(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=edge)
+    QtTest.QTest.mouseMove(header.viewport(), end, 20)
+    QtTest.QTest.mouseRelease(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=end)
+    qtbot.wait(20)
+    assert header.sectionSize(2) < 360
+    resized = header.sectionSize(2)
+    panel.resize(750, 500)
+    qtbot.wait(20)
+    assert header.sectionSize(2) == resized
+
+
+@pytest.mark.parametrize('column', [1, 2])
+def test_cloud_metadata_resize_handle_follows_mouse_without_shifting_name(panel, qtbot, column):
+    from PySide6 import QtTest
+
+    panel.resize(850, 500)
+    panel.show()
+    qtbot.wait(20)
+    header = panel.tree.header()
+    name_width = header.sectionSize(0)
+    original = header.sectionSize(column)
+    edge = QtCore.QPoint(header.sectionViewportPosition(column) + original - 2, header.height() // 2)
+    QtTest.QTest.mousePress(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=edge)
+    for delta in (10, 20, 40):
+        position = edge - QtCore.QPoint(delta, 0)
+        QtTest.QTest.mouseMove(header.viewport(), position, 20)
+        assert header.sectionSize(0) == name_width
+        assert header.sectionSize(column) == original - delta
+        assert header.sectionViewportPosition(column) + header.sectionSize(column) - 2 == position.x()
+    QtTest.QTest.mouseRelease(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=position)
+    assert header.sectionSize(column) == original - 40

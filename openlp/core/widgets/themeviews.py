@@ -15,6 +15,22 @@ class ThemeListView(MultipleViewModeList):
 class ThemeGridView(fluentqt.GridView):
     """Thumbnail grid retaining OpenLP's theme drag payload."""
 
+    def mousePressEvent(self, event):
+        self._drag_start_pos = (
+            event.position().toPoint() if event.button() == QtCore.Qt.MouseButton.LeftButton else None)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and getattr(self, '_drag_start_pos', None) is not None
+                and self.indexAt(self._drag_start_pos).isValid() and self.selectionModel().selectedIndexes()
+                and (event.position().toPoint() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
+
     def startDrag(self, supported_actions):
         self.parent().start_theme_drag(self)
 
@@ -26,6 +42,7 @@ class ThemeViews(QtWidgets.QWidget):
         super().__init__(parent)
         self.manager = parent
         self.list_view = ThemeListView(self)
+        self.list_view.activate_drag('themes')
         self.list_view.setHeaderLabel('Name')
         self.list_view.setSortingEnabled(True)
         self.grid_view = ThemeGridView(self)

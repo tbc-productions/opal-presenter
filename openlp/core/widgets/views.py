@@ -106,10 +106,11 @@ class _SlideBackgroundModel(QtCore.QIdentityProxyModel):
 
 
 class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
-    """Paint the first four wrapped lines of slide text inside Fluent rows."""
-    def __init__(self, view):
+    """Paint wrapped slide text inside Fluent rows, optionally limiting its length."""
+    def __init__(self, view, max_lines=SLIDE_ROW_MAX_LINES):
         super().__init__(view)
         self._view = view
+        self._max_lines = max_lines
         self._native_delegate = view.itemDelegate()
         self._background_model = _SlideBackgroundModel(self)
         self._background_model.setSourceModel(view.model())
@@ -129,13 +130,15 @@ class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
         document.setTextWidth(max(1, self._view.columnWidth(index.column()) - 4 * Spacing.Small))
         # Measure the wrapped layout before trimming so the limit follows the panel width.
         document.size()
+        if self._max_lines is None:
+            return document
         block = document.begin()
         line_count = 0
         while block.isValid():
             layout = block.layout()
             for line_index in range(layout.lineCount()):
                 line_count += 1
-                if line_count == SLIDE_ROW_MAX_LINES:
+                if line_count == self._max_lines:
                     line = layout.lineAt(line_index)
                     end = block.position() + line.textStart() + line.textLength()
                     if end >= document.characterCount() - 1:
@@ -153,7 +156,7 @@ class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
                     cursor.movePosition(QtGui.QTextCursor.MoveOperation.PreviousCharacter)
                     # Make room for the ellipsis without wrapping it onto a fifth line.
                     document.size()
-                    while document.lineCount() > SLIDE_ROW_MAX_LINES and cursor.position():
+                    while document.lineCount() > self._max_lines and cursor.position():
                         cursor.deletePreviousChar()
                         document.size()
                     return document
@@ -192,7 +195,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
     resize_event = QtCore.Signal()
     keyboard_slide_changed = QtCore.Signal()
 
-    def __init__(self, parent, screen_ratio):
+    def __init__(self, parent, screen_ratio, max_lines=SLIDE_ROW_MAX_LINES):
         """
         Initializes the widget to default state.
 
@@ -201,9 +204,9 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         """
         super().__init__(parent)
         self.slide_controller = parent
-        self._setup(screen_ratio)
+        self._setup(screen_ratio, max_lines)
 
-    def _setup(self, screen_ratio):
+    def _setup(self, screen_ratio, max_lines):
         """
         Set up the widget
         """
@@ -235,7 +238,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
-        self.setItemDelegate(SlidePreviewDelegate(self))
+        self.setItemDelegate(SlidePreviewDelegate(self, max_lines))
         self.screen_ratio = screen_ratio
         self.auto_row_height = 100
         # Connect signals

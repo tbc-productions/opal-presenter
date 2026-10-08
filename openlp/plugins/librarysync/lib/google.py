@@ -17,7 +17,7 @@ API = 'https://www.googleapis.com/drive/v3'
 WRITE_API = 'https://www.googleapis.com/drive/v2'
 FOLDER_MIME = 'application/vnd.google-apps.folder'
 FIELDS = ('id,name,mimeType,size,modifiedTime,createdTime,version,md5Checksum,'
-          'webViewLink,thumbnailLink,resourceKey,parents,'
+          'webViewLink,thumbnailLink,resourceKey,parents,lastModifyingUser(displayName),'
           'capabilities(canAddChildren,canDownload,canCopy,canEdit,canTrash,canMoveItemWithinDrive),appProperties')
 CHUNK_SIZE = 8 * 1024 * 1024
 
@@ -42,7 +42,9 @@ def cloud_item(data, category=''):
                      title=data.get('appProperties', {}).get('openlpTitle', ''),
                      can_copy=permissions.get('canCopy', False), can_edit=permissions.get('canEdit', False),
                      can_delete=permissions.get('canTrash', False), created=data.get('createdTime', ''),
-                     parents=tuple(data.get('parents', [])), can_move=permissions.get('canMoveItemWithinDrive', False))
+                     parents=tuple(data.get('parents', [])), can_move=permissions.get('canMoveItemWithinDrive', False),
+                     provider_name='Google Drive',
+                     modified_by=data.get('lastModifyingUser', {}).get('displayName', ''))
 
 
 def preview_url_allowed(value):

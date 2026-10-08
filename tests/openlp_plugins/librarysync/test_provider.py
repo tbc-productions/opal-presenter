@@ -43,6 +43,17 @@ def test_paged_shared_folder_listing(provider):
     assert params['pageSize'] == 200
 
 
+def test_google_items_include_provider_and_available_author_metadata():
+    item = cloud_item({'id': 'song', 'name': 'Welcome.xml', 'size': '2048',
+                       'createdTime': '2026-10-08T01:00:00Z', 'modifiedTime': '2026-10-09T01:00:00Z',
+                       'lastModifyingUser': {'displayName': 'Sam'}})
+    assert item.provider_name == 'Google Drive'
+    assert item.modified_by == 'Sam'
+    assert item.created and item.modified and item.size == 2048
+    unknown = cloud_item({'id': 'song', 'name': 'Welcome.xml'})
+    assert unknown.modified_by == ''
+
+
 def test_upload_rechecks_live_folder_permissions(provider, tmp_path):
     provider.folder = MagicMock(return_value=CloudItem('root', 'Church', folder=True, can_upload=False))
     with pytest.raises(SyncError, match='read-only'):

@@ -60,7 +60,7 @@ from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.ui.renamedialog import RenameDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
-from openlp.core.widgets.dnd import ItemDragData, copy_service_item, execute_drag
+from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, copy_service_item, execute_drag, supports_theme_drop
 from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
 from openlp.core.ui.fluenticons import fluent_icon, service_icon
 
@@ -135,6 +135,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.service_manager = service_manager
         self._drag_start_pos = None
         self._last_notes_tooltip_item = None
+        self._theme_drag_data = None
         self._drop_line = QtWidgets.QFrame(self.viewport())
         self._drop_line.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self._drop_line.hide()
@@ -179,6 +180,8 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
 
     def can_accept_drop(self, event):
         mime = event.mimeData()
+        if isinstance(mime, ThemeDragData):
+            return mime.can_drop(self.theme_drop_item(event.pos()))
         if isinstance(mime, ItemDragData):
             if event.source() is self and self.service_manager.is_internal_drag_active():
                 return mime.item is self.service_manager._internal_drag_item['service_item']
@@ -188,12 +191,40 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
                        for url in mime.urls()) and bool(mime.urls())
         return False
 
+    def theme_drop_item(self, pos):
+        row = self.itemAt(pos)
+        if row is not None:
+            row = row.parent() or row
+            index = get_parent_item_data(row) - 1
+            if 0 <= index < len(self.service_manager.service_items):
+                return self.service_manager.service_items[index]['service_item']
+        return None
+
+    def set_theme_drop_target(self, pos):
+        self.set_drop_position(None)
+        if self._theme_drag_data and self._theme_drag_data.can_drop(self.theme_drop_item(pos)):
+            row = self.itemAt(pos)
+            row = row.parent() or row
+            self._drop_line.setStyleSheet(
+                'background: transparent; border: 2px solid palette(highlight); border-radius: 4px;')
+            rect = self.visualItemRect(row)
+            if row.isExpanded() and row.childCount():
+                rect = rect.united(self.visualItemRect(row.child(row.childCount() - 1)))
+            self._drop_line.setGeometry(rect.intersected(self.viewport().rect()).adjusted(2, 0, -2, 0))
+            self._drop_line.show()
+            self._drop_line.raise_()
+
     def dragEnterEvent(self, event):
         if not self.can_accept_drop(event):
             event.ignore()
             return
         mime = event.mimeData()
-        if isinstance(mime, ItemDragData) and event.source() is self:
+        if isinstance(mime, ThemeDragData):
+            self.service_manager.cancel_external_drag_preview()
+            self._theme_drag_data = mime
+            self.set_theme_drop_target(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+        elif isinstance(mime, ItemDragData) and event.source() is self:
             self.service_manager.update_internal_drag_preview(event.pos())
             event.setDropAction(QtCore.Qt.DropAction.MoveAction)
         elif not mime.hasUrls():
@@ -209,6 +240,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
 
     def dragLeaveEvent(self, event):
         self._drag_scroll_timer.stop()
+        self._theme_drag_data = None
         self.service_manager.cancel_external_drag_preview()
         self.set_drop_position(None)
         QtWidgets.QToolTip.hideText()
@@ -216,9 +248,13 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
 
     def dragMoveEvent(self, event):
         if not self.can_accept_drop(event):
+            self.set_drop_position(None)
             event.ignore()
             return
-        if isinstance(event.mimeData(), ItemDragData) and event.source() is self:
+        if isinstance(event.mimeData(), ThemeDragData):
+            self.set_theme_drop_target(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+        elif isinstance(event.mimeData(), ItemDragData) and event.source() is self:
             self.service_manager.update_internal_drag_preview(event.pos())
             event.setDropAction(QtCore.Qt.DropAction.MoveAction)
         else:
@@ -256,7 +292,9 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         if step:
             bar = self.verticalScrollBar()
             bar.setValue(bar.value() + step)
-            if self.service_manager.is_internal_drag_active():
+            if self._theme_drag_data:
+                self.set_theme_drop_target(pos)
+            elif self.service_manager.is_internal_drag_active():
                 self.service_manager.update_internal_drag_preview(pos)
             else:
                 self.service_manager.update_external_drag_preview(pos)
@@ -3365,10 +3403,19 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         link = event.mimeData()
         self.service_manager_list._drag_scroll_timer.stop()
+        self.service_manager_list._theme_drag_data = None
+        self.service_manager_list.set_drop_position(None)
         if not self.service_manager_list.can_accept_drop(event):
             self.cancel_external_drag_preview()
-            self.service_manager_list.set_drop_position(None)
             event.ignore()
+            return
+        if isinstance(link, ThemeDragData):
+            self.cancel_external_drag_preview()
+            if self.apply_theme_to_item(self.service_manager_list.theme_drop_item(event.pos()), link.title):
+                event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+                event.accept()
+            else:
+                event.ignore()
             return
         if isinstance(link, ItemDragData):
             self.cancel_external_drag_preview()
@@ -3430,6 +3477,44 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             theme_group.addAction(create_widget_action(self.theme_menu, theme, text=theme, checked=False,
                                   triggers=self.on_theme_change_action))
         find_and_set_in_combo_box(self.theme_combo_box, self.service_theme)
+
+    def apply_theme_to_item(self, service_item, theme):
+        """Apply an explicit theme drop and refresh every pane showing this item."""
+        if not supports_theme_drop(service_item):
+            return False
+        identifier = service_item.unique_identifier
+        controllers = [controller for controller in (self.preview_controller, self.live_controller)
+                       if controller.service_item and controller.service_item.unique_identifier == identifier]
+        index = next((i for i, entry in enumerate(self.service_items)
+                      if entry['service_item'].unique_identifier == identifier), None)
+        if index is None and service_item.from_service:
+            index = next((controller._service_manager_item_index for controller in controllers
+                          if isinstance(controller._service_manager_item_index, int)
+                          and 0 <= controller._service_manager_item_index < len(self.service_items)
+                          and self.service_items[controller._service_manager_item_index]['service_item'].name
+                          == service_item.name), None)
+        if index is not None:
+            service_item = self.service_items[index]['service_item']
+        if not supports_theme_drop(service_item):
+            return False
+        controllers = [controller for controller in (self.preview_controller, self.live_controller)
+                       if controller in controllers or (controller.service_item and
+                       controller.service_item.unique_identifier == service_item.unique_identifier)]
+        changed = service_item.get_theme_data().theme_name != theme
+        if changed:
+            service_item.update_theme(theme)
+            # A deliberate item override must also work at Global and Service theme levels.
+            service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
+            service_item.render_text_items()
+            if index is not None:
+                self.repaint_service_list(*self.find_service_item())
+                self.set_modified()
+        for controller in controllers:
+            if (changed or controller.service_item.unique_identifier != service_item.unique_identifier
+                    or controller.service_item.get_theme_data().theme_name != theme):
+                controller._service_manager_item_index = index
+                controller.refresh_service_item(service_item)
+        return True
 
     def on_theme_change_action(self, field=None):
         """

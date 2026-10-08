@@ -52,7 +52,7 @@ from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.ui.modernstyle import is_modern_style
 from openlp.core.widgets.views import ListPreviewWidget
-from openlp.core.widgets.dnd import ItemDragData, execute_drag
+from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
 
 # Threshold which has to be trespassed to toggle.
 HIDE_MENU_THRESHOLD = 80
@@ -538,7 +538,10 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         elif kind in (QtCore.QEvent.Type.DragEnter, QtCore.QEvent.Type.DragMove, QtCore.QEvent.Type.Drop):
             mime = event.mimeData()
             destination = 'live' if self.is_live else 'preview'
-            accepted = isinstance(mime, ItemDragData) and mime.controller is not self and mime.can_drop(destination)
+            if isinstance(mime, ThemeDragData):
+                accepted = mime.can_drop(self.service_item)
+            else:
+                accepted = isinstance(mime, ItemDragData) and mime.controller is not self and mime.can_drop(destination)
             if not accepted:
                 self._drop_hint.hide()
                 event.ignore()
@@ -549,6 +552,12 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
                     event.ignore()
                     return True
             else:
+                if isinstance(mime, ThemeDragData):
+                    hint = translate('OpenLP.SlideController', 'Drop to apply theme')
+                else:
+                    hint = (translate('OpenLP.SlideController', 'Drop to go live') if self.is_live else
+                            translate('OpenLP.SlideController', 'Drop to preview'))
+                self._drop_hint.setText(hint)
                 self._drop_hint.setGeometry(self.panel.rect().adjusted(6, 6, -6, -6))
                 self._drop_hint.show()
                 self._drop_hint.raise_()
@@ -580,6 +589,9 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             execute_drag(source, mime)
 
     def drop_item(self, mime):
+        if isinstance(mime, ThemeDragData):
+            return (mime.can_drop(self.service_item)
+                    and self.service_manager.apply_theme_to_item(self.service_item, mime.title))
         context = ServiceItemContext.Live if self.is_live else ServiceItemContext.Preview
         items = mime.service_items(context)
         if not items:

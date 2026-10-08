@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
-from fluentqt import Breadcrumb, BreadcrumbItem
+from fluentqt import Breadcrumb, BreadcrumbItem, Spacing
 
 from PySide6 import QtCore, QtGui
 
@@ -32,7 +32,7 @@ from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError, previ
 from openlp.plugins.librarysync.lib.transfer import (
     import_item, item_category, local_item, name_key, prepare_upload, read_theme_item, read_xml_item, safe_name,
     write_upload)
-from openlp.plugins.librarysync.lib.preview import show_preview
+from openlp.plugins.librarysync.lib.preview import format_local_time, show_preview
 from openlp.plugins.librarysync.lib.stream import MediaStream
 from openlp.plugins.librarysync.lib.worker import SyncWorker
 
@@ -62,12 +62,20 @@ class CloudTree(DataGridWithDnD):
         self.setRootIsDecorated(False)
         self.setUniformRowHeights(True)
         self.setFont(QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Body))
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        date = format_local_time(QtCore.QDateTime.currentDateTimeUtc().toString(QtCore.Qt.DateFormat.ISODate))
+        self.header().resizeSection(2, self.fontMetrics().horizontalAdvance(date) + 4 * Spacing.Medium)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setAccessibleName(tr('Cloud Library items'))
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(panel.context_menu)
+
+    def _on_section_resized(self, section, old_size, new_size):
+        # Keep Name still so a metadata resize handle follows the mouse.
+        if section == 0:
+            super()._on_section_resized(section, old_size, new_size)
 
     def startDrag(self, actions):
         items = self.panel.selected_items()
@@ -158,7 +166,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.toolbar.add_pinned_action(self.connect_action)
         self.refresh_action = self.toolbar.addAction(UiIcons().refresh, tr('Refresh'), self.refresh)
         self.download_action = self.toolbar.addAction(UiIcons().download, tr('Add to Library'), self.download_selected)
-        self.preview_action = self.toolbar.addAction(UiIcons().preview, tr('Open cloud preview'), self.open_preview)
+        self.preview_action = self.toolbar.addAction(UiIcons().eye, tr('View'), self.open_preview)
         self.settings_action = self.toolbar.addAction(UiIcons().settings, tr('Connection'), self.configure)
         self.rename_action = QtGui.QAction(UiIcons().edit, tr('Rename'), self)
         self.rename_action.triggered.connect(self.rename_selected)
@@ -264,11 +272,12 @@ class CloudLibrary(QtWidgets.QWidget):
         if self.jobs:
             return
         menu = QtWidgets.QMenu(self)
-        menu.addAction(tr('Import connection file…'), self.import_connection)
-        menu.addAction(tr('Set up Google Drive…'), self.setup_connection)
-        export = menu.addAction(tr('Export connection file…'), self.export_connection)
+        menu.addAction(UiIcons().arrow_import, tr('Import connection…'), self.import_connection)
+        export = menu.addAction(UiIcons().arrow_export, tr('Export connection…'), self.export_connection)
         export.setEnabled(bool(self.profile))
-        disconnect = menu.addAction(tr('Disconnect account'), self.disconnect)
+        menu.addSeparator()
+        menu.addAction(UiIcons().plus, tr('Create (Advanced)…'), self.setup_connection)
+        disconnect = menu.addAction(UiIcons().plug_disconnected, tr('Disconnect…'), self.disconnect)
         disconnect.setEnabled(bool(self.profile))
         menu.exec(QtGui.QCursor.pos())
 
@@ -350,14 +359,13 @@ class CloudLibrary(QtWidgets.QWidget):
                             or item.category not in ('', self.category)):
                         continue
                     item = replace(item, category=self.category)
-                    access = tr('Can upload') if item.can_upload else tr('Read only')
+                    access = tr('View, edit') if item.can_upload else tr('View')
                 else:
                     if item_category(item) != self.category:
                         continue
-                    access = tr('Download') if item.can_download else tr('Preview only')
+                    access = tr('View, edit') if item.can_edit else tr('View')
                 modified = QtCore.QDateTime.fromString(item.modified, QtCore.Qt.DateFormat.ISODate)
-                updated = (QtCore.QLocale().toString(modified.toLocalTime(), QtCore.QLocale.FormatType.ShortFormat)
-                           if modified.isValid() else '—')
+                updated = format_local_time(item.modified)
                 row = FileTreeWidgetItem([item.display_name,
                                           '—' if item.folder else self.format_size(item.size), updated])
                 row.set_sort_data(1, item.size)
@@ -383,6 +391,7 @@ class CloudLibrary(QtWidgets.QWidget):
             item, path, prepared = value
             try:
                 window = show_preview(self.window(), item, path, prepared)
+                self.add_preview_commands(window, item)
                 self.preview_windows.add(window)
                 window.finished.connect(lambda: self.release_preview(window, job['context']))
                 window.finished.connect(job['worker'].stop)
@@ -521,6 +530,7 @@ class CloudLibrary(QtWidgets.QWidget):
     def busy(self):
         return any(job['kind'] in ('connect', 'download', 'upload', 'disconnect', 'preview', 'folder', 'copy',
                                    'prepare-upload', 'rename', 'delete')
+                   and not (job['kind'] == 'preview' and getattr(job.get('context'), 'preview_window', None))
                    for job in self.jobs.values())
 
     def update_actions(self):
@@ -547,7 +557,14 @@ class CloudLibrary(QtWidgets.QWidget):
                                            and self.folder.category in ('', self.category))
                                       and self.category not in ('songs', 'custom') and not busy and not browsing)
         self.rename_action.setEnabled(len(selected) == 1 and selected[0].can_edit and not busy)
-        self.delete_action.setEnabled(bool(selected) and all(item.can_delete for item in selected) and not busy)
+        self.delete_action.setEnabled(bool(selected) and all(item.can_edit and item.can_delete for item in selected)
+                                      and not busy)
+        for window in self.preview_windows:
+            available = self.profile == window.cloud_profile and not busy and not browsing
+            item = window.cloud_item
+            window.cloud_commands['download'].setEnabled(available and item.can_download)
+            window.cloud_commands['rename'].setEnabled(available and item.can_edit)
+            window.cloud_commands['delete'].setEnabled(available and item.can_edit and item.can_delete)
         self.progress.setVisible(busy)
         self.cancel_button.setVisible(busy)
         if not busy:
@@ -650,7 +667,7 @@ class CloudLibrary(QtWidgets.QWidget):
 
     def cancel_previews(self):
         for job in self.jobs.values():
-            if job['kind'] == 'preview':
+            if job['kind'] == 'preview' and not getattr(job.get('context'), 'preview_window', None):
                 job['worker'].cancel.set()
 
     def selection_changed(self):
@@ -673,25 +690,65 @@ class CloudLibrary(QtWidgets.QWidget):
             menu.addAction(self.delete_action)
         menu.exec(self.tree.viewport().mapToGlobal(point))
 
+    def request_name(self, title, label, button, text='', parent=None):
+        dialog = QtWidgets.fluentqt.ContentDialog(parent or self.window())
+        dialog.graphicsEffect().setEnabled(False)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        dialog.setMaximumWidth(560)
+        dialog.setTitle(title)
+        content = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        prompt = QtWidgets.QLabel(label, content)
+        field = QtWidgets.QLineEdit(content)
+        field.setAccessibleName(label)
+        field.setText(text)
+        field.selectAll()
+        prompt.setBuddy(field)
+        layout.addWidget(prompt)
+        layout.addWidget(field)
+        dialog.setContent(content)
+        dialog.setPrimaryButtonText(button)
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Primary)
+        field.returnPressed.connect(lambda: dialog.done(dialog.ResultPrimary))
+        QtCore.QTimer.singleShot(0, field, field.setFocus)
+        try:
+            return field.text() if dialog.exec() == dialog.ResultPrimary else None
+        finally:
+            dialog.deleteLater()
+
     def rename_selected(self):
         if not self.rename_action.isEnabled():
             return
         item = self.selected_items()[0]
-        name, accepted = QtWidgets.QInputDialog.getText(
-            self.window(), tr('Rename cloud item'), tr('Name'), text=item.display_name)
-        if accepted and name.strip() != item.display_name:
-            folder = self.folder
+        self.rename_item(item, self.folder)
+
+    def rename_item(self, item, folder, parent=None):
+        if not item.can_edit or self.busy():
+            return False
+        name = self.request_name(tr('Rename cloud item'), tr('Name'), tr('Rename'), item.display_name, parent=parent)
+        if name is not None and name.strip() != item.display_name:
             self.start_job('rename', lambda provider, *args: provider.rename(item, folder, name))
+            return True
+        return False
 
     def delete_selected(self):
         if not self.delete_action.isEnabled():
             return
-        items = self.selected_items()
-        if QtWidgets.QMessageBox.question(self.window(), tr('Delete cloud items'),
+        self.delete_items(self.selected_items())
+
+    def delete_items(self, items, parent=None):
+        if not items or self.busy() or any(not item.can_edit or not item.can_delete for item in items):
+            return False
+        if QtWidgets.QMessageBox.question(parent or self.window(), tr('Delete cloud items'),
                                           tr('Move {count} item(s) to the cloud bin?').format(count=len(items)),
                                           defaultButton=QtWidgets.QMessageBox.StandardButton.No) != \
                 QtWidgets.QMessageBox.StandardButton.Yes:
-            return
+            return False
 
         def operation(provider, cancel, *args):
             for item in items:
@@ -699,6 +756,7 @@ class CloudLibrary(QtWidgets.QWidget):
                     raise SyncError('Transfer cancelled.')
                 provider.delete(item)
         self.start_job('delete', operation)
+        return True
 
     def confirm_overwrite(self, title, destination):
         return QtWidgets.QMessageBox.question(
@@ -715,6 +773,7 @@ class CloudLibrary(QtWidgets.QWidget):
         if not item.can_download:
             if preview_url_allowed(item.preview_url):
                 window = show_preview(self.window(), item, None)
+                self.add_preview_commands(window, item)
                 self.preview_windows.add(window)
                 window.finished.connect(lambda: self.release_preview(window))
                 window.show()
@@ -729,8 +788,7 @@ class CloudLibrary(QtWidgets.QWidget):
                 publish((item, None, stream.url))
                 stream.serve()
                 return None
-            if item_category(item) == 'images' or (
-                    item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf'):
+            if item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf':
                 kind, image = provider.preview(item, cancel)
                 if kind == 'image':
                     thumbnail = destination.with_name('cover.png')
@@ -744,6 +802,34 @@ class CloudLibrary(QtWidgets.QWidget):
             return item, destination, prepared
         self.start_job('preview', operation, temporary)
 
+    def add_preview_commands(self, window, item):
+        window.resize(1480, 900)
+        window.cloud_item, window.cloud_folder, window.cloud_profile = item, self.folder, self.profile
+        window.cloud_commands = {}
+        toolbar = OpenLPToolbar(window)
+        toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        for command, icon, label, allowed in (
+                ('download', UiIcons().download, tr('Download'), item.can_download),
+                ('rename', UiIcons().edit, tr('Rename'), item.can_edit),
+                ('delete', UiIcons().delete, tr('Delete'), item.can_edit and item.can_delete)):
+            action = toolbar.addAction(icon, label, lambda checked=False, command=command:
+                                       self.preview_command(window, command))
+            action.setEnabled(allowed)
+            window.cloud_commands[command] = action
+        window.layout().insertWidget(1, toolbar)
+
+    def preview_command(self, window, command):
+        if not window.cloud_commands[command].isEnabled() or self.profile != window.cloud_profile or self.busy():
+            return
+        item = window.cloud_item
+        if command == 'download':
+            self.download([item])
+        elif command == 'rename':
+            if self.rename_item(item, window.cloud_folder, window):
+                window.accept()
+        elif command == 'delete' and self.delete_items([item], window):
+            window.accept()
+
     def release_preview(self, window, temporary=None):
         self.preview_windows.discard(window)
         if temporary:
@@ -753,8 +839,8 @@ class CloudLibrary(QtWidgets.QWidget):
     def create_folder(self):
         if not self.folder_action.isEnabled():
             return
-        name, accepted = QtWidgets.QInputDialog.getText(self.window(), tr('New cloud folder'), tr('Folder name'))
-        if accepted:
+        name = self.request_name(tr('New cloud folder'), tr('Folder name'), tr('Create'))
+        if name is not None:
             folder, category = self.folder, self.category
             self.start_job('folder', lambda provider, *args: provider.create_folder(folder, category, name))
 

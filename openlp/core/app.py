@@ -57,7 +57,7 @@ from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
 from openlp.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
-from openlp.core.ui.splashscreen import SplashScreen
+from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
 from openlp.core.ui.modernstyle import apply_mica, refine_modern_layout
 from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
                                    set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
@@ -167,7 +167,12 @@ class OpenLP(QtCore.QObject, LogMixin):
                 sys.exit()
         can_show_splash = True
         if can_show_splash:
-            self.splash = SplashScreen()
+            try:
+                self.splash = SplashScreenProcess()
+            except (OSError, EOFError):
+                # A splash helper failure must not prevent the application from opening.
+                log.exception('Could not launch the splash helper; using the local splash screen')
+                self.splash = SplashScreen()
             Registry().register_function('startup_progress', self.splash.set_stage_progress)
             self.splash.show()
         # make sure Qt really display the splash screen
@@ -202,6 +207,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         Registry().execute('bootstrap_post_set_up')
         if can_show_splash:
             self.splash.set_status(translate('OpenLP.SplashScreen', 'Opening the main window'), 95)
+        activate_main_window = self.splash.is_foreground()
         self.main_window.show()
         refine_modern_layout(self.main_window)
         apply_mica(self.main_window)
@@ -212,6 +218,9 @@ class OpenLP(QtCore.QObject, LogMixin):
             log.debug('Splashscreen closing')
             self.splash.close()
             log.debug('Splashscreen closed')
+        if activate_main_window and is_macosx():
+            import AppKit
+            AppKit.NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         # make sure Qt really display the splash screen
         QtWidgets.QApplication.processEvents()
         self.main_window.repaint()
@@ -227,6 +236,9 @@ class OpenLP(QtCore.QObject, LogMixin):
         if self.settings.value('api/update check') and not Registry().get_flag('no_web_server'):
             check_for_remote_update(self.main_window)
         Registry().execute('bootstrap_completion')
+        if activate_main_window and self.splash.is_foreground():
+            self.main_window.raise_()
+            self.main_window.activateWindow()
         if layout_recovered:
             self.main_window.show_status_message(
                 translate('OpenLP', 'The saved window layout was reset to allow OpenLP+ to start.'), 15000)

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from PySide6 import QtGui
+from PySide6 import QtCore, QtGui
 
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.mediapreview import MediaPreview
@@ -58,14 +58,15 @@ def test_cloud_image_uses_fluent_inspector_and_friendly_name(settings, qtbot, tm
     image.save(str(path))
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
-    item = CloudItem('image', 'Sunday [123456abcdef].png', category='images', modified='2026-10-09T01:00:00Z')
+    item = CloudItem('image', 'Sunday [123456abcdef].png', category='images', modified='2026-10-09T01:00:00Z',
+                     provider_name='Google Drive', size=path.stat().st_size)
     window = show_preview(parent, item, path)
     assert isinstance(window, MediaPreview)
     assert isinstance(window, QtWidgets.fluentqt.Dialog)
     assert window.windowTitle() == 'Sunday'
-    assert window.metadata['Source'].text() == 'Cloud Library'
+    assert window.metadata['Source'].text() == 'Google Drive'
     assert window.metadata['Resolution'].text() == '200 × 100'
-    assert window.metadata['Access'].text() == 'Download allowed'
+    assert window.metadata['Access'].text() == 'View'
     assert 'Modified' in window.metadata
     window.reject()
 
@@ -82,6 +83,7 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     display.go_to_slide = MagicMock()
     display.deregister_display = MagicMock()
     monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    words = 'One\nTwo\nThree\nFour\nFive\nSix'
     root, xml = safe_xml(b'<song><title>Welcome</title><lyrics><verse>Hello everyone</verse></lyrics></song>')
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
@@ -89,11 +91,32 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     service = window.service_item
     service.get_theme_data = MagicMock(return_value=SimpleNamespace())
     service._rendered_slides = [{'text': 'Hello everyone', 'verse': 0}]
-    service._display_slides = [{'text': 'Hello everyone', 'title': 'Hello everyone', 'verse': '1'}]
+    service._display_slides = [{'text': words, 'title': 'Welcome', 'verse': '1'}]
     window.render()
     assert isinstance(window.slide_list, ListPreviewWidget)
     assert window.slide_list.rowCount() == 1
+    option = QtWidgets.QStyleOptionViewItem()
+    option.font = window.slide_list.font()
+    delegate = window.slide_list.itemDelegate()
+    index = window.slide_list.model().index(0, 0)
+    assert delegate._document(option, index).toPlainText() == words
+    window.slide_list.setColumnWidth(0, 400)
+    height = delegate.sizeHint(option, index).height()
+    long_words = 'Words that must stay visible when the column becomes narrower. ' * 8
+    window.slide_list.item(0, 0).setText(long_words)
+    window.slide_list.setColumnWidth(0, 260)
+    assert delegate._document(option, index).toPlainText() == long_words
+    assert delegate.sizeHint(option, index).height() > height
     assert not window.slide_list.dragEnabled()
+    assert isinstance(window.split_view, QtWidgets.fluentqt.SplitView)
+    assert window.split_view.panePreferredSize(0) == 380
+    assert window.split_view.handleCount() == 2
+    assert list(window.metadata)[-3:] == ['Created', 'Modified', 'Modified by']
+    from fluentqt import Spacing
+    ratio = display.parentWidget().layout()
+    ratio.setGeometry(QtCore.QRect(0, 0, 700, 400))
+    assert display.geometry().left() >= Spacing.Medium
+    assert 700 - display.geometry().right() - 1 >= Spacing.Medium
     display.load_verses.assert_called_once_with(service._rendered_slides)
     display.go_to_slide.assert_called_with(0, raise_window=False)
     window.reject()
@@ -104,6 +127,20 @@ def test_cloud_metadata_does_not_show_storage_filename():
     fields = cloud_metadata(CloudItem('f', 'unreadable.png', category='images'))
     assert fields['Item type'] == 'Images'
     assert 'unreadable' not in str(fields)
+
+
+def test_cloud_metadata_uses_provider_permissions_and_places_audit_fields_last():
+    item = CloudItem('f', 'technical.xml', category='songs', provider_name='Another provider', size=2048,
+                     can_edit=True, created='2026-10-08T01:00:00Z',
+                     modified='2026-10-09T01:00:00Z', modified_by='Sam')
+    fields = cloud_metadata(item, {'Authors': 'Song author'})
+    assert fields['Source'] == 'Another provider' and fields['Access'] == 'View, edit'
+    assert 'kb' in fields['File size'].lower()
+    assert 'Created by' not in fields and fields['Modified by'] == 'Sam'
+    assert list(fields)[-3:] == ['Created', 'Modified', 'Modified by']
+    missing = cloud_metadata(CloudItem('f', 'f.xml', category='songs'))
+    assert missing['Access'] == 'View'
+    assert missing['Modified by'] == '—'
 
 
 def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings, qtbot, monkeypatch):
@@ -136,3 +173,18 @@ def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings
     window.reject()
     window.stop_preview()
     display.deregister_display.assert_called_once()
+
+
+@pytest.mark.parametrize('zone_name, date, hour', [('Australia/Sydney', 9, 1), ('America/New_York', 8, 10)])
+def test_cloud_dates_use_system_timezone_with_daylight_saving(monkeypatch, zone_name, date, hour):
+    from openlp.plugins.librarysync.lib.preview import format_local_time
+    zone = QtCore.QTimeZone(zone_name.encode())
+    monkeypatch.setattr(QtCore.QTimeZone, 'systemTimeZone', lambda: zone)
+    local = QtCore.QDateTime(QtCore.QDate(2026, 10, date), QtCore.QTime(hour, 0), zone)
+    expected = QtCore.QLocale().toString(local, QtCore.QLocale.FormatType.ShortFormat)
+    item = CloudItem('song', 'song.xml', category='songs', created='2026-10-08T14:00:00Z',
+                     modified='2026-10-08T16:00:00+02:00')
+    fields = cloud_metadata(item)
+    assert fields['Created'] == fields['Modified'] == expected
+    assert format_local_time(item.modified) == expected
+    assert format_local_time('') == format_local_time('invalid') == '—'

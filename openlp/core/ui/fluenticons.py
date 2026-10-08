@@ -80,7 +80,8 @@ def _service_icon_theme():
 def service_icon(icon, plugin_name):
     """Colour service, Library and Settings icons with the active Fluent palette."""
     token = {'songs': 'systemCaution', 'bibles': 'systemSuccess', 'images': 'systemInfo',
-             'media': 'systemCritical', 'presentations': 'purple', 'custom': 'orange'}.get(plugin_name)
+             'media': 'systemCritical', 'presentations': 'purple', 'custom': 'orange',
+             'themes': 'accentDefault'}.get(plugin_name)
     if token is None:
         return icon
     theme = _service_icon_theme()

@@ -2,6 +2,8 @@
 import html
 from pathlib import Path
 
+from fluentqt import Spacing
+
 from PySide6 import QtCore
 
 from openlp.core.common.i18n import translate
@@ -21,12 +23,21 @@ def tr(text):
     return translate('LibrarySync', text)
 
 
-def cloud_metadata(item):
-    modified = QtCore.QDateTime.fromString(item.modified, QtCore.Qt.DateFormat.ISODate)
-    return {'Source': tr('Cloud Library'), 'Item type': tr(CATEGORIES[item.category]),
-            'Modified': (QtCore.QLocale().toString(modified.toLocalTime(), QtCore.QLocale.FormatType.ShortFormat)
-                         if modified.isValid() else '—'),
-            'Access': tr('Download allowed') if item.can_download else tr('Preview only')}
+def format_local_time(value):
+    parsed = QtCore.QDateTime.fromString(value, QtCore.Qt.DateFormat.ISODate)
+    if not parsed.isValid():
+        return '—'
+    local = parsed.toTimeZone(QtCore.QTimeZone.systemTimeZone())
+    return QtCore.QLocale().toString(local, QtCore.QLocale.FormatType.ShortFormat)
+
+
+def cloud_metadata(item, details=None):
+    return {'Source': item.provider_name or tr('Cloud Library'), 'Item type': tr(CATEGORIES[item.category]),
+            'File size': QtCore.QLocale().formattedDataSize(
+                item.size, 1, QtCore.QLocale.DataSizeFormat.DataSizeTraditionalFormat),
+            'Access': tr('View, edit') if item.can_edit else tr('View'), **(details or {}),
+            'Created': format_local_time(item.created),
+            'Modified': format_local_time(item.modified), 'Modified by': item.modified_by or '—'}
 
 
 def text_service_item(item, prepared):
@@ -97,8 +108,8 @@ class CloudSlidePreview(QtWidgets.QDialog):
         self.service_item, metadata = text_service_item(item, prepared)
         self.preview_stopped = False
         self.setWindowTitle(self.service_item.title)
-        self.resize(1100, 680)
-        self.setMinimumSize(680, 440)
+        self.resize(1480, 900)
+        self.setMinimumSize(960, 600)
         layout = QtWidgets.QVBoxLayout(self)
         heading = QtWidgets.QLabel(self.service_item.title)
         heading.setTextFormat(QtCore.Qt.TextFormat.PlainText)
@@ -118,17 +129,20 @@ class CloudSlidePreview(QtWidgets.QDialog):
                                           .format(name=self.service_item.theme))
         self.theme_warning.setVisible(bool(missing))
         layout.addWidget(self.theme_warning)
-        body = QtWidgets.QHBoxLayout()
+        self.split_view = QtWidgets.fluentqt.SplitView(self)
+        self.split_view.setDefaultSizeHint(QtCore.QSize(1400, 680))
         screen = ScreenList().current.display_geometry.size()
-        self.slide_list = ListPreviewWidget(self, screen.width() / screen.height())
+        self.slide_list = ListPreviewWidget(self, screen.width() / screen.height(), max_lines=None)
         self.slide_list.setDragEnabled(False)
-        self.slide_list.setMinimumWidth(220)
-        self.slide_list.setMaximumWidth(340)
         self.slide_list.cellClicked.connect(lambda row, column: self.change_slide(row))
         self.slide_list.keyboard_slide_changed.connect(lambda: self.change_slide(self.slide_list.currentRow()))
-        body.addWidget(self.slide_list, 1)
+        self.split_view.addPane(self.slide_list)
+        self.split_view.setPaneMinimumSize(0, 260)
+        self.split_view.setPaneMaximumSize(0, 650)
+        self.split_view.setPanePreferredSize(0, 380)
         viewer = QtWidgets.QWidget(self)
         ratio = AspectRatioLayout(viewer, screen.width() / screen.height())
+        ratio.margin = Spacing.Medium
         from openlp.core.display.window import DisplayWindow
         self.display = DisplayWindow(viewer, can_show_startup_screen=False, embedded=True,
                                      after_loaded_callback=self.render)
@@ -136,19 +150,29 @@ class CloudSlidePreview(QtWidgets.QDialog):
         self.display.allow_item_transitions = False
         ratio.addWidget(self.display)
         ratio.resize.connect(self.resize_preview)
-        body.addWidget(viewer, 3)
+        self.split_view.addPane(viewer)
+        self.split_view.setPaneMinimumSize(1, 280)
+        self.split_view.setFillPaneIndex(1)
         details = QtWidgets.QWidget(self)
-        details.setFixedWidth(200)
         fields = QtWidgets.QFormLayout(details)
         fields.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        for key, value in {**cloud_metadata(item), **metadata}.items():
+        self.metadata = {}
+        for key, value in cloud_metadata(item, metadata).items():
             label = QtWidgets.QLabel(value)
             label.setTextFormat(QtCore.Qt.TextFormat.PlainText)
             label.setWordWrap(True)
             label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
+            self.metadata[key] = label
             fields.addRow(tr(key), label)
-        body.addWidget(details)
-        layout.addLayout(body, 1)
+        details_scroll = QtWidgets.QScrollArea(self)
+        details_scroll.setWidgetResizable(True)
+        details_scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        details_scroll.setWidget(details)
+        self.split_view.addPane(details_scroll)
+        self.split_view.setPaneMinimumSize(2, 260)
+        self.split_view.setPaneMaximumSize(2, 540)
+        self.split_view.setPanePreferredSize(2, 300)
+        layout.addWidget(self.split_view, 1)
         close = QtWidgets.QPushButton(tr('Close'), self)
         close.clicked.connect(self.accept)
         layout.addWidget(close, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
@@ -226,4 +250,5 @@ def show_preview(parent, item, path, prepared=None):
         return CloudSlidePreview(parent, item, prepared)
     return MediaPreview(parent, path, item.display_name,
                         kind={'images': 'image', 'media': 'media', 'presentations': 'presentation'}[item.category],
-                        preview_paths=prepared, extra_metadata=cloud_metadata(item), allow_reveal=False)
+                        preview_paths=prepared, extra_metadata=cloud_metadata(item), allow_reveal=False,
+                        file_size=item.size)

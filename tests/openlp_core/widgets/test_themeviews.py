@@ -2,7 +2,8 @@
 from unittest.mock import patch
 
 import fluentqt
-from PySide6 import QtCore, QtTest
+from PySide6 import QtCore, QtGui, QtTest
+import pytest
 
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.themeviews import ThemeViews
@@ -64,15 +65,41 @@ def test_theme_grid_context_menu_and_activation(qapp):
     view.close()
 
 
-def test_theme_grid_drag_payload(qapp):
+@pytest.mark.parametrize('surface', ['list_view', 'grid_view'])
+def test_theme_drag_payload(qapp, settings, surface):
     view = ThemeViews()
     view.addItem('Theme (default)')
     view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Theme')
     view.setCurrentRow(0)
     with patch('openlp.core.widgets.themeviews.execute_drag') as drag:
-        view.grid_view.startDrag(QtCore.Qt.DropAction.CopyAction)
+        getattr(view, surface).startDrag(QtCore.Qt.DropAction.CopyAction)
     mime = drag.call_args.args[1]
     assert mime.text() == 'themes'
     assert bytes(mime.data('application/x-openlp-item-title')) == b'Theme'
     assert mime.names == ('Theme',)
     assert mime.manager is view.manager
+
+
+@pytest.mark.parametrize('surface', ['list_view', 'grid_view'])
+def test_theme_mouse_drag_uses_shared_payload(qapp, qtbot, settings, surface):
+    view = ThemeViews()
+    qtbot.addWidget(view)
+    view.addItem('Theme')
+    view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Theme')
+    view.resize(400, 300)
+    view.setViewMode(QtWidgets.QListView.ViewMode.IconMode if surface == 'grid_view'
+                     else QtWidgets.QListView.ViewMode.ListMode)
+    view.show()
+    qapp.process_events()
+    target = getattr(view, surface)
+    point = target.visualRect(target.model().index(0, 0)).center()
+    qtbot.mousePress(target.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+    end = point + QtCore.QPoint(QtWidgets.QApplication.startDragDistance() + 10, 0)
+    move = QtGui.QMouseEvent(
+        QtCore.QEvent.Type.MouseMove, QtCore.QPointF(end), QtCore.QPointF(target.viewport().mapToGlobal(end)),
+        QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    with patch('openlp.core.widgets.themeviews.execute_drag') as drag:
+        QtWidgets.QApplication.sendEvent(target.viewport(), move)
+    qtbot.mouseRelease(target.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=end)
+    assert drag.call_count == 1
+    assert drag.call_args.args[1].names == ('Theme',)

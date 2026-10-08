@@ -103,7 +103,7 @@ class MediaPreview(QtWidgets.QDialog):
         self.viewer.setMinimumSize(320, 240)
         body.addWidget(self.viewer, 1)
         metadata = QtWidgets.QWidget()
-        metadata.setFixedWidth(230)
+        metadata.setFixedWidth(300 if extra_metadata else 230)
         fields = QtWidgets.QFormLayout(metadata)
         fields.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.metadata = {}
@@ -115,7 +115,7 @@ class MediaPreview(QtWidgets.QDialog):
             keys += ['Duration', 'Audio codec'] if audio_only else ['Frame rate', 'Duration', 'Video codec']
         if kind == 'presentation':
             keys.append('Slides')
-        keys += list(extra_metadata or {})
+        keys += [key for key in (extra_metadata or {}) if key not in keys]
         for key in keys:
             value = QtWidgets.QLabel('—')
             value.setWordWrap(True)

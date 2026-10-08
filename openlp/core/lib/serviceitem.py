@@ -1060,6 +1060,8 @@ class ServiceItem(RegistryProperties):
         self.theme_overwritten = (theme is None)
         self.theme = theme
         if self.is_text():
+            if theme is None:
+                self.remove_capability(ItemCapabilities.ProvidesOwnTheme)
             self._clear_slides_cache()
         self._new_item()
 

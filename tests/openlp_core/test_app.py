@@ -18,19 +18,95 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
+import os
 import sys
 from argparse import Namespace
 from pathlib import Path
 from tempfile import mkdtemp
-from unittest.mock import MagicMock, patch
+from unittest.mock import DEFAULT, MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtWidgets
 
 from openlp.core.app import parse_options, backup_if_version_changed, main as app_main, setup_portable_settings
 from openlp.core.common.platform import is_win
+from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.ui.style import UiThemes
+
+
+@pytest.mark.parametrize('helper_error', [None, OSError('Cannot start splash helper')])
+@pytest.mark.parametrize('foreground', [True, False])
+def test_run_splash_lifecycle(qapp, mock_settings, helper_error, foreground):
+    """Startup forwards progress and closes the helper, with a usable local fallback."""
+    qapp.settings = mock_settings
+    mock_settings.value.side_effect = lambda key: key == 'core/has run wizard'
+    with patch.multiple('openlp.core.app', SplashScreenProcess=DEFAULT, SplashScreen=DEFAULT,
+                        ScreenList=DEFAULT, State=DEFAULT, set_default_theme=DEFAULT, loader=DEFAULT,
+                        MainWindow=DEFAULT, begin_layout_startup=DEFAULT,
+                        get_application_stylesheet=DEFAULT, refine_modern_layout=DEFAULT,
+                        apply_mica=DEFAULT, is_macosx=DEFAULT) as mocks, \
+            patch.object(qapp, 'backup_on_upgrade'), patch.object(qapp, 'exec', return_value=0), \
+            patch('openlp.core.app.QtCore.QTimer.singleShot'):
+        mocks['SplashScreenProcess'].side_effect = helper_error
+        mocks['begin_layout_startup'].return_value = False
+        mocks['get_application_stylesheet'].return_value = ''
+        mocks['is_macosx'].return_value = False
+        splash = mocks['SplashScreen' if helper_error else 'SplashScreenProcess'].return_value
+        splash.is_foreground.return_value = foreground
+        assert qapp.run([], MagicMock()) == 0
+        splash = mocks['SplashScreen' if helper_error else 'SplashScreenProcess'].return_value
+        splash.show.assert_called_once()
+        splash.set_status.assert_any_call('Loading components', 5)
+        splash.set_status.assert_any_call('Ready', 100)
+        splash.close.assert_called_once()
+        if foreground:
+            mocks['MainWindow'].return_value.raise_.assert_called_once()
+            mocks['MainWindow'].return_value.activateWindow.assert_called_once()
+        else:
+            mocks['MainWindow'].return_value.raise_.assert_not_called()
+            mocks['MainWindow'].return_value.activateWindow.assert_not_called()
+        assert Registry().functions_list['startup_progress'] == []
+
+
+@pytest.mark.skipif(sys.platform != 'darwin' or os.environ.get('QT_QPA_PLATFORM') == 'offscreen',
+                    reason='Requires native macOS activation')
+@pytest.mark.parametrize('switch_away', [False, True])
+def test_native_startup_focus_handoff(qapp, mock_settings, qtbot, switch_away):
+    """A real splash hands focus to a real window, unless the user switched applications."""
+    import AppKit
+
+    main_window = QtWidgets.QWidget()
+    qtbot.addWidget(main_window)
+    qapp.settings = mock_settings
+    mock_settings.value.side_effect = lambda key: key == 'core/has run wizard'
+    finder = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_('com.apple.finder')[0]
+
+    def loading_work():
+        if switch_away:
+            finder.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
+            qtbot.waitUntil(lambda: not qapp.splash.is_foreground())
+
+    Registry().register_function('bootstrap_post_set_up', loading_work)
+    with patch.multiple('openlp.core.app', ScreenList=DEFAULT, State=DEFAULT, set_default_theme=DEFAULT,
+                        loader=DEFAULT, MainWindow=DEFAULT, begin_layout_startup=DEFAULT,
+                        get_application_stylesheet=DEFAULT, refine_modern_layout=DEFAULT,
+                        apply_mica=DEFAULT) as mocks, \
+            patch.object(qapp, 'backup_on_upgrade'), patch.object(qapp, 'exec', return_value=0), \
+            patch('openlp.core.app.QtCore.QTimer.singleShot'):
+        mocks['MainWindow'].return_value = main_window
+        mocks['begin_layout_startup'].return_value = False
+        mocks['get_application_stylesheet'].return_value = ''
+        try:
+            assert qapp.run([], QtWidgets.QApplication.instance()) == 0
+            native_app = AppKit.NSApplication.sharedApplication()
+            qtbot.waitUntil(lambda: native_app.isActive() == (not switch_away))
+            if not switch_away:
+                qtbot.waitUntil(main_window.isActiveWindow)
+            assert not qapp.splash._process.is_alive()
+        finally:
+            if hasattr(qapp, 'splash'):
+                qapp.splash.close()
 
 
 @pytest.fixture

@@ -518,18 +518,18 @@ class MultipleViewModeList(QtWidgets.QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if (self.mime_data_text and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
+
+    def startDrag(self, supported_actions):
         if not self.mime_data_text:
-            super().mouseMoveEvent(event)
-            return
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
-            return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
+            super().startDrag(supported_actions)
             return
         drag = QtGui.QDrag(self)
         mime_data = QtCore.QMimeData()

@@ -512,6 +512,10 @@ class TreeItemsMixin:
 class FluentTreeWidget(TreeItemsMixin, fluentqt.TreeView):
     """Native hierarchy with visible headers when column labels are supplied."""
 
+    def indexAt(self, point):
+        # Match Qt's delegate geometry rather than Fluent's fixed row heights.
+        return _qt.QTreeView.indexAt(self, point)
+
     def resizeEvent(self, event):
         # Fluent's single title margin clips Qt's column headings above the view.
         if self.isHeaderHidden():
