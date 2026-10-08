@@ -85,3 +85,30 @@ def test_native_commandbar_updates_glyphs_after_action_changes(qtbot):
     action.setIcon(second)
     qtbot.waitUntil(lambda: toolbar.widgetForAction(action).iconGlyph() == chr(glyphs[second.name()]))
     assert toolbar.widgetForAction(action).iconFontFamily() == family
+
+
+def test_commandbar_overflow_does_not_overlay_icons_on_captions(qtbot):
+    window = QtWidgets.QWidget()
+    qtbot.addWidget(window)
+    window.resize(500, 300)
+    toolbar = OpenLPToolbar(window)
+    toolbar.setGeometry(250, 0, 60, 40)
+    actions = [toolbar.add_toolbar_action(name, text=caption, icon=fluent_icon(f'ic_fluent_{glyph}_24_regular'))
+               for name, caption, glyph in [('open', 'Open Service', 'folder_open'),
+                                            ('save', 'Save Service', 'save'),
+                                            ('save_as', 'Save As', 'save_edit')]]
+    actions[1].setEnabled(False)
+    actions[2].setEnabled(False)
+    window.show()
+    group = toolbar._command_groups[0]
+    qtbot.waitUntil(lambda: group.isPrimaryActionOverflowed(actions[0]))
+    for _ in range(2):
+        group.setOverflowOpen(True)
+        popup = window.findChild(QtWidgets.QWidget, 'FluentCommandBar.OverflowPopup')
+        qtbot.waitUntil(popup.isVisible)
+        for button in popup.findChildren(fluentqt.Button):
+            if button.property('commandAction') in actions:
+                assert button.isVisible()
+                assert not button.iconGlyph()
+        group.setOverflowOpen(False)
+        assert not popup.isVisible()

@@ -26,7 +26,7 @@ import threading
 from functools import partial
 from pathlib import Path
 from time import sleep
-from unittest.mock import ANY, Mock, MagicMock, call, patch
+from unittest.mock import Mock, MagicMock, call, patch
 from zipfile import BadZipFile
 
 import pytest
@@ -41,10 +41,13 @@ from openlp.core.state import State
 from openlp.core.common.enum import ServiceItemType
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList, SERVICE_ITEM_INDICATORS_ROLE
+from openlp.core.ui.servicemanager import ServiceManager, SERVICE_ITEM_INDICATORS_ROLE
 from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from tests.utils.constants import RESOURCE_PATH
+from openlp.core.widgets.dnd import ItemDragData
+
+pytestmark = pytest.mark.usefixtures("qapp")
 
 BIBLE_VERSES = (
     'In the beginning, God created the heavens and the earth. The earth was formless and empty. Darkness '
@@ -266,6 +269,7 @@ def service_manager(registry: Registry, settings: Settings):
     # Mocked registry entries
     registry.register('main_window', MagicMock())
     registry.register('live_controller', MagicMock())
+    registry.register('preview_controller', MagicMock())
     registry.register('renderer', MagicMock())
     registry.register('plugin_manager', MagicMock())
 
@@ -1097,370 +1101,162 @@ def test_regenerate_service_items_set_modified(mocked_tree: MagicMock, settings:
     service_manager.repaint_service_list.assert_called_once()
 
 
-def test_service_manager_list_drag_enter_event_accepts_supported_plugin(registry: Registry):
-    """
-    Test that ServiceManagerList.dragEnterEvent accepts supported plugin drags.
-    """
-    # GIVEN: A service manager list and a supported plugin drop payload
-    service_manager = MagicMock()
-    service_manager.can_accept_external_plugin = MagicMock(return_value=True)
-    service_manager.begin_external_drag_preview = MagicMock(return_value='Test Song')
-    service_manager.update_external_drag_preview = MagicMock()
-    service_manager.cancel_external_drag_preview = MagicMock()
-    service_manager_list = ServiceManagerList(service_manager)
-    mime_data = MagicMock(
-        hasUrls=MagicMock(return_value=False),
-        hasText=MagicMock(return_value=True),
-        text=MagicMock(return_value='songs'))
-    mime_data.data.return_value = QtCore.QByteArray(b'Test Song')
-    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data), pos=MagicMock(return_value=QtCore.QPoint(0, 0)))
-    service_manager_list._show_drag_tooltip = MagicMock()
-
-    # WHEN: The dragEnterEvent method is called
-    service_manager_list.dragEnterEvent(mocked_event)
-
-    # THEN: The drag is accepted and preview is started
-    mocked_event.accept.assert_called_once_with()
-    service_manager.can_accept_external_plugin.assert_called_once_with('songs')
-    service_manager.begin_external_drag_preview.assert_called_once_with('songs', item_title='Test Song')
+@pytest.fixture()
+def drag_service(service_manager):
+    for title in ('A', 'B', 'C'):
+        item = _add_song_service_item(service_manager)
+        item.title = title
+    service_manager._repaint_service_list()
+    for row in service_manager.tree_widget_items:
+        if not row.childCount():
+            child = QtWidgets.QTreeWidgetItem(['First slide'])
+            child.setData(0, QtCore.Qt.ItemDataRole.UserRole, 0)
+            row.addChild(child)
+    view = service_manager.service_manager_list
+    service_manager.resize(420, 600)
+    service_manager.show()
+    QtWidgets.QApplication.processEvents()
+    view.setCurrentItem(service_manager.tree_widget_items[0])
+    service_manager.set_modified(False)
+    return service_manager
 
 
-def test_service_manager_list_uses_small_child_indentation():
-    """Test that ServiceManagerList adds an indent for sub-items."""
-    service_manager_list = ServiceManagerList(MagicMock())
-
-    assert service_manager_list.indentation() == 30
+def _service_orders(manager):
+    return ([entry['service_item'].title for entry in manager.service_items],
+            [manager.service_manager_list.topLevelItem(i).text(0) for i in range(3)])
 
 
-def test_service_manager_list_drag_enter_event_rejects_unsupported_plugin():
-    """
-    Test that ServiceManagerList.dragEnterEvent rejects unsupported plugin drags.
-    """
-    # GIVEN: A service manager list and an unsupported plugin drop payload
-    service_manager = MagicMock()
-    service_manager.can_accept_external_plugin = MagicMock(return_value=False)
-    service_manager_list = ServiceManagerList(service_manager)
-    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
-                          text=MagicMock(return_value='themes'))
-    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data))
+def test_cancel_native_service_drag_leaves_rows_and_data_in_sync(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    first = manager.tree_widget_items[0]
+    first.setExpanded(True)
 
-    # WHEN: The dragEnterEvent method is called
-    service_manager_list.dragEnterEvent(mocked_event)
+    def cancel(*args):
+        manager.update_internal_drag_preview(QtCore.QPoint(20, view.viewport().height() - 4))
+        assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
+        assert view._drop_line.isVisible()
+        return QtCore.Qt.DropAction.IgnoreAction
 
-    # THEN: The drag is rejected
-    mocked_event.ignore.assert_called_once_with()
-    service_manager.begin_external_drag_preview.assert_not_called()
-
-
-def test_service_manager_list_drag_move_event_accepts_supported_plugin():
-    """
-    Test that ServiceManagerList.dragMoveEvent accepts supported plugin drags.
-    """
-    # GIVEN: A service manager list with a supported plugin drag payload
-    service_manager = MagicMock()
-    service_manager.can_accept_external_plugin = MagicMock(return_value=True)
-    service_manager_list = ServiceManagerList(service_manager)
-    service_manager_list._update_drag_tooltip_pos = MagicMock()
-    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
-                          text=MagicMock(return_value='songs'))
-    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data), pos=MagicMock(return_value=QtCore.QPoint(0, 0)))
-
-    # WHEN: The dragMoveEvent method is called
-    service_manager_list.dragMoveEvent(mocked_event)
-
-    # THEN: The drag is accepted and preview position updated
-    mocked_event.accept.assert_called_once_with()
-    service_manager.update_external_drag_preview.assert_called_once()
+    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+        drag.return_value.exec.side_effect = cancel
+        view.startDrag(QtCore.Qt.DropAction.MoveAction)
+    assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
+    assert first.isExpanded()
+    assert manager.find_service_item()[0] == 0
+    assert not manager.is_modified()
+    assert not manager.is_internal_drag_active()
+    assert not view._drop_line.isVisible()
+    assert not view._drag_scroll_timer.isActive()
 
 
-def test_service_manager_list_drag_move_event_rejects_unsupported_plugin():
-    """
-    Test that ServiceManagerList.dragMoveEvent rejects unsupported plugin drags.
-    """
-    # GIVEN: A service manager list with an unsupported plugin drag payload
-    service_manager = MagicMock()
-    service_manager.can_accept_external_plugin = MagicMock(return_value=False)
-    service_manager_list = ServiceManagerList(service_manager)
-    mime_data = MagicMock(hasUrls=MagicMock(return_value=False), hasText=MagicMock(return_value=True),
-                          text=MagicMock(return_value='themes'))
-    mocked_event = MagicMock(mimeData=MagicMock(return_value=mime_data))
+def test_native_service_drop_moves_once_and_keeps_expansion_and_child_selection(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    first = manager.tree_widget_items[0]
+    first.setExpanded(True)
+    view.setCurrentItem(first.child(0))
 
-    # WHEN: The dragMoveEvent method is called
-    service_manager_list.dragMoveEvent(mocked_event)
+    def drop(*args):
+        mime = drag.return_value.setMimeData.call_args.args[0]
+        event = MagicMock()
+        event.mimeData.return_value = mime
+        event.source.return_value = view
+        event.pos.return_value = QtCore.QPoint(20, view.viewport().height() - 4)
+        manager.drop_event(event)
+        event.setDropAction.assert_called_once_with(QtCore.Qt.DropAction.MoveAction)
+        return QtCore.Qt.DropAction.MoveAction
 
-    # THEN: The drag is rejected
-    mocked_event.ignore.assert_called_once_with()
-    service_manager.update_external_drag_preview.assert_not_called()
-
-
-def test_service_manager_list_key_press_event():
-    """
-    Test that the ServiceManagerList.keyPressEvent slot ignores the event
-    """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    mocked_event = MagicMock()
-
-    # WHEN: The keyPressEvent method is called
-    service_manager_list.keyPressEvent(mocked_event)
-
-    # THEN: The ignore() method on the event is called
-    mocked_event.ignore.assert_called_once_with()
+    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+        drag.return_value.exec.side_effect = drop
+        view.startDrag(QtCore.Qt.DropAction.MoveAction)
+    assert _service_orders(manager) == (['B', 'C', 'A'], ['B', 'C', 'A'])
+    assert first.isExpanded()
+    assert manager.find_service_item() == (2, 0)
+    assert manager.is_modified()
+    assert not manager.is_internal_drag_active()
 
 
-def test_service_manager_list_mouse_move_event_not_left_button(qapp):
-    """
-    Test that the ServiceManagerList.mouseMoveEvent slot ignores the event if it's not a left-click
-    """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    mocked_event = MagicMock()
-    mocked_event.buttons.return_value = QtCore.Qt.MouseButton.RightButton
-
-    # WHEN: The mouseMoveEvent method is called
-    service_manager_list.mouseMoveEvent(mocked_event)
-
-    # THEN: The ignore() method on the event is called
-    mocked_event.ignore.assert_called_once_with()
+def test_drag_out_of_service_does_not_reorder(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+        drag.return_value.exec.return_value = QtCore.Qt.DropAction.CopyAction
+        view.startDrag(QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
+    assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
+    assert not manager.is_modified()
 
 
-@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-def test_service_manager_list_mouse_move_event_no_item(MockQCursor: MagicMock, qapp):
-    """
-    Test that the ServiceManagerList.mouseMoveEvent slot ignores the event if it's not over an item
-    """
-    # GIVEN: A service manager and a mocked event
-    service_manager_list = ServiceManagerList(None)
-    service_manager_list.itemAt = MagicMock(return_value=None)
-    service_manager_list.mapFromGlobal = MagicMock()
-    mocked_event = MagicMock()
-    mocked_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
-
-    # WHEN: The mouseMoveEvent method is called
-    service_manager_list.mouseMoveEvent(mocked_event)
-
-    # THEN: The ignore() method on the event is called
-    mocked_event.ignore.assert_called_once_with()
+def test_service_insertion_line_is_painted_at_the_gap(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    manager.begin_external_drag_preview('images', 'Image')
+    manager._move_external_drag_preview(1)
+    line = view._drop_line
+    assert line.isVisible()
+    assert line.geometry().top() == view.visualItemRect(manager.tree_widget_items[1]).top() - 1
+    image = view.viewport().grab().toImage()
+    assert image.pixelColor(line.geometry().center()) == \
+        view.itemDelegateForColumn(0)._theme_host.theme_tokens().colors.accentDefault
+    manager.cancel_external_drag_preview()
+    assert not line.isVisible()
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-def test_service_manager_list_mouse_move_event(MockQCursor: MagicMock, mocked_set_override_cursor: MagicMock,
-                                               mocked_restore_override_cursor: MagicMock, qapp):
-    """
-    Test that mouseMoveEvent starts an internal drag using pure mouse tracking (no QDrag).
-    The cursor is set to ClosedHandCursor and begin_internal_drag / update_internal_drag_preview are called.
-    """
-    # GIVEN: A service manager list with a mocked service manager
-    mocked_service_manager = MagicMock(
-        begin_internal_drag=MagicMock(return_value=True),
-        get_internal_drag_title=MagicMock(return_value='Test Song'),
-        finish_internal_drag=MagicMock())
-    service_manager_list = ServiceManagerList(mocked_service_manager)
-    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
-    service_manager_list._show_drag_tooltip = MagicMock()
-    mocked_item = MagicMock()
-    service_manager_list.itemAt = MagicMock(return_value=mocked_item)
-    service_manager_list.mapFromGlobal = MagicMock()
-    mocked_event = MagicMock()
-    mocked_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
-    mocked_event.pos.return_value = QtCore.QPoint(5, 5)
-
-    # WHEN: mouseMoveEvent is called past the drag threshold
-    service_manager_list.mouseMoveEvent(mocked_event)
-
-    # THEN: the drag started, cursor was set, and preview was updated
-    assert service_manager_list._is_internal_dragging is True
-    mocked_service_manager.begin_internal_drag.assert_called_once_with()
-    mocked_set_override_cursor.assert_called_once_with(QtCore.Qt.CursorShape.ClosedHandCursor)
-    mocked_service_manager.update_internal_drag_preview.assert_called_once()
-    # finish_internal_drag is NOT called until mouseReleaseEvent
-    mocked_service_manager.finish_internal_drag.assert_not_called()
+def test_service_reorder_keeps_loaded_controller_positions_in_sync(drag_service):
+    manager = drag_service
+    manager.preview_controller.service_item = manager.service_items[0]['service_item']
+    manager.live_controller.service_item = manager.service_items[1]['service_item']
+    manager._move_service_item_row(0, 2)
+    assert manager.preview_controller._service_manager_item_index == 2
+    assert manager.live_controller._service_manager_item_index == 0
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-def test_service_manager_list_mouse_move_event_begin_drag_fails(MockQCursor: MagicMock,
-                                                                mocked_set_cursor: MagicMock,
-                                                                mocked_restore_cursor: MagicMock, qapp):
-    """
-    Test that mouseMoveEvent does NOT start a drag if begin_internal_drag() returns False
-    (e.g. no service item is selected).
-    """
-    # GIVEN: A service manager list whose service_manager refuses to start the drag
-    mocked_service_manager = MagicMock(begin_internal_drag=MagicMock(return_value=False))
-    service_manager_list = ServiceManagerList(mocked_service_manager)
-    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
-    service_manager_list.itemAt = MagicMock(return_value=MagicMock())
-    service_manager_list.mapFromGlobal = MagicMock()
-    mocked_event = MagicMock()
-    mocked_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
-    mocked_event.pos.return_value = QtCore.QPoint(5, 5)
-
-    # WHEN: mouseMoveEvent fires past threshold
-    service_manager_list.mouseMoveEvent(mocked_event)
-
-    # THEN: No drag started, cursor NOT changed
-    assert service_manager_list._is_internal_dragging is False
-    mocked_set_cursor.assert_not_called()
-    mocked_event.ignore.assert_called_once_with()
+def test_service_drag_scrolls_at_the_edge_and_updates_insertion(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    view.verticalScrollBar().setRange(0, 100)
+    view.verticalScrollBar().setValue(20)
+    manager.begin_external_drag_preview('images')
+    point = QtCore.QPoint(20, view.viewport().height() - 4)
+    with patch('openlp.core.ui.servicemanager.QtGui.QCursor.pos', return_value=view.viewport().mapToGlobal(point)), \
+            patch.object(manager, 'update_external_drag_preview') as update:
+        view._scroll_drag()
+    assert view.verticalScrollBar().value() == 28
+    update.assert_called_once_with(point)
+    manager.cancel_external_drag_preview()
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.restoreOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtWidgets.QApplication.setOverrideCursor')
-@patch('openlp.core.ui.servicemanager.QtGui.QCursor')
-def test_service_manager_list_mouse_release_event_commits_drag(
-        MockQCursor: MagicMock, mocked_set_cursor: MagicMock, mocked_restore_cursor: MagicMock, qapp):
-    """
-    Test that mouseReleaseEvent commits the internal drag (finish_internal_drag(True) called)
-    and restores the cursor.
-    """
-    # GIVEN: A service manager list in the middle of an internal drag
-    mocked_service_manager = MagicMock(
-        begin_internal_drag=MagicMock(return_value=True),
-        get_internal_drag_title=MagicMock(return_value='Test Song'),
-        finish_internal_drag=MagicMock())
-    service_manager_list = ServiceManagerList(mocked_service_manager)
-    service_manager_list._drag_start_pos = QtCore.QPoint(0, 0)
-    service_manager_list._show_drag_tooltip = MagicMock()
-    service_manager_list.itemAt = MagicMock(return_value=MagicMock())
-    service_manager_list.mapFromGlobal = MagicMock()
-
-    # Start the drag via mouseMoveEvent
-    move_event = MagicMock()
-    move_event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
-    move_event.pos.return_value = QtCore.QPoint(5, 5)
-    service_manager_list.mouseMoveEvent(move_event)
-    assert service_manager_list._is_internal_dragging is True
-
-    # WHEN: The left button is released
-    release_event = MagicMock()
-    release_event.button.return_value = QtCore.Qt.MouseButton.LeftButton
-    service_manager_list.mouseReleaseEvent(release_event)
-
-    # THEN: drag is committed and cursor is restored
-    mocked_service_manager.finish_internal_drag.assert_called_once_with(True)
-    mocked_restore_cursor.assert_called_once_with()
-    assert service_manager_list._is_internal_dragging is False
-    release_event.accept.assert_called_once_with()
+def test_controller_drop_copies_item_without_sharing_slide_data(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    original = manager.service_items[0]['service_item']
+    mime = ItemDragData(item=original, slide_no=0)
+    event = MagicMock()
+    event.mimeData.return_value = mime
+    event.source.return_value = QtWidgets.QWidget()
+    event.pos.return_value = QtCore.QPoint(20, view.viewport().height() - 4)
+    manager.drop_event(event)
+    copied = manager.service_items[-1]['service_item']
+    assert copied.unique_identifier != original.unique_identifier
+    assert copied.slides == original.slides and copied.slides is not original.slides
+    copied.slides[0]['title'] = 'Changed'
+    assert original.slides[0]['title'] != 'Changed'
+    event.setDropAction.assert_called_once_with(QtCore.Qt.DropAction.CopyAction)
 
 
-def test_move_internal_drag_preview(service_manager: ServiceManager):
-    """
-    Test that the internal drag preview temporarily reorders service items.
-    """
-    # GIVEN: A service manager with three items and an active internal drag
-    first_item = _add_song_service_item(service_manager)
-    second_item = _add_bible_service_item(service_manager)
-    third_item = _add_image_service_item(service_manager)
-    service_manager.find_service_item = MagicMock(return_value=(0, -1))
-
-    # WHEN: The drag starts and previews a move to the end of the list
-    service_manager.begin_internal_drag()
-    service_manager._move_internal_drag_preview(len(service_manager.service_items))
-
-    # THEN: The dragged item should be shown at the preview position
-    assert [item['service_item'] for item in service_manager.service_items] == [second_item, third_item, first_item]
-
-
-def test_finish_internal_drag_restore_on_cancel(service_manager: ServiceManager):
-    """
-    Test that canceling an internal drag restores the original service order.
-    """
-    # GIVEN: A service manager with three items and an active internal drag preview
-    first_item = _add_song_service_item(service_manager)
-    second_item = _add_bible_service_item(service_manager)
-    third_item = _add_image_service_item(service_manager)
-    service_manager.find_service_item = MagicMock(return_value=(0, -1))
-    service_manager.begin_internal_drag()
-    service_manager._move_internal_drag_preview(len(service_manager.service_items))
-
-    # WHEN: The drag is canceled
-    service_manager.finish_internal_drag(False)
-
-    # THEN: The original order should be restored and no drag should remain active
-    assert [item['service_item'] for item in service_manager.service_items] == [first_item, second_item, third_item]
-    assert service_manager.is_internal_drag_active() is False
-
-
-def test_begin_internal_drag_does_not_repaint_list(service_manager: ServiceManager):
-    """
-    Test that beginning an internal drag does not trigger a full list repaint.
-    """
-    # GIVEN: A service manager with a selected item
-    _add_song_service_item(service_manager)
-    _add_bible_service_item(service_manager)
-    service_manager.find_service_item = MagicMock(return_value=(0, -1))
-    service_manager.repaint_service_list = MagicMock()
-
-    # WHEN: Internal drag starts
-    started = service_manager.begin_internal_drag()
-
-    # THEN: Drag starts but no full repaint occurs on initial grab
-    assert started is True
-    service_manager.repaint_service_list.assert_not_called()
-
-
-def test_drop_event_external_plugin_uses_preview_position(service_manager: ServiceManager):
-    """
-    Test that when an external plugin item is dropped while the drag preview is active,
-    the drop_position is set to the tracked preview index.
-    """
-    # GIVEN: A service manager with two items and an active external drag preview at index 1
-    first_item = _add_song_service_item(service_manager)
-    second_item = _add_bible_service_item(service_manager)
-    service_manager.begin_external_drag_preview('images')
-    # Move preview target between the two existing items
-    service_manager._move_external_drag_preview(1)
-    assert service_manager.is_external_drag_active()
-    assert service_manager.drop_position == -1  # not set yet
-
-    mocked_event = MagicMock()
-    mocked_event.mimeData.return_value = MagicMock(
-        hasUrls=MagicMock(return_value=False),
-        hasText=MagicMock(return_value=True),
-        text=MagicMock(return_value='images')
-    )
-    service_manager.service_manager_list._hide_drag_tooltip = MagicMock()
-
-    # WHEN: The drop event fires
-    with patch('openlp.core.ui.servicemanager.Registry') as MockRegistry:
-        service_manager.drop_event(mocked_event)
-
-    # THEN: Preview is gone, drop_position reflects placeholder index, plugin add is called
-    assert not service_manager.is_external_drag_active()
-    assert service_manager.drop_position == 1
-    MockRegistry.return_value.execute.assert_called_once_with('images_add_service_item', False)
-
-
-def test_drop_event_external_plugin_rejects_unsupported_type(service_manager: ServiceManager):
-    """
-    Test that drop_event ignores unsupported plugin drops and does not dispatch add_service_item.
-    """
-    # GIVEN: A service manager with an active external drag preview and unsupported plugin payload
-    _add_song_service_item(service_manager)
-    service_manager.begin_external_drag_preview('images')
-    assert service_manager.is_external_drag_active()
-    mocked_event = MagicMock()
-    mocked_event.mimeData.return_value = MagicMock(
-        hasUrls=MagicMock(return_value=False),
-        hasText=MagicMock(return_value=True),
-        text=MagicMock(return_value='themes')
-    )
-    service_manager.service_manager_list._hide_drag_tooltip = MagicMock()
-
-    # WHEN: The drop event fires for an unsupported plugin
-    with patch('openlp.core.ui.servicemanager.Registry') as MockRegistry:
-        MockRegistry.return_value.has_function.return_value = False
-        service_manager.drop_event(mocked_event)
-
-    # THEN: The drag is ignored, preview removed, and no add action executed
-    assert not service_manager.is_external_drag_active()
-    mocked_event.ignore.assert_called_once_with()
-    service_manager.service_manager_list._hide_drag_tooltip.assert_called_once_with()
-    MockRegistry.return_value.execute.assert_not_called()
+@pytest.mark.parametrize('destination', ['enter', 'move', 'drop'])
+def test_service_rejects_unknown_drag(drag_service, destination):
+    event = MagicMock()
+    event.mimeData.return_value = QtCore.QMimeData()
+    event.mimeData.return_value.setText('themes')
+    view = drag_service.service_manager_list
+    if destination == 'enter':
+        view.dragEnterEvent(event)
+    elif destination == 'move':
+        view.dragMoveEvent(event)
+    else:
+        drag_service.drop_event(event)
+    event.ignore.assert_called_once()
 
 
 def test_begin_external_drag_preview(service_manager: ServiceManager):

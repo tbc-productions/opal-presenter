@@ -40,6 +40,7 @@ from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.edits import SearchEdit
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.views import ListWidgetWithDnD
+from openlp.core.widgets.libraryfooter import LibraryFooter
 
 
 class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
@@ -118,9 +119,21 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.page_layout.addWidget(self.panel_widget)
         self.required_icons()
         self.setup_ui()
+        self.list_view.setFont(QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Body))
+        if self.plugin.name in ('songs', 'custom'):
+            self.library_footer = LibraryFooter(self)
+            self.page_layout.addWidget(self.library_footer)
+            model = self.list_view.model()
+            for signal in (model.rowsInserted, model.rowsRemoved, model.modelReset):
+                signal.connect(self.update_item_count)
+            self.update_item_count()
         self.library_tab_icon = self.get_library_tab_icon()
         self.retranslate_ui()
         self.auto_select_id = -1
+
+    def update_item_count(self):
+        """Count the current search results in the Songs and Custom Slides lists."""
+        self.library_footer.set_count(self.list_view.model().rowCount())
 
     def get_library_tab_icon(self):
         """Return the plugin Library tab icon in its Fluent service colour."""
@@ -516,7 +529,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         file_name = file_path.name
         return any(re.match(fnmatch.translate(pattern), file_name, re.IGNORECASE) for pattern in patterns)
 
-    def dnd_move_internal(self, target):
+    def dnd_move_internal(self, target, items=None):
         """
         Handle internal moving of media manager items
 

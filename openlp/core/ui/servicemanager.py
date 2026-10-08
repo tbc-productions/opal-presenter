@@ -60,6 +60,7 @@ from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.ui.renamedialog import RenameDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
+from openlp.core.widgets.dnd import ItemDragData, copy_service_item, execute_drag
 from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
 from openlp.core.ui.fluenticons import fluent_icon, service_icon
 
@@ -122,6 +123,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setSelectionIndicatorVisible(True)
         self.setItemDelegateForColumn(0, ServiceItemDelegate(self))
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.setAlternatingRowColors(use_alternate_rows())
         self.setColumnCount(1)
         self.setHeaderHidden(True)
@@ -132,9 +134,13 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
         self._drag_start_pos = None
-        self._is_internal_dragging = False
-        self._drag_tooltip_label = None
         self._last_notes_tooltip_item = None
+        self._drop_line = QtWidgets.QFrame(self.viewport())
+        self._drop_line.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self._drop_line.hide()
+        self._drag_scroll_timer = QtCore.QTimer(self)
+        self._drag_scroll_timer.setInterval(50)
+        self._drag_scroll_timer.timeout.connect(self._scroll_drag)
 
     def _show_notes_tooltip_on_hover(self, event):
         """Show the row tooltip immediately over its inline indicators."""
@@ -171,54 +177,89 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         QtWidgets.QToolTip.hideText()
         super(ServiceManagerList, self).leaveEvent(event)
 
+    def can_accept_drop(self, event):
+        mime = event.mimeData()
+        if isinstance(mime, ItemDragData):
+            if event.source() is self and self.service_manager.is_internal_drag_active():
+                return mime.item is self.service_manager._internal_drag_item['service_item']
+            return mime.can_drop('service')
+        if mime.hasUrls():
+            return all(url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in ('.osz', '.oszl')
+                       for url in mime.urls()) and bool(mime.urls())
+        return False
+
     def dragEnterEvent(self, event):
-        """
-        React to a drag enter event from an external source (e.g. Songs or Media library).
-        Start a live preview of where the dragged item will land.
-        """
-        if event.mimeData().hasUrls():
-            event.accept()
-        elif event.mimeData().hasText():
-            plugin_name = event.mimeData().text()
-            if self.service_manager and not self.service_manager.can_accept_external_plugin(plugin_name):
-                event.ignore()
-                return
-            raw_title = event.mimeData().data('application/x-openlp-item-title')
-            item_title = bytes(raw_title).decode('utf-8') if raw_title and not raw_title.isEmpty() else None
-            if self.service_manager:
-                self.service_manager.cancel_external_drag_preview()
-                title = self.service_manager.begin_external_drag_preview(plugin_name, item_title=item_title)
-                self.service_manager.update_external_drag_preview(event.pos())
-                self._show_drag_tooltip(title)
-            event.accept()
-        else:
+        if not self.can_accept_drop(event):
             event.ignore()
+            return
+        mime = event.mimeData()
+        if isinstance(mime, ItemDragData) and event.source() is self:
+            self.service_manager.update_internal_drag_preview(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.MoveAction)
+        elif not mime.hasUrls():
+            raw_title = mime.data('application/x-openlp-item-title')
+            title = bytes(raw_title).decode('utf-8', errors='replace') if raw_title else None
+            plugin = mime.text() if mime.hasText() else mime.item.name
+            self.service_manager.cancel_external_drag_preview()
+            self.service_manager.begin_external_drag_preview(plugin, item_title=title)
+            self.service_manager.update_external_drag_preview(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+        event.accept()
+        self._drag_scroll_timer.start()
 
     def dragLeaveEvent(self, event):
-        """
-        React to the drag leaving the service list — cancel the external preview and tooltip.
-        """
-        if self.service_manager:
-            self.service_manager.cancel_external_drag_preview()
-        self._hide_drag_tooltip()
+        self._drag_scroll_timer.stop()
+        self.service_manager.cancel_external_drag_preview()
+        self.set_drop_position(None)
+        QtWidgets.QToolTip.hideText()
         event.accept()
 
     def dragMoveEvent(self, event):
-        """
-        React to a drag move event from an external source — update the live preview position.
-        """
-        if event.mimeData().hasUrls():
-            event.accept()
-        elif event.mimeData().hasText():
-            if self.service_manager and not self.service_manager.can_accept_external_plugin(event.mimeData().text()):
-                event.ignore()
-                return
-            if self.service_manager:
-                self.service_manager.update_external_drag_preview(event.pos())
-            self._update_drag_tooltip_pos()
-            event.accept()
-        else:
+        if not self.can_accept_drop(event):
             event.ignore()
+            return
+        if isinstance(event.mimeData(), ItemDragData) and event.source() is self:
+            self.service_manager.update_internal_drag_preview(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.MoveAction)
+        else:
+            self.service_manager.update_external_drag_preview(event.pos())
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+        event.accept()
+
+    def set_drop_position(self, index):
+        """Draw the insertion gap independently of the row delegate."""
+        if index is None:
+            self._drop_line.hide()
+            return
+        count = self.topLevelItemCount()
+        if index < count:
+            y = self.visualItemRect(self.topLevelItem(index)).top()
+        elif count:
+            item = self.topLevelItem(count - 1)
+            while item.isExpanded() and item.childCount():
+                item = item.child(item.childCount() - 1)
+            y = self.visualItemRect(item).bottom() + 1
+        else:
+            y = 4
+        color = self.itemDelegateForColumn(0)._theme_host.theme_tokens().colors.accentDefault
+        self._drop_line.setStyleSheet('background: {color}; border-radius: 1px;'.format(color=color.name()))
+        self._drop_line.setGeometry(4, max(0, min(y - 1, self.viewport().height() - 3)),
+                                    max(0, self.viewport().width() - 8), 3)
+        self._drop_line.show()
+        self._drop_line.raise_()
+
+    def _scroll_drag(self):
+        pos = self.viewport().mapFromGlobal(QtGui.QCursor.pos())
+        if not self.viewport().rect().contains(pos):
+            return
+        step = -8 if pos.y() < 28 else 8 if pos.y() > self.viewport().height() - 28 else 0
+        if step:
+            bar = self.verticalScrollBar()
+            bar.setValue(bar.value() + step)
+            if self.service_manager.is_internal_drag_active():
+                self.service_manager.update_internal_drag_preview(pos)
+            else:
+                self.service_manager.update_external_drag_preview(pos)
 
     def keyPressEvent(self, event):
         """
@@ -226,10 +267,6 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         :param event:
         """
         if isinstance(event, QtGui.QKeyEvent):
-            if self._is_internal_dragging and event.key() == QtCore.Qt.Key.Key_Escape:
-                self._cancel_internal_drag()
-                event.accept()
-                return
             # here accept the event and do something
             if event.key() == QtCore.Qt.Key.Key_Up:
                 self.service_manager.on_move_selection_up()
@@ -256,89 +293,31 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """
-        Handle internal service item reordering via pure mouse events (no QDrag).
-        This gives full cursor control and avoids macOS native-drag cursor override.
-        """
-        left_held = bool(event.buttons() & QtCore.Qt.MouseButton.LeftButton)
-        if not left_held:
-            if self._is_internal_dragging:
-                self._cancel_internal_drag()
-            if isinstance(event, QtGui.QMouseEvent):
-                self._show_notes_tooltip_on_hover(event)
-                super().mouseMoveEvent(event)
-            else:
-                event.ignore()
+        if (event.buttons() & QtCore.Qt.MouseButton.LeftButton and self._drag_start_pos is not None
+                and self.indexAt(self._drag_start_pos).isValid()
+                and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
             return
-
-        if self._is_internal_dragging:
-            if self.service_manager:
-                self.service_manager.update_internal_drag_preview(event.pos())
-            self._update_drag_tooltip_pos()
-            event.accept()
-            return
-
-        # Check drag-start conditions
-        if not self.itemAt(self.mapFromGlobal(QtGui.QCursor.pos())):
+        if not event.buttons() & QtCore.Qt.MouseButton.LeftButton:
+            self._show_notes_tooltip_on_hover(event)
+        if isinstance(event, QtGui.QMouseEvent):
+            super().mouseMoveEvent(event)
+        else:
             event.ignore()
+
+    def startDrag(self, actions):
+        if not self.service_manager or not self.service_manager.begin_internal_drag():
             return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
-            return
-        if self.itemAt(event.pos()) is None:
-            event.ignore()
-            return
-
-        # Begin drag
-        if self.service_manager and not self.service_manager.begin_internal_drag():
-            event.ignore()
-            return
-        self._is_internal_dragging = True
-        self._show_drag_tooltip(
-            self.service_manager.get_internal_drag_title() if self.service_manager else '')
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
-        if self.service_manager:
-            self.service_manager.update_internal_drag_preview(event.pos())
-        event.accept()
-
-    def mouseReleaseEvent(self, event):
-        """
-        Commit the internal drag when the left mouse button is released.
-        """
-        if self._is_internal_dragging and event.button() == QtCore.Qt.MouseButton.LeftButton:
-            self._finish_internal_drag(True)
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
-    def _finish_internal_drag(self, commit):
-        """Finish the internal drag, committing or cancelling the reorder."""
-        if not self._is_internal_dragging:
-            return
-        self._is_internal_dragging = False
-        self._hide_drag_tooltip()
-        QtWidgets.QApplication.restoreOverrideCursor()
-        if self.service_manager:
-            self.service_manager.finish_internal_drag(commit)
-
-    def _cancel_internal_drag(self):
-        """Cancel the internal drag and restore original order."""
-        self._finish_internal_drag(False)
-
-    def _show_drag_tooltip(self, text):
-        """Show or update the drag tooltip near the cursor."""
-        QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), text, self)
-
-    def _update_drag_tooltip_pos(self):
-        """Reposition the drag tooltip to follow the cursor."""
-        if self._is_internal_dragging and self.service_manager:
-            QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), self.service_manager.get_internal_drag_title(), self)
-
-    def _hide_drag_tooltip(self):
-        """Hide the drag tooltip."""
-        QtWidgets.QToolTip.hideText()
-        self._drag_tooltip_label = None
+        item = self.service_manager._internal_drag_item['service_item']
+        mime = ItemDragData(item=item, slide_no=self.service_manager._internal_drag_child)
+        try:
+            execute_drag(self, mime, QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
+        finally:
+            self._drag_scroll_timer.stop()
+            self.service_manager.finish_internal_drag(False)
+            self.set_drop_position(None)
 
 
 class Ui_ServiceManager(object):
@@ -364,9 +343,7 @@ class Ui_ServiceManager(object):
             text=UiStrings().OpenService,
             icon=UiIcons().open,
             tooltip=translate('OpenLP.ServiceManager', 'Load an existing service.'),
-            triggers=self._show_open_service_menu)
-        self.open_service_recent_menu = QtWidgets.QMenu(self.toolbar)
-        self.open_service_recent_menu.aboutToShow.connect(self.update_open_service_recent_menu)
+            triggers=self.on_load_service_clicked)
         self.save_service_action = self.toolbar.add_toolbar_action('saveService', text=UiStrings().SaveService,
                                                                    icon=UiIcons().save,
                                                                    tooltip=translate('OpenLP.ServiceManager',
@@ -380,6 +357,12 @@ class Ui_ServiceManager(object):
             triggers=self.save_file_as)
         self.save_service_action.setEnabled(False)
         self.save_service_as_action.setEnabled(False)
+        self.recent_services_menu = QtWidgets.QMenu(self.toolbar)
+        self.recent_services_menu.aboutToShow.connect(self.update_recent_services_menu)
+        self.recent_services_action = QtGui.QAction(
+            UiIcons().clock, translate('OpenLP.ServiceManager', 'Recent services'), self.toolbar)
+        self.recent_services_action.triggered.connect(self.show_recent_services_menu)
+        self.toolbar.addSecondaryAction(self.recent_services_action)
         self.toolbar.add_spacer()
         self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
@@ -510,18 +493,8 @@ class Ui_ServiceManager(object):
         self._update_unsaved_changes_indicator()
         self._update_new_service_actions()
         self._update_move_actions()
-        # build the drag and drop context menu
-        self.dnd_menu = QtWidgets.QMenu()
-        self.new_action = self.dnd_menu.addAction(translate('OpenLP.ServiceManager', '&Add New Item'))
-        self.new_action.setIcon(UiIcons().edit)
-        self.add_to_action = self.dnd_menu.addAction(translate('OpenLP.ServiceManager', '&Add to Selected Item'))
-        self.add_to_action.setIcon(UiIcons().edit)
         # build the context menu
         self.menu = QtWidgets.QMenu()
-        # Force visible separators (macOS default is nearly invisible).
-        _sep_colour = self.menu.palette().color(QtGui.QPalette.ColorRole.Mid).name()
-        self.menu.setStyleSheet(
-            'QMenu::separator {{ height: 1px; background: {c}; margin: 4px 8px; }}'.format(c=_sep_colour))
         self.edit_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Edit Item'),
                                                 icon=UiIcons().edit, triggers=self.remote_edit)
         self.rename_action = create_widget_action(self.menu, text=translate('OpenLP.ServiceManager', '&Rename...'),
@@ -713,7 +686,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.servicefile_version = None
         self.tree_widget_items = []
         self._internal_drag_item = None
-        self._internal_drag_original_index = None
+        self._internal_drag_target_index = None
         self._internal_drag_child = -1
         self._internal_drag_visual_item_index = -1
         self._external_drag_item = None
@@ -947,49 +920,32 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         self.load_service()
 
-    def _show_open_service_menu(self):
-        """Open the service menu from the shared CommandBar, including its overflow."""
-        presenter = self.toolbar.widgetForAction(self.open_service_action)
+    def show_recent_services_menu(self):
+        """Keep recent services separate from the direct Open service command."""
+        presenter = self.toolbar.widgetForAction(self.recent_services_action)
         anchor = presenter if presenter is not None and presenter.isVisible() else self.toolbar
         position = anchor.mapToGlobal(anchor.rect().bottomLeft())
-        # Let the CommandBar overflow close before displaying the service menu.
-        QtCore.QTimer.singleShot(0, lambda: self.open_service_recent_menu.popup(position))
+        QtCore.QTimer.singleShot(0, lambda: self.recent_services_menu.popup(position))
 
-    def update_open_service_recent_menu(self):
-        """
-        Rebuild the Open Service toolbar dropdown using the main window's recent service list.
-        """
-        if not hasattr(self, 'open_service_recent_menu'):
-            return
-        self.open_service_recent_menu.clear()
-        open_action = self.open_service_recent_menu.addAction(UiStrings().OpenService)
-        open_action.triggered.connect(lambda checked=False: self.on_load_service_clicked(checked))
-        self.open_service_recent_menu.addSeparator()
-        if not self.main_window:
-            return
+    def update_recent_services_menu(self):
+        self.recent_services_menu.clear()
         self.main_window.update_recent_files_menu()
-        has_recent_file = False
         for recent_action in self.main_window.recent_files_menu.actions():
-            recent_file_path = recent_action.data()
-            if recent_action.isSeparator() or not recent_file_path:
+            path = recent_action.data()
+            if recent_action.isSeparator() or not path:
                 continue
-            action_copy = self.open_service_recent_menu.addAction(recent_action.text())
-            action_copy.setEnabled(recent_action.isEnabled())
-            if recent_file_path:
-                has_recent_file = True
-                action_copy.setData(recent_file_path)
-                action_copy.triggered.connect(
-                    lambda checked=False, file_path=recent_file_path: self.on_recent_service_clicked(checked,
-                                                                                                      file_path))
-        if not has_recent_file:
-            no_recent_action = self.open_service_recent_menu.addAction(
-                translate('OpenLP.ServiceManager', 'No recent services'))
-            no_recent_action.setEnabled(False)
-        self.open_service_recent_menu.addSeparator()
-        clear_recent_files_action = self.open_service_recent_menu.addAction(
+            action = self.recent_services_menu.addAction(recent_action.text())
+            action.setEnabled(recent_action.isEnabled())
+            action.triggered.connect(lambda checked=False, file_path=path:
+                                     self.on_recent_service_clicked(checked, file_path))
+        if not self.recent_services_menu.actions():
+            action = self.recent_services_menu.addAction(translate('OpenLP.ServiceManager', 'No recent services'))
+            action.setEnabled(False)
+        self.recent_services_menu.addSeparator()
+        clear = self.recent_services_menu.addAction(
             translate('OpenLP.MainWindow', 'Clear List', 'Clear List of recent files'))
-        clear_recent_files_action.setEnabled(bool(self.main_window.recent_files))
-        clear_recent_files_action.triggered.connect(self.main_window.clear_recent_file_menu)
+        clear.setEnabled(bool(self.main_window.recent_files))
+        clear.triggered.connect(self.main_window.clear_recent_file_menu)
 
     def load_service(self, file_path=None):
         """
@@ -2799,6 +2755,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 for child_index in range(tree_item.childCount()):
                     tree_item.child(child_index).setForeground(0, drag_brush)
 
+        for controller in (self.preview_controller, self.live_controller):
+            if controller and isinstance(controller.service_item, ServiceItem):
+                controller._service_manager_item_index = next(
+                    (i for i, entry in enumerate(self.service_items)
+                     if entry['service_item'].unique_identifier == controller.service_item.unique_identifier), None)
+
     def _insert_service_item_row(self, index):
         """Insert a single rendered row at index without rebuilding the full list."""
         tree_item = QtWidgets.QTreeWidgetItem()
@@ -2819,11 +2781,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if from_index >= len(self.tree_widget_items):
             self._refresh_tree_rows_from_service_items(min(from_index, to_index))
             return
-        moved_tree_item = self.service_manager_list.takeTopLevelItem(from_index)
-        self.service_manager_list.insertTopLevelItem(to_index, moved_tree_item)
-        moved_tree_widget_item = self.tree_widget_items.pop(from_index)
-        self.tree_widget_items.insert(to_index, moved_tree_widget_item)
-        self._refresh_tree_rows_from_service_items(min(from_index, to_index))
+        expanded = self.tree_widget_items[from_index].isExpanded()
+        with QtCore.QSignalBlocker(self.service_manager_list):
+            moved_tree_item = self.service_manager_list.takeTopLevelItem(from_index)
+            self.service_manager_list.insertTopLevelItem(to_index, moved_tree_item)
+            moved_tree_widget_item = self.tree_widget_items.pop(from_index)
+            self.tree_widget_items.insert(to_index, moved_tree_widget_item)
+            self._refresh_tree_rows_from_service_items(min(from_index, to_index))
+            moved_tree_item.setExpanded(expanded)
 
     def clean_up(self):
         """
@@ -3223,15 +3188,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     def is_external_drag_active(self):
         return self._external_drag_plugin_name is not None
 
-    def get_internal_drag_title(self):
-        """Return the display title of the item currently being dragged internally."""
-        if not self.is_internal_drag_active():
-            return ''
-        try:
-            return self._internal_drag_item['service_item'].get_display_title()
-        except Exception:
-            return ''
-
     # External drag preview constants (plugin name → friendly display title)
     _PLUGIN_DISPLAY_NAMES = {
         'songs': 'Song',
@@ -3242,17 +3198,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         'custom': 'Custom Slide',
         'alerts': 'Alert',
     }
-
-    @staticmethod
-    def can_accept_external_plugin(plugin_name):
-        """
-        Return whether this plugin can add items to the service manager via drag and drop.
-
-        :param plugin_name: The plugin name from drag MIME text.
-        """
-        if not plugin_name:
-            return False
-        return Registry().has_function('{plugin}_add_service_item'.format(plugin=plugin_name))
 
     def begin_external_drag_preview(self, plugin_name, item_title=None):
         """
@@ -3290,33 +3235,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         return self._external_drag_target_index
 
     def _set_external_drag_highlight(self, insert_index):
-        """Highlight only the current external drop target row to avoid full-list repaint."""
-        if self._external_drag_highlight_index != -1 and self._external_drag_highlight_index < len(self.tree_widget_items):
-            previous_item = self.tree_widget_items[self._external_drag_highlight_index]
-            previous_item.setBackground(0, QtGui.QBrush())
-
-        self._external_drag_highlight_index = -1
-        if not self.tree_widget_items:
-            return
-        highlight_index = insert_index if insert_index < len(self.tree_widget_items) else len(self.tree_widget_items) - 1
-        if highlight_index < 0:
-            return
-        highlight_item = self.tree_widget_items[highlight_index]
-        highlight_color = self.palette().color(QtGui.QPalette.ColorRole.Highlight)
-        highlight_color.setAlpha(60)
-        highlight_brush = QtGui.QBrush(highlight_color)
-        highlight_item.setBackground(0, highlight_brush)
-
-        self._external_drag_highlight_index = highlight_index
+        self.service_manager_list.set_drop_position(insert_index)
 
     def _clear_external_drag_highlight(self):
-        if self._external_drag_highlight_index == -1:
-            return
-        if self._external_drag_highlight_index < len(self.tree_widget_items):
-            item = self.tree_widget_items[self._external_drag_highlight_index]
-            item.setBackground(0, QtGui.QBrush())
-
-        self._external_drag_highlight_index = -1
+        self.service_manager_list.set_drop_position(None)
 
     def cancel_external_drag_preview(self):
         """Remove the external drag placeholder without committing."""
@@ -3346,7 +3268,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if start_pos == -1 or start_pos >= len(self.service_items):
             return False
         self._internal_drag_item = self.service_items[start_pos]
-        self._internal_drag_original_index = start_pos
+        self._internal_drag_target_index = start_pos
         self._internal_drag_child = child
         self._apply_internal_drag_grab_visual(start_pos)
         return True
@@ -3365,24 +3287,25 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if not self.is_internal_drag_active():
             return
         current_index = self._get_internal_drag_item_index()
-        original_index = self._internal_drag_original_index
+        target_index = self._internal_drag_target_index
         child = self._internal_drag_child
-        if current_index == -1:
-            current_index = original_index
-        if not is_drop_complete and current_index != original_index:
-            dragged_item = self.service_items.pop(current_index)
-            self.service_items.insert(original_index, dragged_item)
-            current_index = original_index
-        has_moved = current_index != original_index
         self._clear_internal_drag_grab_visual()
         self._internal_drag_item = None
-        self._internal_drag_original_index = None
+        self._internal_drag_target_index = None
         self._internal_drag_child = -1
-        if current_index >= 0 and current_index < len(self.tree_widget_items):
-            self.service_manager_list.setCurrentItem(self.tree_widget_items[current_index])
+        self.service_manager_list.set_drop_position(None)
+        if is_drop_complete and current_index != -1:
+            insert_index = target_index - (target_index > current_index)
+            if insert_index != current_index:
+                self._move_service_item_row(current_index, insert_index)
+                current_index = insert_index
+                self.set_modified()
+            if current_index < len(self.tree_widget_items):
+                row = self.tree_widget_items[current_index]
+                if 0 <= child < row.childCount():
+                    row = row.child(child)
+                self.service_manager_list.setCurrentItem(row)
         self._update_move_actions()
-        if is_drop_complete and has_moved:
-            self.set_modified()
 
     def _apply_internal_drag_grab_visual(self, item_index):
         """Dim the grabbed item in-place so drag start does not trigger a full list repaint."""
@@ -3419,6 +3342,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     def _get_internal_drag_target_index(self, pos):
         target_item = self.service_manager_list.itemAt(pos)
         if target_item is None:
+            if (self.tree_widget_items
+                    and pos.y() < self.service_manager_list.visualItemRect(self.tree_widget_items[0]).top()):
+                return 0
             return len(self.service_items)
         target_item = target_item if target_item.parent() is None else target_item.parent()
         target_index = get_parent_item_data(target_item) - 1
@@ -3427,18 +3353,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         return target_index
 
     def _move_internal_drag_preview(self, target_index):
-        current_index = self._get_internal_drag_item_index()
-        if current_index == -1:
-            return
-        insert_index = max(0, min(target_index, len(self.service_items)))
-        if insert_index > current_index:
-            insert_index -= 1
-        if insert_index == current_index:
-            return
-        self._move_service_item_row(current_index, insert_index)
-        self._apply_internal_drag_grab_visual(insert_index)
-        if insert_index >= 0 and insert_index < len(self.tree_widget_items):
-            self.service_manager_list.setCurrentItem(self.tree_widget_items[insert_index])
+        self._internal_drag_target_index = max(0, min(target_index, len(self.service_items)))
+        self.service_manager_list.set_drop_position(self._internal_drag_target_index)
 
     def drop_event(self, event):
         """
@@ -3448,54 +3364,47 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         :param event: Handle of the event passed
         """
         link = event.mimeData()
+        self.service_manager_list._drag_scroll_timer.stop()
+        if not self.service_manager_list.can_accept_drop(event):
+            self.cancel_external_drag_preview()
+            self.service_manager_list.set_drop_position(None)
+            event.ignore()
+            return
+        if isinstance(link, ItemDragData):
+            self.cancel_external_drag_preview()
+            if event.source() is self.service_manager_list:
+                if not self.is_internal_drag_active() or self._get_internal_drag_item_index() == -1:
+                    event.ignore()
+                    return
+                self.update_internal_drag_preview(event.pos())
+                self.finish_internal_drag(True)
+                event.setDropAction(QtCore.Qt.DropAction.MoveAction)
+            else:
+                position = self._get_internal_drag_target_index(event.pos())
+                items = link.service_items()
+                if not items:
+                    event.ignore()
+                    return
+                for offset, item in enumerate(items):
+                    if link.library is None:
+                        item = copy_service_item(item)
+                    item.from_plugin = False
+                    self.add_service_item(item, position=position + offset)
+                event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+            event.accept()
+            return
         if link.hasUrls():
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
             for url in link.urls():
                 file_path = Path(url.toLocalFile())
-                if file_path.suffix == '.osz':
+                if file_path.suffix.lower() == '.osz':
                     self.load_service(file_path)
-                elif file_path.suffix == '.oszl':
+                elif file_path.suffix.lower() == '.oszl':
                     # todo correct
                     self.load_service(file_path)
-        elif link.hasText():
-            plugin = link.text()
-            if not self.can_accept_external_plugin(plugin):
-                self.cancel_external_drag_preview()
-                self.service_manager_list._hide_drag_tooltip()
-                event.ignore()
-                return
-            self.service_manager_list._hide_drag_tooltip()
-            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
-            event.accept()
-            replace = False
-            if self.is_external_drag_active():
-                # Preview was active — use the placeholder's position as drop target
-                self.finish_external_drag_preview()
-            else:
-                # Fallback: no preview was active, determine position from cursor
-                item = self.service_manager_list.itemAt(event.pos())
-                if item is None:
-                    self.drop_position = len(self.service_items)
-                else:
-                    # we are over something so lets investigate
-                    pos = get_parent_item_data(item) - 1
-                    service_item = self.service_items[pos]
-                    if service_item['service_item'].can_append_plugin(plugin):
-                        action = self.dnd_menu.exec(QtGui.QCursor.pos())
-                        # New action required
-                        if action == self.new_action:
-                            self.drop_position = get_parent_item_data(item)
-                        # Append to existing action
-                        if action == self.add_to_action:
-                            self.drop_position = get_parent_item_data(item)
-                            item.setSelected(True)
-                            replace = True
-                    else:
-                        self.drop_position = get_parent_item_data(item) - 1
-            Registry().execute('{plugin}_add_service_item'.format(plugin=plugin), replace)
         else:
-            self.log_warning('Unrecognised item')
+            event.ignore()
 
     def update_theme_list(self, theme_list):
         """

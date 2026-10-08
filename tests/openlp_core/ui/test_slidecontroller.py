@@ -1162,11 +1162,13 @@ def test_add_service_manager_item_loads_new_preview(settings):
     controller.preview_widget = MagicMock()
     controller._process_item = MagicMock()
     controller.service_item = None
+    controller._service_manager_item_index = 3
     item = MagicMock()
     item.is_text.return_value = True
 
     controller.add_service_manager_item(item, -1)
 
+    assert controller._service_manager_item_index is None
     controller._process_item.assert_called_once_with(item, 0)
     controller.preview_widget.change_slide.assert_not_called()
 

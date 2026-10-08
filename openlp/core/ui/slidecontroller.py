@@ -39,7 +39,7 @@ from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.common.utils import wait_for
 from openlp.core.display.screens import ScreenList
 from openlp.core.display.window import DisplayWindow
-from openlp.core.lib import ServiceItemAction, image_to_byte
+from openlp.core.lib import ServiceItemAction, ServiceItemContext, image_to_byte
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
@@ -52,6 +52,7 @@ from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.toolbar import MediaToolbar, OpenLPToolbar
 from openlp.core.ui.modernstyle import is_modern_style
 from openlp.core.widgets.views import ListPreviewWidget
+from openlp.core.widgets.dnd import ItemDragData, execute_drag
 
 # Threshold which has to be trespassed to toggle.
 HIDE_MENU_THRESHOLD = 80
@@ -502,6 +503,101 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         else:
             getattr(self, 'slidecontroller_preview_clear').connect(self.on_clear)
         self._update_slide_action_enabled_state()
+
+        self._setup_item_drag_drop()
+
+    def _setup_item_drag_drop(self):
+        self._display_drag_press = None
+        self._drop_hint = QtWidgets.QLabel(self.panel)
+        self._drop_hint.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self._drop_hint.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self._drop_hint.setText(
+            translate('OpenLP.SlideController', 'Drop to go live') if self.is_live else
+            translate('OpenLP.SlideController', 'Drop to preview'))
+        highlight = self.panel.palette().color(QtGui.QPalette.ColorRole.Highlight)
+        highlight.setAlpha(35)
+        self._drop_hint.setStyleSheet(
+            'QLabel {{ background: {color}; border: 2px dashed palette(highlight); border-radius: 6px; }}'
+            .format(color=highlight.name(QtGui.QColor.NameFormat.HexArgb)))
+        self._drop_hint.hide()
+        self._install_item_drop_target(self.panel)
+
+    def _install_item_drop_target(self, widget):
+        widget.setAcceptDrops(True)
+        widget.installEventFilter(self)
+        for child in widget.findChildren(QtWidgets.QWidget, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly):
+            self._install_item_drop_target(child)
+
+    def eventFilter(self, watched, event):
+        kind = event.type()
+        if kind == QtCore.QEvent.Type.ChildPolished and isinstance(event.child(), QtWidgets.QWidget):
+            # WebEngine creates its input surface after the controller UI is constructed.
+            self._install_item_drop_target(event.child())
+        elif kind == QtCore.QEvent.Type.Resize and watched is self.panel:
+            self._drop_hint.setGeometry(self.panel.rect().adjusted(6, 6, -6, -6))
+        elif kind in (QtCore.QEvent.Type.DragEnter, QtCore.QEvent.Type.DragMove, QtCore.QEvent.Type.Drop):
+            mime = event.mimeData()
+            destination = 'live' if self.is_live else 'preview'
+            accepted = isinstance(mime, ItemDragData) and mime.controller is not self and mime.can_drop(destination)
+            if not accepted:
+                self._drop_hint.hide()
+                event.ignore()
+                return True
+            if kind == QtCore.QEvent.Type.Drop:
+                self._drop_hint.hide()
+                if not self.drop_item(mime):
+                    event.ignore()
+                    return True
+            else:
+                self._drop_hint.setGeometry(self.panel.rect().adjusted(6, 6, -6, -6))
+                self._drop_hint.show()
+                self._drop_hint.raise_()
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+            event.accept()
+            return True
+        elif kind == QtCore.QEvent.Type.DragLeave:
+            self._drop_hint.hide()
+        elif (kind in (QtCore.QEvent.Type.MouseButtonPress, QtCore.QEvent.Type.MouseButtonRelease,
+                       QtCore.QEvent.Type.MouseMove)
+              and (watched is self.preview_display or self.preview_display.isAncestorOf(watched))):
+            if kind == QtCore.QEvent.Type.MouseButtonPress and event.button() == QtCore.Qt.MouseButton.LeftButton:
+                self._display_drag_press = (watched, event.position().toPoint())
+            elif kind == QtCore.QEvent.Type.MouseButtonRelease:
+                self._display_drag_press = None
+            elif (kind == QtCore.QEvent.Type.MouseMove and self._display_drag_press
+                  and self._display_drag_press[0] is watched and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                  and (event.position().toPoint() - self._display_drag_press[1]).manhattanLength()
+                  >= QtWidgets.QApplication.startDragDistance()):
+                self._display_drag_press = None
+                self.start_item_drag(watched)
+                return True
+        return super().eventFilter(watched, event)
+
+    def start_item_drag(self, source):
+        if self.service_item and self.service_item.is_valid:
+            mime = ItemDragData(item=self.service_item, slide_no=self.preview_widget.current_slide_number(),
+                                controller=self)
+            execute_drag(source, mime)
+
+    def drop_item(self, mime):
+        context = ServiceItemContext.Live if self.is_live else ServiceItemContext.Preview
+        items = mime.service_items(context)
+        if not items:
+            return False
+        item = items[0]
+        if self.is_live and mime.controller is not None and not mime.controller.is_live:
+            if item.is_command():
+                Registry().execute('{name}_stop'.format(name=item.name), [item, False])
+            if item.is_media():
+                mime.controller.on_media_close()
+        index = next((i for i, entry in enumerate(self.service_manager.service_items)
+                      if entry['service_item'].unique_identifier == item.unique_identifier), None)
+        if self.is_live and item.from_service and index is not None:
+            self.service_manager.preview_live(item.unique_identifier, mime.slide_no)
+        else:
+            self.add_service_manager_item(item, mime.slide_no, service_list_index=index)
+        self.preview_widget.setFocus()
+        return True
 
     def _setup_display_mode_actions(self):
         """Create pinned mode controls, or the legacy responsive mode menu."""
@@ -1090,8 +1186,7 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         :param slide_no: The slide number to select
         :param service_list_index: Zero-based index in ServiceManager.service_items for this item (optional).
         """
-        if service_list_index is not None:
-            self._service_manager_item_index = service_list_index
+        self._service_manager_item_index = service_list_index
         # If no valid slide number is specified we take the first one, but we remember the initial value to see if we
         # should reload the song or not
         slide_num = slide_no

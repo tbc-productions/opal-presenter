@@ -15,6 +15,7 @@ class FluentToolTipFilter(QtCore.QObject):
         self.tip.setWindowFlag(QtCore.Qt.WindowType.NoDropShadowWindowHint)
         self.tip.setObjectName('openlp_fluent_tooltip')
         self.owner = None
+        self.drag_active = False
         self.area = QtCore.QRect()
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
@@ -37,7 +38,7 @@ class FluentToolTipFilter(QtCore.QObject):
                 self._watched_widgets.add(widget)
 
     def show_text(self, position, text, widget=None, rect=None, duration=-1):
-        if not text:
+        if not text or self.drag_active:
             self.hide()
             return
         self.owner = widget
@@ -72,6 +73,9 @@ class FluentToolTipFilter(QtCore.QObject):
     def eventFilter(self, watched, event):
         kind = event.type()
         if kind == QtCore.QEvent.Type.ToolTip and isinstance(watched, QtWidgets.QWidget):
+            if self.drag_active:
+                event.ignore()
+                return True
             text = watched.toolTip()
             area = watched.rect()
             parent = watched.parentWidget()
@@ -116,7 +120,7 @@ def install_fluent_tooltips(app):
 
 
 class FluentToolTip:
-    """Qt-compatible entry points for immediate service notes and drag hints."""
+    """Qt-compatible entry points for immediate service notes and widget hints."""
 
     @staticmethod
     def showText(position, text, widget=None, rect=None, msecShowTime=-1):

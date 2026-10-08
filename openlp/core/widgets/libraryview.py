@@ -5,11 +5,13 @@ from fluentqt.design import Spacing
 
 from openlp.core.common.i18n import translate
 from openlp.core.widgets.views import handle_mime_data_urls
+from openlp.core.widgets.dnd import ItemDragData, execute_drag
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE, library_folder_icon
 from openlp.core.widgets.fluent_commands import SpacedCommandBar
 from openlp.core.widgets.fluent_collections import ListItemsMixin
+from openlp.core.widgets.libraryfooter import LibraryFooter
 
 LIBRARY_THUMBNAIL_ROLE = QtCore.Qt.ItemDataRole.UserRole + 102
 
@@ -112,6 +114,7 @@ class LibraryGrid(ListItemsMixin, GridView):
         self.setFrameShape(NativeWidgets.QFrame.Shape.NoFrame)
         self.setSelectionMode(browser.tree.selectionMode())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self._drag_start_pos = None
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
@@ -120,19 +123,30 @@ class LibraryGrid(ListItemsMixin, GridView):
         index = tile.data(QtCore.Qt.ItemDataRole.UserRole) if tile else None
         return self.browser.tree.itemFromIndex(QtCore.QModelIndex(index)) if index and index.isValid() else None
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.position().toPoint()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.position().toPoint() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
+
     def startDrag(self, actions):
         self.browser.select_tree_items()
-        drag = QtGui.QDrag(self)
-        mime = QtCore.QMimeData()
-        mime.setText(self.browser.library.plugin.name)
-        selected = self.selectedItems()
-        if selected:
-            mime.setData('application/x-openlp-item-title', selected[0].text().encode('utf-8'))
-        drag.setMimeData(mime)
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+        if self.selectedItems():
+            execute_drag(self, ItemDragData(library=self.browser.library))
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls() or event.source() in (self, self.browser.tree):
+        if (event.mimeData().hasUrls()
+                or (isinstance(event.mimeData(), ItemDragData)
+                    and event.mimeData().library is self.browser.library)):
             event.acceptProposedAction()
         else:
             event.ignore()
@@ -145,8 +159,11 @@ class LibraryGrid(ListItemsMixin, GridView):
         if event.mimeData().hasUrls():
             self.browser.library.handle_mime_data({'file_paths': handle_mime_data_urls(event.mimeData()),
                                                    'target': target})
-        elif event.source() in (self, self.browser.tree):
-            self.browser.library.dnd_move_internal(target)
+        elif (isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.browser.library):
+            rows = [self.browser.tree.itemFromIndex(QtCore.QModelIndex(index)) for index in event.mimeData().indexes
+                    if index.isValid()]
+            self.browser.library.dnd_move_internal(target, items=rows)
         else:
             event.ignore()
             return
@@ -164,6 +181,7 @@ class LibraryView(QtWidgets.QWidget):
             settings._library_view_preferences = LibraryViewPreferences(settings, library.plugin.name)
         self.preferences = settings._library_view_preferences
         self.tree = library.list_view
+        self.tree.setFont(QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Body))
         self.folder = QtCore.QPersistentModelIndex()
         self.syncing = False
         layout = QtWidgets.QVBoxLayout(self)
@@ -192,12 +210,11 @@ class LibraryView(QtWidgets.QWidget):
         layout.addWidget(self.navigation)
         layout.addWidget(self.tree, 1)
         self.grid = LibraryGrid(self)
+        self.grid.setFontRole(QtWidgets.fluentqt.FontRole.Body)
         layout.addWidget(self.grid, 1)
-        self.footer = QtWidgets.QWidget(self)
-        footer_layout = QtWidgets.QHBoxLayout(self.footer)
-        footer_layout.setContentsMargins(8, 6, 8, 6)
-        self.count_label = QtWidgets.QLabel(tr('0 items'))
-        footer_layout.addWidget(self.count_label, 1)
+        self.footer = LibraryFooter(self)
+        footer_layout = self.footer.layout()
+        self.count_label = self.footer.count_label
         self.thumbnail_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self.footer,
                                                   show_value_tooltip=False)
         self.thumbnail_slider.setObjectName('library_thumbnail_size')
@@ -299,7 +316,7 @@ class LibraryView(QtWidgets.QWidget):
         while iterator.value():
             count += isinstance(iterator.value().data(0, QtCore.Qt.ItemDataRole.UserRole), self.library.item_class)
             iterator += 1
-        self.count_label.setText(tr('1 item') if count == 1 else tr('{count} items').format(count=count))
+        self.footer.set_count(count)
         if not self.grid_button.isChecked():
             return
         parent = self.folder_item() or self.tree.invisibleRootItem()

@@ -682,13 +682,13 @@ class FolderLibraryItem(MediaManagerItem):
         if self._is_path_in_directory(file_path.resolve(), library_dir.resolve()):
             file_path.unlink()
 
-    def dnd_move_internal(self, target):
+    def dnd_move_internal(self, target, items=None):
         """
         Handle drag-and-drop moving of items within the media manager
 
         :param target: This contains the QTreeWidget that is the target of the DnD action
         """
-        items_to_move = self.list_view.selectedItems()
+        items_to_move = self.list_view.selectedItems() if items is None else items
         # Determine group to move images to
         target_folder = target
         if target_folder is not None and isinstance(target_folder.data(0, QtCore.Qt.ItemDataRole.UserRole),

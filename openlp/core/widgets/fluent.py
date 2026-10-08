@@ -15,7 +15,15 @@ from openlp.core.widgets.fluent_buttons import (  # noqa: F401
     FluentButtonIconMixin, QCheckBox, QPushButton, QRadioButton)
 from openlp.core.widgets.fluent_text import MnemonicButtonMixin
 
-QLabel = fluentqt.Label
+
+class FluentLabel(fluentqt.Label):
+    """Use compact Fluent text for routine UI labels, preserving explicit heading roles."""
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('fluentTypography', fluentqt.FontRole.Caption)
+        super().__init__(*args, **kwargs)
+
+
+QLabel = FluentLabel
 
 
 QLineEdit = fluentqt.LineEdit
@@ -38,12 +46,25 @@ def create_application_menu(parent):
     return _qt.QMenu(parent) if is_macosx() else QMenu(parent)
 
 
+class ScrollableMenuStyle(_qt.QProxyStyle):
+    """Use Qt's scrolling menu behaviour instead of splitting long menus into columns."""
+    def styleHint(self, hint, option=None, widget=None, returnData=None):
+        if hint == _qt.QStyle.StyleHint.SH_Menu_Scrollable:
+            return 1
+        return super().styleHint(hint, option, widget, returnData)
+
+
 class FluentMenu(fluentqt.FluentMenu):
     """Accept Qt's title/parent constructor forms."""
     def __init__(self, title='', parent=None):
         if isinstance(title, _qt.QWidget) or title is None:
             parent, title = title, ''
         super().__init__(title, parent)
+        self.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+        menu_style = ScrollableMenuStyle()
+        menu_style.setParent(self)
+        self.setStyle(menu_style)
+        self.setMaximumHeight(self.screen().availableGeometry().height())
         self._pressed_action = None
 
     def mousePressEvent(self, event):
@@ -73,27 +94,13 @@ class FluentMenu(fluentqt.FluentMenu):
             return
         _qt.QMenu.mouseReleaseEvent(self, event)
 
+    def showEvent(self, event):
+        self.setMaximumHeight(self.screen().availableGeometry().height())
+        super().showEvent(event)
+
     def hideEvent(self, event):
         self._pressed_action = None
         super().hideEvent(event)
-
-    def sizeHint(self):
-        # FluentMenu repeatedly sets minimumWidth from its hint as actions are
-        # added. Qt's native macOS hint incorporates that minimum and margins,
-        # causing unbounded growth. Measure the action content independently.
-        metrics = self.fontMetrics()
-        actions = [action for action in self.actions() if action.isVisible()]
-        labels = [action.text().split('\t', 1)[0].replace('&', '')
-                  for action in actions if not action.isSeparator()]
-        shortcuts = [self.shortcutTextForAction(action) for action in actions if not action.isSeparator()]
-        width = (max((metrics.horizontalAdvance(label) for label in labels), default=0)
-                 + max((metrics.horizontalAdvance(shortcut) for shortcut in shortcuts), default=0))
-        screen = self.screen()
-        available = screen.availableGeometry().height() - 32 if screen else 720
-        # Use Qt's actual row layout: Fluent's synthetic minimum counts
-        # collapsed separators and can exceed the rendered rows' height.
-        height = _qt.QMenu.sizeHint(self).height()
-        return QtCore.QSize(max(120, width + 100), min(height, available))
 
 
 QMenu = FluentMenu

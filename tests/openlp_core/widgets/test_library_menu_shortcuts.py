@@ -95,3 +95,51 @@ def test_library_shortcuts_activate_from_focused_view(settings, qtbot, plugin):
     finally:
         for action in actions:
             ActionList.get_instance().remove_action(action)
+
+
+@pytest.mark.parametrize('with_icons_and_shortcuts', [False, True])
+def test_export_submenu_uses_native_fluent_sizing_and_remains_stable(qapp, qtbot, with_icons_and_shortcuts):
+    parent = fluent.QMenu()
+    qtbot.addWidget(parent)
+    export = fluent.QMenu('Export', parent)
+    parent.addMenu(export)
+    reference = fluent.fluentqt.FluentMenu('Export', parent)
+    reference.setFont(fluent.fluentqt.font_for_role(fluent.fluentqt.FontRole.Body))
+    for menu in (export, reference):
+        for label in ('Song', 'PowerPoint (PPTX)', 'OpenDocument (ODP)'):
+            action = menu.addAction(label)
+            if with_icons_and_shortcuts:
+                icon = QtGui.QPixmap(20, 20)
+                icon.fill(QtGui.QColor('blue'))
+                action.setIcon(QtGui.QIcon(icon))
+                action.setShortcut(QtGui.QKeySequence('Ctrl+Shift+E'))
+    expected = reference.sizeHint()
+    for _ in range(3):
+        parent.popup(QtCore.QPoint(100, 100))
+        parent.setActiveAction(export.menuAction())
+        QtTest.QTest.keyClick(parent, QtCore.Qt.Key.Key_Right)
+        qtbot.waitUntil(export.isVisible)
+        assert export.size() == expected
+        assert export.sizeHint() == expected
+        export.close()
+        parent.close()
+
+
+def test_long_menu_scrolls_to_last_item_and_stays_on_screen(qapp, qtbot):
+    menu = fluent.QMenu()
+    qtbot.addWidget(menu)
+    for index in range(100):
+        menu.addAction('Language ' + str(index))
+    last = menu.actions()[-1]
+    triggered = []
+    last.triggered.connect(lambda: triggered.append(True))
+    for _ in range(2):
+        menu.popup(QtCore.QPoint(100, 100))
+        QtWidgets.QApplication.processEvents()
+        assert menu.height() <= menu.screen().availableGeometry().height()
+        QtTest.QTest.keyClick(menu, QtCore.Qt.Key.Key_End)
+        assert menu.activeAction() is last
+        assert menu.rect().contains(menu.actionGeometry(last))
+        QtTest.QTest.keyClick(menu, QtCore.Qt.Key.Key_Return)
+        assert not menu.isVisible()
+    assert triggered == [True, True]

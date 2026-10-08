@@ -37,6 +37,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.layouts import AspectRatioLayout
+from openlp.core.widgets.dnd import ItemDragData, execute_drag
 
 
 SONG_SECTION_DEFAULT_COLORS = {
@@ -199,6 +200,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         widget display something.
         """
         super().__init__(parent)
+        self.slide_controller = parent
         self._setup(screen_ratio)
 
     def _setup(self, screen_ratio):
@@ -218,6 +220,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setDragEnabled(True)
         self.setWordWrap(True)
         self.setTextElideMode(QtCore.Qt.TextElideMode.ElideNone)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -237,6 +240,9 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         self.auto_row_height = 100
         # Connect signals
         self.verticalHeader().sectionResized.connect(self.row_resized)
+
+    def startDrag(self, actions):
+        self.slide_controller.start_item_drag(self)
 
     def _resolve_song_section_color(self, verse_tag):
         section_key = SONG_SECTION_COLOR_KEYS.get(str(verse_tag).lower()[:1], 'other')
@@ -501,6 +507,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         Initialise the list widget
         """
         super().__init__(parent)
+        self.media_item = parent
         self.mime_data_text = name
         self.no_results_text = UiStrings().NoResults
         palette = self.palette()
@@ -520,6 +527,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self._drag_start_pos = None
+        self.setDragEnabled(True)
 
     def activateDnD(self):
         """
@@ -527,7 +535,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         """
         self.setAcceptDrops(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
-        Registry().register_function(('%s_dnd' % self.mime_data_text), self.parent().handle_mime_data)
+        Registry().register_function(('%s_dnd' % self.mime_data_text), self.media_item.handle_mime_data)
 
     def clear(self, search_while_typing=False):
         """
@@ -548,29 +556,18 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """
-        Drag and drop event does not care what data is selected as the recipient will use events to request the data
-        move just tell it what plugin to call
-        """
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
             return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
-            return
-        drag = QtGui.QDrag(self)
-        mime_data = QtCore.QMimeData()
-        drag.setMimeData(mime_data)
-        mime_data.setText(self.mime_data_text)
-        selected = self.selectedItems()
-        if selected:
-            mime_data.setData('application/x-openlp-item-title',
-                              selected[0].text().encode('utf-8'))
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+        super().mouseMoveEvent(event)
+
+    def startDrag(self, actions):
+        if self.selectedItems():
+            execute_drag(self, ItemDragData(library=self.media_item))
 
     def dragEnterEvent(self, event):
         """
@@ -668,6 +665,7 @@ class TreeWidgetDnDMixin:
         Initialise the tree widget
         """
         super().__init__(parent)
+        self.media_item = parent
         self.mime_data_text = name
         self.allow_internal_dnd = False
         self._resizing_columns = False
@@ -675,6 +673,7 @@ class TreeWidgetDnDMixin:
         self.header().sectionResized.connect(self._on_section_resized)
         self.default_indentation = self.indentation()
         self._drag_start_pos = None
+        self.setDragEnabled(True)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         if name in ('presentations', 'images', 'media'):
             self.setIndentation(40)
@@ -745,8 +744,8 @@ class TreeWidgetDnDMixin:
         """
         self.setAcceptDrops(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
-        Registry().register_function(('%s_dnd' % self.mime_data_text), self.parent().handle_mime_data)
-        Registry().register_function(('%s_dnd_internal' % self.mime_data_text), self.parent().dnd_move_internal)
+        Registry().register_function(('%s_dnd' % self.mime_data_text), self.media_item.handle_mime_data)
+        Registry().register_function(('%s_dnd_internal' % self.mime_data_text), self.media_item.dnd_move_internal)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -754,31 +753,18 @@ class TreeWidgetDnDMixin:
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """
-        Drag and drop event does not care what data is selected as the recipient will use events to request the data
-        move just tell it what plugin to call
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
 
-        :param event: The event that occurred
-        """
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
-            return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
-            return
-        drag = QtGui.QDrag(self)
-        mime_data = QtCore.QMimeData()
-        drag.setMimeData(mime_data)
-        mime_data.setText(self.mime_data_text)
-        selected = self.selectedItems()
-        if selected:
-            mime_data.setData('application/x-openlp-item-title',
-                              selected[0].text(0).encode('utf-8'))
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+    def startDrag(self, actions):
+        if self.selectedItems():
+            execute_drag(self, ItemDragData(library=self.media_item))
 
     def dragEnterEvent(self, event):
         """
@@ -788,7 +774,8 @@ class TreeWidgetDnDMixin:
         """
         if event.mimeData().hasUrls():
             event.accept()
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.accept()
         else:
             event.ignore()
@@ -803,7 +790,8 @@ class TreeWidgetDnDMixin:
         if event.mimeData().hasUrls():
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
         else:
@@ -827,10 +815,13 @@ class TreeWidgetDnDMixin:
             file_paths = handle_mime_data_urls(event.mimeData())
             Registry().execute('%s_dnd' % self.mime_data_text,
                                {'file_paths': file_paths, 'target': self.itemAt(event.pos())})
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
-            Registry().execute('%s_dnd_internal' % self.mime_data_text, self.itemAt(event.pos()))
+            rows = [self.itemFromIndex(QtCore.QModelIndex(index)) for index in event.mimeData().indexes
+                    if index.isValid()]
+            self.media_item.dnd_move_internal(self.itemAt(event.pos()), items=rows)
         else:
             event.ignore()
 

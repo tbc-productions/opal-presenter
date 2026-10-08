@@ -249,7 +249,7 @@ class ImageMediaItem(FolderLibraryItem):
                 item = self.list_view.itemFromIndex(item)
                 if not item:
                     return False
-            items = [item]
+            items = item if isinstance(item, list) else [item]
         else:
             items = self.list_view.selectedItems()
             if not items:

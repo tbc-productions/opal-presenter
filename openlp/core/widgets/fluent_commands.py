@@ -54,7 +54,8 @@ class SpacedCommandBar(fluentqt.CommandBar):
         actions = self.primaryActions() + self.secondaryActions()
         for button in self.window().findChildren(fluentqt.Button):
             action = button.property('commandAction')
-            if action in actions:
+            # Overflow rows paint their icon and caption themselves.
+            if action in actions and button.objectName() != 'FluentCommandBar.OverflowRow':
                 set_fluent_button_icon(button, action.icon())
 
 
@@ -195,6 +196,14 @@ class FluentCommandToolbar(QtWidgets.QWidget):
                                    if self._command_actions.get(action) is group else None)
             self._sync_group_visibility(group)
         QtWidgets.QWidget.addAction(self, action)
+        return action
+
+    def addSecondaryAction(self, action):
+        self.addAction(action)
+        group = self._command_actions[action]
+        group.removeCommandAction(action)
+        group.addSecondaryAction(action)
+        group.schedule_alignment()
         return action
 
     def _sync_group_visibility(self, group):

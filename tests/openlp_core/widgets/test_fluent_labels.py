@@ -87,3 +87,16 @@ def test_selection_control_mnemonics(qapp):
     assert group.title() == 'Theme & Copyright'
     assert group._toggle.text() == 'Theme & Copyright'
     assert group._toggle.shortcut() == QtGui.QKeySequence.mnemonic('Theme && &Copyright')
+
+
+def test_routine_labels_use_caption_but_context_menus_use_body(qapp, qtbot):
+    role = fluent.fluentqt.FontRole
+    label = fluent.QLabel('Search:')
+    qtbot.addWidget(label)
+    assert label.font() == fluent.fluentqt.font_for_role(role.Caption)
+    heading = fluent.QLabel('Service item', fluentTypography=role.BodyStrong)
+    qtbot.addWidget(heading)
+    assert heading.font() == fluent.fluentqt.font_for_role(role.BodyStrong)
+    menu = fluent.QMenu(label)
+    menu.addAction('Inspect item')
+    assert menu.font() == fluent.fluentqt.font_for_role(role.Body)
