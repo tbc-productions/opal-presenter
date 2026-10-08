@@ -90,8 +90,8 @@ class FluentListView(fluentqt.DataGrid):
 QListView = FluentListView
 
 
-class FluentListWidget(QListView):
-    """Native Fluent collection with Qt's item model kept behind the view."""
+class ListItemsMixin:
+    """Keep Qt's flat item API behind native Fluent collection views."""
     itemClicked = QtCore.Signal(_qt.QListWidgetItem)
     itemDoubleClicked = QtCore.Signal(_qt.QListWidgetItem)
     itemActivated = QtCore.Signal(_qt.QListWidgetItem)
@@ -125,8 +125,12 @@ class FluentListWidget(QListView):
         raise AttributeError(name)
 
     def setSelectionMode(self, mode):
-        super().setSelectionMode(mode)
+        value = mode.value if hasattr(mode, 'value') else int(mode)
+        super().setSelectionMode(fluentqt.SelectionMode(min(value, 3)))
         self._item_store.setSelectionMode(mode)
+
+    def selectionMode(self):
+        return _qt.QAbstractItemView.SelectionMode(int(super().selectionMode()))
 
     def selectedItems(self):
         return self._item_store.selectedItems()
@@ -151,6 +155,10 @@ class FluentListWidget(QListView):
 
     def clear(self):
         self._item_store.clear()
+
+
+class FluentListWidget(ListItemsMixin, QListView):
+    """Native Fluent collection with Qt's item model kept behind the view."""
 
 
 QListWidget = FluentListWidget

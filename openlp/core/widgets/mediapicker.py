@@ -1,10 +1,13 @@
 """Shared Fluent media library picker for the slide and theme designers."""
 from pathlib import Path
+from types import SimpleNamespace
 
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
+from openlp.core.common.registry import Registry
+from openlp.core.db.mixins import FolderMixin, ItemMixin
 from openlp.core.lib.designmedia import (
     MIME_TYPES, cache_media, media_kind, media_label, media_to_source, resolve_media, remember_media_label
 )
@@ -13,6 +16,9 @@ from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.edits import PathEdit
 from openlp.core.widgets.mediapreview import media_context_menu
+from openlp.core.widgets.libraryview import LibraryView, LIBRARY_THUMBNAIL_ROLE
+from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
+from openlp.core.widgets.views import TreeWidgetWithDnD
 from openlp.core.state import State
 
 
@@ -27,7 +33,7 @@ class MediaPicker(QtWidgets.QDialog):
         self.kinds = kinds
         self.selected_path = None
         self.entries = []
-        self.tiles = []
+        self.folders = []
         self._connected_libraries = set()
         self.setWindowTitle(tr('Choose media'))
         self.resize(800, 600)
@@ -56,15 +62,21 @@ class MediaPicker(QtWidgets.QDialog):
         self.add_button.clicked.connect(self.add_files)
         filters.addWidget(self.add_button)
         layout.addLayout(filters)
-        self.scroll = QtWidgets.QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.content = QtWidgets.QWidget()
-        self.grid = QtWidgets.QGridLayout(self.content)
-        self.grid.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
-        self.grid.setSpacing(12)
-        self.scroll.setWidget(self.content)
-        self.scroll.viewport().installEventFilter(self)
-        layout.addWidget(self.scroll, 1)
+        self.settings = Registry().get('settings')
+        self.plugin = SimpleNamespace(name='media_picker')
+        self.item_class, self.folder_class = ItemMixin, FolderMixin
+        self.list_view = TreeWidgetWithDnD(self, 'images')
+        self.list_view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.browser = LibraryView(self)
+        for view in (self.list_view, self.browser.grid):
+            view.setDragEnabled(False)
+            view.setAcceptDrops(False)
+            view.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.list_view.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.list_view.customContextMenuRequested.connect(self.context_menu)
+        self.list_view.itemSelectionChanged.connect(self.selection_changed)
+        self.list_view.doubleClicked.connect(self.on_double_clicked)
+        layout.addWidget(self.browser, 1)
         self.empty = QtWidgets.QLabel(tr('No media'))
         self.empty.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.empty)
@@ -92,6 +104,7 @@ class MediaPicker(QtWidgets.QDialog):
 
     def reload(self, selected_path=None):
         self.entries = []
+        self.folders = []
         with QtCore.QSignalBlocker(self.folder_combo):
             folder = self.folder_combo.currentData()
             self.folder_combo.clear()
@@ -102,6 +115,7 @@ class MediaPicker(QtWidgets.QDialog):
                     self._connected_libraries.add(id(library))
                 for group in library.manager.get_all_objects(library.folder_class):
                     self.folder_combo.addItem(group.name, (kind, group.id))
+                    self.folders.append((kind, group))
                 for item in library.manager.get_all_objects(library.item_class):
                     path = Path(item.file_path)
                     if path.suffix.lower().lstrip('.') in MIME_TYPES and path.is_file():
@@ -113,94 +127,112 @@ class MediaPicker(QtWidgets.QDialog):
         self.filter_entries()
 
     def filter_entries(self, *args):
-        for tile in self.tiles:
-            self.grid.removeWidget(tile)
-            tile.deleteLater()
-        self.tiles = []
         kind, folder = self.kind_combo.currentData(), self.folder_combo.currentData()
         query = self.search.text().casefold()
+        selected_path = self.selected_path
         visible_paths = []
-        for entry_kind, library, item, path in self.entries:
-            if kind and kind != entry_kind or folder and folder != (entry_kind, item.folder_id):
-                continue
-            name = Path(item.name or path.name).stem
-            if query not in name.casefold():
-                continue
-            tile = QtWidgets.QPushButton()
-            tile.setCheckable(True)
-            tile.setChecked(path == self.selected_path)
-            tile.setFixedSize(164, 132)
-            tile.setAccessibleName(name)
-            tile.setToolTip(name)
-            tile.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-            tile.customContextMenuRequested.connect(
-                lambda position, tile=tile, path=path, name=item.name:
-                media_context_menu(tile, position, path, name))
-            tile_layout = QtWidgets.QVBoxLayout(tile)
-            tile_layout.setContentsMargins(8, 8, 8, 8)
-            image = QtWidgets.QLabel()
-            image.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            if entry_kind == 'image':
-                cached = library.generate_thumbnail_path(item) if hasattr(library, 'generate_thumbnail_path') else path
-                reader = QtGui.QImageReader(str(cached if cached.is_file() else path))
-                reader.setAutoTransform(True)
-                reader.setScaledSize(reader.size().scaled(148, 84, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
-                thumbnail = QtGui.QPixmap.fromImage(reader.read())
-            else:
-                thumbnail_path = library.generate_thumbnail_path(item)
-                thumbnail = QtGui.QPixmap(str(thumbnail_path))
-                if thumbnail.isNull():
-                    thumbnail = UiIcons().video.pixmap(64, 64)
-                thumbnail = thumbnail.scaled(148, 84, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                             QtCore.Qt.TransformationMode.SmoothTransformation)
-            image.setPixmap(thumbnail)
-            tile.image_label = image
-            image.setFixedHeight(84)
-            label = QtWidgets.QLabel(tile.fontMetrics().elidedText(name, QtCore.Qt.TextElideMode.ElideRight, 148))
-            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            for child in (image, label):
-                child.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-                tile_layout.addWidget(child)
-            tile.clicked.connect(lambda checked=False, path=path: self.select_path(path))
-            tile.path = path
-            self.tiles.append(tile)
-            visible_paths.append(path)
-        if self.selected_path not in visible_paths:
-            self.selected_path = None
+        with QtCore.QSignalBlocker(self.list_view):
+            self.list_view.clear()
+            groups = {}
+            if not query and not folder:
+                for entry_kind, group in self.folders:
+                    if kind and kind != entry_kind:
+                        continue
+                    node = QtWidgets.QTreeWidgetItem([group.name])
+                    node.setData(0, QtCore.Qt.ItemDataRole.UserRole, group)
+                    node.setData(0, LIBRARY_FOLDER_ROLE, True)
+                    node.setIcon(0, UiIcons().fluent_folder)
+                    groups[(entry_kind, group.id)] = node
+                for entry_kind, group in self.folders:
+                    node = groups.get((entry_kind, group.id))
+                    if node is None:
+                        continue
+                    parent = groups.get((entry_kind, group.parent_id))
+                    if parent is not None:
+                        parent.addChild(node)
+                    else:
+                        self.list_view.addTopLevelItem(node)
+            for entry_kind, library, item, path in self.entries:
+                if kind and kind != entry_kind or folder and folder != (entry_kind, item.folder_id):
+                    continue
+                name = Path(item.name or path.name).stem
+                if query not in name.casefold():
+                    continue
+                node = QtWidgets.QTreeWidgetItem([name])
+                node.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+                node.setToolTip(0, item.name or path.name)
+                thumbnail_path = library.generate_thumbnail_path(item) if hasattr(library, 'generate_thumbnail_path') \
+                    else path
+                node.setData(0, LIBRARY_THUMBNAIL_ROLE, path if entry_kind == 'image' else thumbnail_path)
+                icon = QtGui.QIcon(str(thumbnail_path))
+                if icon.isNull():
+                    icon = UiIcons().video if entry_kind == 'video' else QtGui.QIcon(str(path))
+                node.setIcon(0, icon)
+                parent = groups.get((entry_kind, item.folder_id))
+                if parent is not None:
+                    parent.addChild(node)
+                else:
+                    self.list_view.addTopLevelItem(node)
+                visible_paths.append(path)
+                if path == selected_path:
+                    self.list_view.setCurrentItem(node)
+                    node.setSelected(True)
+            self.list_view.expandAll()
+        self.browser.folder = QtCore.QPersistentModelIndex()
+        current = self.list_view.currentItem()
+        if current and self.browser.grid_button.isChecked():
+            self.browser.folder = QtCore.QPersistentModelIndex(self.list_view.indexFromItem(current.parent()))
+        self.selected_path = selected_path if selected_path in visible_paths else None
         self.insert_button.setEnabled(self.selected_path is not None)
-        self.empty.setVisible(not self.tiles)
-        self.reflow()
-        for tile in self.tiles:
-            if tile.path == self.selected_path:
-                self.scroll.ensureWidgetVisible(tile)
+        self.empty.setVisible(not visible_paths)
+        self.browser.refresh()
+
+    def selection_changed(self):
+        selected = self.list_view.selectedItems()
+        item = selected[0].data(0, QtCore.Qt.ItemDataRole.UserRole) if selected else None
+        self.selected_path = Path(item.file_path) if isinstance(item, ItemMixin) else None
+        self.insert_button.setEnabled(self.selected_path is not None)
 
     def select_path(self, path):
-        self.selected_path = path
-        for tile in self.tiles:
-            tile.setChecked(tile.path == path)
-        self.insert_button.setEnabled(True)
+        iterator = QtWidgets.QTreeWidgetItemIterator(self.list_view)
+        while iterator.value():
+            node = iterator.value()
+            item = node.data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(item, ItemMixin) and Path(item.file_path) == path:
+                self.list_view.setCurrentItem(node)
+                node.setSelected(True)
+                break
+            iterator += 1
+        self.selection_changed()
+
+    def on_double_clicked(self, index):
+        node = self.list_view.itemFromIndex(index)
+        if node and isinstance(node.data(0, QtCore.Qt.ItemDataRole.UserRole), ItemMixin):
+            self.select_path(Path(node.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path))
+            self.accept()
+
+    def context_menu(self, position):
+        view = self.sender() or self.list_view
+        node = view.tree_item(view.itemAt(position)) if view is self.browser.grid else view.itemAt(position)
+        item = node.data(0, QtCore.Qt.ItemDataRole.UserRole) if node else None
+        if isinstance(item, ItemMixin):
+            media_context_menu(view.viewport(), position, Path(item.file_path), item.name)
 
     def thumbnail_ready(self, path):
         entry = next((entry for entry in self.entries if entry[3] == Path(path)), None)
         if not entry:
             return
-        thumbnail = QtGui.QPixmap(str(entry[1].generate_thumbnail_path(entry[2])))
-        if thumbnail.isNull():
+        thumbnail_path = entry[1].generate_thumbnail_path(entry[2])
+        icon = QtGui.QIcon(str(thumbnail_path))
+        if icon.isNull():
             return
-        for tile in self.tiles:
-            if tile.path == Path(path):
-                tile.image_label.setPixmap(thumbnail.scaled(148, 84, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                            QtCore.Qt.TransformationMode.SmoothTransformation))
-
-    def reflow(self):
-        columns = max(1, (self.scroll.viewport().width() - 18) // 176)
-        for index, tile in enumerate(self.tiles):
-            self.grid.addWidget(tile, index // columns, index % columns)
-
-    def eventFilter(self, watched, event):
-        if watched is self.scroll.viewport() and event.type() == QtCore.QEvent.Type.Resize:
-            self.reflow()
-        return super().eventFilter(watched, event)
+        iterator = QtWidgets.QTreeWidgetItemIterator(self.list_view)
+        while iterator.value():
+            node = iterator.value()
+            if node.data(0, QtCore.Qt.ItemDataRole.UserRole) is entry[2]:
+                node.setIcon(0, icon)
+                node.setData(0, LIBRARY_THUMBNAIL_ROLE, entry[3] if entry[0] == 'image' else thumbnail_path)
+            iterator += 1
 
     def add_files(self):
         extensions = ' '.join('*.' + extension for extension in MIME_TYPES
@@ -230,6 +262,14 @@ class MediaPicker(QtWidgets.QDialog):
                 else:
                     item = library.item_class(name=path.name, file_path=str(stored), file_hash=Path(reference).stem)
                     folder = self.folder_combo.currentData()
+                    if not folder:
+                        node = self.browser.folder_item() or self.list_view.currentItem()
+                        if node and isinstance(node.data(0, QtCore.Qt.ItemDataRole.UserRole), ItemMixin):
+                            node = node.parent()
+                        if node:
+                            group = node.data(0, QtCore.Qt.ItemDataRole.UserRole)
+                            folder = next(((kind, group.id) for kind, candidate in self.folders if candidate is group),
+                                          None)
                     if folder and folder[0] == media_kind(path):
                         item.folder_id = folder[1]
                     if not library.manager.save_object(item):

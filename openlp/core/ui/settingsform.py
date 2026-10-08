@@ -35,6 +35,7 @@ from openlp.core.lib import build_icon
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.fluenticons import service_icon
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
@@ -50,13 +51,9 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
     """
     Provide the form to manipulate the settings for OpenLP+
     """
-    SERVICE_COLOR_ICON_MAP = {
-        'songs': ('music', ServiceTab.ICON_THEME_COLOR_SETTINGS['song']),
-        'bibles': ('bible', ServiceTab.ICON_THEME_COLOR_SETTINGS['bible']),
-        'presentations': ('presentation', ServiceTab.ICON_THEME_COLOR_SETTINGS['presentation']),
-        'images': ('picture', ServiceTab.ICON_THEME_COLOR_SETTINGS['image']),
-        'media': ('video', ServiceTab.ICON_THEME_COLOR_SETTINGS['media']),
-        'custom': ('custom', ServiceTab.ICON_THEME_COLOR_SETTINGS['custom_slide'])
+    SERVICE_ICON_MAP = {
+        'songs': 'music', 'bibles': 'bible', 'presentations': 'presentation',
+        'images': 'picture', 'media': 'video', 'custom': 'custom'
     }
     RESET_PRESERVED_KEYS = (
         'settings/version', 'core/application version', 'core/has run wizard',
@@ -185,19 +182,11 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 log.exception('Could not add settings help icons for %s', tab_widget.tab_title)
 
     def _build_settings_tab_icon(self, tab_widget):
-        """
-        Build a settings tab list icon.
-
-        Service item tabs use the user-configured Service theme colors. All other tabs keep their
-        existing icons unchanged.
-        """
+        """Use matching Fluent colours for service plugin Settings tabs."""
         tab_key = str(tab_widget.tab_title).strip().lower()
-        service_color_icon = self.SERVICE_COLOR_ICON_MAP.get(tab_key)
-        if service_color_icon:
-            icon_name, color_setting = service_color_icon
-            color_value = self.settings.value(color_setting)
-            if color_value:
-                return UiIcons().get_icon_variant(icon_name, color=color_value)
+        icon_name = self.SERVICE_ICON_MAP.get(tab_key)
+        if icon_name:
+            return service_icon(getattr(UiIcons(), icon_name), tab_key)
         return build_icon(tab_widget.icon_path)
 
     @staticmethod

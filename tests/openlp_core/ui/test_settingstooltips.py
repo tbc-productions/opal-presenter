@@ -129,7 +129,7 @@ def test_help_button_opens_teaching_tip_from_keyboard(settings, qtbot):
     assert tip.isOpen()
     close_button = tip.findChild(fluentqt.Button, 'settings_teaching_tip_close')
     assert close_button.size() == QtCore.QSize(30, 30)
-    assert close_button.iconGlyph() == ''
+    assert close_button.iconGlyph()
     assert not close_button.icon().isNull()
     assert [label.text() for label in tip.findChildren(QtWidgets.QLabel)] == [button.help_text]
     assert close_button.fluentStyle() == fluentqt.Button.ButtonStyle.Subtle

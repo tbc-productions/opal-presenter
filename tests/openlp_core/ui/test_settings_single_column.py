@@ -57,7 +57,8 @@ def test_presentations_fit_without_horizontal_scrollbar(settings, qtbot):
         tab = PresentationTab(None, 'Presentations', None, {}, None)
     tab.setup_ui()
     tab.retranslate_ui()
-    apply_settings_tooltips(tab)
+    with patch('openlp.core.ui.settingstooltips.is_win', return_value=True):
+        apply_settings_tooltips(tab)
     area = fluent.QScrollArea()
     qtbot.addWidget(area)
     area.setWidgetResizable(True)

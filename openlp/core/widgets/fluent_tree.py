@@ -6,8 +6,16 @@ view's public reveal and selection-indicator animation APIs.
 """
 from PySide6 import QtCore, QtGui, QtWidgets
 from fluentqt import FluentWidget
+from openlp.core.ui.fluenticons import fluent_icon
 
 LIBRARY_FILE_TYPE_ICON_ROLE = QtCore.Qt.ItemDataRole.UserRole + 101
+LIBRARY_FOLDER_ROLE = QtCore.Qt.ItemDataRole.UserRole + 103
+
+
+def library_folder_icon(colors):
+    """Use the active theme's Chart7 colour for library and picker folders."""
+    return fluent_icon('ic_fluent_folder_24_regular', color=colors.charts[6], color_disabled=colors.textDisabled)
+
 
 class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
     """Paint compact, indented file rows with Fluent disclosure controls."""
@@ -20,10 +28,24 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         self._theme_host.hide()
 
     def sizeHint(self, option, index):
-        return QtCore.QSize(0, 36)
+        return QtCore.QSize(0, max(36, self.iconSize(option, index).height() + 12) + self.group_spacing(index))
+
+    def has_next_sibling(self, index):
+        model = index.model()
+        return any(not self._view.itemFromIndex(model.index(row, 0, index.parent())).isHidden()
+                   for row in range(index.row() + 1, model.rowCount(index.parent())))
+
+    def group_spacing(self, index):
+        if index.parent().isValid() and not self.has_next_sibling(index) \
+                and not (self._view.isExpanded(index) and index.model().hasChildren(index)):
+            return 8
+        return 0
 
     def iconSize(self, option, index):
-        return QtCore.QSize(20, 20)
+        if index.data(LIBRARY_FOLDER_ROLE):
+            return QtCore.QSize(34, 34)
+        size = self._view.iconSize()
+        return size if size.isValid() else QtCore.QSize(20, 20)
 
     def _background_rect(self, option):
         top = option.rect.top() + 2
@@ -70,9 +92,13 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         return text, text_rect, icons, rectangles
 
     def trailingIconRects(self, option, index):
+        option = QtWidgets.QStyleOptionViewItem(option)
+        option.rect.adjust(0, 0, 0, -self.group_spacing(index))
         return self._text_layout(option, index)[3]
 
     def paint(self, painter, option, index):
+        option = QtWidgets.QStyleOptionViewItem(option)
+        option.rect.adjust(0, 0, 0, -self.group_spacing(index))
         colors = self._theme_host.theme_tokens().colors
         enabled = bool(option.state & QtWidgets.QStyle.StateFlag.State_Enabled)
         selected = bool(option.state & QtWidgets.QStyle.StateFlag.State_Selected)
@@ -81,6 +107,13 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         rtl = option.direction == QtCore.Qt.LayoutDirection.RightToLeft
         painter.save()
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        if index.data(LIBRARY_FOLDER_ROLE):
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(colors.subtleSecondary)
+            painter.drawRoundedRect(background, 4, 4)
+            font = QtGui.QFont(option.font)
+            font.setWeight(QtGui.QFont.Weight.DemiBold)
+            option.font = font
         if enabled and (selected or hovered):
             pressed = hovered and bool(option.state & QtWidgets.QStyle.StateFlag.State_Sunken)
             painter.setPen(QtCore.Qt.PenStyle.NoPen)
@@ -109,9 +142,19 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         icon_rect = QtCore.QRectF(icon_left, background.center().y() - icon_size.height() / 2,
                                   icon_size.width(), icon_size.height())
         icon = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
+        if index.data(LIBRARY_FOLDER_ROLE):
+            icon = library_folder_icon(colors)
         if isinstance(icon, QtGui.QIcon):
-            icon.paint(painter, icon_rect.toRect(), QtCore.Qt.AlignmentFlag.AlignCenter,
-                       QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled)
+            pixmap = icon.pixmap(icon_size, QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled)
+            pixmap = pixmap.scaled(icon_size * pixmap.devicePixelRatio(), QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                   QtCore.Qt.TransformationMode.SmoothTransformation)
+            target = QtCore.QRectF(QtCore.QPointF(), pixmap.deviceIndependentSize())
+            target.moveCenter(icon_rect.center())
+            painter.drawPixmap(target, pixmap, QtCore.QRectF(pixmap.rect()))
+            if not selected and not index.data(LIBRARY_FOLDER_ROLE):
+                painter.setPen(QtGui.QPen(colors.strokeCard, 1))
+                painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+                painter.drawRoundedRect(target.adjusted(0.5, 0.5, -0.5, -0.5), 2, 2)
         text, text_rect, trailing_icons, trailing_rects = self._text_layout(option, index)
         painter.setFont(option.font)
         painter.setPen(text_color)

@@ -61,7 +61,7 @@ from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.ui.renamedialog import RenameDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
-from openlp.core.ui.fluenticons import fluent_icon
+from openlp.core.ui.fluenticons import fluent_icon, service_icon
 
 
 SERVICE_ITEM_INDICATORS_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
@@ -694,14 +694,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     servicemanager_new_file = QtCore.Signal()
     servicemanager_changed = QtCore.Signal()
     theme_update_service = QtCore.Signal()
-    SERVICE_ICON_THEME_SETTINGS = {
-        'songs': 'servicemanager/theme color song',
-        'bibles': 'servicemanager/theme color bible',
-        'presentations': 'servicemanager/theme color presentation',
-        'images': 'servicemanager/theme color image',
-        'media': 'servicemanager/theme color media',
-        'custom': 'servicemanager/theme color custom slide',
-    }
 
     def __init__(self, parent=None):
         """
@@ -762,7 +754,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Registry().register_function('theme_change_global', self.regenerate_service_items)
         Registry().register_function('theme_change_service', self.regenerate_changed_service_items)
         Registry().register_function('mediaitem_suffix_reset', self.reset_supported_suffixes)
-        Registry().register_function('service_manager_repaint_list_icons', self.repaint_list_icons)
 
     def bootstrap_post_set_up(self):
         """
@@ -869,53 +860,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             service_title = '{title} ({unsaved})'.format(title=service_title, unsaved=unsaved_text)
         dock_widget.setWindowTitle(service_title)
 
-    def repaint_list_icons(self):
-        """
-        Repaint the service list after icon color settings are changed.
-        """
-        self.repaint_service_list(-1, -1)
-
-    @staticmethod
-    def _normalise_theme_color(color_text, default):
-        """
-        Normalize a color to #RRGGBB and use default when invalid.
-        """
-        color = QtGui.QColor(str(color_text).strip())
-        if not color.isValid():
-            color = QtGui.QColor(default)
-        return color
-
-    def _resolve_service_item_icon_color(self, service_item):
-        """
-        Resolve the configured icon color for the service item's plugin type.
-        """
-        plugin_name = str(getattr(service_item, 'name', '')).lower()
-        setting_key = self.SERVICE_ICON_THEME_SETTINGS.get(plugin_name)
-        if not setting_key:
-            return None
-        default_color = self.settings.get_default_value(setting_key)
-        color_text = self.settings.value(setting_key)
-        return self._normalise_theme_color(color_text, default_color)
-
     def _create_colored_service_icon(self, icon, service_item):
-        """
-        Create a colored icon for a service item type while preserving the original alpha mask.
-        """
-        color = self._resolve_service_item_icon_color(service_item)
-        if color is None:
-            return icon
-        base_pixmap = icon.pixmap(80, 80)
-        if base_pixmap.isNull():
-            return icon
-        tinted_pixmap = QtGui.QPixmap(base_pixmap.size())
-        tinted_pixmap.setDevicePixelRatio(base_pixmap.devicePixelRatio())
-        tinted_pixmap.fill(QtCore.Qt.GlobalColor.transparent)
-        painter = QtGui.QPainter(tinted_pixmap)
-        painter.drawPixmap(0, 0, base_pixmap)
-        painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(tinted_pixmap.rect(), color)
-        painter.end()
-        return QtGui.QIcon(tinted_pixmap)
+        """Use the Fluent colour for this service item's plugin type."""
+        return service_icon(icon, str(getattr(service_item, 'name', '')).lower())
 
     def is_modified(self):
         """

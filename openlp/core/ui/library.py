@@ -41,6 +41,9 @@ from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.folders import AddFolderForm, ChooseFolderForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.views import TreeWidgetWithDnD
+from openlp.core.widgets.libraryview import LibraryView
+from openlp.core.widgets.mediapreview import MediaPreview
+from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
 
 
 def _add_library_context_menu_separator(target):
@@ -55,12 +58,12 @@ class FolderLibraryItem(MediaManagerItem):
     This is a custom MediaManagerItem subclass with support for folders
     """
     def __init__(self, parent, plugin, folder_class, item_class):
+        self.folder_class = folder_class
+        self.item_class = item_class
         super(FolderLibraryItem, self).__init__(parent, plugin)
         self.manager = self.plugin.manager
         self.choose_folder_form = ChooseFolderForm(self, self.manager, folder_class)
         self.add_folder_form = AddFolderForm(self, self.manager, folder_class)
-        self.folder_class = folder_class
-        self.item_class = item_class
 
     @property
     def current_folder(self):
@@ -69,6 +72,11 @@ class FolderLibraryItem(MediaManagerItem):
         """
         selected_items = self.list_view.selectedItems()
         selected_folder = None
+        browser = getattr(self, 'library_view', None)
+        if not selected_items and browser and browser.grid_button.isChecked():
+            folder = browser.folder_item()
+            if folder:
+                return folder.data(0, QtCore.Qt.ItemDataRole.UserRole)
         if selected_items:
             selected_item = selected_items[0]
             if isinstance(selected_item.data(0, QtCore.Qt.ItemDataRole.UserRole), self.item_class):
@@ -241,18 +249,70 @@ class FolderLibraryItem(MediaManagerItem):
                     self._update_add_to_selected_service_action_state)
             except Exception:
                 self.log_exception('Failed to connect service manager list selection change signal')
+        if self.plugin.name in ('images', 'media', 'presentations'):
+            self.page_layout.removeWidget(self.list_view)
+            self.library_view = LibraryView(self)
+            self.page_layout.addWidget(self.library_view, 1)
 
     def add_custom_context_actions(self):
         """
         Override this method to add custom context actions
         """
         _add_library_context_menu_separator(self.list_view)
+        if self.plugin.name in ('images', 'media', 'presentations'):
+            self.inspect_action = create_widget_action(
+                self.list_view, 'inspect_action', text=translate('OpenLP.FolderLibraryItem', 'Inspect'),
+                icon=UiIcons().preview, triggers=self.on_inspect_click)
+            self.inspect_action.setEnabled(False)
         create_widget_action(
             self.list_view,
             text=translate('OpenLP.FolderLibraryItem', 'Show in folder'),
             icon=UiIcons().folder,
             triggers=self.on_show_in_folder_click
         )
+
+    def _inspect_selection(self):
+        selected = self.list_view.selectedItems()
+        if len(selected) == 1:
+            item = selected[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(item, self.item_class) and item.file_path and not item.file_path.startswith(
+                    ('devicestream:', 'networkstream:')):
+                return item
+        return None
+
+    def on_selection_change(self):
+        super().on_selection_change()
+        if hasattr(self, 'inspect_action'):
+            self.inspect_action.setEnabled(self._inspect_selection() is not None)
+
+    def on_inspect_click(self):
+        item = self._inspect_selection()
+        if item:
+            self.inspect_item(item)
+
+    def inspect_item(self, item):
+        MediaPreview.show_media(self, Path(item.file_path), item.name,
+                                kind='media' if self.plugin.name == 'media' else 'image')
+
+    def context_menu(self, point):
+        browser = getattr(self, 'library_view', None)
+        grid = browser.grid if browser and browser.grid_button.isChecked() else None
+        view = grid or self.list_view
+        item = grid.tree_item(grid.itemAt(point)) if grid else self.list_view.itemAt(point)
+        if item is None:
+            return
+        if not item.isSelected():
+            self.list_view.clearSelection()
+            self.list_view.setCurrentItem(item)
+            item.setSelected(True)
+        if hasattr(self, 'inspect_action'):
+            self.inspect_action.setEnabled(self._inspect_selection() is not None)
+        self.prepare_context_menu()
+        self.menu.exec(view.viewport().mapToGlobal(point))
+
+    def prepare_context_menu(self):
+        """Allow plugins to update actions after the context item has been selected."""
+        pass
 
     def on_show_in_folder_click(self):
         """
@@ -287,33 +347,8 @@ class FolderLibraryItem(MediaManagerItem):
             'add_folder_action', icon=UiIcons().folder_plus, triggers=self.on_add_folder_click)
 
     def _get_proportional_folder_icon(self) -> QtGui.QIcon:
-        """
-        Return a folder icon rendered at a modest visual size, centered on a transparent
-        pixmap matching the tree's compact icon cell.
-        """
-        cell = self.list_view.iconSize()
-        if not cell.isValid() or cell.width() <= 0 or cell.height() <= 0:
-            return UiIcons().folder
-        cached = getattr(self, '_cached_folder_icon', None)
-        cached_size = getattr(self, '_cached_folder_icon_size', None)
-        if cached is not None and cached_size == (cell.width(), cell.height()):
-            return cached
-        glyph = min(32, cell.height() - 4)
-        device_ratio = self.list_view.devicePixelRatioF() or 1.0
-        pixmap = QtGui.QPixmap(int(cell.width() * device_ratio), int(cell.height() * device_ratio))
-        pixmap.setDevicePixelRatio(device_ratio)
-        pixmap.fill(QtCore.Qt.GlobalColor.transparent)
-        glyph_pixmap = UiIcons().folder.pixmap(glyph, glyph)
-        painter = QtGui.QPainter(pixmap)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
-        x = (cell.width() - glyph) // 2
-        y = (cell.height() - glyph) // 2
-        painter.drawPixmap(x, y, glyph, glyph, glyph_pixmap)
-        painter.end()
-        icon = QtGui.QIcon(pixmap)
-        self._cached_folder_icon = icon
-        self._cached_folder_icon_size = (cell.width(), cell.height())
-        return icon
+        """Keep the Fluent folder glyph scalable in both library views."""
+        return UiIcons().fluent_folder
 
     def _update_folder_count(self, folder_tree_item: QtWidgets.QTreeWidgetItem):
         """Update the displayed item count on a folder tree item after a child is added or removed."""
@@ -327,6 +362,7 @@ class FolderLibraryItem(MediaManagerItem):
         folder_item = QtWidgets.QTreeWidgetItem()
         folder_item.setText(0, f'{folder.name} ({item_count})' if item_count else folder.name)
         folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
+        folder_item.setData(0, LIBRARY_FOLDER_ROLE, True)
         folder_item.setIcon(0, self._get_proportional_folder_icon())
         return folder_item
 

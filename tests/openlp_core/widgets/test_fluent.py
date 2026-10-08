@@ -430,7 +430,7 @@ def test_file_libraries_keep_native_tree_appearance(qapp):
         view = TreeWidgetWithDnD(name=name)
         native = fluent.fluentqt.TreeView()
         view.setup_columns(['Name', 'Date', 'Type'])
-        assert view.indentation() == native.indentation()
+        assert view.indentation() == native.indentation() + 24
         assert view.rootIsDecorated() == native.rootIsDecorated()
         assert view.isAnimated() == native.isAnimated()
         assert view.selectionIndicatorVisible()

@@ -71,7 +71,7 @@ def modern_appearance(settings):
 def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
     from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
     assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
-    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
     assert not main_window.layout_preset_navigation.buttons[0].icon().isNull()
     assert main_window.main_content_layout.contentsMargins().left() == 6
 
@@ -87,7 +87,7 @@ def test_settings_dialog_has_main_window_as_smoke_host(main_window):
 def test_classic_navigation_and_spacing(main_window):
     from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
     assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
-    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
     assert main_window.main_content_layout.contentsMargins().left() == 0
 
 
@@ -576,7 +576,7 @@ def test_mainwindow_configuration(main_window):
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
                              'authentication_token', 'web_socket_server'}
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
-                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons']
+                               'config_screen_changed', 'theme_change_global']
     assert set(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \
@@ -1133,11 +1133,14 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
 
 
 def test_layout_preset_tab_bar_has_expected_tabs(main_window):
-    """Main window includes General, Prepare and Live in left navigation."""
+    """The sidebar and View menu use matching Workspace, Prepare and Live labels."""
     assert len(main_window.layout_preset_navigation.buttons) == 3
-    assert main_window.layout_preset_navigation.buttons[0].text() == 'General'
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
     assert main_window.layout_preset_navigation.buttons[1].text() == 'Prepare'
     assert main_window.layout_preset_navigation.buttons[2].text() == 'Live'
+    assert main_window.mode_default_item.text() == '&Workspace'
+    assert main_window.mode_setup_item.text() == '&Prepare'
+    assert main_window.mode_live_item.text() == '&Live'
 
 
 def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):

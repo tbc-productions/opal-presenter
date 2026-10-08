@@ -11,7 +11,8 @@ import fluentqt
 from openlp.core.common.platform import is_macosx
 from openlp.core.widgets.fluent_collections import (  # noqa: F401
     QListView, QListWidget, QListWidgetItem, forward_item_signals)
-from openlp.core.widgets.fluent_buttons import QCheckBox, QPushButton, QRadioButton  # noqa: F401
+from openlp.core.widgets.fluent_buttons import (  # noqa: F401
+    FluentButtonIconMixin, QCheckBox, QPushButton, QRadioButton)
 from openlp.core.widgets.fluent_text import MnemonicButtonMixin
 
 QLabel = fluentqt.Label
@@ -100,12 +101,14 @@ QMenu = FluentMenu
 
 class FluentSlider(fluentqt.Slider):
     """Accept Qt's orientation/parent constructor forms."""
-    def __init__(self, orientation=QtCore.Qt.Orientation.Horizontal, parent=None, *, value_formatter=None):
+    def __init__(self, orientation=QtCore.Qt.Orientation.Horizontal, parent=None, *, value_formatter=None,
+                 show_value_tooltip=True):
         if isinstance(orientation, _qt.QWidget) or orientation is None:
             parent, orientation = orientation, QtCore.Qt.Orientation.Horizontal
         super().__init__(parent)
         self.setOrientation(orientation)
         self._value_formatter = value_formatter
+        self._show_value_tooltip = show_value_tooltip
         self._value_tooltip = None
 
     def mousePressEvent(self, event):
@@ -126,8 +129,9 @@ class FluentSlider(fluentqt.Slider):
                 position = tip.pos()
                 tip.setWindowFlag(QtCore.Qt.WindowType.NoDropShadowWindowHint)
                 tip.move(position)
-                # Changing window flags hides an already visible widget.
-                tip.show()
+                if self._show_value_tooltip:
+                    # Changing window flags hides an already visible widget.
+                    tip.show()
         self._format_value_tooltip()
 
     def mouseMoveEvent(self, event):
@@ -136,6 +140,9 @@ class FluentSlider(fluentqt.Slider):
 
     def _format_value_tooltip(self):
         tip = self._value_tooltip
+        if tip is not None and not self._show_value_tooltip:
+            tip.hide()
+            return
         if self._value_formatter is None or tip is None or not tip.isVisible():
             return
         # The native handler has positioned the numeric popup over the handle.
@@ -152,7 +159,7 @@ class FluentSlider(fluentqt.Slider):
 QSlider = FluentSlider
 
 
-class FluentToolButton(MnemonicButtonMixin, fluentqt.Button):
+class FluentToolButton(FluentButtonIconMixin, MnemonicButtonMixin, fluentqt.Button):
     """Fluent icon button retaining the application's QAction wiring."""
     ToolButtonPopupMode = _qt.QToolButton.ToolButtonPopupMode
 
@@ -228,7 +235,7 @@ class FluentToolButton(MnemonicButtonMixin, fluentqt.Button):
 QToolButton = FluentToolButton
 
 
-class FluentSplitButton(MnemonicButtonMixin, fluentqt.SplitButton):
+class FluentSplitButton(FluentButtonIconMixin, MnemonicButtonMixin, fluentqt.SplitButton):
     """Native split control with OpenLP's existing tool-button action API."""
     ToolButtonPopupMode = QToolButton.ToolButtonPopupMode
     setDefaultAction = QToolButton.setDefaultAction

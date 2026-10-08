@@ -553,3 +553,21 @@ def test_presentation_and_display_override_upgrade(settings, monkeypatch):
     assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_7__)
     assert settings.value('presentations/Powerpoint') == QtCore.Qt.CheckState.Checked
     assert settings.value('advanced/x11 bypass wm') is False
+
+
+def test_service_colours_upgrade(settings, monkeypatch):
+    """Remove all retired colour overrides while preserving service settings."""
+    monkeypatch.setattr(modsettings, '__version__', 8)
+    settings.setValue('settings/version', 7)
+    for key, _, _ in Settings.__setting_upgrade_8__:
+        settings.setValue(key, '#123456')
+    settings.setValue('servicemanager/service theme', 'Sunday')
+    settings.setValue('advanced/delete service item confirmation', False)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 8
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_8__)
+    assert all(key not in Settings.__default_settings__ for key, _, _ in Settings.__setting_upgrade_8__)
+    assert settings.value('servicemanager/service theme') == 'Sunday'
+    assert settings.value('advanced/delete service item confirmation') is False

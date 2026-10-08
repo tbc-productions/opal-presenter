@@ -38,6 +38,24 @@ from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
 
 
+def test_inspect_presentation_uses_cached_slides_without_loading_controller(media_item, tmp_path):
+    path = tmp_path / 'Sunday.pptx'
+    path.write_bytes(b'presentation')
+    item = Item(name='Sunday', file_path=str(path))
+    controller = MagicMock()
+    doc = controller.add_document.return_value
+    doc.get_slide_image_paths.return_value = []
+    slides = [tmp_path / 'slide1.png', tmp_path / 'slide2.png']
+    doc.get_thumbnail_path.side_effect = slides + [None]
+    media_item.controllers = {'Powerpoint': controller}
+    with patch.object(media_item, 'find_controller_by_type', return_value='Powerpoint'), \
+            patch('openlp.plugins.presentations.lib.mediaitem.MediaPreview.show_media') as preview:
+        media_item.inspect_item(item)
+    preview.assert_called_once_with(media_item, path, 'Sunday', kind='presentation', preview_paths=slides)
+    doc.load_presentation.assert_not_called()
+    controller.remove_doc.assert_called_once_with(doc)
+
+
 def test_build_file_mask_string(media_item):
     """
     Test the build_file_mask_string() method

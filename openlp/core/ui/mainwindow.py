@@ -602,15 +602,15 @@ class Ui_MainWindow(object):
         self.update_theme_images.setText(translate('OpenLP.MainWindow', 'Update Theme Images'))
         self.update_theme_images.setStatusTip(translate('OpenLP.MainWindow',
                                                         'Update the preview images for all themes.'))
-        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&General'))
+        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Workspace'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
         self.layout_preset_navigation.setItemText(0, translate('OpenLP.MainWindow',
-                                                        'General'))
+                                                        'Workspace'))
         self.layout_preset_navigation.pane_toggle.setToolTip(translate('OpenLP.MainWindow', 'Toggle Compact mode'))
         self.layout_preset_navigation.pane_toggle.setAccessibleName(
             translate('OpenLP.MainWindow', 'Toggle Compact mode'))
-        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
+        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Prepare'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
@@ -712,7 +712,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         # Simple message boxes
         Registry().register_function('theme_change_global', self.default_theme_changed)
         Registry().register_function('config_screen_changed', self.screen_changed)
-        Registry().register_function('media_dock_refresh_icons', self.refresh_media_dock_icons)
         Registry().register_function('bootstrap_post_set_up', self.bootstrap_post_set_up)
         # Reset the cursor
         self.application.set_normal_cursor()
@@ -786,12 +785,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             except RuntimeError:
                 # Ignore the RuntimeError that is thrown when Qt has already deleted the C++ thread object
                 pass
-
-    def refresh_media_dock_icons(self):
-        """
-        Refresh library tab icons so updated service theme colors are reflected immediately.
-        """
-        self.media_dock_manager.refresh_item_icons()
 
     def bootstrap_post_set_up(self):
         """

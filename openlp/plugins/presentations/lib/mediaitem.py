@@ -36,6 +36,8 @@ from openlp.core.lib.ui import create_horizontal_adjusting_combo_box, create_wid
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.library import FolderLibraryItem
 from openlp.core.widgets.views import FileTreeWidgetItem
+from openlp.core.widgets.mediapreview import MediaPreview
+from openlp.core.widgets.libraryview import LIBRARY_THUMBNAIL_ROLE
 from openlp.core.widgets.fluent_tree import LIBRARY_FILE_TYPE_ICON_ROLE
 
 from openlp.plugins.presentations.lib.db import Folder, Item
@@ -225,10 +227,32 @@ class PresentationMediaItem(FolderLibraryItem):
                     return item, controller
         return None
 
-    def context_menu(self, point):
+    def prepare_context_menu(self):
         self.convert_pdf_action.setVisible(self._pdf_export_selection() is not None)
         self.powerpoint_settings_action.setVisible(self._powerpoint_settings_selection() is not None)
-        super().context_menu(point)
+
+    def inspect_item(self, item):
+        """Browse cached slides without sending the presentation to a controller."""
+        path = Path(item.file_path)
+        previews = []
+        if path.is_file():
+            controller_name = self.find_controller_by_type(path)
+            if controller_name:
+                controller = self.controllers[controller_name]
+                doc = controller.add_document(path)
+                try:
+                    # Prefer full-size cached renders, then fall back to slide thumbnails.
+                    previews = doc.get_slide_image_paths()
+                    if not previews:
+                        number = 1
+                        thumbnail = doc.get_thumbnail_path(number, True)
+                        while thumbnail:
+                            previews.append(thumbnail)
+                            number += 1
+                            thumbnail = doc.get_thumbnail_path(number, True)
+                finally:
+                    controller.remove_doc(doc)
+        MediaPreview.show_media(self, path, item.name, kind='presentation', preview_paths=previews)
 
     def on_convert_to_pdf(self):
         """Export a PDF copy and select it in the original item's library folder."""
@@ -384,6 +408,7 @@ class PresentationMediaItem(FolderLibraryItem):
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setToolTip(0, str(file_path))
         else:
+            preview_path = None
             controller_name = self.find_controller_by_type(file_path)
             if controller_name:
                 controller = self.controllers[controller_name]
@@ -405,6 +430,8 @@ class PresentationMediaItem(FolderLibraryItem):
             tree_item = FileTreeWidgetItem([display_name])
             tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
             tree_item.setIcon(0, icon)
+            if preview_path:
+                tree_item.setData(0, LIBRARY_THUMBNAIL_ROLE, str(preview_path))
             file_type = file_path.suffix.lstrip('.').upper()
             tree_item.setToolTip(0, str(file_path))
             try:

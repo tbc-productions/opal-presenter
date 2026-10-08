@@ -49,7 +49,7 @@ if is_win():
 
 log = logging.getLogger(__name__)
 
-__version__ = 7
+__version__ = 8
 
 
 class ProxyMode(IntEnum):
@@ -325,6 +325,8 @@ class Settings(QtCore.QSettings):
         'settings/version': 0,
         'advanced/add page break': False,
         'advanced/current media plugin': -1,
+        'advanced/library view': 'list',
+        'advanced/library thumbnail size': 100,
         'advanced/data path': None,
         # 7 stands for now, 0 to 6 is Monday to Sunday.
         'advanced/default service day': 7,
@@ -459,7 +461,9 @@ class Settings(QtCore.QSettings):
         'images/db database': '',
         'images/last directory': None,
         'images/status': PluginStatus.Inactive,
+        'images/library view': 'list',
         'media/status': PluginStatus.Inactive,
+        'media/library view': 'list',
         'media/media files': [],
         'media/last directory': None,
         'media/media auto start': QtCore.Qt.CheckState.Unchecked,
@@ -488,6 +492,7 @@ class Settings(QtCore.QSettings):
         'planningcenter/default_service_type_name': '-- none --',
         'planningcenter/default_service_type_id': '',
         'presentations/status': PluginStatus.Inactive,
+        'presentations/library view': 'list',
         'presentations/maclo': QtCore.Qt.CheckState.Checked,
         'presentations/Impress': QtCore.Qt.CheckState.Checked,
         'presentations/Powerpoint': QtCore.Qt.CheckState.Checked,
@@ -510,12 +515,6 @@ class Settings(QtCore.QSettings):
         'servicemanager/last directory': None,
         'servicemanager/last file': None,
         'servicemanager/service theme': None,
-        'servicemanager/theme color song': '#FBBF24',
-        'servicemanager/theme color bible': '#4ADE80',
-        'servicemanager/theme color presentation': '#C084FC',
-        'servicemanager/theme color image': '#60A5FA',
-        'servicemanager/theme color media': '#F87171',
-        'servicemanager/theme color custom slide': '#14B8A6',
         'SettingsImport/file_date_created': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         'SettingsImport/Make_Changes': 'At_Own_RISK',
         'SettingsImport/type': 'OpenLP_settings_export',
@@ -742,6 +741,15 @@ class Settings(QtCore.QSettings):
         ('presentations/render slide images', '', []),
         ('advanced/disable transparent display', '', []),
         ('advanced/prefer windowed screen capture', '', [])
+    ]
+
+    __setting_upgrade_8__ = [
+        ('servicemanager/theme color song', '', []),
+        ('servicemanager/theme color bible', '', []),
+        ('servicemanager/theme color presentation', '', []),
+        ('servicemanager/theme color image', '', []),
+        ('servicemanager/theme color media', '', []),
+        ('servicemanager/theme color custom slide', '', [])
     ]
 
     @staticmethod

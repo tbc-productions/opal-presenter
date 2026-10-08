@@ -677,6 +677,8 @@ class TreeWidgetDnDMixin:
         self._drag_start_pos = None
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
         if name in ('presentations', 'images', 'media'):
+            self.setIndentation(40)
+            self.default_indentation = self.indentation()
             from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
             self._library_delegate = FluentLibraryTreeDelegate(self)
             self.setItemDelegate(self._library_delegate)

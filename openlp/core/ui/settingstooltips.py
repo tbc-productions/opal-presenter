@@ -47,7 +47,7 @@ class SettingsHelpButton(QtWidgets.QToolButton):
             self.help_label.setWordWrap(True)
             self.help_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
             content.addWidget(self.help_label)
-            close_button = fluentqt.Button(host)
+            close_button = QtWidgets.QPushButton(host)
             close_button.setObjectName('settings_teaching_tip_close')
             close_button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
             close_button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)

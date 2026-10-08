@@ -1,6 +1,7 @@
 """CommandBar-backed toolbar composition with adjacent Fluent input controls."""
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
+from openlp.core.widgets.fluent_buttons import set_fluent_button_icon
 
 
 class SpacedCommandBar(fluentqt.CommandBar):
@@ -30,6 +31,7 @@ class SpacedCommandBar(fluentqt.CommandBar):
         return result
 
     def _align_trailing_actions(self):
+        self.sync_button_icons()
         if not self.has_spacer:
             return
         presenters = [widget for widget in self.findChildren(QtWidgets.QWidget)
@@ -47,6 +49,13 @@ class SpacedCommandBar(fluentqt.CommandBar):
             offset = rect.right() - max(widget.geometry().right() for widget in presenters)
         for widget in presenters:
             widget.move(widget.x() + offset, widget.y())
+
+    def sync_button_icons(self):
+        actions = self.primaryActions() + self.secondaryActions()
+        for button in self.window().findChildren(fluentqt.Button):
+            action = button.property('commandAction')
+            if action in actions:
+                set_fluent_button_icon(button, action.icon())
 
 
 class FluentCommandToolbar(QtWidgets.QWidget):
@@ -98,6 +107,8 @@ class FluentCommandToolbar(QtWidgets.QWidget):
             self._overflow_timer.start(0)
 
     def _raise_overflow(self):
+        for group in self._command_groups:
+            group.sync_button_icons()
         # Flyouts are reparented to the host window. Give their overlay a
         # native surface so embedded WebEngine views cannot cover it.
         for popup in self.window().findChildren(QtWidgets.QWidget):
