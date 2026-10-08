@@ -174,9 +174,9 @@ def test_breadcrumb_returns_to_ancestor_without_crossing_type(panel):
     panel.folder = CloudItem('week', 'Week one', folder=True, category='songs')
     panel.history = [root, advent]
     panel.update_breadcrumbs()
-    assert [crumb.text for crumb in panel.breadcrumbs.items()] == ['Church Library', 'Images', 'Advent', 'Week one']
+    assert [crumb.text for crumb in panel.breadcrumbs.items()] == ['Images', 'Advent', 'Week one']
     panel.browse = MagicMock()
-    panel.activate_breadcrumb(2, panel.breadcrumbs.items()[2])
+    panel.activate_breadcrumb(1, panel.breadcrumbs.items()[1])
     panel.browse.assert_called_once_with(advent)
     assert panel.history == [root]
 

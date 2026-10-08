@@ -581,7 +581,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.browse()
 
     def update_breadcrumbs(self):
-        crumbs = [BreadcrumbItem(self.roots.currentText(), None), BreadcrumbItem(tr(CATEGORIES[self.category]), None)]
+        crumbs = [BreadcrumbItem(tr(CATEGORIES[self.category]), None)]
         for position, folder in enumerate(self.history[1:] + ([self.folder] if self.history else [])):
             crumbs.append(BreadcrumbItem(folder.display_name, position + 1))
         self.breadcrumbs.setItems(crumbs)
