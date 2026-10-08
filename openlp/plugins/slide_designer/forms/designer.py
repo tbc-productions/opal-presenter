@@ -13,13 +13,14 @@ from openlp.core.common.mixins import RegistryProperties
 from openlp.core.display.render import ThemePreviewRenderer, render_tags
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.slidedesign import (
-    apply_design, normalise_design, design_theme, image_to_png_uri, layer_order, remap_custom_footers, FILTER_RANGES
+    apply_design, normalise_design, design_theme, layer_order, remap_custom_footers, FILTER_RANGES
 )
 from openlp.core.lib.theme import Theme
+from openlp.core.lib.designmedia import media_to_source, media_kind, valid_media_source
 from openlp.core.lib.slidelayouts import layout_for_slide, master_design, slide_design, set_slide_design, visual_design
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluenticons import fluent_icon
-from openlp.core.widgets.dialogs import FileDialog
+from openlp.core.widgets.mediapicker import MediaPicker
 from .textediting import visible_text, replace_visible_text
 
 
@@ -238,7 +239,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         toolbar.addSpacing(12)
         self.insert_object_buttons = []
         for caption, kind, icon in ((tr('Text'), 'text', fluent_icon('ic_fluent_textbox_24_regular')),
-                                    (tr('Image'), 'image', UiIcons().blank_theme)):
+                                    (tr('Media'), 'image', UiIcons().blank_theme)):
             button = self.tool_button(caption, icon)
             button.clicked.connect(lambda checked=False, k=kind: self.add_element(k))
             toolbar.addWidget(button)
@@ -770,7 +771,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         if not self.selection:
             return [design]
         return [element for element in design.get('elements', [])
-                if element['id'] in self.selection and element['kind'] == 'image']
+                if element['id'] in self.selection and element['kind'] in ('image', 'video')]
 
     def populate_filters(self):
         targets = self.filter_targets(self.design)
@@ -827,10 +828,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         layout.addWidget(fluentqt.Divider(QtCore.Qt.Orientation.Horizontal))
         image_layout = layout
         row = QtWidgets.QHBoxLayout()
-        self.background_image_button = self.tool_button(tr('Choose image'), UiIcons().blank_theme)
+        self.background_image_button = self.tool_button(tr('Choose media'), UiIcons().blank_theme)
         self.background_image_button.clicked.connect(self.choose_background_image)
         row.addWidget(self.background_image_button)
-        self.remove_background_image = self.tool_button(tr('Remove image'), UiIcons().delete, icon_only=True)
+        self.remove_background_image = self.tool_button(tr('Remove media'), UiIcons().delete, icon_only=True)
         self.remove_background_image.clicked.connect(lambda: self.set_background_property('image', None))
         row.addWidget(self.remove_background_image)
         image_layout.addLayout(row)
@@ -840,14 +841,14 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.background_image_opacity.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.background_image_opacity.valueChanged.connect(
             lambda value: self.set_background_property('image_opacity', value))
-        image_layout.addWidget(self.labelled_field(tr('Image opacity (%)'), self.background_image_opacity))
+        image_layout.addWidget(self.labelled_field(tr('Media opacity (%)'), self.background_image_opacity))
         self.background_fit = QtWidgets.QComboBox()
         for caption, value in ((tr('Fill'), 'cover'), (tr('Fit'), 'contain'), (tr('Stretch'), 'stretch'),
                                (tr('Tile'), 'repeat')):
             self.background_fit.addItem(caption, value)
         self.background_fit.currentIndexChanged.connect(
             lambda: self.set_background_property('fit', self.background_fit.currentData()))
-        image_layout.addWidget(self.labelled_field(tr('Image size'), self.background_fit))
+        image_layout.addWidget(self.labelled_field(tr('Media size'), self.background_fit))
 
     def background_properties(self, defaults=False):
         if not defaults and self.design.get('background'):
@@ -861,14 +862,14 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                           colour=theme.background_start_color if gradient else theme.background_color,
                           end_colour=theme.background_end_color, direction=theme.background_direction,
                           fit=theme.background_fit)
-            if theme.background_type == 'image' and theme.background_filename:
+            if theme.background_type in ('image', 'video') and theme.background_filename:
                 result['colour'] = theme.background_border_color
                 source = str(theme.background_filename)
                 if source not in self._background_image_cache:
                     try:
-                        self._background_image_cache[source] = (source if source.startswith('data:image/png;base64,')
-                                                                else image_to_png_uri(theme.background_filename)[0])
-                    except ValueError:
+                        self._background_image_cache[source] = (source if valid_media_source(source)
+                                                                else media_to_source(theme.background_filename)[0])
+                    except (OSError, ValueError):
                         self._background_image_cache[source] = None
                 if self._background_image_cache[source]:
                     result['image'] = self._background_image_cache[source]
@@ -895,7 +896,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.background_image_opacity.setValue(background['image_opacity'])
         del blocker
         has_image = bool(background.get('image'))
-        self.background_image_button.setText(tr('Replace image') if has_image else tr('Choose image'))
+        self.background_image_button.setText(tr('Replace media') if has_image else tr('Choose media'))
         self.background_image_opacity.setEnabled(has_image)
         self.background_fit.setEnabled(has_image)
         self.remove_background_image.setEnabled(has_image)
@@ -925,14 +926,13 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.set_background_property(key, colour.name())
 
     def choose_background_image(self):
-        path, _ = FileDialog.getOpenFileName(
-            self, tr('Background image'), filter=tr('Images (*.png *.jpg *.jpeg *.webp)'))
+        path = MediaPicker.choose(self)
         if not path:
             return
         try:
-            uri, _ = image_to_png_uri(path)
-        except ValueError:
-            QtWidgets.QMessageBox.warning(self, tr('Background image'), tr('This image could not be embedded.'))
+            uri, _ = media_to_source(path)
+        except (OSError, ValueError) as error:
+            QtWidgets.QMessageBox.warning(self, tr('Background media'), str(error))
             return
         self.set_background_property('image', uri)
 
@@ -1373,7 +1373,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                 properties.update(self.design.get('lyrics', {}))
             return properties
         properties = dict(next((e for e in self.design.get('elements', []) if e['id'] == identifier), {}))
-        if properties.get('kind') in ('rectangle', 'ellipse', 'image') and properties.get('border_width'):
+        if properties.get('kind') in ('rectangle', 'ellipse', 'image', 'video') and properties.get('border_width'):
             properties.setdefault('outline', True)
             properties.setdefault('outline_width', properties['border_width'])
             properties.setdefault('outline_colour', properties.get('border_colour', '#ffffff'))
@@ -1388,14 +1388,16 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             selection.blockSignals(True)
             model = self.layers.model()
             model.clear()
-            labels = {'text': tr('Text'), 'rectangle': tr('Rectangle'), 'ellipse': tr('Ellipse'), 'image': tr('Image')}
+            labels = {'text': tr('Text'), 'rectangle': tr('Rectangle'), 'ellipse': tr('Ellipse'),
+                      'image': tr('Image'), 'video': tr('Video')}
             elements = {element['id']: element for element in self.design.get('elements', [])}
             for identifier in reversed(layer_order(self.design)):
                 element = elements.get(identifier)
                 label = tr('Slide text') if element is None else labels[element['kind']]
                 if element and element['kind'] == 'text' and element.get('text', '').strip():
                     label = element['text'].strip().splitlines()[0][:60]
-                icon = (UiIcons().blank_theme if element and element['kind'] == 'image' else
+                icon = (UiIcons().video if element and element['kind'] == 'video' else
+                        UiIcons().blank_theme if element and element['kind'] == 'image' else
                         fluent_icon('ic_fluent_shapes_24_regular')
                         if element and element['kind'] in ('rectangle', 'ellipse')
                         else fluent_icon('ic_fluent_textbox_24_regular'))
@@ -1695,14 +1697,14 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                    'rotation': 0, 'opacity': 100, 'font_size': 40, 'colour': '#ffffff', 'fill': '#315efb',
                    'font': 'Arial', 'text': tr('Text box') if kind == 'text' else ''}
         if kind == 'image':
-            path, _ = FileDialog.getOpenFileName(self, tr('Add image'), filter=tr('Images (*.png *.jpg *.jpeg *.webp)'))
+            path = MediaPicker.choose(self)
             if not path:
                 return
             try:
-                element['src'], image_size = image_to_png_uri(path)
-            except ValueError:
-                QtWidgets.QMessageBox.warning(self, tr('Add image'), tr('This image could not be embedded. '
-                                                                        'Please choose a smaller, valid image.'))
+                element['src'], image_size = media_to_source(path)
+                element['kind'] = media_kind(element['src'])
+            except (OSError, ValueError) as error:
+                QtWidgets.QMessageBox.warning(self, tr('Add media'), str(error))
                 return
             size = self.canvas_size()
             aspect = size.width() / size.height() * image_size.height() / image_size.width()

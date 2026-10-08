@@ -39,10 +39,11 @@ from tests.utils.constants import RESOURCE_PATH
 
 
 @pytest.fixture()
-def theme_manager(registry: Registry, settings: Settings) -> ThemeManager:
+def theme_manager(registry: Registry, settings: Settings, tmp_path) -> ThemeManager:
     registry.register('main_window', None)
     thm = ThemeManager()
-    return thm
+    with patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'designer'):
+        yield thm
 
 
 @patch('openlp.core.ui.thememanager.zipfile.ZipFile.__init__')

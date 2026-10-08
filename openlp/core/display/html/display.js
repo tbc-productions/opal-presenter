@@ -1360,6 +1360,7 @@ var Display = {
 
     // Reveal updates section positioning during slide changes; keep themed text positions stable.
     Display._reapplyTextThemeAfterLayout();
+    Display._syncDesignVideos();
   },
 
   /**
@@ -2061,7 +2062,7 @@ var Display = {
     order = order.concat(defaultOrder.filter(id => !order.includes(id)));
     content.style.zIndex = String(order.indexOf('lyrics') + 1);
     (design.elements || []).forEach(element => {
-      var node = document.createElement(element.kind === 'image' ? 'img' : 'div');
+      var node = document.createElement(element.kind === 'image' ? 'img' : element.kind === 'video' ? 'video' : 'div');
       node.className = 'song-design-element';
       node.dataset.designId = element.id;
       Object.assign(node.style, {
@@ -2073,11 +2074,17 @@ var Display = {
         maxWidth: 'none', maxHeight: 'none', boxShadow: 'none', textShadow: 'none',
         overflow: 'hidden', borderRadius: element.kind === 'ellipse' ? '50%' : '0'
       });
-      if (element.kind === 'image') {
-        // Only embedded raster images are allowed, never HTML, SVG, file or remote URLs.
-        if (/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(element.src || '')) node.src = element.src;
+      if (element.kind === 'image' || element.kind === 'video') {
+        // Python validates imported sources and resolves managed asset references before rendering.
+        if (Display._isDesignMediaSource(element.src)) node.src = element.src;
         node.style.objectFit = 'contain';
         node.draggable = false;
+        if (element.kind === 'video') {
+          node.muted = true;
+          node.loop = true;
+          node.autoplay = false;
+          node.playsInline = true;
+        }
       } else if (element.kind === 'text') {
         node.textContent = element.text || '';
         Object.assign(node.style, {
@@ -2094,11 +2101,34 @@ var Display = {
       slide.appendChild(node);
     });
     Display._bindDesignEditor(slide);
+    if (slide === Reveal.getCurrentSlide()) Display._syncDesignVideos();
   },
 
   _designTransform: function (properties) {
     return `rotate(${properties.rotation || 0}deg) scale(${properties.flip_horizontal ? -1 : 1}, ` +
       `${properties.flip_vertical ? -1 : 1})`;
+  },
+
+  _isDesignMediaSource: function (source) {
+    return /^(?:data:(?:image\/(?:png|jpeg|webp|gif|bmp)|video\/(?:mp4|webm|quicktime|ogg));base64,[A-Za-z0-9+/=]+|file:\/\/\/[^\r\n"<>]+)$/.test(source || '');
+  },
+
+  _syncDesignVideos: function () {
+    var current = Reveal.getCurrentSlide();
+    document.querySelectorAll('video.song-design-element, video.song-design-background-image, ' +
+      '.slide-background-content > video').forEach(video => {
+      var background = video.closest('.slide-background');
+      if (background) {
+        video.muted = video.loop = true;
+      }
+      var active = background ? background.classList.contains('present') : video.closest('section') === current;
+      if (active) {
+        var playing = video.play();
+        if (playing && playing.catch) playing.catch(function () {});
+      } else {
+        video.pause();
+      }
+    });
   },
 
   _designFilters: function (filters) {
@@ -2158,7 +2188,7 @@ var Display = {
         node.style.border = `${effect.outline ? effect.outline_width * scale : 0}px solid ` +
           `${effect.outline_colour || '#000000'}`;
       }
-      var filters = kind === 'image' ? Display._designFilters(properties.filters) : '';
+      var filters = (kind === 'image' || kind === 'video') ? Display._designFilters(properties.filters) : '';
       node.style.filter = [filters, effect.shadow ? `drop-shadow(${shadow})` : ''].filter(Boolean).join(' ') || 'none';
     }
   },
@@ -2344,9 +2374,10 @@ var Display = {
       background.style.filter = section.dataset.designBackgroundFilters || 'none';
       content.querySelectorAll('.song-design-background-image').forEach(node => node.remove());
       var source = section.dataset.designBackgroundImage;
-      if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source || '')) return;
+      if (!Display._isDesignMediaSource(source)) return;
       var fit = _resolveBackgroundFit(section.dataset.designBackgroundFit || 'cover');
-      var image = document.createElement('div');
+      var video = /^data:video\//.test(source) || /\.(mp4|m4v|webm|mov|ogv)$/i.test(source);
+      var image = document.createElement(video ? 'video' : 'div');
       image.className = 'song-design-background-image';
       Object.assign(image.style, {
         position: 'absolute', inset: '0', pointerEvents: 'none',
@@ -2354,8 +2385,17 @@ var Display = {
         backgroundRepeat: fit.repeat, backgroundPosition: fit.position,
         opacity: String(Math.max(0, Math.min(100, Number(section.dataset.designBackgroundOpacity))) / 100)
       });
+      if (video) {
+        image.style.backgroundImage = 'none';
+        image.style.width = image.style.height = '100%';
+        image.style.objectFit = fit.size === 'contain' ? 'contain' : 'cover';
+        image.src = source;
+        image.muted = image.loop = image.playsInline = true;
+        image.autoplay = false;
+      }
       content.appendChild(image);
     });
+    Display._syncDesignVideos();
   },
 
   _startDesignDrag: function (event, node, resizing) {
@@ -2726,7 +2766,7 @@ var Display = {
     }
     // Set the background
     var backgroundContent = "";
-    var backgroundHtml = "";
+    ['video', 'video-loop', 'video-muted'].forEach(key => targetElement.removeAttribute(`data-background-${key}`));
     var designBackground = is_text && Display._theme.song_design && Display._theme.song_design.background;
     targetElement.dataset.designBackgroundFilters = is_text ?
       Display._designFilters((Display._theme.song_design || {}).background_filters) : '';
@@ -2785,10 +2825,16 @@ var Display = {
         targetElement.removeAttribute("data-background");
         break;
       case BackgroundType.Stream:
-      case BackgroundType.Video:
-        // never actually used since background type is overridden from video to transparent in window.py
         backgroundContent = Display._theme.background_border_color;
-        backgroundHtml = "<video loop autoplay muted><source src='" + Display._getFileUrl(Display._theme.background_filename) + "'></video>";
+        break;
+      case BackgroundType.Video:
+        backgroundContent = Display._theme.background_border_color;
+        if (!designBackground && Display._theme.background_filename) {
+          targetElement.removeAttribute('data-background-image');
+          targetElement.setAttribute('data-background-video', Display._theme.background_filename);
+          targetElement.setAttribute('data-background-video-loop', '');
+          targetElement.setAttribute('data-background-video-muted', '');
+        }
         break;
       default:
         backgroundContent = "#000";

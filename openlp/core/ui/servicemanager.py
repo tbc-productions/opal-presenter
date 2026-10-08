@@ -1373,6 +1373,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 with zipfile.ZipFile(tmp_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                     # First we add service contents..
                     zip_file.writestr('service_data.osj', service_content)
+                    if not self._save_lite:
+                        from openlp.core.lib.designmedia import write_media
+                        write_media(zip_file, service)
                     self.main_window.increment_progress_bar(service_content_size / total_size * 1000)
                     # Finally add all the listed media files.
                     for local_file_item, zip_file_item in write_list:

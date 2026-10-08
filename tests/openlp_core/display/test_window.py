@@ -22,6 +22,7 @@
 Package to test the openlp.core.display.window package.
 """
 import time
+import json
 import pytest
 from pathlib import Path
 
@@ -691,13 +692,13 @@ def test_set_theme_is_display_video(display_window_env, mock_settings, mock_geom
     theme = Theme()
     theme.background_type = 'video'
     result_theme = Theme()
-    result_theme.background_type = 'transparent'
+    result_theme.background_type = 'video'
     result_theme = result_theme.export_theme(is_js=True)
 
     # WHEN: The set theme function is called
     display_window.set_theme(theme, is_sync=False, service_item_type=ServiceItemType.Text)
 
-    # THEN: The final theme should be transparent
+    # THEN: Reveal receives the video theme, so its HTML5 background stays behind lyrics.
     display_window.run_in_display.assert_called_once_with('setTheme', raw_parameters=result_theme, is_sync=False)
 
 
@@ -713,20 +714,33 @@ def test_set_theme_not_display_video(display_window_env, mock_settings, mock_geo
     theme.background_type = 'video'
     theme.background_border_color = 'border_colour'
     result_theme = Theme()
-    result_theme.background_type = 'solid'
+    result_theme.background_type = 'video'
     result_theme.background_border_color = 'border_colour'
-    result_theme.background_start_color = 'border_colour'
-    result_theme.background_end_color = 'border_colour'
-    result_theme.background_main_color = 'border_colour'
-    result_theme.background_footer_color = 'border_colour'
-    result_theme.background_color = 'border_colour'
     result_theme = result_theme.export_theme(is_js=True)
 
     # WHEN: The set theme function is called
     display_window.set_theme(theme, is_sync=False, service_item_type=False)
 
-    # THEN: The final theme should use 'border_colour' for it's colour values
+    # THEN: Preview uses the same HTML5 video background as live output.
     display_window.run_in_display.assert_called_once_with('setTheme', raw_parameters=result_theme, is_sync=False)
+
+
+@pytest.mark.parametrize('is_display', [False, True])
+def test_video_background_uses_browser_playback_copy_and_retains_saved_original(
+        display_window_env, mock_settings, mock_geometry, is_display):
+    window = DisplayWindow()
+    window.is_display = is_display
+    window.run_in_display = MagicMock()
+    theme = Theme()
+    theme.background_type = 'video'
+    original = theme.background_filename = Path('/tmp/original.mp4')
+    playback = Path('/tmp/playback.webm')
+    with patch('openlp.core.lib.videoplayback.video_playback_path', return_value=playback):
+        window.set_theme(theme, service_item_type=ServiceItemType.Text)
+    rendered = json.loads(window.run_in_display.call_args.kwargs['raw_parameters'])
+    assert rendered['background_type'] == 'video'
+    assert rendered['background_filename'] == playback.as_uri()
+    assert theme.background_filename == original
 
 
 def test_set_theme_not_display_live(display_window_env, mock_settings, mock_geometry):

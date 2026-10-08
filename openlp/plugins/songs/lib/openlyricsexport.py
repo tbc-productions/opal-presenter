@@ -69,6 +69,9 @@ class OpenLyricsExport(RegistryProperties):
             self.parent.increment_progress_bar(
                 translate('SongsPlugin.OpenLyricsExport', 'Exporting "{title}"...').format(title=song.title))
             xml = open_lyrics.song_to_xml(song)
+            from openlp.core.lib.designmedia import media_references
+            from openlp.core.lib.itemexport import write_xml_package, xml_design
+            suffix = ".osz" if media_references(xml_design(xml)) else ".xml"
             tree = etree.ElementTree(etree.fromstring(xml.encode()))
             filename = '{title} ({author})'.format(title=song.title,
                                                    author=', '.join([author.display_name for author in
@@ -77,14 +80,22 @@ class OpenLyricsExport(RegistryProperties):
             filename = clean_filename(filename)
             # Ensure the filename isn't too long for some filesystems
             path_length = len(str(self.save_path))
-            filename_with_ext = '{name}.xml'.format(name=filename[0:250 - path_length])
+            filename_with_ext = '{name}{suffix}'.format(name=filename[0:250 - path_length], suffix=suffix)
             # Make sure we're not overwriting an existing file
             conflicts = 0
             while (self.save_path / filename_with_ext).exists():
                 conflicts += 1
-                filename_with_ext = '{name}-{extra}.xml'.format(name=filename[0:247 - path_length], extra=conflicts)
+                filename_with_ext = '{name}-{extra}{suffix}'.format(name=filename[0:247 - path_length],
+                                                                    extra=conflicts, suffix=suffix)
             # Pass a file object, because lxml does not cope with some special
             # characters in the path (see lp:757673 and lp:744337).
-            with (self.save_path / filename_with_ext).open('wb') as out_file:
-                tree.write(out_file, encoding='utf-8', xml_declaration=True, pretty_print=True)
+            output = etree.tostring(tree, encoding='utf-8', xml_declaration=True, pretty_print=True)
+            service_item = None
+            if suffix == '.osz':
+                from PySide6 import QtCore
+                from openlp.core.widgets import fluent as QtWidgets
+                library_item = QtWidgets.QListWidgetItem()
+                library_item.setData(QtCore.Qt.ItemDataRole.UserRole, song.id)
+                service_item = self.parent.plugin.media_item.build_service_item(item=library_item)
+            write_xml_package(self.save_path / filename_with_ext, output, service_item)
         return True

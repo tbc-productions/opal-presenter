@@ -92,8 +92,29 @@ used by the basic editor, projection and presentation export.
 Properties also shows the slide background: theme, colour or gradient, plus an
 optional image with its own opacity and fit. Image opacity reveals the colour or
 gradient underneath without fading the slide text. Select any text, shape or
-image layer to change that object's opacity. Background images are embedded in
-the saved design, using the same portable PNG format as image objects.
+image or video layer to change that object's opacity.
+
+The Media picker is shared by Slide Designer and Theme Designer. It shows library
+thumbnails, with search and folder filters. Add files imports images or videos into
+the corresponding library and retains a managed copy. Video objects and designed
+background videos, including theme backgrounds, loop silently using HTML5 video
+behind the slide text. Linked song audio remains independent.
+The designer caches silent WebM playback copies where required for browser codec
+compatibility, fitted within Full HD. Saved designs and exports retain the original
+media, not the playback copies.
+Right-click media in the picker or its selected-file field to open a larger preview
+with file size, type and resolution. Video previews also show frame rate, duration
+and codec. Show in Finder/Explorer reveals the original file. Theme backgrounds
+retain independent copies and friendly labels when library entries are deleted.
+
+Original files smaller than 2 MiB are embedded as base64 data URIs. Larger files
+use content-addressed references and are bundled once in exported archives, including
+assets in master layouts and per-slide overrides. Songs with large assets export as
+``.osz`` packages containing OpenLyrics XML and media; the OpenLyrics importer accepts
+these packages. Custom exports include their XML alongside the service data in
+``.osz`` archives. Themes retain ``.otz`` archives, embedding small backgrounds in their
+JSON and bundling larger files. Imports retain assets permanently, independently of
+the archive, original source files and library entries.
 
 Effects combines blur, brightness, contrast, greyscale, hue, invert, saturation and
 sepia. Select an image to adjust its filters, or select the slide to filter its
@@ -149,17 +170,17 @@ Layer order is saved with the design and used by the projection renderer. Older
 designs without an explicit order retain their original text-above-decorations
 appearance.
 
-Added images are decoded and embedded as PNG data URIs. Large images are scaled
-to fit 1920 x 1080, with an 8 MB encoded-image limit. Exports include a snapshot of
-the resolved static theme, including its background image. The receiving OpenLP+
+Added images and videos retain their original formats, using embedded data or
+archive assets according to their size. Exports include a snapshot of
+the resolved theme, including its background media. The receiving OpenLP+
 installation therefore does not need those original image files or a matching
 named theme. Canvas dimensions, masters, assignments, local changes and per-page
 footer choices are included too.
 Exporting does not freeze the source library item's theme.
 Explicitly assigning a new theme releases an imported theme snapshot.
 
-This is a static design format: video/stream backgrounds and font files are not
-embedded. Fonts still need to be available on the receiving computer. Other
+Local video backgrounds and video objects travel with the design. Stream URLs and
+font files are not embedded. Fonts still need to be available on the receiving computer. Other
 OpenLyrics applications may ignore or reject the OpenLP+ extension. PPTX exports preserve editable slide text, text boxes, shapes and embedded images
 in their saved layer order, including geometry, opacity, rotation, flips, outlines
 and shadows. Static backgrounds are composited at output resolution to retain

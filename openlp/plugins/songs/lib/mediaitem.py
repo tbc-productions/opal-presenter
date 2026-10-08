@@ -230,10 +230,15 @@ class SongMediaItem(MediaManagerItem):
             song = self.plugin.manager.get_object(Song, item.data(QtCore.Qt.ItemDataRole.UserRole))
             if not song:
                 continue
-            default_path = suggested_item_export_path(self.service_manager, song.title, '.xml')
+            from openlp.core.lib.designmedia import media_references
+            from openlp.core.lib.itemexport import write_xml_package, xml_design
+            xml = self.open_lyrics.song_to_xml(song)
+            suffix = '.osz' if media_references(xml_design(xml)) else '.xml'
+            service_item = self.build_service_item(item=item) if suffix == '.osz' else None
+            default_path = suggested_item_export_path(self.service_manager, song.title, suffix)
             export_item_dialog(
-                self, default_path, '.xml', translate('SongsPlugin.MediaItem', 'OpenLyrics Song (*.xml)'),
-                lambda path, song=song: path.write_bytes(self.open_lyrics.song_to_xml(song).encode('utf-8')))
+                self, default_path, suffix, translate('SongsPlugin.MediaItem', 'OpenLyrics Song') + f' (*{suffix})',
+                lambda path, xml=xml, service_item=service_item: write_xml_package(path, xml, service_item))
 
     def add_list_view_to_toolbar(self):
         """

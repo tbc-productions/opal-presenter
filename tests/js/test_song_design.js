@@ -54,6 +54,40 @@ describe('Portable slide designs', function () {
     Display._designSelection = [];
     Display._theme = null;
   });
+  it('uses Reveal HTML5 video backgrounds with mute and loop, clearing them for other themes', function () {
+    Display._theme = {background_type: BackgroundType.Video, background_filename: 'file:///tmp/playback.webm',
+      background_border_color: '#123456', background_fit: 'contain'};
+    Display.applyTheme(slide, false);
+    expect(slide.getAttribute('data-background-video')).toBe('file:///tmp/playback.webm');
+    expect(slide.hasAttribute('data-background-video-loop')).toBe(true);
+    expect(slide.hasAttribute('data-background-video-muted')).toBe(true);
+    expect(slide.getAttribute('data-background-size')).toBe('contain');
+    expect(slide.querySelector('video')).toBeNull();
+    Display._theme = {background_type: BackgroundType.Solid, background_color: '#000000'};
+    Display.applyTheme(slide, false);
+    expect(slide.hasAttribute('data-background-video')).toBe(false);
+    expect(slide.hasAttribute('data-background-video-loop')).toBe(false);
+    expect(slide.hasAttribute('data-background-video-muted')).toBe(false);
+  });
+  it('starts active Reveal background videos silently and pauses inactive backgrounds', function () {
+    var background = document.createElement('div');
+    background.className = 'slide-background present';
+    var content = document.createElement('div');
+    content.className = 'slide-background-content';
+    var video = document.createElement('video');
+    var playing = spyOn(video, 'play').and.returnValue(Promise.resolve());
+    var paused = spyOn(video, 'pause');
+    content.appendChild(video);
+    background.appendChild(content);
+    host.appendChild(background);
+    Display._syncDesignVideos();
+    expect(playing).toHaveBeenCalled();
+    expect(video.muted).toBe(true);
+    expect(video.loop).toBe(true);
+    background.classList.remove('present');
+    Display._syncDesignVideos();
+    expect(paused).toHaveBeenCalled();
+  });
   it('moves Theme Designer areas in place without replacing text or footer content', function () {
     var previousFooter = Display._footerContainer;
     var previousStyles = Array.from(document.querySelectorAll('.text-slide .slide-text-content'))
@@ -91,6 +125,40 @@ describe('Portable slide designs', function () {
         else node.setAttribute('style', style);
       });
     }
+  });
+
+  it('renders original raster formats and Python-resolved managed media', function () {
+    Display._theme.song_design.elements = [
+      {id: 'picture', kind: 'image', src: 'data:image/jpeg;base64,AAAA', x: 10, y: 10, width: 40, height: 30},
+      {id: 'managed', kind: 'image', src: 'file:///tmp/designer/assets/photo.png',
+        x: 50, y: 10, width: 40, height: 30}
+    ];
+    Display._applySongDesign(slide);
+    expect(slide.querySelector('[data-design-id="picture"]').src).toBe('data:image/jpeg;base64,AAAA');
+    expect(slide.querySelector('[data-design-id="managed"]').src).toBe('file:///tmp/designer/assets/photo.png');
+    expect(Display._isDesignMediaSource('https://example.com/photo.png')).toBe(false);
+    expect(Display._isDesignMediaSource('data:image/svg+xml;base64,AAAA')).toBe(false);
+  });
+
+  it('plays only active slide video objects, silently and with their editable effects', function () {
+    var current = spyOn(Reveal, 'getCurrentSlide').and.returnValue(slide);
+    var play = spyOn(HTMLMediaElement.prototype, 'play').and.returnValue(Promise.resolve());
+    var pause = spyOn(HTMLMediaElement.prototype, 'pause');
+    Display._theme.song_design.elements = [
+      {id: 'clip', kind: 'video', src: 'data:video/mp4;base64,AAAA', x: 10, y: 10, width: 40, height: 30,
+        opacity: 70, filters: {grayscale: 100}}
+    ];
+    Display._applySongDesign(slide);
+    var video = slide.querySelector('video[data-design-id="clip"]');
+    expect(video.muted).toBe(true);
+    expect(video.loop).toBe(true);
+    expect(video.autoplay).toBe(false);
+    expect(video.style.opacity).toBe('0.7');
+    expect(video.style.filter).toBe('grayscale(100%)');
+    expect(play).toHaveBeenCalled();
+    current.and.returnValue(null);
+    Display._syncDesignVideos();
+    expect(pause).toHaveBeenCalled();
   });
   it('edits text in place without dragging, commits once, and restores the rendered markup', function () {
     Display._applySongDesign(slide);

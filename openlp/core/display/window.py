@@ -558,13 +558,16 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Set the theme of the display
         """
         theme_copy = copy.deepcopy(theme)
+        if theme.background_type == 'video' and theme.background_filename:
+            from openlp.core.lib.videoplayback import video_playback_path
+            theme_copy.background_filename = video_playback_path(theme.background_filename)
         if self.is_display:
             if service_item_type == ServiceItemType.Text:
-                if theme.background_type == 'video' or theme.background_type == 'stream':
+                if theme.background_type == 'stream':
                     theme_copy.background_type = 'transparent'
         else:
-            # If preview Display with media background we just show the background color, no media
-            if theme.background_type == 'stream' or theme.background_type == 'video':
+            # Streams keep their native player; file video backgrounds use Reveal in every view.
+            if theme.background_type == 'stream':
                 theme_copy.background_type = 'solid'
                 theme_copy.background_start_color = theme.background_border_color
                 theme_copy.background_end_color = theme.background_border_color

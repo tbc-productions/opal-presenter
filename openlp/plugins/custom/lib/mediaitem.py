@@ -141,10 +141,17 @@ class CustomMediaItem(MediaManagerItem):
             service_item = self.build_service_item(item=item)
             if not service_item:
                 continue
+            custom = self.plugin.manager.get_object(CustomSlide, item.data(QtCore.Qt.ItemDataRole.UserRole))
+            xml = CustomXML(custom.text)
+            xml.add_title_and_credit(custom.title, custom.credits)
+            from openlp.core.lib.slidedesign import package_design
+            xml.set_design(package_design(service_item.slide_design, service_item.get_theme_data(include_design=False)))
+            exported_xml = xml.extract_xml(keep_title_and_credit=True)
             default_path = suggested_item_export_path(self.service_manager, service_item.title, '.osz')
             export_item_dialog(
                 self, default_path, '.osz', translate('CustomPlugin.MediaItem', 'OpenLP+ Service (*.osz)'),
-                lambda path, service_item=service_item: write_item_service(path, service_item))
+                lambda path, service_item=service_item, xml=exported_xml:
+                write_item_service(path, service_item, xml, 'custom-slides.xml'))
 
     def on_save_to_image_library(self):
         """Render selected custom slides into the Image library, optionally inside a folder."""

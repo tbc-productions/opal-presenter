@@ -879,10 +879,12 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self.theme.background_border_color = self.background_page.image_color
             self.theme.background_source = self.background_page.image_path
             self.theme.background_filename = self.background_page.image_path
+            self.theme.background_label = self.background_page.image_path_edit.line_edit.text()
         elif self.theme.background_type == BackgroundType.to_string(BackgroundType.Video):
             self.theme.background_border_color = self.background_page.video_color
             self.theme.background_source = self.background_page.video_path
             self.theme.background_filename = self.background_page.video_path
+            self.theme.background_label = self.background_page.video_path_edit.line_edit.text()
         elif self.theme.background_type == BackgroundType.to_string(BackgroundType.Stream):
             self.theme.background_border_color = self.background_page.stream_color
             self.theme.background_source = self.background_page.stream_mrl
@@ -975,6 +977,11 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
                 self.theme.background_type == BackgroundType.to_string(BackgroundType.Video):
             file_name = self.theme.background_filename.name
             destination_path = self.path / self.theme.theme_name / file_name
+            from openlp.core.lib.designmedia import cache_media, resolve_media, MIME_TYPES
+            source = self.theme.background_filename
+            if (isinstance(source, Path) and source.is_file()
+                    and source.suffix.lower().lstrip('.') in MIME_TYPES):
+                destination_path = resolve_media(cache_media(source))
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Stream):
             destination_path = self.theme.background_source
         if not self.edit_mode and not self.theme_manager.check_if_theme_exists(self.theme.theme_name):

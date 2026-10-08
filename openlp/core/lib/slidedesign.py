@@ -1,7 +1,7 @@
 """Portable, song-local slide designs shared by the editor and output renderer.
 
-Coordinates are stored as percentages of a pixel design canvas for XML compatibility. Images are embedded PNG data
-URIs, so saved services do not depend on the original image files.
+Coordinates are stored as percentages of a pixel design canvas for XML compatibility. Small media files are embedded;
+larger originals use managed, content-addressed references bundled when exporting.
 """
 import copy
 import json
@@ -9,12 +9,15 @@ import math
 import re
 
 from openlp.core.display.screens import ScreenList
+from openlp.core.lib.designmedia import (
+    valid_media_source, media_to_source, materialise_media, resolve_media, resolve_design_media
+)
 
 
 DESIGN_VERSION = 1
 COLOUR = re.compile(r'^#[0-9a-fA-F]{6}$')
 IMAGE = re.compile(r'^data:image/png;base64,[A-Za-z0-9+/=]+$')
-KINDS = {'text', 'rectangle', 'ellipse', 'image'}
+KINDS = {'text', 'rectangle', 'ellipse', 'image', 'video'}
 FILTER_RANGES = {'blur': (0, 0, 100), 'brightness': (100, 0, 200), 'contrast': (100, 0, 200),
                  'grayscale': (0, 0, 100), 'hue-rotate': (0, -180, 180), 'invert': (0, 0, 100),
                  'saturate': (100, 0, 200), 'sepia': (0, 0, 100)}
@@ -89,7 +92,7 @@ def normalise_background(value):
     result['image_opacity'] = _number(value.get('image_opacity'), 100, 0, 100)
     result['fit'] = value.get('fit') if value.get('fit') in ('cover', 'contain', 'stretch', 'repeat') else 'cover'
     image = value.get('image')
-    if isinstance(image, str) and len(image) <= 8_000_000 and IMAGE.fullmatch(image):
+    if valid_media_source(image):
         result['image'] = image
     return result
 
@@ -133,9 +136,9 @@ def normalise_design(value, include_layouts=True):
         for key, default in (('x', 10), ('y', 10), ('width', 40), ('height', 20)):
             clean.setdefault(key, default)
         clean['text'] = str(element.get('text', ''))[:10000]
-        if element['kind'] == 'image':
+        if element['kind'] in ('image', 'video'):
             image = element.get('src', '')
-            if not isinstance(image, str) or len(image) > 8_000_000 or not IMAGE.fullmatch(image):
+            if not valid_media_source(image, element['kind']):
                 continue
             clean['src'] = image
             filters = normalise_filters(element.get('filters'))
@@ -221,7 +224,7 @@ def apply_design(theme, value, size=None):
     else:
         # Earlier designs continue to fill the output exactly as before.
         result.song_design_output_height = size.height()
-    result.song_design = design
+    result.song_design = resolve_design_media(design)
     return result
 
 
@@ -249,7 +252,7 @@ def image_to_png_uri(path):
 
 
 def _normalise_theme(value):
-    """Accept only static theme properties. Never load imported file paths or remote URLs."""
+    """Accept portable theme properties. Never load imported file paths or remote URLs."""
     if not isinstance(value, dict):
         return {}
     result = {}
@@ -272,35 +275,40 @@ def _normalise_theme(value):
             result[key] = int(_number(data, 0, 0, 3))
         elif key in ('display_size_width', 'display_size_height'):
             result[key] = _number(data, 1080, 1, 16384)
-    if value.get('background_type') not in ('solid', 'gradient', 'image', 'transparent'):
+    if value.get('background_type') not in ('solid', 'gradient', 'image', 'video', 'transparent'):
         return {}
     result['background_type'] = value['background_type']
+    if isinstance(value.get('background_label'), str):
+        result['background_label'] = value['background_label'][:500]
     if value.get('background_direction') in ('horizontal', 'vertical', 'leftTop', 'leftBottom', 'circular'):
         result['background_direction'] = value['background_direction']
     if value.get('background_fit') in ('cover', 'contain', 'stretch', 'repeat'):
         result['background_fit'] = value['background_fit']
-    if result['background_type'] == 'image':
+    if result['background_type'] in ('image', 'video'):
         image = value.get('background_filename')
-        if not isinstance(image, str) or len(image) > 8_000_000 or not IMAGE.fullmatch(image):
+        if not valid_media_source(image, result['background_type']):
             return {}
         result['background_filename'] = image
     return result
 
 
 def package_design(value, theme):
-    """Snapshot a static base theme for XML or service export, leaving the library theme inherited.
+    """Snapshot a portable base theme for XML or service export, leaving the library theme inherited.
 
-    Video/stream backgrounds remain external media and are not represented by this
-    static design format. No snapshot is made for those backgrounds.
+    Streams remain external. Images and video files follow the portable media policy.
     """
     from openlp.core.lib.theme import Theme
+    from openlp.core.lib.designmedia import package_media
 
-    design = normalise_design(value)
+    design = package_media(normalise_design(value))
     if not design or design.get('theme') or not isinstance(theme, Theme):
         return design
     snapshot = copy.deepcopy(theme.__dict__)
-    if theme.background_type == 'image':
-        snapshot['background_filename'], _ = image_to_png_uri(theme.background_filename)
+    if theme.background_type in ('image', 'video'):
+        if valid_media_source(theme.background_filename):
+            snapshot['background_filename'] = theme.background_filename
+        else:
+            snapshot['background_filename'], _ = media_to_source(theme.background_filename)
     size = ScreenList().current.display_geometry.size()
     snapshot.update(display_size_width=size.width(), display_size_height=size.height())
     snapshot = _normalise_theme(snapshot)
@@ -325,7 +333,9 @@ def design_theme(theme, value, size=None):
         elif re.fullmatch(r'font_(main|footer)_(y|height|size)', key):
             data *= size.height() / snapshot.get('display_size_height', size.height())
         setattr(result, key, data)
-    result.background_filename = snapshot.get('background_filename')
+    source = snapshot.get('background_filename')
+    result.background_filename = materialise_media(source) if snapshot['background_type'] == 'video' else \
+        resolve_media(source)
     return result
 
 

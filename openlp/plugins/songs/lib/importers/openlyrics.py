@@ -23,6 +23,7 @@ The :mod:`openlyrics` module provides the functionality for importing
 songs which are saved as OpenLyrics files.
 """
 import logging
+import zipfile
 
 from lxml import etree
 
@@ -60,7 +61,20 @@ class OpenLyricsImport(SongImport):
             try:
                 # Pass a file object, because lxml does not cope with some
                 # special characters in the path (see lp:757673 and lp:744337).
-                parsed_file = etree.parse(file_path.open('rb'), parser)
+                from openlp.core.lib.designmedia import restore_media
+                from openlp.core.lib.itemexport import xml_design
+                if file_path.suffix.lower() == '.osz':
+                    with zipfile.ZipFile(file_path) as archive:
+                        xml_names = [name for name in archive.namelist() if name.lower().endswith('.xml')]
+                        if len(xml_names) != 1:
+                            raise ValueError('The song package must contain exactly one XML file.')
+                        packaged_xml = archive.read(xml_names[0])
+                        restore_media(xml_design(packaged_xml), archive=archive)
+                        parsed_file = etree.ElementTree(etree.fromstring(packaged_xml, parser))
+                else:
+                    with file_path.open('rb') as source:
+                        parsed_file = etree.parse(source, parser)
+                    restore_media(xml_design(etree.tostring(parsed_file)), directory=file_path.parent)
 
                 # Remove whitespaces from <lines> tags and its descendants
                 root = parsed_file.getroot()
@@ -74,6 +88,8 @@ class OpenLyricsImport(SongImport):
             except etree.XMLSyntaxError:
                 log.exception('XML syntax error in file {path}'.format(path=file_path))
                 self.log_error(file_path, SongStrings().XMLSyntaxError)
+            except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exception:
+                self.log_error(file_path, str(exception))
             except OpenLyricsError as exception:
                 log.exception('OpenLyricsException {error:d} in file {name}: {text}'.format(error=exception.type,
                                                                                             name=file_path,

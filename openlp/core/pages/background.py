@@ -30,7 +30,7 @@ from openlp.core.pages import GridLayoutPage
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.media import get_supported_media_suffix
 from openlp.core.widgets.buttons import ColorButton
-from openlp.core.widgets.edits import PathEdit
+from openlp.core.widgets.mediapicker import MediaLibraryPathEdit
 from openlp.core.widgets.labels import FormLabel
 
 
@@ -129,8 +129,7 @@ class BackgroundPage(GridLayoutPage):
         self.image_label.setObjectName('image_label')
         self.background_media_layout.addWidget(self.image_label, media_row, 0)
         media_row += 1
-        self.image_path_edit = PathEdit(self, dialog_caption=translate('OpenLP.ThemeWizard', 'Select Image'),
-                                        show_revert=False)
+        self.image_path_edit = MediaLibraryPathEdit(self, kind='image', show_revert=False)
         self.background_media_layout.addWidget(self.image_path_edit, media_row, 0, 1, 2)
         media_row += 1
         self.image_color_label = FormLabel(self)
@@ -148,8 +147,7 @@ class BackgroundPage(GridLayoutPage):
         self.video_label.setObjectName('video_label')
         self.background_media_layout.addWidget(self.video_label, media_row, 0)
         media_row += 1
-        self.video_path_edit = PathEdit(self, dialog_caption=translate('OpenLP.ThemeWizard', 'Select Video'),
-                                        show_revert=False)
+        self.video_path_edit = MediaLibraryPathEdit(self, kind='video', show_revert=False)
         self.background_media_layout.addWidget(self.video_path_edit, media_row, 0, 1, 2)
         media_row += 1
         self.video_color_label = FormLabel(self)

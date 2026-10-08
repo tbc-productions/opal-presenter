@@ -23,6 +23,7 @@ The Theme Manager manages adding, deleteing and modifying of themes.
 """
 import os
 import threading
+import json
 import shutil
 import zipfile
 from pathlib import Path
@@ -732,8 +733,28 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         try:
             with zipfile.ZipFile(theme_path, 'w') as theme_zip:
                 source_path = self.theme_path / theme_name
+                media_hash = None
+                descriptor = source_path / f'{theme_name}.json'
+                if descriptor.is_file():
+                    exported_theme = Theme()
+                    exported_theme.load_theme(descriptor.read_text(), self.theme_path)
+                    portable = exported_theme.export_theme(self.theme_path)
+                    background = json.loads(portable).get('background_filename')
+                    from openlp.core.lib.designmedia import valid_media_source, write_media
+                    if valid_media_source(background):
+                        from openlp.core.common import sha256_file_hash
+                        media_hash = sha256_file_hash(exported_theme.background_filename)
+                    write_media(theme_zip, json.loads(portable))
                 for file_path in source_path.iterdir():
-                    theme_zip.write(file_path, Path(theme_name, file_path.name))
+                    if file_path.suffix == '.json':
+                        exported_theme = Theme()
+                        exported_theme.load_theme(file_path.read_text(), self.theme_path)
+                        theme_zip.writestr(str(Path(theme_name, file_path.name)),
+                                           exported_theme.export_theme(self.theme_path))
+                    else:
+                        if media_hash and sha256_file_hash(file_path) == media_hash:
+                            continue
+                        theme_zip.write(file_path, Path(theme_name, file_path.name))
             return True
         except OSError as ose:
             self.log_exception('Export Theme Failed')
@@ -951,7 +972,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     theme_name = xml_tree.find('name').text.strip()
                 else:
                     new_theme = Theme()
-                    new_theme.load_theme(theme_zip.read(json_file[0]).decode("utf-8"))
+                    descriptor = theme_zip.read(json_file[0]).decode('utf-8')
+                    from openlp.core.lib.designmedia import restore_media, ASSET
+                    restore_media(json.loads(descriptor), archive=theme_zip)
+                    new_theme.load_theme(descriptor)
                     theme_name = new_theme.theme_name
                     json_theme = True
                 theme_folder = self.theme_path / theme_name
@@ -961,6 +985,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 else:
                     abort_import = False
                 for zipped_file in theme_zip.namelist():
+                    if json_theme and ASSET.fullmatch(zipped_file):
+                        continue  # Assets are retained in the shared store before the descriptor is loaded.
                     zipped_file_rel_path = Path(zipped_file)
                     split_name = zipped_file_rel_path.parts
                     if split_name[-1] == '' or len(split_name) == 1:
@@ -975,7 +1001,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     else:
                         with full_name.open('wb') as out_file:
                             out_file.write(theme_zip.read(zipped_file))
-        except (OSError, ValidationError, zipfile.BadZipFile):
+        except (OSError, ValueError, KeyError, ValidationError, zipfile.BadZipFile):
             self.log_exception('Importing theme from zip failed {name}'.format(name=file_path))
             critical_error_message_box(
                 translate('OpenLP.ThemeManager', 'Import Error'),
@@ -1020,6 +1046,16 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         :rtype: None
         """
         name = theme.theme_name
+        # Theme saves retain originals even when called outside Theme Designer.
+        if theme.background_type in ('image', 'video'):
+            from openlp.core.lib.designmedia import cache_media, resolve_media, media_label, MIME_TYPES
+            source = background_file or theme.background_filename
+            if not isinstance(source, Path) or not source.is_file():
+                source = theme.background_source
+            if (isinstance(source, Path) and source.is_file()
+                    and source.suffix.lower().lstrip('.') in MIME_TYPES):
+                theme.background_label = getattr(theme, 'background_label', None) or media_label(source)
+                theme.background_filename = resolve_media(cache_media(source))
         theme_pretty = theme.export_theme(self.theme_path)
         theme_dir = self.theme_path / name
         create_paths(theme_dir)
@@ -1029,11 +1065,16 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         except OSError:
             self.log_exception('Saving theme to file failed')
         if theme.background_filename and theme.background_type != 'stream':
+            from openlp.core.lib.designmedia import asset_root
             # Use theme source image if override doesn't exist
             if not background_file or not background_file.exists():
                 background_file = theme.background_source
-            if self.old_background_image_path and theme.background_filename != self.old_background_image_path:
+            if (self.old_background_image_path and theme.background_filename != self.old_background_image_path
+                    and not self.old_background_image_path.is_relative_to(asset_root())):
                 delete_file(self.old_background_image_path)
+            if (isinstance(theme.background_filename, Path) and theme.background_filename.is_file()
+                    and theme.background_filename.is_relative_to(asset_root())):
+                return  # The original has already been retained; library/theme edits must not overwrite it.
             if not background_file or not background_file.exists():
                 self.log_warning('Background source does not exist, retaining cached background')
             elif background_file != theme.background_filename:

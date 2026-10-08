@@ -60,6 +60,7 @@ classifiers = [
     "Topic :: Religion",
 ]
 dependencies = [
+    "imageio-ffmpeg >= 0.6, < 0.7",
     "alembic >= 1.20.0",
     "beautifulsoup4 >= 4.15.0",
     "chardet >= 7.6.0",

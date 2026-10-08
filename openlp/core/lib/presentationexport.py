@@ -281,9 +281,18 @@ def _page_sections(pages):
 
 
 def _load_image(path):
+    from openlp.core.lib.designmedia import resolve_media
+    path = resolve_media(path)
     path = str(path)
-    if path.startswith('data:image/png;base64,'):
-        return QtGui.QImage.fromData(base64.b64decode(path.split(',', 1)[1]))
+    if path.startswith('data:image/'):
+        data = QtCore.QByteArray(base64.b64decode(path.split(',', 1)[1]))
+        buffer = QtCore.QBuffer(data)
+        buffer.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+        reader = QtGui.QImageReader(buffer)
+        reader.setAutoTransform(True)
+        return reader.read()
+    if path.startswith('file:'):
+        path = QtCore.QUrl(path).toLocalFile()
     if path.lower().endswith('.svg'):
         renderer = QtSvg.QSvgRenderer(path)
         if renderer.isValid():
@@ -294,7 +303,9 @@ def _load_image(path):
             renderer.render(painter)
             painter.end()
             return image
-    return QtGui.QImage(path)
+    reader = QtGui.QImageReader(path)
+    reader.setAutoTransform(True)
+    return reader.read()
 
 
 def _image_bytes(image):

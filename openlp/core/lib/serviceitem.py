@@ -682,6 +682,9 @@ class ServiceItem(RegistryProperties):
         self.service_item_type = ServiceItemType.parse(header['type'])
         self.theme = header['theme']
         self.slide_design = normalise_design(header.get('slide_design'))
+        if path and self.slide_design:
+            from openlp.core.lib.designmedia import restore_media
+            restore_media(self.slide_design, directory=path)
         self.is_slide_set = header.get('is_slide_set', False)
         self.add_icon()
         self.raw_footer = header['footer']
@@ -1070,8 +1073,8 @@ class ServiceItem(RegistryProperties):
                     self.remove_frame(frame)
 
     def requires_media(self):
+        # File video backgrounds are HTML5 media in Reveal's background layer.
         return self.is_capable(ItemCapabilities.HasBackgroundAudio) or \
-            self.is_capable(ItemCapabilities.HasBackgroundVideo) or \
             self.is_capable(ItemCapabilities.HasBackgroundStream)
 
     def missing_frames(self):

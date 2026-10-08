@@ -2211,8 +2211,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         """
         if State().check_preconditions('media'):
             theme_data = item.get_theme_data()
-            is_theme_background = BackgroundType.from_string(theme_data.background_type) in [BackgroundType.Stream,
-                                                                                             BackgroundType.Video]
+            # File video themes are rendered by Reveal; linked audio remains independent.
+            is_theme_background = BackgroundType.from_string(theme_data.background_type) == BackgroundType.Stream
             if self.is_live and not item.is_media() and item.requires_media():
                 self.media_controller.load_media(self.controller_type, item, is_theme_background)
             elif self.is_live:
