@@ -234,7 +234,7 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
     designer.fit_canvas()
-    with patch.object(designer.viewport, 'grab', wraps=designer.viewport.grab) as grab:
+    with patch.object(designer.viewport.window(), 'grab', wraps=designer.viewport.window().grab) as grab:
         designer.canvas_combo.setCurrentIndex(2)
         assert not designer.preview_cover.isHidden()
         designer.refresh()
@@ -253,6 +253,42 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         assert not designer.preview_cover.isHidden()
         assert grab.call_count == 2
         designer.clear_preview_cover()
+
+
+@pytest.mark.parametrize('dark', [False, True])
+def test_frozen_preview_preserves_surrounding_canvas_background(designer, settings, dark):
+    import fluentqt
+    from PySide6 import QtWidgets
+    from openlp.plugins.songs.songsplugin import song_footer
+
+    settings.extend_default_settings(song_footer)
+    original_theme = fluentqt.currentTheme()
+    fluentqt.setTheme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)
+    host = fluentqt.Window()
+    content = QtWidgets.QWidget()
+    host.setContentWidget(content)
+    parent = designer.viewport.parentWidget()
+    designer.viewport.setParent(content)
+    host.resize(500, 350)
+    designer.viewport.setGeometry(20, 20, 460, 310)
+    designer.display = MagicMock(_is_initialised=True)
+    designer.isVisible = lambda: True
+    try:
+        host.show()
+        designer.viewport.show()
+        QtWidgets.QApplication.processEvents()
+        designer.freeze_preview()
+        snapshot = designer.preview_cover.pixmap()
+        captured = snapshot.toImage().pixelColor(QtCore.QPoint(5, 5) * snapshot.devicePixelRatio())
+        designer.clear_preview_cover()
+        expected = host.grab().toImage()
+        point = designer.viewport.mapTo(host, QtCore.QPoint(5, 5)) * expected.devicePixelRatio()
+        assert captured == expected.pixelColor(point)
+    finally:
+        designer.clear_preview_cover()
+        designer.viewport.setParent(parent)
+        host.close()
+        fluentqt.setTheme(original_theme)
 
 
 def test_formatting_preview_is_covered_before_pagination_until_render_finishes(designer):
@@ -291,7 +327,7 @@ def test_new_refresh_requested_during_pagination_keeps_cover_and_schedules_lates
         return ['Lyrics']
 
     designer.display.format_slide.side_effect = paginate
-    with patch.object(designer.viewport, 'grab', wraps=designer.viewport.grab) as grab:
+    with patch.object(designer.viewport.window(), 'grab', wraps=designer.viewport.window().grab) as grab:
         designer.refresh()
         assert designer.refresh_timer.isActive()
         designer.preview_ready(revisions[0])

@@ -1079,7 +1079,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             # QWidget.grab() can synchronously deliver pending resize events.
             self._capturing_preview = True
             try:
-                snapshot = self.viewport.grab()
+                # Capture the window's backdrop rather than the viewport's fallback palette.
+                window = self.viewport.window()
+                region = QtCore.QRect(self.viewport.mapTo(window, QtCore.QPoint()), self.viewport.size())
+                snapshot = window.grab(region)
             finally:
                 self._capturing_preview = False
             self.preview_cover.setPixmap(snapshot)
