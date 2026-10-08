@@ -535,12 +535,25 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 self.settings.setValue('themes/global theme', self.global_theme)
         Registry().execute('theme_change_global')
 
+    def _focus_open_theme_designer(self):
+        """Keep the existing draft when another theme edit is requested."""
+        form = getattr(self, 'theme_form', None)
+        if form is None or not form.isVisible():
+            return False
+        form.setWindowState(form.windowState() & ~QtCore.Qt.WindowState.WindowMinimized)
+        form.show()
+        form.raise_()
+        form.activateWindow()
+        return True
+
     def on_add_theme(self, field=None):
         """
         Loads a new theme with the default settings and then launches the theme editing form for the user to make
         their customisations.
         :param field:
         """
+        if self._focus_open_theme_designer():
+            return
         theme = Theme()
         self.theme_form.theme = theme
         self.theme_form.exec()
@@ -611,6 +624,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         theme editing form so the user can make their changes.
         :param field:
         """
+        if self._focus_open_theme_designer():
+            return
         if check_item_selected(self.theme_list_widget,
                                translate('OpenLP.ThemeManager', 'You must select a theme to edit.')):
             item = self.theme_list_widget.currentItem()

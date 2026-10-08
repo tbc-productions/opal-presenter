@@ -28,6 +28,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from unittest.mock import ANY, Mock, MagicMock, patch, call, sentinel
 
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
@@ -551,6 +552,23 @@ def test_click_on_new_theme(theme_manager):
     new_theme.trigger()
 
     assert mocked_event.call_count == 1, 'The on_add_theme method should have been called once'
+
+
+@pytest.mark.parametrize('action', ['on_add_theme', 'on_edit_theme'])
+def test_theme_edit_request_focuses_existing_draft(theme_manager, action):
+    form = MagicMock()
+    form.isVisible.return_value = True
+    form.windowState.return_value = QtCore.Qt.WindowState.WindowMinimized
+    theme_manager.theme_form = form
+    draft = form.theme
+    with patch('openlp.core.ui.thememanager.Theme') as new_theme:
+        getattr(theme_manager, action)()
+    assert form.theme is draft
+    form.setWindowState.assert_called_once_with(QtCore.Qt.WindowState.WindowNoState)
+    form.raise_.assert_called_once()
+    form.activateWindow.assert_called_once()
+    form.exec.assert_not_called()
+    new_theme.assert_not_called()
 
 
 @patch('openlp.core.ui.themeform.ThemeForm._setup')

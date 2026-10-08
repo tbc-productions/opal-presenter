@@ -63,7 +63,9 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         :param parent: The QWidget-derived parent of the wizard.
         """
         super().__init__(parent)
-        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        # Cocoa suppresses Dock Quit while a native modal session is active,
+        # before OpenLPApplication receives Quit and resolves designer drafts.
+        self.setWindowModality(QtCore.Qt.WindowModality.NonModal)
         self._event_loop = None
         self._result = QtWidgets.QDialog.DialogCode.Rejected
         self._setup()

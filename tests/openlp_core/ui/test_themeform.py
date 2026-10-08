@@ -752,6 +752,7 @@ def test_native_theme_layout_keeps_properties_on_right(interactive_theme_form):
     import fluentqt
     form = interactive_theme_form
     assert isinstance(form, fluentqt.Window)
+    assert form.windowModality() == QtCore.Qt.WindowModality.NonModal
     assert form.splitter.widget(0) is form.preview_panel
     assert form.splitter.widget(1) is form.editor_widget
     assert not form.splitter.childrenCollapsible()
