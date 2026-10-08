@@ -31,6 +31,12 @@ Drag across rows to select text spanning slides. Cut, copy, paste and delete wor
 with either selection. The context menu can paste whole slides before or after the
 selection. Lyrics and design changes share the formatting command row's undo/redo.
 
+The Styles picker applies one named formatting style to each piece of text.
+Choosing another replaces the existing style on the selected text; choosing
+None removes it. Bold, italic and underline can still be combined independently.
+The picker shows Mixed when a selection contains different styles. Applying a
+style across slides preserves section labels and split markers.
+
 New designs start with a Full HD 1920 × 1080 canvas. The preview's canvas selector
 also offers 1920 × 1200 (16:10), 2560 × 1080 (ultrawide) and 1440 × 1080 (4:3).
 Position and size controls use pixels on that canvas. Changing canvas size fits
@@ -38,8 +44,9 @@ and centres the whole layout, scaling positions, dimensions and fonts uniformly
 so aligned edges, relative spacing and object proportions are preserved. Changes use a fixed reference
 canvas, so switching aspect ratios repeatedly does not cumulatively resize or
 move the objects. The reference is saved with the design. Canvas changes support undo.
-The previous preview remains visible while the new aspect ratio renders, then
-switches to the completed layout once its images, fonts and positioning are ready.
+The previous preview remains visible while text, formatting, layout or aspect
+ratio changes render, then switches to the completed layout once its images,
+fonts and positioning are ready.
 
 On another output size, the layout is fitted and centred proportionally. The
 background still fills the screen; objects are never stretched to match the

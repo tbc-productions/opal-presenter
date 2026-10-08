@@ -1109,10 +1109,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         return manager.get_theme_data(theme_name)
 
     def schedule_refresh(self, *args):
+        if not self.preview_cover.isHidden():
+            self._preview_revision += 1
+            self.preview_timeout.stop()
         if not self._refreshing:
-            if not self.preview_cover.isHidden():
-                self._preview_revision += 1
-                self.preview_timeout.stop()
             self.refresh_timer.start()
 
     def refresh(self):
@@ -1122,6 +1122,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self._refreshing = True
         revision = self._preview_revision
         try:
+            # Pagination temporarily resets the theme and slide content in the browser.
+            # Cover that work for text/style changes as well as canvas-size changes.
+            self.freeze_preview()
+            revision = self._preview_revision
             self.base_theme = copy.deepcopy(self.resolve_theme())
             output = ScreenList().current.display_geometry.size()
             canvas = self.canvas_size()

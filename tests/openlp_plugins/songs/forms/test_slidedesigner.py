@@ -254,6 +254,55 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         designer.clear_preview_cover()
 
 
+def test_formatting_preview_is_covered_before_pagination_until_render_finishes(designer):
+    designer.display = MagicMock(_is_initialised=True)
+    designer.isVisible = lambda: True
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.theme_manager.get_theme_data.return_value = Theme()
+
+    def paginate(*args):
+        assert not designer.preview_cover.isHidden()
+        return ['{st}New lyrics{/st}']
+
+    designer.display.format_slide.side_effect = paginate
+    designer.source_form.verse_text_edit.setPlainText('{st}New lyrics{/st}')
+    designer.refresh()
+    revision = designer._preview_revision
+    designer.display.run_in_display.assert_called_with(
+        'waitForDesignPreview', revision, return_event_name='designPreviewReady')
+    assert not designer.preview_cover.isHidden()
+    designer.preview_ready(QtCore.QJsonValue(revision))
+    assert designer.preview_cover.isHidden()
+
+
+def test_new_refresh_requested_during_pagination_keeps_cover_and_schedules_latest_render(designer):
+    designer.display = MagicMock(_is_initialised=True)
+    designer.isVisible = lambda: True
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.theme_manager.get_theme_data.return_value = Theme()
+    revisions = []
+
+    def paginate(*args):
+        revisions.append(designer._preview_revision)
+        designer.schedule_refresh()
+        return ['Lyrics']
+
+    designer.display.format_slide.side_effect = paginate
+    with patch.object(designer.viewport, 'grab', wraps=designer.viewport.grab) as grab:
+        designer.refresh()
+        assert designer.refresh_timer.isActive()
+        designer.preview_ready(revisions[0])
+        assert not designer.preview_cover.isHidden()
+        designer.display.format_slide.side_effect = None
+        designer.display.format_slide.return_value = ['Updated lyrics']
+        designer.refresh()
+        grab.assert_called_once()
+        designer.preview_ready(QtCore.QJsonValue(designer._preview_revision))
+        assert designer.preview_cover.isHidden()
+
+
 def test_failed_preview_render_releases_frozen_image(designer):
     designer.display = MagicMock()
     designer.display._is_initialised = True

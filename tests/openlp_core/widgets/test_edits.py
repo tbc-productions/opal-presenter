@@ -887,7 +887,7 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
 
     # Only the color tag should appear in the dropdown.
     assert editor._color_tags == ['{r}']
-    assert isinstance(editor._custom_formatting_combo, QtWidgets.MultiSelectComboBox)
+    assert isinstance(editor._custom_formatting_combo, QtWidgets.QComboBox)
     assert editor._custom_formatting_combo.placeholderText() == 'Styles'
 
 
@@ -921,8 +921,8 @@ def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_h
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
-def test_spell_text_edit_custom_formatting_multiple_selection(mock_get_html_tags, mock_settings):
-    """Selecting multiple options preserves each format and existing bold text."""
+def test_spell_text_edit_custom_formatting_replaces_previous_style(mock_get_html_tags, mock_settings):
+    """Choosing a style replaces the previous one while preserving bold and undo."""
     mock_get_html_tags.return_value = [
         {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
          'start html': '<span style="color:red">'},
@@ -936,14 +936,14 @@ def test_spell_text_edit_custom_formatting_multiple_selection(mock_get_html_tags
     cursor.setPosition(15, QtGui.QTextCursor.MoveMode.KeepAnchor)
     editor.setTextCursor(cursor)
     combo = editor._custom_formatting_combo
-    combo.setSelectedRows([0, 1])
-    assert editor.toPlainText() == '{st}{r}{bl}Hello world{/bl}{/r}{/st}'
-    assert combo.selectedRows() == [0, 1]
-    combo.setSelectedRows([1])
+    combo.activated.emit(1)
+    assert editor.toPlainText() == '{st}{r}Hello world{/r}{/st}'
+    assert combo.currentIndex() == 1
+    combo.activated.emit(2)
     assert editor.toPlainText() == '{st}{bl}Hello world{/bl}{/st}'
-    assert combo.selectedRows() == [1]
+    assert combo.currentIndex() == 2
     editor.undo()
-    assert editor.toPlainText() == '{st}{r}{bl}Hello world{/bl}{/r}{/st}'
+    assert editor.toPlainText() == '{st}{r}Hello world{/r}{/st}'
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
@@ -954,9 +954,9 @@ def test_custom_formatting_preserves_slide_markers(mock_get_html_tags, mock_sett
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
     editor.setPlainText('First slide\n[---]\nSecond slide')
     editor.selectAll()
-    editor._custom_formatting_combo.setSelectedRows([0])
+    editor._custom_formatting_combo.activated.emit(1)
     assert editor.toPlainText() == '{r}First slide{/r}\n[---]\n{r}Second slide{/r}'
-    editor._custom_formatting_combo.setSelectedRows([])
+    editor._custom_formatting_combo.activated.emit(0)
     assert editor.toPlainText() == 'First slide\n[---]\nSecond slide'
 
 
@@ -968,7 +968,7 @@ def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock
          'start html': '<span style="-webkit-text-fill-color:red">'}
     ]
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
-    item = editor._color_model.item(0)
+    item = editor._color_model.item(1)
     assert item.text() == 'Red'
     assert item.data(QtCore.Qt.ItemDataRole.UserRole) == '{r}'
     assert item.foreground().color() == QtGui.QColor('red')
@@ -1030,7 +1030,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
 
     editor._update_toolbar_state()
 
-    assert editor._custom_formatting_combo.selectedRows() == [0]
+    assert editor._custom_formatting_combo.currentIndex() == 1
 
     # Move outside: should uncheck.
     cursor = editor.textCursor()
@@ -1038,7 +1038,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
     editor.setTextCursor(cursor)
     editor._update_toolbar_state()
 
-    assert editor._custom_formatting_combo.selectedRows() == []
+    assert editor._custom_formatting_combo.currentIndex() == 0
 
 
 def test_spell_text_edit_apply_formatting_wrap_selection(mock_settings):
@@ -1474,20 +1474,20 @@ def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, 
     window.resize(1000, 600)
     editor.setPlainText('Lyrics to format')
     window.show()
-    editor._custom_formatting_combo.setIsOpen(True)
+    editor._custom_formatting_combo.showPopup()
     qtbot.waitUntil(lambda: any(
         view.itemDelegate().metaObject().className() == 'FormattingStyleDelegate'
         for view in window.findChildren(QtWidgets.QAbstractItemView)))
     try:
         assert len(editor._toolbar.findChildren(fluentqt.CommandBar)) == 1
-        item = editor._color_model.item(0)
+        item = editor._color_model.item(1)
         assert item.text() == 'Emphasis'
         assert item.font().bold() and item.font().italic()
         assert item.foreground().color() == QtGui.QColor('blue')
-        view = window.findChild(QtWidgets.QAbstractItemView, 'MultiSelectComboBox.ListView')
+        view = window.findChild(QtWidgets.QAbstractItemView, 'ComboBoxPopupListView')
         qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
-                         pos=view.visualRect(view.model().index(0, 0)).center())
-        assert editor._custom_formatting_combo.selectedRows() == [0]
+                         pos=view.visualRect(view.model().index(1, 0)).center())
+        assert editor._custom_formatting_combo.currentIndex() == 1
         assert '{em}' in editor.toPlainText()
         # Focus and selection must preserve the blue style preview.
         option = QtWidgets.QStyleOptionViewItem()
@@ -1499,7 +1499,7 @@ def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, 
         preview = QtGui.QPixmap(300, 40)
         preview.fill(QtCore.Qt.GlobalColor.transparent)
         painter = QtGui.QPainter(preview)
-        view.itemDelegate().paint(painter, option, view.model().index(0, 0))
+        view.itemDelegate().paint(painter, option, view.model().index(1, 0))
         painter.end()
         image = preview.toImage()
         assert any(image.pixelColor(x, y).blue() > 220 and image.pixelColor(x, y).red() < 60
@@ -1507,7 +1507,7 @@ def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, 
         editor._mode_switch.setIsOn(True)
         assert editor.rich_text_mode is False
         assert '{em}' in editor.toPlainText()
-        editor._custom_formatting_combo.setIsOpen(False)
+        editor._custom_formatting_combo.hidePopup()
         editor._mode_switch.setIsOn(False)
     finally:
         window.close()
