@@ -168,7 +168,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
     This is a window to show the output
     """
     def __init__(self, parent=None, screen=None, can_show_startup_screen=True, start_hidden=False,
-                 after_loaded_callback=None, window_title=None, embedded=False):
+                 after_loaded_callback=None, window_title=None, embedded=False, show_transparency=None):
         """
         Create the display window
         """
@@ -196,7 +196,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self._can_show_startup_screen = can_show_startup_screen
         self._fbo = None
         self.window_title = window_title
-        self.show_transparency = not embedded
+        # Designers can indicate transparency in HTML while retaining an opaque native surface.
+        self.show_transparency = not embedded if show_transparency is None else show_transparency
         self.setWindowTitle(translate('OpenLP.DisplayWindow', 'Display Window'))
         self.setWindowFlags(flags)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)

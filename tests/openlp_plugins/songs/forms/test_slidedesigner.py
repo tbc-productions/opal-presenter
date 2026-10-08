@@ -204,6 +204,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
         designer.showEvent(QtGui.QShowEvent())
 
     create.assert_called_once()
+    assert create.call_args.kwargs['show_transparency'] is True
     assert designer.display is renderer
     assert not designer._creating_display
     renderer.show.assert_called_once()

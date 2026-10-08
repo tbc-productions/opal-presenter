@@ -1002,7 +1002,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             try:
                 if isinstance(self.resolve_theme(), Theme):
                     self.display = ThemePreviewRenderer(self.viewport, embedded=True, can_show_startup_screen=False,
-                                                        after_loaded_callback=self.schedule_refresh)
+                                                        after_loaded_callback=self.schedule_refresh,
+                                                        show_transparency=True)
                     self.display.allow_theme_transitions = False
                     self.display.allow_item_transitions = False
                     self.display.webview.setToolTip(tr('Double-click lyrics or a text box to edit. '

@@ -1,4 +1,5 @@
 """Playback proxies work without changing the media saved in portable designs."""
+import re
 import subprocess
 from unittest.mock import patch
 
@@ -24,9 +25,15 @@ def test_mp4_proxy_is_decodable_cached_and_keeps_original(assets):
                     '-pix_fmt', 'yuv420p', str(original)], check=True, capture_output=True)
     source, _ = media_to_source(original)
     original_bytes = original.read_bytes()
+    managed = materialise_media(source)
+    legacy = managed.parent.parent / 'playback' / (managed.stem + '.webm')
+    legacy.parent.mkdir(parents=True)
+    legacy.write_bytes(b'older low-quality playback')
     playback = video_playback_path(source)
     assert playback.suffix == '.webm'
     assert playback.parent.name == 'playback'
+    assert playback != legacy
+    assert legacy.read_bytes() == b'older low-quality playback'
     subprocess.run([ffmpeg, '-nostdin', '-loglevel', 'error', '-i', str(playback),
                     '-f', 'null', '-'], check=True, capture_output=True)
     assert materialise_media(source).read_bytes() == original_bytes
@@ -35,6 +42,26 @@ def test_mp4_proxy_is_decodable_cached_and_keeps_original(assets):
         assert video_playback_path(source) == playback
     process.assert_not_called()
     cache.assert_not_called()
+
+
+def test_playback_preserves_source_resolution_and_fine_detail(assets):
+    original = assets / 'detail.mp4'
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    subprocess.run([ffmpeg, '-nostdin', '-loglevel', 'error', '-f', 'lavfi', '-i',
+                    'testsrc2=s=2048x1152:r=24', '-t', '0.21', '-c:v', 'libx264', '-crf', '10',
+                    str(original)], check=True, capture_output=True)
+    playback = video_playback_path(original)
+    frame = subprocess.run([ffmpeg, '-nostdin', '-loglevel', 'error', '-i', str(playback),
+                            '-frames:v', '1', '-pix_fmt', 'rgb24', '-f', 'rawvideo', '-'],
+                           check=True, capture_output=True).stdout
+    assert len(frame) == 2048 * 1152 * 3  # No Full HD cap or change to the source's proportions.
+    comparison = subprocess.run([
+        ffmpeg, '-nostdin', '-hide_banner', '-i', str(original), '-i', str(playback), '-lavfi',
+        # WebM timestamps round to milliseconds. Compare corresponding frames, not neighbouring timestamps.
+        '[0:v]settb=AVTB,setpts=N/TB[a];[1:v]settb=AVTB,setpts=N/TB[b];[a][b]psnr',
+        '-fps_mode', 'passthrough', '-f', 'null', '-'], check=True, capture_output=True, text=True)
+    score = re.search(r'PSNR .*average:([\d.]+)', comparison.stderr)
+    assert score and float(score[1]) > 45
 
 
 def test_failed_conversion_removes_partial_playback_and_retains_original(assets):

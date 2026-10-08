@@ -88,6 +88,25 @@ describe('Portable slide designs', function () {
     Display._syncDesignVideos();
     expect(paused).toHaveBeenCalled();
   });
+  it('fits the video surface when Cover and Contain change without affecting custom background fitting', function () {
+    var content = document.createElement('div');
+    var video = document.createElement('video');
+    var custom = document.createElement('video');
+    custom.className = 'song-design-background-image';
+    custom.style.objectFit = 'contain';
+    content.append(video, custom);
+    host.appendChild(content);
+    _applyVideoBackgroundFit(content, _resolveBackgroundFit('cover'));
+    expect(video.style.objectFit).toBe('cover');
+    expect(video.style.width).toBe('100%');
+    expect(video.style.height).toBe('100%');
+    expect(video.style.objectPosition).toBe('50% 50%');
+    expect(custom.style.objectFit).toBe('contain');
+    _applyVideoBackgroundFit(content, _resolveBackgroundFit('contain'));
+    expect(video.style.objectFit).toBe('contain');
+    _applyVideoBackgroundFit(content, _resolveBackgroundFit('cover'));
+    expect(video.style.objectFit).toBe('cover');
+  });
   it('moves Theme Designer areas in place without replacing text or footer content', function () {
     var previousFooter = Display._footerContainer;
     var previousStyles = Array.from(document.querySelectorAll('.text-slide .slide-text-content'))

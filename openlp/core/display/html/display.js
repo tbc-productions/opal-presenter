@@ -418,8 +418,20 @@ function _applyBackgroundFitToRenderedSlides(fit) {
     backgroundContent.style.backgroundSize = fit.size;
     backgroundContent.style.backgroundRepeat = fit.repeat;
     backgroundContent.style.backgroundPosition = fit.position;
+    _applyVideoBackgroundFit(backgroundContent, fit);
   });
   Display._applyDesignBackgroundImages();
+}
+
+/** Apply fitting to the decoded video surface, independently of CSS background-size. */
+function _applyVideoBackgroundFit(content, fit) {
+  content.querySelectorAll('video:not(.song-design-background-image)').forEach(function (video) {
+    Object.assign(video.style, {
+      position: 'absolute', inset: '0', width: '100%', height: '100%',
+      maxWidth: 'none', maxHeight: 'none', margin: '0',
+      objectFit: fit.objectFit, objectPosition: '50% 50%'
+    });
+  });
 }
 
 /**
@@ -2388,7 +2400,8 @@ var Display = {
       if (video) {
         image.style.backgroundImage = 'none';
         image.style.width = image.style.height = '100%';
-        image.style.objectFit = fit.size === 'contain' ? 'contain' : 'cover';
+        image.style.objectFit = fit.objectFit;
+        image.style.objectPosition = '50% 50%';
         image.src = source;
         image.muted = image.loop = image.playsInline = true;
         image.autoplay = false;
@@ -2860,6 +2873,7 @@ var Display = {
         Object.assign(slide.slideBackgroundContentElement.style, {
           backgroundSize: localFit.size, backgroundRepeat: localFit.repeat, backgroundPosition: localFit.position
         });
+        _applyVideoBackgroundFit(slide.slideBackgroundContentElement, localFit);
       });
     });
 

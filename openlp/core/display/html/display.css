@@ -23,8 +23,8 @@ body.reveal-viewport {
 }
 
 body.checkerboard {
-  background: url('checkerboard.png');
-  background-size: 100%;
+  background: conic-gradient(#d8d8d8 25%, #fff 0 50%, #d8d8d8 0 75%, #fff 0);
+  background-size: 24px 24px;
 }
 
 body.hide-mouse {

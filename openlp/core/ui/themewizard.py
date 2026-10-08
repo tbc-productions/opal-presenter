@@ -242,7 +242,8 @@ class Ui_ThemeWizard(object):
         self.preview_area_layout.setSpacing(0)
         self.preview_area_layout.setObjectName('preview_web_layout')
         self.preview_box = ThemeDesignerPreview(
-            theme_dialog, window_title='Theme Designer Preview', embedded=True, can_show_startup_screen=False)
+            theme_dialog, window_title='Theme Designer Preview', embedded=True, can_show_startup_screen=False,
+            show_transparency=True)
         self.preview_box.setObjectName('preview_box')
         self.preview_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Ignored)
         self.preview_canvas = QtWidgets.QWidget()

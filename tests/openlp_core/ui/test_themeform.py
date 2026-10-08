@@ -734,7 +734,7 @@ def interactive_theme_form(settings):
     with patch('openlp.core.ui.themewizard.ThemeDesignerPreview', return_value=display) as preview_constructor:
         form = ThemeForm(None)
     preview_constructor.assert_called_once_with(form, window_title='Theme Designer Preview',
-                                                embedded=True, can_show_startup_screen=False)
+                                                embedded=True, can_show_startup_screen=False, show_transparency=True)
     with patch('openlp.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         form.theme = Theme()

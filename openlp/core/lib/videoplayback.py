@@ -7,8 +7,11 @@ from PySide6 import QtCore
 from openlp.core.lib.designmedia import ASSET, asset_root, cache_media, materialise_media
 
 
+PLAYBACK_PROFILE = 'vp9-v2'
+
+
 def video_playback_path(source):
-    """Prepare a silent WebM once, including when the original uses a proprietary codec."""
+    """Cache a high-quality silent WebM at source resolution for browser playback."""
     source = materialise_media(source)
     source = Path(source)
     if source.suffix.lower() in ('.webm', '.ogv'):
@@ -16,7 +19,8 @@ def video_playback_path(source):
     reference = 'assets/' + source.name
     if source.parent != asset_root() / 'assets' or not ASSET.fullmatch(reference):
         reference = cache_media(source)
-    destination = asset_root() / 'playback' / (Path(reference).stem + '.webm')
+    # Version the profile so lower-quality playback copies are never reused after an upgrade.
+    destination = asset_root() / 'playback' / (Path(reference).stem + '-' + PLAYBACK_PROFILE + '.webm')
     if destination.is_file():
         return destination
     import imageio_ffmpeg
@@ -25,10 +29,9 @@ def video_playback_path(source):
         temporary = Path(temporary_file.name)
     process = QtCore.QProcess()
     process.setProcessChannelMode(QtCore.QProcess.ProcessChannelMode.MergedChannels)
-    scaling = "scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease:force_divisible_by=2"
-    arguments = ['-nostdin', '-hide_banner', '-loglevel', 'error', '-y', '-i', str(source), '-an', '-vf', scaling,
-                 '-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '6', '-crf', '12', '-b:v', '0',
-                 '-threads', '2', '-f', 'webm', str(temporary)]
+    arguments = ['-nostdin', '-hide_banner', '-loglevel', 'error', '-y', '-i', str(source), '-an',
+                 '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-crf', '16', '-b:v', '0',
+                 '-row-mt', '1', '-threads', '4', '-f', 'webm', str(temporary)]
     try:
         application = QtCore.QCoreApplication.instance()
         loop = None

@@ -1374,10 +1374,13 @@ def test_embedded_preview_has_no_native_tool_or_transparency_flags(mocked_is_mac
     display.webview.setAttribute.assert_called_with(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
 
-@pytest.mark.parametrize('embedded, background', [
-    (True, QtCore.Qt.GlobalColor.black), (False, QtCore.Qt.GlobalColor.transparent),
+@pytest.mark.parametrize('embedded, show_transparency, background', [
+    (True, None, QtCore.Qt.GlobalColor.black), (False, None, QtCore.Qt.GlobalColor.transparent),
+    (True, True, QtCore.Qt.GlobalColor.black),
 ])
-def test_preview_background_allows_dialog_stacking(display_window_env, mock_settings, embedded, background):
+def test_preview_background_allows_dialog_stacking(
+        display_window_env, mock_settings, embedded, show_transparency, background):
     """Opaque embedded WebEngine views avoid Qt's forced topmost composition."""
-    display = DisplayWindow(embedded=embedded)
+    display = DisplayWindow(embedded=embedded, show_transparency=show_transparency)
     display.webview.page().setBackgroundColor.assert_called_once_with(background)
+    assert display.show_transparency is (not embedded if show_transparency is None else show_transparency)

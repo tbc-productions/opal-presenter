@@ -100,7 +100,9 @@ the corresponding library and retains a managed copy. Video objects and designed
 background videos, including theme backgrounds, loop silently using HTML5 video
 behind the slide text. Linked song audio remains independent.
 The designer caches silent WebM playback copies where required for browser codec
-compatibility, fitted within Full HD. Saved designs and exports retain the original
+compatibility, preserving source resolution and using high-quality VP9 encoding.
+Cover crops to fill the screen; Contain preserves the entire frame with the theme
+colour around it. Saved designs and exports retain the original
 media, not the playback copies.
 Right-click media in the picker or its selected-file field to open a larger preview
 with file size, type and resolution. Video previews also show frame rate, duration
