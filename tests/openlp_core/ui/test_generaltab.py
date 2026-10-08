@@ -97,11 +97,10 @@ def test_logo_fit_setting_is_saved(settings):
     assert settings.value('core/logo fit') == 'cover'
 
 
-@pytest.mark.parametrize('style', ['classic', 'modern'])
 @pytest.mark.parametrize('scheme, offset', [(UiThemes.Native, 0), (UiThemes.QDarkStyle, 1)])
-def test_legacy_theme_selection(style, scheme, offset):
-    """Legacy schemes map to Auto or Dark within the selected appearance."""
-    assert GeneralTab.get_ui_theme_index(scheme, style) == offset
+def test_legacy_theme_selection(scheme, offset):
+    """Legacy colour schemes map to Modern Auto or Dark."""
+    assert GeneralTab.get_ui_theme_index(scheme) == offset
 
 
 def test_default_theme_is_modern_auto(settings):

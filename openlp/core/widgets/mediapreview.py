@@ -44,7 +44,8 @@ def media_context_menu(widget, position, path, label=None):
 
 
 class MediaPreview(QtWidgets.QDialog):
-    def __init__(self, parent, path, label=None, *, kind=None, preview_paths=None):
+    def __init__(self, parent, path, label=None, *, kind=None, preview_paths=None,
+                 extra_metadata=None, allow_reveal=True, source_url=None, file_size=None, cover_path=None):
         super().__init__(parent)
         self.path = Path(path)
         self.player = None
@@ -87,10 +88,14 @@ class MediaPreview(QtWidgets.QDialog):
             self.video_sink.videoFrameChanged.connect(self.update_video_frame)
             self.player.setVideoSink(self.video_sink)
             self.player.setLoops(QMediaPlayer.Loops.Infinite)
+            self.player.errorOccurred.connect(lambda error, message:
+                                              self.viewer.setText(tr('This media preview could not be played.')))
             if audio_only:
                 self.viewer.setText(tr('Audio preview'))
+            else:
+                self.viewer.setText(tr('Loading media…'))
         else:
-            reader = QtGui.QImageReader(str(self.preview_paths[0] if self.preview_paths else self.path))
+            reader = QtGui.QImageReader(str(cover_path or (self.preview_paths[0] if self.preview_paths else self.path)))
             reader.setAutoTransform(True)
             self.image = reader.read()
             if self.image.isNull():
@@ -103,12 +108,14 @@ class MediaPreview(QtWidgets.QDialog):
         fields.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.metadata = {}
         keys = ['File size', 'File type']
+        resolution_key = 'Preview resolution' if cover_path else 'Resolution'
         if not audio_only:
-            keys.append('Resolution')
+            keys.append(resolution_key)
         if video:
             keys += ['Duration', 'Audio codec'] if audio_only else ['Frame rate', 'Duration', 'Video codec']
         if kind == 'presentation':
             keys.append('Slides')
+        keys += list(extra_metadata or {})
         for key in keys:
             value = QtWidgets.QLabel('—')
             value.setWordWrap(True)
@@ -116,7 +123,7 @@ class MediaPreview(QtWidgets.QDialog):
             value.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
             self.metadata[key] = value
             fields.addRow(QtWidgets.QLabel(tr(key)), value)
-        size = self.path.stat().st_size
+        size = self.path.stat().st_size if file_size is None else file_size
         unit = 'B'
         for next_unit in ('KB', 'MB', 'GB', 'TB'):
             if size < 1024:
@@ -125,15 +132,17 @@ class MediaPreview(QtWidgets.QDialog):
             unit = next_unit
         self.metadata['File size'].setText(f'{size:,.0f} {unit}' if unit == 'B' else f'{size:,.1f} {unit}')
         self.metadata['File type'].setText(f'{self.path.suffix.lstrip(".").upper()} · {mime.name()}')
+        for key, value in (extra_metadata or {}).items():
+            self.metadata[key].setText(value)
         if kind == 'presentation' and self.page_count:
             self.metadata['Slides'].setText(str(self.page_count))
         if video:
             self.player.metaDataChanged.connect(self.update_video_metadata)
             self.player.durationChanged.connect(self.update_video_metadata)
-            self.player.setSource(QtCore.QUrl.fromLocalFile(str(self.path.resolve())))
+            self.player.setSource(source_url or QtCore.QUrl.fromLocalFile(str(self.path.resolve())))
             self.player.play()
         elif not self.image.isNull():
-            self.metadata['Resolution'].setText(f'{self.image.width()} × {self.image.height()}')
+            self.metadata[resolution_key].setText(f'{self.image.width()} × {self.image.height()}')
         body.addWidget(metadata)
         layout.addLayout(body, 1)
         if video:
@@ -167,10 +176,11 @@ class MediaPreview(QtWidgets.QDialog):
             layout.addLayout(pages)
             self.change_page(0)
         buttons = QtWidgets.QHBoxLayout()
-        reveal = QtWidgets.QPushButton(reveal_caption())
-        reveal.setIcon(UiIcons().folder)
-        reveal.clicked.connect(lambda: reveal_media(self.path, self))
-        buttons.addWidget(reveal)
+        if allow_reveal:
+            reveal = QtWidgets.QPushButton(reveal_caption())
+            reveal.setIcon(UiIcons().folder)
+            reveal.clicked.connect(lambda: reveal_media(self.path, self))
+            buttons.addWidget(reveal)
         buttons.addStretch()
         close = QtWidgets.QPushButton(tr('Close'))
         close.clicked.connect(self.accept)

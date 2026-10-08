@@ -109,6 +109,9 @@ class ListItemsMixin:
         self._item_store.hide()
         self.setModel(self._item_store.model())
         self.setSelectionModel(self._item_store.selectionModel())
+        if hasattr(self, 'horizontalHeader'):
+            self.horizontalHeader().sortIndicatorChanged.connect(self._sort_items)
+            self.horizontalHeader().setSortIndicator(0, QtCore.Qt.SortOrder.AscendingOrder)
         forward_item_signals(self, ('itemClicked', 'itemDoubleClicked', 'itemActivated', 'itemPressed',
                                     'itemEntered', 'itemChanged', 'itemSelectionChanged',
                                     'currentItemChanged', 'currentRowChanged', 'currentTextChanged'))
@@ -134,6 +137,17 @@ class ListItemsMixin:
 
     def selectedItems(self):
         return self._item_store.selectedItems()
+
+    def setSortingEnabled(self, enabled):
+        self._item_store.setSortingEnabled(enabled)
+        if hasattr(self, 'horizontalHeader'):
+            super().setSortingEnabled(enabled)
+            self.horizontalHeader().setSectionsClickable(enabled)
+            self._sort_items(0, self.horizontalHeader().sortIndicatorOrder())
+
+    def _sort_items(self, column, order):
+        if self._item_store.isSortingEnabled():
+            self._item_store.sortItems(order)
 
     def itemAt(self, *args):
         return self._item_store.itemFromIndex(self.indexAt(*args))
@@ -167,6 +181,10 @@ QListWidget = FluentListWidget
 class FluentListWidgetItem(_qt.QListWidgetItem):
     def __init__(self, *args):
         super().__init__(*(arg._item_store if isinstance(arg, QListWidget) else arg for arg in args))
+
+    def __lt__(self, other):
+        from openlp.core.common.i18n import get_natural_key
+        return get_natural_key(self.text()) < get_natural_key(other.text())
 
     def setHidden(self, hidden):
         super().setHidden(hidden)

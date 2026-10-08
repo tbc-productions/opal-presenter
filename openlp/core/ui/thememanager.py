@@ -43,8 +43,7 @@ from openlp.core.common.utils import wait_for
 from openlp.core.lib import build_icon, check_item_selected, create_thumb, get_text_file_string, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.theme import Theme
-from openlp.core.lib.ui import add_list_view_mode_items_to_toolbar, create_widget_action, \
-    critical_error_message_box, set_list_view_mode_toolbar_state
+from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.display.screens import ScreenList
 from openlp.core.threading import ThreadWorker, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
@@ -54,6 +53,7 @@ from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.themeviews import ThemeViews
+from openlp.core.widgets.libraryfooter import LibraryFooter
 
 THEME_LIST_ICON_WIDTH = 124
 THEME_LIST_ICON_HEIGHT = 70
@@ -82,12 +82,14 @@ class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
         icon = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
         if icon and not icon.isNull():
             icon_x = rect.left() + 4
-            icon_y = rect.top() + (rect.height() - THEME_LIST_ICON_HEIGHT) // 2
-            icon_rect = QtCore.QRect(icon_x, icon_y, THEME_LIST_ICON_WIDTH, THEME_LIST_ICON_HEIGHT)
+            icon_size = list_widget.iconSize()
+            icon_y = rect.top() + (rect.height() - icon_size.height()) // 2
+            icon_rect = QtCore.QRect(icon_x, icon_y, icon_size.width(), icon_size.height())
             icon.paint(painter, icon_rect, QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        text_rect = QtCore.QRect(rect.left() + THEME_LIST_ICON_WIDTH + 12, rect.top(),
-                                 rect.width() - THEME_LIST_ICON_WIDTH - 16, rect.height())
+        icon_width = list_widget.iconSize().width()
+        text_rect = QtCore.QRect(rect.left() + icon_width + 12, rect.top(),
+                                 rect.width() - icon_width - 16, rect.height())
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole) or ''
 
         if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
@@ -104,7 +106,7 @@ class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
         list_widget = self.parent()
         if isinstance(list_widget, QtWidgets.QListWidget) and \
                 list_widget.viewMode() == QtWidgets.QListWidget.ViewMode.ListMode:
-            return QtCore.QSize(0, THEME_LIST_ICON_HEIGHT + 8)
+            return QtCore.QSize(0, list_widget.iconSize().height() + 8)
         return super().sizeHint(option, index)
 
 
@@ -184,7 +186,6 @@ class Ui_ThemeManager(object):
                                         triggers=self.on_export_theme)
         self.export_toolbar_action.setEnabled(False)
         self.toolbar.addSeparator()
-        add_list_view_mode_items_to_toolbar(self.toolbar, self)
         self.layout.addWidget(self.toolbar)
         self.theme_widget = QtWidgets.QWidgetAction(self.toolbar)
         self.theme_widget.setObjectName('theme_widget')
@@ -200,14 +201,36 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.activate_drag('themes')
         self.theme_list_widget.setObjectName('theme_list_widget')
         self.theme_list_widget.setItemDelegate(ThemeListDelegate(self.theme_list_widget.list_view))
-        self.layout.addWidget(self.theme_list_widget)
-        self.footer_status_bar = QtWidgets.QStatusBar(widget)
+        self.layout.addWidget(self.theme_list_widget, 1)
+        self.footer_status_bar = LibraryFooter(widget)
         self.footer_status_bar.setObjectName('footer_status_bar')
-        self.footer_status_bar.setSizeGripEnabled(False)
-        self.footer_status_bar.setStyleSheet('QStatusBar { padding-left: 8px; }')
         self.footer_status_label = QtWidgets.QLabel(self.footer_status_bar)
         self.footer_status_label.setObjectName('footer_status_label')
-        self.footer_status_bar.addWidget(self.footer_status_label, 1)
+        self.footer_status_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Caption)
+        self.footer_status_bar.layout().addWidget(self.footer_status_label)
+        self.thumbnail_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self.footer_status_bar,
+                                                  show_value_tooltip=False)
+        self.thumbnail_slider.setRange(50, 200)
+        self.thumbnail_slider.setMaximumWidth(100)
+        self.thumbnail_slider.setAccessibleName(translate('OpenLP.ThemeManager', 'Thumbnail size'))
+        self.thumbnail_slider.setValue(self.settings.value('user interface/theme thumbnail size'))
+        self.thumbnail_slider.valueChanged.connect(self.set_thumbnail_size)
+        self.footer_status_bar.layout().addWidget(self.thumbnail_slider)
+        self.view_buttons = QtWidgets.QButtonGroup(widget)
+        for index, (text, icon, callback) in enumerate([
+                ('List', UiIcons().view_list, self.on_set_view_mode_list),
+                ('Grid', UiIcons().view_grid, self.on_set_view_mode_grid)]):
+            button = QtWidgets.QPushButton(translate('OpenLP.ThemeManager', text), self.footer_status_bar)
+            button.setIcon(icon)
+            button.setCheckable(True)
+            button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+            button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+            button.clicked.connect(callback)
+            self.view_buttons.addButton(button, index)
+            self.footer_status_bar.layout().addWidget(button)
+        model = self.theme_list_widget.model()
+        for signal in (model.rowsInserted, model.rowsRemoved, model.modelReset):
+            signal.connect(self.update_theme_count)
         self.footer_status_label.setText('')
         self.layout.addWidget(self.footer_status_bar)
         self.theme_list_widget.customContextMenuRequested.connect(self.context_menu)
@@ -247,6 +270,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
     # These signals are used by the web api to update the theme on the ui thread
     theme_update_global = QtCore.Signal()
     theme_level_updated = QtCore.Signal()
+
+    @QtCore.Slot()
+    def update_theme_count(self):
+        self.footer_status_bar.set_count(self.sender().rowCount())
 
     def __init__(self, parent=None):
         """
@@ -317,7 +344,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         except Exception:
             view_mode_value = QtWidgets.QListWidget.ViewMode.ListMode
             self.settings.setValue('user interface/theme manager view mode', view_mode_value)
-        set_list_view_mode_toolbar_state(self.toolbar, view_mode_value)
+        self.view_buttons.button(1 if view_mode_value == QtWidgets.QListView.ViewMode.IconMode else 0).setChecked(True)
+        self.set_thumbnail_size(self.thumbnail_slider.value())
 
     def save_settings(self):
         if self.theme_list_widget:
@@ -501,12 +529,21 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
     def on_set_view_mode_list(self):
         mode = QtWidgets.QListView.ViewMode.ListMode
         self.theme_list_widget.setViewMode(mode)
-        set_list_view_mode_toolbar_state(self.toolbar, mode)
+        self.view_buttons.button(0).setChecked(True)
+        self.settings.setValue('user interface/theme manager view mode', mode)
 
     def on_set_view_mode_grid(self):
         mode = QtWidgets.QListView.ViewMode.IconMode
         self.theme_list_widget.setViewMode(mode)
-        set_list_view_mode_toolbar_state(self.toolbar, mode)
+        self.view_buttons.button(1).setChecked(True)
+        self.settings.setValue('user interface/theme manager view mode', mode)
+
+    def set_thumbnail_size(self, size):
+        self.settings.setValue('user interface/theme thumbnail size', size)
+        self.theme_list_widget.set_icon_size_by_view_mode(
+            QtWidgets.QListView.ViewMode.IconMode, QtCore.QSize(round(176 * size / 100), round(100 * size / 100)))
+        self.theme_list_widget.set_icon_size_by_view_mode(
+            QtWidgets.QListView.ViewMode.ListMode, QtCore.QSize(round(124 * size / 100), round(70 * size / 100)))
 
     def on_theme_level_updated(self):
         """

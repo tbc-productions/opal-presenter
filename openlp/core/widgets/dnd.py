@@ -53,6 +53,20 @@ class ItemDragData(QtCore.QMimeData):
         return [item for item in items if item]
 
 
+class ThemeDragData(QtCore.QMimeData):
+    """Retain the selected theme names when a drag changes the selection."""
+    def __init__(self, manager, indexes):
+        super().__init__()
+        self.manager = manager
+        self.indexes = [QtCore.QPersistentModelIndex(index) for index in indexes if index.column() == 0]
+        self.names = tuple(index.data(QtCore.Qt.ItemDataRole.UserRole) or index.data() for index in self.indexes)
+        self.title = self.names[0] if self.names else ''
+        from openlp.core.ui.icons import UiIcons
+        self.icon = UiIcons().theme
+        self.setText('themes')
+        self.setData('application/x-openlp-item-title', self.title.encode('utf-8'))
+
+
 def copy_service_item(item):
     """A service copy needs its own slide data and identity; QIcon is implicitly shared."""
     result = deepcopy(item, {id(item.icon): item.icon})

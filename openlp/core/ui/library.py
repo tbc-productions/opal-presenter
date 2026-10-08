@@ -563,7 +563,8 @@ class FolderLibraryItem(MediaManagerItem):
         finally:
             self.list_view.setUpdatesEnabled(True)
 
-    def validate_and_load(self, file_paths: List[Path], target_folder: Optional[QtWidgets.QTreeWidgetItem] = None):
+    def validate_and_load(self, file_paths: List[Path], target_folder: Optional[QtWidgets.QTreeWidgetItem] = None,
+                          *, file_hashes=None, file_names=None):
         """
         Process a list for files either from the File Dialog or from Drag and Drop.
         This method is overloaded from MediaManagerItem.
@@ -595,7 +596,9 @@ class FolderLibraryItem(MediaManagerItem):
                                            translate('OpenLP.FolderLibraryItem',
                                                      'An item with that filename already exists.'))
                 continue
-            source_hash = sha256_file_hash(file_path) if isinstance(file_path, Path) and file_path.is_file() else None
+            source_hash = (file_hashes or {}).get(file_path)
+            if source_hash is None and isinstance(file_path, Path) and file_path.is_file():
+                source_hash = sha256_file_hash(file_path)
             if str(file_path) in existing_files or (copy_to_library and source_hash in existing_hashes):
                 critical_error_message_box(translate('OpenLP.FolderLibraryItem', 'File Exists'),
                                            translate('OpenLP.FolderLibraryItem',
@@ -610,7 +613,8 @@ class FolderLibraryItem(MediaManagerItem):
                 continue
 
             self.log_debug('Adding new item: {name}'.format(name=stored_path))
-            display_name = stored_path.name if isinstance(stored_path, Path) else str(file_path)
+            display_name = (file_names or {}).get(file_path) or (
+                stored_path.name if isinstance(stored_path, Path) else str(file_path))
             item = self.item_class(name=display_name, file_path=str(stored_path))
             if source_hash:
                 item.file_hash = source_hash
@@ -629,6 +633,7 @@ class FolderLibraryItem(MediaManagerItem):
             self._insert_saved_items(saved_items, target_folder)
         last_dir = Path(file_paths[0]).parent
         self.settings.setValue(self.settings_section + '/last directory', last_dir)
+        return saved_items
 
     def _prepare_library_file(self, file_path: Union[Path, str]) -> Union[Path, str]:
         """
@@ -637,6 +642,9 @@ class FolderLibraryItem(MediaManagerItem):
         if not isinstance(file_path, Path):
             return file_path
         if not file_path.exists():
+            return file_path
+        library_dir = AppLocation.get_section_data_path(self.settings_section) / 'library'
+        if self._is_path_in_directory(file_path.resolve(), library_dir.resolve()):
             return file_path
         if not self.settings.value('advanced/copy library files to data folder'):
             return file_path

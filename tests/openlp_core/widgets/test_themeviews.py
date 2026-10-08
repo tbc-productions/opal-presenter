@@ -67,10 +67,12 @@ def test_theme_grid_context_menu_and_activation(qapp):
 def test_theme_grid_drag_payload(qapp):
     view = ThemeViews()
     view.addItem('Theme (default)')
+    view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Theme')
     view.setCurrentRow(0)
-    with patch('openlp.core.widgets.themeviews.QtGui.QDrag') as drag:
+    with patch('openlp.core.widgets.themeviews.execute_drag') as drag:
         view.grid_view.startDrag(QtCore.Qt.DropAction.CopyAction)
-    mime = drag.return_value.setMimeData.call_args.args[0]
+    mime = drag.call_args.args[1]
     assert mime.text() == 'themes'
-    assert bytes(mime.data('application/x-openlp-item-title')) == b'Theme (default)'
-    drag.return_value.exec.assert_called_once_with(QtCore.Qt.DropAction.CopyAction)
+    assert bytes(mime.data('application/x-openlp-item-title')) == b'Theme'
+    assert mime.names == ('Theme',)
+    assert mime.manager is view.manager

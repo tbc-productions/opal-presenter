@@ -489,6 +489,8 @@ class Settings(QtCore.QSettings):
         'planningcenter/status': PluginStatus.Inactive,
         'planningcenter/application_id': '',
         'planningcenter/secret': '',
+        'librarysync/status': PluginStatus.Active,
+        'librarysync/profile': '',
         'planningcenter/default_service_type_name': '-- none --',
         'planningcenter/default_service_type_id': '',
         'presentations/status': PluginStatus.Inactive,
@@ -580,7 +582,7 @@ class Settings(QtCore.QSettings):
         'user interface/main window state': QtCore.QByteArray(),
         'user interface/modern window state': QtCore.QByteArray(),
         **{'user interface/modern preset layout/{}/{}'.format(mode, fragment): default
-           for mode in ('default', 'setup', 'live')
+           for mode in ('default', 'setup', 'live', 'librarysync')
            for fragment, default in (
                ('main window state', QtCore.QByteArray()),
                ('main window splitter geometry', QtCore.QByteArray()),
@@ -607,6 +609,7 @@ class Settings(QtCore.QSettings):
         'user interface/preview panel': True,
         'user interface/preview splitter geometry': QtCore.QByteArray(),
         'user interface/theme manager view mode': 0,
+        'user interface/theme thumbnail size': 100,
         'user interface/show library': True,
         'user interface/show projectors': False,
         'user interface/show service': True,

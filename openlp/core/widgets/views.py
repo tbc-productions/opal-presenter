@@ -373,7 +373,8 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
         text = []
         header_colors = []
         slides = self.service_item.display_slides if self.service_item.is_text() else self.service_item.slides
-        custom_page_counts = Counter(slide['verse'] for slide in slides) if self.service_item.name == 'custom' else {}
+        custom_page_counts = Counter(slide['verse'] for slide in slides) \
+            if self.service_item.name in ('custom', 'themes') else {}
         custom_page_positions = Counter()
         for slide_index, slide in enumerate(slides):
             self.setRowCount(self.slide_count() + 1)
@@ -384,7 +385,7 @@ class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
                 if collection:
                     row = str(slide['verse'])
                     header_colors.append(None)
-                elif self.service_item.name == 'custom':
+                elif self.service_item.name in ('custom', 'themes'):
                     # Split pages share a source slide tag, so append a letter only when needed.
                     verse = slide['verse']
                     row = str(verse)
@@ -651,14 +652,15 @@ class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
         if my_val is not None and other_val is not None:
             return my_val < other_val
         # Fall back to plain string comparison — avoids PySide6 recursion via super().__lt__
-        return self.text(col) < other.text(col)
+        from openlp.core.common.i18n import get_natural_key
+        return get_natural_key(self.text(col)) < get_natural_key(other.text(col))
 
 
 class TreeWidgetDnDMixin:
     """
     Provide a tree widget to store objects and handle drag and drop events
     """
-    first_column_min_ratio = 0.7
+    first_column_min_ratio = 0.5
 
     def __init__(self, parent=None, name=''):
         """
@@ -701,13 +703,6 @@ class TreeWidgetDnDMixin:
         self._ensure_first_column_width()
         self.setSortingEnabled(True)
         self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
-        if self.mime_data_text in ('presentations', 'images', 'media'):
-            # File libraries are a hierarchy, not a visible metadata table.
-            # Keep metadata in the model for sorting, tooltips and plugins.
-            for column in range(1, len(labels)):
-                self.setColumnHidden(column, True)
-            self.header().setStretchLastSection(True)
-            self.setHeaderHidden(True)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

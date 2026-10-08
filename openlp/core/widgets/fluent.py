@@ -439,6 +439,7 @@ class TreeItemsMixin:
         self._item_store.hide()
         self.setModel(self._item_store.model())
         self.setSelectionModel(self._item_store.selectionModel())
+        self.header().sortIndicatorChanged.connect(self._sort_items)
         forward_item_signals(self, ('itemClicked', 'itemDoubleClicked', 'itemActivated', 'itemPressed',
                                     'itemEntered', 'itemChanged', 'itemSelectionChanged',
                                     'currentItemChanged', 'itemExpanded', 'itemCollapsed'))
@@ -462,6 +463,16 @@ class TreeItemsMixin:
 
     def selectedItems(self):
         return self._item_store.selectedItems()
+
+    def setSortingEnabled(self, enabled):
+        self._item_store.sortItems(self.header().sortIndicatorSection(), self.header().sortIndicatorOrder())
+        self._item_store.setSortingEnabled(enabled)
+        super().setSortingEnabled(enabled)
+        self.header().setSectionsClickable(enabled)
+
+    def _sort_items(self, column, order):
+        if self.isSortingEnabled():
+            self._item_store.sortItems(column, order)
 
     def itemBelow(self, item):
         return self._item_store.itemFromIndex(self.indexBelow(self._item_store.indexFromItem(item)))
@@ -501,6 +512,18 @@ class TreeItemsMixin:
 class FluentTreeWidget(TreeItemsMixin, fluentqt.TreeView):
     """Native hierarchy with visible headers when column labels are supplied."""
 
+    def resizeEvent(self, event):
+        # Fluent's single title margin clips Qt's column headings above the view.
+        if self.isHeaderHidden():
+            super().resizeEvent(event)
+        else:
+            _qt.QTreeView.resizeEvent(self, event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self.isHeaderHidden():
+            _qt.QTreeView.updateGeometries(self)
+
 
 QTreeWidget = FluentTreeWidget
 
@@ -510,7 +533,6 @@ class FluentTreeDataGrid(TreeItemsMixin, fluentqt.DataGrid):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.verticalHeader().hide()
-        self.horizontalHeader().sortIndicatorChanged.connect(self._sort_items)
         self.setSelectionBehavior(_qt.QAbstractItemView.SelectionBehavior.SelectRows)
 
     def header(self):

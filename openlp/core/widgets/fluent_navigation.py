@@ -205,7 +205,7 @@ class LayoutPresetNavigation(fluentqt.NavigationView):
         self.pane_toggle.setFixedWidth(40)
         layout.addWidget(self.pane_toggle, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
         self.buttons = []
-        for index in range(3):
+        for index in range(4):
             button = LayoutPresetButton(self.pane)
             button.setCheckable(True)
             button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)

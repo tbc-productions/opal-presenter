@@ -70,21 +70,19 @@ from openlp.core.ui.thememanager import ThemeManager
 from openlp.core.ui.windowmenu import WindowMenu
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.docks import MediaDockManager, MediaToolBox, OpenLPDockWidget
+from openlp.core.widgets.docks import MediaDockManager, MediaToolBox
 
 # Layout preset ids (match ``core/view mode`` values) for per-preset saved window layout.
-_PRESET_LAYOUT_MODES = ('default', 'setup', 'live')
+_PRESET_LAYOUT_MODES = ('default', 'setup', 'live', 'librarysync')
 _PRESET_VISIBILITY_SNAPSHOT_KEY = 'visibility snapshot'
 
 
-def _preset_layout_storage_key(mode: str, fragment: str, modern=None) -> str:
-    layout = 'modern preset layout' if (is_modern_style() if modern is None else modern) else 'preset layout'
-    return 'user interface/{}/{}/{}'.format(layout, mode, fragment)
+def _preset_layout_storage_key(mode: str, fragment: str) -> str:
+    return 'user interface/modern preset layout/{}/{}'.format(mode, fragment)
 
 
-def _window_state_storage_key(modern=None) -> str:
-    modern = is_modern_style() if modern is None else modern
-    return 'user interface/modern window state' if modern else 'user interface/main window state'
+def _window_state_storage_key() -> str:
+    return 'user interface/modern window state'
 
 
 def _set_dock_visible(dock, visible):
@@ -98,8 +96,8 @@ def _dock_is_visible(dock):
     return dock.isDockOpen() if isinstance(dock, AdvancedDockWidget) else dock.isVisible()
 
 
-def _preset_layout_has_saved_state(settings: Settings, mode: str, modern=None) -> bool:
-    st = settings.value(_preset_layout_storage_key(mode, 'main window state', modern))
+def _preset_layout_has_saved_state(settings: Settings, mode: str) -> bool:
+    st = settings.value(_preset_layout_storage_key(mode, 'main window state'))
     return bool(st and len(st) > 0)
 
 
@@ -112,9 +110,8 @@ class Ui_MainWindow(object):
         Set up the user interface
         """
         main_window.setObjectName('MainWindow')
-        self._modern_appearance = is_modern_style()
-        if self._modern_appearance:
-            main_window.setProperty('fluentUi', True)
+        self.settings.setValue('advanced/interface style', 'modern')
+        main_window.setProperty('fluentUi', True)
         main_window.setWindowIcon(UiIcons().main_icon)
         main_window.setDockNestingEnabled(True)
         if is_macosx():
@@ -133,23 +130,21 @@ class Ui_MainWindow(object):
         self.control_splitter = QtWidgets.QSplitter(self.main_content)
         self.control_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.control_splitter.setObjectName('control_splitter')
-        if is_modern_style():
-            self.main_content_layout.setContentsMargins(6, 6, 6, 6)
-            self.control_splitter.setHandleWidth(8)
+        self.main_content_layout.setContentsMargins(6, 6, 6, 6)
+        self.control_splitter.setHandleWidth(8)
         self.main_content_layout.addWidget(self.control_splitter)
-        advanced_docking = is_modern_style()
-        if advanced_docking:
-            main_window.initialize_advanced_docking()
+        main_window.initialize_advanced_docking()
         self.layout_preset_navigation = LayoutPresetNavigation(main_window)
         self.layout_preset_navigation.setObjectName('layout_preset_navigation')
         for button, icon in zip(self.layout_preset_navigation.buttons,
-                                (UiIcons().dashboard, UiIcons().mode_setup, UiIcons().live)):
+                                (UiIcons().dashboard, UiIcons().mode_setup, UiIcons().live, UiIcons().library_sync)):
             button.setIcon(icon)
+        self.layout_preset_navigation.buttons[3].hide()
         self.layout_preset_navigation.contentHost().addOwnedPage(main_window.takeCentralWidget())
         self.layout_preset_navigation.contentHost().setCurrentIndex(0, animated=False)
         main_window.setCentralWidget(self.layout_preset_navigation)
         self.layout_preset_navigation.setNavigationVisible(show_layout_preset_tabs)
-        dock_widget_class = AdvancedDockWidget if advanced_docking else OpenLPDockWidget
+        dock_widget_class = AdvancedDockWidget
         preview_visible = self.settings.value('user interface/preview panel')
         live_visible = self.settings.value('user interface/live panel')
         panel_locked = self.settings.value('user interface/lock panel')
@@ -338,6 +333,10 @@ class Ui_MainWindow(object):
         self.mode_reset_layout_presets_item = create_action(
             main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode,
             can_shortcuts=False, triggers=self.on_mode_reset_layout_presets_clicked)
+        self.mode_library_sync_item = create_action(
+            main_window, 'modeLibrarySyncItem', checked=False, can_shortcuts=False,
+            triggers=lambda: self._activate_layout_preset('librarysync'))
+        self.mode_library_sync_item.setVisible(False)
         self.view_layout_preset_tabs_item = create_action(
             main_window,
             'viewLayoutPresetTabsItem',
@@ -432,6 +431,7 @@ class Ui_MainWindow(object):
                     self.file_import_menu.menuAction(), self.file_export_menu.menuAction(), None,
                     self.print_service_order_item, self.file_exit_item))
         add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item,
+                                          self.mode_library_sync_item,
                                           None, self.view_layout_preset_tabs_item,
                                           self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
@@ -474,11 +474,10 @@ class Ui_MainWindow(object):
         self.import_language_item.setVisible(False)
         self.export_language_item.setVisible(False)
         self.set_lock_panel(panel_locked)
-        if advanced_docking:
-            self.preview_controller_dock.setDockVisible(preview_visible)
-            self.live_controller_dock.setDockVisible(live_visible)
-            self.preview_controller_dock.visibilityChanged.connect(self.set_preview_panel_visibility)
-            self.live_controller_dock.visibilityChanged.connect(self.set_live_panel_visibility)
+        self.preview_controller_dock.setDockVisible(preview_visible)
+        self.live_controller_dock.setDockVisible(live_visible)
+        self.preview_controller_dock.visibilityChanged.connect(self.set_preview_panel_visibility)
+        self.live_controller_dock.visibilityChanged.connect(self.set_live_panel_visibility)
         self.settings_replaced = False
 
     def retranslate_ui(self, main_window):
@@ -620,6 +619,8 @@ class Ui_MainWindow(object):
             'OpenLP.MainWindow',
             'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
         self.layout_preset_navigation.setItemText(2, translate('OpenLP.MainWindow', 'Live'))
+        self.layout_preset_navigation.setItemText(3, translate('OpenLP.MainWindow', 'Library Sync'))
+        self.mode_library_sync_item.setText(translate('OpenLP.MainWindow', 'Library Sync'))
         self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &navigation'))
         self.view_layout_preset_tabs_item.setStatusTip(translate(
             'OpenLP.MainWindow',
@@ -627,7 +628,7 @@ class Ui_MainWindow(object):
         self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
         self.mode_reset_layout_presets_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Discard saved custom layouts for Show all, Setup, and Live. Built-in preset behaviour is restored.'))
+            'Discard saved custom layouts for all presets. Built-in preset behaviour is restored.'))
 
 
 class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
@@ -635,7 +636,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
     The main window.
     """
     def _preset_layout_storage_key(self, mode, fragment):
-        return _preset_layout_storage_key(mode, fragment, self._modern_appearance)
+        return _preset_layout_storage_key(mode, fragment)
 
     def __init__(self):
         """
@@ -772,15 +773,16 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     # If the worker has a stop method, run it
                     worker.stop()
                 if thread and thread.isRunning():
-                    # If the thread is running, let's wait 5 seconds for it
+                    # Network workers need time for their bounded request to unwind safely.
+                    wait_limit = getattr(type(worker), 'shutdown_wait_ms', 5000) // 100
                     retry = 0
-                    while thread.isRunning() and retry < 50:
+                    while thread.isRunning() and retry < wait_limit:
                         # Make the GUI responsive while we wait
                         QtWidgets.QApplication.processEvents()
                         thread.wait(100)
                         retry += 1
                     if thread.isRunning():
-                        # If the thread is still running after 5 seconds, kill it
+                        # Terminate only after the worker's shutdown allowance expires.
                         thread.terminate()
             except RuntimeError:
                 # Ignore the RuntimeError that is thrown when Qt has already deleted the C++ thread object
@@ -903,7 +905,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         view_mode = self.settings.value('core/view mode')
         # If we are using a default mode set accordingly
         if self.settings.value('user interface/is preset layout'):
-            if view_mode not in _PRESET_LAYOUT_MODES:
+            if (view_mode not in _PRESET_LAYOUT_MODES or
+                    view_mode == 'librarysync' and not getattr(self, 'cloud_library_dock', None)):
                 view_mode = 'default'
                 self.settings.setValue('core/view mode', 'default')
             if view_mode == 'default':
@@ -921,13 +924,15 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             # Applying a preset toggles panel visibility, which emits visibility signals that would
             # otherwise clear the preset flag during startup.
             self.settings.setValue('user interface/is preset layout', True)
-            if not _preset_layout_has_saved_state(self.settings, view_mode, self._modern_appearance):
+            if not _preset_layout_has_saved_state(self.settings, view_mode):
                 if view_mode == 'default':
                     self.set_view_mode(True, True, True, True, True, False, 'default')
                 elif view_mode == 'setup':
                     self.set_view_mode(True, True, True, True, False, False, 'setup')
                 elif view_mode == 'live':
                     self.set_view_mode(False, True, False, True, True, False, 'live')
+                elif view_mode == 'librarysync':
+                    self._apply_canonical_preset_visibility('librarysync')
                 self.settings.setValue('user interface/is preset layout', True)
         else:
             self.set_view_mode(
@@ -1201,12 +1206,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
 
     @staticmethod
     def _layout_preset_mode_to_tab_index(mode: str) -> int:
-        mode_to_index = {'default': 0, 'setup': 1, 'live': 2}
+        mode_to_index = {'default': 0, 'setup': 1, 'live': 2, 'librarysync': 3}
         return mode_to_index.get(mode, 0)
 
     @staticmethod
     def _layout_preset_tab_index_to_mode(index: int) -> str | None:
-        index_to_mode = {0: 'default', 1: 'setup', 2: 'live'}
+        index_to_mode = {0: 'default', 1: 'setup', 2: 'live', 3: 'librarysync'}
         return index_to_mode.get(index)
 
     def _sync_layout_preset_tab_from_settings(self) -> None:
@@ -1524,6 +1529,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.set_view_mode(True, True, True, True, False, False, 'setup')
         elif mode == 'live':
             self.set_view_mode(False, True, False, True, True, False, 'live')
+        elif mode == 'librarysync':
+            self.set_view_mode(True, False, True, False, False, False, 'librarysync')
 
     def _save_current_layout_to_preset(self, mode: str) -> None:
         self.settings.setValue(self._preset_layout_storage_key(mode, 'main window state'), self.saveState())
@@ -1549,11 +1556,13 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.control_splitter.setChildrenCollapsible(False)
 
     def _activate_layout_preset(self, mode: str) -> None:
+        if mode == 'librarysync' and not getattr(self, 'cloud_library_dock', None):
+            return
         prev = self.settings.value('core/view mode')
         if (self.settings.value('user interface/is preset layout') and prev in _PRESET_LAYOUT_MODES and prev != mode):
             self._save_current_layout_to_preset(prev)
         self.settings.setValue('core/view mode', mode)
-        has_saved = _preset_layout_has_saved_state(self.settings, mode, self._modern_appearance)
+        has_saved = _preset_layout_has_saved_state(self.settings, mode)
         if has_saved:
             # restoreState() reapplies saved dock visibility; a stored snapshot (or canonical fallback)
             # must run after so Setup/Live preview+live flags stay correct.
@@ -1571,6 +1580,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.mode_setup_item.setChecked(True)
         elif mode == 'live':
             self.mode_live_item.setChecked(True)
+        elif mode == 'librarysync':
+            self.mode_default_item.setChecked(False)
+            self.mode_setup_item.setChecked(False)
+            self.mode_live_item.setChecked(False)
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
         if mode == 'default':
@@ -1583,7 +1596,30 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.mode_default_item.setChecked(False)
             self.mode_setup_item.setChecked(False)
         self._sync_layout_preset_tab_from_settings()
+        self._set_cloud_library_visibility(mode)
         self._schedule_left_column_dock_layout()
+
+    def _set_cloud_library_visibility(self, mode):
+        dock = getattr(self, 'cloud_library_dock', None)
+        if dock is not None:
+            _set_dock_visible(dock, mode == 'librarysync')
+        self.mode_library_sync_item.setChecked(mode == 'librarysync')
+
+    def _reapply_library_sync_dock_layout(self):
+        docks = (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock,
+                 self.cloud_library_dock)
+        for dock in docks:
+            dock.setFloating(False)
+            self.removeDockWidget(dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)
+        self.splitDockWidget(self.media_manager_dock, self.cloud_library_dock, QtCore.Qt.Orientation.Horizontal)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.theme_manager_dock)
+        for dock in (self.media_manager_dock, self.theme_manager_dock, self.cloud_library_dock):
+            _set_dock_visible(dock, True)
+        self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
+        self.media_manager_dock.raise_()
+        self.resizeDocks([self.media_manager_dock, self.cloud_library_dock],
+                         [max(320, self.width() // 2)] * 2, QtCore.Qt.Orientation.Horizontal)
 
     def on_mode_reset_layout_presets_clicked(self) -> None:
         answer = QtWidgets.QMessageBox.warning(
@@ -1611,7 +1647,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         # Drop in-memory window/dock/splitter state so the factory preset can take effect visually; clearing preset
         # keys alone leaves QMainWindow.restoreState() layout and global splitter bytes unchanged.
         self.restoreState(empty)
-        self.settings.setValue(_window_state_storage_key(self._modern_appearance), empty)
+        self.settings.setValue(_window_state_storage_key(), empty)
         self._reset_dock_layout = True
         self.control_splitter.restoreState(empty)
         self.settings.setValue('user interface/main window splitter geometry', empty)
@@ -1625,6 +1661,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.set_view_mode(True, True, True, True, True, False, 'default')
         elif view_mode == 'setup':
             self.set_view_mode(True, True, True, True, False, False, 'setup')
+        elif view_mode == 'librarysync':
+            self._apply_canonical_preset_visibility('librarysync')
         else:
             self.set_view_mode(False, True, False, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
@@ -1749,7 +1787,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.view_projector_manager_item.setEnabled(True)
             self.view_preview_panel.setEnabled(True)
             self.view_live_panel.setEnabled(True)
-        for name in ('preview_controller_dock', 'live_controller_dock'):
+        for name in ('preview_controller_dock', 'live_controller_dock', 'cloud_library_dock'):
             dock = getattr(self, name, None)
             if dock is not None:
                 dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
@@ -1769,10 +1807,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         thm = self.settings.value('user interface/show themes')
 
         if self.settings.value('user interface/is preset layout'):
-            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode, self._modern_appearance):
+            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
                 return (lib, svc, thm)
             if mode == 'live':
                 return False, True, False
+            if mode == 'librarysync':
+                return True, False, True
             if mode in ('default', 'setup'):
                 return True, True, True
 
@@ -1826,6 +1866,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if width <= 0 or height <= 0:
             return
         mode = self.settings.value('core/view mode')
+        if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
+            self.resizeDocks([self.media_manager_dock, self.cloud_library_dock],
+                             [max(320, width // 2)] * 2, QtCore.Qt.Orientation.Horizontal)
+            return
         # Setup: Service | Library+Themes horizontally — size both columns so Library is not squeezed.
         if (
             mode == 'setup'
@@ -1863,18 +1907,20 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             skip_for_saved_preset = (
                 self.settings.value('user interface/is preset layout')
                 and mode in _PRESET_LAYOUT_MODES
-                and _preset_layout_has_saved_state(self.settings, mode, self._modern_appearance))
+                and _preset_layout_has_saved_state(self.settings, mode))
             if getattr(self, 'dock_manager', None):
                 # Preserve floating groups and auto-hide positions across restarts, including custom layouts.
                 skip_for_saved_preset = skip_for_saved_preset or bool(
-                    self.settings.value(_window_state_storage_key(self._modern_appearance)))
+                    self.settings.value(_window_state_storage_key()))
                 if getattr(self, '_reset_dock_layout', False):
                     skip_for_saved_preset = False
                     self.reset_controller_docks()
                     self._reset_dock_layout = False
             with self._mute_left_dock_visibility_signals():
                 if not skip_for_saved_preset:
-                    if mode == 'setup':
+                    if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
+                        self._reapply_library_sync_dock_layout()
+                    elif mode == 'setup':
                         self._reapply_left_column_dock_layout_setup()
                     else:
                         self._reapply_left_column_dock_layout()
@@ -1886,6 +1932,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 _set_dock_visible(self.media_manager_dock, show_lib)
                 _set_dock_visible(self.theme_manager_dock, show_thm)
             self._sync_left_dock_menu_checks_from_settings()
+            self._set_cloud_library_visibility(mode)
             if not (getattr(self, 'dock_manager', None) and skip_for_saved_preset):
                 self._ensure_left_column_dock_sizes()
             if (is_modern_style() and mode in ('default', 'live') and not skip_for_saved_preset
@@ -2034,7 +2081,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.settings.remove('service')
         self.recent_files = self.settings.value('core/recent files')
         self._restore_main_window_geometry()
-        self.restoreState(self.settings.value(_window_state_storage_key(self._modern_appearance)))
+        self.restoreState(self.settings.value(_window_state_storage_key()))
         if not self._window_position_is_valid(self.pos(), self.geometry()):
             self.move(0, 0)
         self.live_controller.splitter.restoreState(self.settings.value('user interface/live splitter geometry'))
@@ -2049,7 +2096,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self._sync_left_dock_menu_checks_from_settings()
         if self.settings.value('user interface/is preset layout'):
             mode = self.settings.value('core/view mode')
-            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode, self._modern_appearance):
+            if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
                 self._restore_layout_from_preset(mode)
                 snap = self.settings.value(self._preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
                 if not self._apply_preset_visibility_snapshot(snap):
@@ -2094,7 +2141,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             return
         self.settings.setValue('core/recent files', self.recent_files)
         self.settings.setValue('user interface/main window position', self.pos())
-        self.settings.setValue(_window_state_storage_key(self._modern_appearance), self.saveState())
+        self.settings.setValue(_window_state_storage_key(), self.saveState())
         self.settings.setValue('user interface/main window geometry', self.saveGeometry())
         self.settings.setValue('user interface/live splitter geometry', self.live_controller.splitter.saveState())
         self.settings.setValue('user interface/preview splitter geometry', self.preview_controller.splitter.saveState())

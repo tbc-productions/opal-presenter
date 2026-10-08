@@ -267,6 +267,8 @@ class Plugin(RegistryBase, RegistryProperties):
         if self.media_item:
             self.media_item.initialise()
             self.main_window.media_dock_manager.add_item_to_dock(self.media_item)
+            if Registry().has_function('librarysync_install_drop_targets'):
+                Registry().execute('librarysync_install_drop_targets')
 
     def finalise(self):
         """

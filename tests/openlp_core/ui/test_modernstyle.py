@@ -42,9 +42,10 @@ def test_modern_color_schemes_have_solid_readable_surfaces(settings, qapp, schem
         app.setFont(old_font)
 
 
-def test_classic_does_not_call_native_material_api(settings):
+def test_non_windows_does_not_call_native_material_api(settings):
     settings.setValue('advanced/interface style', 'classic')
-    with patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
+    with patch('openlp.core.ui.modernstyle.is_win', return_value=False), \
+            patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
         assert apply_mica(None) is False
         native.assert_not_called()
 

@@ -248,8 +248,7 @@ class GeneralTab(SettingsTab):
             self.settings.value('advanced/single click service preview'))
         self.expand_service_item_check_box.setChecked(self.settings.value('advanced/expand service item'))
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
-        ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'),
-                                                       self.settings.value('advanced/interface style'))
+        ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
         self.hide_mouse_check_box.setChecked(self.settings.value('advanced/hide mouse'))
@@ -257,8 +256,8 @@ class GeneralTab(SettingsTab):
         self.search_as_type_check_box.setChecked(self.is_search_as_you_type_enabled)
 
     @staticmethod
-    def get_ui_theme_index(ui_theme, interface_style='classic'):
-        """Map stored appearance and colour settings to the combined selector."""
+    def get_ui_theme_index(ui_theme):
+        """Map stored colour settings to Auto, Dark or Light."""
         if ui_theme in (UiThemes.DefaultDark, UiThemes.QDarkStyle):
             return 1
         if ui_theme == UiThemes.DefaultLight:

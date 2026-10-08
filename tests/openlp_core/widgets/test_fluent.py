@@ -436,8 +436,14 @@ def test_file_libraries_keep_native_tree_appearance(qapp):
         assert view.selectionIndicatorVisible()
         assert not view.alternatingRowColors()
         assert view.styleSheet() == ''
-        assert view.header().isHidden()
-        assert view.isColumnHidden(1) and view.isColumnHidden(2)
+        assert not view.header().isHidden()
+        assert not view.isColumnHidden(1) and not view.isColumnHidden(2)
+        view.resize(600, 400)
+        view.show()
+        QtWidgets.QApplication.processEvents()
+        assert view.header().geometry().top() >= 0
+        assert view.viewport().geometry().top() >= view.header().height()
+        view.close()
         folder = fluent.QTreeWidgetItem(view, ['Folder'])
         child = fluent.QTreeWidgetItem(folder, ['File'])
         folder.setExpanded(True)
@@ -695,3 +701,25 @@ def test_relocated_editor_dialog_uses_its_host(qapp, qtbot, asynchronous):
         dialog.exec()
     assert observed == [(True, True)]
     assert not dialog.isVisible()
+
+
+def test_library_header_sorting_and_new_rows_share_the_same_sort_order(qapp):
+    from PySide6 import QtTest
+    from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
+    view = TreeWidgetWithDnD(name='images')
+    view.setup_columns(['Name', 'Updated'])
+    view.resize(650, 350)
+    view.addTopLevelItem(FileTreeWidgetItem(['Slide 10', '2026-10-09']))
+    view.addTopLevelItem(FileTreeWidgetItem(['Slide 2', '2026-10-08']))
+    view.show()
+    qapp.process_events()
+    assert [view.topLevelItem(i).text(0) for i in range(2)] == ['Slide 2', 'Slide 10']
+    header = view.header()
+    point = QtCore.QPoint(header.sectionViewportPosition(1) + header.sectionSize(1) // 2, header.height() // 2)
+    QtTest.QTest.mouseClick(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+    assert view.sortColumn() == 1
+    view.addTopLevelItem(FileTreeWidgetItem(['Slide 5', '2026-10-08T12:00']))
+    assert [view.topLevelItem(i).text(0) for i in range(3)] == ['Slide 2', 'Slide 5', 'Slide 10']
+    QtTest.QTest.mouseClick(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
+    assert [view.topLevelItem(i).text(0) for i in range(3)] == ['Slide 10', 'Slide 5', 'Slide 2']
+    view.close()

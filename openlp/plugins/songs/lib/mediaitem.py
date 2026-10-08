@@ -80,7 +80,7 @@ class SongListWidgetItem(QtWidgets.QTreeWidgetItem):
     def __lt__(self, other):
         """Case-insensitive alphabetic sort for clickable column headers."""
         col = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        return self.text(col).casefold() < other.text(col).casefold()
+        return get_natural_key(self.text(col)) < get_natural_key(other.text(col))
 
 
 class SongListWidget(DataGridWithDnD):
@@ -470,10 +470,10 @@ class SongMediaItem(MediaManagerItem):
 
         log.debug('display results Song')
         self.save_auto_select_id()
+        search_results.sort(key=get_song_key)
         self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Author'))
         self.list_view.setSortingEnabled(False)
         self.list_view.clear()
-        search_results.sort(key=get_song_key)
         for song in search_results:
             # Do not display temporary songs
             if song.temporary:

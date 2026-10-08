@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def is_modern_style():
-    """Use the selected appearance on every platform."""
+    """Modern is the only supported appearance on every platform."""
     return True
 
 

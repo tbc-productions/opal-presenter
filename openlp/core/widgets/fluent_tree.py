@@ -72,7 +72,7 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         icon_size = self.iconSize(option, index)
         icon_left = chevron.left() - icon_size.width() - 4 if rtl else chevron.right() + 4
         left = background.left() + 8 if rtl else icon_left + icon_size.width() + 6
-        right = icon_left - 6 if rtl else background.right() - 8
+        right = icon_left - 6 if rtl else option.rect.right() - 8
         icons = self.trailingIcons(index)
         extent, gap = 16, 6
         available = max(0, right - left - len(icons) * (extent + gap))
@@ -97,6 +97,9 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         return self._text_layout(option, index)[3]
 
     def paint(self, painter, option, index):
+        if index.column() != 0:
+            super().paint(painter, option, index)
+            return
         option = QtWidgets.QStyleOptionViewItem(option)
         option.rect.adjust(0, 0, 0, -self.group_spacing(index))
         colors = self._theme_host.theme_tokens().colors

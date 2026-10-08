@@ -580,6 +580,9 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     # GIVEN:
     theme_manager.toolbar = MagicMock()
     theme_manager.theme_path = MagicMock()
+    theme_manager.view_buttons = MagicMock()
+    theme_manager.thumbnail_slider = MagicMock()
+    theme_manager.set_thumbnail_size = MagicMock()
     theme_manager.load_themes = MagicMock()
     theme_manager.upgrade_themes = MagicMock()
     theme_manager._get_screen_dimensions = MagicMock(return_value='screen-size')

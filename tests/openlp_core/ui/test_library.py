@@ -391,6 +391,35 @@ def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path
 
 
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_cloud_download_already_in_managed_storage_is_not_copied(mocked_data_path, folder_library_item, tmp_path):
+    source = tmp_path / 'library' / 'cloud-id' / 'clip.mp4'
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b'media')
+    mocked_data_path.return_value = tmp_path
+    folder_library_item.settings_section = 'tests'
+    folder_library_item._copy_file_to_library_storage = MagicMock()
+    assert folder_library_item._prepare_library_file(source) == source
+    folder_library_item._copy_file_to_library_storage.assert_not_called()
+
+
+@patch('openlp.core.ui.library.sha256_file_hash')
+def test_cloud_import_reuses_worker_checksum(mocked_hash, folder_library_item, tmp_path):
+    source = tmp_path / 'clip.mp4'
+    source.write_bytes(b'media')
+    folder_library_item.choose_folder_form = MagicMock(**{'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected})
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.manager.save_object.return_value = True
+    folder_library_item._prepare_library_file = MagicMock(return_value=source)
+    folder_library_item._insert_saved_items = MagicMock()
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.validate_and_load([source], file_hashes={source: 'verified-sha256'},
+                                         file_names={source: 'Welcome video.mp4'})
+    mocked_hash.assert_not_called()
+    assert folder_library_item.manager.save_object.call_args.args[0].file_hash == 'verified-sha256'
+    assert folder_library_item.manager.save_object.call_args.args[0].name == 'Welcome video.mp4'
+
+
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
 def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_path, folder_library_item, tmp_path):
     """Imported files with the same name keep distinct copies and library names."""
     sources = []

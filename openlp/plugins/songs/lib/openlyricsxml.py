@@ -416,6 +416,9 @@ class OpenLyrics(object):
             self._process_formatting_tags(song_xml, parse_and_temporary_save)
         if update_song_id:
             song = self.manager.get_object(Song, update_song_id)
+            song.authors_songs = []
+            song.songbook_entries = []
+            song.topics = []
         else:
             song = Song()
         design_element = song_xml.find('{' + DESIGN_NAMESPACE + '}design')
@@ -426,6 +429,7 @@ class OpenLyrics(object):
         song.verse_order = ''
         song.search_title = ''
         song.temporary = parse_and_temporary_save
+        song.theme_name = song_xml.findtext('{https://openlp.org/ns/library-sync/1}theme') or ''
         self._process_copyright(properties, song)
         self._process_cclinumber(properties, song)
         self._process_titles(properties, song)
@@ -436,7 +440,9 @@ class OpenLyrics(object):
         self._process_songbooks(properties, song)
         self._process_topics(properties, song)
         clean_song(self.manager, song)
-        self.manager.save_object(song)
+        if self.manager.save_object(song):
+            # New objects stay in SQLAlchemy's identity map, so its load reconstructor does not run.
+            song.init_on_load(force_song_detail_recalculation=True)
         return song
 
     def _add_text_to_element(self, tag, parent, text=None, label=None):

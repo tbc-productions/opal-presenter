@@ -1,4 +1,4 @@
-"""ADS integration for the Modern workspace; Classic keeps Qt's dock widgets."""
+"""ADS integration for the Modern workspace."""
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import UiStrings
@@ -132,8 +132,6 @@ class AdvancedDockingMixin:
             getattr(self, f'{controller}_controller').panel.setVisible(visible)
 
     def addDockWidget(self, area, dock, *args):
-        if not getattr(self, 'dock_manager', None):
-            return super().addDockWidget(area, dock, *args)
         areas = {
             QtCore.Qt.DockWidgetArea.LeftDockWidgetArea: ads.LeftDockWidgetArea,
             QtCore.Qt.DockWidgetArea.RightDockWidgetArea: ads.RightDockWidgetArea,
@@ -146,30 +144,20 @@ class AdvancedDockingMixin:
         return result
 
     def removeDockWidget(self, dock):
-        if not getattr(self, 'dock_manager', None):
-            return super().removeDockWidget(dock)
         self.dock_manager.removeDockWidget(dock)
 
     def splitDockWidget(self, first, second, orientation):
-        if not getattr(self, 'dock_manager', None):
-            return super().splitDockWidget(first, second, orientation)
         area = ads.BottomDockWidgetArea if orientation == QtCore.Qt.Orientation.Vertical else ads.RightDockWidgetArea
         return self.dock_manager.addDockWidget(area, second, first.dockAreaWidget())
 
     def tabifyDockWidget(self, first, second):
-        if not getattr(self, 'dock_manager', None):
-            return super().tabifyDockWidget(first, second)
         return self.dock_manager.addDockWidget(ads.CenterDockWidgetArea, second, first.dockAreaWidget())
 
     def tabifiedDockWidgets(self, dock):
-        if not getattr(self, 'dock_manager', None):
-            return super().tabifiedDockWidgets(dock)
         area = dock.dockAreaWidget()
         return [item for item in area.dockWidgets() if item is not dock] if area else []
 
     def resizeDocks(self, docks, sizes, orientation):
-        if not getattr(self, 'dock_manager', None):
-            return super().resizeDocks(docks, sizes, orientation)
         for dock, size in zip(docks, sizes):
             area = dock.dockAreaWidget()
             if not area:
@@ -187,13 +175,9 @@ class AdvancedDockingMixin:
                 splitter.setSizes(values)
 
     def saveState(self, version=0):
-        if not getattr(self, 'dock_manager', None):
-            return super().saveState(version)
         return self.dock_manager.saveState(version)
 
     def restoreState(self, state, version=0):
-        if not getattr(self, 'dock_manager', None):
-            return super().restoreState(state, version)
         if not state:
             return False
         restored = self.dock_manager.restoreState(state, version)
