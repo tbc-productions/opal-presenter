@@ -537,6 +537,45 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         pass
 
+    def can_import_service_item(self, item):
+        """Only accept service content that belongs in this library."""
+        if (not isinstance(item, ServiceItem) or not item.is_valid or item.name != self.plugin.name
+                or not isinstance(item.title, str) or not item.title.strip()):
+            return False
+        if item.name == 'songs':
+            return item.is_text() and isinstance(item.xml_version, (str, bytes)) and bool(item.xml_version)
+        if item.name == 'custom':
+            return item.is_text() and bool(item.slides)
+        return (item.name in ('images', 'media', 'presentations') and bool(item.slides)
+                and (item.is_image() or item.is_command()))
+
+    def confirm_service_item_import(self, title, matches):
+        """Never replace an ambiguous match or overwrite without the user's choice."""
+        if len(matches) > 1:
+            critical_error_message_box(
+                translate('OpenLP.MediaManagerItem', 'Item already exists'),
+                translate('OpenLP.MediaManagerItem',
+                          'Several library items have this name. Rename them before importing a replacement.'),
+                parent=self.window())
+            return False
+        if not matches:
+            return True
+        box = QtWidgets.QMessageBox(
+            QtWidgets.QMessageBox.Icon.Question, translate('OpenLP.MediaManagerItem', 'Item already exists'),
+            translate('OpenLP.MediaManagerItem',
+                      '“{name}” already exists in the Library. Do you want to overwrite it?').format(name=title),
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
+            self.window())
+        box.button(QtWidgets.QMessageBox.StandardButton.Yes).setText(translate('OpenLP.MediaManagerItem', 'Overwrite'))
+        box.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+        accepted = box.exec() == QtWidgets.QMessageBox.StandardButton.Yes
+        box.deleteLater()
+        return accepted
+
+    def import_service_item(self, item, target=None):
+        """Plugins save their native content without altering the service item."""
+        return False
+
     def validate_and_load(self, file_paths, target_group=None):
         """
         Process a list for files either from the File Dialog or from Drag and

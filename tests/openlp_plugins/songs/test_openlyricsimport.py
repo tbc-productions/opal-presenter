@@ -72,6 +72,19 @@ def test_create_importer(importer: OpenLyricsImport):
     assert isinstance(importer, SongImport)
 
 
+def test_failed_save_is_reported(importer: OpenLyricsImport):
+    importer.import_wizard = MagicMock()
+    importer.open_lyrics = MagicMock()
+    importer.open_lyrics.xml_to_song.side_effect = RuntimeError('The imported song could not be saved.')
+    importer.log_error = MagicMock()
+    source = TEST_PATH / next(iter(SONG_TEST_DATA))
+    importer.import_source = [source]
+
+    importer.do_import()
+
+    importer.log_error.assert_called_once_with(source, 'The imported song could not be saved.')
+
+
 def test_file_import(importer: OpenLyricsImport):
     """
     Test the actual import of real song files

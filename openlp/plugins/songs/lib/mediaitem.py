@@ -20,12 +20,14 @@
 ##########################################################################
 from collections import namedtuple
 import logging
+import json
 import mako
 import os
 from pathlib import Path
 from shutil import copyfile
 from typing import Any
 
+from lxml import etree
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import or_
@@ -151,9 +153,11 @@ class SongMediaItem(MediaManagerItem):
             dest_path =\
                 AppLocation.get_section_data_path(self.plugin.name) / 'audio' / str(song.id) / os.path.split(bga[0])[1]
             create_paths(dest_path.parent)
-            copyfile(AppLocation.get_section_data_path('servicemanager') / bga[0], dest_path)
+            source = AppLocation.get_section_data_path('servicemanager') / bga[0]
+            if source.resolve() != dest_path.resolve():
+                copyfile(source, dest_path)
             song.media_files.append(MediaFile(weight=i, file_path=dest_path, file_hash=bga[1]))
-        self.plugin.manager.save_object(song, True)
+        return self.plugin.manager.save_object(song, True)
 
     def add_middle_header_bar(self):
         self.toolbar.addSeparator()
@@ -1061,6 +1065,38 @@ class SongMediaItem(MediaManagerItem):
                 critical_error_message_box(message=translate('SongsPlugin.MediaItem',
                                                              'Failed to render Song footer html.\nSee log for details'))
         return None
+
+    def import_service_item(self, item, target=None):
+        if not self.can_import_service_item(item):
+            return False
+        xml = item.xml_version.encode('utf-8') if isinstance(item.xml_version, str) else item.xml_version
+        if b'<!DOCTYPE' in xml.upper() or b'<!ENTITY' in xml.upper():
+            raise ValueError('The song contains unsafe XML declarations.')
+        root = etree.fromstring(xml, etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False))
+        title = root.find('{http://openlyrics.info/namespace/2009/song}properties/'
+                          '{http://openlyrics.info/namespace/2009/song}titles/'
+                          '{http://openlyrics.info/namespace/2009/song}title')
+        if title is None:
+            raise ValueError('The service item does not contain a valid OpenLyrics song.')
+        title.text = item.title
+        for audio in item.background_audio:
+            if not (AppLocation.get_section_data_path('servicemanager') / audio[0]).is_file():
+                raise FileNotFoundError(f'The song audio file is missing: {audio[0]}')
+        matches = [song for song in self.plugin.manager.get_all_objects(Song)
+                   if song.title.strip().casefold() == item.title.strip().casefold()]
+        if not self.confirm_service_item_import(item.title, matches):
+            return False
+        song = self.open_lyrics.xml_to_song(etree.tostring(root, encoding='unicode'),
+                                            update_song_id=matches[0].id if matches else None)
+        if not song or not song.id:
+            raise ValueError('The song could not be imported.')
+        song.theme_name = item.theme or ''
+        song.slide_design = json.dumps(item.slide_design) if item.slide_design else None
+        if not self._update_background_audio(song, item):
+            raise RuntimeError('The song could not be saved.')
+        song.init_on_load(force_song_detail_recalculation=True)
+        self.on_clear_text_button_click()
+        return True
 
     def service_load(self, item):
         """

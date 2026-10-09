@@ -440,9 +440,10 @@ class OpenLyrics(object):
         self._process_songbooks(properties, song)
         self._process_topics(properties, song)
         clean_song(self.manager, song)
-        if self.manager.save_object(song):
-            # New objects stay in SQLAlchemy's identity map, so its load reconstructor does not run.
-            song.init_on_load(force_song_detail_recalculation=True)
+        if not self.manager.save_object(song):
+            raise RuntimeError('The imported song could not be saved.')
+        # New objects stay in SQLAlchemy's identity map, so its load reconstructor does not run.
+        song.init_on_load(force_song_detail_recalculation=True)
         return song
 
     def _add_text_to_element(self, tag, parent, text=None, label=None):

@@ -13,6 +13,7 @@ from openlp.core.lib.designmedia import media_references, restore_media, valid_m
 from openlp.core.common.registry import Registry
 from openlp.core.lib.itemexport import write_xml_package, xml_design
 from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.views import remove_local_row
 from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError, friendly_name
 
 
@@ -280,23 +281,3 @@ def import_item(item, path, plugin, target=None, prepared=None, overwrite=None):
         library.list_view.addItem(row)
         library.list_view.setCurrentItem(row)
         library.list_view.scrollToItem(row)
-
-
-def remove_local_row(view, item_id, tree=False):
-    if tree:
-        iterator = QtWidgets.QTreeWidgetItemIterator(view)
-        while iterator.value():
-            row = iterator.value()
-            data = row.data(0, QtCore.Qt.ItemDataRole.UserRole)
-            if getattr(data, 'id', data) == item_id:
-                if row.parent():
-                    row.parent().takeChild(row.parent().indexOfChild(row))
-                else:
-                    view.takeTopLevelItem(view.indexOfTopLevelItem(row))
-                return
-            iterator += 1
-    else:
-        for index in range(view.count()):
-            if view.item(index).data(QtCore.Qt.ItemDataRole.UserRole) == item_id:
-                view.takeItem(index)
-                return

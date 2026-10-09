@@ -630,6 +630,7 @@ class PresentationMediaItem(FolderLibraryItem):
                     file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
                 path = file_path.parent
                 service_item.title = display_name
+                service_item.data_string = {'file_path': file_path}
                 if file_path.exists():
                     if not os.access(file_path, os.R_OK):
                         # File is inaccessible

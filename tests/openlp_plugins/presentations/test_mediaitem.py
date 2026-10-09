@@ -653,6 +653,7 @@ def test_generate_slide_data_from_pdf_inherits_item_transition_settings(media_it
         )
 
     assert result is True
+    assert target_service_item.data_string == {'file_path': pdf_path}
     assert target_service_item.slide_transition_settings == {
         'enabled': True,
         'type': TransitionType.Slide,

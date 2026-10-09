@@ -34,6 +34,7 @@ from openlp.core.common.i18n import UiStrings
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
+from openlp.core.db.mixins import FolderMixin
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
@@ -50,6 +51,28 @@ SONG_SECTION_DEFAULT_COLORS = {
     'ending': '#94A3B8',
     'other': '#E2E8F0'
 }
+
+
+def remove_local_row(view, item_id, tree=False):
+    """Remove a replaced library row without rebuilding other folders or selections."""
+    if tree:
+        iterator = QtWidgets.QTreeWidgetItemIterator(view)
+        while iterator.value():
+            row = iterator.value()
+            data = row.data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if not isinstance(data, FolderMixin) and getattr(data, 'id', data) == item_id:
+                if row.parent():
+                    row.parent().takeChild(row.parent().indexOfChild(row))
+                else:
+                    view.takeTopLevelItem(view.indexOfTopLevelItem(row))
+                return
+            iterator += 1
+    else:
+        for index in range(view.count()):
+            if view.item(index).data(QtCore.Qt.ItemDataRole.UserRole) == item_id:
+                view.takeItem(index)
+                return
+
 
 SONG_SECTION_COLOR_KEYS = {
     'v': 'verse',

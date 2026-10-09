@@ -443,7 +443,18 @@ class CustomMediaItem(MediaManagerItem):
             if self.add_custom_from_service:
                 self.create_from_service_item(item)
 
-    def create_from_service_item(self, item):
+    def import_service_item(self, item, target=None):
+        if not self.can_import_service_item(item):
+            return False
+        matches = [custom for custom in self.plugin.db_manager.get_all_objects(CustomSlide)
+                   if custom.title.strip().casefold() == item.title.strip().casefold()]
+        if not self.confirm_service_item_import(item.title, matches):
+            return False
+        if not self.create_from_service_item(item, matches[0] if matches else None):
+            raise RuntimeError('The custom slides could not be saved.')
+        return True
+
+    def create_from_service_item(self, item, custom=None):
         """
         Create a custom slide from a text service item
 
@@ -462,10 +473,16 @@ class CustomMediaItem(MediaManagerItem):
                 credits = footer[len(item.title) + 1:]
             else:
                 credits = footer
-        custom = CustomSlide(title=item.title, text=str(custom_xml.extract_xml(), 'utf-8'),
-                             theme_name=item.theme if item.theme else '', credits=credits)
-        self.plugin.db_manager.save_object(custom)
+        if custom is None:
+            custom = CustomSlide()
+        custom.title = item.title
+        custom.text = str(custom_xml.extract_xml(), 'utf-8')
+        custom.theme_name = item.theme if item.theme else ''
+        custom.credits = credits
+        if not self.plugin.db_manager.save_object(custom):
+            return None
         self.on_search_text_button_clicked()
+        return custom
 
     def on_clear_text_button_click(self):
         """

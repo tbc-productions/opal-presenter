@@ -24,23 +24,25 @@ Provides additional classes for working in the library
 import os
 from shutil import copy2
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, List, Optional, Union
 
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import sha256_file_hash
+from openlp.core.common import clean_filename, sha256_file_hash
 from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import UiStrings, get_natural_key, translate
 from openlp.core.common.path import create_paths
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.lib import check_item_selected
+from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 from openlp.core.lib.plugin import StringContent
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.folders import AddFolderForm, ChooseFolderForm
 from openlp.core.ui.icons import UiIcons
-from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
+from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD, remove_local_row
 from openlp.core.widgets.libraryview import LibraryView
 from openlp.core.widgets.mediapreview import MediaPreview
 from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
@@ -562,6 +564,99 @@ class FolderLibraryItem(MediaManagerItem):
                 self.expand_folder(folder.id)
         finally:
             self.list_view.setUpdatesEnabled(True)
+
+    def import_service_item(self, item, target=None):
+        """Copy service files into durable library storage before saving or replacing their records."""
+        if not self.can_import_service_item(item):
+            return False
+        with TemporaryDirectory() as directory:
+            if item.name == 'presentations' and item.is_image():
+                source = item.data_string.get('file_path') if isinstance(item.data_string, dict) else None
+                if source and Path(source).is_file():
+                    files = [(item.title, Path(source))]
+                else:
+                    # ponytail: rendered-only services restore as PDF until archives include the editable source.
+                    source = Path(directory) / ((clean_filename(item.title).strip(' .') or 'Presentation') + '.pdf')
+                    writer = QtGui.QPdfWriter(str(source))
+                    writer.setResolution(96)
+                    writer.setPageMargins(QtCore.QMarginsF())
+                    painter = QtGui.QPainter()
+                    try:
+                        for index in range(len(item.slides)):
+                            image = QtGui.QImage(str(item.get_frame_path(index)))
+                            if image.isNull():
+                                raise ValueError('A presentation slide could not be read.')
+                            writer.setPageSize(QtGui.QPageSize(
+                                QtCore.QSizeF(image.width() * 25.4 / 96, image.height() * 25.4 / 96),
+                                QtGui.QPageSize.Unit.Millimeter))
+                            if painter.isActive():
+                                if not writer.newPage():
+                                    raise OSError('The presentation PDF could not be written.')
+                            elif not painter.begin(writer):
+                                raise OSError('The presentation PDF could not be written.')
+                            painter.drawImage(QtCore.QPoint(), image)
+                    finally:
+                        if painter.isActive():
+                            painter.end()
+                    files = [(item.title, source)]
+            elif item.name == 'images':
+                files = list(dict.fromkeys((slide['title'], item.get_frame_path(index))
+                                           for index, slide in enumerate(item.slides)))
+            elif item.name == 'media' and item.is_capable(ItemCapabilities.CanStream):
+                files = [(item.title, item.slides[0]['path'])]
+            else:
+                files = [(item.title, item.get_frame_path())]
+            existing_items = self.manager.get_all_objects(self.item_class)
+            planned = []
+            pending_names = {}
+            for title, source in files:
+                stream = isinstance(source, str) and source.startswith(('devicestream:', 'networkstream:'))
+                if not stream and not Path(source).is_file():
+                    raise FileNotFoundError(f'The service file is missing: {source}')
+                if not stream and not self._is_supported_file_path(Path(source)):
+                    raise ValueError('The service file is not supported by this Library view.')
+                suffix = '' if stream else Path(source).suffix
+                if suffix and title.casefold().endswith(suffix.casefold()):
+                    title = title[:-len(suffix)]
+                key = (title.strip().casefold(), '' if item.name == 'presentations' else suffix.casefold())
+                if key in pending_names:
+                    index = pending_names[key]
+                    if not self.confirm_service_item_import(title, [planned[index]]):
+                        return False
+                    planned[index] = (title, source, stream, planned[index][3])
+                    continue
+                matches = [record for record in existing_items if str(source) == record.file_path or
+                           ((record.name if stream else Path(record.name or record.file_path).stem)
+                            .strip().casefold() == title.strip().casefold()
+                            and (item.name == 'presentations' or
+                                 Path(record.name or record.file_path).suffix.casefold() == suffix.casefold()))]
+                if not self.confirm_service_item_import(title, matches):
+                    return False
+                pending_names[key] = len(planned)
+                planned.append((title, source, stream, matches[0] if matches else None))
+            if target and isinstance(target.data(0, QtCore.Qt.ItemDataRole.UserRole), self.item_class):
+                target = target.parent()
+            folder = target.data(0, QtCore.Qt.ItemDataRole.UserRole) if target else self.current_folder
+            for title, source, stream, existing in planned:
+                stored = source if stream else self._copy_file_to_library_storage(Path(source))
+                destination_folder = folder if target or existing is None else existing.folder
+                try:
+                    file_hash = None if stream else sha256_file_hash(Path(stored))
+                    record = existing if existing is not None else self.item_class()
+                    record.name = title if stream else title + Path(source).suffix
+                    record.file_path = str(stored)
+                    record.file_hash = file_hash
+                    record.folder_id = destination_folder.id if destination_folder else None
+                    if not self.manager.save_object(record):
+                        raise RuntimeError('The file could not be saved in the Library.')
+                except Exception:
+                    if not stream and Path(stored) != Path(source):
+                        Path(stored).unlink(missing_ok=True)
+                    raise
+                if existing is not None:
+                    remove_local_row(self.list_view, record.id, tree=True)
+                self._insert_saved_items([record], destination_folder)
+        return True
 
     def validate_and_load(self, file_paths: List[Path], target_folder: Optional[QtWidgets.QTreeWidgetItem] = None,
                           *, file_hashes=None, file_names=None):

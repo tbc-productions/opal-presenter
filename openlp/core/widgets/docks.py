@@ -24,12 +24,15 @@ The :mod:`~openlp.core.widgets.docks` module contains a customised base dock wid
 import logging
 
 from PySide6 import QtCore, QtGui
+from sqlalchemy.exc import SQLAlchemyError
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
 from openlp.core.lib.plugin import StringContent
+from openlp.core.common.i18n import translate
 from openlp.core.ui.style import get_dock_panel_header_stylesheet
+from openlp.core.widgets.dnd import ItemDragData
 
 
 log = logging.getLogger(__name__)
@@ -112,6 +115,44 @@ class MediaToolBox(QtWidgets.QWidget):
         self._stack = QtWidgets.QStackedWidget(self)
         layout.addWidget(self._stack, 1)
         self._overflow_menu = FluentLibraryOverflowMenu(self)
+        self.setAcceptDrops(True)
+        QtWidgets.QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if (event.type() not in (QtCore.QEvent.Type.DragEnter, QtCore.QEvent.Type.DragMove, QtCore.QEvent.Type.Drop)
+                or not isinstance(watched, QtWidgets.QWidget)
+                or watched is not self and not self.isAncestorOf(watched)):
+            return super().eventFilter(watched, event)
+        mime = event.mimeData()
+        if not isinstance(mime, ItemDragData) or mime.library is not None:
+            return super().eventFilter(watched, event)
+        for index, entry in enumerate(self._items):
+            library = entry['widget']
+            if not entry['enabled'] or not library.can_import_service_item(mime.item):
+                continue
+            self.setCurrentIndex(index)
+            if event.type() == QtCore.QEvent.Type.Drop:
+                browser = getattr(library, 'library_view', None)
+                if browser and browser.grid_button.isChecked():
+                    point = browser.grid.viewport().mapFrom(watched, event.position().toPoint())
+                    target = browser.grid.tree_item(browser.grid.itemAt(point)) or browser.folder_item()
+                else:
+                    point = library.list_view.viewport().mapFrom(watched, event.position().toPoint())
+                    target = library.list_view.itemAt(point)
+                try:
+                    imported = library.import_service_item(mime.item, target)
+                except (OSError, ValueError, RuntimeError, SyntaxError, SQLAlchemyError) as error:
+                    QtWidgets.QMessageBox.critical(
+                        self.window(), translate('OpenLP.MediaManagerItem', 'Import failed'), str(error))
+                    imported = False
+                if not imported:
+                    event.ignore()
+                    return True
+            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+            event.accept()
+            return True
+        event.ignore()
+        return True
 
     def minimumSizeHint(self):
         return QtCore.QSize(0, super().minimumSizeHint().height())

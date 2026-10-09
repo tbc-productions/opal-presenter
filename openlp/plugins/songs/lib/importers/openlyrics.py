@@ -88,7 +88,7 @@ class OpenLyricsImport(SongImport):
             except etree.XMLSyntaxError:
                 log.exception('XML syntax error in file {path}'.format(path=file_path))
                 self.log_error(file_path, SongStrings().XMLSyntaxError)
-            except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exception:
+            except (OSError, ValueError, KeyError, RuntimeError, zipfile.BadZipFile) as exception:
                 self.log_error(file_path, str(exception))
             except OpenLyricsError as exception:
                 log.exception('OpenLyricsException {error:d} in file {name}: {text}'.format(error=exception.type,
