@@ -81,19 +81,28 @@ class CloudTree(DataGridWithDnD):
 
     def dragEnterEvent(self, event):
         if self.panel.can_upload(event.mimeData(), self.drop_folder(event)):
+            category = self.panel.local_drag_category(event.mimeData())
+            if category and category != self.panel.category:
+                index = list(CATEGORIES).index(category)
+                self.panel.change_type(index, browse=False)
+                with QtCore.QSignalBlocker(self.panel.sections):
+                    self.panel.sections.setCurrentIndex(index)
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
         else:
             event.ignore()
 
     def dragMoveEvent(self, event):
-        if self.panel.can_upload(event.mimeData(), self.drop_folder(event)):
-            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
-            event.accept()
-        else:
-            event.ignore()
+        self.dragEnterEvent(event)
+
+    def dragLeaveEvent(self, event):
+        if self is self.panel.tree and self.panel.folder is None:
+            self.panel.browse()
+        super().dragLeaveEvent(event)
 
     def drop_folder(self, event):
+        if self is not self.panel.tree:
+            return self.panel.folder
         row = self.itemAt(event.position().toPoint())
         item = row.data(0, QtCore.Qt.ItemDataRole.UserRole) if row else None
         return item if item and item.folder else self.panel.folder
@@ -711,6 +720,9 @@ class CloudLibrary(QtWidgets.QWidget):
         self.settings_action.setEnabled(not self.jobs)
         self.roots.setEnabled(bool(self.roots.count()) and not busy and not browsing)
         self.sections.setEnabled(not busy and not browsing)
+        for tree in self.trees.values():
+            tree.setEnabled(self.connected)
+        self.search.setEnabled(self.connected)
         self.up_action.setEnabled(bool(self.history) and not busy and not browsing)
         self.refresh_action.setEnabled(bool(self.profile) and not busy and not browsing)
         self.refresh_button.setEnabled(self.refresh_action.isEnabled())
@@ -1222,14 +1234,14 @@ class CloudLibrary(QtWidgets.QWidget):
 
     def can_upload(self, mime, folder=None):
         folder = folder or self.folder
-        if (not folder or self.busy() or self.out_of_date
+        if (not self.connected or self.busy() or self.out_of_date
                 or self.cached_listing and not self.cache_checked
                 or any(job['kind'] == 'browse' for job in self.jobs.values())):
             return False
         category = self.local_drag_category(mime)
-        if category and category != self.category:
+        if category and (category != self.category or folder is None):
             return bool(self.profile and self.roots.currentData())
-        if not folder.can_upload or folder.category not in ('', self.category):
+        if not folder or not folder.can_upload or folder.category not in ('', self.category):
             return False
         if isinstance(mime, CloudDragData):
             return (mime.panel is self and bool(mime.items) and all(
@@ -1256,7 +1268,7 @@ class CloudLibrary(QtWidgets.QWidget):
                             detail=str(error) if isinstance(error, SyncError) else '', error=True)
             return
         self.cancel_previews()
-        switched = category != self.category
+        switched = category != self.category or folder is None
         root = self.roots.currentData()
         if switched:
             index = list(CATEGORIES).index(category)

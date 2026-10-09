@@ -40,6 +40,8 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
     assert panel.tree.topLevelItemCount() == 0
     assert panel.import_info.isHidden()
     assert panel.connect_action.isEnabled()
+    assert all(not tree.isEnabled() for tree in panel.trees.values())
+    assert not panel.search.isEnabled()
     assert panel.status.parentWidget() is panel.footer
     panel.set_status('Ready to connect')
     assert panel.status.toolTip() == 'Ready to connect'
@@ -175,6 +177,8 @@ def test_no_connections_shows_import_infobar_and_disables_connect(panel, qtbot, 
     assert not empty.import_info.isHidden()
     assert not empty.connect_action.isEnabled()
     assert not empty.roots.isEnabled()
+    assert all(not tree.isEnabled() for tree in empty.trees.values())
+    assert not empty.search.isEnabled()
     assert empty.navigation.isHidden()
     assert 'organisation' in empty.import_info.message()
     empty.resize(850, 600)
@@ -219,6 +223,7 @@ def test_cloud_drag_requires_matching_library(panel):
 
 
 def test_upload_drop_is_disabled_for_readers(panel):
+    panel.connected = True
     view = QtWidgets.QListWidget()
     view.addItem('Amazing Grace')
     view.item(0).setSelected(True)
@@ -235,6 +240,7 @@ def test_upload_drop_is_disabled_for_readers(panel):
 
 
 def test_local_drop_can_switch_cloud_type_but_same_type_requires_matching_folder(panel):
+    panel.connected = True
     view = QtWidgets.QListWidget()
     view.addItem('Sunday')
     view.item(0).setSelected(True)
@@ -256,6 +262,8 @@ def test_local_drop_can_switch_cloud_type_but_same_type_requires_matching_folder
 @pytest.mark.parametrize('writable', [True, False])
 def test_local_cross_type_drop_switches_view_and_checks_correct_destination(panel, qtbot, monkeypatch,
                                                                             tmp_path, category, writable):
+    panel.connected = True
+    panel.update_actions()
     view = QtWidgets.QListWidget()
     qtbot.addWidget(view)
     view.addItem('Welcome')
@@ -278,16 +286,29 @@ def test_local_cross_type_drop_switches_view_and_checks_correct_destination(pane
     panel.start_job, panel.browse = MagicMock(), MagicMock()
     enter = QtGui.QDragEnterEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
                                   QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
-    old_tree.dragEnterEvent(enter)
+    QtWidgets.QApplication.sendEvent(old_tree.viewport(), enter)
     assert enter.isAccepted()
+    assert panel.category == category and panel.tree is panel.trees[category]
+    assert panel.sections.currentIndex() == list(CATEGORIES).index(category)
+    old_tree.dragLeaveEvent(QtGui.QDragLeaveEvent())
+    panel.browse.assert_not_called()
+    move = QtGui.QDragMoveEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
+                                QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    QtWidgets.QApplication.sendEvent(panel.tree.viewport(), enter)
+    QtWidgets.QApplication.sendEvent(panel.tree.viewport(), move)
+    assert move.isAccepted()
     event = QtGui.QDropEvent(QtCore.QPointF(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
                              QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
-    old_tree.dropEvent(event)
+    if category == 'images':
+        old_tree.dropEvent(event)
+    else:
+        QtWidgets.QApplication.sendEvent(panel.tree.viewport(), event)
     assert event.isAccepted()
     assert panel.category == category and panel.tree is panel.trees[category]
     assert panel.sections.currentIndex() == list(CATEGORIES).index(category)
     assert panel.folder is None and not panel.history and not panel.search.text()
     panel.browse.assert_not_called()
+    panel.start_job.assert_called_once()
     kind, prepare, context = panel.start_job.call_args.args
     assert kind == 'prepare-upload' and context['folder'] is None
     provider = MagicMock()
@@ -321,8 +342,30 @@ def test_local_cross_type_drop_switches_view_and_checks_correct_destination(pane
         context['temporary'].cleanup()
 
 
-@pytest.mark.parametrize('blocked', ['busy', 'outdated', 'unverified', 'browsing', 'unsupported', 'invalid'])
+def test_leaving_cloud_after_type_switch_loads_the_selected_type(panel, qtbot):
+    panel.connected = True
+    panel.folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True)
+    panel.update_actions()
+    view = QtWidgets.QListWidget()
+    qtbot.addWidget(view)
+    view.addItem('Welcome')
+    view.item(0).setSelected(True)
+    library = SimpleNamespace(plugin=SimpleNamespace(name='images'), list_view=view,
+                              get_library_tab_icon=lambda: QtGui.QIcon())
+    mime = ItemDragData(library=library)
+    panel.browse = MagicMock()
+    event = QtGui.QDragEnterEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
+                                  QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    QtWidgets.QApplication.sendEvent(panel.tree.viewport(), event)
+    assert event.isAccepted() and panel.category == 'images'
+    panel.tree.dragLeaveEvent(QtGui.QDragLeaveEvent())
+    panel.browse.assert_called_once_with()
+
+
+@pytest.mark.parametrize('blocked', ['disconnected', 'busy', 'outdated', 'unverified', 'browsing',
+                                     'unsupported', 'invalid'])
 def test_cross_type_drop_keeps_transfer_guards(panel, qtbot, blocked):
+    panel.connected = blocked != 'disconnected'
     view = QtWidgets.QListWidget()
     qtbot.addWidget(view)
     view.addItem('Welcome')
@@ -340,11 +383,16 @@ def test_cross_type_drop_keeps_transfer_guards(panel, qtbot, blocked):
     elif blocked == 'invalid':
         view.clear()
     assert not panel.can_upload(mime)
+    event = QtGui.QDragEnterEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
+                                  QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    panel.tree.dragEnterEvent(event)
+    assert not event.isAccepted()
     assert panel.category == 'songs'
     panel.jobs.clear()
 
 
 def test_cloud_drop_uses_writable_subfolder_and_matching_type(panel):
+    panel.connected = True
     panel.category = 'images'
     item = CloudItem('f', 'Sunday.png', category='images', can_copy=True, can_move=True)
     mime = CloudDragData(panel, [item])
@@ -1049,6 +1097,8 @@ def test_view_failure_refreshes_and_retries_only_once(panel, refreshed):
 
 
 def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
+    panel.connected = True
+    panel.update_actions()
     from PySide6 import QtTest
     from openlp.plugins.librarysync.lib.preview import format_local_time
 
@@ -1083,6 +1133,8 @@ def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
 
 @pytest.mark.parametrize('column', [1, 2])
 def test_cloud_metadata_resize_handle_follows_mouse_without_shifting_name(panel, qtbot, column):
+    panel.connected = True
+    panel.update_actions()
     from PySide6 import QtTest
 
     panel.resize(850, 500)
@@ -1341,16 +1393,23 @@ def test_connection_menu_actions_disable_after_disconnect_and_reenable_after_rec
 
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.connected = True
+    panel.update_actions()
+    assert all(tree.isEnabled() for tree in panel.trees.values())
+    assert panel.search.isEnabled()
     panel.configure()
     panel.jobs['disconnect'] = {'kind': 'disconnect', 'generation': panel.generation}
     panel.job_completed('disconnect')
     assert not panel.connected
+    assert all(not tree.isEnabled() for tree in panel.trees.values())
+    assert not panel.search.isEnabled()
     assert panel.profile
     panel.configure()
     panel.jobs['browse'] = {'kind': 'browse', 'generation': panel.generation, 'context': None}
     panel.job_ready('browse', (CloudItem('church', 'Church Library', folder=True), [], ''))
     panel.job_completed('browse')
     assert panel.connected
+    assert all(tree.isEnabled() for tree in panel.trees.values())
+    assert panel.search.isEnabled()
     panel.configure()
 
 
@@ -1403,6 +1462,7 @@ def test_cloud_file_type_column_preserves_size_and_date_sorting(panel, category,
 
 @pytest.mark.parametrize('same_extension', [False, True])
 def test_batch_cloud_moves_distinguish_file_extensions(panel, same_extension):
+    panel.connected = True
     panel.change_type(list(CATEGORIES).index('images'), browse=False)
     folder = CloudItem('images', 'Images', folder=True, category='images', can_upload=True)
     items = [CloudItem('first', 'Welcome.png', category='images', can_move=True),
