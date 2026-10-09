@@ -25,6 +25,7 @@ from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
 from openlp.core.widgets.libraryfooter import LibraryFooter
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.views import DataGridWithDnD, FileTreeWidgetItem
+from openlp.plugins.librarysync.lib.cache import CloudCache
 from openlp.plugins.librarysync.lib.connectionwizard import ConnectionWizard
 from openlp.plugins.librarysync.lib.profile import (
     deserialize_profile, read_profile, serialize_profile, validate_profile, write_profile)
@@ -123,6 +124,10 @@ class CloudLibrary(QtWidgets.QWidget):
         self.page_token = ''
         self.jobs = {}
         self.cache = {}
+        self.cached_listing = False
+        self.cache_checked = True
+        self.out_of_date = False
+        self.change_token = ''
         self.generation = 0
         self.category = next(iter(CATEGORIES))
         self.preview_windows = set()
@@ -220,39 +225,61 @@ class CloudLibrary(QtWidgets.QWidget):
         self.status.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
         self.status.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.status.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Preferred)
-        progress_layout = QtWidgets.QHBoxLayout()
+        self.footer = LibraryFooter(self)
+        self.footer.layout().setStretch(0, 0)
+        self.transfer_progress = QtWidgets.QWidget(self.footer)
+        self.transfer_progress.setMaximumWidth(360)
+        progress_layout = QtWidgets.QHBoxLayout(self.transfer_progress)
+        progress_layout.setContentsMargins(0, 0, 0, 0)
+        progress_layout.setSpacing(8)
         self.progress = QtWidgets.QProgressBar(self)
-        self.progress.setRange(0, 100)
+        self.progress.setRange(0, 0)
+        self.progress.setMinimumWidth(80)
+        self.progress.setAccessibleName(tr('Transfer progress'))
         self.progress.hide()
         progress_layout.addWidget(self.progress, 1)
         self.cancel_button = QtWidgets.QPushButton(tr('Cancel'), self)
         self.cancel_button.clicked.connect(self.cancel_transfer)
         self.cancel_button.hide()
         progress_layout.addWidget(self.cancel_button)
-        layout.addLayout(progress_layout)
-        self.footer = LibraryFooter(self)
-        self.footer.layout().setStretch(0, 0)
+        self.footer.layout().addWidget(self.transfer_progress, 1)
         self.footer.layout().addWidget(self.status, 1)
         layout.addWidget(self.footer)
         self.roots.currentIndexChanged.connect(self.change_root)
+        self.change_timer = QtCore.QTimer(self)
+        self.change_timer.setInterval(60000)
+        self.change_timer.timeout.connect(self.poll_changes)
+        self._status_theme = QtWidgets.fluentqt.FluentWidget(self)
+        self._status_theme.hide()
         self.update_actions()
 
-    def set_status(self, text):
+    def set_status(self, text, detail='', *, error=False):
+        if self.out_of_date:
+            detail = '\n'.join(part for part in (text, detail) if part)
+            text = tr('Out of date · Refresh')
+        elif self.cached_listing:
+            text = tr('Cached · {status}').format(status=text)
+        color = self._status_theme.theme_tokens().colors.systemCritical if self.out_of_date or error else None
+        self.status.setStyleSheet('color: ' + color.name() + ';' if color is not None else '')
         self.status.setText(text)
-        self.status.setToolTip(text)
+        self.status.setToolTip(text + '\n' + detail if detail else text)
 
     def startup(self):
         raw = self.plugin.settings.value('librarysync/profile')
         if raw:
             try:
                 self.set_profile(deserialize_profile(raw))
-                self.refresh()
+                self.browse()
             except (SyncError, ValueError) as error:
-                self.set_status(str(error))
+                self.set_status(str(error), error=True)
         self.install_drop_targets()
 
     def set_profile(self, profile, save=True):
         self.profile = validate_profile(profile)
+        self.out_of_date = False
+        self.cache_checked = True
+        self.change_token = ''
+        self.cached_listing = False
         self.generation += 1
         self.cache.clear()
         self.folder, self.history, self.page_token = None, [], ''
@@ -287,15 +314,15 @@ class CloudLibrary(QtWidgets.QWidget):
         if path:
             try:
                 self.set_profile(read_profile(path))
-                self.set_status(tr('Connection imported. Choose Connect to sign in with your own Google account.'))
+                self.set_status(tr('Connection imported'))
             except (OSError, SyncError) as error:
-                self.set_status(str(error))
+                self.set_status(str(error), error=True)
 
     def setup_connection(self):
         wizard = ConnectionWizard(self)
         if wizard.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.set_profile(wizard.profile)
-            self.set_status(tr('Connection saved. Choose Connect to sign in with your own Google account.'))
+            self.set_status(tr('Connection saved'))
 
     def export_connection(self):
         if not self.profile:
@@ -306,9 +333,9 @@ class CloudLibrary(QtWidgets.QWidget):
         if path:
             try:
                 write_profile(path, self.profile)
-                self.set_status(tr('Connection exported. Each person signs in separately; tokens are excluded.'))
+                self.set_status(tr('Connection exported'))
             except (OSError, SyncError) as error:
-                self.set_status(str(error))
+                self.set_status(str(error), error=True)
 
     def connect_drive(self):
         if not self.profile:
@@ -317,19 +344,52 @@ class CloudLibrary(QtWidgets.QWidget):
                 return
         if self.jobs:
             return
-        self.set_status(tr('Complete sign-in in your browser…'))
+        self.cache.clear()
+        self.cached_listing = False
+        self.out_of_date = False
+        self.change_token = ''
+        self.folder, self.history, self.page_token = None, [], ''
+        self.footer.set_count(0)
+        self.update_breadcrumbs()
+        for window in list(self.preview_windows):
+            window.reject()
+        for tree in self.trees.values():
+            tree.clear()
+        self.set_status(tr('Sign in in your browser…'))
         self.start_job('connect', lambda provider, cancel, progress, browser, publish:
                        provider.sign_in(cancel, browser))
 
     def disconnect(self):
         if self.profile and not self.jobs:
-            self.start_job('disconnect', lambda provider, *args: provider.disconnect())
+            profile = self.profile
+
+            def operation(provider, *args):
+                cache = CloudCache(profile, provider.cache_account())
+                provider.disconnect()
+                cache.clear()
+            self.start_job('disconnect', operation)
 
     def start_job(self, kind, operation, context=None):
         if self.closing or not self.profile:
             return
         job_id = uuid4().hex
-        worker = SyncWorker(job_id, self.profile, operation)
+        profile = self.profile
+        if kind in ('upload', 'copy', 'folder', 'rename', 'delete', 'connect', 'disconnect'):
+            for job in self.jobs.values():
+                if job['kind'] == 'changes' and job.get('worker'):
+                    job['worker'].stop()
+        if kind in ('upload', 'copy', 'folder', 'rename', 'delete'):
+            mutate = operation
+
+            def operation(provider, *args):
+                try:
+                    return mutate(provider, *args)
+                finally:
+                    CloudCache(profile, provider.cache_account()).clear_listings()
+        if kind not in ('browse', 'changes'):
+            self.progress.setRange(0, 0)
+            self.progress.setValue(0)
+        worker = SyncWorker(job_id, profile, operation)
         self.jobs[job_id] = {'worker': worker, 'kind': kind, 'context': context, 'generation': self.generation}
         run_thread(worker, 'librarysync-' + job_id, queued_connections=[
             (worker.ready, self.job_ready), (worker.failed, self.job_failed), (worker.completed, self.job_completed),
@@ -348,8 +408,16 @@ class CloudLibrary(QtWidgets.QWidget):
                 or job.get('worker') and job['worker'].cancel.is_set()):
             return
         if job['kind'] == 'browse':
-            self.connected = True
-            folder, items, token = value
+            self.cached_listing = len(value) > 3 and value[3]
+            self.cache_checked = not self.cached_listing
+            self.change_token, self.out_of_date = value[4] if len(value) > 4 else ('', False)
+            job['background'] = self.cached_listing
+            if not self.cached_listing:
+                self.connected = True
+            else:
+                job['cached'] = True
+            selected_ids = {item.id for item in self.selected_items()}
+            folder, items, token = value[:3]
             self.folder, self.page_token = folder, token
             if not job['context']:
                 self.tree.clear()
@@ -377,18 +445,30 @@ class CloudLibrary(QtWidgets.QWidget):
                 row.setToolTip(0, '\n'.join([item.display_name, access] + (
                     [self.format_size(item.size)] if not item.folder else [])))
                 self.tree.addTopLevelItem(row)
-            if not job['context']:
+                row.setSelected(item.id in selected_ids)
+            if not job['context'] and not self.cached_listing:
                 self.cache[(self.category, folder.id)] = (time.monotonic(), value)
                 if not self.history:
                     self.cache[(self.category, self.roots.currentData()['id'])] = (time.monotonic(), value)
             self.update_breadcrumbs()
-            self.set_status(tr('Drop Library items here to share a new copy.') if folder.can_upload else
-                            tr('Read-only folder. Preview items or drag them to the local Library.'))
+            self.set_status(tr('Checking for updates…') if self.cached_listing else
+                            tr('Drag-and-drop items to upload') if folder.can_upload else
+                            tr('Read-only'))
             self.filter_items(self.search.text())
             self.more_button.setVisible(bool(token))
             self.footer.set_count(self.tree.topLevelItemCount())
+        elif job['kind'] == 'changes':
+            self.connected = True
+            self.change_token, changed = value
+            self.cache_checked = True
+            if changed:
+                self.out_of_date = True
+                self.cache.clear()
+                self.set_status('')
+            elif not self.out_of_date:
+                self.set_status(tr('Up to date'))
         elif job['kind'] == 'preview':
-            item, path, prepared = value
+            item, path, prepared = value[:3]
             try:
                 window = show_preview(self.window(), item, path, prepared)
                 self.add_preview_commands(window, item)
@@ -397,22 +477,22 @@ class CloudLibrary(QtWidgets.QWidget):
                 window.finished.connect(job['worker'].stop)
                 window.show()
                 job['context'].preview_window = window
-                self.set_status(tr('Preview: {name}').format(name=item.display_name))
+                self.set_status(tr('Viewing {name}').format(name=item.display_name))
             except Exception:
-                self.set_status(tr('This item could not be previewed.'))
+                self.set_status(tr('Couldn’t open item'), error=True)
         elif job['kind'] == 'download':
             job.setdefault('downloads', []).append(value)
         elif job['kind'] in ('upload', 'copy'):
             self.cache.clear()
-            self.set_status(tr('Shared {count} item(s).').format(count=value))
+            self.set_status(tr('Uploaded 1 item') if value == 1 else tr('Uploaded {count} items').format(count=value))
         elif job['kind'] == 'prepare-upload':
             job['candidates'] = value
         elif job['kind'] in ('rename', 'delete'):
             self.cache.clear()
-            self.set_status(tr('Cloud item renamed.') if job['kind'] == 'rename' else tr('Moved to the cloud bin.'))
+            self.set_status(tr('Item renamed') if job['kind'] == 'rename' else tr('Moved to bin'))
         elif job['kind'] == 'folder':
             self.cache.clear()
-            self.set_status(tr('Created folder: {name}').format(name=value.display_name))
+            self.set_status(tr('Folder created'), detail=value.display_name)
         self.update_actions()
 
     def apply_download(self, value, context):
@@ -436,12 +516,12 @@ class CloudLibrary(QtWidgets.QWidget):
             existing = local_item(category, plugin, item.display_name)
             if existing is not None and overwrite is None:
                 if not self.confirm_overwrite(item.display_name, tr('local Library')):
-                    self.set_status(tr('Download skipped.'))
+                    self.set_status(tr('Download skipped'))
                     return
                 overwrite = existing if category == 'themes' else existing.id
             import_item(item, path, plugin, target, prepared=prepared, overwrite=overwrite)
             self.imported.add((item.id, item.version))
-            self.set_status(tr('Added to Library: {name}').format(name=item.display_name))
+            self.set_status(tr('Downloaded {name}').format(name=item.display_name))
             if plugin and plugin.media_item:
                 toolbox = self.plugin.main_window.media_tool_box
                 for index in range(toolbox.count()):
@@ -449,7 +529,8 @@ class CloudLibrary(QtWidgets.QWidget):
                         toolbox.setCurrentIndex(index)
                         break
         except Exception as error:
-            self.set_status(str(error) if isinstance(error, SyncError) else tr('Cloud item import failed.'))
+            self.set_status(tr('Download failed'),
+                            detail=str(error) if isinstance(error, SyncError) else '', error=True)
 
     @QtCore.Slot(str, str)
     def job_failed(self, job_id, message):
@@ -458,11 +539,18 @@ class CloudLibrary(QtWidgets.QWidget):
             job['failed'] = True
             if job['kind'] in ('browse', 'connect'):
                 self.connected = False
-            self.set_status(message)
+            self.set_status(tr('Couldn’t check for updates') if job['kind'] == 'changes' else
+                            tr('Refresh failed') if job.get('cached') else message, detail=message
+                            if job['kind'] == 'changes' or job.get('cached') else '', error=True)
 
     @QtCore.Slot(str)
     def job_completed(self, job_id):
         job = self.jobs.pop(job_id, None)
+        if job and job['kind'] in ('upload', 'copy', 'folder', 'rename', 'delete'):
+            self.cache.clear()
+        if job and job['kind'] == 'browse' and job['generation'] != self.generation:
+            self.update_actions()
+            return
         if job and job['kind'] == 'preview' and not hasattr(job['context'], 'preview_window'):
             job['context'].cleanup()
         if job and job['kind'] == 'prepare-upload':
@@ -473,11 +561,11 @@ class CloudLibrary(QtWidgets.QWidget):
                     title = source.display_name if job['context']['copy'] else source[3]
                     if existing is not None:
                         if job['context']['copy'] and not source.can_delete:
-                            self.set_status(tr('You cannot replace and move “{name}”: '
-                                               'you cannot remove the original.').format(name=title))
+                            self.set_status(tr('You don’t have permission to move {name}').format(
+                                name=title), error=True)
                             continue
                         if not existing.can_edit or existing.folder:
-                            self.set_status(tr('You cannot overwrite “{name}”: it is read only.').format(name=title))
+                            self.set_status(tr('{name} is read-only').format(name=title), error=True)
                             continue
                         if not self.confirm_overwrite(title, tr('Cloud Library')):
                             continue
@@ -495,29 +583,39 @@ class CloudLibrary(QtWidgets.QWidget):
             return
         cancelled = job.get('worker') and job['worker'].cancel.is_set()
         if job['kind'] == 'preview' and cancelled:
-            self.set_status(tr('Preview closed.') if hasattr(job['context'], 'preview_window') else
-                            tr('Preview cancelled.'))
+            self.set_status(tr('View closed') if hasattr(job['context'], 'preview_window') else
+                            tr('Cancelled'))
         elif job['kind'] in ('connect', 'upload', 'download', 'copy', 'folder') and cancelled:
-            self.set_status(tr('Cancelled. Completed copies are kept.'))
+            self.set_status(tr('Cancelled'), detail=tr('Completed copies are kept.')
+                            if job['kind'] != 'connect' else '')
         if job['kind'] == 'connect' and not job.get('failed') and not cancelled:
             self.refresh()
         elif (job['kind'] in ('upload', 'copy', 'folder', 'rename', 'delete')
               and not job.get('failed') and not cancelled):
             self.cache.clear()
             if job['kind'] == 'delete':
-                self.set_status(tr('Moved to the cloud bin.'))
+                self.set_status(tr('Moved to bin'))
             self.refresh()
         elif job['kind'] == 'disconnect' and not job.get('failed'):
             self.connected = False
             self.folder = None
-            self.tree.clear()
+            for tree in self.trees.values():
+                tree.clear()
+            for window in list(self.preview_windows):
+                window.reject()
             self.cache.clear()
-            self.set_status(tr('Disconnected. Choose Connect to sign in again.'))
+            self.cached_listing = False
+            self.out_of_date = False
+            self.change_token = ''
+            self.set_status(tr('Disconnected'))
         self.update_actions()
+        if job['kind'] == 'browse' and self.cached_listing:
+            QtCore.QTimer.singleShot(0, self, self.poll_changes)
 
     @QtCore.Slot(str, str, object, object)
     def job_progress(self, job_id, name, current, total):
-        if job_id in self.jobs and not self.closing:
+        job = self.jobs.get(job_id)
+        if job and job['generation'] == self.generation and not self.closing:
             self.set_status(name)
             self.progress.setRange(0, 100 if total else 0)
             if total:
@@ -534,8 +632,9 @@ class CloudLibrary(QtWidgets.QWidget):
                    for job in self.jobs.values())
 
     def update_actions(self):
-        browsing = any(job['kind'] == 'browse' for job in self.jobs.values())
+        browsing = any(job['kind'] == 'browse' and not job.get('background') for job in self.jobs.values())
         busy = self.busy()
+        read_only = self.out_of_date or self.cached_listing and not self.cache_checked
         selected = self.selected_items() if hasattr(self, 'tree') else []
         self.import_info.setVisible(not self.profile)
         self.navigation.setVisible(bool(self.profile))
@@ -555,16 +654,20 @@ class CloudLibrary(QtWidgets.QWidget):
             selected[0].can_download or preview_url_allowed(selected[0].preview_url)))
         self.folder_action.setEnabled(bool(self.folder and self.folder.can_upload
                                            and self.folder.category in ('', self.category))
-                                      and self.category not in ('songs', 'custom') and not busy and not browsing)
-        self.rename_action.setEnabled(len(selected) == 1 and selected[0].can_edit and not busy)
+                                      and self.category not in ('songs', 'custom') and not busy and not browsing
+                                      and not read_only)
+        self.rename_action.setEnabled(len(selected) == 1 and selected[0].can_edit and not busy
+                                      and not read_only)
         self.delete_action.setEnabled(bool(selected) and all(item.can_edit and item.can_delete for item in selected)
-                                      and not busy)
+                                      and not busy and not read_only)
         for window in self.preview_windows:
             available = self.profile == window.cloud_profile and not busy and not browsing
             item = window.cloud_item
             window.cloud_commands['download'].setEnabled(available and item.can_download)
-            window.cloud_commands['rename'].setEnabled(available and item.can_edit)
-            window.cloud_commands['delete'].setEnabled(available and item.can_edit and item.can_delete)
+            window.cloud_commands['rename'].setEnabled(available and item.can_edit and not read_only)
+            window.cloud_commands['delete'].setEnabled(available and item.can_edit and item.can_delete
+                                                       and not read_only)
+        self.transfer_progress.setVisible(busy)
         self.progress.setVisible(busy)
         self.cancel_button.setVisible(busy)
         if not busy:
@@ -583,7 +686,7 @@ class CloudLibrary(QtWidgets.QWidget):
             return
         self.folder, self.history = None, []
         self.generation += 1
-        self.refresh()
+        self.browse()
 
     def change_type(self, index):
         self.category = list(CATEGORIES)[index]
@@ -604,7 +707,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.breadcrumbs.setItems(crumbs)
 
     def activate_breadcrumb(self, index, item):
-        if self.busy() or any(job['kind'] == 'browse' for job in self.jobs.values()):
+        if self.busy() or any(job['kind'] == 'browse' and not job.get('background')
+                              for job in self.jobs.values()):
             return
         depth = item.data
         folder = (self.history[depth] if depth is not None and depth < len(self.history) else
@@ -614,11 +718,15 @@ class CloudLibrary(QtWidgets.QWidget):
         self.browse(folder)
 
     def browse(self, folder=None, page_token='', force=False):
-        if not self.profile or self.busy() or any(job['kind'] == 'browse' for job in self.jobs.values()):
+        browsing = any(job['kind'] == 'browse' and not job.get('background') for job in self.jobs.values())
+        if not self.profile or self.busy() or browsing:
             return
         root = self.roots.currentData()
         if not root:
             return
+        for job in self.jobs.values():
+            if job['kind'] in ('browse', 'changes') and job.get('worker'):
+                job['worker'].stop()
         self.generation += 1
         self.cancel_previews()
         cached = self.cache.get((self.category, folder.id if folder else root['id']))
@@ -629,18 +737,73 @@ class CloudLibrary(QtWidgets.QWidget):
             self.jobs.pop(job_id)
             self.update_actions()
             return
-        self.set_status(tr('Loading cloud folder…'))
+        self.set_status(tr('Loading…'))
+        category, profile = self.category, self.profile
+        previous_cursor, previous_outdated = self.change_token, self.out_of_date
 
-        def operation(provider, *args):
+        def operation(provider, cancel, progress, browser, publish):
+            cache = CloudCache(profile, provider.cache_account())
+            key = folder.id if folder else root['id']
+            if not force and not page_token:
+                snapshot = cache.listing(category, key)
+                if snapshot is not None and not cancel.is_set():
+                    current, items, token, cursor, outdated = snapshot
+                    if cursor:
+                        return current, items, token, True, (cursor, outdated)
+                    publish((current, items, token, True, ('', outdated)))
+            cursor = previous_cursor if page_token else provider.change_token()
+            outdated = previous_outdated if page_token else False
+            if not isinstance(cursor, str):
+                cursor = ''
             current = folder
-            if force and not page_token and current is not None:
+            if current is not None and not page_token:
                 current = replace(provider.folder(current.id, current.resource_key), category=current.category)
             if current is None or not current.category:
                 shared = current or provider.folder(root['id'], root['resource_key'])
-                current = provider.type_folder(shared, self.category, create=False) or shared
+                current = provider.type_folder(shared, category, create=False) or shared
             items, token = provider.list_folder(current, page_token)
-            return current, items, token
+            if not cancel.is_set() and not page_token:
+                cache.save_listing(category, key, (current, items, token), cursor)
+                cache.save_listing(category, current.id, (current, items, token), cursor)
+            return current, items, token, False, (cursor, outdated)
         self.start_job('browse', operation, bool(page_token))
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.change_timer.start()
+        QtCore.QTimer.singleShot(0, self, self.poll_changes)
+
+    def hideEvent(self, event):
+        self.change_timer.stop()
+        for job in self.jobs.values():
+            if job['kind'] == 'changes' and job.get('worker'):
+                job['worker'].stop()
+        super().hideEvent(event)
+
+    def poll_changes(self):
+        if (self.closing or not self.isVisible() or self.window().isMinimized() or not self.profile
+                or not self.folder or not self.change_token or self.busy()
+                or any(job['kind'] in ('browse', 'changes') for job in self.jobs.values())):
+            return
+        category, profile, folder, cursor = self.category, self.profile, self.folder, self.change_token
+        items = [self.tree.topLevelItem(index).data(0, QtCore.Qt.ItemDataRole.UserRole)
+                 for index in range(self.tree.topLevelItemCount())]
+        parents = {folder.id, self.roots.currentData()['id'], *(ancestor.id for ancestor in self.history)}
+        watched = parents | {item.id for item in items}
+        token, outdated = self.page_token, self.out_of_date
+        keys = {folder.id, self.roots.currentData()['id']} if not self.history else {folder.id}
+
+        def operation(provider, cancel, *args):
+            changes, next_token = provider.changes(cursor)
+            changed = outdated or any(
+                (change.all_items and (not change.drive_id or change.drive_id == folder.drive_id))
+                or change.id in watched or parents.intersection(change.parents) for change in changes)
+            cache = CloudCache(profile, provider.cache_account())
+            for key in keys:
+                if not cancel.is_set():
+                    cache.save_listing(category, key, (folder, items, token), next_token, changed)
+            return next_token, changed
+        self.start_job('changes', operation)
 
     def refresh(self):
         self.browse(self.folder, force=True)
@@ -652,7 +815,7 @@ class CloudLibrary(QtWidgets.QWidget):
     def activate_item(self, row, column=0):
         item = row.data(0, QtCore.Qt.ItemDataRole.UserRole)
         if (item.folder and self.folder and not self.busy()
-                and not any(job['kind'] == 'browse' for job in self.jobs.values())):
+                and not any(job['kind'] == 'browse' and not job.get('background') for job in self.jobs.values())):
             self.history.append(self.folder)
             self.search.clear()
             self.browse(item)
@@ -728,7 +891,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.rename_item(item, self.folder)
 
     def rename_item(self, item, folder, parent=None):
-        if not item.can_edit or self.busy():
+        if (not item.can_edit or self.busy() or self.out_of_date
+                or self.cached_listing and not self.cache_checked):
             return False
         name = self.request_name(tr('Rename cloud item'), tr('Name'), tr('Rename'), item.display_name, parent=parent)
         if name is not None and name.strip() != item.display_name:
@@ -742,7 +906,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.delete_items(self.selected_items())
 
     def delete_items(self, items, parent=None):
-        if not items or self.busy() or any(not item.can_edit or not item.can_delete for item in items):
+        if (not items or self.busy() or self.out_of_date or self.cached_listing and not self.cache_checked
+                or any(not item.can_edit or not item.can_delete for item in items)):
             return False
         if QtWidgets.QMessageBox.question(parent or self.window(), tr('Delete cloud items'),
                                           tr('Move {count} item(s) to the cloud bin?').format(count=len(items)),
@@ -780,7 +945,8 @@ class CloudLibrary(QtWidgets.QWidget):
             return
         temporary = TemporaryDirectory(prefix='openlp-cloud-preview-')
         destination = Path(temporary.name) / (safe_name(item.display_name) + Path(item.name).suffix)
-        self.set_status(tr('Loading preview: {name}').format(name=item.display_name))
+        self.set_status(tr('Opening {name}…').format(name=item.display_name))
+        profile = self.profile
 
         def operation(provider, cancel, progress, browser, publish):
             if item_category(item) == 'media':
@@ -788,18 +954,30 @@ class CloudLibrary(QtWidgets.QWidget):
                 publish((item, None, stream.url))
                 stream.serve()
                 return None
+            cache = CloudCache(profile, provider.cache_account())
             if item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf':
+                thumbnail = destination.with_name('cover.png')
+                if cache.preview(item, thumbnail, cover=True):
+                    progress(tr('Opening {name}…').format(name=item.display_name), 0, 0)
+                    return item, destination, thumbnail, True
                 kind, image = provider.preview(item, cancel)
                 if kind == 'image':
                     thumbnail = destination.with_name('cover.png')
                     thumbnail.write_bytes(image)
+                    cache.save_preview(item, thumbnail, cover=True)
                     return item, destination, thumbnail
-            provider.download(item, destination, cancel, lambda current, total:
-                              progress(tr('Loading preview: {name}').format(name=item.display_name), current, total))
+            cache_hit = cache.preview(item, destination)
+            if cache_hit:
+                progress(tr('Opening {name}…').format(name=item.display_name), 0, 0)
+            else:
+                provider.download(item, destination, cancel, lambda current, total: progress(
+                    tr('Opening {name}…').format(name=item.display_name), current, total))
+                if not cancel.is_set():
+                    cache.save_preview(item, destination)
             category = item_category(item)
             prepared = (read_xml_item(destination) if category in ('songs', 'custom') else
                         read_theme_item(destination) if category == 'themes' else None)
-            return item, destination, prepared
+            return item, destination, prepared, cache_hit
         self.start_job('preview', operation, temporary)
 
     def add_preview_commands(self, window, item):
@@ -819,7 +997,8 @@ class CloudLibrary(QtWidgets.QWidget):
         window.layout().insertWidget(1, toolbar)
 
     def preview_command(self, window, command):
-        if not window.cloud_commands[command].isEnabled() or self.profile != window.cloud_profile or self.busy():
+        if (not window.cloud_commands[command].isEnabled() or self.profile != window.cloud_profile or self.busy()
+                or command != 'download' and (self.out_of_date or self.cached_listing and not self.cache_checked)):
             return
         item = window.cloud_item
         if command == 'download':
@@ -854,15 +1033,15 @@ class CloudLibrary(QtWidgets.QWidget):
         if library:
             library_category = 'themes' if hasattr(library, 'theme_list_widget') else library.plugin.name
         if library and any(item_category(item) != library_category for item in items):
-            self.set_status(tr('Drop items into the matching Library type.'))
+            self.set_status(tr('Choose the matching Library type'), error=True)
             return
         if any(not item_category(item) or not item.can_download or item.folder for item in items):
-            self.set_status(tr('Choose downloadable Library files. Other items can use the cloud preview.'))
+            self.set_status(tr('This item can only be viewed'), error=True)
             return
         if any(item_category(item) != 'themes' and (
                 not (plugin := PluginManager.get_plugin_by_name(item_category(item))) or not plugin.is_active())
                for item in items):
-            self.set_status(tr('Enable the matching Library plugins before downloading these items.'))
+            self.set_status(tr('Enable the matching Library plugin'), error=True)
             return
         accepted, overwrites, names = [], {}, set()
         try:
@@ -879,11 +1058,11 @@ class CloudLibrary(QtWidgets.QWidget):
                     overwrites[item.id] = existing if category == 'themes' else existing.id
                 accepted.append(item)
         except SyncError as error:
-            self.set_status(str(error))
+            self.set_status(str(error), error=True)
             return
         items = accepted
         if not items:
-            self.set_status(tr('Download skipped.'))
+            self.set_status(tr('Download skipped'))
             return
         self.cancel_previews()
         context = {'target': (QtCore.QPersistentModelIndex(library.list_view.indexFromItem(target))
@@ -910,7 +1089,8 @@ class CloudLibrary(QtWidgets.QWidget):
 
     def can_upload(self, mime, folder=None):
         folder = folder or self.folder
-        if (not folder or not folder.can_upload or self.busy()
+        if (not folder or not folder.can_upload or self.busy() or self.out_of_date
+                or self.cached_listing and not self.cache_checked
                 or any(job['kind'] == 'browse' for job in self.jobs.values())
                 or folder.category not in ('', self.category)):
             return False
@@ -935,7 +1115,8 @@ class CloudLibrary(QtWidgets.QWidget):
                 raise SyncError('Each item must have a unique name. Rename duplicates before uploading.')
         except Exception as error:
             temporary.cleanup()
-            self.set_status(str(error) if isinstance(error, SyncError) else tr('Library item preparation failed.'))
+            self.set_status(tr('Couldn’t prepare upload'),
+                            detail=str(error) if isinstance(error, SyncError) else '', error=True)
             return
         self.cancel_previews()
         category = self.category
@@ -944,7 +1125,7 @@ class CloudLibrary(QtWidgets.QWidget):
         def prepare(provider, *args):
             return [(source, provider.find_item(folder, category, title, exclude=source.id) if is_copy else
                      provider.find_item(folder, category, title)) for source, title in zip(sources, titles)]
-        self.set_status(tr('Checking item names…'))
+        self.set_status(tr('Preparing upload…'))
         self.start_job('prepare-upload', prepare, context)
 
     def run_upload(self, context, plan):
@@ -961,10 +1142,12 @@ class CloudLibrary(QtWidgets.QWidget):
                         continue
                     source = Path(temporary.name) / (safe_name(item.display_name) + Path(item.name).suffix)
                     provider.download(item, source, cancel, lambda current, total: progress(
-                        tr('Copying {name}').format(name=item.display_name), current, total))
+                        tr('Copying {name}…').format(name=item.display_name), current, total))
                     category, contents, title = item.category, None, item.display_name
                 else:
                     category, source, contents, title = source
+                progress(tr('Uploading {name} ({number}/{count})').format(
+                    name=title, number=position, count=len(plan)), 0, 0)
                 write_upload(source, contents)
                 provider.upload(folder, category, source, cancel, lambda current, total:
                                 progress(tr('Uploading {name} ({number}/{count})').format(
@@ -980,7 +1163,7 @@ class CloudLibrary(QtWidgets.QWidget):
             if job['kind'] in ('connect', 'upload', 'download', 'preview', 'folder', 'copy', 'prepare-upload',
                                'rename', 'delete'):
                 job['worker'].cancel.set()
-        self.set_status(tr('Cancelling… completed copies are kept.'))
+        self.set_status(tr('Cancelling…'), detail=tr('Completed copies are kept.'))
 
     def install_drop_targets(self):
         if self.closing:
@@ -1033,6 +1216,7 @@ class CloudLibrary(QtWidgets.QWidget):
 
     def shutdown(self):
         self.closing = True
+        self.change_timer.stop()
         for job in self.jobs.values():
             if job.get('worker'):
                 job['worker'].cancel.set()

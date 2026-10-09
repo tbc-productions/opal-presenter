@@ -39,7 +39,11 @@ Reconnecting is necessary if Google revokes or expires the account's authorisati
 With no connections configured, Cloud Library displays a Fluent InfoBar with an
 **Import connection** hyperlink. Connect and the folder selector are disabled
 until a connection is imported. The footer shows the item count on the left and
-current status on the right; hover over shortened status text to read it in full.
+current status on the right. During a transfer, progress, percentage and **Cancel**
+share the middle of this row. Preparation uses an indeterminate progress bar;
+upload percentages update as bytes are sent and reach 100% when Drive confirms
+completion. Status messages are kept brief; hover for full text and error details.
+Errors and an out-of-date cache use Fluent's critical text colour.
 
 The portable file contains the Desktop OAuth application configuration and folder
 references. It never contains personal access tokens, refresh tokens, passwords,
@@ -81,19 +85,19 @@ its ancestors. Songs and Custom Slides are flat collections and cannot contain
 subfolders. Images, Media, Presentations and Themes can have subfolders. **Refresh**
 checks for changes made by other team members. The filter searches the loaded
 items in the current folder. **Load more** retrieves another page when a folder
-has more than 200 items. Recent first pages are cached for one minute when
-navigating back; Refresh always fetches from Drive.
+has more than 200 items. Folder listings and previews are cached between application sessions;
+**Refresh** always fetches the current folder from Drive.
 
-Double-click an item or choose **Preview** to open a Fluent window within OpenLP+.
+Double-click an item or choose **View** to open a Fluent window within OpenLP+.
 Songs and Custom Slides use the native slide renderer and slide list, with item
 metadata and a named theme when present. A warning InfoBar identifies a theme that
 is not installed. Themes show sample slides using the theme's actual appearance.
 Images and media use the Library inspector; media streams on demand rather than
-waiting for a complete download. Provider thumbnails avoid downloading large images
-or presentations for an initial preview. Files with download disabled use the
+waiting for a complete download. Images use their original resolution. Provider thumbnails are used for
+presentation covers. Files with download disabled use the
 provider's embedded viewer when its permissions allow it.
 
-The context menu offers **Preview**, **Download**, and, when permitted, **Rename**
+The context menu offers **View**, **Download**, and, when permitted, **Rename**
 and **Delete**. Delete moves items to the cloud bin. Rename refuses an existing
 name in the same item type.
 
@@ -120,6 +124,33 @@ workers. Progress shows the current file and transfer percentage. **Cancel** sto
 remaining work; copies already completed are retained. Downloads become visible to
 the local importer only after size, version and available checksum checks succeed.
 Partial files are removed. Downloading again follows the same overwrite checks.
+
+Cache and change checks
+-----------------------
+
+Saved listings appear without downloading the folder again. While Cloud Library
+is visible, it checks Google's incremental change list every minute and when
+returning to the panel. Unrelated Drive changes do not reload the Library.
+Relevant additions, edits, moves, removals and shared-drive access changes show
+**Out of date** in the footer's Fluent critical colour. This warning remains
+until **Refresh** retrieves the current folder. Rename, Delete and uploads are
+disabled while the listing is out of date or its cached permissions have not yet
+been checked. Writes always recheck live permissions and file versions.
+
+Read the `Drive changes API documentation
+<https://developers.google.com/workspace/drive/api/reference/rest/v3/changes/list>`_
+for the incremental cursor and shared-drive options used here.
+
+The cache is separate for each connection and account sign-in and contains no
+OAuth credentials. It retains up to 512 MiB across connections and removes the
+least recently used files when necessary; files unused for 30 days expire.
+Disconnecting removes the current connection/account cache. Cached content can
+still be viewed if a change check fails, with that failure shown in the footer.
+Media playback continues to stream on demand.
+
+Downloaded image, song, Custom Slides, theme and presentation previews are reused
+only for the same item version. Active View windows use temporary copies, so cache
+eviction cannot remove files they are currently displaying.
 
 Remote organisation
 -------------------
@@ -201,7 +232,8 @@ Adding a provider
 -----------------
 
 ``CloudProvider`` in ``openlp/plugins/librarysync/lib/provider.py`` defines the
-folder, paged listing, name lookup, preview, streaming, download, upload, rename,
+account cache identity, change cursor/feed, folder, paged listing, name lookup,
+preview, streaming, download, upload, rename,
 move and deletion operations. Return ``CloudItem``
 records with the current user's capabilities. Register a provider factory in
 ``worker.PROVIDERS`` (the factory receives the profile and a cancellation event)

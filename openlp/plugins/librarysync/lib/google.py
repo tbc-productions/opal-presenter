@@ -1,5 +1,6 @@
 """Drive v3 provider: paged reads, checked downloads and resumable, permission-aware writes."""
 import hashlib
+from io import BytesIO
 import mimetypes
 import time
 from pathlib import Path
@@ -10,16 +11,36 @@ from urllib.parse import urlparse
 import requests
 
 from openlp.core.common import clean_filename
-from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudItem, SyncError, friendly_name
+from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudChange, CloudItem, SyncError, friendly_name
 
 
 API = 'https://www.googleapis.com/drive/v3'
 WRITE_API = 'https://www.googleapis.com/drive/v2'
 FOLDER_MIME = 'application/vnd.google-apps.folder'
-FIELDS = ('id,name,mimeType,size,modifiedTime,createdTime,version,md5Checksum,'
+FIELDS = ('id,name,driveId,mimeType,size,modifiedTime,createdTime,version,md5Checksum,'
           'webViewLink,thumbnailLink,resourceKey,parents,lastModifyingUser(displayName),'
           'capabilities(canAddChildren,canDownload,canCopy,canEdit,canTrash,canMoveItemWithinDrive),appProperties')
 CHUNK_SIZE = 8 * 1024 * 1024
+
+
+class UploadChunk(BytesIO):
+    """Report bytes sent without changing Drive's confirmed offset used for retries."""
+    def __init__(self, data, offset, total, cancel, progress):
+        super().__init__(data)
+        self.offset, self.total, self.cancel, self.progress = offset, total, cancel, progress
+        self.percent = -1
+
+    def read(self, size=-1):
+        if self.cancel.is_set():
+            raise SyncError('Transfer cancelled.')
+        data = super().read(size)
+        sent = self.offset + self.tell()
+        percent = int(sent * 100 / self.total) if self.total else 0
+        if data and percent != self.percent:
+            self.percent = percent
+            # The final percentage waits for Drive to confirm the complete upload.
+            self.progress(min(sent, max(0, self.total - 1)), self.total)
+        return data
 
 
 def cloud_item(data, category=''):
@@ -44,7 +65,8 @@ def cloud_item(data, category=''):
                      can_delete=permissions.get('canTrash', False), created=data.get('createdTime', ''),
                      parents=tuple(data.get('parents', [])), can_move=permissions.get('canMoveItemWithinDrive', False),
                      provider_name='Google Drive',
-                     modified_by=data.get('lastModifyingUser', {}).get('displayName', ''))
+                     modified_by=data.get('lastModifyingUser', {}).get('displayName', ''),
+                     drive_id=data.get('driveId', ''))
 
 
 def preview_url_allowed(value):
@@ -66,6 +88,42 @@ class GoogleDriveProvider:
         self.request_lock = RLock()
         self.roots = set()
         self.catalogues = {}
+
+    def cache_account(self):
+        grant = self.auth.token.get('refresh_token', '')
+        return hashlib.sha256(grant.encode()).hexdigest() if grant else ''
+
+    def change_token(self):
+        with self.request('GET', f'{API}/changes/startPageToken', retry=True,
+                          params={'supportsAllDrives': 'true', 'fields': 'startPageToken'}) as response:
+            token = response.json().get('startPageToken')
+        if not isinstance(token, str) or not token:
+            raise SyncError('Google Drive returned an invalid change token.')
+        return token
+
+    def changes(self, token):
+        changes, seen = [], set()
+        fields = 'nextPageToken,newStartPageToken,changes(fileId,changeType,driveId,file(parents))'
+        while token not in seen:
+            seen.add(token)
+            with self.request('GET', f'{API}/changes', retry=True, params={
+                    'pageToken': token, 'pageSize': 1000, 'spaces': 'drive', 'supportsAllDrives': 'true',
+                    'includeItemsFromAllDrives': 'true', 'includeRemoved': 'true',
+                    'fields': fields}) as response:
+                data = response.json()
+            for change in data.get('changes', []):
+                changes.append(CloudChange(
+                    change.get('fileId', ''), tuple(change.get('file', {}).get('parents', [])),
+                    all_items=change.get('changeType') == 'drive', drive_id=change.get('driveId', '')))
+            next_token = data.get('nextPageToken')
+            if next_token:
+                token = next_token
+            else:
+                cursor = data.get('newStartPageToken')
+                if isinstance(cursor, str) and cursor:
+                    return changes, cursor
+                break
+        raise SyncError('Google Drive returned an invalid change list.')
 
     def close(self):
         self.session.close()
@@ -469,7 +527,8 @@ class GoogleDriveProvider:
                 content_range = f'bytes {offset}-{end - 1}/{size}' if chunk else f'bytes */{size}'
                 # A failed chunk is resolved through the resumable session, avoiding a second file creation.
                 try:
-                    response = self.request('PUT', location, cancel=cancel, data=chunk,
+                    response = self.request('PUT', location, cancel=cancel,
+                                            data=UploadChunk(chunk, offset, size, cancel, progress) if chunk else b'',
                                             headers={**headers, 'Content-Range': content_range})
                 except SyncError:
                     if cancel.is_set():
@@ -490,4 +549,4 @@ class GoogleDriveProvider:
                     if stalls >= 3:
                         raise SyncError('The upload stalled. Refresh before retrying. Existing files are retained.')
                     offset = new_offset
-                    progress(offset, size)
+                    progress(min(offset, max(0, size - 1)), size)

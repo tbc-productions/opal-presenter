@@ -50,15 +50,27 @@ class CloudItem:
     can_move: bool = False
     provider_name: str = ''
     modified_by: str = ''
+    drive_id: str = ''
 
     @property
     def display_name(self):
         return (self.title or (self.name if self.folder else friendly_name(self.name))).strip()
 
 
+@dataclass(frozen=True)
+class CloudChange:
+    id: str
+    parents: tuple[str, ...] = ()
+    all_items: bool = False
+    drive_id: str = ''
+
+
 class CloudProvider(Protocol):
     """Providers keep networking, permission checks and atomic writes off the UI thread."""
 
+    def cache_account(self) -> str: ...
+    def change_token(self) -> str: ...
+    def changes(self, token) -> tuple[list[CloudChange], str]: ...
     def sign_in(self, cancel, open_browser): ...
     def disconnect(self): ...
     def folder(self, folder_id, resource_key='') -> CloudItem: ...

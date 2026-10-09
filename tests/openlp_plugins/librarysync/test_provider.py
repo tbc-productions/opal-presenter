@@ -46,8 +46,9 @@ def test_paged_shared_folder_listing(provider):
 def test_google_items_include_provider_and_available_author_metadata():
     item = cloud_item({'id': 'song', 'name': 'Welcome.xml', 'size': '2048',
                        'createdTime': '2026-10-08T01:00:00Z', 'modifiedTime': '2026-10-09T01:00:00Z',
+                       'driveId': 'shared-drive',
                        'lastModifyingUser': {'displayName': 'Sam'}})
-    assert item.provider_name == 'Google Drive'
+    assert item.provider_name == 'Google Drive' and item.drive_id == 'shared-drive'
     assert item.modified_by == 'Sam'
     assert item.created and item.modified and item.size == 2048
     unknown = cloud_item({'id': 'song', 'name': 'Welcome.xml'})
@@ -135,8 +136,81 @@ def test_lost_chunk_response_resumes_same_upload(provider, tmp_path):
     assert provider.upload(CloudItem('root', 'Church'), 'media', source, Event(), MagicMock()).id == 'new'
     calls = provider.request.call_args_list
     assert calls[2].kwargs['headers']['Content-Range'] == 'bytes */10'
-    assert calls[3].kwargs['data'] == b'67890'
+    assert calls[3].kwargs['data'].getvalue() == b'67890'
     assert calls[3].kwargs['headers']['Content-Range'] == 'bytes 5-9/10'
+
+
+def test_upload_reports_sent_bytes_before_drive_confirms(provider, tmp_path):
+    import requests
+    source = tmp_path / 'file.mp4'
+    source.write_bytes(b'1234567890')
+    provider.type_folder = MagicMock(return_value=CloudItem('media', 'Media', folder=True, can_upload=True))
+    progress = MagicMock()
+
+    def send(method, url, **kwargs):
+        if method == 'POST':
+            return response(headers={'Location': 'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'})
+        prepared = requests.Request(method, url, data=kwargs['data'], headers=kwargs['headers']).prepare()
+        assert prepared.headers['Content-Length'] == '10'
+        assert 'Transfer-Encoding' not in prepared.headers
+        assert prepared.body.read(3) == b'123'
+        progress.assert_called_with(3, 10)
+        assert prepared.body.read(3) == b'456'
+        progress.assert_called_with(6, 10)
+        assert prepared.body.read(4) == b'7890'
+        progress.assert_called_with(9, 10)
+        assert prepared.body.read() == b''
+        assert all(call.args[0] < 10 for call in progress.call_args_list)
+        return response(data={'id': 'new', 'name': 'file.mp4'})
+
+    provider.session.request.side_effect = send
+    assert provider.upload(CloudItem('root', 'Organisation'), 'media', source, Event(), progress).id == 'new'
+    progress.assert_called_with(10, 10)
+
+
+def test_sent_progress_does_not_change_confirmed_resume_offset(provider, tmp_path):
+    source = tmp_path / 'file.mp4'
+    source.write_bytes(b'1234567890')
+    provider.type_folder = MagicMock(return_value=CloudItem('media', 'Media', folder=True, can_upload=True))
+    progress = MagicMock()
+
+    def send(method, url, **kwargs):
+        import requests
+        if method == 'POST':
+            return response(headers={'Location': 'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'})
+        if kwargs['data'] == b'':
+            assert kwargs['headers']['Content-Range'] == 'bytes */10'
+            return response(308, headers={'Range': 'bytes=0-4'})
+        if kwargs['headers']['Content-Range'] == 'bytes 0-9/10':
+            assert kwargs['data'].read() == b'1234567890'
+            progress.assert_called_with(9, 10)
+            raise requests.ConnectionError('network failure')
+        assert kwargs['data'].read() == b'67890'
+        assert kwargs['headers']['Content-Range'] == 'bytes 5-9/10'
+        return response(data={'id': 'new', 'name': 'file.mp4'})
+
+    provider.session.request.side_effect = send
+    assert provider.upload(CloudItem('root', 'Organisation'), 'media', source, Event(), progress).id == 'new'
+    progress.assert_called_with(10, 10)
+
+
+def test_upload_cancel_is_checked_while_sending(provider, tmp_path):
+    source = tmp_path / 'file.mp4'
+    source.write_bytes(b'1234567890')
+    cancel = Event()
+    provider.type_folder = MagicMock(return_value=CloudItem('media', 'Media', folder=True, can_upload=True))
+
+    def send(method, url, **kwargs):
+        if method == 'POST':
+            return response(headers={'Location': 'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'})
+        assert kwargs['data'].read(3) == b'123'
+        cancel.set()
+        kwargs['data'].read(3)
+
+    provider.session.request.side_effect = send
+    with pytest.raises(SyncError, match='cancelled'):
+        provider.upload(CloudItem('root', 'Organisation'), 'media', source, cancel, MagicMock())
+    assert provider.session.request.call_count == 2
 
 
 def test_resource_keys_are_sent_for_link_shared_items(provider, tmp_path):
@@ -481,3 +555,44 @@ def test_losing_type_folder_with_another_users_files_is_never_removed(provider):
     provider.delete = MagicMock()
     assert provider.type_folder(root, 'songs').id == 'mine'
     provider.delete.assert_not_called()
+
+
+def test_cache_account_uses_stable_grant_and_never_exposes_tokens(provider):
+    provider.auth.token = {'refresh_token': 'account-one-grant', 'access_token': 'short-lived-one'}
+    first = provider.cache_account()
+    provider.auth.token['access_token'] = 'short-lived-two'
+    assert provider.cache_account() == first
+    assert 'account-one-grant' not in first
+    provider.auth.token['refresh_token'] = 'another-account-grant'
+    assert provider.cache_account() != first
+    provider.auth.token = {}
+    assert provider.cache_account() == ''
+
+
+def test_changes_follow_all_pages_and_include_shared_drive_and_removed_items(provider):
+    provider.session.request.side_effect = [
+        response(data={'changes': [{'fileId': 'new', 'changeType': 'file', 'file': {'parents': ['songs']}}],
+                       'nextPageToken': 'next'}),
+        response(data={'changes': [{'fileId': 'removed', 'changeType': 'file'}, {'changeType': 'drive'}],
+                       'newStartPageToken': 'current'})]
+    changes, token = provider.changes('saved')
+    assert token == 'current'
+    assert changes[0].id == 'new' and changes[0].parents == ('songs',)
+    assert changes[1].id == 'removed' and changes[2].all_items
+    calls = provider.session.request.call_args_list
+    assert [call.kwargs['params']['pageToken'] for call in calls] == ['saved', 'next']
+    assert all(call.kwargs['params']['includeItemsFromAllDrives'] == 'true' for call in calls)
+    assert all(call.kwargs['params']['includeRemoved'] == 'true' for call in calls)
+    assert all(call.kwargs['params']['pageSize'] == 1000 for call in calls)
+
+
+def test_change_baseline_and_invalid_cursor_response(provider):
+    provider.session.request.return_value = response(data={'startPageToken': 'baseline'})
+    assert provider.change_token() == 'baseline'
+    assert provider.session.request.call_args.args[1] == f'{API}/changes/startPageToken'
+    provider.session.request.return_value = response(data={'nextPageToken': 'same'})
+    with pytest.raises(SyncError, match='invalid change list'):
+        provider.changes('same')
+    provider.session.request.return_value = response(data={})
+    with pytest.raises(SyncError, match='invalid change token'):
+        provider.change_token()

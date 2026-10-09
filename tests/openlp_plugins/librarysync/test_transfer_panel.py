@@ -52,6 +52,79 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
     assert not hasattr(panel, 'preview_text') and not hasattr(panel, 'preview_image')
 
 
+def test_transfer_progress_shares_footer_and_starts_indeterminate(panel, monkeypatch):
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.run_thread', MagicMock())
+    panel.start_job('upload', MagicMock())
+    job_id = next(iter(panel.jobs))
+    assert panel.footer.layout().itemAt(0).widget() is panel.footer.count_label
+    assert panel.footer.layout().itemAt(1).widget() is panel.transfer_progress
+    assert panel.footer.layout().itemAt(2).widget() is panel.status
+    assert panel.progress.parentWidget() is panel.transfer_progress
+    assert panel.cancel_button.parentWidget() is panel.transfer_progress
+    assert not panel.transfer_progress.isHidden()
+    assert not panel.cancel_button.isHidden()
+    assert panel.progress.maximum() == 0
+    panel.job_progress(job_id, 'Uploading Welcome', 40, 100)
+    assert panel.progress.value() == 40 and panel.progress.text() == '40%'
+    panel.update_actions()
+    assert panel.progress.value() == 40
+    panel.job_progress(job_id, 'Uploading Next item', 0, 0)
+    assert panel.progress.maximum() == 0
+    panel.jobs.clear()
+    panel.update_actions()
+    assert panel.transfer_progress.isHidden()
+    panel.start_job('download', MagicMock())
+    assert panel.progress.maximum() == 0
+
+
+def test_old_transfer_progress_cannot_change_current_footer(panel):
+    panel.jobs['old'] = {'kind': 'upload', 'generation': panel.generation - 1}
+    panel.set_status('Ready')
+    panel.job_progress('old', 'Uploading old item', 50, 100)
+    assert panel.status.text() == 'Ready'
+    assert panel.progress.maximum() == 0
+
+
+@pytest.mark.parametrize('cached,outdated', [(False, False), (True, False), (True, True)])
+def test_error_status_uses_fluent_critical_colour_and_keeps_details(panel, cached, outdated):
+    panel.cached_listing = cached
+    panel.out_of_date = outdated
+    panel.set_status('Download failed', detail='Check your folder permissions.', error=True)
+    critical = panel._status_theme.theme_tokens().colors.systemCritical.name()
+    assert panel.status.styleSheet() == 'color: ' + critical + ';'
+    assert 'Check your folder permissions.' in panel.status.toolTip()
+    assert 'Download failed' in panel.status.toolTip()
+    if outdated:
+        assert panel.status.text() == 'Out of date · Refresh'
+    else:
+        assert panel.status.text() == ('Cached · Download failed' if cached else 'Download failed')
+    panel.set_status('Up to date')
+    assert bool(panel.status.styleSheet()) == outdated
+    assert 'Check your folder permissions.' not in panel.status.toolTip()
+
+
+@pytest.mark.parametrize('kind,cached,text', [
+    ('changes', False, 'Couldn’t check for updates'), ('browse', True, 'Cached · Refresh failed'),
+    ('upload', False, 'No connection')])
+def test_failed_jobs_show_critical_status_and_preserve_error_details(panel, kind, cached, text):
+    panel.cached_listing = cached
+    panel.jobs['failed'] = {'kind': kind, 'generation': panel.generation, 'cached': cached}
+    panel.job_failed('failed', 'No connection')
+    assert panel.status.text() == text
+    assert 'No connection' in panel.status.toolTip()
+    assert panel._status_theme.theme_tokens().colors.systemCritical.name() in panel.status.styleSheet()
+    panel.jobs.clear()
+
+
+@pytest.mark.parametrize('count,text', [(1, 'Uploaded 1 item'), (2, 'Uploaded 2 items')])
+def test_uploaded_status_uses_correct_item_count(panel, count, text):
+    panel.jobs['upload'] = {'kind': 'upload', 'generation': panel.generation}
+    panel.job_ready('upload', count)
+    assert panel.status.text() == text
+    assert not panel.status.styleSheet()
+    panel.jobs.clear()
+
+
 def test_no_connections_shows_import_infobar_and_disables_connect(panel, qtbot, monkeypatch):
     imported = MagicMock()
     monkeypatch.setattr(CloudLibrary, 'import_connection', imported)
@@ -665,7 +738,7 @@ def test_cloud_move_collision_cannot_overwrite_without_permission_to_remove_orig
     assert not Path(temporary.name).exists()
 
 
-def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot, tmp_path):
+def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot, tmp_path, monkeypatch):
     from threading import Event
     from openlp.plugins.librarysync.lib.preview import show_preview
 
@@ -673,18 +746,22 @@ def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot
     image = QtGui.QImage(1920, 1080, QtGui.QImage.Format.Format_RGB32)
     image.fill(QtGui.QColor('blue'))
     image.save(str(source))
-    item = CloudItem('image', 'Welcome.png', category='images', size=source.stat().st_size,
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    item = CloudItem('image', 'Welcome.png', category='images', size=source.stat().st_size, version='1',
                      thumbnail_url='https://drive.google.com/thumbnail')
     panel.selected_items = MagicMock(return_value=[item])
     panel.start_job = MagicMock()
     panel.open_preview()
     kind, operation, temporary = panel.start_job.call_args.args
     provider = MagicMock()
+    provider.cache_account.return_value = 'account'
     provider.preview.return_value = ('image', b'low resolution thumbnail')
     provider.download.side_effect = lambda item, destination, *args: destination.write_bytes(source.read_bytes())
     try:
-        result_item, path, prepared = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
-        assert kind == 'preview'
+        result_item, path, prepared, cached = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert kind == 'preview' and not cached
+        second = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert second[3]
         provider.preview.assert_not_called()
         provider.download.assert_called_once()
         window = show_preview(panel, result_item, path, prepared)
@@ -748,3 +825,194 @@ def test_cloud_metadata_resize_handle_follows_mouse_without_shifting_name(panel,
         assert header.sectionViewportPosition(column) + header.sectionSize(column) - 2 == position.x()
     QtTest.QTest.mouseRelease(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=position)
     assert header.sectionSize(column) == original - 40
+
+
+@pytest.fixture
+def persistent_cache(panel, tmp_path, monkeypatch):
+    from openlp.plugins.librarysync.lib.cache import CloudCache
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    cache = CloudCache(panel.profile, 'account')
+    folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True, drive_id='library-drive')
+    item = CloudItem('song', 'Welcome.xml', category='songs', version='1', can_edit=True, can_delete=True)
+    cache.save_listing('songs', 'church', (folder, [item], ''), 'baseline')
+    cache.save_listing('songs', 'songs', (folder, [item], ''), 'baseline')
+    return cache, folder, item
+
+
+def test_persistent_listing_is_shown_after_restart_without_reloading_drive(panel, persistent_cache, qtbot, monkeypatch):
+    from openlp.plugins.librarysync.lib.worker import PROVIDERS
+    cache, folder, item = persistent_cache
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: provider)
+    monkeypatch.setattr(panel, 'install_drop_targets', MagicMock())
+    panel.startup()
+    qtbot.waitUntil(lambda: not panel.jobs, timeout=5000)
+    assert panel.folder == folder and panel.tree.topLevelItemCount() == 1
+    assert panel.tree.topLevelItem(0).text(0) == 'Welcome'
+    assert panel.cached_listing and panel.change_token == 'baseline'
+    assert 'Cached' in panel.status.text()
+    provider.folder.assert_not_called()
+    provider.list_folder.assert_not_called()
+    provider.change_token.assert_not_called()
+    provider.changes.assert_not_called()
+
+
+def test_refresh_bypasses_cache_and_captures_change_baseline_before_listing(panel, persistent_cache):
+    from threading import Event
+    cache, folder, item = persistent_cache
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    provider.change_token.return_value = 'before-listing'
+    provider.folder.return_value = CloudItem('church', 'Organisation', folder=True)
+    provider.type_folder.return_value = folder
+    provider.list_folder.return_value = ([item], '')
+    panel.start_job = MagicMock()
+    panel.refresh()
+    operation = panel.start_job.call_args.args[1]
+    result = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+    assert not result[3]
+    assert result[4] == ('before-listing', False)
+    calls = [call[0] for call in provider.mock_calls]
+    assert calls.index('change_token') < calls.index('list_folder')
+    assert cache.listing('songs', 'church')[-2:] == ('before-listing', False)
+
+
+@pytest.mark.parametrize('change,expected', [
+    (('unrelated', ('elsewhere',), False), False), (('song', (), False), True),
+    (('new-song', ('songs',), False), True), (('church', (), False), True), (('', (), True), True),
+    (('', (), True, 'other-drive'), False), (('', (), True, 'library-drive'), True)])
+def test_visible_poll_marks_relevant_changes_out_of_date_and_persists_cursor(
+        panel, persistent_cache, qtbot, change, expected):
+    from threading import Event
+    from openlp.plugins.librarysync.lib.provider import CloudChange
+    cache, folder, item = persistent_cache
+    panel.jobs['snapshot'] = {'kind': 'browse', 'context': False, 'generation': panel.generation}
+    panel.job_ready('snapshot', (folder, [item], '', True, ('baseline', False)))
+    panel.jobs.clear()
+    panel.tree.topLevelItem(0).setSelected(True)
+    panel.start_job = MagicMock()
+    panel.show()
+    qtbot.wait(20)
+    panel.start_job.reset_mock()
+    panel.poll_changes()
+    kind, operation = panel.start_job.call_args.args
+    assert kind == 'changes'
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    provider.changes.return_value = ([CloudChange(*change)], 'next-cursor')
+    result = operation(provider, Event())
+    assert result == ('next-cursor', expected)
+    provider.list_folder.assert_not_called()
+    panel.jobs['poll'] = {'kind': 'changes', 'context': None, 'generation': panel.generation}
+    panel.job_ready('poll', result)
+    panel.jobs.clear()
+    panel.update_actions()
+    assert panel.out_of_date == expected
+    assert panel.rename_action.isEnabled() == (not expected)
+    assert panel.preview_action.isEnabled()
+    assert ('Out of date' in panel.status.text()) == expected
+    assert bool(panel.status.styleSheet()) == expected
+    assert cache.listing('songs', 'church')[-2:] == ('next-cursor', expected)
+    if expected:
+        panel.set_status('Viewing Welcome')
+        assert 'Out of date' in panel.status.text()
+
+
+def test_poll_stops_when_hidden_and_failure_keeps_cached_view_available(panel, persistent_cache, qtbot):
+    cache, folder, item = persistent_cache
+    panel.jobs['snapshot'] = {'kind': 'browse', 'context': False, 'generation': panel.generation}
+    panel.job_ready('snapshot', (folder, [item], '', True, ('baseline', False)))
+    panel.jobs.clear()
+    panel.tree.topLevelItem(0).setSelected(True)
+    panel.start_job = MagicMock()
+    panel.poll_changes()
+    panel.start_job.assert_not_called()
+    panel.show()
+    qtbot.wait(20)
+    worker = MagicMock()
+    panel.jobs['poll'] = {'kind': 'changes', 'context': None, 'generation': panel.generation, 'worker': worker}
+    panel.job_failed('poll', 'No connection')
+    panel.jobs.clear()
+    panel.update_actions()
+    assert panel.tree.topLevelItemCount() == 1
+    assert panel.preview_action.isEnabled() and not panel.rename_action.isEnabled()
+    assert panel.status.text() == 'Cached · Couldn’t check for updates'
+    assert 'No connection' in panel.status.toolTip()
+    panel.jobs['poll'] = {'kind': 'changes', 'worker': worker}
+    panel.hide()
+    assert not panel.change_timer.isActive()
+    worker.stop.assert_called_once()
+    panel.jobs.clear()
+    panel.start_job.reset_mock()
+    panel.poll_changes()
+    panel.start_job.assert_not_called()
+
+
+def test_mutation_invalidates_disk_listing_even_after_partial_failure(panel, persistent_cache, monkeypatch):
+    cache, folder, item = persistent_cache
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.run_thread', MagicMock())
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+
+    def partial_operation(*args):
+        raise SyncError('One of the items changed')
+    panel.cache[('songs', 'church')] = (time.monotonic(), (folder, [item], ''))
+    panel.start_job('delete', partial_operation)
+    worker = next(iter(panel.jobs.values()))['worker']
+    with pytest.raises(SyncError):
+        worker.operation(provider)
+    assert cache.listing('songs', 'church') is None
+    job_id = next(iter(panel.jobs))
+    panel.jobs[job_id]['failed'] = True
+    panel.job_completed(job_id)
+    assert not panel.cache
+
+
+def test_disconnect_clears_only_signed_in_accounts_cache(panel, persistent_cache):
+    cache, folder, item = persistent_cache
+    panel.start_job = MagicMock()
+    panel.disconnect()
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    panel.start_job.call_args.args[1](provider)
+    provider.disconnect.assert_called_once()
+    assert cache.listing('songs', 'church') is None
+
+
+def test_loading_more_preserves_cursor_so_changes_to_earlier_pages_are_not_lost(panel, persistent_cache):
+    from threading import Event
+    cache, folder, item = persistent_cache
+    panel.folder, panel.change_token, panel.out_of_date = folder, 'earlier-page-baseline', True
+    panel.start_job = MagicMock()
+    panel.browse(folder, 'page-two', force=True)
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    provider.list_folder.return_value = ([], '')
+    result = panel.start_job.call_args.args[1](provider, Event(), MagicMock(), MagicMock(), MagicMock())
+    provider.change_token.assert_not_called()
+    assert result[4] == ('earlier-page-baseline', True)
+
+
+def test_poll_for_an_old_folder_cannot_overwrite_current_status(panel, persistent_cache):
+    cache, folder, item = persistent_cache
+    panel.jobs['old-poll'] = {'kind': 'changes', 'generation': panel.generation, 'context': None}
+    panel.generation += 1
+    panel.set_status('Current folder')
+    panel.job_ready('old-poll', ('next', True))
+    assert not panel.out_of_date and panel.status.text() == 'Current folder'
+    panel.jobs.clear()
+
+
+def test_change_poll_can_run_while_a_media_view_stream_is_open(panel, persistent_cache, qtbot):
+    cache, folder, item = persistent_cache
+    panel.folder, panel.change_token = folder, 'baseline'
+    panel.start_job = MagicMock()
+    panel.show()
+    qtbot.wait(20)
+    panel.start_job.reset_mock()
+    panel.jobs['stream'] = {'kind': 'preview', 'context': SimpleNamespace(preview_window=QtWidgets.QWidget()),
+                            'worker': MagicMock()}
+    panel.poll_changes()
+    assert panel.start_job.call_args.args[0] == 'changes'
+    panel.jobs.clear()
