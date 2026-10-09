@@ -12,8 +12,8 @@ import subprocess
 import sys
 
 SOURCE_URL = 'https://github.com/calvinhxx/Fluent-Qt.git'
-SOURCE_REVISION = '4da001f20d0e1bee4a0a1d0519535e9ff0e5eb42'
-VERSION = '1.9.2+openlp.7'
+SOURCE_REVISION = '227764dba3dcd33db393c7640a0d8642d89b1e38'
+VERSION = '1.9.3+openlp.1'
 QT_VERSION = '6.11.1'
 
 
@@ -233,7 +233,7 @@ def main():
         relocate_macos(build / 'python/fluentqt/_fluentqt.so')
     run(cmake, '--build', build, '--target', 'fluentqt_pyside6_stubs', '--parallel', args.jobs)
     env = dict(os.environ, QT_QPA_PLATFORM='offscreen', PYTHONPATH=str(build / 'python'),
-               FLUENTQT_EXPECTED_VERSION='1.9.2')
+               FLUENTQT_EXPECTED_VERSION='1.9.3')
     run(python, bindings / 'tests/test_bindings.py', env=env)
     output = workspace / 'wheelhouse'
     run(python, bindings / 'tools/build_wheel.py', '--package-dir', build / 'python/fluentqt',
