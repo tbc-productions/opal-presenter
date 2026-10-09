@@ -87,6 +87,62 @@ def test_song_editor_exec_opens_and_closes(form: EditSongForm):
         parent.close()
 
 
+@pytest.mark.parametrize('relocated', [True, False])
+@pytest.mark.parametrize('child_name', ['author_form', 'topic_form', 'song_book_form'])
+def test_maintenance_dialog_uses_current_editor_window(form, qtbot, relocated, child_name):
+    """Maintenance and its edit dialogs open in the designer's window and refresh song choices on close."""
+    from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    form.show()
+    if relocated:
+        form.hide()
+        parent = fluentqt.Window()
+        qtbot.addWidget(parent)
+        parent.resize(1200, 900)
+        parent.show()
+        form._fluent_dialog_host = parent
+    observed = []
+
+    def inspect_and_close():
+        dialog = (parent.findChild(SongMaintenanceForm, 'song_maintenance_dialog') or
+                  form.parentWidget().findChild(SongMaintenanceForm, 'song_maintenance_dialog'))
+        observed.append(dialog is not None and dialog.window() is parent and dialog.isOpen() and dialog.isVisible())
+        if dialog is None:
+            return
+        QtCore.QTimer.singleShot(1000, dialog, dialog.reject)
+        dialog.setAnimationEnabled(False)
+        child = getattr(dialog, child_name)
+        child.setAnimationEnabled(False)
+
+        def close_child():
+            observed.append(child.window() is parent and child.isOpen() and child.isVisible())
+            child.reject()
+
+        QtCore.QTimer.singleShot(0, close_child)
+        child.exec()
+        dialog.reject()
+
+    QtCore.QTimer.singleShot(0, inspect_and_close)
+    try:
+        with patch.object(form, 'load_authors') as load_authors, \
+                patch.object(form, 'load_songbooks') as load_songbooks, \
+                patch.object(form, 'load_topics') as load_topics:
+            form.maintenance_button.click()
+        assert observed == [True, True]
+        load_authors.assert_called_once_with()
+        load_songbooks.assert_called_once_with()
+        load_topics.assert_called_once_with()
+        form.media_item.song_maintenance_form.exec.assert_not_called()
+    finally:
+        if relocated:
+            del form._fluent_dialog_host
+        form.close()
+        parent.close()
+
+
 @pytest.mark.parametrize('accept', [True, False])
 @pytest.mark.parametrize('relocated', [True, False])
 def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept, relocated):

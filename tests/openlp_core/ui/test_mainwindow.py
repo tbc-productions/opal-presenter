@@ -142,6 +142,42 @@ def test_modern_factory_layout_has_usable_library_height(modern_appearance, main
     assert library.dockAreaWidget().currentDockWidget() is library
 
 
+@pytest.mark.parametrize('saved_tab', [None, 'media_manager_dock', 'theme_manager_dock', 'legacy', 'detached'])
+@patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+def test_live_preset_groups_left_docks_and_defaults_to_service(mock_schedule, saved_tab, main_window, settings):
+    """Live opens all three tabs and selects Service, including when restoring older saved layouts."""
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    if saved_tab == 'detached':
+        # Library Sync removes Service from the dock layout.
+        main_window.removeDockWidget(main_window.service_manager_dock)
+    main_window._activate_layout_preset('live')
+    main_window._deferred_apply_left_column_dock_layout()
+    if saved_tab and saved_tab != 'detached':
+        if saved_tab == 'legacy':
+            main_window._reapply_left_column_dock_layout()
+            main_window.set_view_mode(False, True, False, True, True, False, 'live')
+        else:
+            getattr(main_window, saved_tab).raise_()
+        main_window._activate_layout_preset('setup')
+        main_window._deferred_apply_left_column_dock_layout()
+        main_window._activate_layout_preset('live')
+        main_window._deferred_apply_left_column_dock_layout()
+
+    service = main_window.service_manager_dock
+    library = main_window.media_manager_dock
+    themes = main_window.theme_manager_dock
+    assert set(main_window.tabifiedDockWidgets(service)) == {library, themes}
+    assert all(dock.isDockOpen() for dock in (service, library, themes))
+    assert service.dockAreaWidget().currentDockWidget() is service
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
+    assert all(action.isChecked() for action in (main_window.view_service_manager_item,
+                                               main_window.view_media_manager_item,
+                                               main_window.view_theme_manager_item))
+
+
 class _DummyRenderer:
     def __init__(self, *args, **kwargs):
         pass
@@ -1015,7 +1051,7 @@ def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_w
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(False, True, False, True, True, False, 'live')
+    mocked_view_mode.assert_called_with(True, True, True, True, True, False, 'live')
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
@@ -1095,8 +1131,9 @@ def test_left_dock_visibility_named_live_preset_without_saved_uses_factory(main_
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'live')
     settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray())
-    settings.setValue('user interface/show library', True)
-    assert main_window._left_dock_visibility_from_settings() == (False, True, False)
+    settings.setValue('user interface/show library', False)
+    settings.setValue('user interface/show themes', False)
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
 
 
 def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window, settings):
@@ -1104,8 +1141,8 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
     Once a preset has saved layout state, left-pane visibility follows stored settings (user customisation).
     """
     settings.setValue('user interface/is preset layout', True)
-    settings.setValue('core/view mode', 'live')
-    settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('core/view mode', 'setup')
+    settings.setValue('user interface/modern preset layout/setup/main window state', QtCore.QByteArray(b'1'))
     settings.setValue('user interface/show library', True)
     settings.setValue('user interface/show service', False)
     settings.setValue('user interface/show themes', True)

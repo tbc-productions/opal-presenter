@@ -56,6 +56,7 @@ from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.lib.slidedesign import normalise_design
 from openlp.core.widgets.slideeditor import get_slide_editor, exec_item_editor
 from openlp.plugins.songs.forms.mediafilesform import MediaFilesForm
+from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
 from openlp.plugins.songs.lib import VerseType, clean_song
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
 from openlp.plugins.songs.lib.openlyricsxml import SongXML
@@ -1533,7 +1534,11 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         """
         Maintenance button pressed
         """
-        self.media_item.song_maintenance_form.exec(True)
+        maintenance_form = SongMaintenanceForm(self.manager, self)
+        try:
+            maintenance_form.exec(True)
+        finally:
+            maintenance_form.deleteLater()
         self.load_authors()
         self.load_songbooks()
         self.load_topics()

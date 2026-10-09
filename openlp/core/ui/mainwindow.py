@@ -617,7 +617,7 @@ class Ui_MainWindow(object):
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
+            'Preview and Live slide controllers, with Service, Library and Themes sharing one dock area.'))
         self.layout_preset_navigation.setItemText(2, translate('OpenLP.MainWindow', 'Live'))
         self.layout_preset_navigation.setItemText(3, translate('OpenLP.MainWindow', 'Library Sync'))
         self.mode_library_sync_item.setText(translate('OpenLP.MainWindow', 'Library Sync'))
@@ -930,7 +930,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 elif view_mode == 'setup':
                     self.set_view_mode(True, True, True, True, False, False, 'setup')
                 elif view_mode == 'live':
-                    self.set_view_mode(False, True, False, True, True, False, 'live')
+                    self.set_view_mode(True, True, True, True, True, False, 'live')
                 elif view_mode == 'librarysync':
                     self._apply_canonical_preset_visibility('librarysync')
                 self.settings.setValue('user interface/is preset layout', True)
@@ -1250,7 +1250,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
 
     def on_mode_live_item_clicked(self):
         """
-        Put OpenLP into "Live" view mode (Preview and Live slide controllers; Library hidden).
+        Put OpenLP into "Live" view mode (Service, Library and Themes tabified beside Preview and Live).
         """
         self._activate_layout_preset('live')
 
@@ -1528,7 +1528,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         elif mode == 'setup':
             self.set_view_mode(True, True, True, True, False, False, 'setup')
         elif mode == 'live':
-            self.set_view_mode(False, True, False, True, True, False, 'live')
+            self.set_view_mode(True, True, True, True, True, False, 'live')
         elif mode == 'librarysync':
             self.set_view_mode(True, False, True, False, False, False, 'librarysync')
 
@@ -1664,7 +1664,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         elif view_mode == 'librarysync':
             self._apply_canonical_preset_visibility('librarysync')
         else:
-            self.set_view_mode(False, True, False, True, True, False, 'live')
+            self.set_view_mode(True, True, True, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
         self._deferred_apply_left_column_dock_layout()
 
@@ -1807,10 +1807,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         thm = self.settings.value('user interface/show themes')
 
         if self.settings.value('user interface/is preset layout'):
+            if mode == 'live':
+                return True, True, True
             if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
                 return (lib, svc, thm)
-            if mode == 'live':
-                return False, True, False
             if mode == 'librarysync':
                 return True, False, True
             if mode in ('default', 'setup'):
@@ -1835,6 +1835,16 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                              QtCore.Qt.Orientation.Vertical)
         self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
         self.media_manager_dock.raise_()
+
+    def _reapply_left_column_dock_layout_live(self) -> None:
+        """Keep all three Live tabs in Service's dock area, with Service selected."""
+        self.service_manager_dock.setFloating(False)
+        if self.service_manager_dock.dockAreaWidget() is None:
+            self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
+        for dock in (self.media_manager_dock, self.theme_manager_dock):
+            dock.setFloating(False)
+            self.tabifyDockWidget(self.service_manager_dock, dock)
+        self.service_manager_dock.raise_()
 
     def _reapply_left_column_dock_layout_setup(self) -> None:
         """
@@ -1894,7 +1904,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.resizeDocks([ref], [target_w], QtCore.Qt.Orientation.Horizontal)
         except (TypeError, AttributeError):
             pass
-        if getattr(self, 'dock_manager', None) and show_svc and (show_lib or show_thm):
+        if getattr(self, 'dock_manager', None) and mode != 'live' and show_svc and (show_lib or show_thm):
             self.resizeDocks([self.service_manager_dock, self.media_manager_dock],
                              [int(height * 0.35), int(height * 0.65)], QtCore.Qt.Orientation.Vertical)
     def _deferred_apply_left_column_dock_layout(self) -> None:
@@ -1917,7 +1927,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     self.reset_controller_docks()
                     self._reset_dock_layout = False
             with self._mute_left_dock_visibility_signals():
-                if not skip_for_saved_preset:
+                if not skip_for_saved_preset and mode != 'live':
                     if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
                         self._reapply_library_sync_dock_layout()
                     elif mode == 'setup':
@@ -1931,6 +1941,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 _set_dock_visible(self.service_manager_dock, show_svc)
                 _set_dock_visible(self.media_manager_dock, show_lib)
                 _set_dock_visible(self.theme_manager_dock, show_thm)
+                if mode == 'live':
+                    self._reapply_left_column_dock_layout_live()
             self._sync_left_dock_menu_checks_from_settings()
             self._set_cloud_library_visibility(mode)
             if not (getattr(self, 'dock_manager', None) and skip_for_saved_preset):
