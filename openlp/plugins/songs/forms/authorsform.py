@@ -27,7 +27,7 @@ from openlp.core.lib.ui import critical_error_message_box
 from openlp.plugins.songs.forms.authorsdialog import Ui_AuthorsDialog
 
 
-class AuthorsForm(QtWidgets.QDialog, Ui_AuthorsDialog):
+class AuthorsForm(QtWidgets.FormDialog, Ui_AuthorsDialog):
     """
     Class to control the Maintenance of Authors Dialog
     """
@@ -55,7 +55,7 @@ class AuthorsForm(QtWidgets.QDialog, Ui_AuthorsDialog):
             self.last_name_edit.clear()
             self.display_edit.clear()
         self.first_name_edit.setFocus()
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def on_first_name_edited(self, display_name):
         """
@@ -107,12 +107,12 @@ class AuthorsForm(QtWidgets.QDialog, Ui_AuthorsDialog):
                                   'You have not set a display name for the author, combine the first and last names?'),
                     parent=self, question=True) == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.display_edit.setText(self.first_name_edit.text() + ' ' + self.last_name_edit.text())
-                return QtWidgets.QDialog.accept(self)
+                return QtWidgets.FormDialog.accept(self)
             else:
                 self.display_edit.setFocus()
                 return False
         else:
-            return QtWidgets.QDialog.accept(self)
+            return QtWidgets.FormDialog.accept(self)
 
     def _get_first_name(self):
         """

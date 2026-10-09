@@ -427,7 +427,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         def tr(text):
             return translate('OpenLP.ThemeWizard', text)
 
-        dialog = fluentqt.ContentDialog(self)
+        dialog = QtWidgets.ContentDialog(self)
         dialog.setObjectName('theme_exit_dialog')
         dialog.setTitle(tr('Save Theme?'))
         title = self.theme_name_edit.text().strip()

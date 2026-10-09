@@ -38,8 +38,9 @@ class Ui_StartTimeDialog(object):
         Set up the UI
         """
         StartTimeDialog.setObjectName('StartTimeDialog')
+        StartTimeDialog.setMaximumWidth(720)
         StartTimeDialog.setWindowIcon(UiIcons().main_icon)
-        self.dialog_layout = QtWidgets.QGridLayout(StartTimeDialog)
+        self.dialog_layout = QtWidgets.QGridLayout(StartTimeDialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.start_label = QtWidgets.QLabel(StartTimeDialog)
         self.start_label.setObjectName('start_label')
@@ -124,4 +125,6 @@ class Ui_StartTimeDialog(object):
         self.second_label.setText(translate('OpenLP.StartTime_form', 'Seconds:'))
         self.start_label.setText(translate('OpenLP.StartTime_form', 'Start'))
         self.finish_label.setText(translate('OpenLP.StartTime_form', 'Finish'))
-        self.length_label.setText(translate('OpenLP.StartTime_form', 'Length'))
+        self.length_label.setText(translate('OpenLP.StartTime_form', 'Media length'))
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('OpenLP.StartTime_form', 'Apply'))

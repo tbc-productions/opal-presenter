@@ -36,7 +36,7 @@ class Ui_TopicsDialog(object):
         """
         topics_dialog.setObjectName('topics_dialog')
         topics_dialog.setWindowIcon(UiIcons().main_icon)
-        self.dialog_layout = QtWidgets.QVBoxLayout(topics_dialog)
+        self.dialog_layout = QtWidgets.QVBoxLayout(topics_dialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.name_layout = QtWidgets.QFormLayout()
         self.name_layout.setObjectName('name_layout')

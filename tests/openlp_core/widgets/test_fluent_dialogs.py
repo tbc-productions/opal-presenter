@@ -230,7 +230,7 @@ def test_compact_dialogs_fit_fields_and_labels(qapp, registry, mock_settings, mo
     """Old height caps must not compress fields after Fluent padding is applied."""
     from importlib import import_module
     ui = getattr(import_module(module_name), ui_name)
-    dialog_type = type('CompactDialog', (fluent.QDialog, ui), {})
+    dialog_type = type('CompactDialog', (fluent.FormDialog, ui), {})
     parent = QtWidgets.QWidget()
     parent.resize(1000, 800)
     parent.show()
@@ -354,3 +354,135 @@ def test_long_content_message_has_bounded_width_and_wrapped_text(qapp):
     finally:
         box.done(0)
         parent.close()
+
+
+@pytest.mark.parametrize('default', ['Save', 'Discard', 'Cancel'])
+def test_message_command_positions_do_not_follow_default_action(qapp, default):
+    buttons = fluent.QMessageBox.StandardButton
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Question, 'Save changes?', 'Choose an action',
+                             buttons.Save | buttons.Discard | buttons.Cancel)
+    box.setDefaultButton(getattr(buttons, default))
+    box._sync_content()
+    assert {slot: box.standardButton(button) for slot, button in box._content_commands.items()} == {
+        'primary': buttons.Save, 'secondary': buttons.Discard, 'close': buttons.Cancel}
+    assert box.defaultButton() is box.button(getattr(buttons, default))
+    box.deleteLater()
+
+
+def test_long_message_scrolls_without_hiding_commands(qapp, qtbot):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.show()
+    text = '\n'.join(('/missing/' + 'long-folder-name/' * 7 + 'presentation-number-{0}.pptx').format(index)
+                     for index in range(25))
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Warning, 'Missing files', text,
+                             fluent.QMessageBox.StandardButton.Ok, parent)
+    box.setAnimationEnabled(False)
+    box.open()
+    QtWidgets.QApplication.processEvents()
+    assert parent.rect().contains(box.geometry())
+    assert box._content_scroll.verticalScrollBar().maximum() > 0
+    button = box._native_commands['primary']
+    assert box.rect().contains(QtCore.QRect(button.mapTo(box, QtCore.QPoint()), button.size()))
+    parent.resize(800, 500)
+    QtWidgets.QApplication.processEvents()
+    assert parent.rect().contains(box.geometry())
+    assert box.rect().contains(QtCore.QRect(button.mapTo(box, QtCore.QPoint()), button.size()))
+    assert box._content_scroll.viewport().height() > 0
+    box.done(0)
+
+
+def test_content_dialog_preserves_padding_typography_and_content_ownership(qapp):
+    dialog = fluent.ContentDialog()
+    native = fluentqt.ContentDialog()
+    assert dialog.layout().contentsMargins() == native.layout().contentsMargins()
+    label = fluent.QLabel('A body paragraph')
+    dialog.setContent(label)
+    assert label.fluentTypography() == fluentqt.FontRole.Body
+    assert not label.autoFillBackground()
+    replacement = fluent.QLineEdit()
+    dialog.setContent(replacement)
+    assert label.parentWidget() is None
+    assert label.text() == 'A body paragraph'
+    assert dialog.takeContent() is replacement
+    assert replacement.parentWidget() is None
+    assert dialog.content() is None
+    dialog.deleteLater()
+    native.deleteLater()
+    label.deleteLater()
+    replacement.deleteLater()
+
+
+def test_plain_horizontal_dialog_puts_heading_above_content(qapp, qtbot):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(900, 600)
+    parent.show()
+    dialog = fluent.QDialog(parent)
+    dialog.setWindowTitle('About OpenLP+')
+    layout = QtWidgets.QHBoxLayout(dialog)
+    body = fluent.QLabel('About text')
+    layout.addWidget(body)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    assert dialog._heading.text() == 'About OpenLP+'
+    assert dialog._heading.mapTo(dialog, QtCore.QPoint()).y() < body.mapTo(dialog, QtCore.QPoint()).y()
+    dialog.setWindowTitle('Updated title')
+    assert dialog._heading.text() == 'Updated title'
+    dialog.done(0)
+
+
+def test_folder_form_has_room_for_both_rows_and_primary_action(qapp, registry, mock_settings, qtbot):
+    from openlp.core.ui.folders import AddFolderForm
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 800)
+    parent.show()
+    dialog = AddFolderForm(parent)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    assert dialog.title() == 'Add folder'
+    assert dialog._native_commands['primary'].text() == 'Create'
+    for label, field in ((dialog.parent_folder_label, dialog.folder_combobox), (dialog.name_label, dialog.name_edit)):
+        assert label.height() >= label.sizeHint().height()
+        assert field.height() >= 32
+    assert dialog.parent_folder_label.geometry().bottom() < dialog.name_label.geometry().top()
+    dialog.done(0)
+
+
+def test_planning_center_keeps_import_before_refresh(qapp, registry, mock_settings):
+    from openlp.plugins.planningcenter.forms.selectplandialog import Ui_SelectPlanDialog
+    dialog = type('PlanningDialog', (fluent.FormDialog, Ui_SelectPlanDialog), {})()
+    dialog.setup_ui(dialog)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    QtWidgets.QApplication.processEvents()
+    for button in dialog._native_commands.values():
+        assert button.width() >= button.sizeHint().width()
+    assert dialog.service_type_combo_box.width() >= 200
+    assert dialog._content_commands['primary'] is dialog.import_as_new_button
+    assert dialog._content_commands['secondary'] is dialog.update_existing_button
+    dialog.import_as_new_button.setEnabled(False)
+    assert not dialog._native_commands['primary'].isEnabled()
+    dialog.import_as_new_button.setEnabled(True)
+    assert dialog._native_commands['primary'].isEnabled()
+    dialog.done(0)
+    dialog.deleteLater()
+
+
+@pytest.mark.parametrize('accept', [True, False])
+def test_colour_prompt_keeps_colour_and_cancel_contract(qapp, monkeypatch, accept):
+    def choose(dialog):
+        picker = dialog.content()
+        assert isinstance(dialog, fluent.ContentDialog)
+        assert picker.alphaEnabled()
+        picker.setColor(QtGui.QColor('#80402010'))
+        return dialog.ResultPrimary if accept else dialog.ResultNone
+
+    monkeypatch.setattr(fluent.ContentDialog, 'exec', choose)
+    colour = fluent.QColorDialog.getColor(
+        QtGui.QColor('red'), options=fluent.QColorDialog.ColorDialogOption.ShowAlphaChannel)
+    assert colour.isValid() is accept
+    if accept:
+        assert colour.name(QtGui.QColor.NameFormat.HexArgb) == '#80402010'

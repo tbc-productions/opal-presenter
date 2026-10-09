@@ -30,7 +30,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.ui.filerenamedialog import Ui_FileRenameDialog
 
 
-class FileRenameForm(QtWidgets.QDialog, Ui_FileRenameDialog, RegistryProperties):
+class FileRenameForm(QtWidgets.FormDialog, Ui_FileRenameDialog, RegistryProperties):
     """
     The file rename dialog
     """
@@ -55,8 +55,11 @@ class FileRenameForm(QtWidgets.QDialog, Ui_FileRenameDialog, RegistryProperties)
         Run the Dialog with correct heading.
         """
         if copy:
-            self.setWindowTitle(translate('OpenLP.FileRenameForm', 'File Copy'))
+            self.setWindowTitle(translate('OpenLP.FileRenameForm', 'Copy File'))
+            action = translate('OpenLP.FileRenameForm', 'Copy')
         else:
-            self.setWindowTitle(translate('OpenLP.FileRenameForm', 'File Rename'))
+            self.setWindowTitle(translate('OpenLP.FileRenameForm', 'Rename File'))
+            action = translate('OpenLP.FileRenameForm', 'Rename')
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(action)
         self.file_name_edit.setFocus()
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)

@@ -756,7 +756,7 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
     assert designer.document['masters'][master]['design'] == master_before
     assert slide_design(designer.document, 'v2:0:0') == master_before
     original = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
+    with patch('openlp.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_design()
@@ -783,7 +783,7 @@ def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer)
         designer.switch_design_context()
         assert designer.reset_button.isEnabled()
     document = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
+    with patch('openlp.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_button.click()

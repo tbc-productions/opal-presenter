@@ -1606,3 +1606,30 @@ def test_changing_connection_cancels_pending_automatic_refresh(panel, persistent
     panel.set_profile({**panel.profile, 'name': 'Another Library'})
     assert not panel.auto_refresh_timer.isActive()
     assert not panel.out_of_date and panel.refresh_button.isHidden()
+
+
+def test_name_prompt_rejects_blank_enter_and_trims_valid_name(panel, monkeypatch):
+    from PySide6 import QtTest
+    panel.resize(850, 600)
+    panel.show()
+
+    def enter_name(dialog):
+        dialog.setAnimationEnabled(False)
+        dialog.open()
+        QtWidgets.QApplication.processEvents()
+        field = dialog.findChild(QtWidgets.QLineEdit)
+        for text in ('', '   '):
+            field.setText(text)
+            assert not dialog._native_commands['primary'].isEnabled()
+            QtTest.QTest.keyClick(field, QtCore.Qt.Key.Key_Return)
+            QtWidgets.QApplication.processEvents()
+            assert dialog.isOpen()
+        field.setText('  Sunday service  ')
+        assert dialog._native_commands['primary'].isEnabled()
+        QtTest.QTest.keyClick(field, QtCore.Qt.Key.Key_Return)
+        QtWidgets.QApplication.processEvents()
+        assert not dialog.isOpen()
+        return dialog.result()
+
+    monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', enter_name)
+    assert panel.request_name('New cloud folder', 'Folder name', 'Create') == 'Sunday service'

@@ -38,7 +38,7 @@ class Ui_AuthorsDialog(object):
         authors_dialog.setObjectName('authors_dialog')
         authors_dialog.setWindowIcon(UiIcons().main_icon)
         authors_dialog.setModal(True)
-        self.dialog_layout = QtWidgets.QVBoxLayout(authors_dialog)
+        self.dialog_layout = QtWidgets.QVBoxLayout(authors_dialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.author_layout = QtWidgets.QFormLayout()
         self.author_layout.setObjectName('author_layout')

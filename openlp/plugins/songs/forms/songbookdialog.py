@@ -36,7 +36,7 @@ class Ui_SongBookDialog(object):
         """
         song_book_dialog.setObjectName('song_book_dialog')
         song_book_dialog.setWindowIcon(UiIcons().main_icon)
-        self.dialog_layout = QtWidgets.QVBoxLayout(song_book_dialog)
+        self.dialog_layout = QtWidgets.QVBoxLayout(song_book_dialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.book_layout = QtWidgets.QFormLayout()
         self.book_layout.setObjectName('book_layout')

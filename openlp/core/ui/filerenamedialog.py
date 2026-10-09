@@ -39,7 +39,7 @@ class Ui_FileRenameDialog(object):
         """
         file_rename_dialog.setObjectName('file_rename_dialog')
         file_rename_dialog.setWindowIcon(UiIcons().main_icon)
-        self.dialog_layout = QtWidgets.QGridLayout(file_rename_dialog)
+        self.dialog_layout = QtWidgets.QGridLayout(file_rename_dialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.file_name_label = QtWidgets.QLabel(file_rename_dialog)
         self.file_name_label.setObjectName('file_name_label')

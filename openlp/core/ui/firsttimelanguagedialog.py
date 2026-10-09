@@ -38,12 +38,14 @@ class Ui_FirstTimeLanguageDialog(object):
         """
         language_dialog.setObjectName('language_dialog')
         language_dialog.setWindowIcon(UiIcons().main_icon)
-        self.dialog_layout = QtWidgets.QVBoxLayout(language_dialog)
+        self.dialog_layout = QtWidgets.QVBoxLayout(language_dialog.content_widget)
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
         self.dialog_layout.setSpacing(8)
         self.dialog_layout.setObjectName('dialog_layout')
         self.info_label = QtWidgets.QLabel(language_dialog)
         self.info_label.setObjectName('info_label')
+        self.info_label.setWordWrap(True)
+        self.info_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
         self.dialog_layout.addWidget(self.info_label)
         self.language_layout = QtWidgets.QHBoxLayout()
         self.language_layout.setObjectName('language_layout')
@@ -67,3 +69,5 @@ class Ui_FirstTimeLanguageDialog(object):
         self.info_label.setText(
             translate('OpenLP.FirstTimeLanguageForm', 'Choose the translation you\'d like to use in OpenLP+.'))
         self.language_label.setText(translate('OpenLP.FirstTimeLanguageForm', 'Translation:'))
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('OpenLP.FirstTimeLanguageForm', 'Select'))

@@ -508,7 +508,7 @@ class PresentationMediaItem(FolderLibraryItem):
     def _show_unavailable_presentation(self, file_path, remote=False):
         """Explain why an existing library presentation cannot be opened."""
         if not remote:
-            dialog = fluentqt.ContentDialog(self.main_window)
+            dialog = QtWidgets.ContentDialog(self.main_window)
             dialog.setSmokeEnabled(True)
             dialog.setDragEnabled(False)
             dialog.setMinimumWidth(420)

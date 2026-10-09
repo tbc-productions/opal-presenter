@@ -132,6 +132,7 @@ class Ui_StreamSelector(object):
         # connect
         self.button_box.accepted.connect(stream_selector.accept)
         self.button_box.rejected.connect(stream_selector.reject)
+        stream_selector.setButtonBox(self.button_box)
 
     def retranslate_ui(self, stream_selector):
         stream_selector.setWindowTitle(translate('MediaPlugin.StreamSelector', 'Select Input Stream'))

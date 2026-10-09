@@ -31,7 +31,7 @@ class Ui_LanguageDialog(object):
         language_dialog.setObjectName('language_dialog')
         language_dialog.setWindowIcon(UiIcons().main_icon)
         language_dialog.resize(400, 165)
-        self.language_layout = QtWidgets.QVBoxLayout(language_dialog)
+        self.language_layout = QtWidgets.QVBoxLayout(language_dialog.content_widget)
         self.language_layout.setSpacing(8)
         self.language_layout.setContentsMargins(8, 8, 8, 8)
         self.language_layout.setObjectName('language_layout')
@@ -40,6 +40,7 @@ class Ui_LanguageDialog(object):
         self.language_layout.addWidget(self.bible_label)
         self.info_label = QtWidgets.QLabel(language_dialog)
         self.info_label.setWordWrap(True)
+        self.info_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
         self.info_label.setObjectName('info_label')
         self.language_layout.addWidget(self.info_label)
         self.language_h_box_layout = QtWidgets.QHBoxLayout()
@@ -71,3 +72,6 @@ class Ui_LanguageDialog(object):
                       'OpenLP+ is unable to determine the language of this translation of the Bible. Please select '
                       'the language from the list below.'))
         self.language_label.setText(translate('BiblesPlugin.LanguageDialog', 'Language:'))
+        self.language_label.setBuddy(self.language_combo_box)
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('BiblesPlugin.LanguageDialog', 'Select'))

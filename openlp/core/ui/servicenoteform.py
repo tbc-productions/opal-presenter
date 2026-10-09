@@ -31,7 +31,7 @@ from openlp.core.lib.ui import create_button_box
 from openlp.core.widgets.edits import SpellTextEdit
 
 
-class ServiceNoteForm(QtWidgets.QDialog, RegistryProperties):
+class ServiceNoteForm(QtWidgets.FormDialog, RegistryProperties):
     """
     This is the form that is used to edit the verses of the song.
     """
@@ -51,14 +51,15 @@ class ServiceNoteForm(QtWidgets.QDialog, RegistryProperties):
         Execute the form and return the result.
         """
         self.text_edit.setFocus()
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def setup_ui(self):
         """
         Set up the UI of the dialog
         """
         self.setObjectName('serviceNoteEdit')
-        self.dialog_layout = QtWidgets.QVBoxLayout(self)
+        self.resize(560, 420)
+        self.dialog_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
         self.dialog_layout.setSpacing(8)
         self.dialog_layout.setObjectName('vertical_layout')

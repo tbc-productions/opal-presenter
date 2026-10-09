@@ -9,7 +9,7 @@ def show_screen_setup_message(parent, title, text):
     """Return whether the screen setup reminder's secondary action was selected."""
     from openlp.core.widgets import fluent as QtWidgets
 
-    dialog = QtWidgets.fluentqt.ContentDialog(parent)
+    dialog = QtWidgets.ContentDialog(parent)
     dialog.setTitle(title)
     label = QtWidgets.QLabel(text)
     label.setWordWrap(True)

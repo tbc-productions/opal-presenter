@@ -8,7 +8,7 @@ def show_restart_message(parent, title, text):
     from openlp.core.common.registry import Registry
     from openlp.core.widgets import fluent as QtWidgets
 
-    dialog = QtWidgets.fluentqt.ContentDialog(parent)
+    dialog = QtWidgets.ContentDialog(parent)
     dialog.setTitle(title)
     label = QtWidgets.QLabel(text)
     label.setWordWrap(True)

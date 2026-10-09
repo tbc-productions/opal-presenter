@@ -23,6 +23,7 @@ from PySide6 import QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.icons import UiIcons
+from openlp.core.common.i18n import translate
 
 
 class Ui_ConfirmationDialog():
@@ -51,13 +52,14 @@ class Ui_ConfirmationDialog():
             confirmation_dialog.resize(width, 200)
         confirmation_dialog.setWindowTitle(title)
 
-        self.confirmation_layout = QtWidgets.QVBoxLayout(confirmation_dialog)
+        self.confirmation_layout = QtWidgets.QVBoxLayout(confirmation_dialog.content_widget)
         self.confirmation_layout.setObjectName('confirmation_layout')
 
         # confirmation message
         self.message_label = QtWidgets.QLabel(message)
         self.message_label.setObjectName('message')
         self.message_label.setWordWrap(True)
+        self.message_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
         self.confirmation_layout.addWidget(self.message_label)
 
         # listview to display the items
@@ -86,11 +88,17 @@ class Ui_ConfirmationDialog():
         button_types = QtWidgets.QDialogButtonBox.StandardButton.Yes | QtWidgets.QDialogButtonBox.StandardButton.No
         self.buttonBox = QtWidgets.QDialogButtonBox(button_types)
         self.buttonBox.setObjectName('buttons')
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Yes).setText(
+            translate('OpenLP.ConfirmationDialog', 'Delete'))
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.No).setText(
+            translate('OpenLP.Ui', 'Cancel'))
         self.confirmation_layout.addWidget(self.buttonBox)
 
         # slot connections
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
+        confirmation_dialog.setButtonBox(self.buttonBox)
+        confirmation_dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Close)
 
         # Avoid adjustSize() here as it can crash in some Qt/PySide test environments.
         # Activate the layout so child geometry is computed for tests and callers.

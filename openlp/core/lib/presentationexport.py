@@ -490,7 +490,7 @@ def export_presentation(items, destination, insert_logo=False, *, progress=None)
 
 def export_items_dialog(parent, items, suffix, default_path, insert_logo=False):
     """Choose an output path for one presentation format and report errors."""
-    from PySide6 import QtWidgets
+    from openlp.core.widgets import fluent as QtWidgets
 
     from openlp.core.common.i18n import translate
     from openlp.core.widgets.dialogs import FileDialog

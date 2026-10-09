@@ -380,7 +380,7 @@ class CloudLibrary(QtWidgets.QWidget):
     def disconnect(self):
         if not self.profile or not self.connected or self.jobs:
             return
-        dialog = QtWidgets.fluentqt.ContentDialog(self.window())
+        dialog = QtWidgets.ContentDialog(self.window())
         dialog.setTitle(tr('Disconnect connection?'))
         message = QtWidgets.QLabel(tr('Disconnect “{name}”? Previews will close and the local cache will be cleared. '
                                       'Your library files will be kept.').format(name=self.profile['name']))
@@ -939,7 +939,7 @@ class CloudLibrary(QtWidgets.QWidget):
         menu.exec(self.tree.viewport().mapToGlobal(point))
 
     def request_name(self, title, label, button, text='', parent=None):
-        dialog = QtWidgets.fluentqt.ContentDialog(parent or self.window())
+        dialog = QtWidgets.ContentDialog(parent or self.window())
         dialog.graphicsEffect().setEnabled(False)
         dialog.setSmokeEnabled(True)
         dialog.setDragEnabled(False)
@@ -962,10 +962,12 @@ class CloudLibrary(QtWidgets.QWidget):
         dialog.setPrimaryButtonText(button)
         dialog.setCloseButtonText(tr('Cancel'))
         dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Primary)
-        field.returnPressed.connect(lambda: dialog.done(dialog.ResultPrimary))
+        primary = dialog._native_commands['primary']
+        field.textChanged.connect(lambda value: primary.setEnabled(bool(value.strip())))
+        primary.setEnabled(bool(text.strip()))
         QtCore.QTimer.singleShot(0, field, field.setFocus)
         try:
-            return field.text() if dialog.exec() == dialog.ResultPrimary else None
+            return field.text().strip() if dialog.exec() == dialog.ResultPrimary else None
         finally:
             dialog.deleteLater()
 

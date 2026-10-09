@@ -32,7 +32,7 @@ class DesignerWindow(fluentqt.Window):
         def tr(text):
             return translate('SongsPlugin.SlideDesigner', text)
 
-        dialog = fluentqt.ContentDialog(self)
+        dialog = QtWidgets.ContentDialog(self)
         dialog.setObjectName('designer_exit_dialog')
         dialog.setTitle(tr('Save Song?') if self.editor.design_kind == 'song' else tr('Save Custom Slides?'))
         title = self.editor.design_owner.title_edit.text().strip()

@@ -477,7 +477,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.layers_panel.setOwnedContentWidget(content)
 
     def reset_design(self, all_slides=False):
-        dialog = fluentqt.ContentDialog(self.window())
+        dialog = QtWidgets.ContentDialog(self.window())
         dialog.setTitle(tr('Reset all slides?') if all_slides else tr('Reset slide?'))
         message = (tr('Change all slides to the Theme layout and clear their customisations?') if all_slides else
                    tr('Reset this slide to its assigned master layout?'))
@@ -548,7 +548,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.commit_document(document, tr('Apply master layout'))
 
     def prompt_layout_name(self, title, name=''):
-        dialog = fluentqt.ContentDialog(self.window())
+        dialog = QtWidgets.ContentDialog(self.window())
         dialog.setObjectName('layout_name_dialog')
         dialog.setTitle(title)
         dialog.graphicsEffect().setEnabled(False)

@@ -1840,7 +1840,7 @@ def test_service_manager_delete_confirmation_dialog(MockMessageBox: MagicMock, r
 
 @pytest.mark.parametrize('action, expected', [
     ('Save', QtWidgets.QMessageBox.StandardButton.Save),
-    ("Don't Save", QtWidgets.QMessageBox.StandardButton.Discard),
+    ("Discard", QtWidgets.QMessageBox.StandardButton.Discard),
     ('Cancel', QtWidgets.QMessageBox.StandardButton.Cancel),
     ('Escape', QtWidgets.QMessageBox.StandardButton.Cancel),
 ])

@@ -152,7 +152,7 @@ class ProxyWidget(QtWidgets.QGroupBox):
         self.settings.setValue('advanced/proxy password', self.password_edit.text())
 
 
-class ProxyDialog(QtWidgets.QDialog):
+class ProxyDialog(QtWidgets.FormDialog):
     """
     A basic dialog to show proxy settingd
     """
@@ -161,7 +161,7 @@ class ProxyDialog(QtWidgets.QDialog):
         self.show_ftw_options = show_ftw_options
         self.timeout = timeout
         self.retries = retries
-        self.dialog_layout = QtWidgets.QVBoxLayout(self)
+        self.dialog_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.proxy_widget = ProxyWidget(self)
         self.dialog_layout.addWidget(self.proxy_widget)
         self.ftw_options_group_box = None
@@ -185,6 +185,7 @@ class ProxyDialog(QtWidgets.QDialog):
         self.dialog_layout.addWidget(self.button_box)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+        self.setButtonBox(self.button_box)
         self.retranslate_ui()
 
     def accept(self):

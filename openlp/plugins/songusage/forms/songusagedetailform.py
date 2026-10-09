@@ -36,7 +36,7 @@ from .songusagedetaildialog import Ui_SongUsageDetailDialog
 log = logging.getLogger(__name__)
 
 
-class SongUsageDetailForm(QtWidgets.QDialog, Ui_SongUsageDetailDialog, RegistryProperties):
+class SongUsageDetailForm(QtWidgets.FormDialog, Ui_SongUsageDetailDialog, RegistryProperties):
     """
     Class documentation goes here.
     """
@@ -63,8 +63,8 @@ class SongUsageDetailForm(QtWidgets.QDialog, Ui_SongUsageDetailDialog, RegistryP
         from_date = self.settings.value('songusage/from date')
         if not (isinstance(from_date, QtCore.QDate) and from_date.isValid()):
             from_date = to_date.addYears(-1)
-        self.from_date_calendar.setSelectedDate(from_date)
-        self.to_date_calendar.setSelectedDate(to_date)
+        self.from_date_picker.setDate(from_date)
+        self.to_date_picker.setDate(to_date)
         self.report_path_edit.path = self.settings.value('songusage/last directory export')
 
     def on_report_path_edit_path_changed(self, file_path):
@@ -92,13 +92,13 @@ class SongUsageDetailForm(QtWidgets.QDialog, Ui_SongUsageDetailDialog, RegistryP
         create_paths(path)
         file_name = translate('SongUsagePlugin.SongUsageDetailForm',
                               'usage_detail_{old}_{new}.txt'
-                              ).format(old=self.from_date_calendar.selectedDate().toString('ddMMyyyy'),
-                                       new=self.to_date_calendar.selectedDate().toString('ddMMyyyy'))
-        self.settings.setValue('songusage/from date', self.from_date_calendar.selectedDate())
-        self.settings.setValue('songusage/to date', self.to_date_calendar.selectedDate())
+                              ).format(old=self.from_date_picker.date().toString('ddMMyyyy'),
+                                       new=self.to_date_picker.date().toString('ddMMyyyy'))
+        self.settings.setValue('songusage/from date', self.from_date_picker.date())
+        self.settings.setValue('songusage/to date', self.to_date_picker.date())
         usage = self.plugin.manager.get_all_objects(
-            SongUsageItem, and_(SongUsageItem.usagedate >= self.from_date_calendar.selectedDate().toPyDate(),
-                                SongUsageItem.usagedate < self.to_date_calendar.selectedDate().toPyDate()),
+            SongUsageItem, and_(SongUsageItem.usagedate >= self.from_date_picker.date().toPyDate(),
+                                SongUsageItem.usagedate < self.to_date_picker.date().toPyDate()),
             [SongUsageItem.usagedate, SongUsageItem.usagetime])
         report_file_name = path / file_name
         try:

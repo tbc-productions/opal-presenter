@@ -306,7 +306,7 @@ def test_generate_slide_data_with_file_path_from_item(media_item):
     list_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
 
     # WHEN: generate_slide_data is called
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog'):
+    with patch('openlp.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog'):
         result = media_item.generate_slide_data(mocked_service_item, item=list_item)
 
     # THEN: The result should be false
@@ -336,7 +336,7 @@ def test_existing_library_presentation_without_controller_shows_dialog(
     media_item.display_type_combo_box.itemData.return_value = selected
     service_item = MagicMock()
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+    with patch('openlp.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog') as dialog:
         result = media_item.generate_slide_data(service_item, item=tree_item, context=context)
 
     assert result is False
@@ -360,7 +360,7 @@ def test_unavailable_remote_presentation_does_not_open_modal_dialog(media_item, 
     media_item.display_type_combo_box = MagicMock()
     media_item.display_type_combo_box.itemData.return_value = ''
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+    with patch('openlp.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog') as dialog:
         assert not media_item.generate_slide_data(MagicMock(), item=tree_item, remote=True)
     dialog.assert_not_called()
 

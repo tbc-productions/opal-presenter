@@ -41,11 +41,12 @@ class _DialogSizingMixin:
         layout = self.layout()
         if layout is None:
             return
-        padding = Spacing.Padding.Dialog
-        margins = layout.contentsMargins()
-        layout.setContentsMargins(max(padding, margins.left()), max(padding, margins.top()),
-                                  max(padding, margins.right()), max(padding, margins.bottom()))
-        layout.setSpacing(max(Spacing.Medium, layout.spacing()))
+        if not isinstance(self, fluentqt.ContentDialog):
+            padding = Spacing.Padding.Dialog
+            margins = layout.contentsMargins()
+            layout.setContentsMargins(max(padding, margins.left()), max(padding, margins.top()),
+                                      max(padding, margins.right()), max(padding, margins.bottom()))
+            layout.setSpacing(max(Spacing.Medium, layout.spacing()))
         # Fluent inputs need their full control height even in compact forms.
         for control_type in (fluentqt.LineEdit, fluentqt.ComboBox, _qt.QAbstractSpinBox):
             for control in self.findChildren(control_type):
@@ -85,6 +86,7 @@ class _DialogSizingMixin:
     def showEvent(self, event):
         self._prepare_size()
         super().showEvent(event)
+        self._prepare_size()
         self._constrain_position()
 
     def mouseMoveEvent(self, event):
@@ -100,6 +102,203 @@ class _DialogSizingMixin:
 
 class FluentDialog(_DialogSizingMixin, fluentqt.Dialog):
     """Fluent form dialog with content sizing and bounded dragging."""
+
+    def setWindowTitle(self, title):
+        super().setWindowTitle(title)
+        if hasattr(self, '_heading'):
+            self._heading.setText(title)
+            self._heading.setVisible(bool(title))
+
+    def _prepare_size(self):
+        layout = self.layout()
+        if layout is not None and not hasattr(self, '_heading'):
+            self._heading = fluentqt.Label(self.windowTitle(), self)
+            self._heading.setFluentTypography(fluentqt.FontRole.Subtitle)
+            self._heading.setWordWrap(True)
+            if isinstance(layout, _qt.QHBoxLayout):
+                content = _qt.QWidget(self)
+                content.setLayout(layout)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout = _qt.QVBoxLayout(self)
+                layout.addWidget(self._heading)
+                layout.addWidget(content)
+            elif isinstance(layout, _qt.QBoxLayout):
+                layout.insertWidget(0, self._heading)
+            elif isinstance(layout, _qt.QFormLayout):
+                layout.insertRow(0, self._heading)
+            elif isinstance(layout, _qt.QGridLayout):
+                positions = [layout.getItemPosition(index) for index in range(layout.count())]
+                items = [layout.takeAt(0) for _ in positions]
+                for item, (row, column, rows, columns) in zip(items, positions):
+                    layout.addItem(item, row + 1, column, rows, columns)
+                layout.addWidget(self._heading, 0, 0, 1, layout.columnCount())
+        if hasattr(self, '_heading'):
+            self._heading.setVisible(bool(self.windowTitle()))
+        super()._prepare_size()
+
+
+class _ContentScrollArea(_qt.QScrollArea):
+    """Use the content's natural height until the dialog needs a scrollbar."""
+    def sizeHint(self):
+        return self.widget().sizeHint() if self.widget() is not None else QtCore.QSize()
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(0, 0)
+
+    def hasHeightForWidth(self):
+        return self.widget() is not None and self.widget().hasHeightForWidth()
+
+    def heightForWidth(self, width):
+        return self.widget().heightForWidth(width) if self.hasHeightForWidth() else self.sizeHint().height()
+
+
+class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
+    """ContentDialog with shared presentation and scrollable, window-bounded content."""
+    def __init__(self, parent=None, flags=QtCore.Qt.WindowType(0)):
+        super().__init__(parent, flags)
+        self.setDragEnabled(False)
+        self.setMinimumWidth(420)
+        self.layout().setSizeConstraint(_qt.QLayout.SizeConstraint.SetNoConstraint)
+        self._content_scroll = _ContentScrollArea(self)
+        self._content_scroll.setFrameShape(_qt.QFrame.Shape.NoFrame)
+        self._content_scroll.setWidgetResizable(True)
+        self._content_scroll.setMinimumSize(0, 0)
+        self._content_scroll.viewport().setAutoFillBackground(False)
+        fluentqt.ContentDialog.setContent(self, self._content_scroll)
+        self._native_commands = {}
+        for slot, setter in (('primary', self.setPrimaryButtonText),
+                             ('secondary', self.setSecondaryButtonText), ('close', self.setCloseButtonText)):
+            setter(slot)
+            self._native_commands[slot] = next(button for button in self.findChildren(fluentqt.Button)
+                                               if button.text() == slot)
+            setter('')
+
+    def setWindowTitle(self, title):
+        super().setWindowTitle(title)
+        self.setTitle(title)
+
+    def setContent(self, content):
+        self._validate_content(content, self)
+        current = self.content()
+        if current is content:
+            return
+        if current is not None:
+            self._content_scroll.takeWidget()
+        if isinstance(content, fluentqt.Label):
+            content.setFluentTypography(fluentqt.FontRole.Body)
+        self._content_scroll.setWidget(content)
+        if content is not None:
+            content.setAutoFillBackground(False)
+
+    def takeContent(self):
+        return self._content_scroll.takeWidget()
+
+    def content(self):
+        return self._content_scroll.widget()
+
+    def _prepare_size(self):
+        buttons = [button for button in self._native_commands.values() if button.text()]
+        if buttons:
+            margins = self.layout().contentsMargins()
+            # Native footer buttons share equal widths, including the longest caption.
+            width = max(button.sizeHint().width() for button in buttons) * len(buttons)
+            width += Spacing.Small * (len(buttons) - 1) + 2 * Spacing.Padding.Dialog
+            width += margins.left() + margins.right() + 2 * self.shadowSize()
+            self.resize(max(self.width(), width), self.height())
+        super()._prepare_size()
+
+    def _click_default_command(self):
+        slot = {fluentqt.ContentDialogButton.Primary: 'primary',
+                fluentqt.ContentDialogButton.Secondary: 'secondary',
+                fluentqt.ContentDialogButton.Close: 'close'}.get(fluentqt.ContentDialog.defaultButton(self))
+        button = self._native_commands.get(slot)
+        if self.isOpen() and button is not None and button.isVisible():
+            button.click()
+            return True
+        return False
+
+    def keyPressEvent(self, event):
+        if event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter) and self._click_default_command():
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+ContentDialog = FluentContentDialog
+
+
+class FluentFormDialog(FluentContentDialog):
+    """ContentDialog retaining existing form validation and Qt button-box results."""
+    def __init__(self, parent=None, flags=QtCore.Qt.WindowType(0)):
+        super().__init__(parent, flags)
+        self.content_widget = _qt.QWidget()
+        self.setContent(self.content_widget)
+        self._button_box = None
+        self._content_commands = {}
+        self.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        for slot, button in self._native_commands.items():
+            button.clicked.disconnect()
+            button.clicked.connect(lambda checked=False, slot=slot: self._click_command(slot))
+
+    def setButtonBox(self, button_box):
+        self._button_box = button_box
+
+    def _click_command(self, slot):
+        button = self._content_commands.get(slot)
+        if button is not None:
+            if button.isEnabled():
+                button.click()
+        elif slot == 'close':
+            self.reject()
+
+    def _sync_buttons(self):
+        if self._button_box is None:
+            return
+        roles = _qt.QDialogButtonBox.ButtonRole
+        self._content_commands.clear()
+        buttons = sorted(self._button_box.buttons(),
+                         key=lambda button: self._button_box.buttonRole(button) != roles.AcceptRole)
+        for button in buttons:
+            role = self._button_box.buttonRole(button)
+            slot = None
+            if role in (roles.AcceptRole, roles.YesRole, roles.ApplyRole):
+                slot = 'primary' if 'primary' not in self._content_commands else 'secondary'
+            elif role in (roles.RejectRole, roles.NoRole):
+                slot = 'close'
+            elif role in (roles.DestructiveRole, roles.HelpRole):
+                slot = 'secondary'
+            if slot is not None and slot not in self._content_commands:
+                self._content_commands[slot] = button
+                button.hide()
+                button.installEventFilter(self)
+            else:
+                button.show()
+        from openlp.core.common.i18n import UiStrings
+        for slot, setter in (('primary', self.setPrimaryButtonText),
+                             ('secondary', self.setSecondaryButtonText), ('close', self.setCloseButtonText)):
+            command = self._content_commands.get(slot)
+            setter(command.text() if command is not None else UiStrings().Cancel if slot == 'close' else '')
+            self._native_commands[slot].setEnabled(command is None or command.isEnabled())
+        self._button_box.setVisible(any(button not in self._content_commands.values()
+                                        for button in self._button_box.buttons()))
+
+    def _prepare_size(self):
+        self._sync_buttons()
+        layout = self.content_widget.layout()
+        if layout is not None:
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(Spacing.Medium)
+        super()._prepare_size()
+
+    def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.Type.EnabledChange:
+            for slot, button in self._content_commands.items():
+                if watched is button:
+                    self._native_commands[slot].setEnabled(button.isEnabled())
+        return super().eventFilter(watched, event)
+
+
+FormDialog = FluentFormDialog
 
 
 class TextEditorDialog(FluentDialog):
@@ -646,7 +845,7 @@ class _MessageBoxCommands(_qt.QMessageBox):
         return cls._message(cls.Icon.Question, parent, title, text, buttons, defaultButton)
 
 
-class FluentMessageBox(_DialogSizingMixin, fluentqt.ContentDialog):
+class FluentMessageBox(FluentContentDialog):
     """Iconless ContentDialog retaining Qt message button/result contracts."""
     Icon = _qt.QMessageBox.Icon
     StandardButton = _qt.QMessageBox.StandardButton
@@ -683,17 +882,9 @@ class FluentMessageBox(_DialogSizingMixin, fluentqt.ContentDialog):
         self._content_commands = {}
         # Bind the native button bar directly to the Qt command model. Native
         # ContentDialog handlers otherwise finish again with their 0/1/2 results.
-        self._native_commands = {}
-        for slot, setter in (('primary', self.setPrimaryButtonText),
-                             ('secondary', self.setSecondaryButtonText),
-                             ('close', self.setCloseButtonText)):
-            setter(slot)
-            button = next(button for button in self.findChildren(fluentqt.Button)
-                          if button not in self.buttons() and button.text() == slot)
+        for slot, button in self._native_commands.items():
             button.clicked.disconnect()
             button.clicked.connect(lambda checked=False, slot=slot: self._click_command(slot))
-            self._native_commands[slot] = button
-        self.setMinimumWidth(420)
 
     def _click_command(self, slot):
         button = self._content_commands.get(slot)
@@ -733,10 +924,8 @@ class FluentMessageBox(_DialogSizingMixin, fluentqt.ContentDialog):
                                         self.buttonRole(escape) == self.ButtonRole.RejectRole):
                 self._content_commands['close'] = escape
                 remaining.remove(escape)
-            default = self.defaultButton()
-            if default in remaining:
-                remaining.remove(default)
-                remaining.insert(0, default)
+            remaining.sort(key=lambda button: self.buttonRole(button) not in (
+                self.ButtonRole.AcceptRole, self.ButtonRole.YesRole, self.ButtonRole.ApplyRole))
             for slot, button in zip(('primary', 'secondary', 'close'), remaining):
                 self._content_commands[slot] = button
             for button in buttons:
@@ -810,24 +999,21 @@ class FluentColorDialog:
     @staticmethod
     def getColor(initial=None, parent=None, title='', options=_qt.QColorDialog.ColorDialogOption(0)):
         from PySide6 import QtGui
-        dialog = FluentDialog(parent)
-        dialog.setWindowTitle(title or 'Choose a colour')
+        from openlp.core.common.i18n import translate, UiStrings
+        dialog = FluentContentDialog(parent)
+        dialog.setTitle(title or translate('OpenLP.ColorDialog', 'Choose a colour'))
         picker = fluentqt.ColorPicker(dialog)
         if initial is not None:
             picker.setColor(initial)
         picker.setAlphaEnabled(bool(options & QColorDialog.ColorDialogOption.ShowAlphaChannel))
-        layout = _qt.QVBoxLayout(dialog)
-        layout.addWidget(picker)
-        # Import at invocation after the shared construction namespace is ready.
-        from openlp.core.widgets.fluent import QDialogButtonBox
-        buttons = QDialogButtonBox(_qt.QDialogButtonBox.StandardButton.Ok
-                                   | _qt.QDialogButtonBox.StandardButton.Cancel, dialog)
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-        if dialog.exec() == _qt.QDialog.DialogCode.Accepted:
-            return picker.color()
-        return QtGui.QColor()
+        dialog.setContent(picker)
+        dialog.setPrimaryButtonText(translate('OpenLP.Ui', 'Save'))
+        dialog.setCloseButtonText(UiStrings().Cancel)
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        accepted = dialog.exec() == dialog.ResultPrimary
+        colour = picker.color() if accepted else QtGui.QColor()
+        dialog.deleteLater()
+        return colour
 
 
 QColorDialog = FluentColorDialog
@@ -837,23 +1023,25 @@ class FluentInputDialog:
     """Input prompts using Fluent dialogs and native Fluent fields."""
     @staticmethod
     def _prompt(parent, title, label, field):
-        from openlp.core.widgets.fluent import QDialogButtonBox
-        dialog = FluentDialog(parent)
-        dialog.setWindowTitle(title)
-        layout = _qt.QVBoxLayout(dialog)
-        layout.addWidget(fluentqt.Label(title, dialog))
-        prompt = fluentqt.Label(label, dialog)
+        from openlp.core.common.i18n import UiStrings, translate
+        dialog = FluentContentDialog(parent)
+        dialog.setTitle(title)
+        content = _qt.QWidget()
+        layout = _qt.QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(Spacing.Medium)
+        prompt = fluentqt.Label(label, content)
         prompt.setWordWrap(True)
+        prompt.setBuddy(field)
+        field.setAccessibleName(label.rstrip(':'))
         layout.addWidget(prompt)
         layout.addWidget(field)
-        buttons = QDialogButtonBox(_qt.QDialogButtonBox.StandardButton.Ok
-                                   | _qt.QDialogButtonBox.StandardButton.Cancel, dialog)
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-        dialog.setMinimumWidth(320)
-        field.setFocus()
-        return dialog, dialog.exec() == _qt.QDialog.DialogCode.Accepted
+        dialog.setContent(content)
+        dialog.setPrimaryButtonText(translate('OpenLP.Ui', 'OK'))
+        dialog.setCloseButtonText(UiStrings().Cancel)
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        QtCore.QTimer.singleShot(0, field, field.setFocus)
+        return dialog, dialog.exec() == dialog.ResultPrimary
 
     @classmethod
     def getText(cls, parent, title, label, echo=_qt.QLineEdit.EchoMode.Normal, text='',
@@ -864,7 +1052,9 @@ class FluentInputDialog:
         field.setInputMethodHints(inputMethodHints)
         field.selectAll()
         dialog, accepted = cls._prompt(parent, title, label, field)
-        return field.text() if accepted else '', accepted
+        value = field.text() if accepted else ''
+        dialog.deleteLater()
+        return value, accepted
 
     @classmethod
     def getInt(cls, parent, title, label, value=0, min=-2147483647, max=2147483647, step=1,
@@ -876,7 +1066,9 @@ class FluentInputDialog:
         field.setValue(value)
         initial = field.value()
         dialog, accepted = cls._prompt(parent, title, label, field)
-        return field.value() if accepted else initial, accepted
+        value = field.value() if accepted else initial
+        dialog.deleteLater()
+        return value, accepted
 
     @classmethod
     def getItem(cls, parent, title, label, items, current=0, editable=True,
@@ -887,7 +1079,9 @@ class FluentInputDialog:
         field.setEditable(editable)
         field.setInputMethodHints(inputMethodHints)
         dialog, accepted = cls._prompt(parent, title, label, field)
-        return field.currentText() if accepted else '', accepted
+        value = field.currentText() if accepted else ''
+        dialog.deleteLater()
+        return value, accepted
 
 
 QInputDialog = FluentInputDialog

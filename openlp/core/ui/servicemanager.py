@@ -1012,7 +1012,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Check to see if a service needs to be saved.
         """
-        dialog = fluentqt.ContentDialog(self.main_window)
+        dialog = QtWidgets.ContentDialog(self.main_window)
         dialog.graphicsEffect().setEnabled(False)
         dialog.setSmokeEnabled(True)
         dialog.setDragEnabled(False)
@@ -1025,10 +1025,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         content.setWordWrap(True)
         dialog.setContent(content)
         dialog.setPrimaryButtonText(translate('OpenLP.ServiceManager', 'Save'))
-        dialog.setSecondaryButtonText(translate('OpenLP.ServiceManager', "Don't Save"))
+        dialog.setSecondaryButtonText(translate('OpenLP.ServiceManager', 'Discard'))
         dialog.setCloseButtonText(translate('OpenLP.ServiceManager', 'Cancel'))
         dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
         result = dialog.exec()
+        dialog.deleteLater()
         return {dialog.ResultPrimary: QtWidgets.QMessageBox.StandardButton.Save,
                 dialog.ResultSecondary: QtWidgets.QMessageBox.StandardButton.Discard}.get(
                     result, QtWidgets.QMessageBox.StandardButton.Cancel)
@@ -1953,9 +1954,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             (translate('OpenLP.ServiceManager', 'Normal'), TransitionSpeed.Normal),
             (translate('OpenLP.ServiceManager', 'Slow'), TransitionSpeed.Slow)
         ]
-        dialog = QtWidgets.QDialog(self)
+        dialog = QtWidgets.FormDialog(self)
         dialog.setWindowTitle(translate('OpenLP.ServiceManager', 'Transition'))
-        dialog_layout = QtWidgets.QFormLayout(dialog)
+        dialog_layout = QtWidgets.QFormLayout(dialog.content_widget)
         transition_combo = QtWidgets.QComboBox(dialog)
         transition_combo.addItem(translate('OpenLP.ServiceManager', 'Disabled'), None)
         for label, value in transition_types:
@@ -1972,6 +1973,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         dialog_layout.addRow(button_box)
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
+        dialog.setButtonBox(button_box)
+        button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('OpenLP.ServiceManager', 'Apply'))
         if settings['enabled']:
             type_index = transition_combo.findData(settings['type'])
             transition_combo.setCurrentIndex(max(0, type_index))
@@ -1982,6 +1986,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         transition_combo.currentIndexChanged.connect(lambda: speed_combo.setEnabled(transition_combo.currentData() is not None))
         speed_combo.setEnabled(transition_combo.currentData() is not None)
         if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            dialog.deleteLater()
             return
         selected_type = transition_combo.currentData()
         service_item.slide_transition_settings = {
@@ -1989,6 +1994,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             'type': selected_type if selected_type is not None else TransitionType.Fade,
             'speed': speed_combo.currentData() if speed_combo.currentData() is not None else TransitionSpeed.Normal
         }
+        dialog.deleteLater()
         self._sync_pdf_service_item_transition_settings(service_item)
         if service_item.is_slide_set:
             service_item._clear_slides_cache()

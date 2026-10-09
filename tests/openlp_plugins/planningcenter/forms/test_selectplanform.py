@@ -62,7 +62,7 @@ def form(plugin: PlanningCenterPlugin):
     yield form_
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.date')
 def test_initial_defaults(mocked_date: MagicMock, mocked_exec: MagicMock, form: SelectPlanForm):
     """
@@ -88,7 +88,7 @@ def test_initial_defaults(mocked_date: MagicMock, mocked_exec: MagicMock, form: 
     assert form.slide_theme_selection_combo_box.count() == 0, 'Count of custom slide themes is incorrect'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QMessageBox.warning')
 def test_warning_messagebox_shown_for_bad_credentials(mocked_warning: MagicMock, mocked_exec: MagicMock,
                                                       form: SelectPlanForm):
@@ -104,7 +104,7 @@ def test_warning_messagebox_shown_for_bad_credentials(mocked_warning: MagicMock,
         mocked_warning.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_disable_import_buttons(mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the import buttons are disabled when the "Select Plan Date" element in the
@@ -120,7 +120,7 @@ def test_disable_import_buttons(mocked_exec: MagicMock, form: SelectPlanForm):
     assert not form.update_existing_button.isEnabled(), '"Refresh Service" button should be disabled'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.date')
 def test_default_plan_date_is_next_sunday(mocked_date: MagicMock, mocked_exec: MagicMock, form: SelectPlanForm):
     """
@@ -139,7 +139,7 @@ def test_default_plan_date_is_next_sunday(mocked_date: MagicMock, mocked_exec: M
         'The next Sunday\'s Date is not selected in the plan_selection_combo_box'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.PlanningCenterAPI.get_plan_list')
 def test_plan_selection_combobox_item_texts(mocked_get_plan_list: MagicMock, mocked_exec: MagicMock,
                                             form: SelectPlanForm):
@@ -176,7 +176,7 @@ def test_plan_selection_combobox_item_texts(mocked_get_plan_list: MagicMock, moc
     assert form.plan_selection_combo_box.itemText(4) == 'January 4, 2019 - Series'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_service_type_changed_called_when_service_type_combo_changed(mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the "on_service_type_combobox_changed" function is executed when the
@@ -191,7 +191,7 @@ def test_service_type_changed_called_when_service_type_combo_changed(mocked_exec
     assert form.plan_selection_combo_box.itemText(0) == 'Select Plan Date', 'Plan Combo Box has default text'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_plan_selection_changed_called_when_plan_selection_combo_changed(mocked_exec: MagicMock,
                                                                          form: SelectPlanForm):
     """
@@ -210,7 +210,7 @@ def test_plan_selection_changed_called_when_plan_selection_combo_changed(mocked_
     assert form.update_existing_button.isEnabled(), 'Update button should be enabled'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_settings_tab_displayed_when_edit_auth_button_clicked(mocked_exec: MagicMock, registry: Registry,
                                                               form: SelectPlanForm):
     """
@@ -228,7 +228,7 @@ def test_settings_tab_displayed_when_edit_auth_button_clicked(mocked_exec: Magic
     mocked_settings_form.exec.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.SelectPlanForm._do_import')
 def test_import_function_called_when_import_button_clicked(mocked_do_import: MagicMock, mocked_exec: MagicMock,
                                                            form: SelectPlanForm):
@@ -247,7 +247,7 @@ def test_import_function_called_when_import_button_clicked(mocked_do_import: Mag
     mocked_do_import.assert_called_with(update=False)
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
 @patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
 @patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
@@ -285,7 +285,7 @@ def test_service_imported_when_import_button_clicked(mocked_date: MagicMock, moc
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
 @patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
 @patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
@@ -323,7 +323,7 @@ def test_service_refreshed_when_refresh_button_clicked(mocked_date: MagicMock, m
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
 @patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
 @patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
@@ -358,7 +358,7 @@ def test_other_bible_is_used_when_bible_gui_form_is_blank(mocked_date: MagicMock
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.PlanningCenterSongImport.finish')
 @patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
@@ -394,7 +394,7 @@ def test_warning_importing_bible_with_no_bible_available(mocked_date: MagicMock,
 
 
 @pytest.mark.skip('fails to run when executed with all other openlp tests.  awaiting pytest fixtures to enable again')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 @patch('openlp.plugins.planningcenter.forms.selectplanform.date')
 def test_less_mocking_service_refreshed_when_refresh_button_clicked(mocked_date: MagicMock, mocked_exec: MagicMock,
                                                                     form: SelectPlanForm):

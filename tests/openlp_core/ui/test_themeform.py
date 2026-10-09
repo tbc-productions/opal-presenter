@@ -860,7 +860,7 @@ def test_theme_dirty_state_ignores_preview_and_detects_reverted_edits(interactiv
 def test_clean_theme_closes_for_exit_without_a_prompt(interactive_theme_form):
     form = interactive_theme_form
     form.mark_saved()
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as dialog:
+    with patch('openlp.core.ui.themeform.QtWidgets.ContentDialog') as dialog:
         assert form.request_close_for_exit()
     dialog.assert_not_called()
     assert form.result() == QtWidgets.QDialog.DialogCode.Rejected
@@ -877,7 +877,7 @@ def test_theme_exit_save_discard_cancel(interactive_theme_form, choice, closes, 
               'discard': fluentqt.ContentDialog.ResultSecondary,
               'cancel': fluentqt.ContentDialog.ResultNone}[choice]
     primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor:
+    with patch('openlp.core.ui.themeform.QtWidgets.ContentDialog') as constructor:
         dialog = constructor.return_value
         dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary
         dialog.exec.return_value = result
@@ -893,7 +893,7 @@ def test_failed_theme_save_keeps_app_exit_cancelled(interactive_theme_form):
     form.mark_saved()
     form.theme_name_edit.setText('')
     primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor, \
+    with patch('openlp.core.ui.themeform.QtWidgets.ContentDialog') as constructor, \
             patch('openlp.core.ui.themeform.critical_error_message_box') as error:
         dialog = constructor.return_value
         dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary

@@ -31,7 +31,7 @@ from openlp.core.lib.ui import critical_error_message_box
 from openlp.core.ui.starttimedialog import Ui_StartTimeDialog
 
 
-class StartTimeForm(QtWidgets.QDialog, Ui_StartTimeDialog, RegistryProperties):
+class StartTimeForm(QtWidgets.FormDialog, Ui_StartTimeDialog, RegistryProperties):
     """
     The start time dialog
     """
@@ -59,10 +59,11 @@ class StartTimeForm(QtWidgets.QDialog, Ui_StartTimeDialog, RegistryProperties):
         self.hour_finish_spin_box.setValue(hours)
         self.minute_finish_spin_box.setValue(minutes)
         self.second_finish_spin_box.setValue(seconds)
-        self.hour_finish_label.setText('{val:d}{text}'.format(val=hour, text=UiStrings().Hours))
+        hours, minutes, seconds = self._time_split(self.item['service_item'].media_length)
+        self.hour_finish_label.setText('{val:d}{text}'.format(val=hours, text=UiStrings().Hours))
         self.minute_finish_label.setText('{val:d}{text}'.format(val=minutes, text=UiStrings().Minutes))
         self.second_finish_label.setText('{val:d}{text}'.format(val=seconds, text=UiStrings().Seconds))
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -83,7 +84,7 @@ class StartTimeForm(QtWidgets.QDialog, Ui_StartTimeDialog, RegistryProperties):
             return
         self.item['service_item'].start_time = start * 1000
         self.item['service_item'].end_time = end * 1000
-        return QtWidgets.QDialog.accept(self)
+        return QtWidgets.FormDialog.accept(self)
 
     def _time_split(self, milliseconds):
         """

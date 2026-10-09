@@ -6,7 +6,7 @@ from openlp.core.common.i18n import translate
 from openlp.core.widgets import fluent as QtWidgets
 
 
-class RenameDialog(fluentqt.ContentDialog):
+class RenameDialog(QtWidgets.ContentDialog):
     def __init__(self, parent, title, label, text):
         super().__init__(parent)
         self.setObjectName('rename_dialog')

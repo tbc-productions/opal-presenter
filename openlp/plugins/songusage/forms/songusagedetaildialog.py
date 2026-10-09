@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -40,38 +39,28 @@ class Ui_SongUsageDetailDialog(object):
         """
         song_usage_detail_dialog.setObjectName('song_usage_detail_dialog')
         song_usage_detail_dialog.setWindowIcon(UiIcons().main_icon)
-        song_usage_detail_dialog.resize(609, 413)
-        self.vertical_layout = QtWidgets.QVBoxLayout(song_usage_detail_dialog)
-        self.vertical_layout.setSpacing(8)
-        self.vertical_layout.setContentsMargins(8, 8, 8, 8)
+        self.vertical_layout = QtWidgets.QVBoxLayout(song_usage_detail_dialog.content_widget)
         self.vertical_layout.setObjectName('vertical_layout')
-        self.date_range_group_box = QtWidgets.QGroupBox(song_usage_detail_dialog)
-        self.date_range_group_box.setObjectName('date_range_group_box')
-        self.date_horizontal_layout = QtWidgets.QHBoxLayout(self.date_range_group_box)
-        self.date_horizontal_layout.setSpacing(8)
-        self.date_horizontal_layout.setContentsMargins(8, 8, 8, 8)
-        self.date_horizontal_layout.setObjectName('date_horizontal_layout')
-        self.from_date_calendar = QtWidgets.QCalendarWidget(self.date_range_group_box)
-        self.from_date_calendar.setObjectName('from_date_calendar')
-        self.date_horizontal_layout.addWidget(self.from_date_calendar)
-        self.to_label = QtWidgets.QLabel(self.date_range_group_box)
-        self.to_label.setScaledContents(False)
-        self.to_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.to_label.setObjectName('to_label')
-        self.date_horizontal_layout.addWidget(self.to_label)
-        self.to_date_calendar = QtWidgets.QCalendarWidget(self.date_range_group_box)
-        self.to_date_calendar.setObjectName('to_date_calendar')
-        self.date_horizontal_layout.addWidget(self.to_date_calendar)
-        self.vertical_layout.addWidget(self.date_range_group_box)
-        self.file_group_box = QtWidgets.QGroupBox(self.date_range_group_box)
-        self.file_group_box.setObjectName('file_group_box')
-        self.file_horizontal_layout = QtWidgets.QHBoxLayout(self.file_group_box)
-        self.file_horizontal_layout.setSpacing(8)
-        self.file_horizontal_layout.setContentsMargins(8, 8, 8, 8)
-        self.file_horizontal_layout.setObjectName('file_horizontal_layout')
-        self.report_path_edit = PathEdit(self.file_group_box, path_type=PathEditType.Directories, show_revert=False)
-        self.file_horizontal_layout.addWidget(self.report_path_edit)
-        self.vertical_layout.addWidget(self.file_group_box)
+        self.form_layout = QtWidgets.QFormLayout()
+        self.form_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.from_label = QtWidgets.QLabel(song_usage_detail_dialog)
+        self.from_date_picker = QtWidgets.CalendarDatePicker(song_usage_detail_dialog)
+        self.from_date_picker.setObjectName('from_date_picker')
+        self.from_label.setBuddy(self.from_date_picker)
+        self.form_layout.addRow(self.from_label, self.from_date_picker)
+        self.to_label = QtWidgets.QLabel(song_usage_detail_dialog)
+        self.to_date_picker = QtWidgets.CalendarDatePicker(song_usage_detail_dialog)
+        self.to_date_picker.setObjectName('to_date_picker')
+        self.to_label.setBuddy(self.to_date_picker)
+        self.form_layout.addRow(self.to_label, self.to_date_picker)
+        for picker in (self.from_date_picker, self.to_date_picker):
+            picker.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.report_path_label = QtWidgets.QLabel(song_usage_detail_dialog)
+        self.report_path_edit = PathEdit(song_usage_detail_dialog, path_type=PathEditType.Directories,
+                                         show_revert=False)
+        self.report_path_label.setBuddy(self.report_path_edit.line_edit)
+        self.form_layout.addRow(self.report_path_label, self.report_path_edit)
+        self.vertical_layout.addLayout(self.form_layout)
         self.button_box = create_button_box(song_usage_detail_dialog, 'button_box', ['cancel', 'ok', 'help'])
         self.vertical_layout.addWidget(self.button_box)
         self.retranslate_ui(song_usage_detail_dialog)
@@ -85,6 +74,11 @@ class Ui_SongUsageDetailDialog(object):
         """
         song_usage_detail_dialog.setWindowTitle(
             translate('SongUsagePlugin.SongUsageDetailForm', 'Song Usage Extraction'))
-        self.date_range_group_box.setTitle(translate('SongUsagePlugin.SongUsageDetailForm', 'Select Date Range'))
-        self.to_label.setText(translate('SongUsagePlugin.SongUsageDetailForm', 'to'))
-        self.file_group_box.setTitle(translate('SongUsagePlugin.SongUsageDetailForm', 'Report Location'))
+        self.from_label.setText(translate('SongUsagePlugin.SongUsageDetailForm', 'From'))
+        self.to_label.setText(translate('SongUsagePlugin.SongUsageDetailForm', 'To'))
+        self.from_date_picker.setAccessibleName(translate('SongUsagePlugin.SongUsageDetailForm', 'From date'))
+        self.to_date_picker.setAccessibleName(translate('SongUsagePlugin.SongUsageDetailForm', 'To date'))
+        self.report_path_label.setText(translate('SongUsagePlugin.SongUsageDetailForm', 'Report Location'))
+        self.report_path_edit.line_edit.setAccessibleName(self.report_path_label.text())
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('SongUsagePlugin.SongUsageDetailForm', 'Export'))

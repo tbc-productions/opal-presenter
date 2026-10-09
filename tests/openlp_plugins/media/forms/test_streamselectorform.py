@@ -104,3 +104,21 @@ def test_set_stream_call(stream_selector_form):
 
     # THEN: The callback function should be called with the correct values
     setstream.assert_called_with('devicestream:test&&qt6video=Camera 2;qt6audio=&&')
+
+
+def test_enter_commits_network_url_before_saving(settings, qtbot):
+    from openlp.plugins.media.forms.networkstreamselectorform import NetworkStreamSelectorForm
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(900, 600)
+    parent.show()
+    callback = MagicMock()
+    form = NetworkStreamSelectorForm(parent, callback)
+    form.setAnimationEnabled(False)
+    form.stream_name_edit.setText('Sunday')
+    form.net_mrl_lineedit.setText('https://example.org/live')
+    form.open()
+    QtTest.QTest.keyClick(form.net_mrl_lineedit, QtCore.Qt.Key.Key_Return)
+    QtWidgets.QApplication.processEvents()
+    callback.assert_called_once_with('networkstream:Sunday&&https://example.org/live&&')
+    assert not form.isOpen()

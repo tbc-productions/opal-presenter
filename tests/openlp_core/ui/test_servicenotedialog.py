@@ -46,7 +46,7 @@ def test_basic_display(form: ServiceNoteForm):
     form.text_edit.setPlainText('')
 
     # WHEN displaying the UI and pressing enter
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -57,7 +57,7 @@ def test_basic_display(form: ServiceNoteForm):
     # WHEN displaying the UI, having set the text and pressing enter
     text = 'OpenLP is the best worship software'
     form.text_edit.setPlainText(text)
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -67,7 +67,7 @@ def test_basic_display(form: ServiceNoteForm):
 
     # WHEN displaying the UI, having set the text and pressing enter
     form.text_edit.setPlainText('')
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
         form.text_edit.setPlainText(text)
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)

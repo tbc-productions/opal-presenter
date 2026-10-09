@@ -41,15 +41,15 @@ from openlp.plugins.planningcenter.lib.songimport import PlanningCenterSongImpor
 log = logging.getLogger(__name__)
 
 
-class SelectPlanForm(QtWidgets.QDialog, Ui_SelectPlanDialog):
+class SelectPlanForm(QtWidgets.FormDialog, Ui_SelectPlanDialog):
     """
     The :class:`PlanningCenterForm` class is the PlanningCenter dialog.
     """
 
     def __init__(self, parent=None, plugin=None):
-        QtWidgets.QDialog.__init__(self, parent,
-                                   QtCore.Qt.WindowType.WindowSystemMenuHint |
-                                   QtCore.Qt.WindowType.WindowTitleHint)
+        QtWidgets.FormDialog.__init__(self, parent,
+                                      QtCore.Qt.WindowType.WindowSystemMenuHint |
+                                      QtCore.Qt.WindowType.WindowTitleHint)
         self.plugin = plugin
         # create an Planning Center API Object
         application_id = Registry().get('settings').value('planningcenter/application_id')
@@ -96,7 +96,7 @@ class SelectPlanForm(QtWidgets.QDialog, Ui_SelectPlanDialog):
             self.song_theme_selection_combo_box.addItem(theme)
             self.slide_theme_selection_combo_box.addItem(theme)
 
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def done(self, result_code):
         """
@@ -105,13 +105,13 @@ class SelectPlanForm(QtWidgets.QDialog, Ui_SelectPlanDialog):
         :param result_code: The result of the dialog.
         """
         log.debug('Closing PlanningCenterForm')
-        return QtWidgets.QDialog.done(self, result_code)
+        return QtWidgets.FormDialog.done(self, result_code)
 
     def on_edit_auth_button_clicked(self):
         """
         Open the edit auth screen
         """
-        self.done(QtWidgets.QDialog.DialogCode.Accepted)
+        self.done(QtWidgets.FormDialog.DialogCode.Accepted)
         settings_form = Registry().get('settings_form')
         settings_form.exec(translate('PlanningCenterPlugin', 'PlanningCenter'))
 
@@ -166,14 +166,14 @@ class SelectPlanForm(QtWidgets.QDialog, Ui_SelectPlanDialog):
         keep changed items
         """
         self._do_import(update=True)
-        self.done(QtWidgets.QDialog.DialogCode.Accepted)
+        self.done(QtWidgets.FormDialog.DialogCode.Accepted)
 
     def on_import_as_new_button_clicked(self):
         """
         Create a new service and import all of the PCO items into it
         """
         self._do_import(update=False)
-        self.done(QtWidgets.QDialog.DialogCode.Accepted)
+        self.done(QtWidgets.FormDialog.DialogCode.Accepted)
 
     def _do_import(self, update=False):
         """

@@ -21,6 +21,7 @@
 """
 Package to test the openlp.plugins.songusage.forms.songusagedeleteform package.
 """
+import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtTest, QtCore
@@ -45,3 +46,45 @@ def test_help(settings: Settings):
 
     # THEN: The Help function should be called
     mocked_help.assert_called_once()
+
+
+@pytest.mark.parametrize('confirmed', [False, True])
+def test_deletion_requires_confirmation_and_matches_inclusive_date(settings, qtbot, monkeypatch, confirmed):
+    from openlp.core.common.registry import Registry
+    from openlp.plugins.songusage.lib.db import SongUsageItem
+    main_window = QtWidgets.QMainWindow()
+    qtbot.addWidget(main_window)
+    main_window.resize(1000, 800)
+    main_window.information_message = MagicMock()
+    Registry().register('main_window', main_window)
+    main_window.show()
+    manager = MagicMock()
+    form = SongUsageDeleteForm(manager, main_window)
+    form.delete_calendar.setSelectedDate(QtCore.QDate(2026, 10, 9))
+    messages = []
+
+    def confirm(dialog):
+        messages.append(dialog.content().text())
+        return dialog.ResultPrimary if confirmed else dialog.ResultNone
+
+    monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', confirm)
+    with patch('openlp.plugins.songusage.forms.songusagedeleteform.QtGui.QDesktopServices.openUrl') as help_url:
+        form.setAnimationEnabled(False)
+        form.open()
+        form._native_commands['secondary'].click()
+        help_url.assert_called_once()
+        assert form.isOpen()
+    form._native_commands['primary'].click()
+    assert messages == ['Permanently delete all song usage data on or before 2026-10-09?']
+    if confirmed:
+        model, expression = manager.delete_all_objects.call_args.args
+        assert model is SongUsageItem
+        assert expression.compare(SongUsageItem.usagedate <= QtCore.QDate(2026, 10, 9).toPyDate())
+        main_window.information_message.assert_called_once()
+        assert form.result() == form.DialogCode.Accepted
+        assert not form.isOpen()
+    else:
+        manager.delete_all_objects.assert_not_called()
+        main_window.information_message.assert_not_called()
+        assert form.isOpen()
+        form.reject()

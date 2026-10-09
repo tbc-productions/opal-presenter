@@ -41,12 +41,13 @@ class Ui_MediaFilesDialog(object):
         media_files_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         media_files_dialog.resize(400, 300)
         media_files_dialog.setModal(True)
-        self.files_vertical_layout = QtWidgets.QVBoxLayout(media_files_dialog)
+        self.files_vertical_layout = QtWidgets.QVBoxLayout(media_files_dialog.content_widget)
         self.files_vertical_layout.setSpacing(8)
         self.files_vertical_layout.setContentsMargins(8, 8, 8, 8)
         self.files_vertical_layout.setObjectName('files_vertical_layout')
         self.select_label = QtWidgets.QLabel(media_files_dialog)
         self.select_label.setWordWrap(True)
+        self.select_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
         self.select_label.setObjectName('select_label')
         self.files_vertical_layout.addWidget(self.select_label)
         self.file_list_widget = QtWidgets.QListWidget(media_files_dialog)
@@ -66,6 +67,7 @@ class Ui_MediaFilesDialog(object):
         :param media_files_dialog:
         """
         media_files_dialog.setWindowTitle(translate('SongsPlugin.MediaFilesForm', 'Select Media File(s)'))
-        self.select_label.setText(translate('SongsPlugin.MediaFilesForm', 'Select one or more audio files from the '
-                                                                          'list below, and click OK to import them '
-                                                                          'into this song.'))
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('SongsPlugin.MediaFilesForm', 'Select'))
+        self.select_label.setText(translate('SongsPlugin.MediaFilesForm',
+                                            'Select one or more audio files below to import into this song.'))

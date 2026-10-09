@@ -117,7 +117,7 @@ def projectordb(temp_folder, settings):
 @pytest.fixture()
 def projector_editform(projectordb):
     with patch('openlp.core.projectors.editform.QtWidgets.QMessageBox') as mock_msg_box, \
-         patch('openlp.core.projectors.editform.QtWidgets.QDialog') as mock_dialog_box:
+         patch('openlp.core.projectors.editform.QtWidgets.FormDialog') as mock_dialog_box:
         _form = ProjectorEditForm(projectordb=projectordb)
         _form.mock_msg_box = mock_msg_box
         _form.mock_dialog_box = mock_dialog_box
@@ -128,7 +128,7 @@ def projector_editform(projectordb):
 @pytest.fixture()
 def projector_editform_mtdb(projectordb_mtdb):
     with patch('openlp.core.projectors.editform.QtWidgets.QMessageBox') as mock_msg_box, \
-         patch('openlp.core.projectors.editform.QtWidgets.QDialog') as mock_dialog_box:
+         patch('openlp.core.projectors.editform.QtWidgets.FormDialog') as mock_dialog_box:
         _form = ProjectorEditForm(projectordb=projectordb_mtdb)
         _form.mock_msg_box = mock_msg_box
         _form.mock_dialog_box = mock_dialog_box

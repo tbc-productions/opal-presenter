@@ -30,7 +30,7 @@ from openlp.core.lib.ui import create_action
 from .firsttimelanguagedialog import Ui_FirstTimeLanguageDialog
 
 
-class FirstTimeLanguageForm(QtWidgets.QDialog, Ui_FirstTimeLanguageDialog):
+class FirstTimeLanguageForm(QtWidgets.FormDialog, Ui_FirstTimeLanguageDialog):
     """
     The language selection dialog.
     """
@@ -51,7 +51,7 @@ class FirstTimeLanguageForm(QtWidgets.QDialog, Ui_FirstTimeLanguageDialog):
         """
         Run the Dialog with correct heading.
         """
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -65,7 +65,7 @@ class FirstTimeLanguageForm(QtWidgets.QDialog, Ui_FirstTimeLanguageDialog):
             LanguageManager.auto_language = False
             action = create_action(None, self.language_combo_box.currentText())
             LanguageManager.set_language(action, False)
-        return QtWidgets.QDialog.accept(self)
+        return QtWidgets.FormDialog.accept(self)
 
     def reject(self):
         """
@@ -73,4 +73,4 @@ class FirstTimeLanguageForm(QtWidgets.QDialog, Ui_FirstTimeLanguageDialog):
         """
         LanguageManager.auto_language = True
         LanguageManager.set_language(False, False)
-        return QtWidgets.QDialog.reject(self)
+        return QtWidgets.FormDialog.reject(self)

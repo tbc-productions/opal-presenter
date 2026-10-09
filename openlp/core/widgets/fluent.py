@@ -28,6 +28,7 @@ QLabel = FluentLabel
 
 QLineEdit = fluentqt.LineEdit
 QComboBox = fluentqt.ComboBox
+CalendarDatePicker = fluentqt.CalendarDatePicker
 MultiSelectComboBox = fluentqt.MultiSelectComboBox
 Card = fluentqt.Card
 
@@ -728,7 +729,7 @@ DataGrid = FluentTableWidget
 from openlp.core.widgets.fluent_inputs import (  # noqa: E402,F401
     QTimeEdit, QCalendarWidget, QFontComboBox, QSpinBox, QGroupBox)
 from openlp.core.widgets.fluent_dialogs import (  # noqa: E402,F401
-    QDialog, QInputDialog, QProgressBar, QProgressDialog, QTabWidget, QMessageBox, QColorDialog)
+    ContentDialog, FormDialog, QDialog, QInputDialog, QProgressBar, QProgressDialog, QTabWidget, QMessageBox, QColorDialog)
 
 from openlp.core.widgets.fluent_navigation import QTabBar  # noqa: E402,F401
 

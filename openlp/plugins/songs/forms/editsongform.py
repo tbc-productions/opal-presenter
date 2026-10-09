@@ -1232,7 +1232,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         if item is None:
             return
         author_id, author_type = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        dialog = fluentqt.ContentDialog(getattr(self, '_fluent_dialog_host', self))
+        dialog = QtWidgets.ContentDialog(getattr(self, '_fluent_dialog_host', self))
         dialog.setObjectName('author_type_dialog')
         dialog.graphicsEffect().setEnabled(False)
         dialog.setSmokeEnabled(True)

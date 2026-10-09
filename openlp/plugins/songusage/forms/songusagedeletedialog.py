@@ -40,12 +40,14 @@ class Ui_SongUsageDeleteDialog(object):
         song_usage_delete_dialog.setObjectName('song_usage_delete_dialog')
         song_usage_delete_dialog.setWindowIcon(UiIcons().main_icon)
         song_usage_delete_dialog.resize(291, 243)
-        self.vertical_layout = QtWidgets.QVBoxLayout(song_usage_delete_dialog)
+        self.vertical_layout = QtWidgets.QVBoxLayout(song_usage_delete_dialog.content_widget)
         self.vertical_layout.setSpacing(8)
         self.vertical_layout.setContentsMargins(8, 8, 8, 8)
         self.vertical_layout.setObjectName('vertical_layout')
         self.delete_label = QtWidgets.QLabel(song_usage_delete_dialog)
         self.delete_label.setObjectName('delete_label')
+        self.delete_label.setWordWrap(True)
+        self.delete_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
         self.vertical_layout.addWidget(self.delete_label)
         self.delete_calendar = QtWidgets.QCalendarWidget(song_usage_delete_dialog)
         self.delete_calendar.setFirstDayOfWeek(QtCore.Qt.DayOfWeek.Sunday)
@@ -65,5 +67,7 @@ class Ui_SongUsageDeleteDialog(object):
         song_usage_delete_dialog.setWindowTitle(
             translate('SongUsagePlugin.SongUsageDeleteForm', 'Delete Song Usage Data'))
         self.delete_label.setText(
-            translate('SongUsagePlugin.SongUsageDeleteForm', 'Select the date up to which the song usage data '
-                      'should be deleted. \nAll data recorded before this date will be permanently deleted.'))
+            translate('SongUsagePlugin.SongUsageDeleteForm',
+                      'Select a date. All song usage data recorded on or before this date '
+                      'will be permanently deleted.'))
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(translate('OpenLP.Ui', 'Delete'))

@@ -130,7 +130,7 @@ class Ui_ProjectorEditForm(object):
         edit_projector_dialog.setMinimumWidth(400)
         edit_projector_dialog.setModal(True)
         # Define the basic layout
-        self.dialog_layout = QtWidgets.QGridLayout(edit_projector_dialog)
+        self.dialog_layout = QtWidgets.QGridLayout(edit_projector_dialog.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.dialog_layout.setSpacing(8)
         self.dialog_layout.setContentsMargins(8, 8, 8, 8)
@@ -187,7 +187,7 @@ class Ui_ProjectorEditForm(object):
                                                           QtWidgets.QDialogButtonBox.StandardButton.Save |
                                                           QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         self.dialog_layout.addWidget(self.button_box_edit, 8, 0, 1, 2)
-        self.button_box_view = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+        self.button_box_view = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Close)
         self.dialog_layout.addWidget(self.button_box_view, 8, 0, 1, 2)
 
     def retranslate_ui(self, edit_projector_dialog):
@@ -212,7 +212,7 @@ class Ui_ProjectorEditForm(object):
         self.notes_text.insertPlainText(self.projector.notes)
 
 
-class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
+class ProjectorEditForm(QtWidgets.FormDialog, Ui_ProjectorEditForm):
     """
     Class to add or edit a projector entry in the database.
 
@@ -237,7 +237,7 @@ class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
         self.button_box_edit.accepted.connect(self.accept_me)
         self.button_box_edit.helpRequested.connect(self.help_me)
         self.button_box_edit.rejected.connect(self.cancel_me)
-        self.button_box_view.accepted.connect(self.cancel_me)
+        self.button_box_view.rejected.connect(self.cancel_me)
 
     def exec(self, projector=None, edit=True):
         if projector is None:
@@ -253,6 +253,9 @@ class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
 
         self.button_box_edit.setVisible(edit)
         self.button_box_view.setVisible(not edit)
+        self.setButtonBox(self.button_box_edit if edit else self.button_box_view)
+        self.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Primary if edit
+                              else QtWidgets.fluentqt.ContentDialogButton.Close)
         self.name_text.setReadOnly(not edit)
         self.ip_text.setReadOnly(not edit)
         self.port_text.setReadOnly(not edit)
@@ -262,7 +265,7 @@ class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
         if edit:
             self.name_text.setFocus()
         self.retranslate_ui(self)
-        reply = QtWidgets.QDialog.exec(self)
+        reply = QtWidgets.FormDialog.exec(self)
         return reply
 
     @QtCore.Slot()

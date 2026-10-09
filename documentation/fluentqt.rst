@@ -90,6 +90,17 @@ Qt's document, cursor, spell-checking and rich-text engines; FluentQt's public
 TextEdit API does not expose the operations these editors need. System file
 and print dialogs retain their platform implementations. Colour selection uses FluentQt's native ColorPicker.
 
+Compact forms, confirmations and input prompts use the shared ``ContentDialog``
+and ``FormDialog`` adapters. Primary actions stay on the left, secondary actions
+in the middle and Cancel or Close on the right; the default action controls
+emphasis without changing this order. Content keeps FluentQt's native padding
+and scrolls within the host window so lengthy messages leave the buttons visible.
+``FormDialog`` forwards its commands through the existing button box, preserving
+validation and Help behaviour. Larger editors retain ``QDialog`` with a visible
+heading.
+See the `dialog design pattern <dialogs.rst>`_ for implementation guidance and
+verification expectations.
+
 Theme changes display a restart reminder. Native controls can update their
 colours live, but existing QAction icons and ADS docking surfaces cache the
 startup scheme. Restarting applies the selected scheme consistently.

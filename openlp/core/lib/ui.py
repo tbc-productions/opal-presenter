@@ -181,6 +181,8 @@ def create_button_box(dialog, name, standard_buttons, custom_buttons=None):
     button_box.rejected.connect(dialog.reject)
     if 'help' in standard_buttons and hasattr(dialog, 'provide_help'):
         button_box.helpRequested.connect(dialog.provide_help)
+    if isinstance(dialog, QtWidgets.FormDialog):
+        dialog.setButtonBox(button_box)
     return button_box
 
 

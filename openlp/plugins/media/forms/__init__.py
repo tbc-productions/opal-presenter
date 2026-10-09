@@ -27,7 +27,7 @@ from openlp.core.lib.ui import critical_error_message_box
 from openlp.core.ui.media import parse_stream_path
 
 
-class StreamSelectorFormBase(QtWidgets.QDialog):
+class StreamSelectorFormBase(QtWidgets.FormDialog):
     """
     Class to manage the clip selection
     """
@@ -53,7 +53,7 @@ class StreamSelectorFormBase(QtWidgets.QDialog):
         self.setSizePolicy(
             QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding,
                                   QtWidgets.QSizePolicy.Policy.MinimumExpanding))
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.main_layout.setObjectName('main_layout')
 
         self.top_widget = QtWidgets.QWidget(self)
@@ -72,7 +72,7 @@ class StreamSelectorFormBase(QtWidgets.QDialog):
         """
         Start dialog
         """
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -90,7 +90,7 @@ class StreamSelectorFormBase(QtWidgets.QDialog):
             type=self.type, name=stream_name, mrl=self.mrl,
             options='')
         self.callback(stream_string)
-        return QtWidgets.QDialog.accept(self)
+        return QtWidgets.FormDialog.accept(self)
 
     def update_mrl_from_form(self, mrl):
         """

@@ -33,10 +33,10 @@ class Ui_SelectPlanDialog(object):
     def setup_ui(self, planningcenter_dialog):
         planningcenter_dialog.setObjectName('planningcenter_dialog')
         planningcenter_dialog.resize(400, 280)
-        self.planningcenter_layout = QtWidgets.QFormLayout(planningcenter_dialog)
+        self.planningcenter_layout = QtWidgets.QFormLayout(planningcenter_dialog.content_widget)
         self.planningcenter_layout.setContentsMargins(50, 50, 50, 50)
         self.planningcenter_layout.setSpacing(8)
-        self.planningcenter_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.planningcenter_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         # Service Type GUI Elements -- service_type combo_box
         self.service_type_label = QtWidgets.QLabel(planningcenter_dialog)
         self.service_type_combo_box = QtWidgets.QComboBox(planningcenter_dialog)
@@ -57,11 +57,12 @@ class Ui_SelectPlanDialog(object):
         self.import_as_new_button = QtWidgets.QPushButton(planningcenter_dialog)
         self.button_layout.addButton(self.import_as_new_button, QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
         self.update_existing_button = QtWidgets.QPushButton(planningcenter_dialog)
-        self.button_layout.addButton(self.update_existing_button, QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
+        self.button_layout.addButton(self.update_existing_button, QtWidgets.QDialogButtonBox.ButtonRole.ApplyRole)
         self.edit_auth_button = QtWidgets.QPushButton(planningcenter_dialog)
         self.button_layout.addButton(self.edit_auth_button, QtWidgets.QDialogButtonBox.ButtonRole.ActionRole)
         self.planningcenter_layout.addRow(self.button_layout)
         self.retranslate_ui(planningcenter_dialog)
+        planningcenter_dialog.setButtonBox(self.button_layout)
 
     def retranslate_ui(self, planningcenter_dialog):
         """

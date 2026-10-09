@@ -30,7 +30,7 @@ from openlp.core.lib.ui import critical_error_message_box
 from openlp.plugins.songs.forms.topicsdialog import Ui_TopicsDialog
 
 
-class TopicsForm(QtWidgets.QDialog, Ui_TopicsDialog):
+class TopicsForm(QtWidgets.FormDialog, Ui_TopicsDialog):
     """
     Class documentation goes here.
     """
@@ -51,7 +51,7 @@ class TopicsForm(QtWidgets.QDialog, Ui_TopicsDialog):
         if clear:
             self.name_edit.clear()
         self.name_edit.setFocus()
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -63,7 +63,7 @@ class TopicsForm(QtWidgets.QDialog, Ui_TopicsDialog):
             self.name_edit.setFocus()
             return False
         else:
-            return QtWidgets.QDialog.accept(self)
+            return QtWidgets.FormDialog.accept(self)
 
     def _get_name(self):
         """

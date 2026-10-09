@@ -64,6 +64,7 @@ class NetworkStreamSelectorForm(StreamSelectorFormBase):
         self.net_mrl_lineedit.editingFinished.connect(self.on_updates)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+        self.setButtonBox(self.button_box)
 
     def retranslate_ui(self):
         self.setWindowTitle(translate('MediaPlugin.StreamSelector', 'Insert Input Stream'))

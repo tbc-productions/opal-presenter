@@ -2,6 +2,7 @@
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from zipfile import ZipFile
 
 import pytest
@@ -14,10 +15,12 @@ from openlp.core.lib.presentationexport import PresentationPage, _styled_lines, 
     service_pages, _base_text_style
 from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.widgets.dialogs import FileDialog
-from tests.openlp_core.ui.test_mainwindow import main_window_reduced as _main_window_reduced
+from tests.openlp_core.ui.test_mainwindow import (
+    main_window as _main_window, main_window_reduced as _main_window_reduced)
 from tests.utils.constants import RESOURCE_PATH
 
 
+main_window = _main_window
 presentation_main_window = _main_window_reduced
 
 
@@ -580,7 +583,8 @@ def test_export_dialog_uses_requested_format_and_suggested_path(monkeypatch, tmp
 
 @pytest.mark.parametrize('fails', [False, True])
 def test_export_progress_dialog_is_modal_and_closes_before_errors(tmp_path, monkeypatch, fails):
-    from PySide6 import QtCore, QtWidgets
+    from PySide6 import QtCore
+    from openlp.core.widgets import fluent as QtWidgets
     from openlp.core.lib import presentationexport
     from openlp.core.ui import presentationexportdialog
 
@@ -696,12 +700,13 @@ def test_export_with_progress_writes_real_output_on_worker(tmp_path, monkeypatch
         assert len(Presentation(target).slides) == 5
 
 
-def test_export_menu_has_separate_presentation_formats(request):
+def test_export_menu_has_separate_presentation_formats(request, monkeypatch):
     main_window = request.getfixturevalue('presentation_main_window')
     menu = main_window.export_presentation_menu
     assert menu.title() == '&Presentation'
     assert [action.text() for action in menu.actions()] == ['PowerPoint (PPTX)', 'OpenDocument (ODP)']
     assert menu.menuAction() in main_window.file_export_menu.actions()
+    monkeypatch.setattr(main_window.service_manager_contents, 'on_export_presentation', MagicMock())
     main_window.export_powerpoint_item.trigger()
     main_window.export_opendocument_item.trigger()
     calls = main_window.service_manager_contents.on_export_presentation.call_args_list

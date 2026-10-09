@@ -133,7 +133,7 @@ def test_set_display_name_property(form):
     assert form.display_edit.text() == display_name, 'The display name should be set correctly'
 
 
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.QDialog.exec')
+@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.exec')
 def test_exec(mocked_exec, form):
     """
     Test the exec() method
@@ -301,7 +301,7 @@ def test_accept_no_display_name_no_combine(mocked_critical_error, form):
 
 
 @patch('openlp.plugins.songs.forms.authorsform.critical_error_message_box')
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.QDialog.accept')
+@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
 def test_accept_no_display_name(mocked_accept, mocked_critical_error, form):
     """
     Test the accept() method with no display name and auto-combine
@@ -332,7 +332,7 @@ def test_accept_no_display_name(mocked_accept, mocked_critical_error, form):
     mocked_accept.assert_called_once_with(form)
 
 
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.QDialog.accept')
+@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
 def test_accept(mocked_accept, form):
     """
     Test the accept() method

@@ -73,7 +73,7 @@ def test_time_display(form: StartTimeForm):
 
     # WHEN displaying the UI and pressing enter
     form.item = {'service_item': mocked_serviceitem}
-    with patch('openlp.core.widgets.fluent.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.FormDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Ok)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -86,7 +86,7 @@ def test_time_display(form: StartTimeForm):
 
     # WHEN displaying the UI, changing the time to 2min 3secs and pressing enter
     form.item = {'service_item': mocked_serviceitem}
-    with patch('openlp.core.widgets.fluent.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.FormDialog.exec'):
         form.exec()
     form.minute_spin_box.setValue(2)
     form.second_spin_box.setValue(3)
@@ -98,3 +98,13 @@ def test_time_display(form: StartTimeForm):
     assert form.minute_spin_box.value() == 2
     assert form.second_spin_box.value() == 3
     assert form.item['service_item'].start_time == 123000, 'The start time should have changed'
+
+
+def test_media_length_is_independent_of_trimmed_start_and_finish(form):
+    form.item = {'service_item': MagicMock(start_time=61000, end_time=3701000, media_length=7200000)}
+    with patch('openlp.core.widgets.fluent.FormDialog.exec'):
+        form.exec()
+    assert form.hour_finish_label.text() == '2h'
+    assert form.minute_finish_label.text() == '0m'
+    assert form.second_finish_label.text() == '0s'
+    assert form.length_label.text() == 'Media length'

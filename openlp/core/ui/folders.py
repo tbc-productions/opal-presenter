@@ -50,7 +50,7 @@ class FolderPopulateMixin(object):
             self.populate_folders(folder.id, prefix + '   ')
 
 
-class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
+class AddFolderForm(QtWidgets.FormDialog, FolderPopulateMixin):
     """
     This class implements the 'Add folder' form for the plugins.
     """
@@ -67,7 +67,7 @@ class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
     def setup_ui(self):
         self.setObjectName('AddFolderDialog')
         self.resize(300, 10)
-        self.dialog_layout = QtWidgets.QVBoxLayout(self)
+        self.dialog_layout = QtWidgets.QVBoxLayout(self.content_widget)
         self.dialog_layout.setObjectName('dialog_layout')
         self.name_layout = QtWidgets.QFormLayout()
         self.name_layout.setObjectName('name_layout')
@@ -86,12 +86,13 @@ class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
         self.button_box = create_button_box(self, 'button_box', ['cancel', 'save'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui()
-        self.setMaximumHeight(self.sizeHint().height())
 
     def retranslate_ui(self):
         self.setWindowTitle(translate('OpenLP.AddFolderForm', 'Add folder'))
         self.parent_folder_label.setText(translate('OpenLP.AddFolderForm', 'Parent folder:'))
         self.name_label.setText(translate('OpenLP.AddFolderForm', 'Folder name:'))
+        self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Save).setText(
+            translate('OpenLP.AddFolderForm', 'Create'))
 
     def exec(self, clear=True, show_top_level_folder=False, selected_folder=None):
         """
@@ -113,7 +114,7 @@ class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
             for i in range(self.folder_combobox.count()):
                 if self.folder_combobox.itemData(i) == selected_folder:
                     self.folder_combobox.setCurrentIndex(i)
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -129,7 +130,7 @@ class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
                                                          'This folder already exists, please use a different name.'))
             return False
         else:
-            return QtWidgets.QDialog.accept(self)
+            return QtWidgets.FormDialog.accept(self)
 
     @property
     def parent_id(self):
@@ -163,7 +164,7 @@ class AddFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
                                                    self.folder_class.name == self.folder_name) is not None
 
 
-class ChooseFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
+class ChooseFolderForm(QtWidgets.FormDialog, FolderPopulateMixin):
     """
     This class implements the 'Choose folder' form for the plugins.
     """
@@ -183,8 +184,8 @@ class ChooseFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
         """
         self.setObjectName('ChooseFolderForm')
         self.resize(399, 119)
-        self.choose_folder_layout = QtWidgets.QFormLayout(self)
-        self.choose_folder_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.choose_folder_layout = QtWidgets.QFormLayout(self.content_widget)
+        self.choose_folder_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.choose_folder_layout.setContentsMargins(8, 8, 8, 8)
         self.choose_folder_layout.setSpacing(8)
         self.choose_folder_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft |
@@ -230,6 +231,8 @@ class ChooseFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
         self.nofolder_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'No folder'))
         self.existing_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'Existing folder'))
         self.new_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'New folder'))
+        self.folder_button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
+            translate('OpenLP.ChooseFolderForm', 'Select'))
 
     def exec(self, selected_folder=None):
         """
@@ -247,7 +250,7 @@ class ChooseFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
                 if self.folder_combobox.itemData(index) == selected_folder:
                     self.folder_combobox.setCurrentIndex(index)
                     self.existing_radio_button.setChecked(True)
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -259,7 +262,7 @@ class ChooseFolderForm(QtWidgets.QDialog, FolderPopulateMixin):
             self.new_folder_edit.setFocus()
             return False
         else:
-            return QtWidgets.QDialog.accept(self)
+            return QtWidgets.FormDialog.accept(self)
 
     def on_folder_combobox_selected(self, index: int):
         """

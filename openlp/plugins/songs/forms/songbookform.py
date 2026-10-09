@@ -30,7 +30,7 @@ from openlp.core.lib.ui import critical_error_message_box
 from openlp.plugins.songs.forms.songbookdialog import Ui_SongBookDialog
 
 
-class SongBookForm(QtWidgets.QDialog, Ui_SongBookDialog):
+class SongBookForm(QtWidgets.FormDialog, Ui_SongBookDialog):
     """
     Class documentation goes here.
     """
@@ -54,7 +54,7 @@ class SongBookForm(QtWidgets.QDialog, Ui_SongBookDialog):
             self.name_edit.clear()
             self.publisher_edit.clear()
         self.name_edit.setFocus()
-        return QtWidgets.QDialog.exec(self)
+        return QtWidgets.FormDialog.exec(self)
 
     def accept(self):
         """
@@ -66,4 +66,4 @@ class SongBookForm(QtWidgets.QDialog, Ui_SongBookDialog):
             self.name_edit.setFocus()
             return False
         else:
-            return QtWidgets.QDialog.accept(self)
+            return QtWidgets.FormDialog.accept(self)
