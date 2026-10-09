@@ -170,3 +170,10 @@ def test_expired_sign_in_error_does_not_include_tokens(profile, monkeypatch):
     with pytest.raises(SyncError) as error:
         auth.exchange({'grant_type': 'refresh_token', 'refresh_token': 'private-token'})
     assert 'private-token' not in str(error.value)
+
+
+@pytest.mark.parametrize('provider', ['unsupported', None, [], {}])
+def test_unsupported_profile_provider_is_rejected(profile, provider):
+    profile['provider'] = provider
+    with pytest.raises(SyncError, match='not supported'):
+        validate_profile(profile)

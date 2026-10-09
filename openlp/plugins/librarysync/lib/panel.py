@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
-from fluentqt import Breadcrumb, BreadcrumbItem, Spacing
+from fluentqt import Breadcrumb, BreadcrumbItem
 
 from PySide6 import QtCore, QtGui
 
@@ -31,7 +31,8 @@ from openlp.plugins.librarysync.lib.profile import (
     deserialize_profile, read_profile, serialize_profile, validate_profile, write_profile)
 from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError, preview_url_allowed
 from openlp.plugins.librarysync.lib.transfer import (
-    import_item, item_category, local_item, name_key, prepare_upload, read_theme_item, read_xml_item, safe_name,
+    EXTENSION_CATEGORIES, duplicate_key, import_item, item_category, local_item, prepare_upload,
+    read_theme_item, read_xml_item, safe_name,
     write_upload)
 from openlp.plugins.librarysync.lib.preview import format_local_time, show_preview
 from openlp.plugins.librarysync.lib.stream import MediaStream
@@ -56,27 +57,22 @@ class CloudDragData(QtCore.QMimeData):
 
 
 class CloudTree(DataGridWithDnD):
-    def __init__(self, panel):
+    def __init__(self, panel, category):
         super().__init__(panel, 'librarysync')
         self.panel = panel
-        self.setup_columns([tr('Name'), tr('Size'), tr('Updated')])
+        self.size_column = 2 if category in EXTENSION_CATEGORIES else 1
+        self.setup_columns([tr('Name')] + ([tr('File Type')] if self.size_column == 2 else []) +
+                           [tr('Size'), tr('Updated')])
         self.setRootIsDecorated(False)
         self.setUniformRowHeights(True)
         self.setFont(QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Body))
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        date = format_local_time(QtCore.QDateTime.currentDateTimeUtc().toString(QtCore.Qt.DateFormat.ISODate))
-        self.header().resizeSection(2, self.fontMetrics().horizontalAdvance(date) + 4 * Spacing.Medium)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setAccessibleName(tr('Cloud Library items'))
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(panel.context_menu)
-
-    def _on_section_resized(self, section, old_size, new_size):
-        # Keep Name still so a metadata resize handle follows the mouse.
-        if section == 0:
-            super()._on_section_resized(section, old_size, new_size)
 
     def startDrag(self, actions):
         items = self.panel.selected_items()
@@ -127,16 +123,18 @@ class CloudLibrary(QtWidgets.QWidget):
         self.cached_listing = False
         self.cache_checked = True
         self.out_of_date = False
+        self.last_auto_refresh = None
         self.change_token = ''
         self.generation = 0
         self.category = next(iter(CATEGORIES))
         self.preview_windows = set()
+        self.pending_view = None
         self.drop_views = {}
         self.imported = set()
         self.closing = False
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(6, 0, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.import_info = QtWidgets.fluentqt.InfoBar(self)
         info_policy = self.import_info.sizePolicy()
         info_policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Expanding)
@@ -156,7 +154,7 @@ class CloudLibrary(QtWidgets.QWidget):
                            'media': UiIcons().media, 'presentations': UiIcons().presentation, 'themes': UiIcons().theme}
         self.trees = {}
         for category, label in CATEGORIES.items():
-            tree = CloudTree(self)
+            tree = CloudTree(self, category)
             tree.itemDoubleClicked.connect(self.activate_item)
             tree.itemSelectionChanged.connect(self.selection_changed)
             self.trees[category] = tree
@@ -179,7 +177,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.delete_action.triggered.connect(self.delete_selected)
         controls = QtWidgets.QWidget(self)
         controls_layout = QtWidgets.QVBoxLayout(controls)
-        controls_layout.setContentsMargins(0, 8, 0, 8)
+        controls_layout.setContentsMargins(8, 8, 8, 8)
         controls_layout.setSpacing(0)
         controls_layout.addWidget(self.toolbar)
         self.navigation = QtWidgets.QWidget(controls)
@@ -232,23 +230,35 @@ class CloudLibrary(QtWidgets.QWidget):
         progress_layout = QtWidgets.QHBoxLayout(self.transfer_progress)
         progress_layout.setContentsMargins(0, 0, 0, 0)
         progress_layout.setSpacing(8)
-        self.progress = QtWidgets.QProgressBar(self)
+        self.progress = QtWidgets.QProgressBar(self, compact=True)
         self.progress.setRange(0, 0)
         self.progress.setMinimumWidth(80)
         self.progress.setAccessibleName(tr('Transfer progress'))
         self.progress.hide()
         progress_layout.addWidget(self.progress, 1)
         self.cancel_button = QtWidgets.QPushButton(tr('Cancel'), self)
+        self.cancel_button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+        self.cancel_button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
         self.cancel_button.clicked.connect(self.cancel_transfer)
         self.cancel_button.hide()
         progress_layout.addWidget(self.cancel_button)
         self.footer.layout().addWidget(self.transfer_progress, 1)
         self.footer.layout().addWidget(self.status, 1)
+        self.refresh_button = QtWidgets.QPushButton(tr('Refresh'), self.footer)
+        self.refresh_button.setIcon(UiIcons().refresh)
+        self.refresh_button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+        self.refresh_button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+        self.refresh_button.clicked.connect(self.refresh)
+        self.refresh_button.hide()
+        self.footer.layout().addWidget(self.refresh_button)
         layout.addWidget(self.footer)
         self.roots.currentIndexChanged.connect(self.change_root)
         self.change_timer = QtCore.QTimer(self)
-        self.change_timer.setInterval(60000)
+        self.change_timer.setInterval(10000)
         self.change_timer.timeout.connect(self.poll_changes)
+        self.auto_refresh_timer = QtCore.QTimer(self)
+        self.auto_refresh_timer.setSingleShot(True)
+        self.auto_refresh_timer.timeout.connect(self.auto_refresh)
         self._status_theme = QtWidgets.fluentqt.FluentWidget(self)
         self._status_theme.hide()
         self.update_actions()
@@ -256,13 +266,18 @@ class CloudLibrary(QtWidgets.QWidget):
     def set_status(self, text, detail='', *, error=False):
         if self.out_of_date:
             detail = '\n'.join(part for part in (text, detail) if part)
-            text = tr('Out of date · Refresh')
+            text = tr('Out of date')
         elif self.cached_listing:
             text = tr('Cached · {status}').format(status=text)
         color = self._status_theme.theme_tokens().colors.systemCritical if self.out_of_date or error else None
         self.status.setStyleSheet('color: ' + color.name() + ';' if color is not None else '')
         self.status.setText(text)
+        self.refresh_button.setVisible(self.out_of_date)
         self.status.setToolTip(text + '\n' + detail if detail else text)
+
+    def set_ready_status(self):
+        self.set_status(tr('Drag-and-drop items to upload') if self.folder and self.folder.can_upload else
+                        tr('Read-only') if self.folder else tr('Ready'))
 
     def startup(self):
         raw = self.plugin.settings.value('librarysync/profile')
@@ -275,7 +290,10 @@ class CloudLibrary(QtWidgets.QWidget):
         self.install_drop_targets()
 
     def set_profile(self, profile, save=True):
+        self.auto_refresh_timer.stop()
+        self.pending_view = None
         self.profile = validate_profile(profile)
+        self.connected = False
         self.out_of_date = False
         self.cache_checked = True
         self.change_token = ''
@@ -301,11 +319,11 @@ class CloudLibrary(QtWidgets.QWidget):
         menu = QtWidgets.QMenu(self)
         menu.addAction(UiIcons().arrow_import, tr('Import connection…'), self.import_connection)
         export = menu.addAction(UiIcons().arrow_export, tr('Export connection…'), self.export_connection)
-        export.setEnabled(bool(self.profile))
+        export.setEnabled(bool(self.profile) and self.connected)
         menu.addSeparator()
-        menu.addAction(UiIcons().plus, tr('Create (Advanced)…'), self.setup_connection)
+        menu.addAction(UiIcons().plus, tr('Set up connection…'), self.setup_connection)
         disconnect = menu.addAction(UiIcons().plug_disconnected, tr('Disconnect…'), self.disconnect)
-        disconnect.setEnabled(bool(self.profile))
+        disconnect.setEnabled(bool(self.profile) and self.connected)
         menu.exec(QtGui.QCursor.pos())
 
     def import_connection(self):
@@ -319,13 +337,13 @@ class CloudLibrary(QtWidgets.QWidget):
                 self.set_status(str(error), error=True)
 
     def setup_connection(self):
-        wizard = ConnectionWizard(self)
+        wizard = ConnectionWizard(self, existing_names=[self.profile['name']] if self.profile else [])
         if wizard.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.set_profile(wizard.profile)
             self.set_status(tr('Connection saved'))
 
     def export_connection(self):
-        if not self.profile:
+        if not self.profile or not self.connected:
             return
         path, _ = FileDialog.getSaveFileName(
             self, tr('Export Library Sync connection'),
@@ -360,14 +378,32 @@ class CloudLibrary(QtWidgets.QWidget):
                        provider.sign_in(cancel, browser))
 
     def disconnect(self):
-        if self.profile and not self.jobs:
-            profile = self.profile
+        if not self.profile or not self.connected or self.jobs:
+            return
+        dialog = QtWidgets.fluentqt.ContentDialog(self.window())
+        dialog.setTitle(tr('Disconnect connection?'))
+        message = QtWidgets.QLabel(tr('Disconnect “{name}”? Previews will close and the local cache will be cleared. '
+                                      'Your library files will be kept.').format(name=self.profile['name']))
+        message.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+        message.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
+        message.setWordWrap(True)
+        dialog.setContent(message)
+        dialog.setMinimumWidth(420)
+        dialog.setPrimaryButtonText(tr('Disconnect'))
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Close)
+        try:
+            if dialog.exec() != dialog.ResultPrimary:
+                return
+        finally:
+            dialog.deleteLater()
+        profile = self.profile
 
-            def operation(provider, *args):
-                cache = CloudCache(profile, provider.cache_account())
-                provider.disconnect()
-                cache.clear()
-            self.start_job('disconnect', operation)
+        def operation(provider, *args):
+            cache = CloudCache(profile, provider.cache_account())
+            provider.disconnect()
+            cache.clear()
+        self.start_job('disconnect', operation)
 
     def start_job(self, kind, operation, context=None):
         if self.closing or not self.profile:
@@ -434,10 +470,12 @@ class CloudLibrary(QtWidgets.QWidget):
                     access = tr('View, edit') if item.can_edit else tr('View')
                 modified = QtCore.QDateTime.fromString(item.modified, QtCore.Qt.DateFormat.ISODate)
                 updated = format_local_time(item.modified)
-                row = FileTreeWidgetItem([item.display_name,
-                                          '—' if item.folder else self.format_size(item.size), updated])
-                row.set_sort_data(1, item.size)
-                row.set_sort_data(2, modified.toMSecsSinceEpoch() if modified.isValid() else 0)
+                values = [item.display_name]
+                if self.tree.size_column == 2:
+                    values.append(tr('Folder') if item.folder else Path(item.name).suffix.lstrip('.').upper() or '—')
+                row = FileTreeWidgetItem(values + ['—' if item.folder else self.format_size(item.size), updated])
+                row.set_sort_data(self.tree.size_column, item.size)
+                row.set_sort_data(self.tree.size_column + 1, modified.toMSecsSinceEpoch() if modified.isValid() else 0)
                 row.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
                 row.setData(0, LIBRARY_FOLDER_ROLE, item.folder)
                 row.setIcon(0, UiIcons().folder if item.folder else service_icon(
@@ -477,7 +515,7 @@ class CloudLibrary(QtWidgets.QWidget):
                 window.finished.connect(job['worker'].stop)
                 window.show()
                 job['context'].preview_window = window
-                self.set_status(tr('Viewing {name}').format(name=item.display_name))
+                self.set_ready_status()
             except Exception:
                 self.set_status(tr('Couldn’t open item'), error=True)
         elif job['kind'] == 'download':
@@ -513,7 +551,7 @@ class CloudLibrary(QtWidgets.QWidget):
                     root.findtext('title')
                 if title:
                     item = replace(item, title=title)
-            existing = local_item(category, plugin, item.display_name)
+            existing = local_item(category, plugin, item.display_name, Path(item.name).suffix)
             if existing is not None and overwrite is None:
                 if not self.confirm_overwrite(item.display_name, tr('local Library')):
                     self.set_status(tr('Download skipped'))
@@ -537,6 +575,11 @@ class CloudLibrary(QtWidgets.QWidget):
         job = self.jobs.get(job_id)
         if not self.closing and job and job['generation'] == self.generation:
             job['failed'] = True
+            context = job.get('context')
+            if (job['kind'] == 'preview' and getattr(context, 'view_id', None)
+                    and not context.refreshed and not hasattr(context, 'preview_window')):
+                job['retry_view'] = context.view_id
+                return
             if job['kind'] in ('browse', 'connect'):
                 self.connected = False
             self.set_status(tr('Couldn’t check for updates') if job['kind'] == 'changes' else
@@ -574,6 +617,8 @@ class CloudLibrary(QtWidgets.QWidget):
                 self.run_upload(job['context'], accepted)
             else:
                 job['context']['temporary'].cleanup()
+                if job['context'].get('switched') and not self.closing:
+                    self.browse()
         elif job and job['kind'] == 'download' and not self.closing:
             for value in job.get('downloads', []):
                 self.apply_download(value, job['context'])
@@ -582,9 +627,28 @@ class CloudLibrary(QtWidgets.QWidget):
         if self.closing or not job:
             return
         cancelled = job.get('worker') and job['worker'].cancel.is_set()
+        if job.get('retry_view') and not cancelled:
+            self.pending_view = job['retry_view']
+            self.refresh()
+        elif job['kind'] == 'browse' and self.pending_view:
+            item_id = self.pending_view
+            row = next((self.tree.topLevelItem(index) for index in range(self.tree.topLevelItemCount())
+                        if self.tree.topLevelItem(index).data(0, QtCore.Qt.ItemDataRole.UserRole).id == item_id), None)
+            if not job.get('failed') and not cancelled and not self.out_of_date and row is None and self.page_token:
+                self.load_more()
+            else:
+                self.pending_view = None
+                if not job.get('failed') and not cancelled and not self.out_of_date and row is not None:
+                    self.tree.clearSelection()
+                    self.tree.setCurrentItem(row)
+                    self.open_preview(refreshed=True)
+                elif not job.get('failed') and not cancelled:
+                    self.set_status(tr('Couldn’t open item'), error=True)
         if job['kind'] == 'preview' and cancelled:
-            self.set_status(tr('View closed') if hasattr(job['context'], 'preview_window') else
-                            tr('Cancelled'))
+            if hasattr(job['context'], 'preview_window'):
+                self.set_ready_status()
+            else:
+                self.set_status(tr('Cancelled'))
         elif job['kind'] in ('connect', 'upload', 'download', 'copy', 'folder') and cancelled:
             self.set_status(tr('Cancelled'), detail=tr('Completed copies are kept.')
                             if job['kind'] != 'connect' else '')
@@ -611,6 +675,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.update_actions()
         if job['kind'] == 'browse' and self.cached_listing:
             QtCore.QTimer.singleShot(0, self, self.poll_changes)
+        if not job.get('failed') and not cancelled:
+            self.schedule_auto_refresh()
 
     @QtCore.Slot(str, str, object, object)
     def job_progress(self, job_id, name, current, total):
@@ -647,6 +713,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.sections.setEnabled(not busy and not browsing)
         self.up_action.setEnabled(bool(self.history) and not busy and not browsing)
         self.refresh_action.setEnabled(bool(self.profile) and not busy and not browsing)
+        self.refresh_button.setEnabled(self.refresh_action.isEnabled())
+        self.refresh_button.setVisible(self.out_of_date)
         self.more_button.setEnabled(not busy and not browsing)
         self.download_action.setEnabled(bool(selected) and not busy and all(
             not item.folder and item.can_download and item_category(item) for item in selected))
@@ -688,7 +756,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.generation += 1
         self.browse()
 
-    def change_type(self, index):
+    def change_type(self, index, *, browse=True):
         self.category = list(CATEGORIES)[index]
         self.tree = self.sections.widget(index)
         self.folder, self.history, self.page_token = None, [], ''
@@ -698,7 +766,8 @@ class CloudLibrary(QtWidgets.QWidget):
         self.footer.set_count(0)
         self.generation += 1
         self.update_breadcrumbs()
-        self.browse()
+        if browse:
+            self.browse()
 
     def update_breadcrumbs(self):
         crumbs = [BreadcrumbItem(tr(CATEGORIES[self.category]), None)]
@@ -771,10 +840,12 @@ class CloudLibrary(QtWidgets.QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.change_timer.start()
+        self.schedule_auto_refresh()
         QtCore.QTimer.singleShot(0, self, self.poll_changes)
 
     def hideEvent(self, event):
         self.change_timer.stop()
+        self.auto_refresh_timer.stop()
         for job in self.jobs.values():
             if job['kind'] == 'changes' and job.get('worker'):
                 job['worker'].stop()
@@ -805,7 +876,23 @@ class CloudLibrary(QtWidgets.QWidget):
             return next_token, changed
         self.start_job('changes', operation)
 
+    def schedule_auto_refresh(self):
+        self.auto_refresh_timer.stop()
+        if (self.closing or not self.out_of_date or not self.isVisible() or self.window().isMinimized()
+                or not self.profile or not self.folder or self.busy()
+                or any(job['kind'] in ('browse', 'changes') for job in self.jobs.values())):
+            return
+        delay = max(0, 10 - (time.monotonic() - self.last_auto_refresh)) if self.last_auto_refresh is not None else 0
+        self.auto_refresh_timer.start(int(delay * 1000 + 0.999))
+        return delay == 0
+
+    def auto_refresh(self):
+        if self.schedule_auto_refresh():
+            self.last_auto_refresh = time.monotonic()
+            self.refresh()
+
     def refresh(self):
+        self.auto_refresh_timer.stop()
         self.browse(self.folder, force=True)
 
     def load_more(self):
@@ -847,10 +934,8 @@ class CloudLibrary(QtWidgets.QWidget):
         menu = QtWidgets.QMenu(self)
         menu.addAction(self.preview_action)
         menu.addAction(self.download_action)
-        if self.rename_action.isEnabled():
-            menu.addAction(self.rename_action)
-        if self.delete_action.isEnabled():
-            menu.addAction(self.delete_action)
+        menu.addAction(self.rename_action)
+        menu.addAction(self.delete_action)
         menu.exec(self.tree.viewport().mapToGlobal(point))
 
     def request_name(self, title, label, button, text='', parent=None):
@@ -930,11 +1015,18 @@ class CloudLibrary(QtWidgets.QWidget):
             .format(name=title, destination=destination), defaultButton=QtWidgets.QMessageBox.StandardButton.No
         ) == QtWidgets.QMessageBox.StandardButton.Yes
 
-    def open_preview(self):
+    def open_preview(self, *, refreshed=False):
         selected = self.selected_items()
         if len(selected) != 1 or selected[0].folder or self.busy():
             return
         item = selected[0]
+        if self.out_of_date:
+            if refreshed:
+                self.set_status(tr('Couldn’t open item'), error=True)
+            else:
+                self.pending_view = item.id
+                self.refresh()
+            return
         if not item.can_download:
             if preview_url_allowed(item.preview_url):
                 window = show_preview(self.window(), item, None)
@@ -942,20 +1034,36 @@ class CloudLibrary(QtWidgets.QWidget):
                 self.preview_windows.add(window)
                 window.finished.connect(lambda: self.release_preview(window))
                 window.show()
+                self.set_ready_status()
+            else:
+                self.set_status(tr('This item cannot be viewed'), error=True)
             return
         temporary = TemporaryDirectory(prefix='openlp-cloud-preview-')
+        temporary.view_id, temporary.refreshed = item.id, refreshed
         destination = Path(temporary.name) / (safe_name(item.display_name) + Path(item.name).suffix)
         self.set_status(tr('Opening {name}…').format(name=item.display_name))
         profile = self.profile
+        exporter = None
+        if item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf':
+            from openlp.plugins.presentations.lib.pdfexport import PDF_EXPORT_CONTROLLERS
+            plugin = PluginManager.get_plugin_by_name('presentations')
+            if plugin and plugin.is_active():
+                controller_name = plugin.media_item.find_controller_by_type(destination)
+                controller = plugin.media_item.controllers.get(controller_name)
+                if controller and controller.name in PDF_EXPORT_CONTROLLERS:
+                    exporter = (controller.name, getattr(controller, 'keynote_app', None),
+                                getattr(controller, 'com_obj_name', None))
 
         def operation(provider, cancel, progress, browser, publish):
+            cache = CloudCache(profile, provider.cache_account())
             if item_category(item) == 'media':
+                if cache.preview(item, destination):
+                    return item, destination, None, True
                 stream = MediaStream(provider, item, cancel)
                 publish((item, None, stream.url))
                 stream.serve()
                 return None
-            cache = CloudCache(profile, provider.cache_account())
-            if item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf':
+            if item_category(item) == 'presentations' and destination.suffix.lower() != '.pdf' and not exporter:
                 thumbnail = destination.with_name('cover.png')
                 if cache.preview(item, thumbnail, cover=True):
                     progress(tr('Opening {name}…').format(name=item.display_name), 0, 0)
@@ -975,8 +1083,19 @@ class CloudLibrary(QtWidgets.QWidget):
                 if not cancel.is_set():
                     cache.save_preview(item, destination)
             category = item_category(item)
-            prepared = (read_xml_item(destination) if category in ('songs', 'custom') else
-                        read_theme_item(destination) if category == 'themes' else None)
+            if exporter:
+                rendered = destination.with_suffix('.pdf')
+                if not cache.preview(item, rendered, slides=True):
+                    from openlp.plugins.presentations.lib.pdfexport import export_to_pdf
+                    progress(tr('Opening {name}…').format(name=item.display_name), 0, 0)
+                    rendered = export_to_pdf(exporter[0], destination, keynote_app=exporter[1],
+                                             com_name=exporter[2], cancel_event=cancel)
+                    if not cancel.is_set():
+                        cache.save_preview(item, rendered, slides=True)
+                prepared = rendered
+            else:
+                prepared = (read_xml_item(destination) if category in ('songs', 'custom') else
+                            read_theme_item(destination) if category == 'themes' else None)
             return item, destination, prepared, cache_hit
         self.start_job('preview', operation, temporary)
 
@@ -987,14 +1106,14 @@ class CloudLibrary(QtWidgets.QWidget):
         toolbar = OpenLPToolbar(window)
         toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         for command, icon, label, allowed in (
-                ('download', UiIcons().download, tr('Download'), item.can_download),
+                ('download', UiIcons().download, tr('Add to Library'), item.can_download),
                 ('rename', UiIcons().edit, tr('Rename'), item.can_edit),
                 ('delete', UiIcons().delete, tr('Delete'), item.can_edit and item.can_delete)):
             action = toolbar.addAction(icon, label, lambda checked=False, command=command:
                                        self.preview_command(window, command))
             action.setEnabled(allowed)
             window.cloud_commands[command] = action
-        window.layout().insertWidget(1, toolbar)
+        window.contentWidget().layout().insertWidget(1, toolbar)
 
     def preview_command(self, window, command):
         if (not window.cloud_commands[command].isEnabled() or self.profile != window.cloud_profile or self.busy()
@@ -1046,12 +1165,13 @@ class CloudLibrary(QtWidgets.QWidget):
         accepted, overwrites, names = [], {}, set()
         try:
             for item in items:
-                if name_key(item.display_name) in names:
-                    raise SyncError('Choose one cloud item per name. Rename duplicates before downloading.')
-                names.add(name_key(item.display_name))
                 category = item_category(item)
+                key = duplicate_key(category, item.display_name, Path(item.name).suffix)
+                if key in names:
+                    raise SyncError('Choose one cloud item per name. Rename duplicates before downloading.')
+                names.add(key)
                 plugin = PluginManager.get_plugin_by_name(category) if category != 'themes' else None
-                existing = local_item(category, plugin, item.display_name)
+                existing = local_item(category, plugin, item.display_name, Path(item.name).suffix)
                 if existing is not None:
                     if not self.confirm_overwrite(item.display_name, tr('local Library')):
                         continue
@@ -1087,20 +1207,32 @@ class CloudLibrary(QtWidgets.QWidget):
                     publish((item, path, prepared))
         self.start_job('download', operation, context)
 
+    @staticmethod
+    def local_drag_category(mime):
+        if isinstance(mime, ThemeDragData):
+            category = 'themes' if mime.names else ''
+        elif isinstance(mime, ItemDragData) and mime.library is not None:
+            category = mime.library.plugin.name
+        else:
+            return ''
+        return category if (category in CATEGORIES and mime.indexes
+                            and all(index.isValid() for index in mime.indexes)) else ''
+
     def can_upload(self, mime, folder=None):
         folder = folder or self.folder
-        if (not folder or not folder.can_upload or self.busy() or self.out_of_date
+        if (not folder or self.busy() or self.out_of_date
                 or self.cached_listing and not self.cache_checked
-                or any(job['kind'] == 'browse' for job in self.jobs.values())
-                or folder.category not in ('', self.category)):
+                or any(job['kind'] == 'browse' for job in self.jobs.values())):
+            return False
+        category = self.local_drag_category(mime)
+        if category and category != self.category:
+            return bool(self.profile and self.roots.currentData())
+        if not folder.can_upload or folder.category not in ('', self.category):
             return False
         if isinstance(mime, CloudDragData):
             return (mime.panel is self and bool(mime.items) and all(
                 not item.folder and item.can_move and item_category(item) == self.category for item in mime.items))
-        if isinstance(mime, ThemeDragData):
-            return self.category == 'themes' and bool(mime.names) and all(index.isValid() for index in mime.indexes)
-        return (isinstance(mime, ItemDragData) and mime.library is not None and bool(mime.indexes)
-                and all(index.isValid() for index in mime.indexes) and mime.library.plugin.name == self.category)
+        return category == self.category
 
     def upload(self, mime, folder=None):
         folder = folder or self.folder
@@ -1111,7 +1243,10 @@ class CloudLibrary(QtWidgets.QWidget):
             is_copy = isinstance(mime, CloudDragData)
             sources = list(mime.items) if is_copy else prepare_upload(mime, Path(temporary.name))
             titles = [source.display_name if is_copy else source[3] for source in sources]
-            if len({name_key(title) for title in titles}) != len(titles):
+            extensions = [Path(source.name).suffix if is_copy else source[1].suffix for source in sources]
+            category = self.local_drag_category(mime) or self.category
+            if len({duplicate_key(category, title, extension) for title, extension in zip(titles, extensions)}) != \
+                    len(titles):
                 raise SyncError('Each item must have a unique name. Rename duplicates before uploading.')
         except Exception as error:
             temporary.cleanup()
@@ -1119,19 +1254,39 @@ class CloudLibrary(QtWidgets.QWidget):
                             detail=str(error) if isinstance(error, SyncError) else '', error=True)
             return
         self.cancel_previews()
-        category = self.category
-        context = {'folder': folder, 'temporary': temporary, 'copy': is_copy}
+        switched = category != self.category
+        root = self.roots.currentData()
+        if switched:
+            index = list(CATEGORIES).index(category)
+            with QtCore.QSignalBlocker(self.sections):
+                self.sections.setCurrentIndex(index)
+            self.change_type(index, browse=False)
+        context = {'folder': None if switched else folder, 'temporary': temporary, 'copy': is_copy,
+                   'switched': switched}
 
         def prepare(provider, *args):
-            return [(source, provider.find_item(folder, category, title, exclude=source.id) if is_copy else
-                     provider.find_item(folder, category, title)) for source, title in zip(sources, titles)]
+            target = folder
+            if switched:
+                shared = provider.folder(root['id'], root['resource_key'])
+                target = provider.type_folder(shared, category, create=False) or shared
+                if target.category not in ('', category):
+                    raise SyncError('Choose the matching item-type folder or the shared Library root.')
+                if not target.can_upload:
+                    raise SyncError('You have read-only access to this folder. '
+                                    'Ask a folder owner for upload permission.')
+                context['folder'] = target
+            return [(source, provider.find_item(target, category, title,
+                                                exclude=source.id if is_copy else '', extension=extension))
+                    for source, title, extension in zip(sources, titles, extensions)]
         self.set_status(tr('Preparing upload…'))
         self.start_job('prepare-upload', prepare, context)
 
     def run_upload(self, context, plan):
         temporary, folder = context['temporary'], context['folder']
+        profile = self.profile
 
         def operation(provider, cancel, progress, *args):
+            cache = CloudCache(profile, provider.cache_account())
             for position, (source, existing) in enumerate(plan, 1):
                 if cancel.is_set():
                     raise SyncError('Transfer cancelled.')
@@ -1149,10 +1304,18 @@ class CloudLibrary(QtWidgets.QWidget):
                 progress(tr('Uploading {name} ({number}/{count})').format(
                     name=title, number=position, count=len(plan)), 0, 0)
                 write_upload(source, contents)
-                provider.upload(folder, category, source, cancel, lambda current, total:
-                                progress(tr('Uploading {name} ({number}/{count})').format(
-                                    name=title, number=position, count=len(plan)), current, total),
-                                title=title, overwrite=existing)
+                before = source.stat()
+                uploaded = provider.upload(folder, category, source, cancel, lambda current, total:
+                                           progress(tr('Uploading {name} ({number}/{count})').format(
+                                               name=title, number=position, count=len(plan)), current, total),
+                                           title=title, overwrite=existing)
+                try:
+                    after = source.stat()
+                    if (not cancel.is_set() and before.st_mtime_ns == after.st_mtime_ns
+                            and before.st_size == after.st_size == uploaded.size):
+                        cache.save_preview(uploaded, source)
+                except OSError:
+                    pass  # Cache failures must not turn a successful upload into a failed transfer.
                 if context['copy']:
                     provider.delete(item)
             return len(plan)
@@ -1216,7 +1379,9 @@ class CloudLibrary(QtWidgets.QWidget):
 
     def shutdown(self):
         self.closing = True
+        self.pending_view = None
         self.change_timer.stop()
+        self.auto_refresh_timer.stop()
         for job in self.jobs.values():
             if job.get('worker'):
                 job['worker'].cancel.set()

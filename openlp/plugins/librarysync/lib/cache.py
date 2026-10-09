@@ -74,18 +74,21 @@ class CloudCache:
         if len(data.encode()) <= MAX_LISTING and self.path is not None:
             self.store(self.listing_path(category, folder), data.encode())
 
-    def preview_path(self, item, cover):
+    def preview_path(self, item, cover, slides=False):
         if self.path is None or not (item.version or item.checksum or item.modified):
             return None
         key = [item.id, item.category, item.version, item.checksum, item.modified, item.size, cover]
+        if slides:
+            key.append('slides')
         return self.path / ('preview-' + digest(key) + '.cache')
 
-    def preview(self, item, destination, cover=False):
-        path = self.preview_path(item, cover)
+    def preview(self, item, destination, cover=False, slides=False):
+        path = self.preview_path(item, cover, slides)
         if path is None:
             return False
         try:
-            if time.time() - path.stat().st_mtime > MAX_AGE or (not cover and path.stat().st_size != item.size):
+            if time.time() - path.stat().st_mtime > MAX_AGE or (
+                    not cover and not slides and path.stat().st_size != item.size):
                 return False
             shutil.copyfile(path, destination)
             path.touch()
@@ -93,8 +96,8 @@ class CloudCache:
         except OSError:
             return False
 
-    def save_preview(self, item, source, cover=False):
-        path = self.preview_path(item, cover)
+    def save_preview(self, item, source, cover=False, slides=False):
+        path = self.preview_path(item, cover, slides)
         if path is not None:
             self.store(path, source=source)
 

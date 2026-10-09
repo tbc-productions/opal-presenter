@@ -86,7 +86,6 @@ class GoogleDriveProvider:
         self.session = requests.Session()
         self.resource_keys = {}
         self.request_lock = RLock()
-        self.roots = set()
         self.catalogues = {}
 
     def cache_account(self):
@@ -349,52 +348,36 @@ class GoogleDriveProvider:
                 'appProperties': {'openlpType': category}}) as response:
             return cloud_item(response.json(), category)
 
-    def find_item(self, folder, category, title, exclude=''):
-        from openlp.plugins.librarysync.lib.transfer import name_key
+    def find_item(self, folder, category, title, exclude='', extension=''):
+        from openlp.plugins.librarysync.lib.transfer import duplicate_key
         target = self.type_folder(folder, category, create=False)
         if target is None:
             return None
         matches = [item for item in self.catalogue(target) if item.id != exclude
-                   and name_key(item.display_name) == name_key(title)]
+                   and duplicate_key(category, item.display_name, '' if item.folder else Path(item.name).suffix) ==
+                   duplicate_key(category, title, extension)]
         if len(matches) > 1:
             raise SyncError('Several cloud items have this name. Rename or delete the duplicates before uploading.')
         return matches[0] if matches else None
 
-    def category_root(self, folder):
-        current, visited = folder, set()
-        while self.roots and current.id not in self.roots and current.parents and current.id not in visited:
-            visited.add(current.id)
-            parent = self.folder(current.parents[0])
-            if parent.category != folder.category:
-                break
-            current = parent
-        return current
-
     def catalogue(self, folder, fresh=False):
-        root = self.category_root(folder)
-        if not fresh and root.id in self.catalogues:
-            return self.catalogues[root.id]
-        items, pending, visited = [], [root], set()
-        while pending:
-            current = pending.pop()
-            if current.id in visited:
-                continue
-            visited.add(current.id)
-            token = ''
-            while True:
-                page, token = self.list_folder(current, token)
-                items.extend(page)
-                pending.extend(child for child in page if child.folder and child.category in ('', root.category))
-                if not token:
-                    break
-        self.catalogues[root.id] = items
+        if not fresh and folder.id in self.catalogues:
+            return self.catalogues[folder.id]
+        items, token = [], ''
+        while True:
+            page, token = self.list_folder(folder, token)
+            items.extend(page)
+            if not token:
+                break
+        self.catalogues[folder.id] = items
         return items
 
     def move(self, item, folder):
         target = self.type_folder(folder, item.category)
         if target.id in item.parents:
             return item
-        if self.find_item(target, item.category, item.display_name, exclude=item.id):
+        if self.find_item(target, item.category, item.display_name, exclude=item.id,
+                          extension='' if item.folder else Path(item.name).suffix):
             raise SyncError('This name already exists. Rename duplicates before moving them.')
         headers = self.checked_write(item, 'can_move')
         with self.request('PATCH', f'{WRITE_API}/files/{item.id}', headers=headers,
@@ -427,7 +410,8 @@ class GoogleDriveProvider:
         title = title.strip()
         if not title or len(title) > 200 or safe_name(title) != title:
             raise SyncError('Enter a name without path separators (up to 200 characters).')
-        if self.find_item(folder, item.category, title, exclude=item.id):
+        if self.find_item(folder, item.category, title, exclude=item.id,
+                          extension='' if item.folder else Path(item.name).suffix):
             raise SyncError('An item with this name already exists. Choose a unique name.')
         headers = self.checked_write(item, 'can_edit')
         with self.request('PATCH', f'{WRITE_API}/files/{item.id}', headers=headers,
@@ -460,7 +444,7 @@ class GoogleDriveProvider:
             raise SyncError('This item changed in the cloud. Refresh before copying it.')
         if target.id == item.id:
             raise SyncError('Choose a subfolder as the destination.')
-        if self.find_item(target, item.category, current.display_name):
+        if self.find_item(target, item.category, current.display_name, extension=Path(current.name).suffix):
             raise SyncError('This name already exists in the destination. Confirm overwrite before copying.')
         with self.request('POST', f'{API}/files/{item.id}/copy',
                           params={'supportsAllDrives': 'true', 'fields': FIELDS}, json={
@@ -473,9 +457,11 @@ class GoogleDriveProvider:
     def check_new_name(self, item, folder):
         """A second writer must retract its new copy instead of leaving duplicate names."""
         # ponytail: Drive has no unique-name constraint; an external index is needed for strict concurrent creation.
-        from openlp.plugins.librarysync.lib.transfer import name_key
+        from openlp.plugins.librarysync.lib.transfer import duplicate_key
         matches = [other for other in self.catalogue(folder, fresh=True)
-                   if name_key(other.display_name) == name_key(item.display_name)]
+                   if duplicate_key(item.category, other.display_name,
+                                    '' if other.folder else Path(other.name).suffix) ==
+                   duplicate_key(item.category, item.display_name, '' if item.folder else Path(item.name).suffix)]
         winner = min(matches + [item], key=lambda other: (other.created, other.id))
         if winner.id != item.id:
             self.delete(item)
@@ -488,7 +474,7 @@ class GoogleDriveProvider:
         filename = clean_filename(title).strip(' .') or 'Item'
         name = filename + source.suffix
         size = source.stat().st_size
-        existing = self.find_item(target, category, title)
+        existing = self.find_item(target, category, title, extension=source.suffix)
         if existing is not None and (overwrite is None or existing.id != overwrite.id):
             raise SyncError('This name already exists in the cloud. Refresh and confirm overwrite before uploading.')
         if overwrite is not None and (existing is None or existing.id != overwrite.id):

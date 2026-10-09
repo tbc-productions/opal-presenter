@@ -1,5 +1,6 @@
 """CommandBar-backed toolbar composition with adjacent Fluent input controls."""
 from PySide6 import QtCore, QtGui, QtWidgets
+from shiboken6 import isValid
 import fluentqt
 from openlp.core.widgets.fluent_buttons import set_fluent_button_icon
 
@@ -53,6 +54,9 @@ class SpacedCommandBar(fluentqt.CommandBar):
     def sync_button_icons(self):
         actions = self.primaryActions() + self.secondaryActions()
         for button in self.window().findChildren(fluentqt.Button):
+            # Updating an icon can rebuild commands and delete later buttons in this snapshot.
+            if not isValid(button):
+                continue
             action = button.property('commandAction')
             # Overflow rows paint their icon and caption themselves.
             if action in actions and button.objectName() != 'FluentCommandBar.OverflowRow':

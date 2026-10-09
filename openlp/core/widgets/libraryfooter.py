@@ -1,5 +1,5 @@
 """Shared Fluent item-count footer for Library lists and designer media browsers."""
-from fluentqt import FontRole
+from fluentqt import FontRole, Spacing
 
 from openlp.core.common.i18n import translate
 from openlp.core.widgets import fluent as QtWidgets
@@ -10,6 +10,7 @@ class LibraryFooter(QtWidgets.QWidget):
         super().__init__(parent)
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
+        self.setFixedHeight(Spacing.ControlHeight.Large)
         self.count_label = QtWidgets.QLabel(self)
         self.count_label.setFluentTypography(FontRole.Caption)
         layout.addWidget(self.count_label, 1)

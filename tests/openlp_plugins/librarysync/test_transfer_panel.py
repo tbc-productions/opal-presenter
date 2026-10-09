@@ -10,9 +10,10 @@ from PySide6 import QtCore, QtGui
 
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.dnd import ItemDragData
+from openlp.core.widgets.dnd import ItemDragData, ThemeDragData
 from openlp.plugins.librarysync.lib.panel import CloudDragData, CloudLibrary
-from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError
+from openlp.plugins.librarysync.lib.preview import CloudPreviewWindow
+from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudItem, SyncError
 from openlp.plugins.librarysync.lib.transfer import (
     import_item, item_category, prepare_upload, read_xml_item, safe_name, safe_xml, write_upload)
 from openlp.plugins.librarysync.lib.worker import SyncWorker
@@ -85,6 +86,44 @@ def test_old_transfer_progress_cannot_change_current_footer(panel):
     assert panel.progress.maximum() == 0
 
 
+def test_transfer_footer_height_is_stable_and_cancel_is_small_subtle(panel, qtbot):
+    from openlp.core.widgets.libraryfooter import LibraryFooter
+    library_footer = LibraryFooter()
+    qtbot.addWidget(library_footer)
+    library_footer.show()
+    panel.resize(850, 600)
+    panel.show()
+    QtWidgets.QApplication.processEvents()
+    height = panel.footer.height()
+    assert height == library_footer.height()
+    assert panel.footer.geometry().bottom() == panel.rect().bottom()
+    assert panel.footer.geometry().top() == panel.sections.geometry().bottom() + 1
+    slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, library_footer)
+    library_footer.layout().addWidget(slider)
+    button = QtWidgets.QPushButton('List', library_footer)
+    button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+    button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+    library_footer.layout().addWidget(button)
+    QtWidgets.QApplication.processEvents()
+    assert height == library_footer.height()
+    panel.jobs['transfer'] = {'kind': 'upload', 'generation': panel.generation}
+    panel.update_actions()
+    QtWidgets.QApplication.processEvents()
+    assert panel.footer.height() == height
+    assert panel.footer.geometry().bottom() == panel.rect().bottom()
+    assert panel.footer.geometry().top() == panel.sections.geometry().bottom() + 1
+    panel.job_progress('transfer', 'Uploading Welcome', 40, 100)
+    QtWidgets.QApplication.processEvents()
+    assert panel.footer.height() == height
+    assert panel.progress.height() <= panel.footer.height() - 12
+    assert panel.cancel_button.fluentSize() == QtWidgets.fluentqt.Button.ButtonSize.Small
+    assert panel.cancel_button.fluentStyle() == QtWidgets.fluentqt.Button.ButtonStyle.Subtle
+    panel.jobs.clear()
+    panel.update_actions()
+    QtWidgets.QApplication.processEvents()
+    assert panel.footer.height() == height
+
+
 @pytest.mark.parametrize('cached,outdated', [(False, False), (True, False), (True, True)])
 def test_error_status_uses_fluent_critical_colour_and_keeps_details(panel, cached, outdated):
     panel.cached_listing = cached
@@ -95,7 +134,8 @@ def test_error_status_uses_fluent_critical_colour_and_keeps_details(panel, cache
     assert 'Check your folder permissions.' in panel.status.toolTip()
     assert 'Download failed' in panel.status.toolTip()
     if outdated:
-        assert panel.status.text() == 'Out of date · Refresh'
+        assert panel.status.text() == 'Out of date'
+        assert not panel.refresh_button.isHidden()
     else:
         assert panel.status.text() == ('Cached · Download failed' if cached else 'Download failed')
     panel.set_status('Up to date')
@@ -194,7 +234,7 @@ def test_upload_drop_is_disabled_for_readers(panel):
     view.deleteLater()
 
 
-def test_local_drop_requires_active_matching_cloud_type(panel):
+def test_local_drop_can_switch_cloud_type_but_same_type_requires_matching_folder(panel):
     view = QtWidgets.QListWidget()
     view.addItem('Sunday')
     view.item(0).setSelected(True)
@@ -203,13 +243,105 @@ def test_local_drop_requires_active_matching_cloud_type(panel):
     mime = ItemDragData(library=library)
     panel.folder = CloudItem('root', 'Organisation', folder=True, can_upload=True)
     assert panel.category == 'songs'
-    assert not panel.can_upload(mime)
+    assert panel.can_upload(mime)
     panel.category = 'images'
     assert panel.can_upload(mime)
     assert panel.can_upload(mime, CloudItem('advent', 'Advent', folder=True, category='images', can_upload=True))
     assert not panel.can_upload(mime, CloudItem(
         'custom', 'Custom Slides', folder=True, category='custom', can_upload=True))
     view.deleteLater()
+
+
+@pytest.mark.parametrize('category', CATEGORIES)
+@pytest.mark.parametrize('writable', [True, False])
+def test_local_cross_type_drop_switches_view_and_checks_correct_destination(panel, qtbot, monkeypatch,
+                                                                            tmp_path, category, writable):
+    view = QtWidgets.QListWidget()
+    qtbot.addWidget(view)
+    view.addItem('Welcome')
+    view.item(0).setSelected(True)
+    library = SimpleNamespace(plugin=SimpleNamespace(name=category), list_view=view,
+                              get_library_tab_icon=lambda: QtGui.QIcon())
+    mime = (ThemeDragData(library, view.selectedIndexes()) if category == 'themes'
+            else ItemDragData(library=library))
+    panel.change_type(list(CATEGORIES).index('images' if category == 'songs' else 'songs'), browse=False)
+    wrong_folder = CloudItem('wrong-subfolder', 'Old folder', folder=True, category=panel.category)
+    panel.folder, panel.history = wrong_folder, [wrong_folder]
+    panel.search.setText('Old filter')
+    old_tree = panel.tree
+    row = QtWidgets.QTreeWidgetItem(['Old folder'])
+    row.setData(0, QtCore.Qt.ItemDataRole.UserRole, wrong_folder)
+    old_tree.addTopLevelItem(row)
+    old_tree.itemAt = MagicMock(return_value=row)
+    source = (category, tmp_path / 'Welcome.xml', None, 'Welcome')
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.prepare_upload', MagicMock(return_value=[source]))
+    panel.start_job, panel.browse = MagicMock(), MagicMock()
+    enter = QtGui.QDragEnterEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
+                                  QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    old_tree.dragEnterEvent(enter)
+    assert enter.isAccepted()
+    event = QtGui.QDropEvent(QtCore.QPointF(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
+                             QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    old_tree.dropEvent(event)
+    assert event.isAccepted()
+    assert panel.category == category and panel.tree is panel.trees[category]
+    assert panel.sections.currentIndex() == list(CATEGORIES).index(category)
+    assert panel.folder is None and not panel.history and not panel.search.text()
+    panel.browse.assert_not_called()
+    kind, prepare, context = panel.start_job.call_args.args
+    assert kind == 'prepare-upload' and context['folder'] is None
+    provider = MagicMock()
+    shared = CloudItem('shared', 'Organisation', folder=True, can_upload=True)
+    target = CloudItem('correct-type', CATEGORIES[category], folder=True, category=category, can_upload=writable)
+    provider.folder.return_value, provider.type_folder.return_value = shared, target
+    provider.find_item.return_value = None
+    try:
+        if writable:
+            plan = prepare(provider)
+            assert context['folder'] is target
+            assert plan == [(source, None)]
+            provider.find_item.assert_called_once_with(target, category, 'Welcome', exclude='', extension='.xml')
+            panel.run_upload = MagicMock()
+            panel.jobs['prepared'] = {'kind': kind, 'context': context, 'generation': panel.generation}
+            panel.job_ready('prepared', plan)
+            panel.job_completed('prepared')
+            panel.run_upload.assert_called_once_with(context, plan)
+        else:
+            with pytest.raises(SyncError, match='read-only'):
+                prepare(provider)
+            provider.find_item.assert_not_called()
+            panel.jobs['prepared'] = {'kind': kind, 'context': context, 'generation': panel.generation, 'failed': True}
+            panel.job_completed('prepared')
+            panel.browse.assert_called_once_with()
+        root = panel.roots.currentData()
+        provider.folder.assert_called_once_with(root['id'], root['resource_key'])
+        provider.type_folder.assert_called_once_with(shared, category, create=False)
+        provider.upload.assert_not_called()
+    finally:
+        context['temporary'].cleanup()
+
+
+@pytest.mark.parametrize('blocked', ['busy', 'outdated', 'unverified', 'browsing', 'unsupported', 'invalid'])
+def test_cross_type_drop_keeps_transfer_guards(panel, qtbot, blocked):
+    view = QtWidgets.QListWidget()
+    qtbot.addWidget(view)
+    view.addItem('Welcome')
+    view.item(0).setSelected(True)
+    library = SimpleNamespace(plugin=SimpleNamespace(name='bibles' if blocked == 'unsupported' else 'images'),
+                              list_view=view, get_library_tab_icon=lambda: QtGui.QIcon())
+    mime = ItemDragData(library=library)
+    panel.folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True)
+    if blocked in ('busy', 'browsing'):
+        panel.jobs['block'] = {'kind': 'upload' if blocked == 'busy' else 'browse'}
+    elif blocked == 'outdated':
+        panel.out_of_date = True
+    elif blocked == 'unverified':
+        panel.cached_listing, panel.cache_checked = True, False
+    elif blocked == 'invalid':
+        view.clear()
+    assert not panel.can_upload(mime)
+    assert panel.category == 'songs'
+    panel.jobs.clear()
 
 
 def test_cloud_drop_uses_writable_subfolder_and_matching_type(panel):
@@ -300,8 +432,8 @@ def test_preview_opens_inside_application_without_external_browser(panel, monkey
         preview_url='https://another-cloud.example/view/f'))
     panel.tree.addTopLevelItem(row)
     row.setSelected(True)
-    window = QtWidgets.QDialog(panel)
-    QtWidgets.QVBoxLayout(window)
+    window = CloudPreviewWindow(panel)
+    QtWidgets.QVBoxLayout(window.contentWidget())
     window.show = MagicMock()
     show = MagicMock(return_value=window)
     monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.show_preview', show)
@@ -312,16 +444,42 @@ def test_preview_opens_inside_application_without_external_browser(panel, monkey
     panel.open_preview()
     assert show.call_args.args[0] is panel.window()
     window.show.assert_called_once()
+    assert panel.status.text() == 'Ready'
     opened.assert_not_called()
     panel.preview_windows.clear()
 
 
 @pytest.mark.parametrize('writable', [True, False])
-def test_viewer_commands_use_viewed_item_and_disable_read_only_writes(panel, writable):
-    window = QtWidgets.QDialog(panel)
-    QtWidgets.QVBoxLayout(window)
-    item = CloudItem('viewed', 'Welcome.xml', category='songs', can_edit=writable, can_delete=True)
+def test_opening_and_closing_view_restores_normal_footer_status(panel, monkeypatch, writable):
+    from tempfile import TemporaryDirectory
+    from threading import Event
+    panel.folder = CloudItem('images', 'Images', folder=True, category='images', can_upload=writable)
+    window = CloudPreviewWindow(panel)
+    QtWidgets.QVBoxLayout(window.contentWidget())
+    window.show = MagicMock()
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.show_preview', lambda *args: window)
+    temporary = TemporaryDirectory()
+    cancelled = Event()
+    worker = SimpleNamespace(cancel=cancelled, stop=cancelled.set)
+    panel.jobs['view'] = {'kind': 'preview', 'generation': panel.generation, 'context': temporary, 'worker': worker}
+    panel.set_status('Opening Welcome…')
+    panel.job_ready('view', (CloudItem('image', 'Welcome.png', category='images'), None, None))
+    status = 'Drag-and-drop items to upload' if writable else 'Read-only'
+    assert panel.status.text() == status
+    window.closeWindow()
+    panel.job_completed('view')
+    assert panel.status.text() == status
+    assert not panel.preview_windows and not Path(temporary.name).exists()
+
+
+@pytest.mark.parametrize('category', ['songs', 'themes'])
+@pytest.mark.parametrize('writable', [True, False])
+def test_viewer_commands_use_viewed_item_and_disable_read_only_writes(panel, writable, category):
+    window = CloudPreviewWindow(panel)
+    QtWidgets.QVBoxLayout(window.contentWidget())
+    item = CloudItem('viewed', 'Welcome.xml', category=category, can_edit=writable, can_delete=True)
     panel.add_preview_commands(window, item)
+    assert window.cloud_commands['download'].text() == 'Add to Library'
     panel.download, panel.rename_item, panel.delete_items = MagicMock(), MagicMock(), MagicMock()
     panel.selected_items = MagicMock(return_value=[CloudItem('other', 'Other.xml', category='songs')])
     window.cloud_commands['download'].trigger()
@@ -333,15 +491,20 @@ def test_viewer_commands_use_viewed_item_and_disable_read_only_writes(panel, wri
         panel.preview_command(window, 'delete')
         panel.rename_item.assert_not_called()
         panel.delete_items.assert_not_called()
+    else:
+        window.cloud_commands['rename'].trigger()
+        window.cloud_commands['delete'].trigger()
+        panel.rename_item.assert_called_once_with(item, window.cloud_folder, window)
+        panel.delete_items.assert_called_once_with([item], window)
     panel.profile = None
     panel.preview_command(window, 'download')
     assert panel.download.call_count == 1
 
 
 def test_viewer_rename_keeps_original_folder_and_media_view_does_not_block_downloads(panel):
-    window = QtWidgets.QDialog(panel)
+    window = CloudPreviewWindow(panel)
     window.accept = MagicMock()
-    QtWidgets.QVBoxLayout(window)
+    QtWidgets.QVBoxLayout(window.contentWidget())
     folder = CloudItem('original', 'Songs', folder=True, category='songs')
     panel.folder = folder
     item = CloudItem('viewed', 'Welcome.xml', category='songs', can_edit=True, can_delete=True)
@@ -613,6 +776,25 @@ def test_cloud_write_context_actions_follow_item_permissions(panel):
     assert panel.rename_action.isEnabled() and panel.delete_action.isEnabled()
 
 
+@pytest.mark.parametrize('writable,can_delete', [(True, True), (True, False), (False, False)])
+def test_theme_context_menu_includes_write_actions_with_item_permissions(panel, monkeypatch, writable, can_delete):
+    panel.start_job = MagicMock()
+    panel.sections.setCurrentIndex(5)
+    assert panel.category == 'themes'
+    item = CloudItem('theme', 'Welcome.otz', category='themes', can_edit=writable, can_delete=can_delete)
+    row = QtWidgets.QTreeWidgetItem(['Welcome'])
+    row.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+    panel.tree.addTopLevelItem(row)
+    panel.tree.itemAt = MagicMock(return_value=row)
+    menu = MagicMock()
+    monkeypatch.setattr(QtWidgets, 'QMenu', MagicMock(return_value=menu))
+    panel.context_menu(QtCore.QPoint(10, 10))
+    assert [call.args[0] for call in menu.addAction.call_args_list] == [
+        panel.preview_action, panel.download_action, panel.rename_action, panel.delete_action]
+    assert panel.rename_action.isEnabled() == writable
+    assert panel.delete_action.isEnabled() == (writable and can_delete)
+
+
 @pytest.mark.parametrize('operation', ['rename', 'folder'])
 @pytest.mark.parametrize('accepted', [True, False])
 def test_cloud_names_use_content_dialog_and_cancel_without_writing(panel, monkeypatch, operation, accepted):
@@ -655,7 +837,7 @@ def test_connection_menu_order_icons_and_separator(panel, monkeypatch):
     def inspect(menu, position):
         actions = menu.actions()
         assert [action.text() for action in actions] == [
-            'Import connection…', 'Export connection…', '', 'Create (Advanced)…', 'Disconnect…']
+            'Import connection…', 'Export connection…', '', 'Set up connection…', 'Disconnect…']
         assert actions[2].isSeparator()
         assert [action.icon().name() for action in actions if not action.isSeparator()] == [
             'ic_fluent_arrow_import_24_regular', 'ic_fluent_arrow_export_24_regular',
@@ -774,6 +956,98 @@ def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot
         temporary.cleanup()
 
 
+def test_cloud_presentation_downloads_deck_and_reuses_rendered_pdf(panel, monkeypatch, tmp_path):
+    from threading import Event
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    controller = SimpleNamespace(name='Keynote', keynote_app=None)
+    plugin = SimpleNamespace(is_active=lambda: True, media_item=SimpleNamespace(
+        find_controller_by_type=lambda path: 'Keynote', controllers={'Keynote': controller}))
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
+    item = CloudItem('deck', 'Welcome.pptx', category='presentations', size=4, version='1')
+    panel.selected_items = MagicMock(return_value=[item])
+    panel.start_job = MagicMock()
+    panel.open_preview()
+    kind, operation, temporary = panel.start_job.call_args.args
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    provider.download.side_effect = lambda item, destination, *args: destination.write_bytes(b'deck')
+
+    def convert(name, source, **kwargs):
+        path = source.with_suffix('.pdf')
+        path.write_bytes(b'%PDF-1.4 rendered slides')
+        return path
+
+    export = MagicMock(side_effect=convert)
+    monkeypatch.setattr('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', export)
+    try:
+        result = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert kind == 'preview' and result[2].suffix == '.pdf'
+        assert result[2].read_bytes() == b'%PDF-1.4 rendered slides'
+        result = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert result[3] and result[2].read_bytes() == b'%PDF-1.4 rendered slides'
+        provider.download.assert_called_once()
+        provider.preview.assert_not_called()
+        export.assert_called_once()
+    finally:
+        temporary.cleanup()
+
+
+@pytest.mark.parametrize('later_page', [False, True])
+def test_view_refreshes_outdated_listing_then_opens_current_version(panel, later_page):
+    folder = CloudItem('songs', 'Songs', folder=True, category='songs')
+    old = CloudItem('song', 'Welcome.xml', category='songs', version='1')
+    current = CloudItem('song', 'Welcome.xml', category='songs', version='2')
+    row = QtWidgets.QTreeWidgetItem(['Welcome'])
+    row.setData(0, QtCore.Qt.ItemDataRole.UserRole, old)
+    panel.tree.addTopLevelItem(row)
+    row.setSelected(True)
+    panel.out_of_date = True
+    panel.refresh, panel.load_more, panel.start_job = MagicMock(), MagicMock(), MagicMock()
+    panel.open_preview()
+    panel.refresh.assert_called_once()
+    panel.start_job.assert_not_called()
+    assert panel.pending_view == old.id
+    panel.jobs['refresh'] = {'kind': 'browse', 'generation': panel.generation, 'context': False}
+    panel.job_ready('refresh', (folder, [] if later_page else [current], 'second' if later_page else '', False,
+                                ('fresh-cursor', False)))
+    panel.job_completed('refresh')
+    if later_page:
+        assert panel.pending_view == old.id
+        panel.load_more.assert_called_once()
+        panel.start_job.assert_not_called()
+        panel.jobs['page'] = {'kind': 'browse', 'generation': panel.generation, 'context': True}
+        panel.job_ready('page', (folder, [current], '', False, ('fresh-cursor', False)))
+        panel.job_completed('page')
+    assert panel.pending_view is None and not panel.out_of_date
+    assert panel.selected_items() == [current]
+    kind, operation, temporary = panel.start_job.call_args.args
+    assert kind == 'preview' and temporary.refreshed and temporary.view_id == current.id
+    temporary.cleanup()
+
+
+@pytest.mark.parametrize('refreshed', [False, True])
+def test_view_failure_refreshes_and_retries_only_once(panel, refreshed):
+    from tempfile import TemporaryDirectory
+    temporary = TemporaryDirectory()
+    temporary.view_id, temporary.refreshed = 'song', refreshed
+    panel.jobs['view'] = {'kind': 'preview', 'generation': panel.generation, 'context': temporary}
+    panel.refresh = MagicMock()
+    panel.set_status('Opening Welcome…')
+    panel.job_failed('view', 'This item changed in the cloud')
+    if not refreshed:
+        assert panel.status.text() == 'Opening Welcome…'
+    else:
+        assert panel.status.text() == 'This item changed in the cloud'
+        assert panel.status.styleSheet()
+    panel.job_completed('view')
+    if not refreshed:
+        panel.refresh.assert_called_once()
+        assert panel.pending_view == 'song'
+    else:
+        panel.refresh.assert_not_called()
+    assert not Path(temporary.name).exists()
+
+
 def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
     from PySide6 import QtTest
     from openlp.plugins.librarysync.lib.preview import format_local_time
@@ -783,9 +1057,11 @@ def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
     qtbot.wait(20)
     header = panel.tree.header()
     date = format_local_time(QtCore.QDateTime.currentDateTimeUtc().toString(QtCore.Qt.DateFormat.ISODate))
+    panel.tree.addTopLevelItem(QtWidgets.QTreeWidgetItem(['Welcome', '700 KB', date]))
+    qtbot.wait(20)
     assert header.sectionSize(2) > panel.tree.fontMetrics().horizontalAdvance(date)
     assert header.sectionResizeMode(2) == QtWidgets.QHeaderView.ResizeMode.Interactive
-    header.resizeSection(2, 360)
+    header.resizeSection(2, 600)
     qtbot.wait(20)
     scrollbar = panel.tree.horizontalScrollBar()
     assert scrollbar.maximum() > 0
@@ -798,7 +1074,7 @@ def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
     QtTest.QTest.mouseMove(header.viewport(), end, 20)
     QtTest.QTest.mouseRelease(header.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=end)
     qtbot.wait(20)
-    assert header.sectionSize(2) < 360
+    assert header.sectionSize(2) < 600
     resized = header.sectionSize(2)
     panel.resize(750, 500)
     qtbot.wait(20)
@@ -813,6 +1089,8 @@ def test_cloud_metadata_resize_handle_follows_mouse_without_shifting_name(panel,
     panel.show()
     qtbot.wait(20)
     header = panel.tree.header()
+    header.resizeSection(column, 160)
+    qtbot.wait(20)
     name_width = header.sectionSize(0)
     original = header.sectionSize(column)
     edge = QtCore.QPoint(header.sectionViewportPosition(column) + original - 2, header.height() // 2)
@@ -969,8 +1247,10 @@ def test_mutation_invalidates_disk_listing_even_after_partial_failure(panel, per
     assert not panel.cache
 
 
-def test_disconnect_clears_only_signed_in_accounts_cache(panel, persistent_cache):
+def test_disconnect_clears_only_signed_in_accounts_cache(panel, persistent_cache, monkeypatch):
     cache, folder, item = persistent_cache
+    panel.connected = True
+    monkeypatch.setattr(QtWidgets.fluentqt.ContentDialog, 'exec', lambda dialog: dialog.ResultPrimary)
     panel.start_job = MagicMock()
     panel.disconnect()
     provider = MagicMock()
@@ -1016,3 +1296,313 @@ def test_change_poll_can_run_while_a_media_view_stream_is_open(panel, persistent
     panel.poll_changes()
     assert panel.start_job.call_args.args[0] == 'changes'
     panel.jobs.clear()
+
+
+def test_setup_connection_checks_existing_name_before_saving(panel, monkeypatch):
+    wizard = MagicMock()
+    wizard.exec.return_value = QtWidgets.QDialog.DialogCode.Rejected
+    factory = MagicMock(return_value=wizard)
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.ConnectionWizard', factory)
+    panel.setup_connection()
+    factory.assert_called_once_with(panel, existing_names=['Church Library'])
+    assert panel.profile['name'] == 'Church Library'
+
+
+@pytest.mark.parametrize('accepted', [False, True])
+def test_disconnect_confirms_with_content_dialog_before_starting(panel, monkeypatch, accepted):
+    panel.connected = True
+    panel.start_job = MagicMock()
+
+    def respond(dialog):
+        assert isinstance(dialog, QtWidgets.fluentqt.ContentDialog)
+        assert dialog.title() == 'Disconnect connection?'
+        assert dialog.primaryButtonText() == 'Disconnect'
+        assert dialog.closeButtonText() == 'Cancel'
+        assert dialog.defaultButton() == QtWidgets.fluentqt.ContentDialogButton.Close
+        assert 'Church Library' in dialog.content().text()
+        assert 'library files will be kept' in dialog.content().text()
+        panel.start_job.assert_not_called()
+        return dialog.ResultPrimary if accepted else dialog.ResultNone
+
+    monkeypatch.setattr(QtWidgets.fluentqt.ContentDialog, 'exec', respond)
+    panel.disconnect()
+    if accepted:
+        assert panel.start_job.call_args.args[0] == 'disconnect'
+    else:
+        panel.start_job.assert_not_called()
+        assert panel.connected
+
+
+def test_connection_menu_actions_disable_after_disconnect_and_reenable_after_reconnect(panel, monkeypatch):
+    def inspect(menu, position):
+        actions = menu.actions()
+        assert actions[1].isEnabled() == panel.connected
+        assert actions[4].isEnabled() == panel.connected
+
+    monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
+    panel.connected = True
+    panel.configure()
+    panel.jobs['disconnect'] = {'kind': 'disconnect', 'generation': panel.generation}
+    panel.job_completed('disconnect')
+    assert not panel.connected
+    assert panel.profile
+    panel.configure()
+    panel.jobs['browse'] = {'kind': 'browse', 'generation': panel.generation, 'context': None}
+    panel.job_ready('browse', (CloudItem('church', 'Church Library', folder=True), [], ''))
+    panel.job_completed('browse')
+    assert panel.connected
+    panel.configure()
+
+
+def test_disconnected_handlers_do_not_export_or_prompt(panel, monkeypatch):
+    dialog = MagicMock()
+    save = MagicMock()
+    monkeypatch.setattr(QtWidgets.fluentqt.ContentDialog, 'exec', dialog)
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.FileDialog.getSaveFileName', save)
+    panel.start_job = MagicMock()
+    panel.disconnect()
+    panel.export_connection()
+    dialog.assert_not_called()
+    save.assert_not_called()
+    panel.start_job.assert_not_called()
+
+
+def test_replacing_profile_resets_connection_state(panel):
+    panel.connected = True
+    panel.set_profile(panel.profile)
+    assert not panel.connected
+
+
+@pytest.mark.parametrize('category,extensions', [
+    ('images', ('.png', '.jpg')), ('media', ('.mp4', '.mp3')), ('presentations', ('.pptx', '.pdf'))])
+def test_cloud_file_type_column_preserves_size_and_date_sorting(panel, category, extensions):
+    panel.change_type(list(CATEGORIES).index(category), browse=False)
+    folder = CloudItem(category, CATEGORIES[category], folder=True, category=category)
+    items = [CloudItem('larger', 'Welcome' + extensions[0], category=category, size=2048,
+                       modified='2026-10-08T01:00:00Z'),
+             CloudItem('smaller', 'Welcome' + extensions[1], category=category, size=512,
+                       modified='2026-10-09T01:00:00Z')]
+    panel.jobs['listing'] = {'kind': 'browse', 'generation': panel.generation, 'context': False}
+    panel.job_ready('listing', (folder, items, ''))
+    panel.jobs.clear()
+    tree = panel.tree
+    assert [tree.headerItem().text(index) for index in range(tree.columnCount())] == [
+        'Name', 'File Type', 'Size', 'Updated']
+    assert {tree.topLevelItem(index).text(1) for index in range(2)} == {
+        extension[1:].upper() for extension in extensions}
+    tree.sortItems(2, QtCore.Qt.SortOrder.AscendingOrder)
+    assert tree.topLevelItem(0).data(0, QtCore.Qt.ItemDataRole.UserRole).id == 'smaller'
+    assert tree.topLevelItem(0).text(2) == panel.format_size(512)
+    tree.sortItems(3, QtCore.Qt.SortOrder.AscendingOrder)
+    assert tree.topLevelItem(0).data(0, QtCore.Qt.ItemDataRole.UserRole).id == 'larger'
+    assert tree.topLevelItem(0).text(3)
+    assert panel.trees['songs'].columnCount() == 3
+    assert panel.trees['custom'].columnCount() == 3
+    assert panel.trees['themes'].columnCount() == 3
+
+
+@pytest.mark.parametrize('same_extension', [False, True])
+def test_batch_cloud_moves_distinguish_file_extensions(panel, same_extension):
+    panel.change_type(list(CATEGORIES).index('images'), browse=False)
+    folder = CloudItem('images', 'Images', folder=True, category='images', can_upload=True)
+    items = [CloudItem('first', 'Welcome.png', category='images', can_move=True),
+             CloudItem('second', 'Welcome.PNG' if same_extension else 'Welcome.jpg',
+                       category='images', can_move=True)]
+    panel.folder = folder
+    panel.start_job = MagicMock()
+    panel.upload(CloudDragData(panel, items), folder)
+    if same_extension:
+        panel.start_job.assert_not_called()
+    else:
+        kind, prepare, context = panel.start_job.call_args.args
+        assert kind == 'prepare-upload'
+        provider = MagicMock()
+        provider.find_item.return_value = None
+        assert prepare(provider) == [(item, None) for item in items]
+        assert [call.kwargs['extension'] for call in provider.find_item.call_args_list] == ['.png', '.jpg']
+        context['temporary'].cleanup()
+
+
+@pytest.mark.parametrize('same_extension', [False, True])
+def test_batch_downloads_distinguish_file_extensions(panel, monkeypatch, same_extension):
+    plugin = SimpleNamespace(is_active=lambda: True)
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
+    existing = MagicMock(return_value=None)
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.local_item', existing)
+    panel.start_job = MagicMock()
+    items = [CloudItem('first', 'Welcome.png', category='images'),
+             CloudItem('second', 'Welcome.PNG' if same_extension else 'Welcome.jpg', category='images')]
+    panel.download(items)
+    if same_extension:
+        panel.start_job.assert_not_called()
+    else:
+        assert panel.start_job.call_args.args[0] == 'download'
+        assert [call.args[-1] for call in existing.call_args_list] == ['.png', '.jpg']
+
+
+@pytest.mark.parametrize('category', ['images', 'media', 'presentations'])
+def test_local_library_duplicate_lookup_matches_actual_file_extension(category):
+    from openlp.plugins.librarysync.lib.transfer import local_item
+    first = SimpleNamespace(id=1, name='Welcome.png', file_path='/library/Welcome.png')
+    second = SimpleNamespace(id=2, name='Welcome.jpg', file_path='/library/Welcome.jpg')
+    plugin = MagicMock()
+    plugin.media_item.manager.get_all_objects.return_value = [first, second]
+    assert local_item(category, plugin, 'WELCOME', '.PNG') is first
+    assert local_item(category, plugin, 'Welcome', '.jpg') is second
+    assert local_item(category, plugin, 'Welcome', '.pdf') is None
+
+
+def test_importing_another_image_format_does_not_replace_existing_file(tmp_path):
+    first = SimpleNamespace(id=1, name='Welcome.png', file_path='/library/Welcome.png')
+    plugin = MagicMock()
+    plugin.name = 'images'
+    plugin.is_active.return_value = True
+    plugin.media_item.manager.get_all_objects.return_value = [first]
+    plugin.media_item.validate_and_load.return_value = True
+    path = tmp_path / 'Welcome.jpg'
+    path.write_bytes(b'new format')
+    import_item(CloudItem('second', path.name, category='images'), path, plugin, prepared='new-hash')
+    plugin.media_item.manager.save_object.assert_not_called()
+    plugin.media_item.validate_and_load.assert_called_once_with(
+        [path], None, file_hashes={path: 'new-hash'}, file_names={path: 'Welcome.jpg'})
+    assert first.file_path == '/library/Welcome.png'
+
+
+@pytest.mark.parametrize('category,extension', [('images', '.png'), ('media', '.mp4'), ('presentations', '.pdf')])
+def test_view_reuses_uploaded_bytes_without_downloading(panel, tmp_path, monkeypatch, category, extension):
+    from tempfile import TemporaryDirectory
+    from threading import Event
+    from openlp.plugins.librarysync.lib.cache import CloudCache
+
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    source = tmp_path / ('Welcome' + extension)
+    source.write_bytes(b'uploaded file')
+    item = CloudItem('uploaded', source.name, category=category, size=source.stat().st_size, version='2')
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    provider.upload.return_value = item
+    panel.start_job = MagicMock()
+    temporary = TemporaryDirectory()
+    context = {'temporary': temporary, 'folder': CloudItem('folder', category, folder=True), 'copy': False}
+    panel.run_upload(context, [((category, source, None, 'Welcome'), None)])
+    kind, upload, _ = panel.start_job.call_args.args
+    assert kind == 'upload'
+    assert upload(provider, Event(), MagicMock()) == 1
+    source.unlink()
+    temporary.cleanup()
+    panel.selected_items = MagicMock(return_value=[item])
+    panel.open_preview()
+    kind, view, temporary = panel.start_job.call_args.args
+    try:
+        result = view(provider, Event(), MagicMock(), MagicMock(), MagicMock())
+        assert kind == 'preview'
+        assert result[3] and result[1].read_bytes() == b'uploaded file'
+        provider.download.assert_not_called()
+        provider.preview.assert_not_called()
+        provider.media_metadata.assert_not_called()
+        assert not CloudCache(panel.profile, 'another-account').preview(item, tmp_path / 'other')
+    finally:
+        temporary.cleanup()
+
+
+@pytest.mark.parametrize('outcome', ['failed', 'cancelled', 'modified'])
+def test_unsuccessful_or_changed_upload_does_not_seed_preview(panel, tmp_path, monkeypatch, outcome):
+    from tempfile import TemporaryDirectory
+    from threading import Event
+    from openlp.plugins.librarysync.lib.cache import CloudCache
+
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    source = tmp_path / 'Welcome.png'
+    source.write_bytes(b'original file')
+    item = CloudItem('uploaded', source.name, category='images', size=source.stat().st_size, version='2')
+    provider = MagicMock()
+    provider.cache_account.return_value = 'account'
+    cancel = Event()
+
+    def upload(*args, **kwargs):
+        if outcome == 'failed':
+            raise SyncError('Upload failed')
+        if outcome == 'cancelled':
+            cancel.set()
+        else:
+            source.write_bytes(b'changed bytes')
+        return item
+    provider.upload.side_effect = upload
+    panel.start_job = MagicMock()
+    temporary = TemporaryDirectory()
+    context = {'temporary': temporary, 'folder': CloudItem('folder', 'Images', folder=True), 'copy': False}
+    try:
+        panel.run_upload(context, [(('images', source, None, 'Welcome'), None)])
+        operation = panel.start_job.call_args.args[1]
+        if outcome == 'failed':
+            with pytest.raises(SyncError):
+                operation(provider, cancel, MagicMock())
+        else:
+            operation(provider, cancel, MagicMock())
+        assert not CloudCache(panel.profile, 'account').preview(item, tmp_path / 'preview.png')
+    finally:
+        temporary.cleanup()
+
+
+def test_outdated_listing_refreshes_automatically_at_most_every_ten_seconds(panel, persistent_cache, monkeypatch):
+    _, folder, _ = persistent_cache
+    panel.poll_changes = MagicMock()
+    panel.show()
+    panel.folder = folder
+    panel.browse = MagicMock()
+    clock = SimpleNamespace(monotonic=MagicMock(return_value=1000))
+    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.time', clock)
+    panel.jobs['changes'] = {'kind': 'changes', 'context': None, 'generation': panel.generation}
+    panel.job_ready('changes', ('next', True))
+    panel.job_completed('changes')
+    assert panel.auto_refresh_timer.isActive()
+    assert panel.refresh_button.isVisible() and panel.status.text() == 'Out of date'
+    assert not panel.refresh_button.icon().isNull()
+    assert panel.refresh_button.fluentSize() == QtWidgets.fluentqt.Button.ButtonSize.Small
+    assert panel.refresh_button.fluentStyle() == QtWidgets.fluentqt.Button.ButtonStyle.Subtle
+    panel.auto_refresh()
+    panel.browse.assert_called_once_with(folder, force=True)
+    clock.monotonic.return_value = 1001
+    panel.auto_refresh()
+    assert panel.browse.call_count == 1
+    assert panel.auto_refresh_timer.remainingTime() > 8500
+    clock.monotonic.return_value = 1010
+    panel.auto_refresh()
+    assert panel.browse.call_count == 2
+    panel.out_of_date = False
+    panel.set_ready_status()
+    panel.auto_refresh()
+    assert panel.browse.call_count == 2 and panel.refresh_button.isHidden()
+
+
+def test_automatic_refresh_defers_transfers_and_stops_when_hidden(panel, persistent_cache):
+    _, folder, _ = persistent_cache
+    panel.poll_changes = MagicMock()
+    panel.show()
+    panel.folder, panel.out_of_date = folder, True
+    panel.browse = MagicMock()
+    panel.schedule_auto_refresh()
+    panel.jobs['transfer'] = {'kind': 'upload'}
+    panel.auto_refresh()
+    panel.browse.assert_not_called()
+    assert not panel.auto_refresh_timer.isActive()
+    panel.jobs.clear()
+    panel.schedule_auto_refresh()
+    assert panel.auto_refresh_timer.isActive()
+    panel.hide()
+    panel.auto_refresh()
+    panel.browse.assert_not_called()
+    assert not panel.auto_refresh_timer.isActive()
+
+
+def test_changing_connection_cancels_pending_automatic_refresh(panel, persistent_cache):
+    _, folder, _ = persistent_cache
+    panel.poll_changes = MagicMock()
+    panel.show()
+    panel.folder, panel.out_of_date = folder, True
+    panel.set_status('')
+    panel.schedule_auto_refresh()
+    assert panel.auto_refresh_timer.isActive() and panel.refresh_button.isVisible()
+    panel.set_profile({**panel.profile, 'name': 'Another Library'})
+    assert not panel.auto_refresh_timer.isActive()
+    assert not panel.out_of_date and panel.refresh_button.isHidden()

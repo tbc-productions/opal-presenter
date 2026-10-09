@@ -6,8 +6,8 @@ import pytest
 from PySide6 import QtCore, QtGui
 
 from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.mediapreview import MediaPreview
-from openlp.plugins.librarysync.lib.preview import cloud_metadata, show_preview, text_service_item
+from openlp.plugins.librarysync.lib.preview import (
+    CloudMediaPreview, CloudPresentationPreview, CloudPreviewWindow, cloud_metadata, show_preview, text_service_item)
 from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError, friendly_name
 from openlp.plugins.librarysync.lib.transfer import safe_xml
 
@@ -30,7 +30,10 @@ def test_song_preview_preserves_verse_order_and_line_breaks_without_database(set
     assert service.title == 'Amazing Grace'
     assert [slide['verse'] for slide in service.slides] == ['V1', 'C1', 'V1']
     assert service.slides[0]['text'] == 'Amazing grace\nHow sweet the sound'
-    assert metadata == {'Authors': 'John Newton', 'Copyright': 'Public domain', 'CCLI number': '123'}
+    assert metadata == {'Authors': 'John Newton', 'Copyright': 'Public domain', 'CCLI number': '123',
+                        'Verse order': 'V1 C1 V1'}
+    assert list(metadata)[-2:] == ['CCLI number', 'Verse order']
+    assert service.raw_footer == ['Amazing Grace', 'John Newton', 'Public domain', '123']
     assert service.edit_id is None
 
 
@@ -61,14 +64,125 @@ def test_cloud_image_uses_fluent_inspector_and_friendly_name(settings, qtbot, tm
     item = CloudItem('image', 'Sunday [123456abcdef].png', category='images', modified='2026-10-09T01:00:00Z',
                      provider_name='Google Drive', size=path.stat().st_size)
     window = show_preview(parent, item, path)
-    assert isinstance(window, MediaPreview)
-    assert isinstance(window, QtWidgets.fluentqt.Dialog)
+    assert isinstance(window, CloudMediaPreview)
+    assert isinstance(window, QtWidgets.fluentqt.Window)
+    assert window.isWindow()
     assert window.windowTitle() == 'Sunday'
     assert window.metadata['Source'].text() == 'Google Drive'
     assert window.metadata['Resolution'].text() == '200 × 100'
     assert window.metadata['Access'].text() == 'View'
     assert 'Modified' in window.metadata
+    assert next(iter(window.metadata)) == 'Resolution'
     window.reject()
+
+
+@pytest.mark.parametrize('dismiss', ['accept', 'reject', 'close', 'closeWindow', 'escape'])
+def test_cloud_window_can_maximise_and_finishes_once_on_close(settings, qtbot, dismiss):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    window = CloudPreviewWindow(parent)
+    qtbot.addWidget(window)
+    QtWidgets.QVBoxLayout(window.contentWidget())
+    window.resize(1000, 660)
+    finished = MagicMock()
+    window.finished.connect(finished)
+    parent.show()
+    window.show()
+    assert window.isWindow() and parent.isEnabled()
+    assert window.windowFlags() & QtCore.Qt.WindowType.WindowMaximizeButtonHint
+    assert window.windowFlags() & QtCore.Qt.WindowType.WindowCloseButtonHint
+    window.showMaximized()
+    assert window.isMaximized()
+    window.showNormal()
+    assert not window.isMaximized()
+    if dismiss == 'escape':
+        qtbot.keyClick(window, QtCore.Qt.Key.Key_Escape)
+    else:
+        getattr(window, dismiss)()
+    result = (QtWidgets.QDialog.DialogCode.Accepted if dismiss == 'accept'
+              else QtWidgets.QDialog.DialogCode.Rejected)
+    finished.assert_called_once_with(result)
+    assert not window.isVisible() and parent.isVisible()
+    window.reject()
+    finished.assert_called_once()
+
+
+def test_cloud_media_title_bar_close_stops_playback(settings, qtbot, tmp_path):
+    import wave
+    path = tmp_path / 'Music.wav'
+    with wave.open(str(path), 'wb') as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(8000)
+        audio.writeframes(b'\x00\x00' * 8000)
+    item = CloudItem('audio', path.name, category='media', size=path.stat().st_size)
+    window = show_preview(None, item, path)
+    qtbot.addWidget(window)
+    window.show()
+    assert not window.player.source().isEmpty()
+    window.closeWindow()
+    assert window.player.source().isEmpty()
+
+
+def test_cloud_presentation_has_async_thumbnails_and_selectable_slides(settings, qtbot, tmp_path):
+    path = tmp_path / 'Welcome.pdf'
+    writer = QtGui.QPdfWriter(str(path))
+    painter = QtGui.QPainter(writer)
+    painter.fillRect(0, 0, writer.width(), writer.height(), QtGui.QColor('red'))
+    writer.newPage()
+    painter.fillRect(0, 0, writer.width(), writer.height(), QtGui.QColor('blue'))
+    painter.end()
+    del writer
+    item = CloudItem('presentation', 'Welcome.pptx', category='presentations', size=2048,
+                     provider_name='Google Drive')
+    window = show_preview(None, item, tmp_path / item.name, path)
+    qtbot.addWidget(window)
+    window.show()
+    assert isinstance(window, CloudPresentationPreview) and window.isWindow()
+    assert window.slide_list.rowCount() == 2
+    assert window.split_view.handleCount() == 2
+    assert not window.slide_list.dragEnabled()
+    assert not hasattr(window, 'next_button') and not hasattr(window, 'previous_button')
+    assert window.metadata['Slides'].text() == '2'
+    assert window.metadata['File type'].text() == 'PPTX'
+    assert window.metadata['File size'].text() == '2.0 kB'
+
+    def colour(label):
+        pixmap = label.pixmap()
+        if pixmap is None or pixmap.isNull():
+            return None
+        return pixmap.toImage().pixelColor(pixmap.width() // 2, pixmap.height() // 2).name()
+
+    thumbnails = [window.slide_list.cellWidget(row, 0).findChild(QtWidgets.QLabel) for row in range(2)]
+    qtbot.waitUntil(lambda: colour(thumbnails[0]) == '#ff0000' and colour(thumbnails[1]) == '#0000ff')
+    qtbot.waitUntil(lambda: colour(window.viewer) == '#ff0000')
+    qtbot.mouseClick(window.slide_list.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=window.slide_list.visualItemRect(window.slide_list.item(1, 0)).center())
+    qtbot.waitUntil(lambda: window.page == 1 and colour(window.viewer) == '#0000ff')
+    qtbot.keyClick(window.slide_list, QtCore.Qt.Key.Key_Up)
+    qtbot.waitUntil(lambda: window.page == 0 and colour(window.viewer) == '#ff0000')
+    window.closeWindow()
+    assert window.document.status() == window.document.Status.Null
+
+
+def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings, qtbot, monkeypatch):
+    from openlp.core.widgets.metadataview import MetadataView
+    viewer = QtWidgets.QWidget()
+    viewer.setUrl = MagicMock()
+    viewer.stop = MagicMock()
+    monkeypatch.setattr('PySide6.QtWebEngineWidgets.QWebEngineView', lambda *args: viewer)
+    item = CloudItem('document', 'Welcome.pptx', category='presentations', can_download=False,
+                     preview_url='https://drive.google.com/file/d/document/view', provider_name='Google Drive')
+    window = show_preview(None, item, None)
+    qtbot.addWidget(window)
+    assert isinstance(window, CloudPreviewWindow) and window.isWindow()
+    details = window.findChild(MetadataView)
+    assert details.fields is window.metadata
+    assert window.metadata['Source'].text() == 'Google Drive'
+    assert window.metadata['Access'].text() == 'View'
+    viewer.setUrl.assert_called_once_with(QtCore.QUrl(item.preview_url))
+    window.reject()
+    viewer.stop.assert_called_once()
 
 
 def test_cloud_slide_window_uses_preview_controller_and_embedded_display(settings, qtbot, monkeypatch):
@@ -88,6 +202,7 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     window = CloudSlidePreview(parent, CloudItem('custom', 'item.xml', category='custom'), (root, xml))
+    assert isinstance(window, CloudPreviewWindow) and window.isWindow()
     service = window.service_item
     service.get_theme_data = MagicMock(return_value=SimpleNamespace())
     service._rendered_slides = [{'text': 'Hello everyone', 'verse': 0}]
@@ -109,7 +224,7 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     assert delegate.sizeHint(option, index).height() > height
     assert not window.slide_list.dragEnabled()
     assert isinstance(window.split_view, QtWidgets.fluentqt.SplitView)
-    assert window.split_view.panePreferredSize(0) == 380
+    assert window.split_view.panePreferredSize(0) == 460
     assert window.split_view.handleCount() == 2
     assert list(window.metadata)[-3:] == ['Created', 'Modified', 'Modified by']
     from fluentqt import Spacing
@@ -134,6 +249,7 @@ def test_cloud_metadata_uses_provider_permissions_and_places_audit_fields_last()
                      can_edit=True, created='2026-10-08T01:00:00Z',
                      modified='2026-10-09T01:00:00Z', modified_by='Sam')
     fields = cloud_metadata(item, {'Authors': 'Song author'})
+    assert next(iter(fields)) == 'Authors'
     assert fields['Source'] == 'Another provider' and fields['Access'] == 'View, edit'
     assert 'kb' in fields['File size'].lower()
     assert 'Created by' not in fields and fields['Modified by'] == 'Sam'

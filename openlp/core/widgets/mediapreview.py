@@ -10,6 +10,7 @@ from openlp.core.common.i18n import translate
 from openlp.core.lib.designmedia import media_kind, media_label
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.metadataview import MetadataView
 
 
 def tr(text):
@@ -43,7 +44,8 @@ def media_context_menu(widget, position, path, label=None):
     menu.deleteLater()
 
 
-class MediaPreview(QtWidgets.QDialog):
+class MediaPreviewMixin:
+    """Shared inspector content for local dialogs and Cloud Library windows."""
     def __init__(self, parent, path, label=None, *, kind=None, preview_paths=None,
                  extra_metadata=None, allow_reveal=True, source_url=None, file_size=None, cover_path=None):
         super().__init__(parent)
@@ -54,7 +56,8 @@ class MediaPreview(QtWidgets.QDialog):
         self.setWindowTitle(name)
         self.resize(1000, 660)
         self.setMinimumSize(680, 440)
-        layout = QtWidgets.QVBoxLayout(self)
+        content = self.contentWidget() if isinstance(self, QtWidgets.fluentqt.Window) else self
+        layout = QtWidgets.QVBoxLayout(content)
         heading = QtWidgets.QLabel(name)
         heading.setTextFormat(QtCore.Qt.TextFormat.PlainText)
         font = heading.font()
@@ -102,11 +105,6 @@ class MediaPreview(QtWidgets.QDialog):
                 self.viewer.setText(tr('No preview available'))
         self.viewer.setMinimumSize(320, 240)
         body.addWidget(self.viewer, 1)
-        metadata = QtWidgets.QWidget()
-        metadata.setFixedWidth(300 if extra_metadata else 230)
-        fields = QtWidgets.QFormLayout(metadata)
-        fields.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.metadata = {}
         keys = ['File size', 'File type']
         resolution_key = 'Preview resolution' if cover_path else 'Resolution'
         if not audio_only:
@@ -116,13 +114,9 @@ class MediaPreview(QtWidgets.QDialog):
         if kind == 'presentation':
             keys.append('Slides')
         keys += [key for key in (extra_metadata or {}) if key not in keys]
-        for key in keys:
-            value = QtWidgets.QLabel('—')
-            value.setWordWrap(True)
-            value.setTextFormat(QtCore.Qt.TextFormat.PlainText)
-            value.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
-            self.metadata[key] = value
-            fields.addRow(QtWidgets.QLabel(tr(key)), value)
+        metadata = MetadataView(dict.fromkeys(keys, '—'), self)
+        metadata.setFixedWidth(300 if extra_metadata else 230)
+        self.metadata = metadata.fields
         size = self.path.stat().st_size if file_size is None else file_size
         unit = 'B'
         for next_unit in ('KB', 'MB', 'GB', 'TB'):
@@ -267,3 +261,7 @@ class MediaPreview(QtWidgets.QDialog):
         finally:
             dialog.stop_video()
             dialog.deleteLater()
+
+
+class MediaPreview(MediaPreviewMixin, QtWidgets.QDialog):
+    """Local Library inspector with its existing modal dialog lifecycle."""

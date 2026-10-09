@@ -96,40 +96,13 @@ class SongListWidget(DataGridWithDnD):
 
     def __init__(self, parent=None, name=''):
         super().__init__(parent, name)
-        self._initial_columns_set = False
         self.setup_columns([
             translate('SongsPlugin.MediaItem', 'Title'),
             translate('SongsPlugin.MediaItem', 'Author'),
         ])
-        # Keep the secondary column filling any remaining width.
-        self.header().setStretchLastSection(True)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-
-    def showEvent(self, event):
-        """Set a 65/35 column split on first show."""
-        super().showEvent(event)
-        if not self._initial_columns_set:
-            self._initial_columns_set = True
-            available = self.viewport().width()
-            if available > 0:
-                first_column = int(available * 0.65)
-                self.header().resizeSection(0, first_column)
-
-    def _ensure_first_column_width(self):
-        """When narrow (<300px), enforce a 65% minimum width for column 0."""
-        if self.columnCount() < 2 or self._resizing_columns:
-            return
-        available_width = self.viewport().width()
-        minimum_width = int(available_width * 0.65) if available_width < 300 else 0
-        if self.columnWidth(0) >= minimum_width:
-            return
-        self._resizing_columns = True
-        try:
-            self.header().resizeSection(0, minimum_width)
-        finally:
-            self._resizing_columns = False
 
     def set_secondary_header(self, label: str):
         """Update the secondary column header label for the current search mode."""

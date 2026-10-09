@@ -17,6 +17,7 @@ from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError, frien
 
 
 MAX_XML = 8 * 1024 * 1024
+EXTENSION_CATEGORIES = ('images', 'media', 'presentations')
 FILE_TYPES = {
     'images': {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.webp', '.svg'},
     'presentations': {'.ppt', '.pptx', '.odp', '.pdf', '.key'},
@@ -30,7 +31,12 @@ def name_key(name):
     return unicodedata.normalize('NFKC', name).strip().casefold()
 
 
-def local_item(category, plugin, title):
+def duplicate_key(category, title, extension=''):
+    """Files with different formats can share a title; editable Library items cannot."""
+    return name_key(title), extension.casefold() if category in EXTENSION_CATEGORIES else ''
+
+
+def local_item(category, plugin, title, extension=''):
     """Use saved records, including items outside the current filter/folder."""
     if category == 'themes':
         manager = Registry().get('theme_manager')
@@ -46,8 +52,10 @@ def local_item(category, plugin, title):
             records = plugin.db_manager.get_all_objects(CustomSlide)
         else:
             records = plugin.media_item.manager.get_all_objects(plugin.media_item.item_class)
-        records = [record for record in records if name_key(
-            friendly_name(record.name) if category in FILE_TYPES else record.title) == name_key(title)]
+        records = [record for record in records if duplicate_key(
+            category, friendly_name(record.name) if category in FILE_TYPES else record.title,
+            Path(record.file_path).suffix if category in EXTENSION_CATEGORIES else '') ==
+            duplicate_key(category, title, extension)]
     if len(records) > 1:
         raise SyncError('Several local items have this name. Rename them before downloading a replacement.')
     return records[0] if records else None
@@ -193,7 +201,8 @@ def write_upload(source, contents):
 
 def import_item(item, path, plugin, target=None, prepared=None, overwrite=None):
     category = item_category(item)
-    existing = local_item(category, plugin, item.display_name) if category == 'themes' or plugin else None
+    existing = local_item(category, plugin, item.display_name, Path(item.name).suffix) \
+        if category == 'themes' or plugin else None
     if existing is not None and overwrite is None:
         raise SyncError('This name already exists in the local Library. Confirm overwrite before downloading.')
     if overwrite is not None and (existing is None or (existing if category == 'themes' else existing.id) != overwrite):

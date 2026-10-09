@@ -17,31 +17,52 @@ An administrator performs the Google setup once:
 2. Configure the OAuth consent screen and its audience. Create a **Desktop app**
    OAuth client and download its JSON configuration. Do not use a service account
    or a Web application client.
-3. In Cloud Library, choose **Connection → Set up Google Drive** to open the admin
-   wizard. Enter the Client ID and Client secret, or choose **Load Google client JSON**.
-   The secret is masked on screen.
-4. Give the connection a name and paste the shared folder link. Links with a resource
-   key are supported. The folder can be in My Drive or a Google Workspace shared drive.
+3. In Cloud Library, choose **Connection → Set up connection**. Select a supported
+   cloud provider and enter a unique connection name. Names are compared without
+   case or leading/trailing spaces. Select **Google Drive** for the API connection.
+4. Choose **Next** to configure Google Drive. Enter the Client ID and Client secret,
+   or choose **Load client JSON**, then paste the shared folder link or folder ID.
+   The secret is masked on screen. Links with a resource key are supported. The
+   folder can be in My Drive or a Google Workspace shared drive.
 5. Leave **Export a connection file for the team** checked, then choose **Save connection**
    and a file location. The chosen name is included in the file and the folder selector.
 6. Choose **Connect** and complete Google sign-in in the system browser to check access.
    Share the exported file with the team. **Connection → Export connection file** can
    export it again later.
 
-Each team member chooses **Connection → Import connection file**, then **Connect**,
-and signs in with their own Google account. Existing Google folder permissions
+For storage without API credentials, choose **Local Cloud Storage** on the first
+wizard page. Choose **Next**, then browse to an existing folder on this computer.
+A local or synced folder works. Review the location and choose **Save connection**,
+then **Connect**.
+Export is off by default because folder paths belong to the current computer.
+Each computer should create its own connection pointing to its synced copy.
+
+Local Cloud Storage uses the same Songs, Presentations, Images, Media, Custom
+Slides and Themes folders as Cloud Library. Uploads and downloads publish complete
+files; an overwrite requires confirmation and refuses a stale item. Deleted items
+are retained under ``.librarysync-trash`` inside the chosen folder and can be
+restored manually. Hidden files and symbolic links are excluded. The desktop
+cloud storage app handles availability, syncing, sharing and conflicts between
+computers. Local writes are not confirmed as synced to the cloud.
+
+For Google Drive, each team member chooses **Connection → Import connection file**,
+then **Connect**, and signs in with their own Google account. Existing Google folder permissions
 determine what that account can download and upload. Sharing the connection file
 does not grant access to the organisation folder.
 The connection and account are remembered across restarts. Starting the application
 uses the saved account and renews its token when necessary without opening a browser.
 Reconnecting is necessary if Google revokes or expires the account's authorisation.
+Disconnect asks for confirmation before closing previews and clearing the local
+cache. Export connection and Disconnect are unavailable while disconnected.
 
 With no connections configured, Cloud Library displays a Fluent InfoBar with an
 **Import connection** hyperlink. Connect and the folder selector are disabled
 until a connection is imported. The footer shows the item count on the left and
 current status on the right. During a transfer, progress, percentage and **Cancel**
-share the middle of this row. Preparation uses an indeterminate progress bar;
-upload percentages update as bytes are sent and reach 100% when Drive confirms
+share the middle of this row. Preparation uses an indeterminate progress bar.
+The footer matches Library and Themes and keeps the same height during transfers.
+**Cancel** is a small, subtle Fluent button.
+Upload percentages update as bytes are sent and reach 100% when Drive confirms
 completion. Status messages are kept brief; hover for full text and error details.
 Errors and an out-of-date cache use Fluent's critical text colour.
 
@@ -86,26 +107,42 @@ subfolders. Images, Media, Presentations and Themes can have subfolders. **Refre
 checks for changes made by other team members. The filter searches the loaded
 items in the current folder. **Load more** retrieves another page when a folder
 has more than 200 items. Folder listings and previews are cached between application sessions;
-**Refresh** always fetches the current folder from Drive.
+**Refresh** always fetches the current folder from the selected storage provider.
 
-Double-click an item or choose **View** to open a Fluent window within OpenLP+.
+Double-click an item or choose **View** to open an independent Fluent window with
+maximise, restore and close controls. Closing it stops playback and preview transfers.
 Songs and Custom Slides use the native slide renderer and slide list, with item
 metadata and a named theme when present. A warning InfoBar identifies a theme that
 is not installed. Themes show sample slides using the theme's actual appearance.
+Metadata uses Fluent cards, with item details first (including song authors,
+copyright and CCLI), file information next, and creation/modification history last.
+Values wrap and can be selected and copied; the panel scrolls when needed.
 Images and media use the Library inspector; media streams on demand rather than
-waiting for a complete download. Images use their original resolution. Provider thumbnails are used for
-presentation covers. Files with download disabled use the
+waiting for a complete download. Images use their original resolution. Presentations
+have a resizable slide sidebar with a thumbnail per slide; select a row or use the
+arrow keys to view it. PDFs render directly. Other formats use an enabled compatible
+presentation application to create a cached PDF preview in the background. Without
+one, a warning explains that only the provider's cover is available.
+Files with download disabled use the
 provider's embedded viewer when its permissions allow it.
+View refreshes an out-of-date listing before opening the selected item. A failed
+opening gets one refresh and retry; further failures show critical error text.
+Opening a View window restores the normal Cloud Library footer status.
 
-The context menu offers **View**, **Download**, and, when permitted, **Rename**
-and **Delete**. Delete moves items to the cloud bin. Rename refuses an existing
-name in the same item type.
+The context menu offers **View**, **Add to Library**, **Rename** and **Delete**
+for all item types, including Themes. The View window also provides Add to Library,
+Rename and Delete. Rename and Delete are disabled when unavailable. Delete moves
+items to the cloud bin. Rename refuses an existing name and file type in the same item type.
 
 Drag cloud items onto the matching local Library tab, in either list or grid view,
 or choose **Add to Library**. Drag local Library items into the currently open cloud
-folder to share them. Local/cloud transfers copy and retain their source. Dragging
+folder to share them. If their type differs from the current Cloud Library tab,
+the tab switches and uploads go to that type's folder in the selected connection.
+The destination's write permission is checked before uploading.
+Local/cloud transfers copy and retain their source. Dragging
 an existing cloud item into a cloud subfolder moves that item within its type.
-Cross-type drops are rejected. The local Themes list and grid support these
+Cloud items cannot be moved between types or added to a different local Library type.
+The local Themes list and grid support these
 transfers too. Themes has an item count, thumbnail slider and list/grid buttons
 in its footer.
 
@@ -113,8 +150,12 @@ A read-only
 folder disables uploads, and the provider rechecks permissions before writing.
 You can navigate into a child folder with different permissions.
 
-Names are compared without case or Unicode presentation differences, across the
-selected type's subfolders. Uploading or downloading an existing name asks whether
+Names are compared without case or Unicode presentation differences within the
+destination folder. Different folders can contain items with the same name.
+Presentations, Media and Images show **File Type** after Name and compare both name
+and extension. For example, ``Welcome.pptx`` and ``Welcome.pdf`` can coexist.
+Folders stay above files when sorting in either direction.
+Other Library types continue to compare titles. Uploading or downloading a duplicate asks whether
 to overwrite it. Declining preserves the existing item. A confirmed overwrite
 updates the existing record rather than adding a confusing duplicate. Existing
 legacy duplicates must be renamed or removed before a replacement can proceed.
@@ -129,11 +170,13 @@ Cache and change checks
 -----------------------
 
 Saved listings appear without downloading the folder again. While Cloud Library
-is visible, it checks Google's incremental change list every minute and when
-returning to the panel. Unrelated Drive changes do not reload the Library.
+is visible, it checks the provider for changes every ten seconds and when
+returning to the panel. Unrelated changes do not reload the Library.
 Relevant additions, edits, moves, removals and shared-drive access changes show
 **Out of date** in the footer's Fluent critical colour. This warning remains
-until **Refresh** retrieves the current folder. Rename, Delete and uploads are
+until the current folder refreshes automatically, at most once every ten seconds.
+A small **Refresh** button also allows a manual refresh. Transfers defer automatic
+refresh until they finish. Rename, Delete and uploads are
 disabled while the listing is out of date or its cached permissions have not yet
 been checked. Writes always recheck live permissions and file versions.
 
@@ -146,7 +189,8 @@ OAuth credentials. It retains up to 512 MiB across connections and removes the
 least recently used files when necessary; files unused for 30 days expire.
 Disconnecting removes the current connection/account cache. Cached content can
 still be viewed if a change check fails, with that failure shown in the footer.
-Media playback continues to stream on demand.
+Successful uploads also populate the preview cache. Media uses a cached upload
+when available and otherwise streams on demand.
 
 Downloaded image, song, Custom Slides, theme and presentation previews are reused
 only for the same item version. Active View windows use temporary copies, so cache

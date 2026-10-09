@@ -28,6 +28,8 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         self._theme_host.hide()
 
     def sizeHint(self, option, index):
+        if index.column() != 0:
+            return super().sizeHint(option, index)
         return QtCore.QSize(0, max(36, self.iconSize(option, index).height() + 12) + self.group_spacing(index))
 
     def has_next_sibling(self, index):

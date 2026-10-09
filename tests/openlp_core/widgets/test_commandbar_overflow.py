@@ -102,3 +102,31 @@ def test_library_page_switch_aligns_commands_before_returning_from_show(qapp, qt
         # Do not drain the event queue: the next paint must already see the
         # final positions, even while the deferred alignment timer is pending.
         assert max(widget.geometry().right() for widget in visible) == group.contentsRect().right()
+
+
+def test_icon_sync_skips_buttons_deleted_during_command_rebuild(settings, qtbot, monkeypatch):
+    import fluentqt
+    from shiboken6 import delete, isValid
+    from openlp.core.ui.icons import UiIcons
+    from openlp.core.widgets.fluent_buttons import set_fluent_button_icon
+
+    toolbar = OpenLPToolbar(None)
+    qtbot.addWidget(toolbar)
+    action = toolbar.add_toolbar_action('refresh', text='Refresh', icon=UiIcons().refresh)
+    group = toolbar._command_groups[0]
+    first, removed, last = [fluentqt.Button(toolbar) for _ in range(3)]
+    for button in (first, removed, last):
+        button.setProperty('commandAction', action)
+    synced = []
+
+    def rebuild_during_sync(button, icon):
+        synced.append(button)
+        if button is first and isValid(removed):
+            delete(removed)
+        set_fluent_button_icon(button, icon)
+
+    monkeypatch.setattr('openlp.core.widgets.fluent_commands.set_fluent_button_icon', rebuild_during_sync)
+    group.sync_button_icons()
+    assert not isValid(removed)
+    assert removed not in synced and first in synced and last in synced
+    assert last.iconGlyph()

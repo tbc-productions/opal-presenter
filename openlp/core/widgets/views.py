@@ -36,6 +36,7 @@ from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.ui.style import use_alternate_rows
+from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
 from openlp.core.widgets.layouts import AspectRatioLayout
 from openlp.core.widgets.dnd import ItemDragData, execute_drag
 
@@ -649,7 +650,13 @@ class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
         self.setData(column, FileTreeWidgetItem._SORT_ROLE, value)
 
     def __lt__(self, other):
-        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
+        tree = self.treeWidget()
+        folder = bool(self.data(0, LIBRARY_FOLDER_ROLE))
+        if tree and folder != bool(other.data(0, LIBRARY_FOLDER_ROLE)):
+            # Qt reverses comparisons for descending sorts; folders must still stay first.
+            ascending = tree.header().sortIndicatorOrder() == QtCore.Qt.SortOrder.AscendingOrder
+            return folder if ascending else not folder
+        col = tree.sortColumn() if tree else 0
         my_val = self.data(col, FileTreeWidgetItem._SORT_ROLE)
         other_val = other.data(col, FileTreeWidgetItem._SORT_ROLE)
         if my_val is not None and other_val is not None:
@@ -663,7 +670,7 @@ class TreeWidgetDnDMixin:
     """
     Provide a tree widget to store objects and handle drag and drop events
     """
-    first_column_min_ratio = 0.5
+    first_column_min_ratio = 0.3
 
     def __init__(self, parent=None, name=''):
         """
@@ -674,6 +681,13 @@ class TreeWidgetDnDMixin:
         self.mime_data_text = name
         self.allow_internal_dnd = False
         self._resizing_columns = False
+        self._manual_columns = set()
+        self._column_timer = QtCore.QTimer(self)
+        self._column_timer.setSingleShot(True)
+        self._column_timer.timeout.connect(self._fit_columns)
+        for signal in (self.model().rowsInserted, self.model().rowsRemoved, self.model().dataChanged,
+                       self.model().modelReset, self.model().headerDataChanged):
+            signal.connect(lambda *args: self._column_timer.start(0))
         self.header().close()
         self.header().sectionResized.connect(self._on_section_resized)
         self.default_indentation = self.indentation()
@@ -701,21 +715,41 @@ class TreeWidgetDnDMixin:
         self.header().setStretchLastSection(False)
         for i in range(len(labels)):
             self.header().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Interactive)
-        for i in range(1, len(labels)):
-            self.header().resizeSection(i, 130)
-        self._ensure_first_column_width()
+        self._manual_columns.clear()
+        self._fit_columns()
         self.setSortingEnabled(True)
         self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._fit_columns()
+
+    def _fit_columns(self):
+        """Measure metadata with Qt's delegate and leave the remaining space for Name."""
+        if self.header().isHidden() or self.columnCount() < 2 or self._resizing_columns:
+            return
+        self._resizing_columns = True
+        try:
+            for column in range(1, self.columnCount()):
+                if column not in self._manual_columns:
+                    self.resizeColumnToContents(column)
+                    # Fluent cells paint with more horizontal padding than Qt's size hint.
+                    content_width = self.columnWidth(column) + 2 * Spacing.Medium
+                    width = max(self.header().sectionSizeHint(column),
+                                min(content_width, self.viewport().width() // 2))
+                    self.header().resizeSection(column, width)
+        finally:
+            self._resizing_columns = False
         self._ensure_first_column_width()
 
     def _on_section_resized(self, section, old_size, new_size):
         """Keep the first column readable if interactive resizing makes it too small."""
         if old_size == new_size or self._resizing_columns:
             return
-        self._ensure_first_column_width()
+        if section:
+            self._manual_columns.add(section)
+        else:
+            self._ensure_first_column_width()
 
     def _ensure_first_column_width(self):
         """Keep the first column visible and proportional to the viewport width."""

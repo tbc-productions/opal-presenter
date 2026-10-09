@@ -30,6 +30,18 @@ QLineEdit = fluentqt.LineEdit
 QComboBox = fluentqt.ComboBox
 MultiSelectComboBox = fluentqt.MultiSelectComboBox
 Card = fluentqt.Card
+
+
+class FluentSplitView(fluentqt.SplitView):
+    """Clear handle hover when the pointer enters a pane, keeping native drag behaviour."""
+    # ponytail: remove when the pinned FluentQt resets handle hover on pane entry.
+    def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.Type.Enter and not self.resizing():
+            super().leaveEvent(QtCore.QEvent(QtCore.QEvent.Type.Leave))
+        return super().eventFilter(watched, event)
+
+
+SplitView = FluentSplitView
 QMenuBar = fluentqt.FluentMenuBar
 
 

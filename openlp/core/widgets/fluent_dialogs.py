@@ -156,11 +156,14 @@ class FluentProgressBar(_qt.QWidget):
     """Full-width row containing a Fluent progress rail and optional trailing label."""
     valueChanged = QtCore.Signal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, compact=False):
         super().__init__(parent)
         self.setSizePolicy(_qt.QSizePolicy.Policy.Expanding, _qt.QSizePolicy.Policy.Fixed)
         self._bar = _ProgressRail(self)
         self._label = fluentqt.Label(self)
+        if compact:
+            self._bar.setFixedHeight(Spacing.ControlHeight.Small)
+            self._label.setFluentTypography(fluentqt.FontRole.Caption)
         self._format = '%p%'
         self._text_visible = True
         self._minimum, self._maximum = 0, 100

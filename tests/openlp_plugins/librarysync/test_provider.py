@@ -407,7 +407,7 @@ def test_find_duplicate_name_checks_all_pages_and_matches_case_and_unicode(provi
     provider.type_folder = MagicMock(return_value=folder)
     item = CloudItem('last-page', 'ＳＵＮＤＡＹ.JPG', category='images')
     provider.list_folder = MagicMock(side_effect=[([], 'second'), ([item], '')])
-    assert GoogleDriveProvider.find_item(provider, folder, 'images', 'Sunday') is item
+    assert GoogleDriveProvider.find_item(provider, folder, 'images', 'Sunday', extension='.jpg') is item
     assert provider.list_folder.call_args_list[-1].args == (folder, 'second')
 
 
@@ -477,17 +477,36 @@ def test_first_upload_uses_older_type_folder_created_by_another_writer(provider)
     assert provider.delete.call_args.args[0].id == 'mine'
 
 
-def test_name_uniqueness_includes_subfolders_of_the_selected_type(provider):
-    root = CloudItem('root', 'Organisation', folder=True)
-    images = CloudItem('images', 'Images', folder=True, category='images', parents=('root',))
-    child = CloudItem('advent', 'Advent', folder=True, category='images', parents=('images',))
-    existing = CloudItem('f', 'Sunday.png', category='images')
-    provider.roots = {'root'}
-    provider.type_folder = MagicMock(return_value=child)
-    provider.folder = MagicMock(side_effect=lambda id: {'root': root, 'images': images}[id])
-    provider.list_folder = MagicMock(
-        side_effect=lambda folder, token: ([child], '') if folder.id == 'images' else ([existing], ''))
-    assert GoogleDriveProvider.find_item(provider, child, 'images', 'Sunday') is existing
+@pytest.mark.parametrize('destination_has_item', [False, True])
+def test_name_uniqueness_only_checks_destination_folder(provider, destination_has_item):
+    parent = CloudItem('presentations', 'Presentations', folder=True, category='presentations')
+    child = CloudItem('advent', 'Advent', folder=True, category='presentations', parents=(parent.id,))
+    nested = CloudItem('nested', 'Nested', folder=True, category='presentations', parents=(child.id,))
+    parent_item = CloudItem('parent-file', 'Welcome.pptx', category='presentations', parents=(parent.id,))
+    child_item = CloudItem('child-file', 'Welcome.pptx', category='presentations', parents=(child.id,))
+    provider.type_folder = MagicMock(side_effect=lambda folder, *args, **kwargs: folder)
+    provider.folder = MagicMock()
+    provider.list_folder = MagicMock(side_effect=[([parent_item, child], ''), ([nested], 'second'),
+                                                  ([child_item] if destination_has_item else [], '')])
+    assert GoogleDriveProvider.find_item(provider, parent, 'presentations', 'Welcome', extension='.pptx') is parent_item
+    result = GoogleDriveProvider.find_item(provider, child, 'presentations', 'Welcome', extension='.pptx')
+    assert result == (child_item if destination_has_item else None)
+    assert [call.args for call in provider.list_folder.call_args_list] == [
+        (parent, ''), (child, ''), (child, 'second')]
+    provider.folder.assert_not_called()
+
+
+def test_new_name_check_does_not_retract_file_due_to_same_name_in_parent(provider):
+    parent = CloudItem('presentations', 'Presentations', folder=True, category='presentations')
+    child = CloudItem('advent', 'Advent', folder=True, category='presentations', parents=(parent.id,))
+    original = CloudItem('original', 'Welcome.pptx', category='presentations', created='2026-10-09T01:00:00Z')
+    uploaded = CloudItem('uploaded', 'Welcome.pptx', category='presentations', created='2026-10-09T02:00:00Z')
+    provider.list_folder = MagicMock(side_effect=[([original, child], ''), ([uploaded], '')])
+    provider.delete = MagicMock()
+    provider.catalogue(parent)
+    assert GoogleDriveProvider.check_new_name(provider, uploaded, child) is uploaded
+    provider.delete.assert_not_called()
+    assert provider.list_folder.call_args.args == (child, '')
 
 
 def test_move_changes_parents_of_same_file_with_version_lock(provider):
@@ -596,3 +615,19 @@ def test_change_baseline_and_invalid_cursor_response(provider):
     provider.session.request.return_value = response(data={})
     with pytest.raises(SyncError, match='invalid change token'):
         provider.change_token()
+
+
+@pytest.mark.parametrize('category,extensions', [
+    ('images', ('.png', '.jpg')), ('media', ('.mp4', '.mp3')), ('presentations', ('.pptx', '.pdf'))])
+def test_drive_duplicate_checks_and_concurrent_uploads_distinguish_extensions(provider, category, extensions):
+    folder = CloudItem(category, category, folder=True, category=category)
+    first = CloudItem('first', 'Welcome' + extensions[0], category=category, created='2026-10-09T01:00:00Z')
+    second = CloudItem('second', 'Welcome' + extensions[1], category=category, created='2026-10-09T02:00:00Z')
+    provider.type_folder = MagicMock(return_value=folder)
+    provider.list_folder = MagicMock(return_value=([first, second], ''))
+    provider.delete = MagicMock()
+    assert GoogleDriveProvider.find_item(provider, folder, category, 'WELCOME',
+                                         extension=extensions[0].upper()) is first
+    assert GoogleDriveProvider.find_item(provider, folder, category, 'Welcome', extension=extensions[1]) is second
+    assert GoogleDriveProvider.check_new_name(provider, second, folder) is second
+    provider.delete.assert_not_called()

@@ -40,7 +40,7 @@ from openlp.core.lib.plugin import StringContent
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.folders import AddFolderForm, ChooseFolderForm
 from openlp.core.ui.icons import UiIcons
-from openlp.core.widgets.views import TreeWidgetWithDnD
+from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
 from openlp.core.widgets.libraryview import LibraryView
 from openlp.core.widgets.mediapreview import MediaPreview
 from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
@@ -359,7 +359,7 @@ class FolderLibraryItem(MediaManagerItem):
 
     def _make_folder_tree_item(self, folder):
         item_count = len(folder.items) + len(folder.folders)
-        folder_item = QtWidgets.QTreeWidgetItem()
+        folder_item = FileTreeWidgetItem()
         folder_item.setText(0, f'{folder.name} ({item_count})' if item_count else folder.name)
         folder_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, folder)
         folder_item.setData(0, LIBRARY_FOLDER_ROLE, True)

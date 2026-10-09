@@ -31,7 +31,7 @@ def folder_reference(value):
     return folder_id, resource_key
 
 
-def validate_profile(value):
+def validate_google_profile(value):
     """Allowlist fields so imported/exported settings cannot carry tokens or custom OAuth endpoints."""
     if not isinstance(value, dict) or value.get('version') != 1 or value.get('provider') != 'google-drive':
         raise SyncError('Choose a Library Sync Google Drive connection file (version 1).')
@@ -62,6 +62,30 @@ def validate_profile(value):
     return {'version': 1, 'provider': 'google-drive',
             'name': name.strip(), 'installed': {'client_id': client_id, 'client_secret': secret},
             'folders': clean_folders}
+
+
+def validate_local_profile(value):
+    """Local profiles carry a folder location, never credentials or arbitrary item paths."""
+    name, path = value.get('name'), value.get('path')
+    if not isinstance(name, str) or not name.strip() or len(name) > 200:
+        raise SyncError('Invalid connection name.')
+    if not isinstance(path, str) or not path or len(path) > 4096 or '\x00' in path or not Path(path).is_absolute():
+        raise SyncError('Choose an absolute path to a local storage folder.')
+    return {'version': 1, 'provider': 'local-cloud', 'name': name.strip(), 'path': str(Path(path)),
+            'folders': [{'id': '.', 'name': name.strip(), 'resource_key': ''}]}
+
+
+PROFILE_VALIDATORS = {'google-drive': validate_google_profile, 'local-cloud': validate_local_profile}
+
+
+def validate_profile(value):
+    """Dispatch to a provider's allowlist before storing or sharing configuration."""
+    if not isinstance(value, dict) or value.get('version') != 1:
+        raise SyncError('Choose a Library Sync connection file (version 1).')
+    provider = value.get('provider')
+    if not isinstance(provider, str) or provider not in PROFILE_VALIDATORS:
+        raise SyncError('This cloud provider is not supported.')
+    return PROFILE_VALIDATORS[provider](value)
 
 
 def serialize_profile(profile):

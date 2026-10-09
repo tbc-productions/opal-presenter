@@ -32,8 +32,8 @@ from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.widgets.views import FileTreeWidgetItem, ListPreviewWidget, ListWidgetWithDnD, TreeWidgetWithDnD, \
-    handle_mime_data_urls
+from openlp.core.widgets.views import (
+    DataGridWithDnD, FileTreeWidgetItem, ListPreviewWidget, ListWidgetWithDnD, TreeWidgetWithDnD, handle_mime_data_urls)
 from openlp.core.ui.icons import UiIcons
 from tests.utils.osdinteraction import read_service_from_file
 
@@ -614,7 +614,7 @@ def test_treewidgetwithdnd_setup_columns(qapp):
 
 
 def test_treewidgetwithdnd_keeps_first_column_wide_enough(qapp):
-    """The first column keeps at least 70 percent of the visible width."""
+    """The first column keeps its configured minimum share of the visible width."""
     widget = TreeWidgetWithDnD(name='Test')
 
     widget.resize(500, 300)
@@ -841,3 +841,48 @@ def test_collection_custom_label_is_shown_in_preview_and_live(preview_widget):
     preview_widget.replace_service_item(item, 0, 0)
     assert preview_widget.item(0, 0).text() == 'Welcome label'
     assert item.display_slides[0]['text'] == 'Projected custom slide words'
+
+
+@pytest.mark.parametrize('tree_type,name', [
+    (TreeWidgetWithDnD, 'Test'), (TreeWidgetWithDnD, 'images'), (DataGridWithDnD, 'Test')])
+def test_library_columns_fit_metadata_and_preserve_manual_widths(qapp, qtbot, tree_type, name):
+    from fluentqt import Spacing
+    widget = tree_type(name=name)
+    qtbot.addWidget(widget)
+    widget.resize(1000, 400)
+    widget.setup_columns(['Name', 'File Type', 'Size', 'Updated'])
+    widget.show()
+    date = '09/10/2026 08:23:45'
+    widget.addTopLevelItem(QtWidgets.QTreeWidgetItem(['Welcome', 'PNG', '700 KB', date]))
+    qtbot.wait(20)
+    assert widget.columnWidth(3) >= widget.fontMetrics().horizontalAdvance(date) + 2 * Spacing.Medium
+    assert widget.columnWidth(1) < widget.columnWidth(3)
+    assert sum(widget.columnWidth(i) for i in range(4)) == widget.viewport().width()
+    assert widget.horizontalScrollBar().maximum() == 0
+    widget.header().resizeSection(3, 280)
+    widget.topLevelItem(0).setText(2, '123.4 MB')
+    widget.resize(1100, 400)
+    qtbot.wait(20)
+    assert widget.columnWidth(3) == 280
+    assert sum(widget.columnWidth(i) for i in range(4)) == widget.viewport().width()
+
+
+@pytest.mark.parametrize('tree_type', [TreeWidgetWithDnD, DataGridWithDnD])
+@pytest.mark.parametrize('column', [0, 1, 2])
+@pytest.mark.parametrize('order', [QtCore.Qt.SortOrder.AscendingOrder, QtCore.Qt.SortOrder.DescendingOrder])
+def test_file_lists_keep_folders_first_in_both_sort_directions(qapp, qtbot, tree_type, column, order):
+    from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
+    tree = tree_type(name='Test')
+    qtbot.addWidget(tree)
+    tree.setup_columns(['Name', 'Size', 'Updated'])
+    for name, folder, size, date in [('Zulu folder', True, 80, 8), ('Alpha file', False, 20, 2),
+                                     ('Beta folder', True, 10, 1), ('Zulu file', False, 90, 9)]:
+        item = FileTreeWidgetItem([name, str(size), str(date)])
+        item.setData(0, LIBRARY_FOLDER_ROLE, folder)
+        item.set_sort_data(1, size)
+        item.set_sort_data(2, date)
+        tree.addTopLevelItem(item)
+    tree.sortByColumn(column, order)
+    expected = ['Beta folder', 'Zulu folder', 'Alpha file', 'Zulu file'] if \
+        order == QtCore.Qt.SortOrder.AscendingOrder else ['Zulu folder', 'Beta folder', 'Zulu file', 'Alpha file']
+    assert [tree.topLevelItem(i).text(0) for i in range(4)] == expected

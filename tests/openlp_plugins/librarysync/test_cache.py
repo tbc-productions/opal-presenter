@@ -61,6 +61,19 @@ def test_preview_reuse_checks_version_and_keeps_active_copy_after_clear(profile,
     assert not cache.preview(item, destination)
 
 
+def test_rendered_slides_cache_is_separate_from_original_and_cover(profile, cache_root, tmp_path):
+    cache = CloudCache(profile, 'account')
+    item = CloudItem('deck', 'Welcome.pptx', category='presentations', size=100, version='1')
+    rendered, destination = tmp_path / 'rendered.pdf', tmp_path / 'active.pdf'
+    rendered.write_bytes(b'%PDF-1.4 rendered slides')
+    cache.save_preview(item, rendered, slides=True)
+    assert cache.preview(item, destination, slides=True)
+    assert destination.read_bytes() == rendered.read_bytes()
+    assert not cache.preview(item, destination)
+    assert not cache.preview(item, destination, cover=True)
+    assert not cache.preview(replace(item, version='2'), destination, slides=True)
+
+
 def test_corrupt_preview_size_is_a_cache_miss(profile, cache_root, tmp_path):
     cache = CloudCache(profile, 'account')
     item = CloudItem('image', 'Welcome.png', category='images', size=20, version='1')
