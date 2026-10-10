@@ -14,6 +14,7 @@
   },
   "scripts": {
     "test": "jasmine-browser-runner runSpecs --config=jasmine-browser.mjs",
+    "test:stress": "jasmine-browser-runner runSpecs --config=jasmine-stress.mjs",
     "lint": "eslint openlp/core/display/html/display*.js",
     "test:serve": "jasmine-browser-runner serve --config=jasmine-browser.mjs"
   },

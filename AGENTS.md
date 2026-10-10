@@ -15,3 +15,8 @@ are in `openlp/core/widgets/fluent_dialogs.py`, exported through
 - Verify changed dialogs visually and run the relevant regression tests. Check
   long text, narrow hosts and keyboard submission as well as mouse clicks.
 - Use Australian English in documentation, commits and pull requests.
+
+# Naming
+
+- Use Opal for all new internal names, including environment variables,
+  identifiers and namespaces. Do not introduce new OpenLP names.
