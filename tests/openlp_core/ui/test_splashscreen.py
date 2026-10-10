@@ -31,7 +31,7 @@ from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
 from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
@@ -49,9 +49,14 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.iconSize() == QtCore.QSize(128, 128)
     assert isinstance(splash, fluentqt.SplashScreen)
     assert splash.objectName() == 'splashScreen'
-    assert splash.size() == QtCore.QSize(793, 496)
+    assert splash.size() == QtCore.QSize(640, 400)
     assert not splash._artwork.isNull()
-    assert splash._artwork.size() == splash.size() * 2
+    assert splash._artwork.size() == QtCore.QSize(1586, 992)
+    assert splash._logo.size() == QtCore.QSize(512, 512)
+    assert splash._logo.hasAlphaChannel()
+    assert splash._title_font.pixelSize() == 48
+    assert splash._title_font.weight() == QtGui.QFont.Weight.Normal
+    assert splash._title_font.family() == fluentqt.font_for_role(fluentqt.FontRole.Body).family()
     assert splash.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
@@ -81,7 +86,8 @@ def test_loading_lines_align_with_artwork(mock_settings, qtbot, theme):
         status = splash.findChild(fluentqt.Label, 'splashStatusText')
         percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
         for label in (status, percentage):
-            assert label.x() == 350
+            assert label.x() == 282
+            assert label.height() == 20
             assert label.alignment() & QtCore.Qt.AlignmentFlag.AlignLeft
             assert label.palette().color(label.foregroundRole()) == QtCore.Qt.GlobalColor.white
             assert splash.rect().contains(label.geometry())

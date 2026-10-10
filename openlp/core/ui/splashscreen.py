@@ -45,6 +45,10 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setWindowTitle('Opal Presenter')
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
         self._artwork = QtGui.QPixmap(':/graphics/opal-presenter-startup.png')
+        self._logo = QtGui.QPixmap(':/icon/opal-presenter-logo-512x512.png')
+        self._title_font = fluentqt.font_for_role(fluentqt.FontRole.Body)
+        self._title_font.setPixelSize(48)
+        self._title_font.setWeight(QtGui.QFont.Weight.Normal)
         self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
         self.setIcon(QtGui.QIcon(':/icon/opal-presenter.png'))
         self.setIconSize(QtCore.QSize(128, 128))
@@ -56,7 +60,7 @@ class SplashScreen(fluentqt.SplashScreen):
         self._status_timer.timeout.connect(self._update_status_text)
         # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
-        self.setFixedSize(793, 496)
+        self.setFixedSize(640, 400)
         ring = self.findChild(fluentqt.ProgressRing, 'splashProgressRing')
         ring.setStrokeWidth(1.5)
         fluentqt.set_widget_theme_overrides(ring, {
@@ -64,10 +68,17 @@ class SplashScreen(fluentqt.SplashScreen):
         self._refresh_progress_display()
 
     def paintEvent(self, event):
-        """The supplied artwork includes the logo, title and rounded border."""
+        """Compose the background, transparent logo and live title text."""
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
         painter.drawPixmap(self.rect(), self._artwork)
+        painter.scale(self.width() / 793, self.height() / 496)
+        painter.drawPixmap(QtCore.QRect(115, 102, 226, 226), self._logo)
+        painter.setFont(self._title_font)
+        painter.setPen(QtCore.Qt.GlobalColor.white)
+        title = self.windowTitle()
+        left_bearing = QtGui.QFontMetrics(self._title_font).tightBoundingRect(title).left()
+        painter.drawText(QtCore.QPoint(350 - left_bearing, 239), title)
 
     def showEvent(self, event):
         """Native show refreshes progress; retain the indeterminate spinner."""
@@ -80,14 +91,15 @@ class SplashScreen(fluentqt.SplashScreen):
         """Keep the loading spinner independent of completed startup work."""
         ring = self.findChild(fluentqt.ProgressRing, 'splashProgressRing')
         ring.setIsIndeterminate(True)
-        # The artwork's title starts at pixel 700; display the image at half size.
+        # Align loading text with the title as the branding scales down.
+        scale = self.width() / 793
         for name, top in (('splashStatusText', 263), ('splashPercentage', 291)):
             label = self.findChild(fluentqt.Label, name)
             label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
             label.setWordWrap(False)
             label.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
             label.setStyleSheet('color: white; background: transparent;')
-            label.setGeometry(350, top, 340, 20)
+            label.setGeometry(round(350 * scale), round(top * scale), round(340 * scale), 20)
         percentage = self.findChild(fluentqt.Label, 'splashPercentage')
         ring.setFixedSize(16, 16)
         ring.move(percentage.x() + percentage.fontMetrics().horizontalAdvance(percentage.text()) + 8,
