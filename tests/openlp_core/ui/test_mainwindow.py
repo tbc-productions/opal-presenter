@@ -142,6 +142,71 @@ def test_modern_factory_layout_has_usable_library_height(modern_appearance, main
     assert library.dockAreaWidget().currentDockWidget() is library
 
 
+@pytest.mark.parametrize('width', [1000, 1200, 1600])
+@pytest.mark.parametrize('mode', ['default', 'setup', 'live', 'librarysync'])
+def test_factory_presets_reserve_controller_space(main_window, settings, width, mode):
+    """Large Library size hints must not squeeze the controllers to slivers."""
+    from openlp.core.ui.advanceddocking import AdvancedDockWidget
+    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, **kwargs):
+        widget = QtWidgets.QWidget(parent)
+        widget.show_display = MagicMock()
+        widget.set_scale = MagicMock()
+        return widget
+
+    class WideLibrary(QtWidgets.QLabel):
+        def sizeHint(self):
+            return QtCore.QSize(1200, 600)
+
+    main_window.media_manager_dock.setWidget(WideLibrary('Library'))
+    main_window.cloud_library_dock = AdvancedDockWidget(main_window, 'cloud_library_dock')
+    main_window.cloud_library_dock.setWidget(QtWidgets.QLabel('Cloud Library'))
+    main_window.cloud_library_dock.setDockVisible(False)
+    main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, main_window.cloud_library_dock)
+    controllers = (PreviewController(main_window), LiveController(main_window))
+    for controller in controllers:
+        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        main_window.dock_slide_controller(controller)
+    main_window._preview_controller, main_window._live_controller = controllers
+    main_window.resize(width, 800)
+    QtWidgets.QWidget.setVisible(main_window, True)
+    QtWidgets.QApplication.processEvents()
+    main_window._activate_layout_preset(mode)
+    QtWidgets.QApplication.processEvents()
+    available = main_window.dock_manager.width()
+    if mode == 'librarysync':
+        library_width = main_window.media_manager_dock.width()
+        cloud_width = main_window.cloud_library_dock.width()
+        assert library_width / available == pytest.approx(0.5, abs=0.03)
+        assert cloud_width / available == pytest.approx(0.5, abs=0.03)
+    else:
+        preview_width = main_window.preview_controller_dock.width()
+        assert preview_width / available >= 0.30
+        if mode != 'setup':
+            live_width = main_window.live_controller_dock.width()
+            assert live_width / available >= 0.30
+            if mode == 'live':
+                assert live_width > preview_width
+            else:
+                assert live_width == pytest.approx(preview_width, abs=2)
+        assert main_window.service_manager_dock.width() >= 190
+    measured_docks = (main_window.media_manager_dock, main_window.service_manager_dock,
+                      main_window.preview_controller_dock, main_window.live_controller_dock,
+                      main_window.cloud_library_dock)
+    sizes = [dock.dockAreaWidget().width() for dock in measured_docks if dock.isDockOpen()]
+    main_window._activate_layout_preset('live' if mode == 'default' else 'default')
+    QtWidgets.QApplication.processEvents()
+    main_window._activate_layout_preset(mode)
+    QtWidgets.QApplication.processEvents()
+    assert [dock.dockAreaWidget().width() for dock in measured_docks if dock.isDockOpen()] == \
+        pytest.approx(sizes, abs=2)
+    QtWidgets.QWidget.setVisible(main_window, False)
+
+
 @pytest.mark.parametrize('saved_tab', [None, 'media_manager_dock', 'theme_manager_dock', 'legacy', 'detached'])
 @patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
 def test_live_preset_groups_left_docks_and_defaults_to_service(mock_schedule, saved_tab, main_window, settings):

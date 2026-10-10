@@ -1581,6 +1581,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self._set_cloud_library_visibility(mode)
         if has_saved:
             self._deferred_apply_left_column_dock_layout()
+        else:
+            self._ensure_left_column_dock_sizes()
 
     def _set_cloud_library_visibility(self, mode):
         dock = getattr(self, 'cloud_library_dock', None)
@@ -1831,7 +1833,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
     def _reapply_left_column_dock_layout_setup(self) -> None:
         """
         Setup preset: full-height Library + Themes (tabified) | full-height Service, with
-        Preview over Live in the central column — three vertical bands (see View → Setup).
+        Preview on the right — three vertical bands (see View → Prepare).
         """
         for dock in (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock):
             dock.setFloating(False)
@@ -1853,42 +1855,28 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         )
         if not (show_lib or show_svc or show_thm):
             return
-        width = self.width()
-        height = self.height()
+        width = self.dock_manager.width()
+        height = self.dock_manager.height()
         if width <= 0 or height <= 0:
             return
         mode = self.settings.value('core/view mode')
         if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
-            self.resizeDocks([self.media_manager_dock, self.cloud_library_dock],
-                             [max(320, width // 2)] * 2, QtCore.Qt.Orientation.Horizontal)
-            return
-        # Setup: Service | Library+Themes horizontally — size both columns so Library is not squeezed.
-        if (
-            mode == 'setup'
-            and self.settings.value('user interface/is preset layout')
-            and show_svc
-            and show_lib
-        ):
-            # Favour a wider Library column in Setup mode so tabs fit on one row on common display widths.
-            svc_w = max(200, min(300, int(width * 0.10)))
-            lib_w = max(680, min(1200, int(width * 0.52)))
-            try:
-                self.resizeDocks(
-                    [self.media_manager_dock, self.service_manager_dock],
-                    [lib_w, svc_w],
-                    QtCore.Qt.Orientation.Horizontal)
-            except (TypeError, AttributeError):
-                pass
-            return
-        target_w = max(300, min(520, int(width * 0.26)))
-        ref = self.service_manager_dock if show_svc else self.media_manager_dock
-        try:
-            self.resizeDocks([ref], [target_w], QtCore.Qt.Orientation.Horizontal)
-        except (TypeError, AttributeError):
-            pass
-        if getattr(self, 'dock_manager', None) and mode != 'live' and show_svc and (show_lib or show_thm):
+            docks = [self.media_manager_dock, self.cloud_library_dock]
+            weights = [50, 50]
+        elif mode == 'setup':
+            docks = [self.media_manager_dock, self.service_manager_dock, self.preview_controller_dock]
+            weights = [42, 22, 36]
+        else:
+            ref = self.service_manager_dock if show_svc else self.media_manager_dock
+            docks = [ref, self.preview_controller_dock, self.live_controller_dock]
+            weights = [22, 34, 44] if mode == 'live' else [28, 36, 36]
+        # Reserve the controllers' share explicitly; Library size hints must not consume the remainder.
+        self.resizeDocks(docks, [int(width * weight / 100) for weight in weights],
+                         QtCore.Qt.Orientation.Horizontal)
+        if mode == 'default' and show_svc and (show_lib or show_thm):
             self.resizeDocks([self.service_manager_dock, self.media_manager_dock],
                              [int(height * 0.35), int(height * 0.65)], QtCore.Qt.Orientation.Vertical)
+
     def _deferred_apply_left_column_dock_layout(self) -> None:
         """
         Place panes before opening them. Startup defers this until the window is shown;

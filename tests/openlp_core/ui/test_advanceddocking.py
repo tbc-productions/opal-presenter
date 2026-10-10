@@ -46,6 +46,14 @@ def test_tabs_and_initially_closed_pane(workspace):
     assert not projectors.isClosed()
 
 
+def test_resize_docks_applies_sibling_sizes_together(workspace):
+    window, (service, library, _, _) = workspace
+    window.resizeDocks([service, library], [210, 390], QtCore.Qt.Orientation.Vertical)
+    splitter = service.dockAreaWidget().parentSplitter()
+    service_height, library_height = splitter.sizes()
+    assert service_height / (service_height + library_height) == pytest.approx(0.35, abs=0.01)
+
+
 def test_tabifying_existing_tabs_does_not_remove_and_reinsert_them(workspace):
     window, (_, library, themes, _) = workspace
     area = library.dockAreaWidget()

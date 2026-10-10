@@ -161,6 +161,7 @@ class AdvancedDockingMixin:
         return [item for item in area.dockWidgets() if item is not dock] if area else []
 
     def resizeDocks(self, docks, sizes, orientation):
+        pending = {}
         for dock, size in zip(docks, sizes):
             area = dock.dockAreaWidget()
             if not area:
@@ -173,9 +174,11 @@ class AdvancedDockingMixin:
                 if not isinstance(splitter, QtWidgets.QSplitter):
                     splitter = None
             if splitter:
-                values = splitter.sizes()
+                values = pending.setdefault(splitter, splitter.sizes())
                 values[splitter.indexOf(child)] = size
-                splitter.setSizes(values)
+        # Apply each split once so earlier sizes are not rescaled before later ones are assigned.
+        for splitter, values in pending.items():
+            splitter.setSizes(values)
 
     def saveState(self, version=0):
         return self.dock_manager.saveState(version)
