@@ -99,10 +99,12 @@ def test_save_flushes_inline_lyrics_before_syncing_owner(integrated):
 
 def test_save_syncs_content_design_and_theme_before_existing_validation(integrated):
     owner, editor = integrated
+    editor.slide_grid.source_action.trigger()
     editor.theme_combo_box.addItem('Ocean', 'Ocean')
     editor.slide_designer.load_design(owner.slide_design)
     editor.title_field.setText('Edited title')
-    editor.design_text_editor.setPlainText('---[Verse:2]---\nEdited' if editor.design_kind == 'song' else 'Edited')
+    editor.design_text_editor.selectAll()
+    editor.design_text_editor.insertPlainText('---[Verse:2]---\nEdited' if editor.design_kind == 'song' else 'Edited')
     finished = MagicMock()
     editor.finished.connect(finished)
     with patch.object(owner, 'accept') as accept:

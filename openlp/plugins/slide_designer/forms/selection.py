@@ -41,8 +41,8 @@ class SlideSelection:
         else:
             self.position_editor()
         for action in self.formatting_bar.actions():
-            if action not in self.designer.history_actions:
-                action.setEnabled(not selected)
+            if action not in [self.source_action, *self.designer.history_actions]:
+                action.setEnabled(not selected and not self.source_action.isChecked())
         self.viewport().update()
 
     def clear_grid_selection(self):

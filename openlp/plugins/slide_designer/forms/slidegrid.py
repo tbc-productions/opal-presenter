@@ -8,6 +8,7 @@ import fluentqt
 from PySide6 import QtCore, QtGui
 
 from openlp.core.common.i18n import translate
+from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.edits import FormattingTagDelegate
 from openlp.plugins.songs.forms.editversedialog import SongLyricsTextEdit
@@ -239,14 +240,7 @@ class SlideCellEditor(SongLyricsTextEdit):
             self._updating_block_formats = False
 
     def createStandardContextMenu(self):
-        menu = super().createStandardContextMenu()
-        stack = self.parentWidget().parentWidget().designer.undo_stack
-        for action in menu.actions():
-            if action.objectName() in ('edit-undo', 'edit-redo'):
-                undo = action.objectName() == 'edit-undo'
-                action.triggered.disconnect()
-                action.triggered.connect(stack.undo if undo else stack.redo)
-                action.setEnabled(stack.canUndo() if undo else stack.canRedo())
+        menu = self.slide_grid.history_menu(super().createStandardContextMenu())
         if hasattr(self, 'slide_grid'):
             menu.addSeparator()
             menu.addAction(tr('Select slide'), lambda: self.slide_grid.select_slide_rows({self.slide_grid.active_row}))
@@ -329,11 +323,18 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
         self.formatting_bar.addAction(styles)
         for action in trailing:
             self.formatting_bar.addAction(action)
+        self.source_action = QtGui.QAction(fluent_icon('ic_fluent_code_24_regular'), tr('Source'), self)
+        self.source_action.setCheckable(True)
+        self.source_action.setToolTip(tr('Edit source'))
+        self.source_action.toggled.connect(self.set_source_mode)
+        self.formatting_bar.addAction(self.source_action)
         self.formatting_bar.addSeparator(standalone=True)
         for action in self.designer.history_actions:
             action.setParent(self.formatting_bar)
             self.formatting_bar.addAction(action)
         self.cell_editor._editor.installEventFilter(self)
+        source._editor.installEventFilter(self)
+        source._editor.viewport().installEventFilter(self)
         self.cell_editor.textChanged.connect(self.cell_changed)
         self.cell_editor.cursorPositionChanged.connect(self.sync_source_cursor)
         source.textChanged.connect(self.source_changed)
@@ -344,6 +345,25 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
         self.horizontalHeader().sectionResized.connect(self.resize_rows)
         self.setup_selection()
         self.reload()
+
+    def active_text_editor(self):
+        return self.source if self.source_action.isChecked() else self.cell_editor
+
+    def set_source_mode(self, enabled):
+        self.designer.commit_text()
+        self.clear_grid_selection()
+        self.form.text_editor_stack.setCurrentWidget(self.source if enabled else self)
+        self.active_text_editor().setFocus()
+
+    def history_menu(self, menu):
+        stack = self.designer.undo_stack
+        for action in menu.actions():
+            if action.objectName() in ('edit-undo', 'edit-redo'):
+                undo = action.objectName() == 'edit-undo'
+                action.triggered.disconnect()
+                action.triggered.connect(stack.undo if undo else stack.redo)
+                action.setEnabled(stack.canUndo() if undo else stack.canRedo())
+        return menu
 
     def fallback_label(self):
         if self.kind == 'song':
@@ -576,7 +596,7 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
             self.source.setTextCursor(cursor)
             self.designer.restore(design)
             self.reload()
-            self.cell_editor.setFocus()
+            self.active_text_editor().setFocus()
         finally:
             self._replaying = False
 
@@ -593,7 +613,12 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
         self.cell_editor.setFocus()
 
     def eventFilter(self, watched, event):
-        if hasattr(self, 'cell_editor') and watched is self.cell_editor._editor.viewport():
+        if watched is self.source._viewport and event.type() == QtCore.QEvent.Type.ContextMenu:
+            menu = self.history_menu(self.source.createStandardContextMenu())
+            menu.exec(event.globalPos())
+            menu.deleteLater()
+            return True
+        if hasattr(self, 'cell_editor') and watched is self.cell_editor._viewport:
             point = (watched.mapTo(self.viewport(), event.position().toPoint())
                      if isinstance(event, QtGui.QMouseEvent) else None)
             if (event.type() == QtCore.QEvent.Type.MouseButtonPress
@@ -606,13 +631,15 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
             elif event.type() == QtCore.QEvent.Type.MouseButtonRelease:
                 if self.selection_release():
                     return True
-        if (hasattr(self, 'cell_editor') and watched is self.cell_editor._editor
+        if (hasattr(self, 'cell_editor') and watched in (self.cell_editor._editor, self.source._editor)
                 and event.type() == QtCore.QEvent.Type.KeyPress):
             for key, action in ((QtGui.QKeySequence.StandardKey.Undo, self.designer.undo_stack.undo),
                                 (QtGui.QKeySequence.StandardKey.Redo, self.designer.undo_stack.redo)):
                 if event.matches(key):
                     action()
                     return True
+            if watched is self.source._editor:
+                return super().eventFilter(watched, event)
             cursor = self.cell_editor.textCursor()
             if (event.key() == QtCore.Qt.Key.Key_Backspace and not cursor.hasSelection()
                     and cursor.position() in (0, qt_length(self.cell_prefix()))):

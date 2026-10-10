@@ -1847,13 +1847,22 @@ class SlideDesignerDialogMixin:
         text_layout.addLayout(text_header)
         from openlp.plugins.slide_designer.forms.slidegrid import SlideGrid
         editor.hide()
+        editor._toolbar.hide()
+        editor._toolbar = None
+        editor.setAccessibleName(tr('Song source') if kind == 'song' else tr('Slide source'))
+        editor.set_rich_text_mode(False)
+        if kind == 'song':
+            self.update_section_tag_highlighting()
         self.slide_grid = SlideGrid(self, editor, kind)
-        text_layout.addWidget(self.slide_grid, 1)
+        self.text_editor_stack = QtWidgets.QStackedWidget()
+        self.text_editor_stack.addWidget(self.slide_grid)
+        self.text_editor_stack.addWidget(editor)
+        text_layout.addWidget(self.text_editor_stack, 1)
         self.designer_text_controls(text_layout, kind)
         split_buttons = ((self.insert_button, self.split_button) if kind == 'custom' else
                          (self.insert_button, self.forced_split_button, self.overflow_split_button))
         for button in split_buttons:
-            button.clicked.connect(lambda: self.slide_grid.cell_editor.setFocus())
+            button.clicked.connect(lambda: self.slide_grid.active_text_editor().setFocus())
         self.editor_splitter.addWidget(text_panel)
         self.editor_splitter.addWidget(self.slide_designer)
         self.editor_splitter.setStretchFactor(1, 1)

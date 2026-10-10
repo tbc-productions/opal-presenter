@@ -44,7 +44,7 @@ class SongLyricsTextEdit(SpellTextEdit):
         self.parse_section_labels = False
 
     def insertFromMimeData(self, source):
-        if not self.parse_section_labels or not source.hasText():
+        if not self.rich_text_mode or not self.parse_section_labels or not source.hasText():
             return super().insertFromMimeData(source)
 
         lines = []
