@@ -51,6 +51,45 @@ def test_cell_edit_updates_source_and_undo(form):
     assert grid.cell_editor.toPlainText() == 'Verse 1\nFirst line\nSecond line!'
 
 
+def test_typing_keeps_heading_and_lyrics_horizontal_positions_stable(form, qtbot):
+    grid = form.slide_grid
+    grid.resize(360, 480)
+    grid.resize_rows()
+    editor = grid.cell_editor
+    heading = QtGui.QTextCursor(editor.document().firstBlock())
+    lyrics = QtGui.QTextCursor(editor.document().firstBlock().next())
+    origins = []
+
+    def record_origins(*args):
+        origins.append((editor.cursorRect(heading).x(), editor.cursorRect(lyrics).x()))
+
+    record_origins()
+    editor.document().contentsChanged.connect(record_origins)
+    editor.document().documentLayout().documentSizeChanged.connect(record_origins)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    qtbot.keyClicks(editor._editor, ' typing across wrapped lines' * 5)
+    qtbot.keyClick(editor._editor, QtCore.Qt.Key.Key_Return)
+    qtbot.keyClicks(editor._editor, 'New line')
+    qtbot.keyClick(editor._editor, QtCore.Qt.Key.Key_Backspace)
+    assert len(origins) > 1
+    assert set(origins) == {origins[0]}
+
+
+@pytest.mark.parametrize('text,has_heading', [('Verse 1\nLyrics', True), ('Ordinary lyrics', False)])
+def test_section_background_covers_cell_edges_and_vertical_padding(form, text, has_heading):
+    editor = form.slide_grid.paint_editor
+    editor.setPlainText(text)
+    editor.document().setTextWidth(360)
+    height = round(editor.document().firstBlock().blockFormat().lineHeight()) if has_heading else 25
+    image = QtGui.QImage(360, height, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtCore.Qt.GlobalColor.white)
+    painter = QtGui.QPainter(image)
+    editor.paint_heading_backgrounds(painter, image.width())
+    painter.end()
+    assert (image.pixelColor(0, 0) != QtGui.QColor('white')) == has_heading
+    assert image.pixelColor(0, 0) == image.pixelColor(image.width() - 1, height - 1)
+
+
 def test_split_creates_row_and_backspace_merges_with_undo(form, qtbot):
     grid = form.slide_grid
     cursor = grid.cell_editor.textCursor()
@@ -379,9 +418,11 @@ def test_row_text_geometry_stays_the_same_when_selected(form):
         heading = grid.cell_editor.document().firstBlock()
         rect = grid.cell_editor.document().documentLayout().blockBoundingRect(heading)
         assert rect.left() == 0
-        assert heading.blockFormat().rightMargin() == 0
+        assert heading.blockFormat().rightMargin() == grid.cell_editor.TEXT_INSET
         assert grid.cell_editor.geometry() == grid.visualRect(grid.model().index(row, 0))
-        assert heading.blockFormat().textIndent() == grid.cell_editor.TEXT_INSET
+        assert heading.blockFormat().textIndent() == 0
+        line_height = grid.cell_editor._editor.fontMetrics().lineSpacing() + 2 * grid.cell_editor.LABEL_PADDING
+        assert heading.blockFormat().lineHeight() == line_height
 
 
 def test_properties_is_the_only_sidebar_toggle_and_drawers_stay_present(form):

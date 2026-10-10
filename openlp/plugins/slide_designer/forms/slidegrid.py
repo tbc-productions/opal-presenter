@@ -155,6 +155,7 @@ class SlideContentDelegate(FormattingTagDelegate):
             painter.save()
             painter.setClipRect(option.rect)
             painter.translate(option.rect.topLeft())
+            editor.paint_heading_backgrounds(painter, editor._editor.viewport().width())
             context = QtGui.QAbstractTextDocumentLayout.PaintContext()
             context.palette = option.palette
             context.selections = self.parent().selection_paint_context(index.row(), editor, option.palette)
@@ -213,9 +214,9 @@ class SlideCellEditor(SongLyricsTextEdit):
     def _refresh_block_formats(self):
         if self._updating_block_formats:
             return
-        super()._refresh_block_formats()
         if not self.song_headings:
-            return
+            return super()._refresh_block_formats()
+        # A base formatting pass would temporarily move every heading before this pass restores it.
         self._updating_block_formats = True
         cursor = QtGui.QTextCursor(self.document())
         cursor.joinPreviousEditBlock()
@@ -224,13 +225,17 @@ class SlideCellEditor(SongLyricsTextEdit):
             while block.isValid():
                 label = heading_identity(block.text())
                 desired = QtGui.QTextBlockFormat(block.blockFormat())
-                desired.setBackground(section_colour(label)
-                                      if label else QtGui.QBrush(QtCore.Qt.BrushStyle.NoBrush))
-                desired.setTopMargin(4 if label else 0)
-                desired.setBottomMargin(4 if label else 0)
-                desired.setLeftMargin(0 if label else self.TEXT_INSET)
-                desired.setRightMargin(0 if label else self.TEXT_INSET)
-                desired.setTextIndent(self.TEXT_INSET if label else 0)
+                desired.setBackground(QtGui.QBrush(QtCore.Qt.BrushStyle.NoBrush))
+                desired.setTopMargin(0)
+                desired.setBottomMargin(0)
+                desired.setLeftMargin(self.TEXT_INSET)
+                desired.setRightMargin(self.TEXT_INSET)
+                desired.setTextIndent(0)
+                desired.setNonBreakableLines(bool(label))
+                desired.setLineHeight(
+                    self._editor.fontMetrics().lineSpacing() + 2 * self.LABEL_PADDING if label else 100,
+                    (QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight if label else
+                     QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight).value)
                 if desired != block.blockFormat():
                     cursor.setPosition(block.position())
                     cursor.setBlockFormat(desired)
@@ -238,6 +243,27 @@ class SlideCellEditor(SongLyricsTextEdit):
         finally:
             cursor.endEditBlock()
             self._updating_block_formats = False
+
+    def paint_heading_backgrounds(self, painter, width):
+        if not self.song_headings:
+            return
+        block = self.document().begin()
+        while block.isValid():
+            label = heading_identity(block.text())
+            if label:
+                rect = self.blockBoundingRect(block)
+                rect.setLeft(0)
+                rect.setWidth(width)
+                painter.fillRect(rect, section_colour(label))
+            block = block.next()
+
+    def eventFilter(self, watched, event):
+        if watched is self._viewport and event.type() == QtCore.QEvent.Type.Paint:
+            painter = QtGui.QPainter(watched)
+            painter.translate(0, -self._editor.verticalScrollBar().value())
+            self.paint_heading_backgrounds(painter, watched.width())
+            painter.end()
+        return super().eventFilter(watched, event)
 
     def createStandardContextMenu(self):
         menu = self.slide_grid.history_menu(super().createStandardContextMenu())
