@@ -228,3 +228,28 @@ def test_web_import_uses_spinner_and_local_import_keeps_progress_bar(import_form
     import_form.pre_wizard()
     assert not import_form.progress_bar.isHidden()
     assert import_form.import_spinner.isHidden()
+
+
+@pytest.mark.parametrize('web_import', [True, False])
+@pytest.mark.parametrize('size', [(640, 540), (460, 380)])
+def test_import_status_stays_below_instructions_without_large_gaps(import_form, qtbot, web_import, size):
+    from openlp.plugins.bibles.lib.manager import BibleFormat
+    qtbot.addWidget(import_form)
+    import_form.setStartId(import_form.pageIds()[-1])
+    with patch.object(import_form, 'perform_wizard'), patch.object(import_form, 'post_wizard'):
+        import_form.restart()
+        import_form.resize(*size)
+        import_form.show()
+    import_form.format_combo_box.setCurrentIndex(BibleFormat.WebDownload if web_import else BibleFormat.OSIS)
+    import_form.pre_wizard()
+    import_form.progress_label.setText('Registering language for a translation with a long name. ' * 3)
+    QtWidgets.QApplication.processEvents()
+    page = import_form.progress_page
+    description_bottom = page.description.mapTo(page, QtCore.QPoint(0, page.description.height())).y()
+    status_top = import_form.progress_label.mapTo(page, QtCore.QPoint()).y()
+    status_bottom = import_form.progress_label.mapTo(page, QtCore.QPoint(0, import_form.progress_label.height())).y()
+    indicator = import_form.import_spinner if web_import else import_form.progress_bar
+    indicator_top = indicator.mapTo(page, QtCore.QPoint()).y()
+    assert 0 <= status_top - description_bottom <= 32
+    assert 0 <= indicator_top - status_bottom <= 16
+    assert import_form.cancel_button.isVisible()

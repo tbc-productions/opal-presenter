@@ -169,6 +169,7 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
         self.progress_page.setObjectName('progress_page')
         self.progress_layout = QtWidgets.QVBoxLayout(self.progress_page)
         self.progress_layout.setContentsMargins(48, 48, 48, 48)
+        self.progress_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.progress_layout.setObjectName('progress_layout')
         self.progress_label = QtWidgets.QLabel(self.progress_page)
         self.progress_label.setObjectName('progress_label')
