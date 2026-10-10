@@ -33,7 +33,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib import check_item_selected
 from openlp.core.lib.itemexport import export_item_dialog, suggested_item_export_path, write_item_service
 from openlp.core.lib.mediamanageritem import MediaManagerItem
-from openlp.core.lib.plugin import PluginStatus
+from openlp.core.lib.plugin import PluginStatus, StringContent
 from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action
 from openlp.core.ui.icons import UiIcons
@@ -79,6 +79,10 @@ class CustomMediaItem(MediaManagerItem):
         super().required_icons()
         self.add_to_service_item = True
         self.has_import_icon = True
+        self.has_new_icon = False
+
+    def add_start_header_bar(self):
+        self.add_actionlist_to_toolbar([['New', StringContent.New, UiIcons().new, self.on_new_click]])
 
     def on_selection_change(self):
         """

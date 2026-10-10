@@ -28,12 +28,49 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib.mediamanageritem import MediaManagerItem
 
 
+@pytest.mark.parametrize('name', ['images', 'media', 'presentations'])
+def test_empty_controls_panel_leaves_header_against_toolbar(qapp, settings, qtbot, name):
+    from PySide6 import QtCore
+    from openlp.core.ui.icons import UiIcons
+
+    plugin = MagicMock(name=name)
+    plugin.name = name
+    plugin.icon = UiIcons().picture
+    plugin.get_string.return_value = {'title': name, 'tooltip': name}
+    with patch('openlp.core.lib.ui.ActionList.get_instance'):
+        item = MediaManagerItem(None, plugin)
+    qtbot.addWidget(item)
+    item.resize(640, 500)
+    item.show()
+    qtbot.wait(20)
+    assert item.panel_widget.isHidden()
+    assert item.list_view.mapTo(item, QtCore.QPoint()).y() == item.toolbar.geometry().bottom() + 1
+
+
 @pytest.fixture
 def media_env(qapp):
     setup_patcher = patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup')
     setup_patcher.start()
     yield
     setup_patcher.stop()
+
+
+def test_custom_new_precedes_import_in_command_bar(qapp, settings, qtbot):
+    from openlp.core.widgets.toolbar import OpenLPToolbar
+    from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
+
+    plugin = MagicMock()
+    plugin.name = 'custom'
+    plugin.get_string.return_value = {'title': 'Custom Slides', 'tooltip': 'Custom Slides'}
+    with patch.object(MediaManagerItem, '_setup'), patch.object(CustomMediaItem, 'setup_item'):
+        item = CustomMediaItem(None, plugin)
+    qtbot.addWidget(item)
+    item.toolbar = OpenLPToolbar(item)
+    item.required_icons()
+    item.add_start_header_bar()
+    item.add_common_header_bar()
+    assert [action.objectName() for action in item.toolbar.actions()] == [
+        'customNewAction', 'customImportAction', 'customEditAction', 'customDeleteAction']
 
 
 @patch('openlp.core.lib.mediamanageritem.MediaManagerItem.on_preview_click')

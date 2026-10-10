@@ -255,9 +255,23 @@ def test_add_middle_header_bar(media_item: BibleMediaItem):
     assert media_item.options_tab is not None
     assert media_item.search_button_widget is not None
     assert media_item.results_view_tab is not None
+    assert media_item.clear_button.icon().name() == 'ic_fluent_eraser_24_regular'
     assert media_item.page_layout.addWidget.call_args_list[0] == call(media_item.search_tab_bar)
     assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.results_view_tab_container)
     assert media_item.page_layout.addWidget.call_count == 2
+
+
+def test_results_tabs_meet_bottom_of_action_row(media_item, qtbot):
+    media_item.page_layout = MagicMock()
+    media_item.add_middle_header_bar()
+    row = media_item.results_view_tab_container
+    qtbot.addWidget(media_item)
+    media_item.resize(640, 400)
+    row.resize(640, row.sizeHint().height())
+    row.show()
+    media_item.show()
+    qtbot.wait(20)
+    assert media_item.results_view_tab.geometry().bottom() == row.rect().bottom()
 
 
 def test_on_focus_search_tab_visible(media_item: BibleMediaItem):
@@ -767,8 +781,8 @@ def test_on_search_tab_bar_current_changed(media_item: BibleMediaItem, index: in
     media_item.on_focus.assert_called_once_with()
 
 
-def test_update_search_tab_bar_height_uses_frame_metric(media_item: BibleMediaItem):
-    """Test that the Bibles tabs use the widget frame metric in the height calculation."""
+def test_update_search_tab_bar_height_uses_fluent_content_height(media_item: BibleMediaItem):
+    """Fluent tabs need no extra frame or margins beyond the page size hint."""
     page = MagicMock()
     page.contentsMargins.return_value = QtCore.QMargins(0, 3, 0, 4)
     page.sizeHint.return_value = QtCore.QSize(100, 90)
@@ -783,11 +797,9 @@ def test_update_search_tab_bar_height_uses_frame_metric(media_item: BibleMediaIt
 
     media_item._update_search_tab_bar_height(0)
 
-    style.pixelMetric.assert_called_once_with(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth,
-                                              None,
-                                              media_item.search_tab_bar)
-    media_item.search_tab_bar.setMinimumHeight.assert_called_once_with(119)
-    media_item.search_tab_bar.setMaximumHeight.assert_called_once_with(119)
+    style.pixelMetric.assert_not_called()
+    media_item.search_tab_bar.setMinimumHeight.assert_called_once_with(110)
+    media_item.search_tab_bar.setMaximumHeight.assert_called_once_with(110)
 
 
 @pytest.mark.parametrize('index, widget_name', [(ResultsTab.Saved, 'saved_results'),

@@ -120,7 +120,7 @@ class BibleMediaItem(MediaManagerItem):
         :param args: Positional arguments to pass to the super method. (tuple)
         :param kwargs: Keyword arguments to pass to the super method. (dict)
         """
-        self.clear_icon = UiIcons().square
+        self.clear_icon = UiIcons().eraser
         self.save_results_icon = UiIcons().save
         self.sort_icon = UiIcons().sort
         self.bible = None
@@ -187,7 +187,7 @@ class BibleMediaItem(MediaManagerItem):
         self.search_tab = QtWidgets.QWidget()
         self.search_tab.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.search_layout = QtWidgets.QFormLayout(self.search_tab)
-        self.search_layout.setContentsMargins(4, 4, 4, 4)
+        self.search_layout.setContentsMargins(4, 4, 4, 0)
         self.search_layout.setSpacing(8)
         self.search_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.search_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -273,7 +273,7 @@ class BibleMediaItem(MediaManagerItem):
         self.results_view_tab_container_layout = QtWidgets.QHBoxLayout(self.results_view_tab_container)
         self.results_view_tab_container_layout.setContentsMargins(0, 0, 0, 0)
         self.results_view_tab_container_layout.setSpacing(0)
-        self.results_view_tab_container_layout.addWidget(self.results_view_tab, 1)
+        self.results_view_tab_container_layout.addWidget(self.results_view_tab, 1, QtCore.Qt.AlignmentFlag.AlignBottom)
         self.results_view_tab_container_layout.addWidget(self.search_button_widget)
         header_layout.addWidget(self.results_view_tab_container)
 
@@ -281,7 +281,7 @@ class BibleMediaItem(MediaManagerItem):
         super().setup_ui()
         # Let the tab bars span the full library width in the Bibles panel.
         self.panel_layout.setContentsMargins(0, 0, 0, 0)
-        self.panel_layout.setSpacing(4)
+        self.panel_layout.setSpacing(0)
         self.search_tab_bar._pages.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                                 QtWidgets.QSizePolicy.Policy.Ignored)
         # Keep the header compact and let the results list consume available height.
@@ -565,12 +565,9 @@ class BibleMediaItem(MediaManagerItem):
         page = self.search_tab_bar.widget(index)
         if page is None:
             return
-        page_margins = page.contentsMargins()
-        page_height = page.sizeHint().height() + page_margins.top() + page_margins.bottom()
+        page_height = page.sizeHint().height()
         tab_bar_height = self.search_tab_bar.tabBar().sizeHint().height()
-        frame = self.search_tab_bar.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth,
-                                                        None, self.search_tab_bar) * 2
-        total_height = tab_bar_height + page_height + frame
+        total_height = tab_bar_height + page_height
         self.search_tab_bar.setMinimumHeight(total_height)
         self.search_tab_bar.setMaximumHeight(total_height)
 

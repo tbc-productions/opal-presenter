@@ -370,6 +370,7 @@ class PresentationMediaItem(FolderLibraryItem):
             self.display_type_combo_box.insertItem(0, self.automatic, userData='automatic')
             self.display_type_combo_box.setCurrentIndex(0)
         self.presentation_widget.setVisible(self.display_type_combo_box.count() > 1)
+        self.panel_widget.setVisible(self.display_type_combo_box.count() > 1)
 
     def _selected_controller_name(self):
         """Return the controller key stored with the selected display label."""

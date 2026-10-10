@@ -116,6 +116,7 @@ class UiIcons(metaclass=Singleton):
             'donate': {'icon': 'ic_fluent_money_24_regular'},
             'download': {'icon': 'ic_fluent_arrow_download_24_regular'},
             'edit': {'icon': 'ic_fluent_document_edit_24_regular'},
+            'eraser': {'icon': 'ic_fluent_eraser_24_regular'},
             'email': {'icon': 'ic_fluent_mail_24_regular'},
             'error': {'icon': 'ic_fluent_error_circle_24_regular', 'attr': 'red'},
             'exception': {'icon': 'ic_fluent_dismiss_circle_24_regular'},

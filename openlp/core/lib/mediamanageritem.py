@@ -204,6 +204,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.add_common_end_header_bar()
         # Add the list view
         self.add_list_view_to_toolbar()
+        self.panel_widget.setVisible(self.panel_layout.count() > 0)
 
     def add_common_header_bar(self):
         """

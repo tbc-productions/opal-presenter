@@ -137,10 +137,12 @@ def test_display_type_combo_uses_controller_keys(media_item):
     media_item.automatic = 'Automatic'
     media_item.display_type_combo_box = QtWidgets.QComboBox()
     media_item.presentation_widget = MagicMock()
+    media_item.panel_widget = MagicMock()
 
     media_item.populate_display_types()
 
     media_item.presentation_widget.setVisible.assert_called_once_with(True)
+    media_item.panel_widget.setVisible.assert_called_once_with(True)
     combo = media_item.display_type_combo_box
     assert [combo.itemText(index) for index in range(combo.count())] == \
         ['Automatic', 'PDF', 'PowerPoint (macOS)']
@@ -152,6 +154,7 @@ def test_display_type_combo_uses_controller_keys(media_item):
     media_item.controllers = {'Pdf': pdf_controller}
     media_item.populate_display_types()
     media_item.presentation_widget.setVisible.assert_called_with(False)
+    media_item.panel_widget.setVisible.assert_called_with(False)
 
 
 def test_validate_and_load_reports_only_unsupported_imports(media_item, tmp_path):
