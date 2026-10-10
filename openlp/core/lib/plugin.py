@@ -59,7 +59,12 @@ class Plugin(RegistryBase, RegistryProperties):
         The name that should appear in the plugins list.
 
     ``version``
-        The version number of this iteration of the plugin.
+        The version number of this iteration of the plugin. Plugin Manager only
+        displays a version explicitly supplied to the constructor.
+
+    ``developer``, ``licence``, ``website``, ``updates``
+        Optional developer name, licence identifier, HTTP(S) website URL and
+        update instructions shown in Plugin Manager when provided by the plugin.
 
     ``icon``
         An instance of QIcon, which holds an icon for this plugin.
@@ -100,6 +105,10 @@ class Plugin(RegistryBase, RegistryProperties):
 
     """
     log.info('loaded')
+    developer = ''
+    licence = ''
+    website = ''
+    updates = ''
 
     def __init__(self, name, media_item_class=None, settings_tab_class=None, version=None):
         """
@@ -146,6 +155,7 @@ class Plugin(RegistryBase, RegistryProperties):
         :param version: Defaults to *None*, which means that the same version number is used as OpenLP's version number.
         :rtype: None
         """
+        self.version_is_explicit = bool(version)
         if version:
             self.version = version
         else:

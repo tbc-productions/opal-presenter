@@ -22,12 +22,15 @@
 The actual plugin view form
 """
 import logging
+import sys
+from html import escape
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
-from openlp.core.common.i18n import translate
+from openlp.core.common.i18n import get_natural_key, translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.restart import show_restart_message
 from openlp.core.lib.plugin import PluginStatus
@@ -52,27 +55,31 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
         self.active_plugin = None
         self.programmatic_change = False
         self.setup_ui(self)
-        self.load()
-        self._clear_details()
         # Right, now let's put some signals and slots together!
         self.plugin_list_widget.itemSelectionChanged.connect(self.on_plugin_list_widget_selection_changed)
         self.status_checkbox.stateChanged.connect(self.on_status_checkbox_changed)
+        self.open_folder_button.clicked.connect(self.on_open_folder_clicked)
+        self.load()
 
-    def load(self):
+    def load(self, selected_plugin=None):
         """
         Load the plugin details into the screen
         """
-        self.plugin_list_widget.clear()
         self.programmatic_change = True
-        self._clear_details()
-        self.programmatic_change = True
-        plugin_list_width = 0
-        for plugin in State().list_plugins():
-            if plugin:
-                item = QtWidgets.QListWidgetItem(self.plugin_list_widget)
-                # We do this just to make 100% sure the status is an integer as
-                # sometimes when it's loaded from the config, it isn't cast to int.
+        with QtCore.QSignalBlocker(self.plugin_list_widget):
+            self.plugin_list_widget.clear()
+            self._clear_details()
+            plugins = [plugin for plugin in State().list_plugins() if plugin]
+            for plugin in plugins:
                 plugin.status = int(plugin.status)
+            plugins.sort(key=lambda plugin: (plugin.status != PluginStatus.Active,
+                                             get_natural_key(plugin.name_strings['singular'])))
+            selected_row = 0
+            for row, plugin in enumerate(plugins):
+                item = QtWidgets.QListWidgetItem(self.plugin_list_widget)
+                item.setData(QtCore.Qt.ItemDataRole.UserRole, plugin)
+                if plugin is selected_plugin:
+                    selected_row = row
                 # Set the little status text in brackets next to the plugin name.
                 if plugin.status == PluginStatus.Disabled:
                     status_text = translate('OpenLP.PluginForm', '{name} (Disabled)')
@@ -82,6 +89,7 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
                     # PluginStatus.Inactive
                     status_text = translate('OpenLP.PluginForm', '{name} (Inactive)')
                 item.setText(status_text.format(name=plugin.name_strings['singular']))
+                item.setToolTip(item.text())
                 # Dim inactive/disabled plugins
                 if plugin.status != PluginStatus.Active:
                     colour = self.palette().color(QtGui.QPalette.ColorRole.Text)
@@ -90,27 +98,58 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
                 # If the plugin has an icon, set it!
                 if plugin.icon:
                     item.setIcon(plugin.icon)
-                self.plugin_list_widget.addItem(item)
-                plugin_list_width = max(plugin_list_width, self.fontMetrics().width(
-                    translate('OpenLP.PluginForm', '{name} (Inactive)').format(name=plugin.name_strings['singular'])))
-        self.plugin_list_widget.setFixedWidth(plugin_list_width + self.plugin_list_widget.iconSize().width() + 48)
-        if self.plugin_list_widget.count():
-            self.plugin_list_widget.setCurrentRow(0)
+            if plugins:
+                self.plugin_list_widget.setCurrentRow(selected_row)
+        self.on_plugin_list_widget_selection_changed()
+        self.programmatic_change = False
 
     def _clear_details(self):
         """
         Clear the plugin details widgets
         """
+        self.active_plugin = None
+        self.plugin_folder = None
         self.status_checkbox.setChecked(False)
         self.about_text_browser.setHtml('')
         self.status_checkbox.setEnabled(False)
+        self.open_folder_button.setEnabled(False)
+        self.open_folder_button.setToolTip('')
 
     def _set_details(self):
         """
         Set the details of the currently selected plugin
         """
         log.debug('PluginStatus: {status}'.format(status=str(self.active_plugin.status)))
-        self.about_text_browser.setHtml(self.active_plugin.about())
+        plugin = self.active_plugin
+        module_path = getattr(sys.modules.get(type(plugin).__module__), '__file__', None)
+        self.plugin_folder = Path(module_path).resolve().parent if module_path else None
+        folder_available = self.plugin_folder is not None and self.plugin_folder.is_dir()
+        self.open_folder_button.setEnabled(folder_available)
+        self.open_folder_button.setToolTip(
+            str(self.plugin_folder) if folder_available else
+            translate('OpenLP.PluginForm', 'This plugin’s folder is not available on disk.'))
+        version = plugin.version if getattr(plugin, 'version_is_explicit', True) else ''
+        html = ''
+        for field, label, value in [
+            ('version', translate('OpenLP.PluginForm', 'Version'), version),
+            ('developer', translate('OpenLP.PluginForm', 'Developer'), plugin.developer),
+            ('licence', translate('OpenLP.PluginForm', 'Licence'), plugin.licence),
+            ('website', translate('OpenLP.PluginForm', 'Website'), plugin.website),
+            ('updates', translate('OpenLP.PluginForm', 'Updates'), getattr(plugin, 'updates', '')),
+        ]:
+            if not value or not str(value).strip():
+                continue
+            value_text = escape(str(value))
+            if field == 'website':
+                url = QtCore.QUrl(value)
+                if url.isValid() and url.scheme() in ('http', 'https') and url.host():
+                    value_text = '<a href="{url}">{url}</a>'.format(url=escape(value, quote=True))
+            html += '<p><b>{label}:</b> {value}</p>'.format(label=escape(label), value=value_text)
+        if html:
+            html += '<hr>'
+        html += '<h3>{about}</h3>{description}'.format(
+            about=escape(translate('OpenLP.PluginForm', 'About')), description=plugin.about())
+        self.about_text_browser.setHtml(html)
         self.programmatic_change = True
         if not self.active_plugin.can_be_disabled:
             self.status_checkbox.setChecked(True)
@@ -130,12 +169,7 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
         if self.plugin_list_widget.currentItem() is None:
             self._clear_details()
             return
-        plugin_name_singular = self.plugin_list_widget.currentItem().text().split(' (')[0]
-        self.active_plugin = None
-        for plugin in State().list_plugins():
-            if plugin.name_strings['singular'] == plugin_name_singular:
-                self.active_plugin = plugin
-                break
+        self.active_plugin = self.plugin_list_widget.currentItem().data(QtCore.Qt.ItemDataRole.UserRole)
         if self.active_plugin:
             self._set_details()
         else:
@@ -154,16 +188,18 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
             self.active_plugin.app_startup()
         else:
             self.active_plugin.toggle_status(PluginStatus.Inactive)
-        status_text = translate('OpenLP.PluginForm', '{name} (Inactive)')
-        if self.active_plugin.status == PluginStatus.Active:
-            status_text = translate('OpenLP.PluginForm', '{name} (Active)')
-        elif self.active_plugin.status == PluginStatus.Inactive:
-            status_text = translate('OpenLP.PluginForm', '{name} (Inactive)')
-        elif self.active_plugin.status == PluginStatus.Disabled:
-            status_text = translate('OpenLP.PluginForm', '{name} (Disabled)')
-        self.plugin_list_widget.currentItem().setText(
-            status_text.format(name=self.active_plugin.name_strings['singular']))
+        self.load(selected_plugin=self.active_plugin)
         if getattr(self.active_plugin, 'requires_restart', False) is True:
             show_restart_message(
                 self, translate('OpenLP.PluginForm', 'Restart Required'),
                 translate('OpenLP.PluginForm', 'Restart OpenLP+ to apply this plugin change.'))
+
+    def on_open_folder_clicked(self):
+        """Open the selected plugin's installed directory in the system file manager."""
+        if self.plugin_folder is None:
+            return
+        if (not self.plugin_folder.is_dir() or
+                not QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(self.plugin_folder)))):
+            QtWidgets.QMessageBox.warning(
+                self, translate('OpenLP.PluginForm', 'Cannot Open Plugin Folder'),
+                translate('OpenLP.PluginForm', 'The plugin folder could not be opened.'))
