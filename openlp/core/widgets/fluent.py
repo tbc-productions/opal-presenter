@@ -642,13 +642,19 @@ class TreeItemsMixin:
         self._item_store.clear()
 
 
+class FluentTreeHeaderHost(fluentqt.DataGrid):
+    def updateGeometries(self):
+        # The tree owns the borrowed header's geometry; the hidden grid must not resize it.
+        pass
+
+
 class FluentTreeWidget(TreeItemsMixin, fluentqt.TreeView):
     """Native hierarchy with visible headers when column labels are supplied."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         # The native DataGrid header needs its theme host to stay alive.
-        self._header_host = fluentqt.DataGrid(self)
+        self._header_host = FluentTreeHeaderHost(self)
         self._header_host.hide()
         self.setHeader(self._header_host.horizontalHeader())
         self.header().setSectionsMovable(False)

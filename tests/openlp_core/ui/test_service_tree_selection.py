@@ -1,11 +1,46 @@
 """Service tree clicks select individual items and disclose their slides."""
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
 from openlp.core.widgets import fluent
 from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
+
+
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_service_hover_keeps_row_geometry(qapp, qtbot, theme):
+    previous = fluentqt.currentTheme()
+    fluentqt.setTheme(theme)
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    first = fluent.QTreeWidgetItem(view, ['A long service title ' * 8])
+    child = fluent.QTreeWidgetItem(first, ['Slide thumbnail'])
+    second = fluent.QTreeWidgetItem(view, ['Next song'])
+    pixmap = QtGui.QPixmap(64, 48)
+    pixmap.fill(QtCore.Qt.GlobalColor.blue)
+    child.setIcon(0, QtGui.QIcon(pixmap))
+    first.setExpanded(True)
+    try:
+        view.show()
+        qtbot.wait(250)
+        for width in (320, 480):
+            view.resize(width, 240)
+            for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+                view.setLayoutDirection(direction)
+                QtWidgets.QApplication.processEvents()
+                rectangles = [view.visualItemRect(row) for row in (first, child, second)]
+                assert rectangles[0].width() == view.viewport().width()
+                for rect in rectangles:
+                    view._header_host.updateGeometries()
+                    qtbot.mouseMove(view.viewport(), rect.center())
+                    QtWidgets.QApplication.processEvents()
+                    assert view.header().sectionSize(0) == view.viewport().width()
+                    assert [view.visualItemRect(row) for row in (first, child, second)] == rectangles
+    finally:
+        view.close()
+        fluentqt.setTheme(previous)
 
 
 def test_service_type_icons_have_no_border_but_child_thumbnails_do(qapp, qtbot):
