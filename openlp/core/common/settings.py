@@ -523,6 +523,7 @@ class Settings(QtCore.QSettings):
         'SettingsImport/type': 'OpalPresenter_settings_export',
         'SettingsImport/version': '',
         'slide_designer/status': PluginStatus.Active,
+        'slide_designer/preview profiles': {},
         'songs/status': PluginStatus.Inactive,
         'songs/db type': 'sqlite',
         'songs/db username': '',

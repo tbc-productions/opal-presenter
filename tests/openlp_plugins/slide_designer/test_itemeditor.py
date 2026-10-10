@@ -51,7 +51,7 @@ def test_integrated_controls_and_metadata_navigation(integrated):
     assert editor.slide_designer.tools.layout().itemAt(0).widget() is owner.title_edit
     footer = editor.slide_designer.preview_footer
     assert editor.theme_combo_box.parentWidget() is footer.theme_group
-    assert editor.slide_designer.canvas_combo.parentWidget() is footer.preview_group
+    assert editor.slide_designer.preview_output.parentWidget() is footer.preview_group
     wide_height = footer.reflow(700)
     narrow_height = footer.reflow(300)
     assert narrow_height > wide_height
@@ -204,8 +204,9 @@ def test_dirty_state_compares_content_metadata_design_and_undo(integrated):
     assert editor.has_unsaved_changes()
     editor.slide_designer.undo_stack.undo()
     assert not editor.has_unsaved_changes()
-    editor.slide_designer.canvas_combo.setCurrentIndex(2)
-    assert not editor.has_unsaved_changes()  # Theme preview aspect ratio is view state.
+    output = editor.slide_designer.preview_output
+    output.combo.setCurrentIndex(output.index(('preset', 2560, 1080)))
+    assert not editor.has_unsaved_changes()  # Preview output is view state.
     if editor.design_kind == 'song':
         owner.comments_edit.setPlainText('Notes')
         assert editor.has_unsaved_changes()

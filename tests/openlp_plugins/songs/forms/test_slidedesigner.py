@@ -167,7 +167,7 @@ def test_preview_uses_assigned_theme_with_global_fallback(designer, settings):
     designer.resolve_theme()
     designer.theme_manager.get_theme_data.assert_called_with('Global')
     assert not hasattr(designer, 'theme_source')
-    assert designer.canvas_combo.parentWidget() is designer.preview_footer.preview_group
+    assert designer.preview_output.parentWidget() is designer.preview_footer.preview_group
 
 
 def test_preview_uses_unsaved_verse_and_design(designer):
@@ -235,13 +235,13 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         designer.theme_manager.get_theme_data.return_value = Theme()
     designer.fit_canvas()
     with patch.object(designer.viewport.window(), 'grab', wraps=designer.viewport.window().grab) as grab:
-        designer.canvas_combo.setCurrentIndex(2)
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 2560, 1080)))
         assert not designer.preview_cover.isHidden()
         designer.refresh()
         first_revision = designer._preview_revision
         designer.display.run_in_display.assert_called_with(
             'waitForDesignPreview', first_revision, return_event_name='designPreviewReady')
-        designer.canvas_combo.setCurrentIndex(3)
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 1440, 1080)))
         designer.refresh()
         designer.preview_ready(first_revision)
         assert not designer.preview_cover.isHidden()
@@ -249,9 +249,8 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         designer.preview_ready(designer._preview_revision)
         assert designer.preview_cover.isHidden()
         assert not designer.preview_timeout.isActive()
-        designer.undo_stack.undo()
-        assert not designer.preview_cover.isHidden()
-        assert grab.call_count == 2
+        assert designer.undo_stack.count() == 0
+        assert grab.call_count == 1
         designer.clear_preview_cover()
 
 
@@ -957,26 +956,18 @@ def test_multi_row_drop_keeps_relative_order(designer):
     assert [element['id'] for element in designer.design['elements']] == ['a']
 
 
-def test_pixel_coordinates_and_canvas_change_preserve_shape_proportions(designer):
+def test_preview_output_keeps_pixel_coordinates_and_saved_dimensions(designer):
     designer.add_element('rectangle')
     designer.fields['x'].setValue(192)
     designer.fields['y'].setValue(108)
     designer.fields['width'].setValue(384)
     designer.fields['height'].setValue(216)
-    assert designer.design['canvas_width'] == 1920
-    assert designer.fields['width'].value() == 384
-    original = copy.deepcopy(designer.design)
-    designer.canvas_combo.setCurrentIndex(3)  # 4:3
-    assert designer.canvas_size() == QtCore.QSize(1440, 1080)
-    element = designer.design['elements'][0]
-    assert element['width'] * 1440 / 100 == pytest.approx(288)
-    assert element['height'] * 1080 / 100 == pytest.approx(162)
-    assert (element['x'] + element['width'] / 2) == pytest.approx(20)
-    assert (element['y'] + element['height'] / 2) == pytest.approx(27.5)
-    designer.undo_stack.undo()
+    original = designer.serialised_design()
+    designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 1440, 1080)))
     assert designer.canvas_size() == QtCore.QSize(1920, 1080)
-    assert designer.design == original
+    assert designer.serialised_design() == original
     assert designer.fields['width'].value() == 384
+    assert not hasattr(designer, 'canvas_combo')
 
 
 @pytest.mark.parametrize('alignment', ['left', 'center', 'right', 'top', 'middle', 'bottom',
@@ -990,21 +981,9 @@ def test_aspect_changes_preserve_aligned_layout_with_different_box_sizes(designe
     designer.select_objects(['date', 'title', 'lyrics'])
     designer.alignment_actions[alignment].trigger()
     original = copy.deepcopy(designer.design)
-    for preset, width, height in ((2, 2560, 1080), (3, 1440, 1080), (1, 1920, 1200), (0, 1920, 1080)):
-        designer.canvas_combo.setCurrentIndex(preset)
-        scale = min(width / 1920, height / 1080)
-        before = [original['lyrics']] + original['elements']
-        after = [designer.design['lyrics']] + designer.design['elements']
-        for first, second in zip(before, after):
-            # A single affine transform preserves aligned edges and even gaps regardless of box size.
-            for axis, extent, initial, current in (('x', 'width', 1920, width), ('y', 'height', 1080, height)):
-                expected_position = (first[axis] / 100 * initial - initial / 2) * scale + current / 2
-                assert second[axis] / 100 * current == pytest.approx(expected_position)
-                assert second[extent] / 100 * current == pytest.approx(first[extent] / 100 * initial * scale)
-    designer.undo_stack.undo()
-    assert designer.canvas_size() == QtCore.QSize(1920, 1200)
-    designer.undo_stack.redo()
-    assert designer.design['lyrics']['x'] == pytest.approx(original['lyrics']['x'])
+    for width, height in ((2560, 1080), (1440, 1080), (1920, 1200), (1920, 1080)):
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', width, height)))
+        assert designer.design == original
 
 
 def test_footer_visibility_is_per_verse_split_and_page_with_undo(designer):
@@ -1048,37 +1027,18 @@ def test_custom_footer_uses_outer_slide_number_and_survives_reorder_delete(desig
     owner.deleteLater()
 
 
-def test_repeated_aspect_switches_return_to_original_geometry(designer):
-    designer.add_element('rectangle')
-    designer.fields['x'].setValue(250)
-    designer.fields['y'].setValue(120)
-    designer.fields['width'].setValue(384)
-    designer.fields['height'].setValue(216)
-    designer.add_element('text')
-    designer.fields['font_size'].setValue(48)
-    original = copy.deepcopy(designer.design['elements'])
-    layouts = {}
-    for _ in range(6):
-        for preset in (1, 3, 2, 0):
-            designer.canvas_combo.setCurrentIndex(preset)
-            actual = designer.design['elements']
-            if preset in layouts:
-                for first, second in zip(layouts[preset], actual):
-                    for key in ('x', 'y', 'width', 'height', 'font_size'):
-                        assert second[key] == pytest.approx(first[key])
-            else:
-                layouts[preset] = copy.deepcopy(actual)
-    for first, second in zip(original, designer.design['elements']):
-        for key in ('x', 'y', 'width', 'height', 'font_size'):
-            assert second[key] == pytest.approx(first[key])
-    # The reference survives closing/reopening the editor on a different aspect ratio.
-    designer.canvas_combo.setCurrentIndex(3)
-    saved = designer.serialised_design()
-    load_editable_design(designer, saved)
-    designer.canvas_combo.setCurrentIndex(0)
-    for first, second in zip(original, designer.design['elements']):
-        for key in ('x', 'y', 'width', 'height', 'font_size'):
-            assert second[key] == pytest.approx(first[key])
+def test_repeated_preview_switches_preserve_existing_slide_size(designer):
+    load_editable_design(designer, {'version': 1, 'canvas_width': 1440, 'canvas_height': 1080,
+                                    'elements': [{'id': 'box', 'kind': 'rectangle', 'x': 20, 'y': 10,
+                                                  'width': 30, 'height': 20}]})
+    original = designer.serialised_design()
+    for _ in range(3):
+        for width, height in ((1920, 1200), (1440, 1080), (2560, 1080), (1920, 1080)):
+            designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', width, height)))
+            assert designer.serialised_design() == original
+            assert designer.canvas_size() == QtCore.QSize(1440, 1080)
+    designer.load_design(original)
+    assert designer.serialised_design() == original
 
 
 @pytest.mark.parametrize('accepted', [True, False])
@@ -1125,6 +1085,47 @@ def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
         assert designer.prompt_layout_name('Rename layout', 'Welcome') == ('Closing', True)
 
 
+@pytest.mark.parametrize('host_width', [1000, 360])
+@pytest.mark.parametrize('action', ['enter', 'create', 'escape', 'cancel'])
+def test_layout_name_prompt_fits_and_submits_through_visible_actions(designer, qtbot, monkeypatch, host_width, action):
+    from openlp.core.widgets import fluent as QtWidgets
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(host_width, 320)
+    parent.show()
+    monkeypatch.setattr(designer, 'window', lambda: parent)
+    name = 'A long layout name ' * 20
+
+    def interact():
+        dialog = parent.findChild(QtWidgets.ContentDialog, 'layout_name_dialog')
+        try:
+            field = dialog.content()
+            primary = dialog._native_commands['primary']
+            field.setText('   ')
+            qtbot.keyClick(field, QtCore.Qt.Key.Key_Return)
+            assert dialog.isOpen()
+            assert not primary.isEnabled()
+            field.setText('  ' + name + '  ')
+            assert primary.isEnabled()
+            assert field.height() >= 32
+            assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+            assert dialog._content_scroll.horizontalScrollBar().maximum() == 0
+            assert parent.rect().contains(dialog.geometry())
+            close = dialog._native_commands['close']
+            assert primary.mapTo(dialog, QtCore.QPoint()).x() < close.mapTo(dialog, QtCore.QPoint()).x()
+            if action in ('enter', 'escape'):
+                key = QtCore.Qt.Key.Key_Return if action == 'enter' else QtCore.Qt.Key.Key_Escape
+                qtbot.keyClick(field, key)
+            else:
+                qtbot.mouseClick(primary if action == 'create' else close, QtCore.Qt.MouseButton.LeftButton)
+        except Exception:
+            dialog.done(dialog.ResultNone)
+            raise
+
+    QtCore.QTimer.singleShot(250, interact)
+    assert designer.prompt_layout_name('New layout') == (name.strip(), action in ('enter', 'create'))
+
+
 def test_new_slide_uses_theme_and_locks_all_design_changes(designer):
     designer.load_design({})
     assert designer.active_layout() == 'theme'
@@ -1144,8 +1145,8 @@ def test_new_slide_uses_theme_and_locks_all_design_changes(designer):
     assert designer.footer_key() in designer.document['hidden_footers']
     designer.reset_section('slide')
     assert not designer.document.get('hidden_footers')
-    designer.canvas_combo.setCurrentIndex(2)
-    assert designer.canvas_size() == QtCore.QSize(2560, 1080)
+    designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 2560, 1080)))
+    assert designer.preview_output.output_size() == QtCore.QSize(2560, 1080)
     assert not designer.document.get('overrides')
     with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
         designer.new_layout()
@@ -1221,3 +1222,130 @@ def test_effects_target_background_and_images_with_mixed_selection_and_undo(desi
     for drawer, _ in designer.reset_sections.values():
         assert drawer.reset_button.text() == ''
         assert not drawer.reset_button.icon().isNull()
+
+
+def test_preview_output_does_not_resize_saved_canvas(designer):
+    designer.add_element('rectangle')
+    before = designer.serialised_design()
+    undo_count = designer.undo_stack.count()
+    output = designer.preview_output
+    output.combo.setCurrentIndex(output.index(('preset', 1920, 1200)))
+    assert output.output_size() == QtCore.QSize(1920, 1200)
+    assert designer.canvas_size() == QtCore.QSize(1920, 1080)
+    assert designer.serialised_design() == before
+    assert designer.undo_stack.count() == undo_count
+
+
+def test_preview_output_profiles_persist_rename_and_delete(designer):
+    output = designer.preview_output
+    output.save_profile('Venue', 1920, 1080)
+    output.populate()
+    assert output.profiles() == {'Venue': [1920, 1080]}
+    assert output.combo.currentData() == ('profile', 'Venue', 1920, 1080)
+    output.save_profile('Wide venue', 2560, 1080, 'Venue')
+    assert output.profiles() == {'Wide venue': [2560, 1080]}
+    output.delete_profile()
+    assert output.profiles() == {}
+    assert output.output_size() == designer.canvas_size()
+
+
+def test_preview_output_connected_displays_refresh(designer):
+    from openlp.core.display.screens import Screen
+    output = designer.preview_output
+    screen = Screen(1, QtCore.QRect(0, 0, 1920, 1200))
+    with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[screen]):
+        output.refresh_outputs()
+        output.combo.setCurrentIndex(output.index(('display', 1, 1920, 1200)))
+        assert output.output_size() == QtCore.QSize(1920, 1200)
+        assert '1920 × 1200' in output.combo.currentText()
+    with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[]):
+        output.refresh_outputs()
+    assert output.combo.currentData() == ('preset', 1920, 1080)
+
+
+def test_preview_output_ignores_invalid_profiles(designer):
+    designer.settings.setValue('slide_designer/preview profiles',
+                               '{"Bad": [0, 1080], "Huge": [99999, 1], "Good": [1920, 1080]}')
+    assert designer.preview_output.profiles() == {'Good': [1920, 1080]}
+    designer.settings.setValue('slide_designer/preview profiles', 'invalid json')
+    assert designer.preview_output.profiles() == {}
+
+
+def test_preview_output_fits_design_and_maps_gestures_back_to_canvas(designer):
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.base_theme = Theme()
+    designer.add_element('rectangle')
+    identifier = designer.selected
+    designer.preview_output.combo.setCurrentIndex(
+        designer.preview_output.index(('preset', 1920, 1200)))
+    theme = designer.output_theme(designer.design)
+    element = theme.song_design['elements'][0]
+    assert element['x'] == pytest.approx(10)
+    assert element['y'] == pytest.approx(14)
+    assert element['height'] == pytest.approx(18)
+    designer.canvas_changed({'id': identifier, 'changed': True,
+                             'geometry': {'x': 20, 'y': 23, 'width': 35, 'height': 18}})
+    element = designer.design['elements'][0]
+    assert element['x'] == pytest.approx(20)
+    assert element['y'] == pytest.approx(20)
+    assert element['height'] == pytest.approx(20)
+
+
+@pytest.mark.parametrize('submit', ['enter', 'mouse', 'cancel'])
+def test_preview_profile_dialog_validation_and_submission(designer, qtbot, submit):
+    from openlp.core.widgets import fluent as QtWidgets
+    designer.setParent(None)
+    with patch.object(type(designer), 'showEvent', lambda self, event: None):
+        designer.show()
+    designer.resize(1000, 700)
+    output = designer.preview_output
+    output.save_profile('Existing', 1920, 1080)
+    output.combo.setCurrentIndex(0)
+    real_exec = QtWidgets.FormDialog.exec
+
+    def execute(dialog):
+        def interact():
+            name = dialog.content_widget.findChild(QtWidgets.QLineEdit)
+            buttons = dialog.content_widget.findChild(QtWidgets.QDialogButtonBox)
+            save = buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Save)
+            assert not save.isEnabled()
+            name.setText('   ')
+            assert not save.isEnabled()
+            name.setText('Existing')
+            assert not save.isEnabled()
+            name.setText('  Venue screen  ')
+            assert save.isEnabled()
+            fields = dialog.content_widget.findChildren(QtWidgets.QSpinBox)
+            fields[0].setValue(2560)
+            fields[1].setValue(1440)
+            if submit == 'cancel':
+                qtbot.keyClick(name, QtCore.Qt.Key.Key_Escape)
+            elif submit == 'enter':
+                qtbot.keyClick(name, QtCore.Qt.Key.Key_Return)
+            else:
+                primary = dialog._native_commands['primary']
+                qtbot.mouseClick(primary, QtCore.Qt.MouseButton.LeftButton)
+        QtCore.QTimer.singleShot(2000, dialog, dialog.reject)
+        QtCore.QTimer.singleShot(30, interact)
+        return real_exec(dialog)
+
+    with patch.object(QtWidgets.FormDialog, 'exec', execute):
+        output.edit_profile()
+    assert ('Venue screen' in output.profiles()) == (submit != 'cancel')
+    if submit != 'cancel':
+        assert output.output_size() == QtCore.QSize(2560, 1440)
+    assert output.profiles()['Existing'] == [1920, 1080]
+    designer.hide()
+
+
+def test_portrait_preview_keeps_output_controls_reachable(designer):
+    designer.viewport.resize(600, 500)
+    designer.display = MagicMock(_is_initialised=False)
+    designer.preview_output.save_profile('Portrait', 1080, 3840)
+    designer.fit_canvas()
+    _, _, width, height = designer.display.setGeometry.call_args.args
+    assert width > 0 and height > width
+    assert designer.preview_footer.width() > width
+    assert designer.preview_footer.width() <= designer.viewport.width()
+    assert designer.preview_footer.geometry().bottom() < designer.viewport.height()

@@ -22,6 +22,7 @@ from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.mediapicker import MediaPicker
 from .textediting import visible_text, replace_visible_text
+from .previewoutput import PreviewOutput
 
 
 def tr(text):
@@ -43,7 +44,7 @@ class PreviewFooter(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         self.theme_group = None
-        self.preview_group = self.group(QtWidgets.QLabel(tr('Preview')), combo)
+        self.preview_group = self.group(QtWidgets.QLabel(tr('Preview output')), combo)
         self.reflow(1000)
 
     def group(self, label, combo):
@@ -51,6 +52,7 @@ class PreviewFooter(QtWidgets.QWidget):
         row = QtWidgets.QHBoxLayout(group)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
+        label.setBuddy(combo.combo if isinstance(combo, PreviewOutput) else combo)
         row.addWidget(label)
         row.addWidget(combo)
         return group
@@ -324,17 +326,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         canvas_layout = QtWidgets.QVBoxLayout(canvas_panel)
         canvas_layout.setContentsMargins(12, 6, 12, 12)
         canvas_layout.setSpacing(8)
-        self.canvas_combo = QtWidgets.QComboBox()
-        for caption, dimensions in ((tr('Full HD · 16:9'), (1920, 1080)),
-                                    ('16:10 · 1920 × 1200', (1920, 1200)),
-                                    ('21:9 · 2560 × 1080', (2560, 1080)),
-                                    ('4:3 · 1440 × 1080', (1440, 1080))):
-            self.canvas_combo.addItem(caption, dimensions)
-        self.canvas_combo.setAccessibleName(tr('Canvas size'))
-        self.canvas_combo.setFixedWidth(185)
-        self.canvas_combo.currentIndexChanged.connect(self.change_canvas)
         layout_row = self.layout_row = QtWidgets.QHBoxLayout()
         layout_row.addWidget(self.heading(tr('Layout')))
+        layout_row.addStretch()
         self.layout_combo = QtWidgets.QComboBox()
         self.layout_combo.setAccessibleName(tr('Master layout'))
         self.layout_combo.currentIndexChanged.connect(self.assign_layout)
@@ -349,7 +343,6 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.delete_layout_button = self.tool_button(tr('Delete layout'), UiIcons().delete, icon_only=True)
         self.delete_layout_button.clicked.connect(self.delete_layout)
         layout_row.addWidget(self.delete_layout_button)
-        layout_row.addStretch()
         canvas_layout.addLayout(layout_row)
         self.viewport = QtWidgets.QWidget()
         self.viewport.setMinimumSize(280, 180)
@@ -364,7 +357,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.preview_timeout.setSingleShot(True)
         self.preview_timeout.setInterval(5000)
         self.preview_timeout.timeout.connect(self.clear_preview_cover)
-        self.preview_footer = PreviewFooter(self.canvas_combo, self.viewport)
+        self.preview_output = PreviewOutput(self)
+        self.preview_footer = PreviewFooter(self.preview_output, self.viewport)
         canvas_layout.addWidget(self.viewport, 1)
         self.splitter.addWidget(canvas_panel)
         self.sidebar = QtWidgets.QWidget()
@@ -939,49 +933,9 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def canvas_size(self):
         return self._canvas_size
 
-    def change_canvas(self):
-        dimensions = self.canvas_combo.currentData()
-        if not dimensions or tuple(dimensions) == (self.canvas_size().width(), self.canvas_size().height()):
-            return
-        self.commit_text()
-        if not self.design_editable():
-            self._canvas_size = QtCore.QSize(*dimensions)
-            self.fit_canvas()
-            self.schedule_refresh()
-            return
-        old = self.canvas_size()
-        width, height = dimensions
-        design = self.editable_design()
-        reference_width = design.setdefault('reference_width', old.width())
-        reference_height = design.setdefault('reference_height', old.height())
-        old_scale = min(old.width() / reference_width, old.height() / reference_height)
-        scale = min(width / reference_width, height / reference_height) / old_scale
-        # Fit the entire layout around the canvas centre. Moving each object's centre independently
-        # would break aligned edges and even spacing when objects have different dimensions.
-        design['lyrics'] = self.selected_properties('lyrics')
-        for element in [design['lyrics']] + design['elements']:
-            for axis, extent, previous, current in (('x', 'width', old.width(), width),
-                                                    ('y', 'height', old.height(), height)):
-                position = element[axis] / 100 * previous
-                element[axis] = ((position - previous / 2) * scale + current / 2) / current * 100
-                element[extent] *= previous * scale / current
-            for key in ('font_size', 'outline_width', 'shadow_x', 'shadow_y', 'shadow_blur', 'border_width'):
-                if key in element:
-                    element[key] *= scale
-        design.update(canvas_width=width, canvas_height=height)
-        self.commit(design, tr('Resize canvas'))
-
     def sync_canvas(self):
         if self.design.get('canvas_width'):
             self._canvas_size = QtCore.QSize(round(self.design['canvas_width']), round(self.design['canvas_height']))
-        dimensions = (self.canvas_size().width(), self.canvas_size().height())
-        with QtCore.QSignalBlocker(self.canvas_combo):
-            index = next((i for i in range(self.canvas_combo.count())
-                          if tuple(self.canvas_combo.itemData(i)) == dimensions), -1)
-            if index < 0:
-                self.canvas_combo.addItem(f'{dimensions[0]} × {dimensions[1]}', dimensions)
-                index = self.canvas_combo.count() - 1
-            self.canvas_combo.setCurrentIndex(index)
         self.fit_canvas()
 
     def set_field_property(self, key, value):
@@ -992,6 +946,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.preview_output.refresh_outputs()
         # Deferred creation avoids a WebEngine process for song import/maintenance dialogs.
         if self._creating_display:
             return
@@ -1038,7 +993,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def fit_canvas(self):
         if self.display is None or self._capturing_preview:
             return
-        size = self.canvas_size()
+        size = self.preview_output.output_size()
         if self._display_canvas_size is not None and size != self._display_canvas_size:
             self.freeze_preview()
         self._display_canvas_size = QtCore.QSize(size)
@@ -1048,14 +1003,16 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         avail_h = max(1, self.viewport.height() - 24 - total_footer_space)
         scale = min(max(1, self.viewport.width() - 24) / size.width(),
                     avail_h / size.height())
-        width, height = round(size.width() * scale), round(size.height() * scale)
-        wrapped_height = self.preview_footer.reflow(width)
+        width, height = max(1, round(size.width() * scale)), max(1, round(size.height() * scale))
+        footer_width = max(width, min(self.preview_footer.minimumSizeHint().width(), self.viewport.width() - 24))
+        wrapped_height = self.preview_footer.reflow(footer_width)
         if wrapped_height != footer_height:
             footer_height = wrapped_height
             total_footer_space = footer_height + gap
             scale = min(max(1, self.viewport.width() - 24) / size.width(),
                         max(1, self.viewport.height() - 24 - total_footer_space) / size.height())
-            width, height = round(size.width() * scale), round(size.height() * scale)
+            width, height = max(1, round(size.width() * scale)), max(1, round(size.height() * scale))
+            footer_width = max(width, min(self.preview_footer.minimumSizeHint().width(), self.viewport.width() - 24))
         left = (self.viewport.width() - width) // 2
         top = max(4, (self.viewport.height() - (height + total_footer_space)) // 2)
         self.display.setGeometry(left, top, width, height)
@@ -1063,9 +1020,10 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.preview_border.setGeometry(left - 1, top - 1, width + 2, height + 2)
         self.preview_border.show()
         self.preview_border.raise_()
-        self.preview_footer.setGeometry(left, top + height + gap, width, footer_height)
+        self.preview_footer.setGeometry((self.viewport.width() - footer_width) // 2,
+                                        top + height + gap, footer_width, footer_height)
         self.preview_footer.raise_()
-        self.preview_cover.setGeometry(self.viewport.rect())
+        self.preview_cover.setGeometry(self.preview_border.geometry())
         if not self.preview_cover.isHidden():
             self.preview_cover.raise_()
 
@@ -1079,14 +1037,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             # QWidget.grab() can synchronously deliver pending resize events.
             self._capturing_preview = True
             try:
-                # Capture the window's backdrop rather than the viewport's fallback palette.
+                # Leave the window backdrop and footer live while the slide refreshes.
                 window = self.viewport.window()
-                region = QtCore.QRect(self.viewport.mapTo(window, QtCore.QPoint()), self.viewport.size())
+                region = QtCore.QRect(self.viewport.mapTo(window, self.preview_border.pos()),
+                                     self.preview_border.size())
                 snapshot = window.grab(region)
             finally:
                 self._capturing_preview = False
             self.preview_cover.setPixmap(snapshot)
-            self.preview_cover.setGeometry(self.viewport.rect())
+            self.preview_cover.setGeometry(self.preview_border.geometry())
             self.preview_cover.show()
             self.preview_cover.raise_()
             self.preview_cover.repaint()
@@ -1142,12 +1101,11 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                     setattr(self.base_theme, attr, getattr(self.base_theme, attr) * current / previous)
             preview_design = copy.deepcopy(self.design)
             self.base_theme = design_theme(self.base_theme, preview_design, self.canvas_size())
-            theme = apply_design(self.base_theme, preview_design, self.canvas_size())
+            theme = self.output_theme(preview_design)
             self.display.run_in_display('setDesignEditor', None)
             # Keep page identities stable when a master or local text box is customised.
-            pagination_theme = apply_design(
-                self.base_theme, master_design(self.document, self.document.get('default_layout', 'default')),
-                self.canvas_size())
+            pagination_theme = self.output_theme(
+                master_design(self.document, self.document.get('default_layout', 'default')))
             self.display.set_theme(pagination_theme, is_sync=True)
             text = self.source_form.designer_text()
             self.pages = []
@@ -1175,6 +1133,19 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self._refreshing = False
             if revision != self._preview_revision and not self.preview_cover.isHidden():
                 self.schedule_refresh()
+
+    def output_theme(self, design):
+        """Render at the chosen output size while inspector values stay on the design canvas."""
+        theme = copy.deepcopy(self.base_theme)
+        canvas, output = self.canvas_size(), self.preview_output.output_size()
+        for part in ('main', 'footer'):
+            for key, factor in (('x', output.width() / canvas.width()),
+                                ('width', output.width() / canvas.width()),
+                                ('y', output.height() / canvas.height()),
+                                ('height', output.height() / canvas.height())):
+                attr = 'font_' + part + '_' + key
+                setattr(theme, attr, getattr(theme, attr) * factor)
+        return apply_design(theme, design, output)
 
     def footer_key(self):
         section = self.source_form.designer_section_key()
@@ -1682,6 +1653,19 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             for identifier, geometry in geometries.items():
                 target = self.design_target(design, identifier)
                 if target is not None:
+                    geometry = dict(geometry)
+                    if 'canvas_width' in self.design:
+                        output = self.preview_output.output_size()
+                        scale = min(output.width() / design['canvas_width'],
+                                    output.height() / design['canvas_height'])
+                        for axis, extent, dimension in (('x', 'width', output.width()),
+                                                        ('y', 'height', output.height())):
+                            fitted = design['canvas_' + extent] * scale
+                            if axis in geometry:
+                                geometry[axis] = (geometry[axis] * dimension -
+                                                  (dimension - fitted) * 50) / fitted
+                            if extent in geometry:
+                                geometry[extent] *= dimension / fitted
                     target.update(geometry)
             self.commit(design, tr('Move or resize elements'))
         self.populate_inspector()

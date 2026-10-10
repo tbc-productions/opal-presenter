@@ -23,7 +23,7 @@ below its slide list. Title and, for songs, Alternative title are in the top
 command row. Songs without copyright information show a warning above the lyrics
 entry and a warning badge beside Copyright/Flags/Comments in the navigation rail.
 Both clear as soon as copyright information is entered.
-Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect-ratio
+Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview output
 selector aligned to the right. The preview uses the assigned theme, falling back
 to the global theme. Imported theme snapshots remain in use until a new theme is chosen.
 
@@ -40,13 +40,8 @@ None removes it. Bold, italic and underline can still be combined independently.
 The picker shows Mixed when a selection contains different styles. Applying a
 style across slides preserves section labels and split markers.
 
-New designs start with a Full HD 1920 × 1080 canvas. The preview's canvas selector
-also offers 1920 × 1200 (16:10), 2560 × 1080 (ultrawide) and 1440 × 1080 (4:3).
-Position and size controls use pixels on that canvas. Changing canvas size fits
-and centres the whole layout, scaling positions, dimensions and fonts uniformly
-so aligned edges, relative spacing and object proportions are preserved. Changes use a fixed reference
-canvas, so switching aspect ratios repeatedly does not cumulatively resize or
-move the objects. The reference is saved with the design. Canvas changes support undo.
+New designs use Full HD 1920 × 1080 proportions automatically. Existing designs
+retain their saved proportions. There is no separate slide-size control.
 The previous preview remains visible while text, formatting, layout or aspect
 ratio changes render, then switches to the completed layout once its images,
 fonts and positioning are ready.
@@ -136,8 +131,18 @@ beyond PowerPoint's range are baked in full to preserve their appearance and ord
 ODP exports bake all filters into the image pixels. In both formats, slide text
 remains editable and images remain separate movable objects.
 
+Choose a connected display (with its configured output size), or a common resolution
+preset, including HD, Full HD, QHD, 4K UHD, 16:10, ultrawide and 4:3. The display
+list refreshes when the picker opens; disconnected outputs fall back to Full HD. Use the profile pencil button to create a named output with a width and
+height in pixels, or edit the selected profile. Names must be unique and dimensions
+must be between 1 and 16384 pixels. The delete button removes the selected profile.
+Profiles are saved in local application settings and are available across items.
+Changing Preview output fits and centres the existing layout without resizing the
+slide, changing the design or adding an undo step. Dragging and resizing
+objects in another output preview preserves the slide’s proportions.
+
 New slides use Theme by default. Theme locks design properties, object insertion
-and canvas manipulation; Show footer remains editable. Preview aspect ratios can
+and canvas manipulation; Show footer remains editable. Preview output can
 still be changed without modifying the saved design. Songs do not automatically
 offer a Custom layout, and existing saved formatting is preserved. Earlier shared
 designs in custom slide items remain available as Custom, which can be renamed.
