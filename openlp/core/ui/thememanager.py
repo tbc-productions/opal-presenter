@@ -915,7 +915,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                  if (self.theme_path / file).exists()]
         # Sort the themes by its name considering language specific
         files.sort(key=lambda file_name: get_locale_key(str(file_name)))
-        stage = translate('OpenLP.SplashScreen', 'Loading themes')
+        stage = translate('OpenLP.SplashScreen', 'Loading themes…')
         if Registry().has_function('startup_progress'):
             Registry().execute('startup_progress', stage, 0, len(files), progress_range=(75, 90))
         for completed, file in enumerate(files, 1):
@@ -923,6 +923,9 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             theme_path = self.theme_path / file
             if theme_path.exists():
                 text_name = theme_path.stem
+                stage = translate('OpenLP.SplashScreen', 'Loading {theme}…').format(theme=text_name)
+                if Registry().has_function('startup_progress'):
+                    Registry().execute('startup_progress', stage, completed - 1, len(files), progress_range=(75, 90))
                 if text_name == self.global_theme:
                     name = translate('OpenLP.ThemeManager', '{name} (default)').format(name=text_name)
                 else:
@@ -951,7 +954,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             if Registry().has_function('startup_progress'):
                 Registry().execute('startup_progress', stage, completed, len(files), progress_range=(75, 90))
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes'))
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading Library…'))
         self._push_themes()
 
     def _push_themes(self):

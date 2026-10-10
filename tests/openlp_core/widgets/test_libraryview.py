@@ -293,6 +293,20 @@ def test_grid_uses_fluent_card_stroke_for_unselected_tiles(browser):
     assert canvas.pixelColor(10, 2) != unselected
 
 
+def test_library_type_icons_have_no_border_but_thumbnails_do(browser):
+    tree = browser.tree
+    item = tree.topLevelItem(1)
+    thumbnail = item.icon(0)
+    option = QtWidgets.QStyleOptionViewItem()
+    option.rect = QtCore.QRect(0, 0, 400, 60)
+    option.state = QtWidgets.QStyle.StateFlag.State_Enabled
+    for icon, bordered in ((UiIcons().video, False), (thumbnail, True)):
+        item.setIcon(0, icon)
+        painter = MagicMock()
+        tree.itemDelegate().paint(painter, option, tree.indexFromItem(item))
+        assert painter.drawRoundedRect.call_count == int(bordered)
+
+
 @pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
 def test_folder_icons_use_theme_chart7_without_hierarchy_guides(browser, theme):
     previous = fluentqt.current_theme()

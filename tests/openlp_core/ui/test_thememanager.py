@@ -788,10 +788,12 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
         theme_manager.load_themes()
 
     assert updates == [
-        (('Loading themes', 0, 2), []),
-        (('Loading themes', 1, 2), ['a']),
-        (('Loading themes', 2, 2), ['a', 'b']),
-        (('Loading library and themes',), ['a', 'b'])
+        (('Loading themes…', 0, 2), []),
+        (('Loading a…', 0, 2), []),
+        (('Loading a…', 1, 2), ['a']),
+        (('Loading b…', 1, 2), ['a']),
+        (('Loading b…', 2, 2), ['a', 'b']),
+        (('Loading Library…',), ['a', 'b'])
     ]
     theme_manager._push_themes.assert_called_once_with()
 

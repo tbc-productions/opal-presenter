@@ -57,8 +57,8 @@ def test_run_splash_lifecycle(qapp, mock_settings, helper_error, foreground):
         assert qapp.run([], MagicMock()) == 0
         splash = mocks['SplashScreen' if helper_error else 'SplashScreenProcess'].return_value
         splash.show.assert_called_once()
-        splash.set_status.assert_any_call('Loading components', 5)
-        splash.set_status.assert_any_call('Ready', 100)
+        splash.set_status.assert_any_call('Starting…', 5)
+        splash.set_status.assert_any_call(None, 100)
         splash.close.assert_called_once()
         if foreground:
             mocks['MainWindow'].return_value.raise_.assert_called_once()

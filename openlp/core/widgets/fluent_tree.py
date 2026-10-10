@@ -49,6 +49,9 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
         size = self._view.iconSize()
         return size if size.isValid() else QtCore.QSize(20, 20)
 
+    def iconBorderVisible(self, index):
+        return not index.data(QtCore.Qt.ItemDataRole.DecorationRole).name().startswith('ic_fluent_')
+
     def _background_rect(self, option):
         top = option.rect.top() + 2
         height = option.rect.height() - 4
@@ -156,7 +159,7 @@ class FluentLibraryTreeDelegate(QtWidgets.QStyledItemDelegate):
             target = QtCore.QRectF(QtCore.QPointF(), pixmap.deviceIndependentSize())
             target.moveCenter(icon_rect.center())
             painter.drawPixmap(target, pixmap, QtCore.QRectF(pixmap.rect()))
-            if not selected and not index.data(LIBRARY_FOLDER_ROLE):
+            if not selected and not index.data(LIBRARY_FOLDER_ROLE) and self.iconBorderVisible(index):
                 painter.setPen(QtGui.QPen(colors.strokeCard, 1))
                 painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
                 painter.drawRoundedRect(target.adjusted(0.5, 0.5, -0.5, -0.5), 2, 2)

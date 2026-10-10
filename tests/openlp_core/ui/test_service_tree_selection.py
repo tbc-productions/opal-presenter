@@ -1,11 +1,29 @@
 """Service tree clicks select individual items and disclose their slides."""
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
 from openlp.core.widgets import fluent
 from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
+
+
+def test_service_type_icons_have_no_border_but_child_thumbnails_do(qapp, qtbot):
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    item = fluent.QTreeWidgetItem(view, ['Song'])
+    child = fluent.QTreeWidgetItem(item, ['Image'])
+    pixmap = QtGui.QPixmap(80, 80)
+    pixmap.fill(QtCore.Qt.GlobalColor.red)
+    option = QtWidgets.QStyleOptionViewItem()
+    option.rect = QtCore.QRect(0, 0, 400, 60)
+    option.state = QtWidgets.QStyle.StateFlag.State_Enabled
+    delegate = view.itemDelegateForColumn(0)
+    for row, bordered in ((item, False), (child, True)):
+        row.setIcon(0, QtGui.QIcon(pixmap))
+        painter = MagicMock()
+        delegate.paint(painter, option, view.indexFromItem(row))
+        assert painter.drawRoundedRect.call_count == int(bordered)
 
 
 def test_service_tree_row_and_child_selection(qapp, qtbot):

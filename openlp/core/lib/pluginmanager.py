@@ -61,10 +61,10 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         )
         plugin_classes = Plugin.__subclasses__()
         for completed, plugin in enumerate(plugin_classes, 1):
-            stage = translate('OpenLP.SplashScreen', 'Loading plugins')
+            stage = translate('OpenLP.SplashScreen', 'Loading plugins…')
             try:
                 instance = plugin()
-                stage = translate('OpenLP.SplashScreen', 'Loading {plugin}').format(
+                stage = translate('OpenLP.SplashScreen', 'Loading {plugin}…').format(
                     plugin=instance.name_strings['plural'])
                 self.log_debug(f'Loaded plugin {plugin}')
             except TypeError:
@@ -164,7 +164,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
         uninitialised_plugins = []
         plugins = [plugin for plugin in State().list_plugins() if plugin and plugin.is_active()]
         for completed, plugin in enumerate(plugins, 1):
-            stage = translate('OpenLP.SplashScreen', 'Initialising {plugin}').format(
+            stage = translate('OpenLP.SplashScreen', 'Loading {plugin}…').format(
                 plugin=plugin.name_strings['plural'])
             if Registry().has_function('startup_progress'):
                 Registry().execute('startup_progress', stage, completed - 1, len(plugins), progress_range=(55, 75))
@@ -195,7 +195,7 @@ class PluginManager(RegistryBase, LogMixin, RegistryProperties):
                                               QtWidgets.QMessageBox.StandardButton(
                                                   QtWidgets.QMessageBox.StandardButton.Ok))
         if Registry().has_function('startup_progress'):
-            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes'))
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading Library…'))
 
     def finalise_plugins(self):
         """

@@ -56,7 +56,7 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Starting Opal Presenter'
+    assert splash.text() == 'Starting…'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring is not None
     assert ring.isVisible()
@@ -77,6 +77,7 @@ def test_loading_lines_align_with_artwork(mock_settings, qtbot, theme):
         qtbot.addWidget(splash)
         splash.show()
         splash.set_status('Loading components and initialising a very large presentation library ' * 3, 55)
+        qtbot.waitUntil(lambda: splash.text().startswith('Loading components'))
         status = splash.findChild(fluentqt.Label, 'splashStatusText')
         percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
         for label in (status, percentage):
@@ -116,6 +117,27 @@ def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
     process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
 
+def test_status_updates_coalesce_without_delaying_progress(mock_settings, qtbot):
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.show()
+    splash.set_status('Loading Songs…', 25)
+    splash.set_status('Loading Media…', 55)
+    assert splash.text() == 'Starting…'
+    assert splash.progress() == 55
+    qtbot.waitUntil(lambda: splash.text() == 'Loading Media…')
+    splash.set_stage_progress('Loading Evening…', 0, 2, progress_range=(75, 90))
+    assert splash.text() == 'Loading Media…'
+    assert splash.progress() == 75
+    qtbot.waitUntil(lambda: splash.text() == 'Loading Evening…')
+    splash.set_stage_progress('Loading Evening…', 2, 2, progress_range=(75, 90))
+    assert splash.progress() == 90
+    splash.set_status(None, 100)
+    assert splash.progress() == 100
+    assert splash.text() == 'Loading Evening…'
+    splash.close()
+
+
 def test_splashscreen_hide_and_close(mock_settings: MagicMock, qtbot):
     """Backup prompts can hide and restore the splash before startup closes it."""
     splash = SplashScreen()
@@ -143,7 +165,7 @@ def test_overall_percentage_preserves_layout_and_progress(mock_settings: MagicMo
 
     assert splash.progress() == 62
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Initialising plugins - 3 of 8'
+    qtbot.waitUntil(lambda: splash.text() == 'Initialising plugins')
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring.isVisible()
     assert ring.isIndeterminate()
@@ -190,11 +212,11 @@ def test_empty_stage_preserves_overall_percentage(mock_settings: MagicMock, qtbo
     """An empty stage preserves the progress made by earlier startup work."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
-    splash.set_status('Loading library', 75)
+    splash.set_status('Loading Library', 75)
     splash.set_stage_progress('Loading themes', 0, 0, progress_range=(75, 90))
     assert not splash.isIndeterminate()
     assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '75%'
-    assert splash.text() == 'Loading themes'
+    qtbot.waitUntil(lambda: splash.text() == 'Loading themes')
 
 
 def _run_observed_splash(*args, samples_file):
@@ -246,9 +268,9 @@ def test_splash_animates_during_blocked_startup(mock_settings, qtbot, tmp_path):
         splash.set_status('Loading plugins', 55)
         splash.set_stage_progress('Initialising plugins', 3, 8, progress_range=(55, 75))
         # Deliberately do not process Qt events in the parent during the heavy task.
-        time.sleep(0.6)
+        time.sleep(1.0)
         samples = [json.loads(line) for line in samples_file.read_text().splitlines()]
-        frames = [sample for sample in samples if sample['text'] == 'Initialising plugins - 3 of 8']
+        frames = [sample for sample in samples if sample['text'] == 'Initialising plugins']
         assert len({sample['frame'] for sample in frames}) >= 3, (os.getpid(), frames)
         assert all(sample['progress'] == 62 and sample['visible'] for sample in frames)
         assert all(sample['theme'] == fluentqt.current_theme().value for sample in frames)

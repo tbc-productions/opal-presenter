@@ -79,15 +79,17 @@ def _service_icon_theme():
 
 def service_icon(icon, plugin_name):
     """Colour service, Library and Settings icons with the active Fluent palette."""
-    token = {'songs': 'systemCaution', 'bibles': 'systemSuccess', 'images': 'systemInfo',
-             'media': 'systemCritical', 'presentations': 'purple', 'custom': 'orange',
+    token = {'songs': 9, 'bibles': 'systemSuccess', 'images': 'systemInfo',
+             'media': 8, 'presentations': 'purple', 'custom': 'orange',
              'themes': 'accentDefault'}.get(plugin_name)
     if token is None:
         return icon
     theme = _service_icon_theme()
     colors = theme.theme_tokens().colors
     dark = fluentqt.theme_uses_dark_appearance(theme.effective_theme())
-    if token == 'purple':
+    if isinstance(token, int):
+        color = colors.charts[token]
+    elif token == 'purple':
         color = colors.charts[11 if dark else 6]
     elif token == 'orange':
         color = colors.charts[6 if dark else 11]

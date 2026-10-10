@@ -88,8 +88,8 @@ def test_bootstrap_initialise_progress_counts_processed_plugins(registry, settin
         manager.bootstrap_initialise()
 
     assert updates == [
-        (('Loading plugins', 1, 2), {'progress_range': (25, 55)}),
-        (('Loading Songs', 2, 2), {'progress_range': (25, 55)})
+        (('Loading plugins…', 1, 2), {'progress_range': (25, 55)}),
+        (('Loading Songs…', 2, 2), {'progress_range': (25, 55)})
     ]
 
 
@@ -580,14 +580,14 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     registry.register_function('startup_progress', report)
 
     def initialise_first():
-        assert updates == [('Initialising First plugin', 0, 2)]
+        assert updates == [('Loading First plugin…', 0, 2)]
         if fails:
             raise RuntimeError('Plugin failed')
 
     first.initialise.side_effect = initialise_first
 
     def initialise_second():
-        assert updates[-1] == ('Initialising Second plugin', 1, 2)
+        assert updates[-1] == ('Loading Second plugin…', 1, 2)
 
     second.initialise.side_effect = initialise_second
     with patch('openlp.core.lib.pluginmanager.State') as state_class:
@@ -598,9 +598,9 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     inactive.initialise.assert_not_called()
     second.initialise.assert_called_once_with()
     assert updates == [
-        ('Initialising First plugin', 0, 2),
-        ('Initialising First plugin', 1, 2),
-        ('Initialising Second plugin', 1, 2),
-        ('Initialising Second plugin', 2, 2),
-        ('Loading library and themes',)
+        ('Loading First plugin…', 0, 2),
+        ('Loading First plugin…', 1, 2),
+        ('Loading Second plugin…', 1, 2),
+        ('Loading Second plugin…', 2, 2),
+        ('Loading Library…',)
     ]

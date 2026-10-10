@@ -48,7 +48,12 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
         self.setIcon(QtGui.QIcon(':/icon/opal-presenter.png'))
         self.setIconSize(QtCore.QSize(128, 128))
-        self.setText(translate('OpenLP.SplashScreen', 'Starting Opal Presenter'))
+        self.setText(translate('OpenLP.SplashScreen', 'Starting…'))
+        self._pending_text = self.text()
+        self._status_timer = QtCore.QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.setInterval(500)
+        self._status_timer.timeout.connect(self._update_status_text)
         # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
         self.setFixedSize(793, 496)
@@ -68,6 +73,8 @@ class SplashScreen(fluentqt.SplashScreen):
         """Native show refreshes progress; retain the indeterminate spinner."""
         super().showEvent(event)
         self._refresh_progress_display()
+        if not self._status_timer.isActive():
+            self._status_timer.start()
 
     def _refresh_progress_display(self):
         """Keep the loading spinner independent of completed startup work."""
@@ -90,9 +97,22 @@ class SplashScreen(fluentqt.SplashScreen):
         """Refresh the loading stage before the next synchronous startup task."""
         if progress is not None:
             self.setProgress(max(self.progress(), min(100, progress)), 100)
-        self.setText(message)
+        if message is not None:
+            self._queue_status_text(message)
         self._refresh_progress_display()
         QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
+    def _queue_status_text(self, message):
+        self._pending_text = message
+        if not self._status_timer.isActive():
+            self._update_status_text()
+
+    def _update_status_text(self):
+        # Coalesce brief stages without holding up startup or percentage updates.
+        if self._pending_text != self.text():
+            self.setText(self._pending_text)
+            self._refresh_progress_display()
+            self._status_timer.start()
 
     def set_stage_progress(self, stage, completed=None, total=None, progress_range=None):
         """Map stage item counts into their share of overall startup progress."""
@@ -104,8 +124,7 @@ class SplashScreen(fluentqt.SplashScreen):
         if progress_range is not None:
             start, end = progress_range
             progress = start + (end - start) * completed // total
-        self.set_status(translate('OpenLP.SplashScreen', '{stage} - {completed} of {total}').format(
-            stage=stage, completed=completed, total=total), progress)
+        self.set_status(stage, progress)
 
     def is_foreground(self):
         return is_application_foreground()
@@ -173,7 +192,7 @@ def _run_splash(connection, theme, font, text, platform, parent_pid):
                     break
                 action, args = connection.recv()
                 if action == 'status':
-                    splash.setText(args[0])
+                    splash._queue_status_text(args[0])
                     splash.setProgress(args[1], 100)
                     splash._refresh_progress_display()
                 elif action == 'show':
@@ -246,7 +265,7 @@ class SplashScreenProcess(SplashScreen):
 
     def set_status(self, message, progress=None):
         super().set_status(message, progress)
-        self._send('status', self.text(), self.progress())
+        self._send('status', self._pending_text, self.progress())
 
     def show(self):
         self._show_requested = True

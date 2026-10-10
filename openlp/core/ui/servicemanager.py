@@ -82,6 +82,9 @@ class ServiceItemDelegate(FluentLibraryTreeDelegate):
         names = index.data(SERVICE_ITEM_INDICATORS_ROLE) or []
         return [fluent_icon(f'ic_fluent_{name}_24_regular') for name in names]
 
+    def iconBorderVisible(self, index):
+        return index.parent().isValid()
+
     def iconSize(self, option, index):
         if index.parent().isValid():
             icon_val = index.data(QtCore.Qt.ItemDataRole.DecorationRole)

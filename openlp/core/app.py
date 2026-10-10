@@ -180,11 +180,11 @@ class OpenLP(QtCore.QObject, LogMixin):
         # Check if OpenLP has been upgrade and if a backup of data should be created
         # Give startup phases fixed shares of progress; their durations vary with user data.
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Checking data'), 0)
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Starting…'), 0)
         self.backup_on_upgrade(has_run_wizard, can_show_splash)
         # start the main app window
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading components'), 5)
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Starting…'), 5)
         Registry().toggle_suppressing()
         loader()
         Registry().toggle_suppressing()
@@ -192,27 +192,27 @@ class OpenLP(QtCore.QObject, LogMixin):
         set_default_theme(app)
         layout_recovered = begin_layout_startup(self.settings, screens)
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Preparing the main window'), 15)
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Starting…'), 15)
         self.main_window = MainWindow()
         self.main_window.installEventFilter(self.main_window)
         # Correct stylesheet bugs
         application_stylesheet = get_application_stylesheet()
         app.setStyleSheet(application_stylesheet or '')
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading plugins'), 25)
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading plugins…'), 25)
         Registry().execute('bootstrap_initialise')
         State().flush_preconditions()
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading library and themes'), 55)
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading Library…'), 55)
         Registry().execute('bootstrap_post_set_up')
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Opening the main window'), 95)
+            self.splash.set_status(None, 95)
         activate_main_window = self.splash.is_foreground()
         self.main_window.show()
         refine_modern_layout(self.main_window)
         apply_mica(self.main_window)
         if can_show_splash:
-            self.splash.set_status(translate('OpenLP.SplashScreen', 'Ready'), 100)
+            self.splash.set_status(None, 100)
             # now kill the splashscreen
             Registry().remove_function('startup_progress', self.splash.set_stage_progress)
             log.debug('Splashscreen closing')
