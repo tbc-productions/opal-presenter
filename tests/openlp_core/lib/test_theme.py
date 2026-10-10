@@ -22,6 +22,7 @@
 Package to test the openlp.core.lib.theme package.
 """
 import pytest
+import json
 from PySide6 import QtCore
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -359,6 +360,72 @@ def test_set_default_header_footer(mock_geometry):
     assert theme.font_main_x == 10, 'header x pos should be reset to default of 10'
 
 
+@pytest.mark.parametrize('width,height', [(1280, 720), (3840, 2160), (1024, 768)])
+def test_theme_layout_and_typography_follow_output_resolution(mock_geometry, width, height):
+    theme = Theme()
+    theme.display_size_width, theme.display_size_height = 1920, 1080
+    theme.font_main_override = theme.font_footer_override = True
+    for area, y, height_fraction in (('main', 108, .7), ('footer', 972, .1)):
+        for field, value in (('x', 192), ('width', 1536), ('y', y), ('height', 1080 * height_fraction),
+                             ('size', 64), ('outline_size', 2), ('shadow_size', 4), ('shadow_blur', 6),
+                             ('letter_adjustment', -1)):
+            setattr(theme, f'font_{area}_{field}', value)
+    saved = theme.export_theme()
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
+        theme.set_default_header_footer()
+        once = theme.export_theme()
+        theme.set_default_header_footer()
+        assert theme.export_theme() == once
+        assert theme.font_main_x == pytest.approx(width * .1)
+        assert theme.font_main_width == pytest.approx(width * .8)
+        assert theme.font_footer_y == pytest.approx(height * .9)
+        assert theme.font_footer_height == pytest.approx(height * .1)
+        assert theme.font_main_size == pytest.approx(64 * height / 1080)
+        assert theme.font_footer_outline_size == pytest.approx(2 * height / 1080)
+        assert theme.font_main_shadow_size == pytest.approx(4 * height / 1080)
+        assert theme.font_main_shadow_blur == pytest.approx(6 * height / 1080)
+        assert theme.font_main_letter_adjustment == pytest.approx(-height / 1080)
+        assert (theme.display_size_width, theme.display_size_height) == (width, height)
+    restored = Theme()
+    restored.load_theme(saved)
+    assert restored.export_theme() == saved
+
+
+@pytest.mark.parametrize('invalid_size', [None, 0, -1, '1920', True, float('nan'), float('inf')])
+def test_old_theme_canvas_is_inferred_without_reusing_previous_dimensions(mock_geometry, invalid_size):
+    theme = Theme()
+    saved = json.loads(theme.export_theme())
+    saved.update(font_footer_x=10, font_footer_width=1900, font_footer_y=972, font_footer_height=108,
+                 display_size_width=invalid_size, display_size_height=invalid_size, font_main_size=64)
+    theme.load_theme(json.dumps(saved))
+    assert (theme.display_size_width, theme.display_size_height) == (1920, 1080)
+    theme.set_default_header_footer()
+    assert theme.font_main_size == pytest.approx(64 * 600 / 1080)
+    assert theme.font_footer_y == 540
+
+
+def test_portable_theme_normalises_a_copy_without_changing_the_saved_layout(mock_geometry):
+    theme = Theme()
+    theme.display_size_width, theme.display_size_height = 1920, 1080
+    theme.font_main_size = 64
+    before = theme.export_theme()
+    portable = json.loads(theme.export_theme_self_contained())
+    assert portable['font_main_size'] == pytest.approx(64 * 600 / 1080)
+    assert portable['display_size_height'] == 600
+    assert theme.export_theme() == before
+
+
+def test_legacy_xml_theme_records_its_original_canvas(mock_geometry):
+    theme = Theme()
+    theme.parse_xml('<?xml version="1.0"?><theme><font type="footer"><x>10</x><width>1900</width>'
+                    '<y>972</y><height>108</height>'
+                    '</font><font type="main"><size>64</size></font></theme>')
+    assert (theme.display_size_width, theme.display_size_height) == (1920, 1080)
+    theme.set_default_header_footer()
+    assert theme.font_main_size == pytest.approx(64 * 600 / 1080)
+
+
 def check_theme(theme):
     assert '#000000' == theme.background_border_color, 'background_border_color should be "#000000"'
     assert 'solid' == theme.background_type, 'background_type should be "solid"'
@@ -366,4 +433,4 @@ def check_theme(theme):
     assert theme.font_footer_bold is False, 'font_footer_bold should be False'
     assert 'Arial' == theme.font_main_name, 'font_main_name should be "Arial"'
     assert theme.font_main_weight == theme.font_footer_weight == 0
-    assert 63 == len(theme.__dict__), 'The theme should have 63 attributes'
+    assert 65 == len(theme.__dict__), 'The theme should have 65 attributes'

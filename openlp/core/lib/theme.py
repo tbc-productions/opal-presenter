@@ -24,6 +24,7 @@ Provide the theme XML and handling functions for OpenLP v2 themes.
 import json
 import logging
 import copy
+import math
 from pathlib import Path
 
 from lxml import etree, objectify
@@ -326,6 +327,10 @@ class Theme(object):
         json_path = AppLocation.get_directory(AppLocation.AppDir) / 'core' / 'lib' / 'json' / 'theme.json'
         jsn = get_text_file_string(json_path)
         self.load_theme(jsn)
+        screen = ScreenList().current
+        if screen:
+            self.display_size_width = screen.display_geometry.width()
+            self.display_size_height = screen.display_geometry.height()
         self.set_default_header_footer()
         self.background_filename = None
         self.background_source = None
@@ -360,9 +365,22 @@ class Theme(object):
 
     def set_default_header_footer(self):
         """
-        Set the default header and footer size to match the current primary screen.
-        Obeys theme override variables.
+        Scale the layout and typography to the output, then reset areas using default locations.
         """
+        screen = ScreenList().current
+        if not screen:
+            return
+        geometry = screen.display_geometry
+        scale_x = geometry.width() / self.display_size_width
+        scale_y = geometry.height() / self.display_size_height
+        for area in ('main', 'footer'):
+            for field in ('x', 'width', 'y', 'height', 'size', 'outline_size', 'shadow_size',
+                          'shadow_blur', 'letter_adjustment'):
+                name = f'font_{area}_{field}'
+                scale = scale_x if field in ('x', 'width') else scale_y
+                setattr(self, name, getattr(self, name) * scale)
+        self.display_size_width = geometry.width()
+        self.display_size_height = geometry.height()
         if not self.font_main_override:
             self.set_default_header()
         if not self.font_footer_override:
@@ -401,12 +419,22 @@ class Theme(object):
         else:
             jsn = json.loads(theme, cls=OpenLPJSONDecoder)
         self.expand_json(jsn)
+        self._set_display_size(jsn)
         from openlp.core.lib.designmedia import valid_media_source, materialise_media
         if valid_media_source(self.background_filename):
             self.background_filename = materialise_media(self.background_filename)
         if getattr(self, 'background_label', None) and self.background_filename:
             from openlp.core.lib.designmedia import remember_media_label
             remember_media_label(self.background_filename, self.background_label)
+
+    def _set_display_size(self, data):
+        # shortcut: old themes have no canvas size; infer it from the footer until they are saved again.
+        for dimension, inferred in (('width', self.font_footer_width + 2 * self.font_footer_x),
+                                    ('height', self.font_footer_y + self.font_footer_height)):
+            value = data.get(f'display_size_{dimension}')
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                value = max(1, inferred)
+            setattr(self, f'display_size_{dimension}', value)
 
     def export_theme(self, theme_path=None, is_js=False):
         """
@@ -444,9 +472,7 @@ class Theme(object):
         if self.background_type == 'image':
             image = image_to_data_uri(self.background_filename)
             theme_copy.background_filename = image
-        current_screen_geometry = ScreenList().current.display_geometry
-        theme_copy.display_size_width = current_screen_geometry.width()
-        theme_copy.display_size_height = current_screen_geometry.height()
+        theme_copy.set_default_header_footer()
         theme_copy.background_source = ''
         exported_theme = theme_copy.export_theme(is_js=is_js)
         return exported_theme
@@ -505,6 +531,7 @@ class Theme(object):
             else:
                 if element.tag == 'name':
                     self._create_attr('theme', element.tag, element.text)
+        self._set_display_size({})
 
     @staticmethod
     def _translate_tags(master, element, value):

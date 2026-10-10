@@ -52,6 +52,20 @@ output aspect ratio. Earlier designs retain their existing output behaviour unti
 edited in the designer. The XML retains normalised coordinates plus canvas
 width/height, avoiding rounding loss when converting between pixel sizes.
 
+Theme text and footer areas use percentage sizes and offsets from their nearest
+screen edges. Their boxes are kept inside the display, including when an older
+theme contains oversized or off-screen coordinates. Text overflowing a box stays
+inside that box; lyrics still use the normal slide pagination, and long footers
+can use the theme's wrapping option.
+
+Font sizes remain in points in the editor. Saved themes record their reference
+display dimensions, and rendering scales fonts, spacing, outlines and shadows
+with the display height. A 64-point font designed at 1080p therefore occupies the
+same proportion of the screen at 720p or 4K. Preview zoom follows the same scaling.
+For legacy themes without reference dimensions, the saved footer bounds provide
+an estimate; a custom footer that does not reach the screen edges can make that
+estimate inaccurate. Saving the theme records explicit dimensions for future use.
+
 Add text boxes, rectangles, ellipses and images with the toolbar. Select an
 element on the canvas or in Layers. The top row in Layers is the frontmost object;
 drag rows to reorder them, or use the arrow buttons and the Arrange menu. Slide

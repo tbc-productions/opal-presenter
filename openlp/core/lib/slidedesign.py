@@ -224,6 +224,8 @@ def apply_design(theme, value, size=None):
     else:
         # Earlier designs continue to fill the output exactly as before.
         result.song_design_output_height = size.height()
+    result.display_size_width = size.width()
+    result.display_size_height = size.height()
     result.song_design = resolve_design_media(design)
     return result
 
@@ -328,11 +330,15 @@ def design_theme(theme, value, size=None):
     for key, data in snapshot.items():
         if re.fullmatch(r'font_(main|footer)_(x|width)', key):
             data *= size.width() / snapshot.get('display_size_width', size.width())
-        elif re.fullmatch(r'font_(main|footer)_size', key) and 'canvas_width' in design:
+        elif re.fullmatch(r'font_(main|footer)_(size|outline_size|shadow_size|shadow_blur|letter_adjustment)', key) \
+                and 'canvas_width' in design:
             data *= design['canvas_height'] / snapshot.get('display_size_height', design['canvas_height'])
-        elif re.fullmatch(r'font_(main|footer)_(y|height|size)', key):
+        elif re.fullmatch(r'font_(main|footer)_(y|height|size|outline_size|shadow_size|shadow_blur|'
+                          r'letter_adjustment)', key):
             data *= size.height() / snapshot.get('display_size_height', size.height())
         setattr(result, key, data)
+    result.display_size_width = size.width()
+    result.display_size_height = size.height()
     source = snapshot.get('background_filename')
     result.background_filename = materialise_media(source) if snapshot['background_type'] == 'video' else \
         resolve_media(source)

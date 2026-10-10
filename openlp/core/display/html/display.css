@@ -46,6 +46,7 @@ body,
 
 .reveal {
   position: relative;
+  container-type: size;
 }
 
 .reveal .slides {

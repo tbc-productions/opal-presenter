@@ -226,6 +226,23 @@ def test_pixel_canvas_accepts_one_pixel_textbox_and_imported_theme_scales_once()
     result = apply_design(SimpleNamespace(), design, QSize(1280, 720))
     assert result.font_main_size == 32
     assert result.font_main_width == pytest.approx(2 / 3)
+    assert (result.display_size_width, result.display_size_height) == (1280, 720)
+
+
+@pytest.mark.parametrize('pixel_canvas', [False, True])
+def test_imported_theme_effects_follow_the_same_scale_as_its_fonts(pixel_canvas):
+    design = {'version': 1, 'theme': {
+        'background_type': 'solid', 'display_size_width': 1920, 'display_size_height': 1080,
+        'font_main_size': 48, 'font_main_outline_size': 3, 'font_main_shadow_size': 6,
+        'font_main_shadow_blur': 9, 'font_main_letter_adjustment': -1}}
+    if pixel_canvas:
+        design.update(canvas_width=1920, canvas_height=1080)
+    result = apply_design(SimpleNamespace(), design, QSize(1280, 720))
+    assert result.font_main_size == 32
+    assert result.font_main_outline_size == 2
+    assert result.font_main_shadow_size == 4
+    assert result.font_main_shadow_blur == 6
+    assert result.font_main_letter_adjustment == pytest.approx(-2 / 3)
 
 
 def test_slide_bold_override_supersedes_theme_weight():

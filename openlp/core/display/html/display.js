@@ -2023,14 +2023,14 @@ var Display = {
    * @param fontSize The font size in pts
    */
   calculateLineCount: function (fontSize) {
-    var p = $(".slides > section > section > p, .slides > section > p");
+    var p = $(".slides .slide-text-content p");
     if (p.length == 0) {
-      Display.addSlide("v1", "Arky arky");
-      p = $(".slides > section > section > p, .slides > section > p");
+      Display.setTextSlide("Arky arky");
+      p = $(".slides .slide-text-content p");
     }
     p = p[0];
-    p.style.fontSize = "" + fontSize + "pt";
-    var d = Reveal.getCurrentSlide() || $(".slides > section")[0];
+    if (Number.isFinite(fontSize)) p.style.fontSize = Display._themeLength(fontSize);
+    var d = p.closest('.slide-text-content');
     var lh = parseFloat(_getStyle(p, "line-height"));
     var dh = parseFloat(_getStyle(d, "height"));
     return Math.floor(dh / lh);
@@ -2084,8 +2084,8 @@ var Display = {
         node.textContent = element.text || '';
         Object.assign(node.style, {
           whiteSpace: 'pre-wrap', fontFamily: element.font || 'Arial', color: element.colour || '#ffffff',
-          fontSize: `${(element.font_size || 40) * (Display._theme.song_design_output_height || 1080) /
-            (design.canvas_height || 1080)}pt`,
+          fontSize: Display._themeLength((element.font_size || 40) * (Display._theme.song_design_output_height || 1080) /
+            (design.canvas_height || 1080)),
           fontWeight: element.bold ? 'bold' : 'normal', fontStyle: element.italic ? 'italic' : 'normal',
           textAlign: element.align || 'center', lineHeight: '1.15'
         });
@@ -2225,13 +2225,40 @@ var Display = {
       var nodes = area === 'main' ? document.querySelectorAll('.text-slide .slide-text-content') :
         [Display._footerContainer].filter(Boolean);
       ['x', 'y', 'width', 'height'].forEach(field => {
-        var value = geometry[field];
-        Display._theme[`font_${area}_${field}`] = value;
-        var property = ({x: 'left', y: 'top'})[field] || field;
-        nodes.forEach(node => node.style.setProperty(property, `${value}px`,
-          area === 'main' && (field === 'x' || field === 'y') ? 'important' : ''));
+        Display._theme[`font_${area}_${field}`] = geometry[field];
+      });
+      Object.entries(Display._themeAreaStyle(area)).forEach(([property, value]) => {
+        nodes.forEach(node => node.style.setProperty(property, value,
+          area === 'main' && ['left', 'right', 'top', 'bottom'].includes(property) ? 'important' : ''));
       });
     });
+  },
+
+  /** Keep theme boxes inside the slide, using percentage offsets from their nearest edges. */
+  _themeAreaStyle: function (area) {
+    var theme = Display._theme;
+    var style = {left: 'auto', right: 'auto', top: 'auto', bottom: 'auto'};
+    [['x', 'width', 'left', 'right'], ['y', 'height', 'top', 'bottom']].forEach(([position, length, near, far]) => {
+      var canvas = Number(theme[`display_size_${length}`]);
+      if (!Number.isFinite(canvas) || canvas <= 0) {
+        style[near] = `${theme[`font_${area}_${position}`]}px`;
+        style[length] = `${theme[`font_${area}_${length}`]}px`;
+        return;
+      }
+      var size = Math.max(0, Math.min(100, Number(theme[`font_${area}_${length}`]) / canvas * 100 || 0));
+      var offset = Math.max(0, Math.min(100 - size, Number(theme[`font_${area}_${position}`]) / canvas * 100 || 0));
+      var opposite = 100 - size - offset;
+      style[length] = `${size}%`;
+      style[offset <= opposite ? near : far] = `${Math.min(offset, opposite)}%`;
+    });
+    return style;
+  },
+
+  /** Container units follow both live output resolution and the preview's existing CSS zoom. */
+  _themeLength: function (value, unit='pt') {
+    var height = Number((Display._theme || {}).display_size_height);
+    return Number.isFinite(height) && height > 0 ?
+      `${Number(value) * (unit === 'pt' ? 4 / 3 : 1) * 100 / height}cqh` : `${value}${unit}`;
   },
 
   _startDesignTextEdit: function (event, node) {
@@ -2835,9 +2862,9 @@ var Display = {
 
     var mainFontSizePt = Number(Display._theme.font_main_size) || 0;
     var footerFontSizePt = Number(Display._theme.font_footer_size) || 0;
-    var mainFontSizeCss = `${mainFontSizePt}pt`;
-    var footerFontSizeCss = `${footerFontSizePt}pt`;
-    var mainPaddingBottomCss = `${mainFontSizePt / 8}px`;
+    var mainFontSizeCss = Display._themeLength(mainFontSizePt);
+    var footerFontSizeCss = Display._themeLength(footerFontSizePt);
+    var mainPaddingBottomCss = Display._themeLength(mainFontSizePt / 8, 'px');
 
     var mainStyle = {
       position: "absolute",
@@ -2846,17 +2873,15 @@ var Display = {
       "box-sizing": "border-box",
       margin: "0",
       padding: "0",
-      width: `${Display._theme.font_main_width}px`,
-      height: `${Display._theme.font_main_height}px`,
-      top: `${Display._theme.font_main_y}px`,
-      left: `${Display._theme.font_main_x}px`,
+      ...Display._themeAreaStyle('main'),
+      overflow: 'hidden',
       color: Display._theme.font_main_color,
       "font-family": Display._theme.font_main_name,
       "font-size": mainFontSizeCss,
       "font-style": Display._theme.font_main_italics ? "italic" : "",
       "font-weight": Display._theme.font_main_weight || (Display._theme.font_main_bold ? "bold" : "normal"),
       "line-height": `${100 + Display._theme.font_main_line_adjustment}%`,
-      "letter-spacing": `${Display._theme.font_main_letter_adjustment}px`,
+      "letter-spacing": Display._themeLength(Display._theme.font_main_letter_adjustment, 'px'),
 
       "text-align":
         HorizontalAlignCSS[Display._theme.display_horizontal_align] ||
@@ -2886,7 +2911,7 @@ var Display = {
             Display._theme.font_main_shadow_color, Display._theme.font_main_shadow_blur || 0) :
           []
         )
-      ].join(", ")
+      ].join(", ").replace(/(-?[\d.]+)pt/g, (match, value) => Display._themeLength(value))
     };
 
     var textTargets = targetElement.matches("section.text-slides") ? Array.from(targetElement.children) : [targetElement];
@@ -2896,7 +2921,7 @@ var Display = {
       contentElement.style.cssText = "";
       for (var mainKey in mainStyle) {
         if (mainStyle.hasOwnProperty(mainKey)) {
-          var priority = (mainKey === "top" || mainKey === "left") ? "important" : "";
+          var priority = ['top', 'bottom', 'left', 'right'].includes(mainKey) ? "important" : "";
           contentElement.style.setProperty(mainKey, mainStyle[mainKey], priority);
         }
       }
@@ -2911,17 +2936,15 @@ var Display = {
       "box-sizing": "border-box",
       margin: "0",
       padding: "0",
-      width: `${Display._theme.font_footer_width}px`,
-      height: `${Display._theme.font_footer_height}px`,
-      top: `${Display._theme.font_footer_y}px`,
-      left: `${Display._theme.font_footer_x}px`,
+      ...Display._themeAreaStyle('footer'),
+      overflow: 'hidden',
       color: Display._theme.font_footer_color,
       "font-family": Display._theme.font_footer_name,
       "font-size": footerFontSizeCss,
       "font-style": Display._theme.font_footer_italics ? "italic" : "",
       "font-weight": Display._theme.font_footer_weight || (Display._theme.font_footer_bold ? "bold" : "normal"),
       "line-height": `${100 + Display._theme.font_footer_line_adjustment}%`,
-      "letter-spacing": `${Display._theme.font_footer_letter_adjustment}px`,
+      "letter-spacing": Display._themeLength(Display._theme.font_footer_letter_adjustment, 'px'),
       "white-space": Display._theme.font_footer_wrap ? "normal" : "nowrap",
 
       "text-align":
@@ -2949,7 +2972,7 @@ var Display = {
             Display._theme.font_footer_shadow_color, Display._theme.font_footer_shadow_blur || 0) :
           []
         )
-      ].join(", ")
+      ].join(", ").replace(/(-?[\d.]+)pt/g, (match, value) => Display._themeLength(value))
     };
 
     var footerTarget = Display._footerContainer;
