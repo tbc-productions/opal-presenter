@@ -264,10 +264,20 @@ def test_large_image_preview_shows_original_metadata_and_friendly_name(qtbot, li
     preview.show()
     qtbot.wait(20)
     assert preview.windowTitle() == 'Church background'
+    assert [label.text() for label in preview.findChildren(QtWidgets.QLabel)
+            if label.text() == 'Church background'] == ['Church background']
     assert preview.metadata['Resolution'].text() == '160 × 90'
     assert preview.metadata['File type'].text().startswith('PNG')
     assert preview.metadata['File size'].text() != '—'
     assert preview.viewer.pixmap() is not None
+    qtbot.keyClick(preview, QtCore.Qt.Key.Key_Escape)
+    qtbot.waitUntil(lambda: not preview.isVisible())
+    assert preview.result() == QtWidgets.QDialog.DialogCode.Rejected
+    preview.show()
+    close = next(button for button in preview.findChildren(QtWidgets.QPushButton) if button.text() == 'Close')
+    qtbot.mouseClick(close, QtCore.Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not preview.isVisible())
+    assert preview.result() == QtWidgets.QDialog.DialogCode.Accepted
 
 
 def test_presentation_inspector_browses_slides_and_uses_source_metadata(qtbot, library, tmp_path):

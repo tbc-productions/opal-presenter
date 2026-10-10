@@ -618,6 +618,16 @@ class TreeItemsMixin:
 class FluentTreeWidget(TreeItemsMixin, fluentqt.TreeView):
     """Native hierarchy with visible headers when column labels are supplied."""
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # The native DataGrid header needs its theme host to stay alive.
+        self._header_host = fluentqt.DataGrid(self)
+        self._header_host.hide()
+        self.setHeader(self._header_host.horizontalHeader())
+        self.header().setSectionsMovable(False)
+        self.header().sortIndicatorChanged.connect(self._sort_items)
+        self.setHeaderHidden(True)
+
     def indexAt(self, point):
         # Match Qt's delegate geometry rather than Fluent's fixed row heights.
         return _qt.QTreeView.indexAt(self, point)

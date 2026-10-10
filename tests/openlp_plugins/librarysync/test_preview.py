@@ -86,6 +86,7 @@ def test_cloud_image_uses_fluent_inspector_and_friendly_name(settings, qtbot, tm
     assert isinstance(window, QtWidgets.fluentqt.Window)
     assert window.isWindow()
     assert window.windowTitle() == 'Sunday'
+    assert not any(label.text() == 'Sunday' for label in window.contentWidget().findChildren(QtWidgets.QLabel))
     assert window.metadata['Source'].text() == 'Google Drive'
     assert window.metadata['Resolution'].text() == '200 × 100'
     assert window.metadata['Access'].text() == 'View'

@@ -58,12 +58,6 @@ class MediaPreviewMixin:
         self.setMinimumSize(680, 440)
         content = self.contentWidget() if isinstance(self, QtWidgets.fluentqt.Window) else self
         layout = QtWidgets.QVBoxLayout(content)
-        heading = QtWidgets.QLabel(name)
-        heading.setTextFormat(QtCore.Qt.TextFormat.PlainText)
-        font = heading.font()
-        font.setPointSize(20)
-        heading.setFont(font)
-        layout.addWidget(heading)
         body = QtWidgets.QHBoxLayout()
         mime = QtCore.QMimeDatabase().mimeTypeForFile(str(self.path))
         video = media_kind(self.path) == 'video' if kind is None else kind == 'media'
