@@ -1244,6 +1244,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         layout = QtWidgets.QVBoxLayout(content)
         layout.setContentsMargins(0, 0, 0, 0)
         label = QtWidgets.QLabel(translate('SongsPlugin.EditSongForm', 'Choose type for this author'), content)
+        label.setWordWrap(True)
         layout.addWidget(label)
         combo = create_combo_box(content, 'edit_author_type_combo_box', editable=False)
         for value in AuthorType.SortedTypes:

@@ -78,7 +78,7 @@ class Ui_ConfirmationDialog():
         row_height = self.listview.sizeHintForRow(0)
         if row_height <= 0:
             row_height = self.listview.fontMetrics().height() + 8
-        visible_rows = min(max(row_count, 1), 8)
+        visible_rows = max(row_count, 1)
         frame_height = self.listview.frameWidth() * 2
         list_height = (row_height * visible_rows) + frame_height + 4
         self.listview.setMinimumHeight(list_height)

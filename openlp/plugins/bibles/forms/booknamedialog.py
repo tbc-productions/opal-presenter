@@ -49,6 +49,7 @@ class Ui_BookNameDialog(object):
         self.current_label.setObjectName('current_label')
         self.corresponding_layout.addWidget(self.current_label, 0, 0, 1, 1)
         self.current_book_label = QtWidgets.QLabel(book_name_dialog)
+        self.current_book_label.setWordWrap(True)
         self.current_book_label.setObjectName('current_book_label')
         self.corresponding_layout.addWidget(self.current_book_label, 0, 1, 1, 1)
         self.corresponding_label = QtWidgets.QLabel(book_name_dialog)

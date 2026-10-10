@@ -393,6 +393,43 @@ def test_long_message_scrolls_without_hiding_commands(qapp, qtbot):
     box.done(0)
 
 
+@pytest.mark.parametrize('animated', [False, True])
+def test_content_dialog_expands_before_scrolling_and_recovers_with_host(qapp, qtbot, animated):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 900)
+    parent.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+    parent.show()
+    dialog = fluent.ContentDialog(parent)
+    dialog.setTitle('Review changes')
+    label = fluent.QLabel('\n\n'.join(['Review these changes before saving your layout.'] * 8))
+    label.setWordWrap(True)
+    dialog.setContent(label)
+    dialog.setPrimaryButtonText('Save')
+    dialog.setCloseButtonText('Cancel')
+    dialog.setAnimationEnabled(animated)
+    dialog.open()
+    qtbot.wait(250)
+    scroll = dialog._content_scroll
+    assert dialog.height() > 320
+    assert scroll.verticalScrollBar().maximum() == 0
+    expanded_height = dialog.height()
+    for width, height in ((1000, 320), (360, 320), (360, 900), (1000, 900)):
+        parent.resize(width, height)
+        QtWidgets.QApplication.processEvents()
+        assert parent.rect().contains(dialog.geometry())
+        assert scroll.horizontalScrollBar().maximum() == 0
+        assert (scroll.verticalScrollBar().maximum() > 0) is (height == 320)
+        if height == 900:
+            assert dialog.height() >= expanded_height
+            assert scroll.viewport().height() >= label.heightForWidth(scroll.viewport().width())
+        for slot in ('primary', 'close'):
+            button = dialog._native_commands[slot]
+            assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+    qtbot.mouseClick(dialog._native_commands['close'], QtCore.Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not dialog.isOpen())
+
+
 @pytest.mark.parametrize('host_size', [(1000, 700), (420, 320)])
 def test_short_confirmation_fits_after_native_layout_settles(qapp, qtbot, host_size):
     parent = QtWidgets.QWidget()
@@ -428,12 +465,65 @@ def test_short_message_recovers_after_a_scrollbar_causes_extra_wrapping(qapp, qt
     QtWidgets.QApplication.processEvents()
     box.resize(box.width(), box.height() - 20)
     QtWidgets.QApplication.processEvents()
-    assert box._content_scroll.verticalScrollBar().maximum() > 0
-    box._prepare_size()
-    QtWidgets.QApplication.processEvents()
+    qtbot.waitUntil(lambda: box._content_scroll.verticalScrollBar().maximum() == 0)
     assert box._content_scroll.verticalScrollBar().maximum() == 0
     assert box._text.height() >= box._text.heightForWidth(box._text.width())
     box.done(0)
+
+
+@pytest.mark.parametrize('control_type', [fluent.QLineEdit, fluent.QComboBox, fluent.QSpinBox])
+@pytest.mark.parametrize('minimum_height', [0, 64])
+def test_direct_content_control_fits_without_scrollbars(qapp, qtbot, control_type, minimum_height):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.show()
+    dialog = fluent.ContentDialog(parent)
+    dialog.setTitle('New layout')
+    field = control_type()
+    field.setMinimumHeight(minimum_height)
+    dialog.setContent(field)
+    dialog.setPrimaryButtonText('Create')
+    dialog.setCloseButtonText('Cancel')
+    dialog.open()
+    qtbot.wait(250)
+    scroll = dialog._content_scroll
+    assert scroll.viewport().height() >= max(field.minimumHeight(), field.sizeHint().height())
+    assert scroll.verticalScrollBar().maximum() == 0
+    assert scroll.horizontalScrollBar().maximum() == 0
+    assert parent.rect().contains(dialog.geometry())
+    dialog.done(0)
+
+
+def test_content_minimum_height_survives_host_shrink_and_growth(qapp, qtbot):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.show()
+    dialog = fluent.ContentDialog(parent)
+    dialog.setTitle('New layout')
+    label = fluent.QLabel('A short wrapped paragraph')
+    label.setWordWrap(True)
+    label.setMinimumHeight(90)
+    dialog.setContent(label)
+    dialog.setPrimaryButtonText('Create')
+    dialog.setCloseButtonText('Cancel')
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    for width, height, scrolls in ((1000, 700, False), (360, 220, True), (360, 400, False), (1000, 700, False)):
+        parent.resize(width, height)
+        QtWidgets.QApplication.processEvents()
+        scroll = dialog._content_scroll
+        assert (scroll.verticalScrollBar().maximum() > 0) is scrolls
+        assert scroll.horizontalScrollBar().maximum() == 0
+        assert parent.rect().contains(dialog.geometry())
+        assert label.height() >= label.minimumHeight()
+        if not scrolls:
+            assert scroll.viewport().height() >= label.minimumHeight()
+        for slot in ('primary', 'close'):
+            button = dialog._native_commands[slot]
+            assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+    dialog.done(0)
 
 
 def test_content_dialog_preserves_padding_typography_and_content_ownership(qapp):
@@ -494,9 +584,13 @@ def test_folder_form_has_room_for_both_rows_and_primary_action(qapp, registry, m
     dialog.done(0)
 
 
-def test_planning_center_keeps_import_before_refresh(qapp, registry, mock_settings):
+def test_planning_center_keeps_import_before_refresh(qapp, registry, mock_settings, qtbot):
     from openlp.plugins.planningcenter.forms.selectplandialog import Ui_SelectPlanDialog
-    dialog = type('PlanningDialog', (fluent.FormDialog, Ui_SelectPlanDialog), {})()
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.show()
+    dialog = type('PlanningDialog', (fluent.FormDialog, Ui_SelectPlanDialog), {})(parent)
     dialog.setup_ui(dialog)
     dialog.setAnimationEnabled(False)
     dialog.open()
@@ -510,6 +604,14 @@ def test_planning_center_keeps_import_before_refresh(qapp, registry, mock_settin
     assert not dialog._native_commands['primary'].isEnabled()
     dialog.import_as_new_button.setEnabled(True)
     assert dialog._native_commands['primary'].isEnabled()
+    for width in (420, 360, 1000):
+        parent.resize(width, 320)
+        QtWidgets.QApplication.processEvents()
+        for button in dialog._native_commands.values():
+            assert button.width() >= button.sizeHint().width()
+            assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+        assert dialog._content_commands['primary'] is dialog.import_as_new_button
+        assert dialog._content_commands['secondary'] is dialog.update_existing_button
     dialog.done(0)
     dialog.deleteLater()
 
@@ -550,3 +652,217 @@ def test_parentless_content_prompt_does_not_keep_default_window_height(qapp, qtb
     assert dialog.height() < 360
     qtbot.mouseClick(dialog._native_commands['secondary'], QtCore.Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: dialog.result() == dialog.ResultSecondary)
+
+
+@pytest.mark.parametrize('host_width', [360, 420, 560])
+def test_content_footer_keeps_long_captions_visible_in_narrow_hosts(qapp, qtbot, host_width):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.show()
+    dialog = fluent.ContentDialog(parent)
+    dialog.setTitle('Save changes?')
+    dialog.setContent(fluent.QLineEdit())
+    dialog.setPrimaryButtonText('Save changes')
+    dialog.setSecondaryButtonText('Restart Opal Presenter')
+    dialog.setCloseButtonText('Cancel')
+    dialog.setDefaultButton(fluentqt.ContentDialogButton.Close)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    for width in (host_width, 1000):
+        parent.resize(width, 320)
+        QtWidgets.QApplication.processEvents()
+        assert parent.rect().contains(dialog.geometry())
+        buttons = [dialog._native_commands[slot] for slot in ('primary', 'secondary', 'close')]
+        positions = [button.mapTo(dialog, QtCore.QPoint()) for button in buttons]
+        assert positions == sorted(positions, key=lambda position: (position.y(), position.x()))
+        for button in buttons:
+            assert button.width() >= button.sizeHint().width()
+            assert button.height() >= button.sizeHint().height()
+            assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+        assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+    parent.resize(host_width, 320)
+    QtWidgets.QApplication.processEvents()
+    qtbot.keyClick(dialog.content(), QtCore.Qt.Key.Key_Return)
+    assert not dialog.isOpen()
+    assert dialog.result() == dialog.ResultNone
+    dialog.open()
+    QtWidgets.QApplication.processEvents()
+    qtbot.mouseClick(dialog._native_commands['close'], QtCore.Qt.MouseButton.LeftButton)
+    assert not dialog.isOpen()
+    assert dialog.result() == dialog.ResultNone
+
+
+@pytest.mark.parametrize('form', [False, True])
+def test_open_content_dialog_grows_when_body_changes(qapp, qtbot, form):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 900)
+    parent.show()
+    dialog = fluent.FormDialog(parent) if form else fluent.ContentDialog(parent)
+    label = fluent.QLabel('Short text')
+    label.setWordWrap(True)
+    if form:
+        layout = QtWidgets.QVBoxLayout(dialog.content_widget)
+        layout.addWidget(label)
+    else:
+        dialog.setContent(label)
+    dialog.setTitle('Review changes')
+    dialog.setPrimaryButtonText('Save')
+    dialog.setCloseButtonText('Cancel')
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    QtWidgets.QApplication.processEvents()
+    initial_height = dialog.height()
+    label.setText('\n\n'.join(['Review these changes before saving your layout.'] * 8))
+    qtbot.wait(50)
+    assert dialog.height() > initial_height
+    assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+    label.setText('Short text')
+    qtbot.wait(50)
+    assert dialog.height() == initial_height
+    dialog.done(0)
+
+
+@pytest.mark.parametrize('kind', ['book', 'language'])
+def test_bible_matching_dialog_wraps_long_names(qapp, qtbot, registry, mock_settings, kind):
+    from openlp.plugins.bibles.forms.booknamedialog import Ui_BookNameDialog
+    from openlp.plugins.bibles.forms.languagedialog import Ui_LanguageDialog
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 900)
+    parent.show()
+    ui = Ui_BookNameDialog if kind == 'book' else Ui_LanguageDialog
+    dialog = type('BibleDialog', (fluent.FormDialog, ui), {})(parent)
+    dialog.setup_ui(dialog)
+    label = dialog.current_book_label if kind == 'book' else dialog.bible_label
+    label.setText('An unfamiliar name with a detailed translation title ' * 4)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    for width, height in ((1000, 900), (360, 320), (1000, 900)):
+        parent.resize(width, height)
+        QtWidgets.QApplication.processEvents()
+        assert label.wordWrap()
+        assert label.height() >= label.heightForWidth(label.width())
+        assert dialog._content_scroll.horizontalScrollBar().maximum() == 0
+        assert parent.rect().contains(dialog.geometry())
+        if height == 900:
+            assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+    dialog.done(0)
+
+
+def test_confirmation_list_expands_past_eight_rows_before_scrolling(qapp, qtbot, registry, mock_settings):
+    from openlp.core.ui.confirmationform import ConfirmationForm
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 1000)
+    parent.show()
+    dialog = ConfirmationForm(parent, 'Delete items?', [f'Item {index}' for index in range(12)], 'Delete these items?')
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    QtWidgets.QApplication.processEvents()
+    assert dialog.listview.verticalScrollBar().maximum() == 0
+    assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+    parent.resize(420, 320)
+    QtWidgets.QApplication.processEvents()
+    assert dialog._content_scroll.verticalScrollBar().maximum() > 0
+    for slot in ('primary', 'close'):
+        button = dialog._native_commands[slot]
+        assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+    qtbot.keyClick(dialog, QtCore.Qt.Key.Key_Return)
+    assert dialog.result() == dialog.DialogCode.Rejected
+
+
+@pytest.mark.parametrize('module_name, ui_name', [
+    ('openlp.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
+    ('openlp.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
+    ('openlp.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
+    ('openlp.plugins.songs.forms.mediafilesdialog', 'Ui_MediaFilesDialog'),
+    ('openlp.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
+    ('openlp.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
+    ('openlp.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
+    ('openlp.plugins.bibles.forms.booknamedialog', 'Ui_BookNameDialog'),
+    ('openlp.plugins.bibles.forms.languagedialog', 'Ui_LanguageDialog'),
+    ('openlp.plugins.songusage.forms.songusagedeletedialog', 'Ui_SongUsageDeleteDialog'),
+    ('openlp.plugins.planningcenter.forms.selectplandialog', 'Ui_SelectPlanDialog'),
+])
+def test_application_content_forms_fit_and_recover_after_host_resize(
+        qapp, qtbot, registry, mock_settings, module_name, ui_name):
+    from importlib import import_module
+    ui = getattr(import_module(module_name), ui_name)
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1200, 1000)
+    parent.show()
+    dialog = type('ApplicationForm', (fluent.FormDialog, ui), {})(parent)
+    dialog.setup_ui(dialog)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    for width, height in ((1200, 1000), (360, 320), (1200, 1000)):
+        parent.resize(width, height)
+        QtWidgets.QApplication.processEvents()
+        scroll = dialog._content_scroll
+        assert parent.rect().contains(dialog.geometry())
+        if height == 1000:
+            assert scroll.verticalScrollBar().maximum() == 0
+            assert scroll.horizontalScrollBar().maximum() == 0
+        elif scroll.verticalScrollBar().maximum() > 0:
+            assert dialog.height() == parent.height()
+        for button in dialog._native_commands.values():
+            if button.isVisible():
+                assert button.width() >= button.sizeHint().width()
+                assert button.height() >= button.sizeHint().height()
+                assert dialog.rect().contains(QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size()))
+        fields = dialog.content().findChildren(fluentqt.LineEdit) + dialog.content().findChildren(fluentqt.ComboBox)
+        fields += dialog.content().findChildren(QtWidgets.QAbstractSpinBox)
+        for field in fields:
+            if field.isVisible():
+                assert field.height() >= max(32, field.minimumSizeHint().height())
+                scroll.ensureWidgetVisible(field)
+                assert scroll.viewport().rect().intersects(
+                    QtCore.QRect(field.mapTo(scroll.viewport(), QtCore.QPoint()), field.size()))
+    dialog.done(0)
+
+
+def test_preview_profile_form_reflows_on_narrow_hosts(qapp, qtbot, registry, mock_settings):
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+    from openlp.plugins.slide_designer.forms.previewoutput import PreviewOutput
+    from openlp.core.ui.style import set_default_theme
+    set_default_theme(QtWidgets.QApplication.instance())
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1200, 1000)
+    parent.show()
+    profile = SimpleNamespace(window=lambda: parent,
+                              combo=SimpleNamespace(currentData=lambda: ('preset', 1920, 1080)),
+                              output_size=lambda: QtCore.QSize(1920, 1080), profiles=lambda: {},
+                              save_profile=MagicMock())
+
+    def submit():
+        dialog = parent.findChild(fluent.FormDialog)
+        dialog.setAnimationEnabled(False)
+        field = dialog.content().findChild(fluent.QLineEdit)
+        try:
+            for width, height in ((1200, 1000), (360, 700), (320, 700), (320, 320), (1200, 1000)):
+                parent.resize(width, height)
+                qtbot.wait(20)
+                assert dialog._content_scroll.horizontalScrollBar().maximum() == 0, (width, height)
+                assert parent.rect().contains(dialog.geometry())
+                if height >= 700:
+                    assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+                elif dialog._content_scroll.verticalScrollBar().maximum() > 0:
+                    assert dialog.height() == parent.height()
+                for button in dialog._native_commands.values():
+                    if button.isVisible():
+                        bounds = QtCore.QRect(button.mapTo(dialog, QtCore.QPoint()), button.size())
+                        assert dialog.rect().contains(bounds)
+            field.setText('Narrow profile')
+            qtbot.keyClick(field, QtCore.Qt.Key.Key_Return)
+        finally:
+            if dialog.isOpen():
+                dialog.reject()
+
+    QtCore.QTimer.singleShot(0, submit)
+    PreviewOutput.edit_profile(profile)
+    profile.save_profile.assert_called_once_with('Narrow profile', 1920, 1080, None)

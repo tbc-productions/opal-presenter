@@ -169,7 +169,11 @@ class FluentDialog(_DialogSizingMixin, fluentqt.Dialog):
 class _ContentScrollArea(_qt.QScrollArea):
     """Use the content's natural height until the dialog needs a scrollbar."""
     def sizeHint(self):
-        return self.widget().sizeHint() if self.widget() is not None else QtCore.QSize()
+        content = self.widget()
+        if content is None:
+            return QtCore.QSize()
+        # A native control's size hint can be smaller than its enforced minimum.
+        return content.sizeHint().expandedTo(content.minimumSizeHint()).expandedTo(content.minimumSize())
 
     def minimumSizeHint(self):
         return QtCore.QSize(0, 0)
@@ -178,7 +182,10 @@ class _ContentScrollArea(_qt.QScrollArea):
         return self.widget() is not None and self.widget().hasHeightForWidth()
 
     def heightForWidth(self, width):
-        return self.widget().heightForWidth(width) if self.hasHeightForWidth() else self.sizeHint().height()
+        if self.hasHeightForWidth():
+            content = self.widget()
+            return max(content.heightForWidth(width), content.minimumSizeHint().height(), content.minimumHeight())
+        return self.sizeHint().height()
 
 
 class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
@@ -193,6 +200,7 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
         self._content_scroll.setWidgetResizable(True)
         self._content_scroll.setMinimumSize(0, 0)
         self._content_scroll.viewport().setAutoFillBackground(False)
+        self._content_scroll.viewport().installEventFilter(self)
         fluentqt.ContentDialog.setContent(self, self._content_scroll)
         self._native_commands = {}
         for slot, setter in (('primary', self.setPrimaryButtonText),
@@ -213,22 +221,30 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
         if current is content:
             return
         if current is not None:
+            current.removeEventFilter(self)
             self._content_scroll.takeWidget()
         if isinstance(content, fluentqt.Label):
             content.setFluentTypography(fluentqt.FontRole.Body)
         self._content_scroll.setWidget(content)
         if content is not None:
             content.setAutoFillBackground(False)
+            content.installEventFilter(self)
 
     def takeContent(self):
+        if self.content() is not None:
+            self.content().removeEventFilter(self)
         return self._content_scroll.takeWidget()
 
     def content(self):
         return self._content_scroll.widget()
 
     def _prepare_size(self):
+        for form in self.findChildren(_qt.QFormLayout):
+            form.setRowWrapPolicy(_qt.QFormLayout.RowWrapPolicy.WrapLongRows)
         buttons = [button for button in self._native_commands.values() if button.text()]
         if buttons:
+            for button in buttons:
+                button.setMinimumWidth(button.sizeHint().width())
             margins = self.layout().contentsMargins()
             # Native footer buttons share equal widths, including the longest caption.
             width = max(button.sizeHint().width() for button in buttons) * len(buttons)
@@ -237,14 +253,26 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
             self.resize(max(self.width(), width), self.height())
         super()._prepare_size()
 
+        if buttons:
+            footer = buttons[0].parentWidget()
+            layout = footer.layout()
+            margins = layout.contentsMargins()
+            required = sum(button.minimumWidth() for button in buttons) + layout.spacing() * (len(buttons) - 1)
+            direction = (_qt.QBoxLayout.Direction.TopToBottom
+                         if required > footer.width() - margins.left() - margins.right()
+                         else _qt.QBoxLayout.Direction.LeftToRight)
+            if layout.direction() != direction:
+                layout.setDirection(direction)
+            # Fluent's footer starts with a fixed height for a single button row.
+            height = layout.sizeHint().height()
+            if footer.minimumHeight() != height:
+                footer.setFixedHeight(height)
+                super()._prepare_size()
+
         content = self.content()
         if self.isVisible() and content is not None:
             viewport = self._content_scroll.viewport()
-            required = content.minimumSizeHint().height()
-            if content.hasHeightForWidth():
-                required = max(required, content.heightForWidth(viewport.width()))
-            else:
-                required = max(required, content.sizeHint().height())
+            required = self._content_scroll.heightForWidth(viewport.width())
             if required > viewport.height():
                 parent = self.parentWidget()
                 available = parent.height() if parent is not None else self.screen().availableGeometry().height()
@@ -252,6 +280,12 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
                                               available, self.maximumHeight()))
                 self.layout().activate()
                 self._constrain_position()
+
+    def eventFilter(self, watched, event):
+        if (self.isVisible() and event.type() == QtCore.QEvent.Type.LayoutRequest and
+                watched in (self.content(), self._content_scroll.viewport())):
+            QtCore.QTimer.singleShot(0, self, self._prepare_size)
+        return super().eventFilter(watched, event)
 
     def showEvent(self, event):
         super().showEvent(event)

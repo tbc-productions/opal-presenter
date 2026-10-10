@@ -36,6 +36,7 @@ class Ui_LanguageDialog(object):
         self.language_layout.setContentsMargins(8, 8, 8, 8)
         self.language_layout.setObjectName('language_layout')
         self.bible_label = QtWidgets.QLabel(language_dialog)
+        self.bible_label.setWordWrap(True)
         self.bible_label.setObjectName('bible_label')
         self.language_layout.addWidget(self.bible_label)
         self.info_label = QtWidgets.QLabel(language_dialog)

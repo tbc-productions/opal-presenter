@@ -978,6 +978,7 @@ class CloudLibrary(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         prompt = QtWidgets.QLabel(label, content)
+        prompt.setWordWrap(True)
         field = QtWidgets.QLineEdit(content)
         field.setAccessibleName(label)
         field.setText(text)

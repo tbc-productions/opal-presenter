@@ -25,8 +25,11 @@ Actions and wording
 
 For prompts and forms, the primary action is on the left, secondary in the
 middle and Cancel or Close on the right. Wizards use the navigation order
-described below. The default action changes keyboard activation and
-accent emphasis, not position. Destructive confirmations default to Cancel.
+described below. If the footer cannot fit these captions in a row, stack the
+actions in primary, secondary, Cancel/Close order with their full captions visible.
+Return to a row when the host is wide enough. The default action changes keyboard
+activation and accent emphasis, not position. Destructive confirmations default
+to Cancel.
 Use concrete verbs: Save, Rename, Copy, Create, Select, Apply, Export or Delete.
 Use Discard consistently for abandoning unsaved changes. Instructions must
 match the visible button caption; avoid references to an old OK/Yes label.
@@ -70,9 +73,12 @@ labels for multiline editors aligned with the top of their content.
 
 The adapters preserve ContentDialog's native padding, give fields at least
 32 px height, disable the problematic opacity effect on macOS and constrain
-the surface to its host. The body scrolls while footer actions remain visible.
-Short content is measured again after native fonts and scrollbar geometry
-settle. Floating workspace panes are temporarily hidden while a prompt occupies
+the surface to its host. Expand the dialog to fit its content before scrolling.
+Only scroll when the content cannot fit within the available host space and
+the dialog's width limit; keep footer actions visible. Recalculate when the host
+is resized, expanding and removing scrollbars when the content fits again.
+Content is measured again after native fonts and scrollbar geometry settle.
+Floating workspace panes are temporarily hidden while a prompt occupies
 the main window, then restored without changing their saved dock placement.
 Do not add outer padding a second time or cap height before layout measurement.
 Normal compact dialogs start at 420 px wide and cap at 560 px. A form needing
@@ -80,7 +86,11 @@ wider controls can explicitly raise its maximum width (the media time grid does
 this); it still fits its host and can scroll when the host is smaller. Footer
 width also accounts for the longest button caption. In form layouts, prefer
 AllNonFixedFieldsGrow so Fluent controls with Preferred size policies fill their
-fields. Avoid fixed widths on descriptive text.
+fields. ContentDialog forms wrap labels above fields when a row cannot fit.
+Avoid fixed widths on descriptive text.
+Wrap user-supplied names displayed as text, including Bible translation and
+unmatched book names. Remeasure open dialogs when their body changes. Confirmation
+lists grow to show their items; the dialog body scrolls when the host is too small.
 
 Read accepted values before calling ``deleteLater()`` on temporary dialogs.
 Content ownership follows FluentQt: replacing or taking content detaches it;
