@@ -39,7 +39,7 @@ from openlp.core.resources import qInitResources
 
 
 def test_splashscreen(mock_settings: MagicMock, qtbot):
-    """Startup uses the simple native Fluent surface and its loading spinner."""
+    """Startup uses branded artwork with a Fluent loading spinner."""
     qInitResources()
     splash = SplashScreen()
     qtbot.addWidget(splash)
@@ -49,7 +49,9 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.iconSize() == QtCore.QSize(128, 128)
     assert isinstance(splash, fluentqt.SplashScreen)
     assert splash.objectName() == 'splashScreen'
-    assert splash.size() == QtCore.QSize(370, 370)
+    assert splash.size() == QtCore.QSize(793, 496)
+    assert not splash._artwork.isNull()
+    assert splash._artwork.size() == splash.size() * 2
     assert splash.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
@@ -63,6 +65,42 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
     assert percentage.isVisible()
     assert percentage.text() == '0%'
+
+
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_loading_lines_align_with_artwork(mock_settings, qtbot, theme):
+    """Both loading lines share the title's left edge, including long stages."""
+    previous_theme = fluentqt.current_theme()
+    try:
+        fluentqt.set_theme(theme)
+        splash = SplashScreen()
+        qtbot.addWidget(splash)
+        splash.show()
+        splash.set_status('Loading components and initialising a very large presentation library ' * 3, 55)
+        status = splash.findChild(fluentqt.Label, 'splashStatusText')
+        percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
+        for label in (status, percentage):
+            assert label.x() == 350
+            assert label.alignment() & QtCore.Qt.AlignmentFlag.AlignLeft
+            assert label.palette().color(label.foregroundRole()) == QtCore.Qt.GlobalColor.white
+            assert splash.rect().contains(label.geometry())
+        assert status.isTextElided()
+        assert status.geometry().bottom() < percentage.y()
+        assert percentage.text() == '55%'
+        ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+        for progress in (0, 55, 100):
+            splash.set_status('Loading components', progress)
+            qtbot.wait(50)
+            assert ring.size() == QtCore.QSize(16, 16)
+            assert ring.x() == percentage.x() + percentage.fontMetrics().horizontalAdvance(percentage.text()) + 8
+            assert ring.geometry().center().y() == percentage.geometry().center().y()
+            pixels = ring.grab().toImage()
+            opaque_pixels = [pixels.pixelColor(x, y) for x in range(pixels.width()) for y in range(pixels.height())
+                             if pixels.pixelColor(x, y).alpha() > 200]
+            assert opaque_pixels
+            assert all(pixel.red() == pixel.green() == pixel.blue() == 255 for pixel in opaque_pixels)
+    finally:
+        fluentqt.set_theme(previous_theme)
 
 
 def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):

@@ -35,7 +35,7 @@ from openlp.core.widgets import fluent as QtWidgets
 
 
 class SplashScreen(fluentqt.SplashScreen):
-    """Simple Fluent startup surface with overall progress and a loading spinner."""
+    """Branded artwork with overall progress and an independent loading spinner."""
 
     def __init__(self):
         super().__init__()
@@ -43,14 +43,26 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.PreventContextMenu)
         self.setWindowFlags(QtCore.Qt.WindowType.SplashScreen | QtCore.Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle('Opal Presenter')
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self._artwork = QtGui.QPixmap(':/graphics/opal-presenter-startup.png')
         self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
         self.setIcon(QtGui.QIcon(':/icon/opal-presenter.png'))
         self.setIconSize(QtCore.QSize(128, 128))
         self.setText(translate('OpenLP.SplashScreen', 'Starting Opal Presenter'))
         # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
+        self.setFixedSize(793, 496)
+        ring = self.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+        ring.setStrokeWidth(1.5)
+        fluentqt.set_widget_theme_overrides(ring, {
+            'light': {'accentDefault': '#ffffff'}, 'dark': {'accentDefault': '#ffffff'}})
         self._refresh_progress_display()
-        self.resize(370, 370)
+
+    def paintEvent(self, event):
+        """The supplied artwork includes the logo, title and rounded border."""
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        painter.drawPixmap(self.rect(), self._artwork)
 
     def showEvent(self, event):
         """Native show refreshes progress; retain the indeterminate spinner."""
@@ -59,7 +71,20 @@ class SplashScreen(fluentqt.SplashScreen):
 
     def _refresh_progress_display(self):
         """Keep the loading spinner independent of completed startup work."""
-        self.findChild(fluentqt.ProgressRing, 'splashProgressRing').setIsIndeterminate(True)
+        ring = self.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+        ring.setIsIndeterminate(True)
+        # The artwork's title starts at pixel 700; display the image at half size.
+        for name, top in (('splashStatusText', 263), ('splashPercentage', 291)):
+            label = self.findChild(fluentqt.Label, name)
+            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+            label.setWordWrap(False)
+            label.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
+            label.setStyleSheet('color: white; background: transparent;')
+            label.setGeometry(350, top, 340, 20)
+        percentage = self.findChild(fluentqt.Label, 'splashPercentage')
+        ring.setFixedSize(16, 16)
+        ring.move(percentage.x() + percentage.fontMetrics().horizontalAdvance(percentage.text()) + 8,
+                  percentage.y() + (percentage.height() - ring.height()) // 2)
 
     def set_status(self, message, progress=None):
         """Refresh the loading stage before the next synchronous startup task."""

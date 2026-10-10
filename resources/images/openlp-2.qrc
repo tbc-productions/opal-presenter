@@ -3,6 +3,7 @@
     <file>opal-presenter.png</file>
   </qresource>
   <qresource prefix="graphics">
+    <file>opal-presenter-startup.png</file>
     <file>opal-presenter-splash.png</file>
     <file>opal-presenter-background.png</file>
   </qresource>
