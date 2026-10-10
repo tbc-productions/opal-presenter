@@ -19,16 +19,12 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-"""Export Opal's approved raster master to app and installer assets.
+"""Export the supplied OpalPresenter.png logo to app and installer assets.
 
-The SVG is canonical. Render its filters with Inkscape or a browser before
-replacing the master PNG; Qt SVG does not support its clipping correctly.
+OpalBackground.jpg is the separate projection background. Projection uses it
+alone; the logo belongs on app icons, splash/About artwork and installers.
 """
 import argparse
-import hashlib
-import json
-import shutil
-import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -53,26 +49,14 @@ def poster(logo, size):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('source', type=Path, nargs='?', default=ROOT / 'branding/Opal-Presenter.svg')
+    parser.add_argument('source', type=Path, nargs='?', default=ROOT / 'branding/OpalPresenter.png')
     parser.add_argument('--packaging', type=Path)
     parser.add_argument('--remote', type=Path)
     args = parser.parse_args()
     source = args.source
     if not source.is_file():
         source = ROOT / 'resources/images' / source
-    if source.suffix.lower() == '.svg':
-        master = ROOT / 'branding/Opal-Presenter-1024.png'
-        inkscape = shutil.which('inkscape')
-        if inkscape:
-            subprocess.run([inkscape, str(source), '--export-type=png', f'--export-filename={master}',
-                            '--export-width=1024', '--export-height=1024'], check=True)
-        else:
-            approved = json.loads((ROOT / 'branding/raster-master.json').read_text())
-            if hashlib.sha256(source.read_bytes()).hexdigest() != approved['source_sha256']:
-                parser.error('The SVG has changed. Install Inkscape to regenerate its raster master.')
-        source = master
-    logo = Image.open(source).convert('RGBA')
-    assert logo.size == (1024, 1024), 'Render the canonical SVG at 1024px first.'
+    logo = Image.open(source).convert('RGBA').resize((1024, 1024), Image.Resampling.LANCZOS)
     images = ROOT / 'resources/images'
     for size in SIZES:
         logo.resize((size, size), Image.Resampling.LANCZOS).save(images / f'opal-presenter-logo-{size}x{size}.png')
@@ -102,6 +86,7 @@ def main():
     if args.remote:
         logo.save(args.remote / 'src/assets/favicon.ico', sizes=[(16, 16), (32, 32), (48, 48)])
         logo.resize((256, 256), Image.Resampling.LANCZOS).save(args.remote / 'src/assets/opal-presenter.png')
+        logo.resize((256, 256), Image.Resampling.LANCZOS).save(args.remote / 'src/assets/loading.png')
 
 
 if __name__ == '__main__':
