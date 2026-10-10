@@ -329,6 +329,6 @@ def test_service_tree_uses_mixed_set_thumbnails(set_env, tmp_path):
     target = image(tmp_path)
     target.append_to_set([custom()])
     child = QtWidgets.QTreeWidgetItem()
-    ServiceManager._set_child_thumbnail(None, child, target, target.display_slides[0])
+    ServiceManager._set_child_icon(None, child, target, target.display_slides[0])
     pixels = child.icon(0).pixmap(64, 48).toImage()
     assert pixels.pixelColor(32, 24) == QtGui.QColor('red')

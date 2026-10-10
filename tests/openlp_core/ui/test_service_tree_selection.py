@@ -6,6 +6,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
 from openlp.core.widgets import fluent
+from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
 
 
@@ -59,6 +60,52 @@ def test_service_type_icons_have_no_border_but_child_thumbnails_do(qapp, qtbot):
         painter = MagicMock()
         delegate.paint(painter, option, view.indexFromItem(row))
         assert painter.drawRoundedRect.call_count == int(bordered)
+
+
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_service_slide_icons_are_compact_and_less_indented(qapp, qtbot, theme):
+    previous = fluentqt.currentTheme()
+    fluentqt.setTheme(theme)
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    item = fluent.QTreeWidgetItem(view, ['Song'])
+    child = fluent.QTreeWidgetItem(item, ['V1: A long slide preview ' * 8])
+    item.setIcon(0, fluent_icon('ic_fluent_music_note_2_24_regular'))
+    child.setIcon(0, fluent_icon('ic_fluent_slide_text_24_regular', color='#60A5FA'))
+    item.setExpanded(True)
+    view.resize(260, 200)
+    try:
+        view.show()
+        qtbot.wait(250)
+        delegate = view.itemDelegateForColumn(0)
+        for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+            view.setLayoutDirection(direction)
+            QtWidgets.QApplication.processEvents()
+            rectangles = []
+            for row in (item, child):
+                index = view.indexFromItem(row)
+                option = QtWidgets.QStyleOptionViewItem()
+                option.rect = view.visualRect(index)
+                option.font = view.font()
+                option.direction = direction
+                text, rect, _, _ = delegate._text_layout(option, index)
+                assert '…' in text if row is child else text == 'Song'
+                assert view.viewport().rect().contains(rect.toRect())
+                rectangles.append(rect)
+            edge = 'left' if direction == QtCore.Qt.LayoutDirection.LeftToRight else 'right'
+            assert abs(getattr(rectangles[1], edge)() - getattr(rectangles[0], edge)()) == 12
+            assert delegate.iconSize(option, view.indexFromItem(child)).width() <= 24
+            assert not delegate.iconBorderVisible(view.indexFromItem(child))
+            assert view.visualItemRect(child).height() == view.visualItemRect(item).height() + 8
+        view.setCurrentItem(item)
+        qtbot.keyClick(view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ShiftModifier)
+        assert view.currentItem() is child
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=view.visualItemRect(child).center())
+        assert view.selectedItems() == [child]
+    finally:
+        view.close()
+        fluentqt.setTheme(previous)
 
 
 def test_service_tree_row_and_child_selection(qapp, qtbot):

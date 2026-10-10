@@ -83,12 +83,13 @@ class ServiceItemDelegate(FluentLibraryTreeDelegate):
         return [fluent_icon(f'ic_fluent_{name}_24_regular') for name in names]
 
     def iconBorderVisible(self, index):
-        return index.parent().isValid()
+        return index.parent().isValid() and super().iconBorderVisible(index)
 
     def iconSize(self, option, index):
         if index.parent().isValid():
             icon_val = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
-            if isinstance(icon_val, QtGui.QIcon) and not icon_val.isNull():
+            if (isinstance(icon_val, QtGui.QIcon) and not icon_val.isNull()
+                    and not icon_val.name().startswith('ic_fluent_')):
                 return QtCore.QSize(64, 48)
         return super().iconSize(option, index)
 
@@ -96,20 +97,6 @@ class ServiceItemDelegate(FluentLibraryTreeDelegate):
         rect = super()._background_rect(option)
         rect.setRight(option.rect.right() - 2)
         return rect
-
-    def sizeHint(self, option, index):
-        opt = QtWidgets.QStyleOptionViewItem(option)
-        self.initStyleOption(opt, index)
-        if index.parent().isValid():
-            icon_val = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
-            if isinstance(icon_val, QtGui.QIcon) and not icon_val.isNull():
-                opt.decorationSize = QtCore.QSize(64, 48)
-        hint = super().sizeHint(opt, index)
-        if index.parent().isValid():
-            icon_val = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
-            if isinstance(icon_val, QtGui.QIcon) and not icon_val.isNull():
-                hint.setHeight(max(hint.height(), 48 + 8))
-        return hint
 
 
 class ServiceManagerList(QtWidgets.QTreeWidget):
@@ -133,7 +120,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         self.setHeaderHidden(True)
         self.header().setStretchLastSection(False)
         self.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setIndentation(30)
+        self.setIndentation(12)
         self.setMouseTracking(True)
         self.setExpandsOnDoubleClick(False)
         self.service_manager = service_manager
@@ -2637,7 +2624,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         # For songs, use HTML to dim the label (but since HTML not supported, use plain)
                         child.setText(0, text)
                         child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
-                        self._set_child_thumbnail(child, service_item_from_item, slide)
+                        self._set_child_icon(child, service_item_from_item, slide)
                         if is_dragged_item:
                             child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
                             child_text_color.setAlpha(140)
@@ -2760,7 +2747,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     text = ' '.join(text.split())
                     child.setText(0, text)
                     child.setData(0, QtCore.Qt.ItemDataRole.UserRole, slide_index)
-                    self._set_child_thumbnail(child, service_item_from_item, slide)
+                    self._set_child_icon(child, service_item_from_item, slide)
                     if is_dragged_item:
                         child_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
                         child_text_color.setAlpha(140)
@@ -2770,7 +2757,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     return
         tree_widget_item.setExpanded(item_data['expanded'])
 
-    def _set_child_thumbnail(self, child, service_item, slide):
+    def _set_child_icon(self, child, service_item, slide):
+        """Use image thumbnails or compact slide icons in the song section colour."""
         if service_item.name == 'images':
             image_path = slide.get('thumbnail') or slide.get('path')
             icon_pixmap = QtGui.QPixmap(64, 48)
@@ -2794,6 +2782,18 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 painter.drawRect(x, y, scaled_img.width() - 1, scaled_img.height() - 1)
                 painter.end()
             child.setIcon(0, QtGui.QIcon(icon_pixmap))
+        else:
+            colors = {}
+            if service_item.name == 'songs':
+                from openlp.plugins.songs.lib import VerseType
+                from openlp.plugins.songs.lib.sectioncolors import (
+                    DEFAULT_SECTION_COLORS, normalize_rgb_hex, section_key_from_verse_tag)
+                verse_type = VerseType.from_loose_input(slide.get('verse', '')[:1], None)
+                if verse_type is not None:
+                    key = section_key_from_verse_tag(VerseType.tags[verse_type])
+                    colors['color'] = normalize_rgb_hex(self.settings.value(f'songs/section color {key}'),
+                                                        DEFAULT_SECTION_COLORS[key])
+            child.setIcon(0, fluent_icon('ic_fluent_slide_text_24_regular', **colors))
 
     def _update_item_indicators(self, tree_widget_item, service_item, tips):
         transition_settings = self._get_service_item_transition_settings(service_item)

@@ -47,6 +47,8 @@ from openlp.core.lib.theme import Theme
 from openlp.core.ui.servicemanager import ServiceManager, SERVICE_ITEM_INDICATORS_ROLE
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.widgets.toolbar import OpenLPToolbar
+from openlp.plugins.songs.lib import VerseType
+from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 from tests.utils.constants import RESOURCE_PATH
 from openlp.core.widgets.dnd import ItemDragData, ThemeDragData
@@ -216,8 +218,8 @@ def test_render_service_item_row_with_transition(service_manager: ServiceManager
         assert tree_widget_item.data(0, SERVICE_ITEM_INDICATORS_ROLE) == ['shape_subtract']
 
 
-def test_set_child_thumbnail_image_collection(service_manager: ServiceManager):
-    """Test that _set_child_thumbnail sets a valid QIcon on the QTreeWidgetItem for an image collection."""
+def test_set_child_icon_image_collection(service_manager: ServiceManager):
+    """Test that _set_child_icon sets a valid QIcon on the QTreeWidgetItem for an image collection."""
     # GIVEN: An images service item and a child tree item
     service_item = MagicMock()
     service_item.name = 'images'
@@ -225,7 +227,7 @@ def test_set_child_thumbnail_image_collection(service_manager: ServiceManager):
     slide = {'thumbnail': str(RESOURCE_PATH / 'church.jpg'), 'path': str(RESOURCE_PATH / 'church.jpg')}
 
     # WHEN: Setting the child thumbnail
-    service_manager._set_child_thumbnail(child, service_item, slide)
+    service_manager._set_child_icon(child, service_item, slide)
 
     # THEN: The child should have an icon set
     icon = child.icon(0)
@@ -234,8 +236,8 @@ def test_set_child_thumbnail_image_collection(service_manager: ServiceManager):
     assert icon.actualSize(QtCore.QSize(64, 48)) == QtCore.QSize(64, 48)
 
 
-def test_set_child_thumbnail_image_collection_missing_image(service_manager: ServiceManager):
-    """Test that _set_child_thumbnail sets a transparent QIcon when the image path is missing/invalid to preserve text alignment."""
+def test_set_child_icon_image_collection_missing_image(service_manager: ServiceManager):
+    """Test that _set_child_icon sets a transparent QIcon when the image path is missing/invalid to preserve text alignment."""
     # GIVEN: An images service item with a missing/invalid image path, and a child tree item
     service_item = MagicMock()
     service_item.name = 'images'
@@ -243,12 +245,53 @@ def test_set_child_thumbnail_image_collection_missing_image(service_manager: Ser
     slide = {'thumbnail': '', 'path': ''}
 
     # WHEN: Setting the child thumbnail
-    service_manager._set_child_thumbnail(child, service_item, slide)
+    service_manager._set_child_icon(child, service_item, slide)
 
     # THEN: The child should still have a valid 64x48 transparent icon set to keep text aligned
     icon = child.icon(0)
     assert not icon.isNull()
     assert icon.actualSize(QtCore.QSize(64, 48)) == QtCore.QSize(64, 48)
+
+
+@pytest.mark.parametrize('tag,key', [
+    ('V1', 'verse'), ('C2', 'chorus'), ('B1', 'bridge'), ('P1', 'pre_chorus'),
+    ('I1', 'intro'), ('E1', 'ending'), ('O1', 'other'), ('R2', 'chorus'),
+])
+@pytest.mark.parametrize('configured', ['#123456', 'invalid'])
+def test_song_slide_icon_uses_configured_section_colour(service_manager, settings, tag, key, configured):
+    Settings.extend_default_settings({f'songs/section color {key}': DEFAULT_SECTION_COLORS[key]})
+    settings.setValue(f'songs/section color {key}', configured)
+    child = QtWidgets.QTreeWidgetItem()
+    with patch.object(VerseType, 'translated_tags', ['v', 'r', 'b', 'p', 'i', 'e', 'o']):
+        service_manager._set_child_icon(child, SimpleNamespace(name='songs'), {'verse': tag})
+    assert child.icon(0).name() == 'ic_fluent_slide_text_24_regular'
+    pixels = child.icon(0).pixmap(24, 24).toImage()
+    colour = max((pixels.pixelColor(x, y) for x in range(24) for y in range(24)), key=lambda c: c.alpha())
+    assert colour.name().upper() == (configured.upper() if configured != 'invalid' else DEFAULT_SECTION_COLORS[key])
+
+
+@pytest.mark.parametrize('plugin', ['songs', 'bibles', 'custom', 'presentations', 'media'])
+def test_unlabelled_slide_uses_neutral_slide_icon(service_manager, plugin):
+    child = QtWidgets.QTreeWidgetItem()
+    service_manager._set_child_icon(child, SimpleNamespace(name=plugin), {})
+    assert child.icon(0).name() == 'ic_fluent_slide_text_24_regular'
+
+
+@pytest.mark.parametrize('full_repaint', [False, True])
+def test_service_slide_icons_in_both_render_paths(service_manager, settings, full_repaint):
+    Settings.extend_default_settings({'songs/section color verse': DEFAULT_SECTION_COLORS['verse']})
+    service_item = _add_song_service_item(service_manager)
+    service_item._display_slides = [{'title': 'Lyrics', 'text': 'First line\nSecond line', 'verse': 'V1'}]
+    if full_repaint:
+        assert service_manager._repaint_service_list() is False
+        row = service_manager.tree_widget_items[0]
+    else:
+        row = QtWidgets.QTreeWidgetItem(service_manager.service_manager_list)
+        service_manager._render_service_item_row(service_manager.service_items[0], row)
+    assert row.childCount() == 1
+    assert row.child(0).text(0) == 'V1: First line Second line'
+    assert row.child(0).data(0, QtCore.Qt.ItemDataRole.UserRole) == 0
+    assert row.child(0).icon(0).name() == 'ic_fluent_slide_text_24_regular'
 
 
 @pytest.mark.parametrize('transition,notes,expected', [
