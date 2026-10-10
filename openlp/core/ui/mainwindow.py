@@ -23,7 +23,6 @@ This is the main window, where all the action happens.
 """
 import json
 import shutil
-import webbrowser
 from contextlib import contextmanager
 from datetime import datetime, date
 from pathlib import Path
@@ -401,15 +400,6 @@ class Ui_MainWindow(object):
                                         triggers=self.on_about_item_clicked)
         # Give Qt Extra Hint that this is an About Menu Item
         self.about_item.setMenuRole(QtGui.QAction.MenuRole.AboutRole)
-        if is_win():
-            self.local_help_file = AppLocation.get_directory(AppLocation.AppDir) / 'OpenLP.chm'
-        elif is_macosx():
-            self.local_help_file = AppLocation.get_directory(AppLocation.AppDir) / '..' / 'Resources' / 'OpenLP.help'
-        self.user_manual_item = create_action(main_window, 'userManualItem', icon=UiIcons().manual,
-                                              can_shortcuts=True, category=UiStrings().Help,
-                                              triggers=self.on_help_clicked)
-        self.web_site_item = create_action(main_window, 'webSiteItem', icon=UiIcons().web, can_shortcuts=True,
-                                           category=UiStrings().Help)
         # Shortcuts not connected to buttons or menu entries.
         self.search_shortcut_action = create_action(main_window,
                                                     'searchShortcut', can_shortcuts=True,
@@ -454,7 +444,7 @@ class Ui_MainWindow(object):
         add_actions(self.tools_menu, (self.tools_open_data_folder, None))
         add_actions(self.tools_menu, (self.tools_first_time_wizard, None))
         add_actions(self.tools_menu, [self.update_theme_images])
-        add_actions(self.help_menu, (self.user_manual_item, None, self.web_site_item, self.about_item))
+        add_actions(self.help_menu, (self.about_item,))
         add_actions(self.menu_bar, (self.file_menu.menuAction(), self.view_menu.menuAction(),
                     self.tools_menu.menuAction(), self.settings_menu.menuAction(), self.window_menu.menuAction(),
                     self.help_menu.menuAction()))
@@ -578,11 +568,9 @@ class Ui_MainWindow(object):
         self.about_item.setText(translate('OpenLP.MainWindow', '&About'))
         self.about_item.setStatusTip(
             translate('OpenLP.MainWindow', 'More information about OpenLP+ (a fork of OpenLP).'))
-        self.user_manual_item.setText(translate('OpenLP.MainWindow', '&User Manual'))
         self.search_shortcut_action.setText(UiStrings().Search)
         self.search_shortcut_action.setToolTip(
             translate('OpenLP.MainWindow', 'Jump to the search box of the current active plugin.'))
-        self.web_site_item.setText(translate('OpenLP.MainWindow', '&Web Site'))
         for item in self.language_group.actions():
             item.setText(item.objectName())
             item.setStatusTip(translate('OpenLP.MainWindow',
@@ -689,7 +677,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.projector_manager_dock.visibilityChanged.connect(self.toggle_projector_manager)
         self.import_theme_item.triggered.connect(self.theme_manager_contents.on_import_theme)
         self.export_theme_item.triggered.connect(self.theme_manager_contents.on_export_theme)
-        self.web_site_item.triggered.connect(self.on_help_web_site_clicked)
         self.tools_open_data_folder.triggered.connect(self.on_tools_open_data_folder_clicked)
         self.tools_first_time_wizard.triggered.connect(self.on_first_time_wizard_clicked)
         self.update_theme_images.triggered.connect(self.on_update_theme_images)
@@ -1032,20 +1019,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if hasattr(self.application, 'splash'):
             self.application.splash.close()
         QtWidgets.QMessageBox.information(self, title, message)
-
-    @staticmethod
-    def on_help_web_site_clicked():
-        """
-        Load the OpenLP website
-        """
-        webbrowser.open_new('https://openlp.org/')
-
-    def on_help_clicked(self):
-        """
-        If is_macosx or is_win, open the local OpenLP help file.
-        Use the Online manual in other cases. (Linux)
-        """
-        webbrowser.open_new('https://manual.openlp.org/')
 
     def on_about_item_clicked(self):
         """

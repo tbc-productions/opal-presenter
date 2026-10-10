@@ -24,7 +24,7 @@ Module to test the EditCustomForm.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
@@ -137,21 +137,15 @@ def test_update_slide_list(form: EditCustomForm):
     form.slide_list_view.addItems.assert_called_with(['1st Slide', '2nd Slide', '3rd Slide'])
 
 
-def test_help(settings: Settings):
+def test_no_help_button(settings: Settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: An edit custom slide form and a patched help function
     main_window = QtWidgets.QMainWindow()
     custom_form = EditCustomForm(MagicMock(), main_window, MagicMock())
 
-    # WHEN: The Help button is clicked
-    with patch.object(custom_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(custom_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert custom_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
 def test_custom_slide_command_bar_actions(form):

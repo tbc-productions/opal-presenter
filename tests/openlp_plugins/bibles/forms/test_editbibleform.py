@@ -21,26 +21,19 @@
 """
 Package to test the openlp.plugins.bibles.forms.editbibleform package.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from PySide6 import QtTest, QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.plugins.bibles.forms.editbibleform import EditBibleForm
 
 
-@patch.object(EditBibleForm, 'provide_help')
-def test_help(mocked_help, settings):
+def test_no_help_button(settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: An edit bible form and a patched help function
     main_window = QtWidgets.QMainWindow()
     edit_bible_form = EditBibleForm(MagicMock(), main_window, MagicMock())
 
-    # WHEN: The Help button is clicked
-    QtTest.QTest.mouseClick(edit_bible_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                            QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert edit_bible_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None

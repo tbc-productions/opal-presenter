@@ -73,8 +73,7 @@ class DuplicateSongRemovalForm(OpenLPWizard, RegistryProperties):
         # Used to interrupt ongoing searches when cancel is clicked.
         self.break_search = False
         super(DuplicateSongRemovalForm, self).__init__(
-            Registry().get('main_window'), plugin, 'duplicateSongRemovalWizard',
-            ':/wizards/wizard_duplicateremoval.png', False)
+            Registry().get('main_window'), plugin, 'duplicateSongRemovalWizard', False)
         self.resize(730, self.height())
 
     def custom_signals(self):

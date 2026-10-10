@@ -107,14 +107,15 @@ Page headings, step captions and short subtitles remain visible above the
 scrolling body. Put long instructions in the body. Footer actions remain
 visible. Use an initial size rather than a fixed window size.
 
-Group Back, Next (or Commit/Finish) and Cancel at the bottom right, in that
-order. Next, Commit and Finish retain their accent style and default keyboard
-action. Help and custom actions stay on the left. This follows Qt's conventional
-wizard navigation order rather than the primary-left prompt layout. See
-`Qt's wizard documentation <https://doc.qt.io/qt-6/qwizard.html>`_. Enable optional actions
+Place Cancel at the far left and group Back and Next (or Commit/Finish) at
+the bottom right. Next, Commit and Finish retain their accent style and default
+keyboard action. Custom actions follow Cancel on the left. Enable optional actions
 through the corresponding wizard options so unused buttons remain hidden.
 Existing welcome pages use the same typography without decorative side images.
-Cloud Library retains its provider-specific step count and validation.
+Cloud Library retains its provider-specific step count and validation. Operator
+dialogs and wizards do not expose Help buttons or links to OpenLP's manual.
+Settings tooltips continue to explain fields locally. Validation prompts belong
+to the active wizard and disable its navigation until dismissed.
 
 First-time setup configures plugins and displays locally and can restore a
 settings backup. It does not contact OpenLP servers or download songs, Bibles,
@@ -123,12 +124,16 @@ files on first startup. Re-running setup preserves the current theme unless a
 settings backup changes it. OpenLP+ is independent and is not endorsed by OpenLP.
 
 The Bible import wizard refreshes translation lists only on request and disables
-sources whose lists cannot be retrieved. Before advancing with a web translation,
+sources whose lists cannot be retrieved, marking them with `` - unavailable``.
+Before advancing with a web translation,
 it uses that source's existing extractors to retrieve its book list and the first
 chapter of its first book, requiring non-empty verse text. Failed checks keep the
 source page open and allow retrying or choosing a local Bible file. This is a
 current sample check; it cannot guarantee every chapter or future availability.
-Web Bibles still retrieve uncached chapters on demand.
+Web Bibles still retrieve uncached chapters on demand. Translation refreshes and
+web Bible imports use indeterminate progress rings; local imports retain their
+progress bars. Network waits keep GUI animations running, with clicks deferred
+until the request completes.
 
 Wizard regressions are covered by ``tests/openlp_core/widgets/test_wizard.py``,
 ``tests/openlp_core/ui/test_firsttimeform.py`` and the Bible and Cloud Library

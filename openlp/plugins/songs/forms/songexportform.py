@@ -24,7 +24,7 @@ OpenLyrics format.
 """
 import logging
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
@@ -56,7 +56,7 @@ class SongExportForm(OpenLPWizard):
         :param parent: The QWidget-derived parent of the wizard.
         :param plugin: The songs plugin.
         """
-        super(SongExportForm, self).__init__(parent, plugin, 'song_export_wizard', ':/wizards/wizard_song.png')
+        super(SongExportForm, self).__init__(parent, plugin, 'song_export_wizard')
         self.stop_export_flag = False
         Registry().register_function('openlp_stop_wizard', self.stop_export)
 
@@ -66,12 +66,6 @@ class SongExportForm(OpenLPWizard):
         """
         log.debug('Stopping songs export')
         self.stop_export_flag = True
-
-    def setup_ui(self, image):
-        """
-        Set up the song wizard UI.
-        """
-        super(SongExportForm, self).setup_ui(image)
 
     def custom_signals(self):
         """
@@ -295,12 +289,6 @@ class SongExportForm(OpenLPWizard):
             item = self.available_list_widget.item(row)
             if not item.isHidden():
                 item.setCheckState(QtCore.Qt.CheckState.Checked)
-
-    def provide_help(self):
-        """
-        Provide help within the wizard by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/export_songs.html"))
 
 
 def find_list_widget_items(list_widget, text=''):

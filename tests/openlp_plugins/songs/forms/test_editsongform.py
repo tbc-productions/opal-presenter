@@ -340,9 +340,9 @@ def test_verse_order_lowercase(form: EditSongForm):
     assert form.verse_order_edit.text() == 'V1 V2 C1 V3 C1 V4 C1'
 
 
-def test_help(settings: Settings):
+def test_no_help_button(settings: Settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: An edit song form and a patched help function
     main_window = QtWidgets.QMainWindow()
@@ -350,13 +350,7 @@ def test_help(settings: Settings):
     Registry().register('theme_manager', MagicMock())
     edit_song_form = EditSongForm(MagicMock(), main_window, MagicMock())
 
-    # WHEN: The Help button is clicked
-    with patch.object(edit_song_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(edit_song_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert edit_song_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
 @patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')

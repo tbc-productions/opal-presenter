@@ -22,7 +22,7 @@
 import logging
 import re
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
@@ -222,9 +222,3 @@ class EditBibleForm(QtWidgets.QDialog, Ui_EditBibleDialog, RegistryProperties):
                                   'The Book Name "{name}" has been entered more than once.').format(name=new_book_name))
                     return False
         return True
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/bibles.html#edit-bible-data"))

@@ -80,7 +80,7 @@ class AlertDialog(object):
         self.display_button = create_button(alert_dialog, 'display_button', icon=UiIcons().live, enabled=False)
         self.display_close_button = create_button(alert_dialog, 'display_close_button', icon=UiIcons().live,
                                                   enabled=False)
-        self.button_box = create_button_box(alert_dialog, 'button_box', ['close', 'help'],
+        self.button_box = create_button_box(alert_dialog, 'button_box', ['close'],
                                             [self.display_button, self.display_close_button])
         self.alert_dialog_layout.addWidget(self.button_box, 2, 0, 1, 2)
         self.retranslate_ui(alert_dialog)

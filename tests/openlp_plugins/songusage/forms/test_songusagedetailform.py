@@ -21,30 +21,24 @@
 """
 Package to test the openlp.plugins.songusage.forms.songusagedetailform package.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from PySide6 import QtTest, QtCore
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
 from openlp.plugins.songusage.forms.songusagedetailform import SongUsageDetailForm
 
 
-def test_help(settings: Settings):
+def test_no_help_button(settings: Settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: A songusage detail form and a patched help function
     main_window = QtWidgets.QMainWindow()
     detail_form = SongUsageDetailForm(MagicMock(), main_window)
 
-    # WHEN: The Help button is clicked
-    with patch.object(detail_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(detail_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert detail_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
 def test_date_range_uses_two_compact_calendar_date_pickers(settings, qtbot):

@@ -42,7 +42,7 @@ def test_add_welcome_page():
     wizard = QtWidgets.QWizard()
 
     # WHEN: A welcome page has been added to the wizard
-    add_welcome_page(wizard, ':/wizards/openlp-osx-wizard.png')
+    add_welcome_page(wizard)
 
     # THEN: The wizard should have one page with a pixmap.
     assert 1 == len(wizard.pageIds()), 'The wizard should have one page.'
@@ -500,3 +500,18 @@ def test_critical_error_respects_explicit_parent(mocked_critical, registry):
     critical_error_message_box('Error', 'Missing title', parent=parent)
     mocked_critical.assert_called_once_with(parent, 'Error', 'Missing title')
     registry.return_value.get.return_value.error_message.assert_not_called()
+
+
+@patch('openlp.core.lib.ui.QtWidgets.QMessageBox.critical')
+def test_critical_error_uses_active_wizard(mocked_critical, registry):
+    main_window = MagicMock()
+    registry.register('main_window', main_window)
+    wizard = QtWidgets.QWizard()
+    wizard.addPage(QtWidgets.QWizardPage())
+    wizard.show()
+    QtWidgets.QApplication.processEvents()
+    critical_error_message_box('Error', 'Missing title')
+    mocked_critical.assert_called_once_with(wizard, 'Error', 'Missing title')
+    main_window.error_message.assert_not_called()
+    wizard.close()
+    wizard.deleteLater()

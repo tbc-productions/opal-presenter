@@ -31,6 +31,7 @@ class _DialogSizingMixin:
             self.setMaximumWidth(560)
         self._preferred_minimum = QtCore.QSize()
         self._floating_windows = []
+        self._wizard_commands = []
         if self.parentWidget() is not None:
             self.parentWidget().installEventFilter(self)
         # Embedded widgets are automatically shown with their parent unless
@@ -86,6 +87,13 @@ class _DialogSizingMixin:
 
     def showEvent(self, event):
         host = self.window()
+        if isinstance(host, _qt.QWizard) and not self._wizard_commands:
+            for role in (_qt.QWizard.WizardButton.BackButton, _qt.QWizard.WizardButton.NextButton,
+                         _qt.QWizard.WizardButton.CommitButton, _qt.QWizard.WizardButton.FinishButton,
+                         _qt.QWizard.WizardButton.CancelButton):
+                button = host.button(role)
+                self._wizard_commands.append((button, button.isEnabled()))
+                button.setEnabled(False)
         manager = getattr(host, 'dock_manager', None)
         if manager is not None:
             # Native floating panes can cover a dialog embedded in the main window.
@@ -104,6 +112,9 @@ class _DialogSizingMixin:
             for window in self._floating_windows:
                 window.show()
         self._floating_windows.clear()
+        for button, enabled in self._wizard_commands:
+            button.setEnabled(enabled)
+        self._wizard_commands.clear()
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -859,7 +870,9 @@ class _MessageBoxCommands(_qt.QMessageBox):
         box = cls(icon, title, text, buttons, parent)
         if default != cls.StandardButton.NoButton:
             box.setDefaultButton(default)
-        return cls.StandardButton(box.exec())
+        result = cls.StandardButton(box.exec())
+        box.deleteLater()
+        return result
 
     @classmethod
     def information(cls, parent, title, text, buttons=_qt.QMessageBox.StandardButton.Ok,

@@ -89,14 +89,10 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
     ``name``
         The object name this wizard should have.
 
-    ``image``
-        The image to display on the "welcome" page of the wizard. It fills the left
-        column while preserving aspect ratio (163×350 is a reasonable source size).
-
     ``add_progress_page``
         Whether to add a progress page with a progressbar at the end of the wizard.
     """
-    def __init__(self, parent, plugin, name, image, add_progress_page=True):
+    def __init__(self, parent, plugin, name, add_progress_page=True):
         """
         Constructor
         """
@@ -115,7 +111,7 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
         self.delete_icon = UiIcons().delete
         self.finish_button = self.button(QtWidgets.QWizard.WizardButton.FinishButton)
         self.cancel_button = self.button(QtWidgets.QWizard.WizardButton.CancelButton)
-        self.setup_ui(image)
+        self.setup_ui()
         self.register_fields()
         self.custom_init()
         self.custom_signals()
@@ -124,22 +120,17 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
             self.error_copy_to_button.clicked.connect(self.on_error_copy_to_button_clicked)
             self.error_save_to_button.clicked.connect(self.on_error_save_to_button_clicked)
 
-    def setup_ui(self, image):
+    def setup_ui(self):
         """
         Set up the wizard UI.
-        :param image: path to start up image
         """
         self.setWindowIcon(UiIcons().main_icon)
         self.setModal(True)
         self.setOptions(QtWidgets.QWizard.WizardOption.IndependentPages |
                         QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage |
                         QtWidgets.QWizard.WizardOption.NoBackButtonOnLastPage)
-        # Set up a help button if the class of this instance has overridden the provide_help method
-        if (self.provide_help.__module__ != __name__):
-            self.setOption(QtWidgets.QWizard.WizardOption.HaveHelpButton, True)
-            self.helpRequested.connect(self.provide_help)
         self.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
-        add_welcome_page(self, image)
+        add_welcome_page(self)
         self.add_custom_pages()
         if self.with_progress_page:
             self.add_progress_page()
@@ -288,9 +279,3 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
         self.finish_button.setVisible(True)
         self.cancel_button.setVisible(False)
         self.application.process_events()
-
-    def provide_help(self):
-        """
-        Provide help - usually by opening the appropriate page of the openlp manual in the user's browser
-        """
-        pass

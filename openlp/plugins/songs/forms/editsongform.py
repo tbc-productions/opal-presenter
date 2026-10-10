@@ -402,7 +402,7 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.warning_label = QtWidgets.QLabel(self)
         self.warning_label.setObjectName('warning_label')
         self.bottom_layout.addWidget(self.warning_label)
-        self.button_box = create_button_box(self, 'button_box', ['cancel', 'save', 'help'])
+        self.button_box = create_button_box(self, 'button_box', ['cancel', 'save'])
         self.bottom_layout.addWidget(self.button_box)
         self.dialog_layout.addLayout(self.bottom_layout)
         self.retranslate_ui()
@@ -1749,10 +1749,3 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         self.manager.save_object(self.song)
         self.media_item.auto_select_id = self.song.id
         Registry().execute('song_changed', self.song.id)
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/songs.html#creating-or-editing-a-song"
-                                                   "-slide"))

@@ -24,7 +24,7 @@ Package to test the openlp.plugins.bibles.forms.bibleimportform package.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtTest, QtCore
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
@@ -76,17 +76,9 @@ def test_custom_init(import_form: BibleImportForm):
         mocked_tab_widget.setDisabled.assert_not_called()
 
 
-def test_help(import_form: BibleImportForm):
-    """
-    Test the help button
-    """
-    # WHEN: The Help button is clicked
-    with patch.object(import_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(import_form.button(QtWidgets.QWizard.WizardButton.HelpButton),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+def test_no_help_button(import_form: BibleImportForm):
+    assert not import_form.testOption(QtWidgets.QWizard.WizardOption.HaveHelpButton)
+    assert not import_form.button(QtWidgets.QWizard.WizardButton.HelpButton).isVisible()
 
 
 @pytest.mark.parametrize('result', [None, {}, {1: ''}, {1: '   '}])
@@ -146,3 +138,93 @@ def test_web_lists_disable_unavailable_sources(import_form):
     assert import_form.web_source_combo_box.currentIndex() == 1
     assert import_form.web_translation_combo_box.currentText() == 'King James Version'
     assert import_form.web_update_button.isEnabled()
+    assert import_form.web_source_combo_box.itemText(0) == 'Crosswalk - unavailable'
+    assert import_form.web_source_combo_box.itemText(1) == 'BibleGateway'
+    assert import_form.web_source_combo_box.itemText(2) == 'BibleServer - unavailable'
+    # A later successful refresh restores the labels and enables every source.
+    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.BSExtract') as server:
+        for extractor in (crosswalk, gateway, server):
+            extractor.return_value.get_bibles_from_http.return_value = [('King James Version', 'KJV', 'en')]
+        import_form.on_web_update_button_clicked()
+    for index, name in enumerate(('Crosswalk', 'BibleGateway', 'BibleServer')):
+        assert import_form.web_source_combo_box.itemText(index) == name
+        assert import_form.web_source_combo_box.model().item(index).isEnabled()
+
+
+def test_source_fields_align_and_match_button_heights(import_form, qtbot):
+    from openlp.plugins.bibles.lib.manager import BibleFormat
+    qtbot.addWidget(import_form)
+    import_form.show()
+    import_form.next()
+    import_form.format_combo_box.setCurrentIndex(BibleFormat.WebDownload)
+    QtWidgets.QApplication.processEvents()
+    page = import_form.select_page
+    labels = (import_form.format_label, import_form.web_update_label,
+              import_form.web_source_label, import_form.web_translation_label)
+    assert len({label.mapTo(page, QtCore.QPoint()).x() for label in labels}) == 1
+    fields = (import_form.format_combo_box, import_form.web_update_button,
+              import_form.web_source_combo_box, import_form.web_translation_combo_box)
+    assert len({field.mapTo(page, QtCore.QPoint()).x() for field in fields}) == 1
+    assert len({field.height() for field in fields}) == 1
+    assert import_form.web_update_button.width() < import_form.web_source_combo_box.width()
+    assert not import_form.web_update_button.icon().isNull()
+    assert import_form.web_update_button.text() == 'Retrieve translations'
+    assert import_form.web_update_button.fluentStyle() == QtWidgets.QPushButton().fluentStyle()
+    assert import_form.web_progress_spinner.isIndeterminate()
+    assert import_form.web_progress_spinner.isHidden()
+    import_form.format_combo_box.setCurrentIndex(BibleFormat.OSIS)
+    QtWidgets.QApplication.processEvents()
+    path_edit = import_form.osis_path_edit
+    assert path_edit.line_edit.height() == path_edit.browse_button.height()
+
+
+def test_license_error_is_modal_over_wizard_and_blocks_repeat_next(import_form, qtbot):
+    from PySide6 import QtTest
+    qtbot.addWidget(import_form)
+    import_form.setStartId(import_form.pageIds()[2])
+    import_form.restart()
+    import_form.show()
+    QtWidgets.QApplication.processEvents()
+    import_form.version_name_edit.setText('NIV')
+    next_button = import_form.button(import_form.WizardButton.NextButton)
+    observed = {}
+
+    def inspect_prompt():
+        prompts = import_form.findChildren(QtWidgets.QMessageBox)
+        observed['count'] = len(prompts)
+        if not prompts:
+            return
+        prompt = prompts[0]
+        observed['host'] = prompt.parentWidget()
+        observed['modal'] = prompt.isModal()
+        observed['disabled'] = not next_button.isEnabled()
+        for _ in range(3):
+            QtTest.QTest.mouseClick(next_button, QtCore.Qt.MouseButton.LeftButton)
+        QtTest.QTest.keyClick(import_form, QtCore.Qt.Key.Key_Return)
+        observed['after_clicks'] = len(import_form.findChildren(QtWidgets.QMessageBox))
+        prompt.button(QtWidgets.QMessageBox.StandardButton.Ok).click()
+
+    QtCore.QTimer.singleShot(100, inspect_prompt)
+    next_button.click()
+    assert observed == {'count': 1, 'host': import_form, 'modal': True, 'disabled': True, 'after_clicks': 1}
+    assert import_form.currentPage() is import_form.license_details_page
+    assert next_button.isEnabled()
+    assert import_form.copyright_edit.hasFocus()
+    qtbot.waitUntil(lambda: not import_form.findChildren(QtWidgets.QMessageBox))
+
+
+def test_web_import_uses_spinner_and_local_import_keeps_progress_bar(import_form):
+    from openlp.plugins.bibles.lib.manager import BibleFormat
+    import_form.format_combo_box.setCurrentIndex(BibleFormat.WebDownload)
+    import_form.pre_wizard()
+    assert import_form.progress_bar.isHidden()
+    assert not import_form.import_spinner.isHidden()
+    assert import_form.import_spinner.isIndeterminate() and import_form.import_spinner.isActive()
+    import_form.post_wizard()
+    assert import_form.import_spinner.isHidden() and not import_form.import_spinner.isActive()
+    import_form.format_combo_box.setCurrentIndex(BibleFormat.OSIS)
+    import_form.pre_wizard()
+    assert not import_form.progress_bar.isHidden()
+    assert import_form.import_spinner.isHidden()

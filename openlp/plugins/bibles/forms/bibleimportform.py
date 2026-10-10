@@ -25,7 +25,6 @@ import logging
 import urllib.error
 
 from lxml import etree
-from PySide6 import QtGui, QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 try:
@@ -41,6 +40,7 @@ from openlp.core.common.platform import is_macosx
 from openlp.core.db.helpers import delete_database
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.ui import critical_error_message_box
+from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.enums import PathEditType
 from openlp.core.widgets.edits import PathEdit
 from openlp.core.widgets.wizard import OpenLPWizard, WizardStrings
@@ -82,13 +82,13 @@ class BibleImportForm(OpenLPWizard):
         self.manager = manager
         self.web_bible_list = {}
         super(BibleImportForm, self).__init__(parent, bible_plugin,
-                                              'bibleImportWizard', ':/wizards/wizard_importbible.png')
+                                              'bibleImportWizard')
 
-    def setup_ui(self, image):
+    def setup_ui(self):
         """
         Set up the UI for the bible wizard.
         """
-        super(BibleImportForm, self).setup_ui(image)
+        super(BibleImportForm, self).setup_ui()
         self.format_combo_box.currentIndexChanged.connect(self.on_current_index_changed)
 
     def on_current_index_changed(self, index):
@@ -140,6 +140,7 @@ class BibleImportForm(OpenLPWizard):
         self.select_page_layout.setObjectName('SelectPageLayout')
         self.format_layout = QtWidgets.QFormLayout()
         self.format_layout.setObjectName('FormatLayout')
+        self.format_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.format_label = QtWidgets.QLabel(self.select_page)
         self.format_label.setObjectName('FormatLabel')
         self.format_combo_box = QtWidgets.QComboBox(self.select_page)
@@ -225,13 +226,28 @@ class BibleImportForm(OpenLPWizard):
         self.web_bible_tab.setObjectName('WebBibleTab')
         self.web_bible_layout = QtWidgets.QFormLayout(self.web_widget)
         self.web_bible_layout.setObjectName('WebBibleLayout')
+        self.web_bible_layout.setContentsMargins(0, 0, 0, 0)
+        self.web_bible_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.web_update_label = QtWidgets.QLabel(self.web_widget)
         self.web_update_label.setObjectName('WebUpdateLabel')
         self.web_bible_layout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.web_update_label)
         self.web_update_button = QtWidgets.QPushButton(self.web_widget)
         self.web_update_button.setObjectName('WebUpdateButton')
+        self.web_update_button.setIcon(UiIcons().download)
         self.web_update_label.setBuddy(self.web_update_button)
-        self.web_bible_layout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.web_update_button)
+        self.web_progress_spinner = QtWidgets.ProgressRing(self.web_widget)
+        self.web_progress_spinner.setRingSize(QtWidgets.ProgressRing.ProgressRingSize.Small)
+        self.web_progress_spinner.setIsIndeterminate(True)
+        self.web_progress_spinner.setIsActive(False)
+        self.web_progress_spinner.hide()
+        self.web_progress_spinner.setAccessibleName(
+            translate('BiblesPlugin.ImportWizardForm', 'Retrieving translations'))
+        refresh_layout = QtWidgets.QHBoxLayout()
+        refresh_layout.setContentsMargins(0, 0, 0, 0)
+        refresh_layout.addWidget(self.web_update_button)
+        refresh_layout.addWidget(self.web_progress_spinner)
+        refresh_layout.addStretch()
+        self.web_bible_layout.setLayout(0, QtWidgets.QFormLayout.ItemRole.FieldRole, refresh_layout)
         self.web_source_label = QtWidgets.QLabel(self.web_widget)
         self.web_source_label.setObjectName('WebSourceLabel')
         self.web_bible_layout.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.web_source_label)
@@ -245,21 +261,12 @@ class BibleImportForm(OpenLPWizard):
         self.web_translation_label.setObjectName('web_translation_label')
         self.web_bible_layout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.web_translation_label)
         self.web_translation_combo_box = QtWidgets.QComboBox(self.web_bible_tab)
-        self.web_translation_combo_box.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.web_translation_combo_box.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.web_translation_combo_box.setObjectName('WebTranslationComboBox')
         self.web_translation_combo_box.setEnabled(False)
         self.web_translation_label.setBuddy(self.web_translation_combo_box)
         self.web_bible_layout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.web_translation_combo_box)
-        self.web_progress_bar = QtWidgets.QProgressBar(self)
-        self.web_progress_bar.setRange(0, 3)
-        self.web_progress_bar.setObjectName('WebTranslationProgressBar')
-        self.web_progress_bar.setVisible(False)
-        self.web_bible_layout.setWidget(3, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.web_progress_bar)
-        self.web_status_label = QtWidgets.QLabel(self.web_widget)
-        self.web_status_label.setWordWrap(True)
-        self.web_status_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
-        self.web_status_label.setTextColorRole(QtWidgets.fluentqt.Label.TextColorRole.Secondary)
-        self.web_bible_layout.setWidget(4, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.web_status_label)
         self.select_stack.addWidget(self.web_widget)
         self.zefania_widget = QtWidgets.QWidget(self.select_page)
         self.zefania_widget.setObjectName('ZefaniaWidget')
@@ -419,18 +426,24 @@ class BibleImportForm(OpenLPWizard):
         self.zefania_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
         self.wordproject_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
         self.web_update_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Translations:'))
-        self.web_update_button.setText(translate('BiblesPlugin.ImportWizardForm', 'Refresh translations'))
-        self.web_status_label.setText(translate(
-            'BiblesPlugin.ImportWizardForm', 'Refresh the lists and choose a translation. '
-            'Next checks that its books and verses can be retrieved. '
-            'Web Bibles require an internet connection when displaying uncached verses.'))
-        self.web_source_combo_box.setItemText(WebDownload.Crosswalk, translate('BiblesPlugin.ImportWizardForm',
-                                                                               'Crosswalk'))
-        self.web_source_combo_box.setItemText(WebDownload.BibleGateway, translate('BiblesPlugin.ImportWizardForm',
-                                                                                  'BibleGateway'))
-        self.web_source_combo_box.setItemText(WebDownload.BibleServer, translate('BiblesPlugin.ImportWizardForm',
-                                                                                 'Bibleserver'))
+        self.web_update_button.setText(translate('BiblesPlugin.ImportWizardForm', 'Retrieve translations'))
+        self.web_source_names = (translate('BiblesPlugin.ImportWizardForm', 'Crosswalk'),
+                                 translate('BiblesPlugin.ImportWizardForm', 'BibleGateway'),
+                                 translate('BiblesPlugin.ImportWizardForm', 'BibleServer'))
+        for index, name in enumerate(self.web_source_names):
+            self.web_source_combo_box.setItemText(index, name)
         self.web_translation_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible:'))
+        labels = (self.format_label, self.web_update_label, self.web_source_label, self.web_translation_label)
+        label_width = max(label.sizeHint().width() for label in labels)
+        for label in labels:
+            label.setMinimumWidth(label_width)
+        control_height = max(self.web_update_button.sizeHint().height(),
+                             self.osis_path_edit.browse_button.sizeHint().height())
+        for field in self.findChildren(QtWidgets.QLineEdit):
+            field.setFixedHeight(control_height)
+        for widget_type in (QtWidgets.QComboBox, QtWidgets.QPushButton, QtWidgets.QToolButton):
+            for field in self.select_page.findChildren(widget_type):
+                field.setFixedHeight(control_height)
         self.sword_bible_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bibles:'))
         self.sword_folder_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD data folder:'))
         self.sword_zipfile_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD zip-file:'))
@@ -613,8 +626,9 @@ class BibleImportForm(OpenLPWizard):
         self.web_source_combo_box.setEnabled(False)
         self.web_translation_combo_box.setEnabled(False)
         self.web_update_button.setEnabled(False)
-        self.web_progress_bar.setVisible(True)
-        self.web_progress_bar.setValue(0)
+        self.web_progress_spinner.show()
+        self.web_progress_spinner.setIsActive(True)
+        QtWidgets.QApplication.processEvents()
         for (download_type, extractor) in ((WebDownload.Crosswalk, CWExtract()),
                                            (WebDownload.BibleGateway, BGExtract()),
                                            (WebDownload.BibleServer, BSExtract())):
@@ -631,22 +645,13 @@ class BibleImportForm(OpenLPWizard):
                 self.web_bible_list[download_type] = {}
                 for (bible_name, bible_key, language_code) in bibles:
                     self.web_bible_list[download_type][bible_name] = (bible_key, language_code)
-            self.web_progress_bar.setValue(download_type + 1)
         # Update combo box if something got into the list
         self.web_translation_combo_box.clear()
-        unavailable = []
-        for index in range(self.web_source_combo_box.count()):
-            self.web_source_combo_box.model().item(index).setEnabled(index in self.web_bible_list)
-            if index not in self.web_bible_list:
-                unavailable.append(self.web_source_combo_box.itemText(index))
-        self.web_status_label.setText(translate(
-            'BiblesPlugin.ImportWizardForm', 'Next checks the selected translation\'s books and verses.'))
-        if unavailable:
-            self.web_status_label.setText(translate(
-                'BiblesPlugin.ImportWizardForm', 'Translation lists unavailable: {sources}. '
-                'Retry, choose an available source, or import a local Bible file. '
-                'Next checks the selected translation\'s books and verses.').format(
-                    sources=', '.join(unavailable)))
+        for index, name in enumerate(self.web_source_names):
+            available = index in self.web_bible_list
+            self.web_source_combo_box.model().item(index).setEnabled(available)
+            self.web_source_combo_box.setItemText(index, name if available else translate(
+                'BiblesPlugin.ImportWizardForm', '{source} - unavailable').format(source=name))
         if self.web_bible_list:
             index = min(self.web_bible_list)
             self.web_source_combo_box.setCurrentIndex(index)
@@ -660,7 +665,8 @@ class BibleImportForm(OpenLPWizard):
         self.web_source_combo_box.setEnabled(bool(self.web_bible_list))
         self.web_translation_combo_box.setEnabled(bool(self.web_bible_list))
         self.web_update_button.setEnabled(True)
-        self.web_progress_bar.setVisible(False)
+        self.web_progress_spinner.setIsActive(False)
+        self.web_progress_spinner.hide()
 
     def validate_web_download(self):
         """Check real books and verses; a translation catalogue alone can be stale."""
@@ -670,7 +676,7 @@ class BibleImportForm(OpenLPWizard):
         if not entry:
             critical_error_message_box(
                 translate('BiblesPlugin.ImportWizardForm', 'Select a translation'),
-                translate('BiblesPlugin.ImportWizardForm', 'Refresh the translation lists and choose a Bible first.'))
+                translate('BiblesPlugin.ImportWizardForm', 'Retrieve translations and choose a Bible first.'))
             return False
         extractor = (CWExtract, BGExtract, BSExtract)[source]()
         self.application.set_busy_cursor()
@@ -780,13 +786,31 @@ class BibleImportForm(OpenLPWizard):
         self.full_license_edit.setPlaceholderText(UiStrings().OptionalHideInFooter)
         self.on_web_source_combo_box_index_changed(WebDownload.Crosswalk)
 
+    def add_progress_page(self):
+        super().add_progress_page()
+        self.import_spinner = QtWidgets.ProgressRing(self.progress_page)
+        self.import_spinner.setIsIndeterminate(True)
+        self.import_spinner.setIsActive(False)
+        self.import_spinner.hide()
+        self.import_spinner.setAccessibleName(translate('BiblesPlugin.ImportWizardForm', 'Importing Bible'))
+        self.progress_layout.insertWidget(1, self.import_spinner)
+
+    def post_wizard(self):
+        self.import_spinner.setIsActive(False)
+        self.import_spinner.hide()
+        super().post_wizard()
+
     def pre_wizard(self):
         """
         Prepare the UI for the import.
         """
         super(BibleImportForm, self).pre_wizard()
         bible_type = self.field('source_format')
-        if bible_type == BibleFormat.WebDownload:
+        is_web = bible_type == BibleFormat.WebDownload
+        self.progress_bar.setVisible(not is_web)
+        self.import_spinner.setVisible(is_web)
+        self.import_spinner.setIsActive(is_web)
+        if is_web:
             self.progress_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Registering Bible...'))
         else:
             self.progress_label.setText(WizardStrings.StartingImport)
@@ -868,9 +892,3 @@ class BibleImportForm(OpenLPWizard):
         # Don't delete the db if it wasen't created
         if hasattr(importer, 'file'):
             delete_database(self.plugin.settings_section, importer.file)
-
-    def provide_help(self):
-        """
-        Provide help within the wizard by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/bibles.html"))

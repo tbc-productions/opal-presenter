@@ -30,7 +30,6 @@ This script regenerates:
 - openlp-logo-128x128.png
 - openlp-logo-256x256.png
 - openlp-splash-screen.png
-- openlp-splash-screen-old.png
 - OpenLP.ico
 """
 
@@ -45,7 +44,6 @@ from pathlib import Path
 SIZES = (16, 32, 48, 64, 128, 256)
 SPLASH_TARGETS = {
     'openlp-splash-screen.png': 1110,
-    'openlp-splash-screen-old.png': 370,
 }
 
 

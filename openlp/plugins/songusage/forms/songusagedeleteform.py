@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -68,9 +68,3 @@ class SongUsageDeleteForm(QtWidgets.FormDialog, Ui_SongUsageDeleteDialog, Regist
             translate('SongUsagePlugin.SongUsageDeleteForm', 'Deletion Successful'),
             translate('SongUsagePlugin.SongUsageDeleteForm', 'All requested data has been deleted successfully.'))
         super().accept()
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/song_usage.html"))

@@ -20,7 +20,7 @@
 ##########################################################################
 import logging
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import and_
 
@@ -122,9 +122,3 @@ class SongUsageDetailForm(QtWidgets.FormDialog, Ui_SongUsageDetailDialog, Regist
                                                  'An error occurred while creating the report: {error}'
                                                  ).format(error=ose.strerror))
         self.close()
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/song_usage.html"))

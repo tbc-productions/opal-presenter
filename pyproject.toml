@@ -136,7 +136,6 @@ hook-dirs = "openlp.__pyinstaller:get_hook_dirs"
 Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
 Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
 Issues = "https://git.tbcproductions.net/tbcproductions/openlp-plus/issues"
-Documentation = "https://manual.openlp.org"
 
 [tool.hatch.version]
 source = "vcs"

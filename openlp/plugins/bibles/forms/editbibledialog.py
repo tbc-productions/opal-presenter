@@ -152,7 +152,7 @@ class Ui_EditBibleDialog(object):
         self.bible_tab_widget.addTab(self.book_name_tab, '')
         # Last few bits
         self.dialog_layout.addWidget(self.bible_tab_widget)
-        self.button_box = create_button_box(edit_bible_dialog, 'button_box', ['cancel', 'save', 'help'])
+        self.button_box = create_button_box(edit_bible_dialog, 'button_box', ['cancel', 'save'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui(edit_bible_dialog)
         QtCore.QMetaObject.connectSlotsByName(edit_bible_dialog)

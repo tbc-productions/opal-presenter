@@ -23,7 +23,7 @@ The song import functions for OpenLP.
 """
 import logging
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.handlers import handle_permission_error
@@ -55,15 +55,15 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
         :param parent: The QWidget-derived parent of the wizard.
         :param plugin: The songs plugin.
         """
-        super(SongImportForm, self).__init__(parent, plugin, 'songImportWizard', ':/wizards/wizard_song.png')
+        super(SongImportForm, self).__init__(parent, plugin, 'songImportWizard')
         self.clipboard = self.main_window.clipboard
 
-    def setup_ui(self, image):
+    def setup_ui(self):
         """
         Set up the song wizard UI.
         """
         self.format_widgets = dict([(song_format, {}) for song_format in SongFormat.get_format_list()])
-        super(SongImportForm, self).setup_ui(image)
+        super(SongImportForm, self).setup_ui()
         self.current_format = SongFormat.OpenLyrics
         self.format_stack.setCurrentIndex(self.current_format)
         self.format_combo_box.currentIndexChanged.connect(self.on_current_index_changed)
@@ -467,16 +467,10 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
         self.format_widgets[this_format]['import_widget'] = import_widget
         return import_widget
 
-    def provide_help(self):
-        """
-        Provide help within the wizard by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/songs.html#song-importer"))
-
 
 class SongImportSourcePage(QtWidgets.QWizardPage):
     """
-    Subclass of QtGui.QWizardPage to override isComplete() for Source Page.
+    Wizard page with source-specific completion checks.
     """
     def isComplete(self):
         """

@@ -23,6 +23,7 @@ Test ProjectorEditForm methods that don't have many paths/options
 """
 
 import logging
+from openlp.core.widgets import fluent as QtWidgets
 import openlp.core.projectors.editform
 import openlp.core.projectors.db
 
@@ -131,16 +132,5 @@ def test_cancel_me(projector_editform_mtdb, caplog):
         mock_close.assert_called_once()
 
 
-def test_help_me(projector_editform_mtdb, caplog):
-    """
-    TODO: Expand method, then expand test
-    """
-    # GIVEN: Test setup
-    caplog.set_level(logging.DEBUG)
-    logs = [(_test_module, logging.DEBUG, 'help_me() signal received')]
-
-    # WHEN: Called
-    projector_editform_mtdb.help_me()
-
-    # THEN: Appropriate log entries made
-    assert caplog.record_tuples == logs, 'Invalid log entries'
+def test_no_help_button(projector_editform_mtdb):
+    assert projector_editform_mtdb.button_box_edit.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None

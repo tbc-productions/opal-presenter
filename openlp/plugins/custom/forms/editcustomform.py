@@ -22,7 +22,7 @@
 import logging
 import html
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -311,9 +311,3 @@ class EditCustomForm(QtWidgets.QDialog, Ui_CustomEditDialog):
                                   'You need to add at least one slide.'))
             return False
         return True
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/custom_slides.html"))

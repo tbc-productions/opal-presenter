@@ -31,6 +31,7 @@ QComboBox = fluentqt.ComboBox
 CalendarDatePicker = fluentqt.CalendarDatePicker
 MultiSelectComboBox = fluentqt.MultiSelectComboBox
 Card = fluentqt.Card
+ProgressRing = fluentqt.ProgressRing
 
 
 class FluentSplitView(fluentqt.SplitView):
@@ -472,7 +473,7 @@ class FluentWizard(_qt.QWizard):
         self._update_button_layout()
 
     def _update_button_layout(self):
-        roles = []
+        roles = [self.WizardButton.CancelButton]
         for option, role in ((self.WizardOption.HaveHelpButton, self.WizardButton.HelpButton),
                              (self.WizardOption.HaveCustomButton1, self.WizardButton.CustomButton1),
                              (self.WizardOption.HaveCustomButton2, self.WizardButton.CustomButton2),
@@ -483,7 +484,7 @@ class FluentWizard(_qt.QWizard):
                 roles.append(role)
         self.setButtonLayout(
             roles + [self.WizardButton.Stretch, self.WizardButton.BackButton, self.WizardButton.NextButton,
-                     self.WizardButton.CommitButton, self.WizardButton.FinishButton, self.WizardButton.CancelButton])
+                     self.WizardButton.CommitButton, self.WizardButton.FinishButton])
 
     def initializePage(self, page_id):
         page = self.page(page_id)

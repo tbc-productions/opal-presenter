@@ -302,9 +302,7 @@ class SongFormat(object):
             'filter': '{text} (*.xml)'.format(text=translate('SongsPlugin.ImportWizardForm',
                                                              'LiveWorship Database')),
             'descriptionText': translate('SongsPlugin.ImportWizardForm',
-                                         'First convert your LiveWorship database to an XML text file, as '
-                                         'explained in the <a href="http://manual.openlp.org/songs.html'
-                                         '#importing-from-liveworship">User Manual</a>.')
+                                         'First convert your LiveWorship database to an XML text file.')
         },
         Lyrix: {
             'class': LyrixImport,
@@ -467,9 +465,7 @@ class SongFormat(object):
             'selectMode': SongFormatSelect.SingleFile,
             'comboBoxText': translate('SongsPlugin.ImportWizardForm', 'ZionWorx (CSV)'),
             'descriptionText': translate('SongsPlugin.ImportWizardForm',
-                                         'First convert your ZionWorx database to a CSV text file, as '
-                                         'explained in the <a href="http://manual.openlp.org/songs.html'
-                                         '#importing-from-zionworx">User Manual</a>.')
+                                         'First convert your ZionWorx database to a CSV text file.')
         },
         Datasoul: {
             'class': DatasoulImport,

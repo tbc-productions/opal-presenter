@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -219,9 +219,3 @@ class AlertForm(QtWidgets.QDialog, AlertDialog):
             self.delete_button.setEnabled(True)
             # We do not need to enable the save button, as it is only enabled
             # when typing text in the "alert_text_edit".
-
-    def provide_help(self):
-        """
-        Provide help within the form by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/alert.html"))

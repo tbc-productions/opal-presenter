@@ -55,7 +55,7 @@ class Ui_SongUsageDeleteDialog(object):
         self.delete_calendar.setVerticalHeaderFormat(QtWidgets.QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
         self.delete_calendar.setObjectName('delete_calendar')
         self.vertical_layout.addWidget(self.delete_calendar)
-        self.button_box = create_button_box(song_usage_delete_dialog, 'button_box', ['cancel', 'ok', 'help'])
+        self.button_box = create_button_box(song_usage_delete_dialog, 'button_box', ['cancel', 'ok'])
         self.vertical_layout.addWidget(self.button_box)
         self.retranslate_ui(song_usage_delete_dialog)
 

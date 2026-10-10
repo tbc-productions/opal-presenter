@@ -25,7 +25,7 @@ def test_wizard_scrolls_long_content_and_keeps_footer_order(qapp, qtbot):
     finish = wizard.button(wizard.WizardButton.FinishButton)
     help_button = wizard.button(wizard.WizardButton.HelpButton)
     cancel = wizard.button(wizard.WizardButton.CancelButton)
-    assert help_button.x() < finish.x() < cancel.x()
+    assert cancel.x() < help_button.x() < finish.x()
     assert finish.isVisible() and cancel.isVisible()
     for role in (wizard.WizardButton.CustomButton1, wizard.WizardButton.CustomButton2,
                  wizard.WizardButton.CustomButton3):
@@ -69,7 +69,7 @@ def test_wizard_enter_respects_validation_and_help_keeps_page_open(qapp, qtbot):
     back_button = wizard.button(wizard.WizardButton.BackButton)
     finish_button = wizard.button(wizard.WizardButton.FinishButton)
     cancel_button = wizard.button(wizard.WizardButton.CancelButton)
-    assert back_button.x() < finish_button.x() < cancel_button.x()
+    assert cancel_button.x() < back_button.x() < finish_button.x()
     QtTest.QTest.keyClick(wizard, QtCore.Qt.Key.Key_Escape)
     assert not wizard.isVisible()
 

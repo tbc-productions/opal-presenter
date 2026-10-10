@@ -38,12 +38,11 @@ from openlp.core.widgets.labels import FormLabel
 log = logging.getLogger(__name__)
 
 
-def add_welcome_page(parent, image):
+def add_welcome_page(parent):
     """
     Generate an opening welcome page with Fluent typography.
 
     :param parent: A ``QWizard`` object to add the welcome page to.
-    :param image: Legacy image argument retained for existing wizard callers.
     """
     parent.welcome_page = QtWidgets.QWizardPage()
     parent.welcome_page.setObjectName('welcome_page')
@@ -99,8 +98,6 @@ def create_button_box(dialog, name, standard_buttons, custom_buttons=None):
         buttons |= QtWidgets.QDialogButtonBox.StandardButton.Cancel
     if 'close' in standard_buttons:
         buttons |= QtWidgets.QDialogButtonBox.StandardButton.Close
-    if 'help' in standard_buttons and hasattr(dialog, 'provide_help'):
-        buttons |= QtWidgets.QDialogButtonBox.StandardButton.Help
     if 'defaults' in standard_buttons:
         buttons |= QtWidgets.QDialogButtonBox.StandardButton.RestoreDefaults
     button_box = QtWidgets.QDialogButtonBox(dialog)
@@ -113,8 +110,6 @@ def create_button_box(dialog, name, standard_buttons, custom_buttons=None):
             button_box.addButton(*button)
     button_box.accepted.connect(dialog.accept)
     button_box.rejected.connect(dialog.reject)
-    if 'help' in standard_buttons and hasattr(dialog, 'provide_help'):
-        button_box.helpRequested.connect(dialog.provide_help)
     if isinstance(dialog, QtWidgets.FormDialog):
         dialog.setButtonBox(button_box)
     return button_box
@@ -134,6 +129,10 @@ def critical_error_message_box(title=None, message=None, parent=None, question=F
                                               QtWidgets.QMessageBox.StandardButton(
             QtWidgets.QMessageBox.StandardButton.Yes |
             QtWidgets.QMessageBox.StandardButton.No))
+    if parent is None:
+        active_window = QtWidgets.QApplication.activeWindow()
+        if isinstance(active_window, QtWidgets.QWizard):
+            parent = active_window
     if parent is not None:
         return QtWidgets.QMessageBox.critical(parent, title if title else UiStrings().Error, message)
     # If used before the main window is created, fall back to direct use of QMessageBox

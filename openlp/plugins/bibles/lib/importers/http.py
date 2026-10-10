@@ -27,10 +27,12 @@ import re
 import socket
 import urllib.error
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 from bs4 import BeautifulSoup, NavigableString, Tag
+from PySide6 import QtCore
 
-from openlp.core.common.httputils import get_web_page
+from openlp.core.common.httputils import get_proxy_settings, get_web_page
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
@@ -781,7 +783,13 @@ def get_soup_for_bible_ref(reference_url, headers=None, pre_parse_regex=None, pr
     if not reference_url:
         return None
     try:
-        page_source = get_web_page(reference_url, headers, update_openlp=True)
+        # Keep progress animations running, while excluding clicks that could start another import.
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            download = executor.submit(get_web_page, reference_url, headers, proxy=get_proxy_settings())
+            while not download.done():
+                QtCore.QCoreApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+                QtCore.QThread.msleep(10)
+            page_source = download.result()
     except Exception:
         log.exception('Unable to download Bible %s, unknown exception occurred', reference_url)
         page_source = None

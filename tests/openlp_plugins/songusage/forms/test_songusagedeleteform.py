@@ -22,30 +22,24 @@
 Package to test the openlp.plugins.songusage.forms.songusagedeleteform package.
 """
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from PySide6 import QtTest, QtCore
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
 from openlp.plugins.songusage.forms.songusagedeleteform import SongUsageDeleteForm
 
 
-def test_help(settings: Settings):
+def test_no_help_button(settings: Settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: A songusage delete form and a patched help function
     main_window = QtWidgets.QMainWindow()
     delete_form = SongUsageDeleteForm(MagicMock(), main_window)
 
-    # WHEN: The Help button is clicked
-    with patch.object(delete_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(delete_form.button_box.button(
-            QtWidgets.QDialogButtonBox.StandardButton.Help), QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert delete_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
 @pytest.mark.parametrize('confirmed', [False, True])
@@ -68,12 +62,9 @@ def test_deletion_requires_confirmation_and_matches_inclusive_date(settings, qtb
         return dialog.ResultPrimary if confirmed else dialog.ResultNone
 
     monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', confirm)
-    with patch('openlp.plugins.songusage.forms.songusagedeleteform.QtGui.QDesktopServices.openUrl') as help_url:
-        form.setAnimationEnabled(False)
-        form.open()
-        form._native_commands['secondary'].click()
-        help_url.assert_called_once()
-        assert form.isOpen()
+    form.setAnimationEnabled(False)
+    form.open()
+    assert not form._native_commands['secondary'].isVisible()
     form._native_commands['primary'].click()
     assert messages == ['Permanently delete all song usage data on or before 2026-10-09?']
     if confirmed:
