@@ -24,7 +24,7 @@ The About dialog.
 import webbrowser
 import datetime
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
@@ -56,18 +56,11 @@ class AboutForm(QtWidgets.QDialog):
         """
         self.setObjectName('AboutForm')
         self.setWindowIcon(UiIcons().main_icon)
+        self.resize(700, 520)
         self.base_layout = QtWidgets.QHBoxLayout(self)
         self.base_layout.setContentsMargins(0, 0, 0, 0)
         self.base_layout.setSpacing(8)
         self.base_layout.setObjectName('base_layout')
-
-        # Mirror the first-time wizard visual style: image on the left, content on the right.
-        self.side_image_label = QtWidgets.QLabel(self)
-        self.side_image_label.setPixmap(QtGui.QPixmap(':/wizards/opal-presenter-about.png'))
-        self.side_image_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
-        self.side_image_label.setMargin(8)
-        self.side_image_label.setObjectName('side_image_label')
-        self.base_layout.addWidget(self.side_image_label)
 
         self.content_widget = QtWidgets.QWidget(self)
         self.content_widget.setObjectName('content_widget')
@@ -87,7 +80,6 @@ class AboutForm(QtWidgets.QDialog):
         self.about_tab_layout = QtWidgets.QVBoxLayout(self.about_tab)
         self.about_tab_layout.setObjectName('about_tab_layout')
         self.about_text_edit = QtWidgets.QTextBrowser(self.about_tab)
-        self.about_text_edit.setMinimumSize(QtCore.QSize(650, 350))
         self.about_text_edit.setOpenExternalLinks(True)
         self.about_text_edit.setObjectName('about_text_edit')
         self.about_tab_layout.addWidget(self.about_text_edit)
@@ -146,9 +138,8 @@ class AboutForm(QtWidgets.QDialog):
                       'https://www.gnu.org/licenses/</a>.</p>').format(crs='\xa9', yr=datetime.date.today().year))
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.about_tab), UiStrings().About)
         developers = translate('OpenLP.AboutForm',
-                       'Opal Presenter is maintained by volunteers all over the world in '
-                       'their spare time. If you would like to see this project succeed, please consider '
-                       'contributing to it by clicking the "contribute" button below.')
+                               'Opal Presenter is based on <a href="https://openlp.org/">OpenLP</a>. '
+                               'The buttons below let you donate or contribute to OpenLP.')
         built_with = translate('OpenLP.AboutForm', 'Opal Presenter would not be possible without '
                        'the following software '
                                'libraries:')
@@ -768,8 +759,8 @@ class AboutForm(QtWidgets.QDialog):
         self.license_text_edit.setHtml(license)
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.license_tab),
                                        translate('OpenLP.AboutForm', 'License'))
-        self.contribute_button.setText(translate('OpenLP.AboutForm', 'Contribute'))
-        self.donate_button.setText(translate('OpenLP.AboutForm', 'Donate'))
+        self.contribute_button.setText(translate('OpenLP.AboutForm', 'Contribute to OpenLP'))
+        self.donate_button.setText(translate('OpenLP.AboutForm', 'Donate to OpenLP'))
 
     def _setup(self):
         """

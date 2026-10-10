@@ -19,27 +19,62 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.firsttimeform package.
+Tests for the About dialog.
 """
 import datetime
 from unittest.mock import patch
+
+import pytest
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.ui.aboutform import AboutForm
 
 
 @patch('openlp.core.ui.aboutform.webbrowser')
-def test_on_contribute_button_clicked(mocked_webbrowser, mock_settings):
+@pytest.mark.parametrize('button_name,caption,url', [
+    ('donate_button', 'Donate to OpenLP', 'http://openlp.org/donate'),
+    ('contribute_button', 'Contribute to OpenLP', 'http://openlp.org/contribute')
+])
+def test_openlp_buttons(mocked_webbrowser, mock_settings, qtbot, button_name, caption, url):
     """
-    Test that clicking on the "Volunteer" button opens a web page.
+    Support actions name OpenLP, open its pages and leave the dialog open.
     """
-    # GIVEN: A new About dialog and a mocked out webbrowser module
     about_form = AboutForm(None)
+    qtbot.addWidget(about_form)
+    about_form.show()
+    button = getattr(about_form, button_name)
+    assert button.text() == caption
 
-    # WHEN: The "Volunteer" button is "clicked"
-    about_form.on_contribute_button_clicked()
+    qtbot.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
 
-    # THEN: A web browser is opened
-    mocked_webbrowser.open_new.assert_called_with('http://openlp.org/contribute')
+    mocked_webbrowser.open_new.assert_called_once_with(url)
+    assert about_form.isVisible()
+
+
+def test_about_form_credits_and_layout(mock_settings, qtbot):
+    """Credit the upstream project without the old maintenance claim or banner."""
+    about_form = AboutForm(None)
+    qtbot.addWidget(about_form)
+    credits = about_form.credits_text_edit.toPlainText()
+    assert 'Opal Presenter is based on OpenLP.' in credits
+    assert 'OpenLP developers and contributors' in credits
+    assert 'maintained by volunteers' not in credits
+    assert about_form.findChild(QtWidgets.QLabel, 'side_image_label') is None
+    assert about_form.base_layout.count() == 1
+
+
+def test_about_form_keyboard_close(mock_settings, qtbot):
+    """Enter activates Close and Escape dismisses the dialog."""
+    about_form = AboutForm(None)
+    qtbot.addWidget(about_form)
+    about_form.show()
+    close_button = about_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Close)
+    close_button.setFocus()
+    qtbot.keyClick(close_button, QtCore.Qt.Key.Key_Return)
+    qtbot.waitUntil(lambda: not about_form.isVisible(), timeout=1000)
+    about_form.show()
+    qtbot.keyClick(about_form, QtCore.Qt.Key.Key_Escape)
+    qtbot.waitUntil(lambda: not about_form.isVisible(), timeout=1000)
 
 
 @patch('openlp.core.ui.aboutform.get_version')
