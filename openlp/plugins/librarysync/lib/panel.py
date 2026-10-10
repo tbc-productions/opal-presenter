@@ -36,7 +36,7 @@ from openlp.plugins.librarysync.lib.transfer import (
     write_upload)
 from openlp.plugins.librarysync.lib.preview import format_local_time, show_preview
 from openlp.plugins.librarysync.lib.stream import MediaStream
-from openlp.plugins.librarysync.lib.worker import SyncWorker
+from openlp.plugins.librarysync.lib.worker import STORAGE_URLS, SyncWorker
 
 
 def tr(text):
@@ -326,6 +326,9 @@ class CloudLibrary(QtWidgets.QWidget):
         if self.jobs:
             return
         menu = QtWidgets.QMenu(self)
+        storage = menu.addAction(UiIcons().open, tr('Open storage'), self.open_storage)
+        storage.setEnabled(bool(self.profile and self.roots.currentData()))
+        menu.addSeparator()
         menu.addAction(UiIcons().arrow_import, tr('Import connection…'), self.import_connection)
         export = menu.addAction(UiIcons().arrow_export, tr('Export connection…'), self.export_connection)
         export.setEnabled(bool(self.profile) and self.connected)
@@ -334,6 +337,14 @@ class CloudLibrary(QtWidgets.QWidget):
         disconnect = menu.addAction(UiIcons().plug_disconnected, tr('Disconnect…'), self.disconnect)
         disconnect.setEnabled(bool(self.profile) and self.connected)
         menu.exec(QtGui.QCursor.pos())
+
+    def open_storage(self):
+        root = self.roots.currentData()
+        if not self.profile or not root:
+            return
+        url = QtCore.QUrl(STORAGE_URLS[self.profile['provider']](self.profile, root))
+        if not QtGui.QDesktopServices.openUrl(url):
+            self.set_status(tr('Couldn’t open storage'), error=True)
 
     def import_connection(self):
         path, _ = FileDialog.getOpenFileName(

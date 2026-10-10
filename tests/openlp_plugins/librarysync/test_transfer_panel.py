@@ -885,13 +885,68 @@ def test_connection_menu_order_icons_and_separator(panel, monkeypatch):
     def inspect(menu, position):
         actions = menu.actions()
         assert [action.text() for action in actions] == [
-            'Import connection…', 'Export connection…', '', 'Set up connection…', 'Disconnect…']
-        assert actions[2].isSeparator()
+            'Open storage', '', 'Import connection…', 'Export connection…', '',
+            'Set up connection…', 'Disconnect…']
+        assert actions[1].isSeparator() and actions[4].isSeparator()
         assert [action.icon().name() for action in actions if not action.isSeparator()] == [
-            'ic_fluent_arrow_import_24_regular', 'ic_fluent_arrow_export_24_regular',
+            'ic_fluent_folder_open_24_regular', 'ic_fluent_arrow_import_24_regular',
+            'ic_fluent_arrow_export_24_regular',
             'ic_fluent_add_24_regular', 'ic_fluent_plug_disconnected_24_regular']
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.configure()
+
+
+@pytest.mark.parametrize('provider', ['google-drive', 'local-cloud'])
+def test_open_storage_menu_uses_selected_root_and_system_launcher(panel, monkeypatch, tmp_path, provider):
+    opened = MagicMock(return_value=True)
+    monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
+    if provider == 'local-cloud':
+        path = tmp_path / 'Church Library #1'
+        panel.set_profile({'version': 1, 'provider': provider, 'name': 'Local storage', 'path': str(path)})
+        expected = QtCore.QUrl.fromLocalFile(str(path))
+    else:
+        profile = dict(panel.profile, folders=[{'id': 'first', 'name': 'First'},
+                                               {'id': 'second', 'name': 'Second', 'resource_key': 'link-key'}])
+        panel.set_profile(profile)
+        with QtCore.QSignalBlocker(panel.roots):
+            panel.roots.setCurrentIndex(1)
+        expected = QtCore.QUrl('https://drive.google.com/drive/folders/second?resourcekey=link-key')
+
+    def inspect(menu, position):
+        storage = menu.actions()[0]
+        assert storage.text() == 'Open storage' and storage.isEnabled()
+        storage.trigger()
+
+    monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
+    assert not panel.connected
+    panel.configure()
+    opened.assert_called_once_with(expected)
+
+
+def test_open_storage_without_resource_key_and_launcher_failure(panel, monkeypatch):
+    opened = MagicMock(return_value=False)
+    monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
+    panel.open_storage()
+    opened.assert_called_once_with(QtCore.QUrl('https://drive.google.com/drive/folders/church'))
+    assert panel.status.text() == 'Couldn’t open storage'
+    assert panel._status_theme.theme_tokens().colors.systemCritical.name() in panel.status.styleSheet()
+
+
+def test_open_storage_requires_a_configured_root(panel, monkeypatch):
+    opened = MagicMock()
+    monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
+    with QtCore.QSignalBlocker(panel.roots):
+        panel.roots.clear()
+    panel.open_storage()
+    panel.profile = None
+
+    def inspect(menu, position):
+        assert not menu.actions()[0].isEnabled()
+
+    monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
+    panel.configure()
+    panel.open_storage()
+    opened.assert_not_called()
 
 
 def test_upload_checks_duplicate_and_only_overwrites_after_confirmation(panel, tmp_path):
@@ -1388,8 +1443,9 @@ def test_disconnect_confirms_with_content_dialog_before_starting(panel, monkeypa
 def test_connection_menu_actions_disable_after_disconnect_and_reenable_after_reconnect(panel, monkeypatch):
     def inspect(menu, position):
         actions = menu.actions()
-        assert actions[1].isEnabled() == panel.connected
-        assert actions[4].isEnabled() == panel.connected
+        assert actions[0].isEnabled()
+        assert actions[3].isEnabled() == panel.connected
+        assert actions[6].isEnabled() == panel.connected
 
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.connected = True

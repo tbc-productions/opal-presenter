@@ -12,6 +12,10 @@ from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudChange, Clo
 from openlp.plugins.librarysync.lib.transfer import duplicate_key
 
 
+def storage_url(profile, folder):
+    return Path(profile['path']).as_uri()
+
+
 class LocalStream:
     """The bounded response interface consumed by the existing loopback media relay."""
     def __init__(self, path, byte_range, cancel):

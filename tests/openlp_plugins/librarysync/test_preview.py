@@ -47,6 +47,24 @@ def test_custom_preview_preserves_title_credits_and_slide_list(settings):
     assert metadata == {'Credits': 'Organisation'}
 
 
+@pytest.mark.parametrize('order', ['', 'c1 v1 c1'])
+def test_song_preview_splits_forced_breaks_and_preserves_design_keys(settings, order):
+    lines = 'First half<br/><p page-break-after="always"/><br/>Second half'
+    xml = f'''<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8">
+      <properties><titles><title>Forced break</title></titles><verseOrder>{order}</verseOrder></properties>
+      <lyrics><verse name="v1"><lines>Verse</lines></verse>
+      <verse name="c1"><lines>{lines}</lines></verse></lyrics></song>'''.encode()
+    service, metadata = text_service_item(CloudItem('song', 'song.xml', category='songs'), safe_xml(xml))
+    expected = [('c1', 0, 'First half'), ('c1', 1, 'Second half'), ('v1', 0, 'Verse'),
+                ('c1', 0, 'First half'), ('c1', 1, 'Second half')] if order else [
+                        ('v1', 0, 'Verse'), ('c1', 0, 'First half'), ('c1', 1, 'Second half')]
+    assert [slide['text'].strip() for slide in service.slides] == [text for tag, split, text in expected]
+    assert [(slide['metadata']['design_section'], slide['metadata']['design_split'], slide['text'].strip())
+            for slide in service.slides] == expected
+    assert [slide['verse'] for slide in service.slides] == [tag.upper() for tag, split, text in expected]
+    assert metadata['Verse order'] == (order.upper() or 'V1 C1')
+
+
 def test_empty_or_mismatched_text_cannot_be_previewed(settings):
     with pytest.raises(SyncError, match='slides'):
         text_service_item(CloudItem('custom', 'item.xml', category='custom'), safe_xml(b'<song><lyrics/></song>'))

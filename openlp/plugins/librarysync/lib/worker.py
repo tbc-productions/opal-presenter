@@ -4,20 +4,13 @@ from threading import Event
 from PySide6 import QtCore
 
 from openlp.core.threading import ThreadWorker
-from openlp.plugins.librarysync.lib.auth import GoogleAuth
-from openlp.plugins.librarysync.lib.google import GoogleDriveProvider
-from openlp.plugins.librarysync.lib.local import LocalStorageProvider
+from openlp.plugins.librarysync.lib.google import google_drive, storage_url as google_storage_url
+from openlp.plugins.librarysync.lib.local import LocalStorageProvider, storage_url as local_storage_url
 from openlp.plugins.librarysync.lib.provider import SyncError
 
 
-def google_drive(profile, cancel):
-    provider = GoogleDriveProvider(GoogleAuth(profile['installed']), cancel)
-    provider.resource_keys.update({folder['id']: folder['resource_key'] for folder in profile['folders']
-                                   if folder['resource_key']})
-    return provider
-
-
 PROVIDERS = {'google-drive': google_drive, 'local-cloud': LocalStorageProvider}
+STORAGE_URLS = {'google-drive': google_storage_url, 'local-cloud': local_storage_url}
 
 
 class SyncWorker(ThreadWorker):

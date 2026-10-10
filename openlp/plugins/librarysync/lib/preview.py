@@ -102,7 +102,10 @@ def text_service_item(item, prepared):
     service.raw_footer = [html.escape(value) for value in footer if value]
     for index, (tag, text) in enumerate(verses):
         section = tag if item.category == 'songs' else f'custom-{index + 1}'
-        service.add_from_text(text, tag.upper(), metadata={'design_section': section})
+        parts = text.split('[--}{--]\n') if item.category == 'songs' else [text]
+        for split_index, part in enumerate(parts):
+            service.add_from_text(
+                part, tag.upper(), metadata={'design_section': section, 'design_split': split_index})
     return service, {key: value for key, value in metadata.items() if value}
 
 

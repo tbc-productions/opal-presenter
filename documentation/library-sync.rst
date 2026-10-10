@@ -55,6 +55,10 @@ Reconnecting is necessary if Google revokes or expires the account's authorisati
 Disconnect asks for confirmation before closing previews and clearing the local
 cache. Export connection and Disconnect are unavailable while disconnected.
 
+Choose **Connection → Open storage** to open the selected shared Google Drive
+folder in your browser, or the configured local storage folder in Finder or
+Explorer. This action is available while disconnected if a connection is configured.
+
 With no connections configured, Cloud Library displays a Fluent InfoBar with an
 **Import connection** hyperlink. Connect and the folder selector are disabled
 until a connection is imported. The footer shows the item count on the left and
@@ -281,7 +285,10 @@ preview, streaming, download, upload, rename,
 move and deletion operations. Return ``CloudItem``
 records with the current user's capabilities. Register a provider factory in
 ``worker.PROVIDERS`` (the factory receives the profile and a cancellation event)
-and add its profile validation and connection flow. Providers
+and a ``storage_url(profile, folder)`` function in ``worker.STORAGE_URLS`` to
+return its browser URL or local folder URI without signing in or making API calls.
+Keep both implementations in the provider module, and add its profile validation
+and connection flow. Providers
 own authentication and their network sessions; the browser and native Library
 importers do not need provider-specific transfer logic. New providers must keep
 writes independent or atomic and must honour cancellation and permission checks.

@@ -6,11 +6,12 @@ import time
 from pathlib import Path
 from dataclasses import replace
 from threading import RLock
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import requests
 
 from openlp.core.common import clean_filename
+from openlp.plugins.librarysync.lib.auth import GoogleAuth
 from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudChange, CloudItem, SyncError, friendly_name
 
 
@@ -21,6 +22,20 @@ FIELDS = ('id,name,driveId,mimeType,size,modifiedTime,createdTime,version,md5Che
           'webViewLink,thumbnailLink,resourceKey,parents,lastModifyingUser(displayName),'
           'capabilities(canAddChildren,canDownload,canCopy,canEdit,canTrash,canMoveItemWithinDrive),appProperties')
 CHUNK_SIZE = 8 * 1024 * 1024
+
+
+def google_drive(profile, cancel):
+    provider = GoogleDriveProvider(GoogleAuth(profile['installed']), cancel)
+    provider.resource_keys.update({folder['id']: folder['resource_key'] for folder in profile['folders']
+                                   if folder['resource_key']})
+    return provider
+
+
+def storage_url(profile, folder):
+    url = 'https://drive.google.com/drive/folders/' + folder['id']
+    if folder['resource_key']:
+        url += '?' + urlencode({'resourcekey': folder['resource_key']})
+    return url
 
 
 class UploadChunk(BytesIO):
