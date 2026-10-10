@@ -2081,7 +2081,8 @@ var Display = {
           node.playsInline = true;
         }
       } else if (element.kind === 'text') {
-        node.textContent = element.text || '';
+        if (typeof element.html === 'string') node.innerHTML = element.html;
+        else node.textContent = element.text || '';
         Object.assign(node.style, {
           whiteSpace: 'pre-wrap', fontFamily: element.font || 'Arial', color: element.colour || '#ffffff',
           fontSize: Display._themeLength((element.font_size || 40) * (Display._theme.song_design_output_height || 1080) /
@@ -2276,6 +2277,7 @@ var Display = {
     target.contentEditable = 'plaintext-only';
     target.style.whiteSpace = 'pre-wrap';
     target.style.minHeight = '1em';
+    target.style.caretColor = '#51a7ff';
     node.style.userSelect = 'text';
     node.style.cursor = 'text';
     node.onpointerdown = pointer => pointer.stopPropagation();
@@ -2304,6 +2306,17 @@ var Display = {
     Display._designTextEdit = null;
     var result = {id: edit.id, text: cancelled ? edit.before : edit.target.innerText,
       before: edit.before, cancelled: !!cancelled};
+    var selection = window.getSelection();
+    if (!cancelled && edit.target.contains(selection.anchorNode) && edit.target.contains(selection.focusNode)) {
+      var anchorNode = selection.anchorNode, anchorOffset = selection.anchorOffset;
+      var focusNode = selection.focusNode, focusOffset = selection.focusOffset;
+      // Selection's rendered text includes line breaks that Range.toString() omits.
+      selection.setBaseAndExtent(edit.target, 0, anchorNode, anchorOffset);
+      var anchor = selection.toString().length;
+      selection.setBaseAndExtent(edit.target, 0, focusNode, focusOffset);
+      result.selection = {anchor, position: selection.toString().length};
+      selection.setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
+    }
     window.removeEventListener('blur', edit.target.onblur);
     edit.target.onblur = null;
     edit.target.onkeydown = null;

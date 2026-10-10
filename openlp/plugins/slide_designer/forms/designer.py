@@ -21,7 +21,7 @@ from openlp.core.lib.slidelayouts import layout_for_slide, master_design, slide_
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.fluenticons import fluent_icon
 from openlp.core.widgets.mediapicker import MediaPicker
-from .textediting import visible_text, replace_visible_text
+from .textediting import visible_text, replace_visible_text, source_selection
 from .previewoutput import PreviewOutput
 
 
@@ -221,6 +221,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self._refreshing = False
         self._canvas_editing = False
         self._canvas_text_context = None
+        self._canvas_formatting_target = None
         self._preview_revision = 0
         self._display_canvas_size = None
         self._capturing_preview = False
@@ -1188,13 +1189,15 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                                                   spans[start:offset]], row.start)
                     break
         if self.design_editable():
-            sources.update({element['id']: element.get('text', '') for element in self.design.get('elements', [])
+            sources.update({element['id']: visible_text(element.get('text', ''), literal=True)[0]
+                            for element in self.design.get('elements', [])
                             if element['kind'] == 'text'})
         self.display.run_in_display('setDesignTextSources', sources)
 
     def canvas_text_editing(self, editing):
         self._canvas_editing = bool(editing)
         if editing:
+            self._canvas_formatting_target = None
             self.refresh_timer.stop()
         # Chromium owns normal text undo/redo until the editing session is committed.
         for shortcut in self.history_shortcuts:
@@ -1204,11 +1207,17 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         if hasattr(value, 'toVariant'):
             value = value.toVariant()
         self.canvas_text_editing(False)
-        if not isinstance(value, dict) or value.get('cancelled') or value.get('text') == value.get('before'):
+        if not isinstance(value, dict) or value.get('cancelled'):
+            return
+        if value.get('text') == value.get('before') and not isinstance(value.get('selection'), dict):
             return
         identifier, text = value.get('id'), value.get('text')
         if not isinstance(text, str):
             return
+        selection = value.get('selection')
+        if (self.source_form.design_text_editor._editor.hasFocus()
+                or self.source_form.slide_grid.cell_editor._editor.hasFocus()):
+            selection = None
         if identifier == 'lyrics' and self._canvas_text_context:
             from .slidegrid import qt_length
             source, before, spans, empty_position = self._canvas_text_context
@@ -1229,23 +1238,71 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             while (suffix < min(len(source), len(updated)) - prefix
                    and source[len(source) - suffix - 1] == updated[len(updated) - suffix - 1]):
                 suffix += 1
-            with QtCore.QSignalBlocker(editor):
-                cursor = editor.textCursor()
-                cursor.setPosition(qt_length(source[:prefix]))
-                cursor.setPosition(qt_length(source[:len(source) - suffix]), QtGui.QTextCursor.MoveMode.KeepAnchor)
-                cursor.insertText(updated[prefix:len(updated) - suffix])
-                editor.setTextCursor(cursor)
-            editor.textChanged.emit()
+            if updated != source:
+                with QtCore.QSignalBlocker(editor):
+                    cursor = editor.textCursor()
+                    cursor.setPosition(qt_length(source[:prefix]))
+                    cursor.setPosition(qt_length(source[:len(source) - suffix]), QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    cursor.insertText(updated[prefix:len(updated) - suffix])
+                    editor.setTextCursor(cursor)
+                editor.textChanged.emit()
+            if isinstance(selection, dict):
+                start = spans[0][0] if spans else empty_position
+                end = spans[-1][1] + len(updated) - len(source) if spans else start + len(updated) - len(source)
+                selection = source_selection(updated[start:end], selection)
+                if selection is not None:
+                    cursor = editor.textCursor()
+                    cursor.setPosition(qt_length(updated[:start + selection[0]]))
+                    cursor.setPosition(qt_length(updated[:start + selection[1]]), QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    editor.setTextCursor(cursor)
         elif self.design_editable():
             design = self.editable_design()
             target = self.design_target(design, identifier)
-            if target and target.get('kind') == 'text' and target.get('text', '') == value.get('before'):
-                target['text'] = text
+            if target and target.get('kind') == 'text':
+                plain, spans = visible_text(target.get('text', ''), literal=True)
+                if plain != value.get('before'):
+                    self.schedule_refresh()
+                    return
+                target['text'] = replace_visible_text(target.get('text', ''), spans, plain, text, literal=True)
+                if isinstance(selection, dict):
+                    self._canvas_formatting_target = {'id': identifier, 'selection': selection}
                 self.commit(design, tr('Edit text box'))
         self.schedule_refresh()
 
+    def format_canvas_text(self, method, *args):
+        """Use the existing tagged-text formatter for a selected decoration instead of the lyrics."""
+        self.commit_text()
+        context = self._canvas_formatting_target
+        if not context or not self.design_editable():
+            return False
+        design = self.editable_design()
+        target = self.design_target(design, context['id'])
+        if not target or target.get('kind') != 'text':
+            self._canvas_formatting_target = None
+            return False
+        selection = source_selection(target.get('text', ''), context['selection'], literal=True)
+        if selection is None:
+            return True
+        from openlp.core.widgets.edits import SpellTextEdit
+        from .slidegrid import qt_length
+        editor = SpellTextEdit(self)
+        try:
+            text = target.get('text', '')
+            editor.setPlainText(text)
+            cursor = editor.textCursor()
+            cursor.setPosition(qt_length(text[:selection[0]]))
+            cursor.setPosition(qt_length(text[:selection[1]]), QtGui.QTextCursor.MoveMode.KeepAnchor)
+            editor.setTextCursor(cursor)
+            getattr(editor, method)(*args)
+            target['text'] = editor.toPlainText()
+            self.commit(design, tr('Format text box'))
+        finally:
+            editor.deleteLater()
+        return True
+
     def change_page(self, delta):
         self.commit_text()
+        self._canvas_formatting_target = None
         self.page_index = max(0, min(self.page_index + delta, len(self.pages) - 1))
         self.switch_design_context()
 
@@ -1254,6 +1311,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.display.run_in_display('finishDesignTextEdit', True, False, is_sync=True)
         self.canvas_text_editing(False)
         self._canvas_text_context = None
+        self._canvas_formatting_target = None
         self.text_timer.stop()
         self._pending_text = None
         self.selected = None
@@ -1640,6 +1698,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             value = value.toVariant()
         self.commit_text()
         self.selection = value.get('ids', [value['id']] if value.get('id') else [])
+        if self._canvas_formatting_target and self.selection != [self._canvas_formatting_target['id']]:
+            self._canvas_formatting_target = None
         if value.get('changed'):
             design = self.editable_design()
             geometries = value.get('geometries', {value.get('id'): value.get('geometry', {})})

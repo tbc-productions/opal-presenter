@@ -69,6 +69,21 @@ def test_apply_design_scales_geometry_without_mutating_theme():
     assert result.song_design_output_height == 720
 
 
+def test_text_box_markup_renders_tags_but_escapes_literal_html_and_keeps_saved_source(settings):
+    text = '{st}Caption{/st}\n<script>alert(1)</script> & [C]'
+    design = {'version': 1, 'elements': [
+        {'id': 'caption', 'kind': 'text', 'text': text, 'html': '<img src=x onerror=alert(1)>'}]}
+    result = apply_design(SimpleNamespace(font_main_size=32), design, QSize(1920, 1080))
+    markup = result.song_design['elements'][0]['html']
+    assert 'Caption</strong>' in markup
+    assert '<br>&lt;script&gt;alert(1)&lt;/script&gt; &amp; &#91;C&#93;' in markup
+    assert '<script>' not in markup
+    assert '<img' not in markup
+    assert result.song_design['elements'][0]['text'] == text
+    assert 'html' not in normalise_design(result.song_design)['elements'][0]
+    assert design['elements'][0]['text'] == text
+
+
 def test_service_header_round_trip_keeps_portable_design(settings):
     item = ServiceItem()
     item.service_item_type = ServiceItemType.Text

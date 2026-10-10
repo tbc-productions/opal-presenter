@@ -4,6 +4,7 @@ Coordinates are stored as percentages of a pixel design canvas for XML compatibi
 larger originals use managed, content-addressed references bundled when exporting.
 """
 import copy
+import html
 import json
 import math
 import re
@@ -231,6 +232,11 @@ def apply_design(theme, value, size=None):
     result.display_size_width = size.width()
     result.display_size_height = size.height()
     result.song_design = resolve_design_media(design)
+    from openlp.core.display.render import render_tags
+    for element in result.song_design['elements']:
+        if element['kind'] == 'text':
+            text = html.escape(element['text'], quote=False).replace('[', '&#91;').replace(']', '&#93;')
+            element['html'] = render_tags(text).replace('\n', '<br>')
     return result
 
 

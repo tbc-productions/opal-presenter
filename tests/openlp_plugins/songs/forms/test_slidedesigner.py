@@ -122,6 +122,94 @@ def test_canvas_lyrics_edit_rejects_stale_source_and_cancel(designer):
     assert form.verse_text_edit.toPlainText() == 'Sidebar edit'
 
 
+@pytest.mark.parametrize('edited', [False, True])
+@pytest.mark.parametrize('action', ['st', 'it', 'clear', 'style'])
+def test_preview_selection_targets_formatting_instead_of_sidebar_cursor(designer, edited, action):
+    form = designer.source_form
+    source = '---[Verse:1]---\nFirst 😀\n{it}Second words{/it}\n---[Chorus:1]---\nSecond words'
+    form.verse_text_edit.setPlainText(source)
+    form.designer_select_section(0)
+    form.slide_grid.record_history = True
+    designer.undo_stack.clear()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['First 😀', '{it}Second words{/it}']
+    designer.page_keys = [(0, 0), (0, 1)]
+    designer.page_index = 1
+    designer.prepare_canvas_text()
+    designer.canvas_text_editing(True)
+    text = 'Second edited' if edited else 'Second words'
+    designer.display.run_in_display.return_value = {
+        'id': 'lyrics', 'before': 'Second words', 'text': text,
+        'selection': {'anchor': 6, 'position': 0}}
+    cell = form.slide_grid.cell_editor
+    if action == 'clear':
+        cell.remove_formatting()
+    elif action == 'style':
+        cell._on_custom_formatting_changed(1)
+    else:
+        cell._tag_actions[action].trigger()
+    actual = form.verse_text_edit.toPlainText()
+    assert actual.startswith('---[Verse:1]---\nFirst 😀\n')
+    assert actual.endswith('---[Chorus:1]---\nSecond words')
+    assert '{st}Second{/st}' in actual if action == 'st' else actual != source
+    assert ('edited' in actual) == edited
+    assert not designer._canvas_editing
+
+
+@pytest.mark.parametrize('action', ['st', 'it', 'clear', 'style'])
+@pytest.mark.parametrize('edited', [False, True])
+def test_preview_text_box_formatting_uses_its_selection_and_keeps_lyrics(designer, action, edited):
+    from openlp.plugins.slide_designer.forms.textediting import visible_text
+    designer.source_form.verse_text_edit.setPlainText('Lyrics stay unchanged')
+    designer.add_element('text')
+    identifier = designer.selected
+    design = designer.editable_design()
+    original = '[C]First 😀 & <script>\n{it}Second words{/it}'
+    designer.design_target(design, identifier)['text'] = original
+    designer.commit(design, 'Set text')
+    designer.undo_stack.clear()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['Lyrics stay unchanged']
+    designer.prepare_canvas_text()
+    plain = visible_text(original, literal=True)[0]
+    text = plain.replace('words', 'edited') if edited else plain
+    designer.canvas_text_editing(True)
+    position = len(plain[:plain.index('Second')].encode('utf-16-le')) // 2
+    designer.display.run_in_display.return_value = {
+        'id': identifier, 'before': plain, 'text': text,
+        'selection': {'anchor': position, 'position': position + 6}}
+    cell = designer.source_form.slide_grid.cell_editor
+    if action == 'clear':
+        cell.remove_formatting()
+    elif action == 'style':
+        cell._on_custom_formatting_changed(1)
+    else:
+        cell._tag_actions[action].trigger()
+    actual = designer.design_target(designer.design, identifier)['text']
+    assert actual.startswith('[C]First 😀 & <script>\n')
+    assert visible_text(actual, literal=True)[0] == text
+    assert actual != original
+    assert designer.source_form.verse_text_edit.toPlainText() == 'Lyrics stay unchanged'
+    assert designer.undo_stack.count() == 1 + edited
+    designer.undo_stack.undo()
+    if edited:
+        designer.undo_stack.undo()
+    assert designer.design_target(designer.design, identifier)['text'] == original
+
+
+def test_text_box_selection_is_released_when_sidebar_receives_focus(designer):
+    designer._canvas_formatting_target = {'id': 'caption', 'selection': {'anchor': 0, 'position': 3}}
+    editor = designer.source_form.slide_grid.cell_editor._editor
+    QtCore.QCoreApplication.sendEvent(editor, QtGui.QFocusEvent(QtCore.QEvent.Type.FocusIn))
+    assert designer._canvas_formatting_target is None
+
+
+def test_text_box_selection_is_released_when_selecting_another_canvas_object(designer):
+    designer._canvas_formatting_target = {'id': 'caption', 'selection': {'anchor': 0, 'position': 3}}
+    designer.canvas_changed({'id': 'lyrics', 'changed': False})
+    assert designer._canvas_formatting_target is None
+
+
 def test_canvas_can_edit_empty_lyrics_in_theme_layout(designer):
     form = designer.source_form
     form.verse_text_edit.setPlainText('')

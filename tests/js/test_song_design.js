@@ -187,6 +187,7 @@ describe('Portable slide designs', function () {
     displayWatcher.dispatchEvent = (name, value) => events.push({name, value});
     text.dispatchEvent(new MouseEvent('dblclick', {bubbles: true}));
     expect(text.contentEditable).toBe('plaintext-only');
+    expect(text.style.caretColor).toBe('rgb(81, 167, 255)');
     expect(text.style.userSelect).toBe('text');
     expect(slide.querySelector('.design-selection-outline')).toBe(null);
     var pointer = new PointerEvent('pointerdown', {bubbles: true, cancelable: true});
@@ -196,11 +197,27 @@ describe('Portable slide designs', function () {
     Display.setDesignEditor('lyrics');
     expect(text.textContent).toBe('New lyrics\nAnother line <script>');
     text.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', ctrlKey: true, bubbles: true}));
-    expect(events[events.length - 1]).toEqual({name: 'songDesignTextChanged', value: {
-      id: 'lyrics', before: 'Lyrics', text: 'New lyrics\nAnother line <script>', cancelled: false}});
+    expect(events[events.length - 1].name).toBe('songDesignTextChanged');
+    expect(events[events.length - 1].value).toEqual(jasmine.objectContaining({
+      id: 'lyrics', before: 'Lyrics', text: 'New lyrics\nAnother line <script>', cancelled: false}));
     expect(text.hasAttribute('contenteditable')).toBe(false);
     expect(text.textContent).toBe('Lyrics');
     expect(Display.finishDesignTextEdit(false)).toBe(null);
+  });
+  it('returns the preview selection across inline styles, line breaks and emoji on blur', function () {
+    text.innerHTML = '<p><strong>First 😀</strong><br>Second words</p>';
+    Display._applySongDesign(slide);
+    Display.setDesignTextSources({lyrics: 'First 😀\nSecond words'});
+    text.dispatchEvent(new MouseEvent('dblclick'));
+    var target = text.firstChild;
+    window.getSelection().setBaseAndExtent(target.lastChild, 6, target.firstChild.firstChild, 6);
+    var result;
+    displayWatcher.dispatchEvent = (name, value) => { result = value; };
+    target.onblur();
+    expect(result.text).toBe('First 😀\nSecond words');
+    expect(result.selection).toEqual({anchor: 15, position: 6});
+    expect(target.hasAttribute('contenteditable')).toBe(false);
+    expect(target.style.caretColor).toBe('');
   });
   it('allows lyrics editing with a locked theme layout and cancels on Escape', function () {
     Display._applySongDesign(slide);
@@ -225,6 +242,14 @@ describe('Portable slide designs', function () {
     caption.textContent = 'Caption';
     expect(Display.finishDesignTextEdit(false, false).text).toBe('Caption');
     expect(caption.hasAttribute('contenteditable')).toBe(false);
+  });
+  it('renders the formatted text-box markup supplied by Python', function () {
+    Display._theme.song_design.elements[1].html = '<strong>First</strong><br>Second &lt;script&gt;';
+    Display._applySongDesign(slide);
+    var caption = slide.querySelector('[data-design-id="caption"]');
+    expect(caption.querySelector('strong').textContent).toBe('First');
+    expect(caption.querySelector('script')).toBe(null);
+    expect(caption.innerText).toBe('First\nSecond <script>');
   });
   it('retains inline formatting while editing and restores it on cancellation', function () {
     text.innerHTML = '<p><strong>Lyrics</strong></p>';

@@ -187,6 +187,22 @@ class SlideCellEditor(SongLyricsTextEdit):
         # The grid owns the cell border; headings fill the entire cell width.
         return 0
 
+    def _apply_formatting_by_tag(self, tag):
+        if hasattr(self, 'slide_grid') and self.slide_grid.designer.format_canvas_text('_apply_formatting_by_tag', tag):
+            return
+        super()._apply_formatting_by_tag(tag)
+
+    def _on_custom_formatting_changed(self, row):
+        if (hasattr(self, 'slide_grid')
+                and self.slide_grid.designer.format_canvas_text('_on_custom_formatting_changed', row)):
+            return
+        super()._on_custom_formatting_changed(row)
+
+    def remove_formatting(self):
+        if hasattr(self, 'slide_grid') and self.slide_grid.designer.format_canvas_text('remove_formatting'):
+            return
+        super().remove_formatting()
+
     def insertFromMimeData(self, source):
         if hasattr(self, 'slide_grid') and self.slide_grid.paste_grid(source):
             return
@@ -671,6 +687,9 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
             elif event.type() == QtCore.QEvent.Type.MouseButtonRelease:
                 if self.selection_release():
                     return True
+        if (hasattr(self, 'cell_editor') and watched in (self.cell_editor._editor, self.source._editor)
+                and event.type() == QtCore.QEvent.Type.FocusIn):
+            self.designer._canvas_formatting_target = None
         if (hasattr(self, 'cell_editor') and watched in (self.cell_editor._editor, self.source._editor)
                 and event.type() == QtCore.QEvent.Type.KeyPress):
             for key, action in ((QtGui.QKeySequence.StandardKey.Undo, self.designer.undo_stack.undo),

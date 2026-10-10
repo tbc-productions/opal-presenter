@@ -1324,6 +1324,7 @@ class SpellTextEdit(QtWidgets.QWidget):
         cursor = self.textCursor()
         pos = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
         text = self.toPlainText()
+        pos = len(text.encode('utf-16-le')[:pos * 2].decode('utf-16-le'))
         for region in Highlighter._iter_tag_regions(
                 text, [{'start tag': start_tag, 'end tag': end_tag, 'start html': ''}]):
             r_start = region['start_token_start']
@@ -1339,8 +1340,9 @@ class SpellTextEdit(QtWidgets.QWidget):
         """
         cursor = self.textCursor()
         text = self.toPlainText()
-        sel_start = cursor.selectionStart() if cursor.hasSelection() else cursor.position()
-        sel_end = cursor.selectionEnd() if cursor.hasSelection() else cursor.position()
+        encoded = text.encode('utf-16-le')
+        sel_start = len(encoded[:cursor.selectionStart() * 2].decode('utf-16-le'))
+        sel_end = len(encoded[:cursor.selectionEnd() * 2].decode('utf-16-le'))
 
         if cursor.hasSelection():
             matching_regions = [region for region in self._iter_matching_tag_regions(text, start_tag, end_tag)
@@ -1373,12 +1375,15 @@ class SpellTextEdit(QtWidgets.QWidget):
                     new_end += delta
                 else:
                     new_end = edit_start + len(left) + len(middle)
-                edit_cursor.setPosition(edit_start)
-                edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                edit_cursor.setPosition(len(text[:edit_start].encode('utf-16-le')) // 2)
+                edit_cursor.setPosition(len(text[:edit_end].encode('utf-16-le')) // 2,
+                                        QtGui.QTextCursor.MoveMode.KeepAnchor)
                 edit_cursor.insertText(replacement)
             edit_cursor.endEditBlock()
-            edit_cursor.setPosition(new_start)
-            edit_cursor.setPosition(new_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            updated = self.toPlainText()
+            edit_cursor.setPosition(len(updated[:new_start].encode('utf-16-le')) // 2)
+            edit_cursor.setPosition(len(updated[:new_end].encode('utf-16-le')) // 2,
+                                    QtGui.QTextCursor.MoveMode.KeepAnchor)
             self.setTextCursor(edit_cursor)
             return
 
@@ -1406,13 +1411,14 @@ class SpellTextEdit(QtWidgets.QWidget):
             re.escape(start_tag) + '|' + re.escape(end_tag), '', segment[:offset]))
 
         edit_cursor = QtGui.QTextCursor(self.document())
-        edit_cursor.setPosition(edit_start)
-        edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        edit_cursor.setPosition(len(text[:edit_start].encode('utf-16-le')) // 2)
+        edit_cursor.setPosition(len(text[:edit_end].encode('utf-16-le')) // 2,
+                                QtGui.QTextCursor.MoveMode.KeepAnchor)
         edit_cursor.beginEditBlock()
         edit_cursor.removeSelectedText()
         edit_cursor.insertText(cleaned)
         edit_cursor.endEditBlock()
-        edit_cursor.setPosition(edit_start + offset_cleaned)
+        edit_cursor.setPosition(len(self.toPlainText()[:edit_start + offset_cleaned].encode('utf-16-le')) // 2)
         self.setTextCursor(edit_cursor)
 
     def _update_toolbar_state(self):
