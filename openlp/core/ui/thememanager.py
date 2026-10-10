@@ -59,7 +59,7 @@ from openlp.core.widgets.libraryfooter import LibraryFooter
 
 THEME_LIST_ICON_WIDTH = 124
 THEME_LIST_ICON_HEIGHT = 70
-DEFAULT_BUILTIN_THEME = 'Bold Sans Dark'
+DEFAULT_BUILTIN_THEME = 'Opal'
 
 
 class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
