@@ -395,12 +395,6 @@ class Ui_ServiceManager(object):
             triggers=self.save_file_as)
         self.save_service_action.setEnabled(False)
         self.save_service_as_action.setEnabled(False)
-        self.recent_services_menu = QtWidgets.QMenu(self.toolbar)
-        self.recent_services_menu.aboutToShow.connect(self.update_recent_services_menu)
-        self.recent_services_action = QtGui.QAction(
-            UiIcons().clock, translate('OpenLP.ServiceManager', 'Recent services'), self.toolbar)
-        self.recent_services_action.triggered.connect(self.show_recent_services_menu)
-        self.toolbar.addSecondaryAction(self.recent_services_action)
         self.toolbar.add_spacer()
         self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
@@ -957,33 +951,6 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         :rtype: None
         """
         self.load_service()
-
-    def show_recent_services_menu(self):
-        """Keep recent services separate from the direct Open service command."""
-        presenter = self.toolbar.widgetForAction(self.recent_services_action)
-        anchor = presenter if presenter is not None and presenter.isVisible() else self.toolbar
-        position = anchor.mapToGlobal(anchor.rect().bottomLeft())
-        QtCore.QTimer.singleShot(0, lambda: self.recent_services_menu.popup(position))
-
-    def update_recent_services_menu(self):
-        self.recent_services_menu.clear()
-        self.main_window.update_recent_files_menu()
-        for recent_action in self.main_window.recent_files_menu.actions():
-            path = recent_action.data()
-            if recent_action.isSeparator() or not path:
-                continue
-            action = self.recent_services_menu.addAction(recent_action.text())
-            action.setEnabled(recent_action.isEnabled())
-            action.triggered.connect(lambda checked=False, file_path=path:
-                                     self.on_recent_service_clicked(checked, file_path))
-        if not self.recent_services_menu.actions():
-            action = self.recent_services_menu.addAction(translate('OpenLP.ServiceManager', 'No recent services'))
-            action.setEnabled(False)
-        self.recent_services_menu.addSeparator()
-        clear = self.recent_services_menu.addAction(
-            translate('OpenLP.MainWindow', 'Clear List', 'Clear List of recent files'))
-        clear.setEnabled(bool(self.main_window.recent_files))
-        clear.triggered.connect(self.main_window.clear_recent_file_menu)
 
     def load_service(self, file_path=None):
         """
