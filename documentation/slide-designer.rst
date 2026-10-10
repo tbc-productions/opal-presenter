@@ -20,7 +20,10 @@ Songs have a collapsible navigation rail for Slides, Authors/Topics/Songbooks,
 Copyright/Flags/Comments and Linked Audio. Metadata controls, validation and saving
 use the existing Songs plugin. Custom Slides has a single workspace with Credits
 below its slide list. Title and, for songs, Alternative title are in the top
-command row. Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect-ratio
+command row. Songs without copyright information show a warning above the lyrics
+entry and a warning badge beside Copyright/Flags/Comments in the navigation rail.
+Both clear as soon as copyright information is entered.
+Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect-ratio
 selector aligned to the right. The preview uses the assigned theme, falling back
 to the global theme. Imported theme snapshots remain in use until a new theme is chosen.
 

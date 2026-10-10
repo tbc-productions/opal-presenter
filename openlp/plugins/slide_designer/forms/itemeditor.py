@@ -10,6 +10,42 @@ from openlp.plugins.slide_designer.forms.designer import tr
 from openlp.plugins.songs.lib import VerseType
 
 
+class CopyrightNavigationButton(LayoutPresetButton):
+    """Keep the missing-copyright badge beside the compact icon or expanded text."""
+
+    def __init__(self, caption):
+        super().__init__(caption)
+        self.badge = fluentqt.InfoBadge(self)
+        self.badge.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Dot)
+        self.badge.setStatus(fluentqt.InfoBadge.InfoBadgeStatus.Critical)
+        self.badge.setBeaconDiameter(8)
+        self.badge.setAccessibleName(tr('Missing copyright information'))
+        self.badge.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.badge.setFixedSize(self.badge.sizeHint())
+        self.fluentLayoutChanged.connect(self.update_caption)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.badge.move(self.width() - self.badge.width() - 1, (self.height() - self.badge.height()) // 2)
+        self.update_caption()
+
+    def update_caption(self):
+        """Keep the full caption accessible when the visible label needs an ellipsis."""
+        caption = self.accessibleName()
+        if self.fluentLayout() != fluentqt.Button.ButtonLayout.IconOnly:
+            width = self.width() - self.iconPixelSize() - 16
+            if not self.badge.isHidden():
+                width -= self.badge.width() + 4
+            caption = self.fontMetrics().elidedText(caption, QtCore.Qt.TextElideMode.ElideRight, max(0, width))
+        fluentqt.Button.setText(self, caption)
+
+    def contentPaintRect(self, surface_rect):
+        rect = super().contentPaintRect(surface_rect)
+        if not self.badge.isHidden() and self.fluentLayout() != fluentqt.Button.ButtonLayout.IconOnly:
+            rect.setRight(min(rect.right(), self.width() - self.badge.width() - 8))
+        return rect
+
+
 class ItemEditorMixin:
     """Borrow draft controls for one editing session and return them on every exit path."""
 
@@ -34,12 +70,22 @@ class ItemEditorMixin:
             tools.insertWidget(1, self.alternative_field)
             tools.insertSpacing(2, 12)
             lyrics_layout = self.editor_splitter.widget(0).layout()
+            self.copyright_warning = fluentqt.InfoBar(self.editor_splitter.widget(0))
+            self.copyright_warning.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Warning)
+            self.copyright_warning.setIsClosable(False)
+            self.copyright_warning.setSingleLine(False)
+            self.copyright_warning.setMultiLineMinHeight(50)
+            self.copyright_warning.setTitle(tr('Missing copyright information'))
+            self.copyright_warning.setAccessibleName(self.copyright_warning.title())
+            lyrics_layout.insertWidget(1, self.copyright_warning)
             order = QtWidgets.QHBoxLayout()
             order.addWidget(QtWidgets.QLabel(tr('Verse order')))
             order.addWidget(self.borrow(owner.verse_order_edit), 1)
             lyrics_layout.addLayout(order)
             lyrics_layout.addWidget(self.borrow(owner.warning_label))
             self.setup_navigation()
+            owner.copyright_edit.textChanged.connect(self.update_copyright_warning)
+            self.update_copyright_warning()
             self.design_text_editor.textChanged.connect(self.sync_lyrics)
         else:
             tools.insertSpacing(1, 12)
@@ -100,7 +146,7 @@ class ItemEditorMixin:
         else:
             entries = ((tr('Slides'), 'slide_text'),)
         for index, (caption, icon) in enumerate(entries):
-            button = LayoutPresetButton(caption.replace('&', '&&'))
+            button = (CopyrightNavigationButton if icon == 'info' else LayoutPresetButton)(caption.replace('&', '&&'))
             button.setIcon(fluent_icon(f'ic_fluent_{icon}_24_regular'))
             button.setToolTip(caption)
             button.setAccessibleName(caption)
@@ -159,6 +205,16 @@ class ItemEditorMixin:
 
     def sync_lyrics(self):
         self.design_owner.set_verse_text(self.get_all_verses())
+
+    def update_copyright_warning(self):
+        missing = not self.design_owner.copyright_edit.toPlainText().strip()
+        self.copyright_warning.setVisible(missing)
+        button = self.navigation_buttons[2]
+        button.badge.setVisible(missing)
+        message = self.copyright_warning.title() if missing else ''
+        button.setAccessibleDescription(message)
+        button.setToolTip(f'{button.accessibleName()}\n{message}' if missing else button.accessibleName())
+        button.update_caption()
 
     def draft_state(self):
         state = super().draft_state()
@@ -231,6 +287,7 @@ class ItemEditorMixin:
         self.title_field.textChanged.disconnect(self.update_title)
         self.title_field.textChanged.disconnect(self.slide_designer.schedule_refresh)
         if self.design_kind == 'song':
+            owner.copyright_edit.textChanged.disconnect(self.update_copyright_warning)
             owner.song_tab_widget.currentChanged.disconnect(self.select_page)
             for tab, page in self.metadata_pages:
                 tab.setLayout(page.layout())

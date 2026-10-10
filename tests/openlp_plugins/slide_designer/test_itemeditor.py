@@ -72,8 +72,77 @@ def test_integrated_controls_and_metadata_navigation(integrated):
         assert editor.metadata_pages[0][1].isAncestorOf(owner.authors_list_view)
     else:
         assert hasattr(editor, 'navigation')
+        assert not hasattr(editor, 'copyright_warning')
         assert editor.navigation.contentHost().currentIndex() == 0
         assert owner.credit_edit.parentWidget() is editor.editor_splitter.widget(0)
+
+
+@pytest.mark.parametrize('copyright', ['', ' \n\t ', '© 2026 Songwriter'])
+def test_copyright_warning_tracks_initial_and_edited_draft(settings, copyright):
+    import fluentqt
+
+    Registry().register('theme_manager', MagicMock())
+    owner = EditSongForm(MagicMock(), None, MagicMock())
+    owner.copyright_edit.setPlainText(copyright)
+    editor = SongItemDesigner(owner)
+    try:
+        warning = editor.copyright_warning
+        button = editor.navigation_buttons[2]
+        assert warning.isHidden() == bool(copyright.strip())
+        assert button.badge.isHidden() == warning.isHidden()
+        assert isinstance(button.badge, fluentqt.InfoBadge)
+        assert button.badge.status() == fluentqt.InfoBadge.InfoBadgeStatus.Critical
+        assert warning.severity() == fluentqt.InfoBar.InfoBarSeverity.Warning
+        assert warning.message() == ''
+        assert warning.title() == 'Missing copyright information'
+        assert warning.actionWidget() is None
+        assert not warning.isClosable()
+        layout = editor.editor_splitter.widget(0).layout()
+        assert layout.indexOf(warning) < layout.indexOf(editor.text_editor_stack)
+        for text in ('© 2026 Songwriter', '', '   ', 'Public domain'):
+            owner.copyright_edit.setPlainText(text)
+            assert warning.isHidden() == bool(text.strip())
+            assert button.badge.isHidden() == warning.isHidden()
+            assert bool(button.accessibleDescription()) == (not text.strip())
+    finally:
+        editor.restore_controls()
+        editor.slide_designer.refresh_timer.stop()
+        editor.deleteLater()
+        owner.deleteLater()
+
+
+@pytest.mark.parametrize('keyboard', [False, True])
+def test_copyright_badge_fits_navigation_and_preserves_activation(integrated, qtbot, keyboard):
+    from openlp.plugins.slide_designer.forms.window import DesignerWindow
+
+    owner, editor = integrated
+    if editor.design_kind != 'song':
+        return
+    window = DesignerWindow(editor)
+    qtbot.addWidget(window)
+    try:
+        with patch.object(editor.slide_designer, 'refresh'):
+            if keyboard:
+                editor.navigation_buttons[2].setAccessibleName('Copyright, Flags & Comments ' * 3)
+                editor.toggle_navigation()
+            window.show()
+            window.activateWindow()
+            QtWidgets.QApplication.processEvents()
+            button = editor.navigation_buttons[2]
+            assert button.rect().contains(button.badge.geometry())
+            assert button.badge.testAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            if keyboard:
+                assert button.text().endswith('…')
+                assert button.contentPaintRect(button.rect()).right() < button.badge.x()
+                button.setFocus()
+                qtbot.keyClick(button, QtCore.Qt.Key.Key_Space)
+            else:
+                qtbot.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
+            assert editor.navigation.contentHost().currentIndex() == 2
+            assert owner.song_tab_widget.currentIndex() == 2
+            assert editor.navigation_buttons[2].isChecked()
+    finally:
+        editor.setLayout(window.host.layout())
 
 
 def test_save_flushes_inline_lyrics_before_syncing_owner(integrated):
