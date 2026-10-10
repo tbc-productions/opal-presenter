@@ -1967,6 +1967,7 @@ class SlideDesignerDialogMixin:
             return
         from openlp.plugins.slide_designer.forms.slidegrid import qt_length
         self.slide_designer.commit_text()
+        previous_document = self.slide_designer.document
         sections = self.designer_sections()
         texts = [section[1] for section in sections]
         if self.design_kind == 'custom' and hasattr(self, '_footer_sections'):
@@ -1995,7 +1996,12 @@ class SlideDesignerDialogMixin:
         self.slide_designer.page_keys = []
         if hasattr(self, 'slide_grid') and self.slide_grid.rows:
             self._preview_split = self.slide_grid.rows[self.slide_grid.active_row].split
-        self.slide_designer.switch_design_context()
+        key = self.slide_designer.footer_key()
+        if key != getattr(self, '_preview_context_key', None) or self.slide_designer.document != previous_document:
+            self.slide_designer.switch_design_context()
+            self._preview_context_key = key
+        else:
+            self.slide_designer.schedule_refresh()
 
     def designer_select_section(self, index):
         from openlp.plugins.slide_designer.forms.slidegrid import qt_length

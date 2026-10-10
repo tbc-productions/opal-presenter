@@ -2,7 +2,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 
 from openlp.core.common.registry import Registry
 from openlp.core.widgets import fluent as QtWidgets
@@ -75,6 +75,54 @@ def test_integrated_controls_and_metadata_navigation(integrated):
         assert not hasattr(editor, 'copyright_warning')
         assert editor.navigation.contentHost().currentIndex() == 0
         assert owner.credit_edit.parentWidget() is editor.editor_splitter.widget(0)
+
+
+def test_typing_only_measures_changed_row_and_defers_preview_and_draft_sync(integrated, qtbot):
+    owner, editor = integrated
+    grid = editor.slide_grid
+    designer = editor.slide_designer
+    body = '\n'.join(['Long lyrics with {st}formatting{/st} and 😀'] * 8)
+    source = ('\n'.join(f'---[Verse:{i + 1}]---\n{body}' for i in range(12))
+              if editor.design_kind == 'song' else '\n[===]\n'.join([body] * 12))
+    editor.design_text_editor.setPlainText(source)
+    grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.designer_cursor_changed()
+    designer.refresh_timer.stop()
+    if editor.design_kind == 'song':
+        editor.sync_lyrics()
+    previews = []
+    designer.refresh_timer.timeout.disconnect(designer.refresh)
+    designer.refresh_timer.timeout.connect(lambda: previews.append(editor.designer_text()))
+    with patch.object(designer, 'populate_inspector') as inspector, \
+            patch.object(grid, 'resizeRowsToContents') as resize_all, \
+            patch.object(grid, 'resizeRowToContents', wraps=grid.resizeRowToContents) as resize_row, \
+            patch.object(owner, 'set_verse_text', create=True, wraps=getattr(owner, 'set_verse_text', None)) as sync:
+        qtbot.keyClicks(grid.cell_editor._editor, ' typing stays responsive')
+        assert grid.cell_editor.toPlainText().endswith(' typing stays responsive')
+        assert editor.design_text_editor.toPlainText() == source.replace(body, body + ' typing stays responsive', 1)
+        inspector.assert_not_called()
+        resize_all.assert_not_called()
+        assert resize_row.call_count == len(' typing stays responsive')
+        assert {call.args[0] for call in resize_row.call_args_list} == {grid.active_row}
+        sync.assert_not_called()
+        assert previews == []
+        qtbot.waitUntil(lambda: len(previews) == 1)
+        assert previews[0].endswith(' typing stays responsive')
+        if editor.design_kind == 'song':
+            qtbot.waitUntil(lambda: sync.call_count == 1)
+            assert owner.verse_list_widget.item(0, 0).text().endswith(' typing stays responsive')
+
+
+def test_metadata_navigation_flushes_pending_lyrics(integrated, qtbot):
+    owner, editor = integrated
+    if editor.design_kind != 'song':
+        return
+    editor.slide_grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    qtbot.keyClicks(editor.slide_grid.cell_editor._editor, ' latest')
+    assert editor.lyrics_timer.isActive()
+    editor.select_page(1)
+    assert not editor.lyrics_timer.isActive()
+    assert owner.verse_list_widget.item(0, 0).text() == 'First latest\n[--}{--]\nSecond'
 
 
 @pytest.mark.parametrize('copyright', ['', ' \n\t ', '© 2026 Songwriter'])

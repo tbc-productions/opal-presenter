@@ -86,7 +86,11 @@ class ItemEditorMixin:
             self.setup_navigation()
             owner.copyright_edit.textChanged.connect(self.update_copyright_warning)
             self.update_copyright_warning()
-            self.design_text_editor.textChanged.connect(self.sync_lyrics)
+            self.lyrics_timer = QtCore.QTimer(self)
+            self.lyrics_timer.setSingleShot(True)
+            self.lyrics_timer.setInterval(180)
+            self.lyrics_timer.timeout.connect(self.sync_lyrics)
+            self.design_text_editor.textChanged.connect(self.lyrics_timer.start)
         else:
             tools.insertSpacing(1, 12)
             footer = self.editor_splitter.widget(0).layout()
@@ -194,6 +198,8 @@ class ItemEditorMixin:
                                    else fluentqt.Button.ButtonLayout.IconOnly)
 
     def select_page(self, index):
+        if self.design_kind == 'song' and index and self.lyrics_timer.isActive():
+            self.sync_lyrics()
         self.navigation.contentHost().setCurrentIndex(index, animated=False)
         for i, button in enumerate(self.navigation_buttons):
             button.setChecked(i == index)
@@ -204,6 +210,7 @@ class ItemEditorMixin:
             self.slide_designer.schedule_refresh()
 
     def sync_lyrics(self):
+        self.lyrics_timer.stop()
         self.design_owner.set_verse_text(self.get_all_verses())
 
     def update_copyright_warning(self):
@@ -287,6 +294,7 @@ class ItemEditorMixin:
         self.title_field.textChanged.disconnect(self.update_title)
         self.title_field.textChanged.disconnect(self.slide_designer.schedule_refresh)
         if self.design_kind == 'song':
+            self.lyrics_timer.stop()
             owner.copyright_edit.textChanged.disconnect(self.update_copyright_warning)
             owner.song_tab_widget.currentChanged.disconnect(self.select_page)
             for tab, page in self.metadata_pages:

@@ -219,7 +219,7 @@ class SlideCellEditor(SongLyricsTextEdit):
         # A base formatting pass would temporarily move every heading before this pass restores it.
         self._updating_block_formats = True
         cursor = QtGui.QTextCursor(self.document())
-        cursor.joinPreviousEditBlock()
+        changed = False
         try:
             block = self.document().begin()
             while block.isValid():
@@ -237,11 +237,15 @@ class SlideCellEditor(SongLyricsTextEdit):
                     (QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight if label else
                      QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight).value)
                 if desired != block.blockFormat():
+                    if not changed:
+                        cursor.joinPreviousEditBlock()
+                        changed = True
                     cursor.setPosition(block.position())
                     cursor.setBlockFormat(desired)
                 block = block.next()
         finally:
-            cursor.endEditBlock()
+            if changed:
+                cursor.endEditBlock()
             self._updating_block_formats = False
 
     def paint_heading_backgrounds(self, painter, width):
@@ -426,6 +430,8 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
             text = self.source.toPlainText()
             self.cell_editor.parse_section_labels = False
             self.rows = slide_rows(text, self.kind, self.fallback_label())
+            row_count_changed = self._model.rowCount() != len(self.rows)
+            changed_rows = []
             self._model.setRowCount(len(self.rows))
             for index, row in enumerate(self.rows):
                 item = self._model.item(index, 0)
@@ -433,7 +439,10 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
                     item = QtGui.QStandardItem()
                     item.setEditable(False)
                     self._model.setItem(index, 0, item)
-                item.setText(self.row_text(row))
+                value = self.row_text(row)
+                if item.text() != value:
+                    item.setText(value)
+                    changed_rows.append(index)
             position = self.source.textCursor().position()
             if not self._cell_edit:
                 self.active_row = max((i for i, row in enumerate(self.rows)
@@ -447,7 +456,12 @@ class SlideGrid(SlideSelection, fluentqt.DataGrid):
                 self.cell_editor.setPlainText(value)
             if not self._cell_edit:
                 self.copy_source_cursor()
-            self.resize_rows()
+            if row_count_changed:
+                self.resize_rows()
+            else:
+                for index in changed_rows:
+                    self.resizeRowToContents(index)
+                self.position_editor()
         finally:
             self._syncing = False
 

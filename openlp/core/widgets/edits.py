@@ -688,7 +688,7 @@ class SpellTextEdit(QtWidgets.QWidget):
         self._updating_block_formats = True
         document = self.document()
         cursor = QtGui.QTextCursor(document)
-        cursor.joinPreviousEditBlock()
+        changed = False
         block = document.begin()
         try:
             while block.isValid():
@@ -708,11 +708,15 @@ class SpellTextEdit(QtWidgets.QWidget):
                 else:
                     desired.setLineHeight(100, QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
                 if fmt != desired:
+                    if not changed:
+                        cursor.joinPreviousEditBlock()
+                        changed = True
                     cursor.setPosition(block.position())
                     cursor.setBlockFormat(desired)
                 block = block.next()
         finally:
-            cursor.endEditBlock()
+            if changed:
+                cursor.endEditBlock()
             self._updating_block_formats = False
 
     def keyPressEvent(self, event):

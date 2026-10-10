@@ -1208,6 +1208,17 @@ def test_fluent_editor_source_toggle_preserves_redo(settings, qtbot):
     assert editor.toPlainText() == source
 
 
+def test_unchanged_block_formatting_does_not_emit_another_text_edit(settings, qtbot):
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.setPlainText('---[Verse:1]---\nLyrics')
+    changed = MagicMock()
+    editor.textChanged.connect(changed)
+    editor._refresh_block_formats()
+    changed.assert_not_called()
+    assert not editor.document().isUndoAvailable()
+
+
 def test_fluent_editor_resize_fills_field_without_changing_undo(settings, qtbot):
     """Dialog resizing must fill the input area without becoming a source edit."""
     editor = SpellTextEdit()
