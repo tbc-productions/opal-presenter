@@ -517,3 +517,36 @@ def test_failed_song_overwrite_does_not_continue_saving_service_metadata(librari
                return_value=QtWidgets.QMessageBox.StandardButton.Yes), pytest.raises(RuntimeError, match='saved'):
         library.import_service_item(item)
     assert failed.call_count == 1 and song.theme_name == 'Service theme'
+
+
+@pytest.mark.parametrize('cancel_second', [False, True])
+def test_service_batch_drop_routes_mixed_plugins_and_stops_on_cancel(libraries, qtbot, cancel_second):
+    box = MediaToolBox()
+    qtbot.addWidget(box)
+    for name in ('songs', 'custom'):
+        box.addItem(libraries[name], QtGui.QIcon(), name)
+    box.show()
+    items = [text_item('songs'), text_item('custom'), text_item('songs')]
+    mime = ItemDragData(items=items)
+    target = libraries['songs'].list_view.viewport()
+    event = QtGui.QDropEvent(QtCore.QPointF(20, 20), QtCore.Qt.DropAction.CopyAction, mime,
+                             QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    with patch.object(libraries['songs'], 'import_service_item', return_value=True) as songs, \
+            patch.object(libraries['custom'], 'import_service_item', return_value=not cancel_second) as custom:
+        box.eventFilter(target, event)
+    assert songs.call_count == (1 if cancel_second else 2)
+    custom.assert_called_once_with(items[1], None)
+    assert event.isAccepted() == (not cancel_second)
+
+
+def test_service_batch_with_unsupported_item_does_not_import_partially(libraries, qtbot):
+    box = MediaToolBox()
+    qtbot.addWidget(box)
+    box.addItem(libraries['songs'], QtGui.QIcon(), 'Songs')
+    mime = ItemDragData(items=[text_item('songs'), text_item('custom')])
+    event = QtGui.QDropEvent(QtCore.QPointF(20, 20), QtCore.Qt.DropAction.CopyAction, mime,
+                             QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    with patch.object(libraries['songs'], 'import_service_item') as imported:
+        box.eventFilter(libraries['songs'].list_view.viewport(), event)
+    imported.assert_not_called()
+    assert not event.isAccepted()

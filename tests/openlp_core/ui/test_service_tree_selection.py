@@ -155,3 +155,26 @@ def test_service_inline_indicators_follow_label_and_fit_width(settings, qtbot):
                 assert abs(rectangles[0].right() - (text_rect.right() - width - 6)) <= 1
                 assert rectangles[1].right() < rectangles[0].left()
     view.close()
+
+
+def test_service_mouse_and_keyboard_extended_selection(qapp, qtbot):
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    rows = [fluent.QTreeWidgetItem(view, [title]) for title in ('A', 'B', 'C')]
+    view.resize(400, 240)
+    view.show()
+    QtWidgets.QApplication.processEvents()
+    qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=view.visualItemRect(rows[0]).center())
+    qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     QtCore.Qt.KeyboardModifier.ControlModifier,
+                     pos=view.visualItemRect(rows[2]).center())
+    assert view.selectedItems() == [rows[0], rows[2]]
+    qtbot.mousePress(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=view.visualItemRect(rows[0]).center())
+    assert view.selectedItems() == [rows[0], rows[2]]
+    qtbot.mouseRelease(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                       pos=view.visualItemRect(rows[0]).center())
+    view.setCurrentItem(rows[0])
+    qtbot.keyClick(view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ShiftModifier)
+    assert view.selectedItems() == rows[:2]

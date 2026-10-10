@@ -134,21 +134,31 @@ class MediaToolBox(QtWidgets.QWidget):
         mime = event.mimeData()
         if not isinstance(mime, ItemDragData) or mime.library is not None:
             return super().eventFilter(watched, event)
-        for index, entry in enumerate(self._items):
-            library = entry['widget']
-            if not entry['enabled'] or not library.can_import_service_item(mime.item):
-                continue
+        destinations = []
+        for item in mime.items:
+            destination = next(((index, entry['widget']) for index, entry in enumerate(self._items)
+                                if entry['enabled'] and entry['widget'].can_import_service_item(item)), None)
+            if destination is None:
+                event.ignore()
+                return True
+            destinations.append((item, *destination))
+        if not destinations:
+            event.ignore()
+            return True
+        for item, index, library in destinations:
             self.setCurrentIndex(index)
             if event.type() == QtCore.QEvent.Type.Drop:
                 browser = getattr(library, 'library_view', None)
-                if browser and browser.grid_button.isChecked():
-                    point = browser.grid.viewport().mapFrom(watched, event.position().toPoint())
-                    target = browser.grid.tree_item(browser.grid.itemAt(point)) or browser.folder_item()
-                else:
-                    point = library.list_view.viewport().mapFrom(watched, event.position().toPoint())
-                    target = library.list_view.itemAt(point)
+                target = None
+                if watched is library or library.isAncestorOf(watched):
+                    if browser and browser.grid_button.isChecked():
+                        point = browser.grid.viewport().mapFrom(watched, event.position().toPoint())
+                        target = browser.grid.tree_item(browser.grid.itemAt(point)) or browser.folder_item()
+                    else:
+                        point = library.list_view.viewport().mapFrom(watched, event.position().toPoint())
+                        target = library.list_view.itemAt(point)
                 try:
-                    imported = library.import_service_item(mime.item, target)
+                    imported = library.import_service_item(item, target)
                 except (OSError, ValueError, RuntimeError, SyntaxError, SQLAlchemyError) as error:
                     QtWidgets.QMessageBox.critical(
                         self.window(), translate('OpenLP.MediaManagerItem', 'Import failed'), str(error))
@@ -156,10 +166,8 @@ class MediaToolBox(QtWidgets.QWidget):
                 if not imported:
                     event.ignore()
                     return True
-            event.setDropAction(QtCore.Qt.DropAction.CopyAction)
-            event.accept()
-            return True
-        event.ignore()
+        event.setDropAction(QtCore.Qt.DropAction.CopyAction)
+        event.accept()
         return True
 
     def minimumSizeHint(self):

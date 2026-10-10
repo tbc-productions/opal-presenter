@@ -1589,8 +1589,7 @@ def test_on_delete_from_service_confirmation_disabled(settings: Settings, servic
     # GIVEN delete item confirmation is disabled and a mock service item
     settings.setValue('advanced/delete service item confirmation', False)
     _add_song_service_item(service_manager)
-    service_manager.find_service_item = MagicMock()
-    service_manager.find_service_item.return_value = (0, MagicMock())
+    service_manager.selected_service_indexes = MagicMock(return_value=[0])
 
     # WHEN the on_delete_from_service function is called
     service_manager.on_delete_from_service()
@@ -1609,8 +1608,7 @@ def test_on_delete_from_service_confirmation_enabled_choose_delete(settings: Set
     # GIVEN delete item confirmation is enabled and a mock service item
     settings.setValue('advanced/delete service item confirmation', True)
     _add_song_service_item(service_manager)
-    service_manager.find_service_item = MagicMock()
-    service_manager.find_service_item.return_value = (0, MagicMock())
+    service_manager.selected_service_indexes = MagicMock(return_value=[0])
 
     # WHEN the on_delete_from_service function is called and the user chooses to delete
     service_manager._delete_confirmation_dialog = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Close)
@@ -1817,6 +1815,7 @@ def test_service_manager_delete_confirmation_dialog(MockMessageBox: MagicMock, r
     """Test the _delete_confirmation_dialog() method"""
     # GIVEN: A service manager and a mocked QMessageBox class
     service_manager = ServiceManager(None)
+    service_manager.service_manager_list = MagicMock(selectedItems=lambda: [])
     mocked_message_box = MagicMock()
     MockMessageBox.return_value = mocked_message_box
     # Restore a couple of items for a more realistic situation
@@ -3247,3 +3246,100 @@ def test_service_list_fills_available_height(service_manager):
     QtWidgets.QApplication.processEvents()
     assert tree.height() > 900
     service_manager.hide()
+
+
+@pytest.mark.parametrize('selected,boundary,expected', [
+    ((0, 1), 3, ['C', 'A', 'B']),
+    ((0, 2), 3, ['B', 'A', 'C']),
+    ((1, 2), 0, ['B', 'C', 'A']),
+    ((0, 1), 1, ['A', 'B', 'C']),
+])
+def test_service_multi_drag_preserves_order_and_selection(drag_service, selected, boundary, expected):
+    manager = drag_service
+    view = manager.service_manager_list
+    view.clearSelection()
+    for index in selected:
+        manager.tree_widget_items[index].setSelected(True)
+    assert manager.begin_internal_drag()
+    manager._move_internal_drag_preview(boundary)
+    manager.finish_internal_drag(True)
+    assert _service_orders(manager) == (expected, expected)
+    assert [manager.service_items[index]['service_item'].title for index in manager.selected_service_indexes()] == [
+        'ABC'[index] for index in selected]
+    assert manager.is_modified() == (expected != ['A', 'B', 'C'])
+    assert not manager.is_internal_drag_active()
+
+
+def test_multi_selection_disables_preview_and_live_and_guards_direct_calls(drag_service):
+    manager = drag_service
+    manager.tree_widget_items[1].setSelected(True)
+    manager._update_move_actions()
+    assert not manager.make_preview_action.isEnabled()
+    assert not manager.preview_action.isEnabled()
+    assert not manager.make_live_action.isEnabled()
+    assert manager.note_toolbar_action.isEnabled()
+    with patch.object(manager, 'find_service_item') as find:
+        manager.make_preview()
+        manager.make_live()
+        find.assert_not_called()
+
+
+def test_multi_notes_apply_to_selected_parents_once_and_cancel_is_safe(drag_service):
+    manager = drag_service
+    manager.tree_widget_items[0].setExpanded(True)
+    manager.tree_widget_items[0].child(0).setSelected(True)
+    manager.tree_widget_items[2].setSelected(True)
+    manager.service_note_form = MagicMock()
+    manager.service_note_form.text_edit.toPlainText.return_value = 'Shared note'
+    manager.service_note_form.exec.return_value = False
+    manager.on_service_item_note_form()
+    assert not manager.is_modified()
+    manager.service_note_form.exec.return_value = True
+    child_counts = [row.childCount() for row in manager.tree_widget_items]
+    manager.on_service_item_note_form()
+    assert [row.childCount() for row in manager.tree_widget_items] == child_counts
+    assert [entry['service_item'].notes for entry in manager.service_items] == ['Shared note', '', 'Shared note']
+    assert len(manager.service_manager_list.selectedItems()) == 3
+
+
+@pytest.mark.parametrize('action,expected', [
+    ('on_service_top', ['A', 'C', 'B']), ('on_service_up', ['A', 'C', 'B']),
+    ('on_service_down', ['B', 'A', 'C']), ('on_service_end', ['B', 'A', 'C']),
+])
+def test_service_toolbar_moves_multiple_items(drag_service, action, expected):
+    manager = drag_service
+    manager.tree_widget_items[2].setSelected(True)
+    getattr(manager, action)()
+    assert _service_orders(manager) == (expected, expected)
+    assert len(manager.selected_service_indexes()) == 2
+
+
+def test_service_batch_delete_requires_confirmation_and_keeps_unselected_items(drag_service, settings):
+    manager = drag_service
+    manager.tree_widget_items[2].setSelected(True)
+    settings.setValue('advanced/delete service item confirmation', True)
+    with patch.object(manager, '_delete_confirmation_dialog', return_value=QtWidgets.QMessageBox.StandardButton.Cancel):
+        manager.on_delete_from_service()
+    assert [entry['service_item'].title for entry in manager.service_items] == ['A', 'B', 'C']
+    with patch.object(manager, '_delete_confirmation_dialog', return_value=QtWidgets.QMessageBox.StandardButton.Close):
+        manager.on_delete_from_service()
+    assert [entry['service_item'].title for entry in manager.service_items] == ['B']
+
+
+def test_cancel_service_batch_drag_keeps_selection_and_source_items(drag_service):
+    manager = drag_service
+    view = manager.service_manager_list
+    manager.tree_widget_items[1].setSelected(True)
+
+    def cancel(*args):
+        mime = drag.return_value.setMimeData.call_args.args[0]
+        assert [item.title for item in mime.service_items()] == ['A', 'B']
+        manager._move_internal_drag_preview(3)
+        return QtCore.Qt.DropAction.IgnoreAction
+
+    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+        drag.return_value.exec.side_effect = cancel
+        view.startDrag(QtCore.Qt.DropAction.MoveAction)
+    assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
+    assert manager.selected_service_indexes() == [0, 1]
+    assert not manager.is_modified()

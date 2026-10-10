@@ -47,7 +47,10 @@ class CloudDragData(QtCore.QMimeData):
     def __init__(self, panel, items):
         super().__init__()
         self.panel, self.items = panel, tuple(items)
-        self.title, self.icon, self.indexes = items[0].display_name, UiIcons().cloud_library, list(items)
+        self.title, self.indexes = items[0].display_name, list(items)
+        category = item_category(items[0])
+        self.icon = (UiIcons().folder if items[0].folder else
+                     service_icon(panel.type_icons[category], category))
         self.setData('application/x-openlp-cloud-items', b'1')
 
     def can_import(self, library):

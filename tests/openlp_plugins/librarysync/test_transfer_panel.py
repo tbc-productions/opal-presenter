@@ -1749,3 +1749,8 @@ def test_name_prompt_rejects_blank_enter_and_trims_valid_name(panel, monkeypatch
 
     monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', enter_name)
     assert panel.request_name('New cloud folder', 'Folder name', 'Create') == 'Sunday service'
+
+
+def test_cloud_drag_uses_the_item_type_icon(panel):
+    mime = CloudDragData(panel, [CloudItem('image', 'Sunday.png', category='images')])
+    assert mime.icon.name() == panel.type_icons['images'].name()

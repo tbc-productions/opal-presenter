@@ -129,3 +129,27 @@ Binding type discovery also uses Qt metadata instead of C++ RTTI. Qt's private
 item models and partially constructed layout children can lack usable RTTI;
 wrapping those objects previously crashed the test suite. BindingApi shims
 without their own Qt meta-object retain their concrete Python wrapper type.
+
+Service selection and drag feedback
+-----------------------------------
+
+Library plugins, Cloud Library, Themes, Preview, Live and Service use the same
+boxed drag card, with the item type icon, title and a count for multiple items.
+The card follows the Fluent appearance and keeps the count visible when a long
+title is shortened.
+
+Service supports Ctrl/Command-click and Shift-click selection, including
+Shift-arrow selection. Dragging moves selected service items together in their
+original order; moving or cancelling a drag preserves the selection and expanded
+slides. Preview and Go Live are disabled for multiple selected rows. Notes apply
+the saved text to every selected service item, with parent and slide selections
+counted once. Matching existing notes appear in the editor; different notes start
+with an empty editor. Saving replaces each selected item's notes, while Cancel
+preserves them.
+
+Dropping selected service items into the Library imports each into its matching
+plugin, including mixed selections. Every item must have an enabled, supported
+Library destination before the import begins. Existing overwrite confirmations
+still apply. Cancelling an import stops the remaining items and retains items
+already imported. Delete removes all selected service items, using the existing
+confirmation preference.

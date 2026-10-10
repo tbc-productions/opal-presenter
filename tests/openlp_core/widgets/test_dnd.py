@@ -308,3 +308,42 @@ def test_controller_rejects_theme_without_supported_current_item(controller, the
     assert not enter.isAccepted() and not controller._drop_hint.isVisible()
     assert not controller.drop_item(mime)
     controller.service_manager.apply_theme_to_item.assert_not_called()
+
+
+def test_service_batch_drag_captures_items_and_rejects_controller_drop():
+    items = [song('First'), song('Second')]
+    mime = ItemDragData(items=items)
+    items.clear()
+    assert [item.title for item in mime.service_items()] == ['First', 'Second']
+    assert mime.can_drop('service')
+    assert not mime.can_drop('preview')
+    assert not mime.can_drop('live')
+    mime.items[1].is_valid = False
+    assert not mime.can_drop('service')
+
+
+@pytest.mark.parametrize('dark', [False, True])
+def test_drag_card_uses_shared_theme_and_font_despite_source_styling(library, dark):
+    import fluentqt
+    previous = fluentqt.current_theme()
+    fluentqt.set_theme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)
+    try:
+        mime = ItemDragData(library=library)
+        mime.title = 'A very long label ' * 20
+        with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+            execute_drag(library.list_view, mime)
+            first = drag.return_value.setPixmap.call_args.args[0].toImage()
+            font = library.list_view.font()
+            font.setPointSize(28)
+            library.list_view.setFont(font)
+            palette = library.list_view.palette()
+            palette.setColor(QtGui.QPalette.ColorRole.Base, QtCore.Qt.GlobalColor.red)
+            library.list_view.setPalette(palette)
+            execute_drag(library.list_view, mime)
+            second = drag.return_value.setPixmap.call_args.args[0].toImage()
+        assert first == second
+        host = fluentqt.FluentWidget()
+        assert first.pixelColor(4, 28) == host.theme_tokens().colors.bgSolid
+        host.deleteLater()
+    finally:
+        fluentqt.set_theme(previous)

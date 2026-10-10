@@ -122,7 +122,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         """
         super(ServiceManagerList, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
-        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionIndicatorVisible(True)
         self.setItemDelegateForColumn(0, ServiceItemDelegate(self))
@@ -310,6 +310,11 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
         """
         if isinstance(event, QtGui.QKeyEvent):
             # here accept the event and do something
+            if event.modifiers() & (QtCore.Qt.KeyboardModifier.ShiftModifier |
+                                    QtCore.Qt.KeyboardModifier.ControlModifier |
+                                    QtCore.Qt.KeyboardModifier.MetaModifier):
+                super().keyPressEvent(event)
+                return
             if event.key() == QtCore.Qt.Key.Key_Up:
                 self.service_manager.on_move_selection_up()
                 event.accept()
@@ -352,8 +357,8 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
     def startDrag(self, actions):
         if not self.service_manager or not self.service_manager.begin_internal_drag():
             return
-        item = self.service_manager._internal_drag_item['service_item']
-        mime = ItemDragData(item=item, slide_no=self.service_manager._internal_drag_child)
+        mime = ItemDragData(items=[entry['service_item'] for entry in self.service_manager._internal_drag_items],
+                            slide_no=self.service_manager._internal_drag_child)
         try:
             execute_drag(self, mime, QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
         finally:
@@ -728,6 +733,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.servicefile_version = None
         self.tree_widget_items = []
         self._internal_drag_item = None
+        self._internal_drag_items = []
         self._internal_drag_target_index = None
         self._internal_drag_child = -1
         self._internal_drag_visual_item_index = -1
@@ -799,10 +805,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         return default_path.parent / f'{default_path.name}{suffix}'
 
     def _delete_confirmation_dialog(self):
+        multiple = len(self.selected_service_indexes()) > 1
+        message = (translate('OpenLP.ServiceManager', 'Are you sure you want to delete these items from the service?')
+                   if multiple else translate('OpenLP.ServiceManager',
+                                              'Are you sure you want to delete this item from the service?'))
         msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
                                         translate('OpenLP.ServiceManager', 'Delete item from service'),
-                                        translate('OpenLP.ServiceManager', 'Are you sure you want to delete '
-                                                  'this item from the service?'),
+                                        message,
                                         QtWidgets.QMessageBox.StandardButton(
                                             QtWidgets.QMessageBox.StandardButton.Close |
                                             QtWidgets.QMessageBox.StandardButton.Cancel), self)
@@ -1878,6 +1887,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.transition_section_sep_before.setVisible(transition_section_visible)
         if hasattr(self, 'transition_section_sep_after'):
             self.transition_section_sep_after.setVisible(transition_section_visible)
+        multiple = len(self.service_manager_list.selectedItems()) > 1
+        for action in (self.edit_action, self.rename_action, self.maintain_action, self.create_custom_action,
+                       self.time_action, self.auto_start_action, getattr(self, 'transition_action', None),
+                       self.auto_play_slides_menu.menuAction(), self.theme_menu.menuAction(),
+                       bible_layout_menu.menuAction() if bible_layout_menu is not None else None):
+            if action is not None:
+                action.setEnabled(not multiple)
+        self._update_move_actions()
         self.menu.exec(self.service_manager_list.mapToGlobal(point))
 
     @staticmethod
@@ -2063,11 +2080,16 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Allow the service note to be edited
         """
-        item = self.find_service_item()[0]
-        self.service_note_form.text_edit.setPlainText(self.service_items[item]['service_item'].notes)
+        indexes = self.selected_service_indexes()
+        if not indexes:
+            return
+        notes = [self.service_items[index]['service_item'].notes for index in indexes]
+        self.service_note_form.text_edit.setPlainText(notes[0] if all(note == notes[0] for note in notes) else '')
         if self.service_note_form.exec():
-            self.service_items[item]['service_item'].notes = self.service_note_form.text_edit.toPlainText()
-            self.repaint_service_list(item, -1)
+            for index in indexes:
+                self.service_items[index]['service_item'].notes = self.service_note_form.text_edit.toPlainText()
+                self._render_service_item_row(self.service_items[index], self.tree_widget_items[index],
+                                              update_slides=False)
             self.set_modified()
 
     def on_start_time_form(self):
@@ -2353,6 +2375,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Move the current ServiceItem to the top of the list.
         """
+        indexes = self.selected_service_indexes()
+        if len(indexes) > 1:
+            self._move_service_entries([self.service_items[index] for index in indexes], 0)
+            return
         item, child = self.find_service_item()
         if item < len(self.service_items) and item != -1:
             temp = self.service_items[item]
@@ -2365,6 +2391,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Move the current ServiceItem one position up in the list.
         """
+        indexes = self.selected_service_indexes()
+        if len(indexes) > 1:
+            self._move_service_entries([self.service_items[index] for index in indexes], indexes[0] - 1)
+            return
         item, child = self.find_service_item()
         if item > 0:
             temp = self.service_items[item]
@@ -2377,6 +2407,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Move the current ServiceItem one position down in the list.
         """
+        indexes = self.selected_service_indexes()
+        if len(indexes) > 1:
+            self._move_service_entries([self.service_items[index] for index in indexes], indexes[-1] + 2)
+            return
         item, child = self.find_service_item()
         if item < len(self.service_items) and item != -1:
             temp = self.service_items[item]
@@ -2389,6 +2423,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Move the current ServiceItem to the bottom of the list.
         """
+        indexes = self.selected_service_indexes()
+        if len(indexes) > 1:
+            self._move_service_entries([self.service_items[index] for index in indexes], len(self.service_items))
+            return
         item, child = self.find_service_item()
         if item < len(self.service_items) and item != -1:
             temp = self.service_items[item]
@@ -2615,7 +2653,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._update_move_actions()
         return False
 
-    def _render_service_item_row(self, item_data, tree_widget_item):
+    def _render_service_item_row(self, item_data, tree_widget_item, update_slides=True):
         """Render one top-level service row and its children into an existing QTreeWidgetItem."""
         service_item_from_item = item_data['service_item']
         autoplay_loop_enabled = bool(service_item_from_item.auto_play_slides_loop)
@@ -2696,6 +2734,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 tips.append(meta)
         tree_widget_item.setToolTip(0, '<br>'.join(tips))
         self._update_item_indicators(tree_widget_item, service_item_from_item, tips)
+        if not update_slides:
+            return
         tree_widget_item.setSelected(item_data['selected'] and not is_dragged_item)
         if is_dragged_item:
             dragged_text_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
@@ -2981,10 +3021,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Remove the current item from the service.
         """
-        item = self.find_service_item()[0]
-        if item != -1:
-            self.service_items.remove(self.service_items[item])
-            self.repaint_service_list(item - 1, -1)
+        indexes = self.selected_service_indexes()
+        if indexes:
+            for index in reversed(indexes):
+                self.service_items.pop(index)
+            self.repaint_service_list(indexes[0] - 1, -1)
             self.set_modified()
             self.servicemanager_changed.emit()
 
@@ -2992,6 +3033,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         """
         Send the current item to the Preview slide controller
         """
+        if len(self.service_manager_list.selectedItems()) > 1:
+            return
         self.application.set_busy_cursor()
         try:
             item, child = self.find_service_item()
@@ -3040,6 +3083,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
 
         :param row: Row number to be displayed if from preview. -1 is passed if the value is not set
         """
+        if len(self.service_manager_list.selectedItems()) > 1:
+            return
         item, child = self.find_service_item()
         # No items in service
         if item == -1 or item >= len(self.service_items):
@@ -3145,6 +3190,11 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             break
         return service_item, service_item_child
 
+    def selected_service_indexes(self):
+        """Return selected service positions once each, in service order."""
+        rows = {get_parent_item_data(item) for item in self.service_manager_list.selectedItems()}
+        return sorted(row - 1 for row in rows if row is not None and 0 < row <= len(self.service_items))
+
     def on_selection_changed(self):
         """
         Called whenever the selection in the service manager list changes. Updates the enabled state of the
@@ -3188,8 +3238,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         count = len(self.service_items)
         has_items = count > 0
         has_selection = item != -1 or any(service_item.get('selected', False) for service_item in self.service_items)
-        at_top = item == 0
-        at_bottom = item == count - 1
+        indexes = self.selected_service_indexes()
+        at_top = (indexes[0] if indexes else item) == 0
+        at_bottom = (indexes[-1] if indexes else item) == count - 1
         if hasattr(self, 'delete_action'):
             self.delete_action.setEnabled(has_items)
         if hasattr(self, 'expand_collapse_action'):
@@ -3198,10 +3249,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.save_service_action.setEnabled(has_items)
         if hasattr(self, 'save_service_as_action'):
             self.save_service_as_action.setEnabled(has_items)
+        single_selection = has_selection and len(self.service_manager_list.selectedItems()) <= 1
         if hasattr(self, 'make_preview_action'):
-            self.make_preview_action.setEnabled(has_selection)
+            self.make_preview_action.setEnabled(single_selection)
         if hasattr(self, 'make_live_action'):
-            self.make_live_action.setEnabled(has_selection)
+            self.make_live_action.setEnabled(single_selection)
+        if hasattr(self, 'preview_action'):
+            self.preview_action.setEnabled(single_selection)
         if hasattr(self, 'note_toolbar_action'):
             self.note_toolbar_action.setEnabled(has_selection)
         self.move_top_action.setEnabled(has_selection and not at_top)
@@ -3294,6 +3348,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         start_pos, child = self.find_service_item()
         if start_pos == -1 or start_pos >= len(self.service_items):
             return False
+        self._internal_drag_items = [self.service_items[index] for index in self.selected_service_indexes()]
         self._internal_drag_item = self.service_items[start_pos]
         self._internal_drag_target_index = start_pos
         self._internal_drag_child = child
@@ -3313,25 +3368,45 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
     def finish_internal_drag(self, is_drop_complete):
         if not self.is_internal_drag_active():
             return
-        current_index = self._get_internal_drag_item_index()
+        entries = self._internal_drag_items
         target_index = self._internal_drag_target_index
         child = self._internal_drag_child
         self._clear_internal_drag_grab_visual()
         self._internal_drag_item = None
+        self._internal_drag_items = []
         self._internal_drag_target_index = None
         self._internal_drag_child = -1
         self.service_manager_list.set_drop_position(None)
-        if is_drop_complete and current_index != -1:
-            insert_index = target_index - (target_index > current_index)
-            if insert_index != current_index:
-                self._move_service_item_row(current_index, insert_index)
-                current_index = insert_index
-                self.set_modified()
-            if current_index < len(self.tree_widget_items):
-                row = self.tree_widget_items[current_index]
-                if 0 <= child < row.childCount():
+        if is_drop_complete:
+            self._move_service_entries(entries, target_index, child)
+        self._update_move_actions()
+
+    def _move_service_entries(self, entries, boundary, child=-1):
+        """Move the captured selection as a block, preserving order and tree rows."""
+        positions = [index for index, entry in enumerate(self.service_items)
+                     if any(entry is selected for selected in entries)]
+        if len(positions) != len(entries) or not positions:
+            return
+        boundary = max(0, min(boundary, len(self.service_items)))
+        insert_index = boundary - sum(index < boundary for index in positions)
+        remaining = [entry for index, entry in enumerate(self.service_items) if index not in positions]
+        order = remaining[:insert_index] + entries + remaining[insert_index:]
+        changed = any(old is not new for old, new in zip(self.service_items, order))
+        with QtCore.QSignalBlocker(self.service_manager_list):
+            for index, entry in enumerate(order):
+                current = next(pos for pos, value in enumerate(self.service_items) if value is entry)
+                self._move_service_item_row(current, index)
+            self.service_manager_list.clearSelection()
+            for offset in range(len(entries)):
+                row = self.tree_widget_items[insert_index + offset]
+                if len(entries) == 1 and 0 <= child < row.childCount():
                     row = row.child(child)
-                self.service_manager_list.setCurrentItem(row)
+                if offset == 0:
+                    self.service_manager_list.setCurrentItem(row)
+                row.setSelected(True)
+        if changed:
+            self.set_modified()
+            self.servicemanager_changed.emit()
         self._update_move_actions()
 
     def _apply_internal_drag_grab_visual(self, item_index):
