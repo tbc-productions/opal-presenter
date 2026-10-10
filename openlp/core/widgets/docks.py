@@ -116,9 +116,17 @@ class MediaToolBox(QtWidgets.QWidget):
         layout.addWidget(self._stack, 1)
         self._overflow_menu = FluentLibraryOverflowMenu(self)
         self.setAcceptDrops(True)
-        QtWidgets.QApplication.instance().installEventFilter(self)
+        self._watch_drag_widgets(self)
+
+    def _watch_drag_widgets(self, widget):
+        # Global Python filters can crash while WebEngine constructs private Qt objects.
+        widget.installEventFilter(self)
+        for child in widget.findChildren(QtWidgets.QWidget):
+            child.installEventFilter(self)
 
     def eventFilter(self, watched, event):
+        if event.type() == QtCore.QEvent.Type.ChildPolished:
+            self._watch_drag_widgets(event.child())
         if (event.type() not in (QtCore.QEvent.Type.DragEnter, QtCore.QEvent.Type.DragMove, QtCore.QEvent.Type.Drop)
                 or not isinstance(watched, QtWidgets.QWidget)
                 or watched is not self and not self.isAncestorOf(watched)):
@@ -206,6 +214,7 @@ class MediaToolBox(QtWidgets.QWidget):
     def addItem(self, widget, icon, label):
         self._items.append(dict(widget=widget, icon=self._as_icon(icon), label=label, enabled=True))
         self._stack.addWidget(widget)
+        self._watch_drag_widgets(widget)
         self._rebuild_selector()
         return len(self._items) - 1
 

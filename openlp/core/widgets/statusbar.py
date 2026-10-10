@@ -1,6 +1,6 @@
 """Main-window footer with status text that shares space with progress controls."""
 from PySide6 import QtCore, QtWidgets
-from fluentqt import Label
+from fluentqt import FontRole, Label
 from fluentqt.design import Spacing
 
 
@@ -28,6 +28,7 @@ class FooterStatusBar(QtWidgets.QStatusBar):
         row.addWidget(self.right_content)
         super().addPermanentWidget(self.content, 1)
         self.message_label = Label(self.left_content)
+        self.message_label.setFluentTypography(FontRole.Caption)
         self.message_label.setObjectName('footer_status_message')
         self.message_label.setTextFormat(QtCore.Qt.TextFormat.PlainText)
         self.message_label.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)

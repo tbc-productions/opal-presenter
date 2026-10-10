@@ -67,6 +67,9 @@ date ranges use two compact CalendarDatePicker fields labelled From and To.
 The adapters preserve ContentDialog's native padding, give fields at least
 32 px height, disable the problematic opacity effect on macOS and constrain
 the surface to its host. The body scrolls while footer actions remain visible.
+Short content is measured again after native fonts and scrollbar geometry
+settle. Floating workspace panes are temporarily hidden while a prompt occupies
+the main window, then restored without changing their saved dock placement.
 Do not add outer padding a second time or cap height before layout measurement.
 Normal compact dialogs start at 420 px wide and cap at 560 px. A form needing
 wider controls can explicitly raise its maximum width (the media time grid does

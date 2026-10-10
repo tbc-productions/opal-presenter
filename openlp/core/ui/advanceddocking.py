@@ -151,7 +151,10 @@ class AdvancedDockingMixin:
         return self.dock_manager.addDockWidget(area, second, first.dockAreaWidget())
 
     def tabifyDockWidget(self, first, second):
-        return self.dock_manager.addDockWidget(ads.CenterDockWidgetArea, second, first.dockAreaWidget())
+        area = first.dockAreaWidget()
+        if area is not None and second.dockAreaWidget() is area:
+            return area
+        return self.dock_manager.addDockWidget(ads.CenterDockWidgetArea, second, area)
 
     def tabifiedDockWidgets(self, dock):
         area = dock.dockAreaWidget()
@@ -181,10 +184,14 @@ class AdvancedDockingMixin:
         if not state:
             return False
         restored = self.dock_manager.restoreState(state, version)
-        # Earlier layouts saved both controllers as one fixed central widget.
-        # ADS can restore their other panes, but the new docks need placement.
-        for dock in (self.preview_controller_dock, self.live_controller_dock):
+        # Missing panes stay registered but unassigned; opening one would otherwise float it.
+        right_docks = (self.preview_controller_dock, self.live_controller_dock,
+                       getattr(self, 'projector_manager_dock', None), getattr(self, 'cloud_library_dock', None))
+        for dock in self.dock_manager.dockWidgetsMap().values():
             if dock.dockAreaWidget() is None and not dock.isAutoHide():
-                self.dock_manager.addDockWidget(ads.RightDockWidgetArea, dock)
+                opened = dock.isDockOpen()
+                area = ads.RightDockWidgetArea if dock in right_docks else ads.LeftDockWidgetArea
+                self.dock_manager.addDockWidget(area, dock)
+                dock.setDockVisible(opened)
         self._show_dock_titles()
         return restored

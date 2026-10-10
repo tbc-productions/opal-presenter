@@ -62,7 +62,7 @@ class Server(QtCore.QObject, LogMixin):
         # Yes, there is.
         if len(args):
             self.out_stream = QtCore.QTextStream(self.out_socket)
-            self.out_stream.setCodec('UTF-8')
+            self.out_stream.setEncoding(QtCore.QStringConverter.Encoding.Utf8)
             self.out_socket.write(str.encode("".join(args)))
             if not self.out_socket.waitForBytesWritten(10):
                 raise Exception(str(self.out_socket.errorString()))
@@ -93,7 +93,7 @@ class Server(QtCore.QObject, LogMixin):
         if not self.in_socket:
             return
         self.in_stream = QtCore.QTextStream(self.in_socket)
-        self.in_stream.setCodec('UTF-8')
+        self.in_stream.setEncoding(QtCore.QStringConverter.Encoding.Utf8)
         self.in_socket.readyRead.connect(self._on_ready_read)
 
     @QtCore.Slot()

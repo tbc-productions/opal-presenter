@@ -1,6 +1,8 @@
 """Exercise real ADS floating, auto-hide, close and restore operations."""
 import pytest
-from PySide6 import QtCore, QtTest
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+from PySide6 import QtCore, QtGui, QtTest
 from openlp.core.widgets import fluent as QtWidgets
 
 
@@ -44,6 +46,29 @@ def test_tabs_and_initially_closed_pane(workspace):
     assert not projectors.isClosed()
 
 
+def test_tabifying_existing_tabs_does_not_remove_and_reinsert_them(workspace):
+    window, (_, library, themes, _) = workspace
+    area = library.dockAreaWidget()
+    with patch.object(window.dock_manager, 'addDockWidget') as add:
+        assert window.tabifyDockWidget(library, themes) is area
+    add.assert_not_called()
+
+
+def test_restoring_layout_without_service_keeps_it_docked_when_reopened(workspace):
+    window, (service, _, _, _) = workspace
+    service.setDockVisible(False)
+    window.removeDockWidget(service)
+    saved = window.saveState()
+    window.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, service)
+    created = QtTest.QSignalSpy(window.dock_manager.floatingWidgetCreated)
+    assert window.restoreState(saved)
+    assert service.isClosed()
+    assert service.dockAreaWidget() is not None
+    service.setDockVisible(True)
+    assert created.count() == 0
+    assert not service.isInFloatingContainer()
+
+
 def test_float_autohide_and_closed_state_round_trip(workspace):
     import PySide6QtAds as ads
     window, (service, library, themes, projectors) = workspace
@@ -85,6 +110,76 @@ def test_tab_group_in_floating_window_round_trip(workspace):
     assert window.restoreState(saved)
     assert library.isInFloatingContainer() and themes.isInFloatingContainer()
     assert library.dockAreaWidget() is themes.dockAreaWidget()
+
+
+@pytest.mark.parametrize('floating_pane', ['service', 'library', 'themes'])
+def test_live_preset_redocks_floating_library_panes(workspace, floating_pane):
+    from openlp.core.ui.mainwindow import MainWindow
+    window, (service, library, themes, _) = workspace
+    window.service_manager_dock = service
+    window.media_manager_dock = library
+    window.theme_manager_dock = themes
+    floating = {'service': service, 'library': library, 'themes': themes}[floating_pane]
+    floating.setFloating(True)
+    assert floating.isInFloatingContainer()
+    MainWindow._reapply_left_column_dock_layout_live(window)
+    assert all(not dock.isInFloatingContainer() for dock in (service, library, themes))
+    assert service.dockAreaWidget() is library.dockAreaWidget() is themes.dockAreaWidget()
+
+
+@pytest.mark.parametrize('dialog_type', [QtWidgets.QMessageBox, QtWidgets.FormDialog])
+def test_modal_prompt_restores_only_previously_visible_floating_panes(workspace, dialog_type):
+    window, (service, library, themes, _) = workspace
+    service.setFloating(True)
+    themes.setFloating(True)
+    visible = service.floatingDockContainer()
+    hidden = themes.floatingDockContainer()
+    hidden.hide()
+    saved = window.saveState()
+    dialog = dialog_type(window)
+    dialog.setAnimationEnabled(False)
+    dialog.open()
+    assert not visible.isVisible() and not hidden.isVisible()
+    nested = QtWidgets.QMessageBox(dialog)
+    nested.setAnimationEnabled(False)
+    nested.open()
+    nested.done(0)
+    assert not visible.isVisible()
+    dialog.done(0)
+    assert visible.isVisible() and not hidden.isVisible()
+    assert window.saveState() == saved
+    assert service.isInFloatingContainer() and themes.isInFloatingContainer()
+
+
+@pytest.mark.parametrize('cancel', [False, True])
+def test_main_window_exit_hides_locked_floating_panes_only_after_confirmation(workspace, cancel):
+    from openlp.core.ui.mainwindow import MainWindow
+    window, (service, library, themes, _) = workspace
+    service.setFloating(True)
+    window.tabifyDockWidget(service, library)
+    window.tabifyDockWidget(service, themes)
+    service.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+    floating = service.floatingDockContainer()
+    assert floating.isVisible()
+    window.application = SimpleNamespace(is_event_loop_active=True)
+    window.service_manager_contents = MagicMock()
+    window.service_manager_contents.is_modified.return_value = cancel
+    window.service_manager_contents.service_items = []
+    window.service_manager_contents.save_modified_service.return_value = QtWidgets.QMessageBox.StandardButton.Cancel
+    window.settings = MagicMock()
+    window.settings_replaced = False
+    window._show_wait_dialog = lambda *args: MainWindow._show_wait_dialog(window, *args)
+    window._wait_for_threads = MagicMock()
+    saved = []
+    window.clean_up = lambda **kwargs: saved.append(window.saveState())
+    event = QtGui.QCloseEvent()
+    MainWindow.closeEvent(window, event)
+    assert event.isAccepted() is not cancel
+    assert floating.isVisible() is cancel
+    assert bool(saved) is not cancel
+    if saved:
+        assert window.restoreState(saved[0])
+        assert service.isInFloatingContainer()
 
 
 def test_lock_disables_float_move_close_and_pin(workspace):

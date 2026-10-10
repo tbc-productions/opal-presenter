@@ -202,6 +202,7 @@ class Ui_MainWindow(object):
         self.default_theme_button = QtWidgets.fluentqt.HyperlinkButton('', self.default_theme_container)
         self.default_theme_button.setObjectName('default_theme_button')
         self.default_theme_button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+        self.default_theme_button.setFontRole(QtWidgets.fluentqt.FontRole.Caption)
         self.default_theme_button.setToolTip(translate('OpenLP.MainWindow', 'Open Themes settings'))
         self.default_theme_button.clicked.connect(self.on_default_theme_clicked)
         default_theme_layout.addWidget(self.default_theme_button)
@@ -1364,6 +1365,9 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 self._wait_for_threads()
                 # Keep imported or reset settings from being overwritten on exit.
                 self.clean_up(save_settings=not self.settings_replaced)
+            if getattr(self, 'dock_manager', None):
+                # Hide after the wait dialog restores panes; locked floating containers refuse Close.
+                self.dock_manager.hideManagerAndFloatingWidgets()
 
     def eventFilter(self, obj, event: QtCore.QEvent):
         if event.type() == QtCore.QEvent.Type.FileOpen:
@@ -1545,8 +1549,19 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
 
     def _restore_layout_from_preset(self, mode: str) -> None:
         state = self.settings.value(self._preset_layout_storage_key(mode, 'main window state'))
-        if state and len(state) > 0:
-            self.restoreState(state)
+        manager = getattr(self, 'dock_manager', None)
+        was_visible = mode == 'live' and manager is not None and manager.isVisible()
+        if was_visible:
+            manager.hide()
+        try:
+            if state and len(state) > 0:
+                self.restoreState(state)
+            if mode == 'live' and manager is not None:
+                # Repair older floating/unassigned Live panes before ADS shows the restored layout.
+                self._reapply_left_column_dock_layout_live()
+        finally:
+            if was_visible:
+                manager.setVisible(True)
         self.live_controller.splitter.restoreState(
             self.settings.value(self._preset_layout_storage_key(mode, 'live splitter geometry')))
         self.preview_controller.splitter.restoreState(
@@ -1571,9 +1586,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             if not self._apply_preset_visibility_snapshot(snap):
                 self._apply_canonical_preset_visibility(mode)
         else:
-            self._apply_canonical_preset_visibility(mode)
             if getattr(self, 'dock_manager', None):
                 self._reset_dock_layout = True
+                self.settings.setValue('user interface/is preset layout', True)
+                # Opening a registered but unassigned ADS dock creates a floating window.
+                self._deferred_apply_left_column_dock_layout()
+            self._apply_canonical_preset_visibility(mode)
         if mode == 'default':
             self.mode_default_item.setChecked(True)
         elif mode == 'setup':
@@ -1597,7 +1615,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.mode_setup_item.setChecked(False)
         self._sync_layout_preset_tab_from_settings()
         self._set_cloud_library_visibility(mode)
-        self._schedule_left_column_dock_layout()
+        if has_saved:
+            self._deferred_apply_left_column_dock_layout()
 
     def _set_cloud_library_visibility(self, mode):
         dock = getattr(self, 'cloud_library_dock', None)
@@ -1625,14 +1644,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         answer = QtWidgets.QMessageBox.warning(
             self,
             translate('OpenLP.MainWindow', 'Reset layout presets?'),
-            translate('OpenLP.MainWindow', 'This will revert customisations for all layout presets.\n\n'
-                      'Do you want to continue?'),
+            translate('OpenLP.MainWindow', 'This will revert customisations for all layout presets.'),
             QtWidgets.QMessageBox.StandardButton(
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No),
-            QtWidgets.QMessageBox.StandardButton.No)
+                QtWidgets.QMessageBox.StandardButton.Reset | QtWidgets.QMessageBox.StandardButton.Cancel),
+            QtWidgets.QMessageBox.StandardButton.Cancel)
         # QMessageBox may return StandardButton or int depending on platform / Qt build.
-        yes = QtWidgets.QMessageBox.StandardButton.Yes
-        if int(answer) != int(yes):
+        if int(answer) != int(QtWidgets.QMessageBox.StandardButton.Reset):
             return
         empty = QtCore.QByteArray()
         for preset_mode in _PRESET_LAYOUT_MODES:
@@ -1657,6 +1674,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.settings.setValue('user interface/preview splitter geometry', empty)
         self.control_splitter.setChildrenCollapsible(False)
         self.settings.setValue('user interface/is preset layout', True)
+        self._deferred_apply_left_column_dock_layout()
         if view_mode == 'default':
             self.set_view_mode(True, True, True, True, True, False, 'default')
         elif view_mode == 'setup':
@@ -1666,7 +1684,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         else:
             self.set_view_mode(True, True, True, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
-        self._deferred_apply_left_column_dock_layout()
 
     def toggle_media_manager(self):
         """
@@ -1839,7 +1856,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
     def _reapply_left_column_dock_layout_live(self) -> None:
         """Keep all three Live tabs in Service's dock area, with Service selected."""
         self.service_manager_dock.setFloating(False)
-        if self.service_manager_dock.dockAreaWidget() is None:
+        if (self.service_manager_dock.dockAreaWidget() is None
+                or self.service_manager_dock.isInFloatingContainer()):
             self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.service_manager_dock)
         for dock in (self.media_manager_dock, self.theme_manager_dock):
             dock.setFloating(False)
@@ -1909,8 +1927,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                              [int(height * 0.35), int(height * 0.65)], QtCore.Qt.Orientation.Vertical)
     def _deferred_apply_left_column_dock_layout(self) -> None:
         """
-        Rebuild the left column after the main window is shown. Called via QTimer so
-        QMainWindow layout and restoreState have settled (avoids splitDockWidget crashes during bootstrap).
+        Place panes before opening them. Startup defers this until the window is shown;
+        preset switches finish it synchronously so the next selection saves a complete layout.
         """
         try:
             mode = self.settings.value('core/view mode')
@@ -1927,7 +1945,9 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     self.reset_controller_docks()
                     self._reset_dock_layout = False
             with self._mute_left_dock_visibility_signals():
-                if not skip_for_saved_preset and mode != 'live':
+                if mode == 'live':
+                    self._reapply_left_column_dock_layout_live()
+                elif not skip_for_saved_preset:
                     if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
                         self._reapply_library_sync_dock_layout()
                     elif mode == 'setup':
@@ -1941,8 +1961,6 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 _set_dock_visible(self.service_manager_dock, show_svc)
                 _set_dock_visible(self.media_manager_dock, show_lib)
                 _set_dock_visible(self.theme_manager_dock, show_thm)
-                if mode == 'live':
-                    self._reapply_left_column_dock_layout_live()
             self._sync_left_dock_menu_checks_from_settings()
             self._set_cloud_library_visibility(mode)
             if not (getattr(self, 'dock_manager', None) and skip_for_saved_preset):
@@ -2094,6 +2112,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         self.recent_files = self.settings.value('core/recent files')
         self._restore_main_window_geometry()
         self.restoreState(self.settings.value(_window_state_storage_key()))
+        if self.settings.value('user interface/is preset layout') and self.settings.value('core/view mode') == 'live':
+            self._reapply_left_column_dock_layout_live()
         if not self._window_position_is_valid(self.pos(), self.geometry()):
             self.move(0, 0)
         self.live_controller.splitter.restoreState(self.settings.value('user interface/live splitter geometry'))

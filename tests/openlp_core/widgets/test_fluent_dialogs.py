@@ -393,6 +393,49 @@ def test_long_message_scrolls_without_hiding_commands(qapp, qtbot):
     box.done(0)
 
 
+@pytest.mark.parametrize('host_size', [(1000, 700), (420, 320)])
+def test_short_confirmation_fits_after_native_layout_settles(qapp, qtbot, host_size):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(*host_size)
+    parent.show()
+    buttons = fluent.QMessageBox.StandardButton
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Warning, 'Reset layout presets?',
+                             'This will revert customisations for all layout presets.',
+                             buttons.Reset | buttons.Cancel, parent)
+    box.setDefaultButton(buttons.Cancel)
+    box.open()
+    qtbot.waitUntil(lambda: box._content_scroll.verticalScrollBar().maximum() == 0)
+    assert box._text.height() >= box._text.heightForWidth(box._text.width())
+    assert parent.rect().contains(box.geometry())
+    assert [box._native_commands[slot].text() for slot in ('primary', 'close')] == ['Reset', 'Cancel']
+    qtbot.keyClick(box, QtCore.Qt.Key.Key_Return)
+    qtbot.waitUntil(lambda: box.result() == buttons.Cancel)
+
+
+def test_short_message_recovers_after_a_scrollbar_causes_extra_wrapping(qapp, qtbot):
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(1000, 700)
+    parent.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+    parent.show()
+    buttons = fluent.QMessageBox.StandardButton
+    box = fluent.QMessageBox(fluent.QMessageBox.Icon.Warning, 'Reset layout presets?',
+                             'This will revert customisations for all layout presets.\n\nDo you want to continue?',
+                             buttons.Yes | buttons.No, parent)
+    box.setAnimationEnabled(False)
+    box.open()
+    QtWidgets.QApplication.processEvents()
+    box.resize(box.width(), box.height() - 20)
+    QtWidgets.QApplication.processEvents()
+    assert box._content_scroll.verticalScrollBar().maximum() > 0
+    box._prepare_size()
+    QtWidgets.QApplication.processEvents()
+    assert box._content_scroll.verticalScrollBar().maximum() == 0
+    assert box._text.height() >= box._text.heightForWidth(box._text.width())
+    box.done(0)
+
+
 def test_content_dialog_preserves_padding_typography_and_content_ownership(qapp):
     dialog = fluent.ContentDialog()
     native = fluentqt.ContentDialog()

@@ -22,6 +22,8 @@
 Tests for Library dock tab behavior.
 """
 
+from unittest.mock import patch
+
 from PySide6 import QtGui
 from openlp.core.widgets import fluent as QtWidgets
 
@@ -31,6 +33,15 @@ from openlp.core.widgets.docks import MediaToolBox
 def _add_item(media_tool_box, label):
     widget = QtWidgets.QWidget()
     media_tool_box.addItem(widget, QtGui.QIcon(), label)
+
+
+def test_library_drag_filter_is_not_installed_on_application(qapp, qtbot):
+    """WebEngine must be able to construct private objects without Python filters."""
+    with patch.object(QtWidgets.QApplication.instance(), 'installEventFilter') as global_filter:
+        box = MediaToolBox()
+        qtbot.addWidget(box)
+        _add_item(box, 'Songs')
+    global_filter.assert_not_called()
 
 
 def test_library_selector_stays_one_row_and_overflows(qapp):

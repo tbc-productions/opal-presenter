@@ -549,8 +549,8 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         return (item.name in ('images', 'media', 'presentations') and bool(item.slides)
                 and (item.is_image() or item.is_command()))
 
-    def confirm_service_item_import(self, title, matches):
-        """Never replace an ambiguous match or overwrite without the user's choice."""
+    def confirm_service_item_import(self, title, matches, *, allow_skip=False):
+        """Return None to skip a batch item, False to cancel, or True to import."""
         if len(matches) > 1:
             critical_error_message_box(
                 translate('OpenLP.MediaManagerItem', 'Item already exists'),
@@ -567,10 +567,17 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
             QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.Cancel,
             self.window())
         box.button(QtWidgets.QMessageBox.StandardButton.Yes).setText(translate('OpenLP.MediaManagerItem', 'Overwrite'))
+        if allow_skip:
+            box.addButton(QtWidgets.QMessageBox.StandardButton.No).setText(translate('OpenLP.MediaManagerItem', 'Skip'))
+            box.setText(translate('OpenLP.MediaManagerItem',
+                                 '“{name}” already exists in the Library. '
+                                 'Overwrite it, skip this item, or cancel the import.').format(name=title))
         box.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
-        accepted = box.exec() == QtWidgets.QMessageBox.StandardButton.Yes
+        result = box.exec()
         box.deleteLater()
-        return accepted
+        if allow_skip and result == QtWidgets.QMessageBox.StandardButton.No:
+            return None
+        return result == QtWidgets.QMessageBox.StandardButton.Yes
 
     def import_service_item(self, item, target=None):
         """Plugins save their native content without altering the service item."""

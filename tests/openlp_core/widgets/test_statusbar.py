@@ -1,5 +1,6 @@
 """Status messages and progress share the padded footer without overlapping."""
 from PySide6 import QtCore, QtGui, QtWidgets
+from fluentqt import FontRole, font_for_role
 from fluentqt.design import Spacing
 
 from openlp.core.widgets.fluent import QProgressBar
@@ -19,6 +20,7 @@ def test_footer_message_and_progress_layout(qapp, qtbot):
     usage.setText('Tracking')
     footer.add_right_widget(usage, before=True)
     footer.showMessage('Loading Sunday service')
+    assert footer.message_label.font() == font_for_role(FontRole.Caption)
     progress.setValue(100)
     window.show()
     for width in (700, 1200):

@@ -621,7 +621,10 @@ class FolderLibraryItem(MediaManagerItem):
                 key = (title.strip().casefold(), '' if item.name == 'presentations' else suffix.casefold())
                 if key in pending_names:
                     index = pending_names[key]
-                    if not self.confirm_service_item_import(title, [planned[index]]):
+                    choice = self.confirm_service_item_import(title, [planned[index]], allow_skip=len(files) > 1)
+                    if choice is None:
+                        continue
+                    if not choice:
                         return False
                     planned[index] = (title, source, stream, planned[index][3])
                     continue
@@ -630,7 +633,10 @@ class FolderLibraryItem(MediaManagerItem):
                             .strip().casefold() == title.strip().casefold()
                             and (item.name == 'presentations' or
                                  Path(record.name or record.file_path).suffix.casefold() == suffix.casefold()))]
-                if not self.confirm_service_item_import(title, matches):
+                choice = self.confirm_service_item_import(title, matches, allow_skip=len(files) > 1)
+                if choice is None:
+                    continue
+                if not choice:
                     return False
                 pending_names[key] = len(planned)
                 planned.append((title, source, stream, matches[0] if matches else None))

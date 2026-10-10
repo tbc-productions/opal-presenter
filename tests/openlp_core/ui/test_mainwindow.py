@@ -171,11 +171,76 @@ def test_live_preset_groups_left_docks_and_defaults_to_service(mock_schedule, sa
     themes = main_window.theme_manager_dock
     assert set(main_window.tabifiedDockWidgets(service)) == {library, themes}
     assert all(dock.isDockOpen() for dock in (service, library, themes))
+    assert all(not dock.isInFloatingContainer() for dock in (service, library, themes))
     assert service.dockAreaWidget().currentDockWidget() is service
     assert main_window._left_dock_visibility_from_settings() == (True, True, True)
     assert all(action.isChecked() for action in (main_window.view_service_manager_item,
                                                main_window.view_media_manager_item,
                                                main_window.view_theme_manager_item))
+
+
+@pytest.mark.parametrize('locked', [False, True])
+def test_rapid_preset_changes_finish_live_layout_before_saving(main_window, settings, locked):
+    """A second selection must save the completed layout, without waiting for a zero timer."""
+    from PySide6 import QtTest
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window.set_lock_panel(locked)
+    created = QtTest.QSignalSpy(main_window.dock_manager.floatingWidgetCreated)
+    for mode in ('live', 'setup', 'live', 'default', 'live') * 3:
+        main_window.layout_preset_navigation.buttons[main_window._layout_preset_mode_to_tab_index(mode)].click()
+        if mode == 'live':
+            service = main_window.service_manager_dock
+            area = service.dockAreaWidget()
+            assert area is main_window.media_manager_dock.dockAreaWidget()
+            assert area is main_window.theme_manager_dock.dockAreaWidget()
+            assert area.currentDockWidget() is service
+            assert not service.isInFloatingContainer()
+    QtWidgets.QApplication.processEvents()
+    assert created.count() == 0
+
+
+@pytest.mark.parametrize('startup', [False, True])
+def test_saved_floating_live_layout_is_repaired_before_any_window_is_shown(main_window, settings, startup):
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    service = main_window.service_manager_dock
+    service.setFloating(True)
+    main_window.tabifyDockWidget(service, main_window.media_manager_dock)
+    main_window.tabifyDockWidget(service, main_window.theme_manager_dock)
+    main_window._save_current_layout_to_preset('live')
+    settings.setValue('user interface/modern window state', main_window.saveState())
+    main_window._reapply_left_column_dock_layout_live()
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    if not startup:
+        QtWidgets.QWidget.setVisible(main_window, True)
+    shown = []
+
+    class Watch(QtCore.QObject):
+        def eventFilter(self, obj, event):
+            if event.type() == QtCore.QEvent.Type.Show:
+                shown.append(obj)
+            return False
+
+    watcher = Watch(main_window)
+    main_window.dock_manager.floatingWidgetCreated.connect(lambda floating: floating.installEventFilter(watcher))
+    if startup:
+        settings.setValue('core/view mode', 'live')
+        settings.setValue('user interface/is preset layout', True)
+        settings.setValue(_preset_layout_storage_key('live', 'main window state'), QtCore.QByteArray())
+        main_window.load_settings()
+        QtWidgets.QWidget.setVisible(main_window, True)
+    else:
+        main_window._activate_layout_preset('live')
+    QtWidgets.QApplication.processEvents()
+    assert not shown
+    assert not service.isInFloatingContainer()
+    assert main_window.dock_manager.isVisible()
+    QtWidgets.QWidget.setVisible(main_window, False)
 
 
 class _DummyRenderer:
@@ -1358,7 +1423,7 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
     main_window._preview_controller.panel = MagicMock()
     main_window._live_controller = MagicMock()
     main_window._live_controller.panel = MagicMock()
-    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
+    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Reset
     for mode in _PRESET_LAYOUT_MODES:
         settings.setValue(_preset_layout_storage_key(mode, 'main window state'), QtCore.QByteArray(b'1'))
         settings.setValue(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '{"show_library": true}')
@@ -1371,6 +1436,16 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
         st = settings.value(_preset_layout_storage_key(mode, 'main window state'))
         assert len(st) == 0
         assert settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) in ('', None)
+
+
+@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+def test_cancel_reset_layout_presets_preserves_storage(mocked_warning, main_window, settings):
+    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Cancel
+    key = _preset_layout_storage_key('live', 'main window state')
+    settings.setValue(key, QtCore.QByteArray(b'saved layout'))
+    main_window.on_mode_reset_layout_presets_clicked()
+    assert settings.value(key) == QtCore.QByteArray(b'saved layout')
+    assert mocked_warning.call_args.args[-1] == QtWidgets.QMessageBox.StandardButton.Cancel
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
@@ -1823,6 +1898,8 @@ def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
     assert isinstance(button, QtWidgets.fluentqt.HyperlinkButton)
     assert button.text() == 'Sunday worship'
     assert main_window.default_theme_label.text() == 'Default Theme:'
+    assert button.fontRole() == QtWidgets.fluentqt.FontRole.Caption
+    assert main_window.default_theme_label.font() == QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Caption)
     with patch.object(main_window.settings_form, 'exec') as open_settings:
         button.click()
     open_settings.assert_called_once_with(UiStrings().Themes)

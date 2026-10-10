@@ -103,6 +103,7 @@ def test_text_drop_adds_native_content_and_overwrites_only_when_confirmed(librar
         box = prompt.call_args.args[0]
         assert box.defaultButton() is box.button(QtWidgets.QMessageBox.StandardButton.Cancel)
         assert box.button(QtWidgets.QMessageBox.StandardButton.Yes).text() == 'Overwrite'
+        assert box.button(QtWidgets.QMessageBox.StandardButton.No) is None
     assert library.plugin.manager.get_all_objects(record_type)[0].theme_name == 'Service theme'
     with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
@@ -187,20 +188,106 @@ def test_service_drag_switches_library_navigation_and_imports_from_any_library_v
     assert drop.isAccepted() and drop.dropAction() == QtCore.Qt.DropAction.CopyAction
 
 
-def test_grouped_image_cancel_leaves_every_file_untouched(libraries, tmp_path):
+def test_service_drag_is_handled_on_later_library_children(libraries, qtbot):
+    box = MediaToolBox()
+    qtbot.addWidget(box)
+    box.addItem(libraries['images'], QtGui.QIcon(), 'Images')
+    box.addItem(libraries['songs'], QtGui.QIcon(), 'Songs')
+    box.show()
+    target = QtWidgets.QWidget(libraries['images'])
+    target.setAcceptDrops(True)
+    target.show()
+    mime = ItemDragData(item=text_item('songs'))
+    event = QtGui.QDragEnterEvent(QtCore.QPoint(20, 20), QtCore.Qt.DropAction.CopyAction, mime,
+                                  QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
+    QtWidgets.QApplication.sendEvent(target, event)
+    assert event.isAccepted()
+    assert box.currentWidget() is libraries['songs']
+
+
+@pytest.mark.parametrize('choice', [QtWidgets.QMessageBox.StandardButton.Cancel,
+                                   QtWidgets.QMessageBox.StandardButton.No,
+                                   QtWidgets.QMessageBox.StandardButton.Yes])
+def test_grouped_image_duplicate_choices(libraries, tmp_path, choice):
     library = libraries['images']
     first = tmp_path / 'First.png'
     second = tmp_path / 'Second.png'
+    third = tmp_path / 'Third.png'
     first.write_bytes(b'first')
     second.write_bytes(b'second')
+    third.write_bytes(b'third')
     assert library.import_service_item(file_item('images', second))
+    original = library.manager.get_all_objects(library.item_class)[0]
+    original_path = Path(original.file_path)
+    second.write_bytes(b'replacement')
+    item = file_item('images', first)
+    item.add_from_image(second, second.stem)
+    item.add_from_image(third, third.stem)
+    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+               return_value=choice) as prompt:
+        assert library.import_service_item(item) is (choice != QtWidgets.QMessageBox.StandardButton.Cancel)
+    box = prompt.call_args.args[0]
+    box._sync_content()
+    assert [box._native_commands[slot].text() for slot in ('primary', 'secondary', 'close')] == [
+        'Overwrite', 'Skip', 'Cancel']
+    assert box.defaultButton() is box.button(QtWidgets.QMessageBox.StandardButton.Cancel)
+    records = library.manager.get_all_objects(library.item_class)
+    assert len(records) == (1 if choice == QtWidgets.QMessageBox.StandardButton.Cancel else 3)
+    updated = next(record for record in records if record.id == original.id)
+    assert Path(updated.file_path).read_bytes() == (
+        b'replacement' if choice == QtWidgets.QMessageBox.StandardButton.Yes else b'second')
+    assert original_path.read_bytes() == b'second'
+    assert first.read_bytes() == b'first' and second.read_bytes() == b'replacement' and third.read_bytes() == b'third'
+
+
+@pytest.mark.parametrize('last_choice', [QtWidgets.QMessageBox.StandardButton.No,
+                                        QtWidgets.QMessageBox.StandardButton.Cancel])
+def test_skipping_all_duplicates_or_cancelling_after_skip_saves_nothing(libraries, tmp_path, last_choice):
+    library = libraries['images']
+    first = tmp_path / 'First.png'
+    second = tmp_path / 'Second.png'
+    for path in (first, second):
+        path.write_bytes(b'original')
+        assert library.import_service_item(file_item('images', path))
+        path.write_bytes(b'replacement')
     item = file_item('images', first)
     item.add_from_image(second, second.stem)
     with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
-               return_value=QtWidgets.QMessageBox.StandardButton.Cancel):
-        assert not library.import_service_item(item)
-    assert len(library.manager.get_all_objects(library.item_class)) == 1
-    assert not (AppLocation.get_section_data_path('images') / 'library' / first.name).exists()
+               side_effect=[QtWidgets.QMessageBox.StandardButton.No, last_choice]), \
+            patch.object(library, '_copy_file_to_library_storage') as copy_file:
+        assert library.import_service_item(item) is (last_choice == QtWidgets.QMessageBox.StandardButton.No)
+    copy_file.assert_not_called()
+    records = library.manager.get_all_objects(library.item_class)
+    assert len(records) == 2
+    assert all(Path(record.file_path).read_bytes() == b'original' for record in records)
+
+
+@pytest.mark.parametrize('action,expected', [('secondary', None), ('primary', True),
+                                           ('enter', False), ('escape', False)])
+def test_collection_duplicate_prompt_mouse_and_keyboard(libraries, qtbot, action, expected):
+    library = libraries['images']
+    parent = library.window()
+    parent.resize(420, 240)
+    parent.show()
+    QtWidgets.fluentqt.initialize_resources()
+
+    def choose():
+        box = next(widget for widget in QtWidgets.QApplication.allWidgets()
+                   if isinstance(widget, QtWidgets.QMessageBox) and widget.isVisible())
+        assert parent.rect().contains(box.geometry())
+        positions = []
+        for slot in ('primary', 'secondary', 'close'):
+            button = box._native_commands[slot]
+            positions.append(button.mapTo(box, QtCore.QPoint()).x())
+            assert box.rect().contains(QtCore.QRect(button.mapTo(box, QtCore.QPoint()), button.size()))
+        assert positions == sorted(positions)
+        if action in ('enter', 'escape'):
+            qtbot.keyClick(box, QtCore.Qt.Key.Key_Return if action == 'enter' else QtCore.Qt.Key.Key_Escape)
+        else:
+            qtbot.mouseClick(box._native_commands[action], QtCore.Qt.MouseButton.LeftButton)
+
+    QtCore.QTimer.singleShot(0, choose)
+    assert library.confirm_service_item_import('A very long image title ' * 30, [object()], allow_skip=True) is expected
 
 
 def test_media_stream_drop_uses_stream_descriptor_and_duplicate_prompt(libraries):
@@ -362,8 +449,10 @@ def test_native_drop_imports_custom_slides_and_cancel_keeps_service_and_library(
     assert item.unique_identifier == identity and repr(item.slides) == slides
 
 
-@pytest.mark.parametrize('overwrite', [True, False])
-def test_conflicting_names_in_one_image_item_prompt_before_any_files_are_saved(libraries, tmp_path, overwrite):
+@pytest.mark.parametrize('choice', [QtWidgets.QMessageBox.StandardButton.Yes,
+                                   QtWidgets.QMessageBox.StandardButton.No,
+                                   QtWidgets.QMessageBox.StandardButton.Cancel])
+def test_conflicting_names_in_one_image_item_prompt_before_any_files_are_saved(libraries, tmp_path, choice):
     library = libraries['images']
     first = tmp_path / 'first.png'
     second = tmp_path / 'second.png'
@@ -373,13 +462,13 @@ def test_conflicting_names_in_one_image_item_prompt_before_any_files_are_saved(l
     item.title = 'Images'
     item.add_from_image(first, 'Same name')
     item.add_from_image(second, 'Same name')
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True, return_value=(
-            QtWidgets.QMessageBox.StandardButton.Yes if overwrite else QtWidgets.QMessageBox.StandardButton.Cancel)):
-        assert library.import_service_item(item) is overwrite
+    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True, return_value=choice):
+        assert library.import_service_item(item) is (choice != QtWidgets.QMessageBox.StandardButton.Cancel)
     records = library.manager.get_all_objects(library.item_class)
-    assert len(records) == int(overwrite)
-    if overwrite:
-        assert Path(records[0].file_path).read_bytes() == b'second'
+    assert len(records) == int(choice != QtWidgets.QMessageBox.StandardButton.Cancel)
+    if records:
+        assert Path(records[0].file_path).read_bytes() == (
+            b'second' if choice == QtWidgets.QMessageBox.StandardButton.Yes else b'first')
 
 
 def test_failed_file_save_keeps_existing_record_and_removes_uncommitted_copy(libraries, tmp_path, monkeypatch):

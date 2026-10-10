@@ -30,6 +30,7 @@ class _DialogSizingMixin:
         if isinstance(self, fluentqt.ContentDialog):
             self.setMaximumWidth(560)
         self._preferred_minimum = QtCore.QSize()
+        self._floating_windows = []
         if self.parentWidget() is not None:
             self.parentWidget().installEventFilter(self)
         # Embedded widgets are automatically shown with their parent unless
@@ -84,10 +85,25 @@ class _DialogSizingMixin:
         return super().exec()
 
     def showEvent(self, event):
+        host = self.window()
+        manager = getattr(host, 'dock_manager', None)
+        if manager is not None:
+            # Native floating panes can cover a dialog embedded in the main window.
+            self._floating_windows = [window for window in manager.floatingWidgets() if window.isVisible()]
+            for window in self._floating_windows:
+                window.hide()
+        host.raise_()
         self._prepare_size()
         super().showEvent(event)
         self._prepare_size()
         self._constrain_position()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        if self.window().isVisible():
+            for window in self._floating_windows:
+                window.show()
+        self._floating_windows.clear()
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -172,6 +188,7 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
             self._native_commands[slot] = next(button for button in self.findChildren(fluentqt.Button)
                                                if button.text() == slot)
             setter('')
+        self.opened.connect(self._prepare_size)
 
     def setWindowTitle(self, title):
         super().setWindowTitle(title)
@@ -206,6 +223,27 @@ class FluentContentDialog(_DialogSizingMixin, fluentqt.ContentDialog):
             width += margins.left() + margins.right() + 2 * self.shadowSize()
             self.resize(max(self.width(), width), self.height())
         super()._prepare_size()
+
+        content = self.content()
+        if self.isVisible() and content is not None:
+            viewport = self._content_scroll.viewport()
+            required = content.minimumSizeHint().height()
+            if content.hasHeightForWidth():
+                required = max(required, content.heightForWidth(viewport.width()))
+            else:
+                required = max(required, content.sizeHint().height())
+            if required > viewport.height():
+                parent = self.parentWidget()
+                available = parent.height() if parent is not None else self.screen().availableGeometry().height()
+                self.resize(self.width(), min(self.height() + required - viewport.height(),
+                                              available, self.maximumHeight()))
+                self.layout().activate()
+                self._constrain_position()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Font and scrollbar geometry settle after the native surface is shown.
+        QtCore.QTimer.singleShot(0, self, self._prepare_size)
 
     def _click_default_command(self):
         slot = {fluentqt.ContentDialogButton.Primary: 'primary',

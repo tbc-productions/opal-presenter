@@ -22,6 +22,7 @@ import pytest
 from pathlib import Path
 from typing import Generator
 from unittest.mock import MagicMock, patch
+from PySide6 import QtCore
 
 from openlp.core.common.registry import Registry
 from openlp.core.server import Server
@@ -131,6 +132,7 @@ def test_post_to_server(MockStream: MagicMock, server: Server):
 
     # THEN: the file should be passed out to the socket
     server.out_socket.write.assert_called_once_with(b'llamas')
+    MockStream.return_value.setEncoding.assert_called_once_with(QtCore.QStringConverter.Encoding.Utf8)
 
 
 @patch('openlp.core.server.QtCore.QTextStream')
@@ -203,7 +205,7 @@ def test_on_new_connection(MockTextStream: MagicMock, server: Server):
     assert server.in_socket is mocked_next_socket
     assert server.in_stream is mocked_stream
     MockTextStream.assert_called_once_with(mocked_next_socket)
-    mocked_stream.setCodec.assert_called_once_with('UTF-8')
+    mocked_stream.setEncoding.assert_called_once_with(QtCore.QStringConverter.Encoding.Utf8)
     mocked_next_socket.readyRead.connect.assert_called_once_with(server._on_ready_read)
 
 
@@ -220,6 +222,20 @@ def test_on_new_connection_no_socket(MockTextStream: MagicMock, server: Server):
     # THEN: The correct methods and attributes should have been called/set up
     assert server.in_socket is None
     MockTextStream.assert_not_called()
+
+
+def test_new_connection_reads_utf8_with_native_qt_stream(server: Server):
+    file_name = '/services/Café worship.osz'
+    socket = QtCore.QBuffer()
+    socket.setData(file_name.encode('utf-8'))
+    assert socket.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+    server.in_socket = None
+    server.server = MagicMock(**{'nextPendingConnection.return_value': socket})
+    service_manager = MagicMock()
+    Registry().register('service_manager', service_manager)
+    server._on_new_connection()
+    server._on_ready_read()
+    service_manager.load_service.assert_called_once_with(Path(file_name))
 
 
 def test_close_server(server: Server):
