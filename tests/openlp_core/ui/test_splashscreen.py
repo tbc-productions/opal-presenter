@@ -54,7 +54,7 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Starting OpenLP+'
+    assert splash.text() == 'Starting Opal Presenter'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring is not None
     assert ring.isVisible()

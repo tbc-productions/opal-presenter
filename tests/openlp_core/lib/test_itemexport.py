@@ -21,12 +21,12 @@ def test_write_item_service_preserves_custom_text(tmp_path, settings):
     item.name = 'custom'
     item.title = 'Welcome'
     item.add_from_text('First slide')
-    path = tmp_path / 'Welcome.osz'
+    path = tmp_path / 'Welcome.opal-slides'
 
     write_item_service(path, item)
 
     with zipfile.ZipFile(path) as archive:
-        service = json.loads(archive.read('service_data.osj'))
+        service = json.loads(archive.read('service.json'))
     assert service[0]['openlp_core']['openlp-servicefile-version'] == 3
     assert service[1]['serviceitem']['header']['title'] == 'Welcome'
     assert service[1]['serviceitem']['data'][0]['raw_slide'] == 'First slide'

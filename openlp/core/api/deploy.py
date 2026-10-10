@@ -25,7 +25,7 @@ import json
 import logging
 import re
 from datetime import date
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 from PySide6 import QtCore
 
@@ -33,8 +33,9 @@ from openlp.core.common.applocation import AppLocation
 from openlp.core.common.httputils import download_file, get_web_page, get_openlp_user_agent
 from openlp.core.common.registry import Registry
 from openlp.core.threading import ThreadWorker, run_thread
+from openlp.core.lib.nativefile import validate_archive
 
-REMOTE_URL = 'https://get.openlp.org/remote/'
+REMOTE_URL = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter-web-remote/releases/latest'
 LOCAL_VERSION = re.compile(r'appVersion.*=.*[\'"](.*?)[\'"];?')
 
 log = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class RemoteVersionWorker(ThreadWorker):
                 version_info = download_version_info()
                 log.debug('New version found: %s', version_info['latest']['version'])
                 break
-            except (OSError, TypeError):
+            except (OSError, TypeError, ValueError, KeyError):
                 log.exception('Unable to connect to OpenLP server to download version file')
                 retries += 1
         else:
@@ -91,8 +92,9 @@ def deploy_zipfile(app_root_path, zip_name):
     :return: None
     """
     zip_path = app_root_path / zip_name
-    web_zip = ZipFile(zip_path)
-    web_zip.extractall(app_root_path)
+    with ZipFile(zip_path) as web_zip:
+        validate_archive(web_zip)
+        web_zip.extractall(app_root_path)
 
 
 def download_version_info(timeout=None, retries=None, session=None):
@@ -101,16 +103,32 @@ def download_version_info(timeout=None, retries=None, session=None):
     """
     try:
         if timeout is None:
-            file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
+            file_contents = get_web_page(REMOTE_URL, headers={'User-Agent': get_openlp_user_agent()},
                                          retries=retries, session=session)
         else:
-            file_contents = get_web_page(REMOTE_URL + 'version.json', headers={'User-Agent': get_openlp_user_agent()},
+            file_contents = get_web_page(REMOTE_URL, headers={'User-Agent': get_openlp_user_agent()},
                                          timeout=timeout, retries=retries, session=session)
     except ConnectionError:
         return False
     if not file_contents:
         return None
-    return json.loads(file_contents)
+    try:
+        release = json.loads(file_contents)
+        if release.get('draft') or release.get('prerelease'):
+            return None
+        asset = next((asset for asset in release.get('assets', [])
+                      if asset.get('name') == 'opal-presenter-web-remote.zip'), None)
+        if not asset:
+            return None
+        if not isinstance(asset.get('size'), int) or asset['size'] < 0:
+            raise ValueError('Invalid remote bundle size.')
+        if not asset['browser_download_url'].startswith('https://git.tbcproductions.net/'):
+            raise ValueError('Invalid remote bundle download URL.')
+        return {'latest': {'version': release['tag_name'].removeprefix('v'), 'filename': asset['name'],
+                           'size': asset['size'], 'url': asset['browser_download_url']}}
+    except (ValueError, KeyError, TypeError):
+        log.warning('Invalid Opal Web Remote release metadata')
+        return None
 
 
 def get_latest_size():
@@ -145,12 +163,16 @@ def download_and_install(callback=None, can_update_range=True, timeout=None, ret
         download_kwargs['timeout'] = timeout
     if retries is not None:
         download_kwargs['retries'] = retries
-    if download_file(callback, REMOTE_URL + '{version}/{filename}'.format(**version_info['latest']), zip_path,
+    if download_file(callback, version_info['latest']['url'], zip_path,
                      session=session, **download_kwargs):
         if not zip_path.exists():
             # File was deleted because the download was cancelled
             return None
-        deploy_zipfile(AppLocation.get_section_data_path('remotes'), 'remote.zip')
+        try:
+            deploy_zipfile(AppLocation.get_section_data_path('remotes'), 'remote.zip')
+        except (OSError, ValueError, BadZipFile):
+            log.exception('Could not install the Opal Web Remote bundle')
+            return None
         return version_info['latest']['version']
     return None
 

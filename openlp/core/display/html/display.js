@@ -464,7 +464,7 @@ function _fixFontName(fontName) {
 }
 
 /**
- * The Display object is what we use from OpenLP+
+ * The Display object is what we use from Opal Presenter
  */
 var Display = {
   /** @type {HTMLElement} */
@@ -1100,7 +1100,7 @@ var Display = {
     };
   },
   /**
-   * Generate the OpenLP+ startup splashscreen
+   * Generate the Opal Presenter startup splashscreen
    * @param {string} bg_color - The background color
    * @param {string} image - Path to the splash image
    * @param {string} logo_fit - cover, contain, stretch, repeat

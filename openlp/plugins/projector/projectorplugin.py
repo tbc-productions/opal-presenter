@@ -27,5 +27,5 @@ class ProjectorPlugin(RestartRequiredFeature, Plugin):
     @staticmethod
     def about():
         return translate('ProjectorPlugin', 'Control network projectors using PJLink. '
-                         'Enable or disable this plugin, then restart OpenLP+ to apply the change. '
+                         'Enable or disable this plugin, then restart Opal Presenter to apply the change. '
                          'Saved projector configuration is kept when disabled.')

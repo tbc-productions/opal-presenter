@@ -21,6 +21,7 @@
 """
 The :mod:`openlp.core.version` module downloads the version details for OpenLP.
 """
+import json
 import logging
 import platform
 import sys
@@ -52,10 +53,7 @@ LIBRARIES = OrderedDict([
     ('PyEnchant', ('enchant',)),
     ('Mako', ('mako',)),
 ])
-VERSION_BASE_URL = 'https://get.openlp.org/versions/'
-VERSION_STABLE = 'version.txt'
-VERSION_DEVELOP = 'dev_version.txt'
-VERSION_NIGHTLY = 'nightly_version.txt'
+RELEASES_URL = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
 
 
 class VersionWorker(ThreadWorker):
@@ -88,15 +86,8 @@ class VersionWorker(ThreadWorker):
         * If a version number's minor version is an even number, it is a stable release.
         """
         log.debug('VersionWorker - Start')
-        download_url = VERSION_BASE_URL
-        if self.current_version['build']:
-            download_url += VERSION_NIGHTLY
-        elif int(self.current_version['version'].split('.')[1]) % 2 != 0:
-            download_url += VERSION_DEVELOP
-        else:
-            download_url += VERSION_STABLE
         headers = {
-            'User-Agent': 'OpenLP+/{version} {system}/{release}; '.format(version=self.current_version['full'],
+            'User-Agent': 'Opal Presenter/{version} {system}/{release}; '.format(version=self.current_version['full'],
                                                                          system=platform.system(),
                                                                          release=platform.release())
         }
@@ -104,13 +95,17 @@ class VersionWorker(ThreadWorker):
         retries = 0
         while retries < 3:
             try:
-                response = get_web_page(download_url, headers=headers)
+                response = get_web_page(RELEASES_URL, headers=headers)
                 if response:
-                    remote_version = response.strip()
+                    release = json.loads(response)
+                    if not release.get('draft') and not release.get('prerelease'):
+                        candidate = release['tag_name'].removeprefix('v')
+                        if not parse(candidate).is_prerelease and not parse(candidate).is_devrelease:
+                            remote_version = candidate
                 log.debug('New version found: %s', remote_version)
                 break
-            except OSError:
-                log.exception('Unable to connect to OpenLP server to download version file')
+            except (OSError, ValueError, TypeError, KeyError):
+                log.exception('Unable to check Opal Presenter releases')
                 retries += 1
         else:
             self.no_internet.emit()
@@ -209,10 +204,10 @@ def get_version():
         'build': build_number
     }
     if APPLICATION_VERSION['build']:
-        log.info('OpenLP+ version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
+        log.info('Opal Presenter version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
                                                                  build=APPLICATION_VERSION['build']))
     else:
-        log.info('OpenLP+ version {version}'.format(version=APPLICATION_VERSION['version']))
+        log.info('Opal Presenter version {version}'.format(version=APPLICATION_VERSION['version']))
     return APPLICATION_VERSION
 
 

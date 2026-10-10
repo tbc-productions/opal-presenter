@@ -40,7 +40,7 @@ exceptionform.ENCHANT_VERSION = 'Enchant Test'
 exceptionform.MAKO_VERSION = 'Mako Test'
 exceptionform.ICU_VERSION = 'ICU Test'
 
-MAIL_ITEM_TEXT = ('**OpenLP+ Bug Report**\nVersion: Trunk Test\n\n--- Details of the Exception. ---\n\n'
+MAIL_ITEM_TEXT = ('**Opal Presenter Bug Report**\nVersion: Trunk Test\n\n--- Details of the Exception. ---\n\n'
                   'Description Test\n\n --- Exception Traceback ---\nopenlp: Traceback Test\n'
                   '--- System information ---\nPlatform: Nose Test\n\n--- Library Versions ---\n'
                   'Python: Python Test\nQt6: Qt6 Test\nPySide6: PySide6 Test\n'

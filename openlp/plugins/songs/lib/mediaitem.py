@@ -196,7 +196,7 @@ class SongMediaItem(MediaManagerItem):
                         self.service_manager.suggested_presentation_file_path(suffix))
         export_items_dialog(self, items, suffix, default_path)
 
-    def on_export_song(self):
+    def on_export_song(self, checked=False, plain=False):
         """Export each selected song as an OpenLyrics file."""
         selected = self.list_view.selectedItems()
         if not selected:
@@ -207,14 +207,15 @@ class SongMediaItem(MediaManagerItem):
             song = self.plugin.manager.get_object(Song, item.data(QtCore.Qt.ItemDataRole.UserRole))
             if not song:
                 continue
-            from openlp.core.lib.designmedia import media_references
-            from openlp.core.lib.itemexport import write_xml_package, xml_design
+            from openlp.core.lib.itemexport import write_xml_package
             xml = self.open_lyrics.song_to_xml(song)
-            suffix = '.osz' if media_references(xml_design(xml)) else '.xml'
-            service_item = self.build_service_item(item=item) if suffix == '.osz' else None
+            suffix = '.xml' if plain else '.opal-song'
+            service_item = self.build_service_item(item=item) if suffix == '.opal-song' else None
             default_path = suggested_item_export_path(self.service_manager, song.title, suffix)
             export_item_dialog(
-                self, default_path, suffix, translate('SongsPlugin.MediaItem', 'OpenLyrics Song') + f' (*{suffix})',
+                self, default_path, suffix, (translate('SongsPlugin.MediaItem', 'Plain OpenLyrics XML') if plain else
+                                                   translate('SongsPlugin.MediaItem', 'Opal Presenter Song')) +
+                f' (*{suffix})',
                 lambda path, xml=xml, service_item=service_item: write_xml_package(path, xml, service_item))
 
     def add_list_view_to_toolbar(self):
@@ -253,6 +254,11 @@ class SongMediaItem(MediaManagerItem):
         self.export_presentation_menu.setIcon(UiIcons().upload)
         native_action = self.export_presentation_menu.addAction(translate('SongsPlugin.MediaItem', 'Song'))
         native_action.triggered.connect(self.on_export_song)
+        plain_action = self.export_presentation_menu.addAction(
+            translate('SongsPlugin.MediaItem', 'Plain OpenLyrics XML (lyrics and metadata only)'))
+        plain_action.setToolTip(translate('SongsPlugin.MediaItem',
+                                         'Includes supported chords. Omits designs, theme snapshots and media.'))
+        plain_action.triggered.connect(lambda checked=False: self.on_export_song(plain=True))
         formats = ((translate('OpenLP.PresentationExport', 'PowerPoint (PPTX)'), '.pptx'),
                    (translate('OpenLP.PresentationExport', 'OpenDocument (ODP)'), '.odp'))
         for label, suffix in formats:

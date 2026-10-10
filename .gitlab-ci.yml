@@ -213,13 +213,13 @@ build-source:
       mkdir -p dist
       if [ "$CI_COMMIT_TAG" != "" ]; then
           echo -n "$CI_COMMIT_TAG" >! openlp/.version
-          git archive -o "dist/openlp-plus-${CI_COMMIT_TAG}.tar.gz" --add-file=openlp/.version "$CI_COMMIT_TAG" .
+          git archive -o "dist/opal-presenter-${CI_COMMIT_TAG}.tar.gz" --add-file=openlp/.version "$CI_COMMIT_TAG" .
       else
           pip install hatch
           git fetch --unshallow --tags
           VERSION=`hatch version`
           echo -n "$VERSION" > openlp/.version
-          git archive -o "dist/openlp-plus-${VERSION}.tar.gz" --add-file=openlp/.version HEAD .
+          git archive -o "dist/opal-presenter-${VERSION}.tar.gz" --add-file=openlp/.version HEAD .
       fi
   artifacts:
     name: $CI_COMMIT_REF_SLUG

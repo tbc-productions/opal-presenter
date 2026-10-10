@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build OpenLP+'s pinned FluentQt wheel for Python 3.14 and Qt 6.11.1.
+"""Build Opal Presenter's pinned FluentQt wheel for Python 3.14 and Qt 6.11.1.
 
 Requires a matching Qt C++ SDK, cmake, ninja and shiboken6_generator. The
 result is a local distribution; it is not an upstream supported wheel.
@@ -188,7 +188,7 @@ def main():
     parser.add_argument('--install', action='store_true', help='Install the tested wheel into the calling interpreter')
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 14):
-        parser.error('OpenLP+ must remain on Python 3.14')
+        parser.error('Opal Presenter must remain on Python 3.14')
     workspace = args.work_dir.resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     source = args.source.resolve() if args.source else workspace / 'source'

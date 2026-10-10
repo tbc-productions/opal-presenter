@@ -73,7 +73,7 @@ from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, Song, Topi
 log = logging.getLogger(__name__)
 
 NAMESPACE = 'http://openlyrics.info/namespace/2009/song'
-DESIGN_NAMESPACE = 'https://openlp.org/ns/slide-design/1'
+from openlp.core.lib.nativefile import DESIGN_NAMESPACE, SYNC_NAMESPACE, LEGACY_SYNC_NAMESPACE, design_element
 NSMAP = '{{' + NAMESPACE + '}}{tag}'
 NEWPAGETAG = '<p style="page-break-after: always;"/>'
 
@@ -241,7 +241,7 @@ class OpenLyrics(object):
         # Append the necessary meta data to the song.
         song_xml.set('xmlns', NAMESPACE)
         song_xml.set('version', OpenLyrics.IMPLEMENTED_VERSION)
-        application_name = 'OpenLP ' + get_version()['version']
+        application_name = 'Opal Presenter ' + get_version()['version']
         song_xml.set('createdIn', application_name)
         song_xml.set('modifiedIn', application_name)
         # "Convert" 2012-08-27 11:49:15 to 2012-08-27T11:49:15.
@@ -251,11 +251,14 @@ class OpenLyrics(object):
             from openlp.core.lib.serviceitem import ServiceItem
             item = ServiceItem()
             item.theme = song.theme_name
-            design = package_design(design, item.get_theme_data())
+            design = package_design(design, item.get_theme_data(include_design=False))
         if design:
-            element = etree.Element('{' + DESIGN_NAMESPACE + '}design', nsmap={'olp': DESIGN_NAMESPACE})
+            element = etree.Element('{' + DESIGN_NAMESPACE + '}design', nsmap={'opal': DESIGN_NAMESPACE})
             element.text = json.dumps(design)
             song_xml.append(element)
+        if song.theme_name:
+            etree.SubElement(song_xml, '{' + SYNC_NAMESPACE + '}theme',
+                             nsmap={'opal': SYNC_NAMESPACE})._setText(song.theme_name)
         properties = etree.SubElement(song_xml, 'properties')
         titles = etree.SubElement(properties, 'titles')
         self._add_text_to_element('title', titles, song.title)
@@ -304,7 +307,7 @@ class OpenLyrics(object):
             # Named 'format_' - 'format' is built-in function in Python.
             format_ = etree.SubElement(song_xml, 'format')
             tags_element = etree.SubElement(format_, 'tags')
-            tags_element.set('application', 'OpenLP')
+            tags_element.set('application', 'Opal Presenter')
         # Process the song's lyrics.
         lyrics = etree.SubElement(song_xml, 'lyrics')
         verse_list = sxml.get_verses(song.lyrics)
@@ -421,15 +424,16 @@ class OpenLyrics(object):
             song.topics = []
         else:
             song = Song()
-        design_element = song_xml.find('{' + DESIGN_NAMESPACE + '}design')
-        design = normalise_design(design_element.text if design_element is not None else None)
+        element = design_element(song_xml)
+        design = normalise_design(element.text if element is not None else None)
         song.slide_design = json.dumps(design) if design else None
         # Values will be set when cleaning the song.
         song.search_lyrics = ''
         song.verse_order = ''
         song.search_title = ''
         song.temporary = parse_and_temporary_save
-        song.theme_name = song_xml.findtext('{https://openlp.org/ns/library-sync/1}theme') or ''
+        song.theme_name = (song_xml.findtext('{' + SYNC_NAMESPACE + '}theme')
+                           or song_xml.findtext('{' + LEGACY_SYNC_NAMESPACE + '}theme') or '')
         self._process_copyright(properties, song)
         self._process_cclinumber(properties, song)
         self._process_titles(properties, song)

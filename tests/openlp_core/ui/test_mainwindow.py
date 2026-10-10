@@ -447,7 +447,7 @@ def test_cmd_line_arg_not_service_file(main_window):
     Test that passing a file that is not a service does nothing.
     """
     # GIVEN a non service file as an argument to openlp
-    args = ['run_openlp.py']
+    args = ['run_opal_presenter.py']
 
     # WHEN the argument is processed
     with patch.object(main_window.service_manager, 'load_file') as mocked_load_file, \

@@ -268,22 +268,22 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             return
         last_export_directory = self.settings.value('themes/last directory export')
         if not last_export_directory:
-            default_export_path = Path('{name}.otz'.format(name=theme_name))
+            default_export_path = Path('{name}.opal-theme'.format(name=theme_name))
         else:
             last_export_directory = Path(last_export_directory)
-            default_export_path = last_export_directory / '{name}.otz'.format(name=theme_name)
+            default_export_path = last_export_directory / '{name}.opal-theme'.format(name=theme_name)
         export_path, filter_used = FileDialog.getSaveFileName(
             self,
             translate('OpenLP.ThemeManager', 'Save Theme - ({name})').format(name=theme_name),
             default_export_path,
-            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'),
-            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
+            translate('OpenLP.ThemeManager', 'Opal Presenter Themes (*.opal-theme)'),
+            translate('OpenLP.ThemeManager', 'Opal Presenter Themes (*.opal-theme)'))
         if not export_path:
             return
         self.application.set_busy_cursor()
         try:
             self.settings.setValue('themes/last directory export', export_path.parent)
-            if self.theme_manager._export_theme(export_path.with_suffix('.otz'), theme_name):
+            if self.theme_manager._export_theme(export_path.with_suffix('.opal-theme'), theme_name):
                 QtWidgets.QMessageBox.information(
                     self,
                     translate('OpenLP.ThemeManager', 'Theme Exported'),
@@ -431,8 +431,8 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         dialog.setObjectName('theme_exit_dialog')
         dialog.setTitle(tr('Save Theme?'))
         title = self.theme_name_edit.text().strip()
-        message = tr('Save changes to “{title}” before exiting OpenLP+?').format(title=title) if title else \
-            tr('Save your changes before exiting OpenLP+?')
+        message = tr('Save changes to “{title}” before exiting Opal Presenter?').format(title=title) if title else \
+            tr('Save your changes before exiting Opal Presenter?')
         label = QtWidgets.QLabel(message)
         label.setWordWrap(True)
         dialog.setContent(label)

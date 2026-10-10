@@ -117,7 +117,7 @@ def test_on_ready_read_giving_up(server: Server):
         server._on_ready_read()
 
     # THEN: the service will be loaded
-    mocked_log_error.assert_called_once_with('OpenLP+ is taking too long to start up, abandoning file load')
+    mocked_log_error.assert_called_once_with('Opal Presenter is taking too long to start up, abandoning file load')
 
 
 @patch('openlp.core.server.QtCore.QTextStream')
@@ -143,7 +143,7 @@ def test_post_to_server_openlp(MockStream: MagicMock, server: Server):
     """
     # GIVEN: A server
     # WHEN: I post to a server
-    server.post_to_server(['l', 'l', 'a', 'm', 'a', 's', 'OpenLP'])
+    server.post_to_server(['l', 'l', 'a', 'm', 'a', 's', 'Opal Presenter'])
 
     # THEN: the file should be passed out to the socket
     server.out_socket.write.assert_called_once_with(b'llamas')

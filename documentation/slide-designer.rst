@@ -3,17 +3,17 @@ Slide designer
 
 Slide Designer is an optional plugin, enabled by default. Enable or disable it
 in Plugin Manager. Creating or editing an item opens directly in Slide Designer,
-without restarting OpenLP+. When disabled, songs and custom slides use their
+without restarting Opal Presenter. When disabled, songs and custom slides use their
 original dialogs and basic text editors. Saved designs and their projection/export
 behaviour remain intact; enabling the plugin makes those designs editable again.
 
 The designer opens in its own Fluent window, which can be minimised or maximised.
-The main OpenLP+ window and other library items remain available without replacing
-the draft. Its window title is the item name followed by ``- OpenLP+``, with
+The main Opal Presenter window and other library items remain available without replacing
+the draft. Its window title is the item name followed by ``- Opal Presenter``, with
 ``New Song`` or ``New Custom Slide`` used for unnamed items. Exit/Quit and closing
 the main window check each open designer for unsaved changes. Changed items offer
 Save, Discard and Cancel in a ContentDialog; unchanged items close without a prompt.
-Cancel or a validation failure stops quitting. Once the designers close, OpenLP+
+Cancel or a validation failure stops quitting. Once the designers close, Opal Presenter
 continues its normal unsaved-service and exit-confirmation behaviour.
 
 Songs have a collapsible navigation rail for Slides, Authors/Topics/Songbooks,
@@ -115,9 +115,9 @@ retain independent copies and friendly labels when library entries are deleted.
 Original files smaller than 2 MiB are embedded as base64 data URIs. Larger files
 use content-addressed references and are bundled once in exported archives, including
 assets in master layouts and per-slide overrides. Songs with large assets export as
-``.osz`` packages containing OpenLyrics XML and media; the OpenLyrics importer accepts
+``.opal-song`` packages containing OpenLyrics XML and media; the OpenLyrics importer accepts
 these packages. Custom exports include their XML alongside the service data in
-``.osz`` archives. Themes retain ``.otz`` archives, embedding small backgrounds in their
+``.opal-slides`` archives. Themes use ``.opal-theme`` archives, embedding small backgrounds in their
 JSON and bundling larger files. Imports retain assets permanently, independently of
 the archive, original source files and library entries.
 
@@ -169,7 +169,7 @@ Portability
 Songs store a versioned design document in the songs database. OpenLyrics XML
 exports include it in an ``olp:design`` extension with namespace
 ``https://openlp.org/ns/slide-design/1``. Custom items store the same extension
-inside their existing XML and preserve it through their existing ``.osz`` export
+inside their existing XML and preserve it through their native Opal package export
 and import route. Service headers also retain the design.
 Layer order is saved with the design and used by the projection renderer. Older
 designs without an explicit order retain their original text-above-decorations
@@ -177,7 +177,7 @@ appearance.
 
 Added images and videos retain their original formats, using embedded data or
 archive assets according to their size. Exports include a snapshot of
-the resolved theme, including its background media. The receiving OpenLP+
+the resolved theme, including its background media. The receiving Opal Presenter
 installation therefore does not need those original image files or a matching
 named theme. Canvas dimensions, masters, assignments, local changes and per-page
 footer choices are included too.
@@ -186,7 +186,7 @@ Explicitly assigning a new theme releases an imported theme snapshot.
 
 Local video backgrounds and video objects travel with the design. Stream URLs and
 font files are not embedded. Fonts still need to be available on the receiving computer. Other
-OpenLyrics applications may ignore or reject the OpenLP+ extension. PPTX exports preserve editable slide text, text boxes, shapes and embedded images
+OpenLyrics applications may ignore or reject the Opal Presenter extension. PPTX exports preserve editable slide text, text boxes, shapes and embedded images
 in their saved layer order, including geometry, opacity, rotation, flips, outlines
 and shadows. Static backgrounds are composited at output resolution to retain
 image opacity and gradients. Presentation applications can differ in their
@@ -200,5 +200,5 @@ Choose no folder, an existing folder, or a new folder. Each rendered slide is
 captured at the current output resolution, including its theme, custom objects,
 effects and footer visibility. Images use the custom item's title, followed by
 ``(2)``, ``(3)`` and so on for subsequent slides. Numbering restarts for each item.
-These images are stored permanently in OpenLP+'s data folder; repeated saves do
+These images are stored permanently in Opal Presenter's data folder; repeated saves do
 not overwrite existing images. The original custom slides remain editable.

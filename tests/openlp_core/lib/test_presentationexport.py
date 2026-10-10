@@ -519,14 +519,14 @@ def test_presentation_metadata_identifies_openlp(tmp_path):
     _write_odp([page], odp, 1024, 768)
     properties = Presentation(str(pptx)).core_properties
     assert properties.title == 'Sunday'
-    assert properties.comments == 'Exported from OpenLP+'
-    assert properties.author == 'OpenLP+'
-    assert properties.last_modified_by == 'OpenLP+'
+    assert properties.comments == 'Exported from Opal Presenter'
+    assert properties.author == 'Opal Presenter'
+    assert properties.last_modified_by == 'Opal Presenter'
     with ZipFile(pptx) as package:
         assert b'generated using python-pptx' not in package.read('docProps/core.xml')
     with ZipFile(odp) as package:
         metadata = package.read('meta.xml')
-        assert b'Exported from OpenLP+' in metadata
+        assert b'Exported from Opal Presenter' in metadata
 
 
 def test_presentation_filename_matches_saved_service():

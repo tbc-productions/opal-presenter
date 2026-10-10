@@ -54,7 +54,7 @@ def test_about_form_build_number(mocked_get_version, mock_settings):
     about_form = AboutForm(None)
 
     # THEN: The build number should be in the text
-    assert 'OpenLP+ 3.1.5 build 3000' in about_form.about_text_edit.toPlainText(), \
+    assert 'Opal Presenter 3.1.5 build 3000' in about_form.about_text_edit.toPlainText(), \
         "The build number should be set correctly"
 
 

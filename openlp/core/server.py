@@ -40,7 +40,7 @@ class Server(QtCore.QObject, LogMixin):
         self.out_socket = QtNetwork.QLocalSocket()
         self.server: Optional[QtNetwork.QLocalServer] = None
         self.file_name: Optional[Path | str] = None
-        self.id = 'OpenLPDual'
+        self.id = 'net.tbcproductions.OpalPresenter'
         self._ms_waited = 0
 
     def is_another_instance_running(self) -> bool:
@@ -57,8 +57,8 @@ class Server(QtCore.QObject, LogMixin):
         Post the file name to the over instance
         :param args: The passed arguments including maybe a file name
         """
-        if 'OpenLP' in args:
-            args.remove('OpenLP')
+        if 'Opal Presenter' in args:
+            args.remove('Opal Presenter')
         # Yes, there is.
         if len(args):
             self.out_stream = QtCore.QTextStream(self.out_socket)
@@ -112,7 +112,7 @@ class Server(QtCore.QObject, LogMixin):
         if service_manager:
             service_manager.load_service(Path(self.file_name))
         elif self._ms_waited > MAX_WAIT_TIME_MS:
-            self.log_error('OpenLP+ is taking too long to start up, abandoning file load')
+            self.log_error('Opal Presenter is taking too long to start up, abandoning file load')
         else:
             self.log_info('Service manager is not loaded yet, waiting 500ms')
             self._ms_waited += 500

@@ -11,7 +11,8 @@ from PySide6 import QtCore
 from openlp.core.common import clean_filename
 from openlp.core.lib.designmedia import media_references, restore_media, valid_media_source, write_media
 from openlp.core.common.registry import Registry
-from openlp.core.lib.itemexport import write_xml_package, xml_design
+from openlp.core.lib.itemexport import write_xml_package, xml_design, export_archive
+from openlp.core.lib.nativefile import read_manifest, SYNC_NAMESPACE, LEGACY_SYNC_NAMESPACE
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.widgets.views import remove_local_row
 from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError, friendly_name
@@ -23,9 +24,17 @@ FILE_TYPES = {
     'images': {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.webp', '.svg'},
     'presentations': {'.ppt', '.pptx', '.odp', '.pdf', '.key'},
     'media': {'.mp3', '.mp4', '.wav', '.ogg', '.ogv', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.m4a', '.flac', '.wmv'},
-    'themes': {'.otz'},
+    'themes': {'.opal-theme', '.otz'},
 }
-THEME_TAG = '{https://openlp.org/ns/library-sync/1}theme'
+THEME_TAG = '{' + SYNC_NAMESPACE + '}theme'
+LEGACY_THEME_TAG = '{' + LEGACY_SYNC_NAMESPACE + '}theme'
+
+
+def package_manifest(archive, file_type, required=False):
+    try:
+        return read_manifest(archive, file_type, required)
+    except (ValueError, KeyError, zipfile.BadZipFile) as error:
+        raise SyncError(str(error)) from error
 
 
 def name_key(name):
@@ -66,7 +75,7 @@ def item_category(item):
     suffix = Path(item.name).suffix.lower()
     if item.category in CATEGORIES:
         if (item.category in FILE_TYPES and suffix in FILE_TYPES[item.category]
-                or item.category in ('songs', 'custom') and suffix in ('.xml', '.osz')):
+                or item.category in ('songs', 'custom') and suffix in ('.xml', '.osz', '.opal-song' if item.category == 'songs' else '.opal-slides')):
             return item.category
         return ''
     return next((category for category, extensions in FILE_TYPES.items() if suffix in extensions), '')
@@ -89,21 +98,12 @@ def safe_xml(data):
 
 
 def read_xml_item(path):
-    """Bound archive expansion before the existing verified design-media importer runs."""
-    if path.suffix.lower() != '.osz':
-        if path.stat().st_size > MAX_XML:
-            raise SyncError('The cloud XML is too large.')
-        return safe_xml(path.read_bytes())
-    with zipfile.ZipFile(path) as archive:
-        members = archive.infolist()
-        if len(members) > 2000 or sum(info.file_size for info in members) > 1024 * 1024 * 1024:
-            raise SyncError('The cloud package expands beyond the supported size.')
-        xml_files = [info for info in members if info.filename.lower().endswith('.xml')]
-        if len(xml_files) != 1 or xml_files[0].file_size > MAX_XML:
-            raise SyncError('The cloud package must contain one small XML file.')
-        root, text = safe_xml(archive.read(xml_files[0]))
-        restore_media(xml_design(text), archive=archive)
-        return root, text
+    from openlp.core.lib.itemexport import read_xml_package
+    kind = 'song' if path.suffix.lower() == '.opal-song' else 'slides' if path.suffix.lower() == '.opal-slides' else None
+    try:
+        return read_xml_package(path, kind)
+    except (ValueError, KeyError, zipfile.BadZipFile) as error:
+        raise SyncError(str(error)) from error
 
 
 def read_theme_item(path):
@@ -113,7 +113,9 @@ def read_theme_item(path):
         members = archive.infolist()
         if len(members) > 2000 or sum(info.file_size for info in members) > 1024 * 1024 * 1024:
             raise SyncError('The cloud theme expands beyond the supported size.')
-        descriptors = [info for info in members if info.filename.lower().endswith('.json')]
+        manifest = package_manifest(archive, 'theme', required=path.suffix.lower() == '.opal-theme')
+        descriptors = ([archive.getinfo(manifest['payload'])] if manifest else
+                       [info for info in members if info.filename.lower().endswith('.json')])
         if len(descriptors) != 1 or descriptors[0].file_size > MAX_XML:
             raise SyncError('The cloud theme must contain one small JSON descriptor.')
         data = json.loads(archive.read(descriptors[0]))
@@ -142,7 +144,7 @@ def prepare_upload(mime, directory):
         for position, name in enumerate(mime.names):
             theme = mime.manager.get_theme_data(name)
             descriptor = theme.export_theme(mime.manager.theme_path)
-            result.append(('themes', directory / str(position) / (safe_name(name) + '.otz'), descriptor, name))
+            result.append(('themes', directory / str(position) / (safe_name(name) + '.opal-theme'), descriptor, name))
         return result
     library = mime.library
     category = library.plugin.name
@@ -178,7 +180,7 @@ def prepare_upload(mime, directory):
             service = library.build_service_item(item=row)
             custom.set_design(package_design(service.slide_design, service.get_theme_data(include_design=False)))
             xml = custom.extract_xml(keep_title_and_credit=True)
-        suffix = '.osz' if media_references(xml_design(xml)) else '.xml'
+        suffix = '.opal-song' if category == 'songs' else '.opal-slides'
         if record.theme_name:
             root, _ = safe_xml(xml.encode('utf-8') if isinstance(xml, str) else xml)
             etree.SubElement(root, THEME_TAG).text = record.theme_name
@@ -192,8 +194,8 @@ def write_upload(source, contents):
     if contents is None:
         return
     source.parent.mkdir(parents=True, exist_ok=True)
-    if source.suffix.lower() == '.otz':
-        with zipfile.ZipFile(source, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+    if source.suffix.lower() == '.opal-theme':
+        with export_archive(source, 'theme', f'{source.stem}/{source.stem}.json') as archive:
             archive.writestr(f'{source.stem}/{source.stem}.json', contents)
             write_media(archive, json.loads(contents))
         return
@@ -268,7 +270,7 @@ def import_item(item, path, plugin, target=None, prepared=None, overwrite=None):
             record = existing if overwrite is not None else CustomSlide()
             record.title = item.title or root.findtext('title') or item.display_name
             record.credits = root.findtext('credit') or ''
-            record.theme_name = root.findtext(THEME_TAG) or ''
+            record.theme_name = root.findtext(THEME_TAG) or root.findtext(LEGACY_THEME_TAG) or ''
             record.text = custom.extract_xml().decode('utf-8')
             if not plugin.db_manager.save_object(record):
                 raise SyncError('The cloud item could not be saved in the local Library.')

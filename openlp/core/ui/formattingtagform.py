@@ -21,6 +21,7 @@
 """Browse built-in formatting styles and edit custom styles stored as JSON in settings."""
 import html
 import json
+from pathlib import Path
 import re
 
 from PySide6 import QtCore, QtGui
@@ -448,13 +449,23 @@ class FormattingTagForm(FluentWindow, Ui_FormattingTagDialog, FormattingTagContr
             self,
             translate('OpenLP.FormattingTagForm', 'Export formatting styles'),
             last_export_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Styles (*.json)'))
+            translate('OpenLP.FormattingTagForm', 'Opal Presenter Formatting Styles (*.opal-styles)'))
         if not export_file_path:
             return
-        export_file_path = export_file_path.with_suffix('.json')
+        export_file_path = export_file_path.with_suffix('.opal-styles')
         try:
-            with export_file_path.open('w', encoding='utf-8') as exported_tags_file:
-                json.dump(self.services.custom_tags, exported_tags_file, indent=2)
+            from tempfile import NamedTemporaryFile
+            from openlp.core.lib.nativefile import document
+            temporary_path = None
+            try:
+                with NamedTemporaryFile(mode='w', encoding='utf-8', dir=export_file_path.parent,
+                                        delete=False) as exported_tags_file:
+                    temporary_path = Path(exported_tags_file.name)
+                    json.dump(document('styles', self.services.custom_tags), exported_tags_file, indent=2)
+                temporary_path.replace(export_file_path)
+            finally:
+                if temporary_path:
+                    temporary_path.unlink(missing_ok=True)
         except OSError as ose:
             QtWidgets.QMessageBox.critical(
                 self,
@@ -464,7 +475,7 @@ class FormattingTagForm(FluentWindow, Ui_FormattingTagDialog, FormattingTagContr
             return
         settings.setValue('formattingTags/last directory export', export_file_path.parent)
 
-    def on_import_clicked(self):
+    def on_import_clicked(self, checked=False, import_file_path=None):
         """
         Import custom formatting tags from a JSON file.
         """
@@ -473,16 +484,20 @@ class FormattingTagForm(FluentWindow, Ui_FormattingTagDialog, FormattingTagContr
             last_import_directory = settings.value('formattingTags/last directory import')
         except KeyError:
             last_import_directory = None
-        import_file_path, filter_used = FileDialog.getOpenFileName(
-            self,
-            translate('OpenLP.FormattingTagForm', 'Import formatting styles'),
-            last_import_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Styles (*.json)'))
+        if import_file_path is None:
+            import_file_path, filter_used = FileDialog.getOpenFileName(
+                self,
+                translate('OpenLP.FormattingTagForm', 'Import formatting styles'),
+                last_import_directory,
+                translate('OpenLP.FormattingTagForm', 'Opal Presenter and OpenLP Formatting Styles (*.opal-styles *.json)'))
         if import_file_path is None:
             return
         try:
             with import_file_path.open('r', encoding='utf-8') as imported_tags_file:
                 imported_tags = json.load(imported_tags_file)
+            if import_file_path.suffix.lower() == '.opal-styles' or isinstance(imported_tags, dict):
+                from openlp.core.lib.nativefile import read_document
+                imported_tags = read_document(imported_tags, 'styles')
         except (OSError, ValueError, TypeError):
             QtWidgets.QMessageBox.critical(
                 self,

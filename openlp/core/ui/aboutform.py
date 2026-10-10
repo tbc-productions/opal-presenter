@@ -63,7 +63,7 @@ class AboutForm(QtWidgets.QDialog):
 
         # Mirror the first-time wizard visual style: image on the left, content on the right.
         self.side_image_label = QtWidgets.QLabel(self)
-        self.side_image_label.setPixmap(QtGui.QPixmap(':/wizards/openlp-osx-wizard.png'))
+        self.side_image_label.setPixmap(QtGui.QPixmap(':/wizards/opal-presenter-about.png'))
         self.side_image_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.side_image_label.setMargin(8)
         self.side_image_label.setObjectName('side_image_label')
@@ -125,12 +125,12 @@ class AboutForm(QtWidgets.QDialog):
 
         :param self: The QDialog object to translate
         """
-        self.setWindowTitle('{about} OpenLP+'.format(about=UiStrings().About))
+        self.setWindowTitle('{about} Opal Presenter'.format(about=UiStrings().About))
         self.about_text_edit.setHtml(
             translate('OpenLP.AboutForm',
-                      '<p>OpenLP+ {{version}}{{revision}} - Open Source Lyrics Projection</p>'
-                      '<p>OpenLP+ is a fork of OpenLP.</p>'
-                      '<p>OpenLP+ project: <a href="https://git.tbcproductions.net/tbcproductions/openlp-plus">https://git.tbcproductions.net/tbcproductions/openlp-plus</a></p>'
+                      '<p>Opal Presenter {{version}}{{revision}} - Open Source Lyrics Projection</p>'
+                      '<p>Opal Presenter is a fork of OpenLP.</p>'
+                      '<p>Opal Presenter project: <a href="https://git.tbcproductions.net/tbcproductions/opal-presenter">https://git.tbcproductions.net/tbcproductions/opal-presenter</a></p>'
                       '<hr>'
                       '<p>Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors</p>'
                       '<p>OpenLP project: '
@@ -146,10 +146,10 @@ class AboutForm(QtWidgets.QDialog):
                       'https://www.gnu.org/licenses/</a>.</p>').format(crs='\xa9', yr=datetime.date.today().year))
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.about_tab), UiStrings().About)
         developers = translate('OpenLP.AboutForm',
-                       'OpenLP+ is maintained by volunteers all over the world in '
+                       'Opal Presenter is maintained by volunteers all over the world in '
                        'their spare time. If you would like to see this project succeed, please consider '
                        'contributing to it by clicking the "contribute" button below.')
-        built_with = translate('OpenLP.AboutForm', 'OpenLP+ would not be possible without '
+        built_with = translate('OpenLP.AboutForm', 'Opal Presenter would not be possible without '
                        'the following software '
                                'libraries:')
         build_tech = ('<ul>'

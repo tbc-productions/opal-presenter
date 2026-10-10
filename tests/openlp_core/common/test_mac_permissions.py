@@ -12,10 +12,10 @@ from openlp.core.common.mac_permissions import (
 
 
 def test_running_app_bundle_uses_the_current_executable(tmp_path):
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     (bundle / 'Contents' / 'MacOS').mkdir(parents=True)
     (bundle / 'Contents' / 'Info.plist').touch()
-    executable = bundle / 'Contents' / 'MacOS' / 'OpenLP+'
+    executable = bundle / 'Contents' / 'MacOS' / 'Opal Presenter'
 
     with patch('openlp.core.common.mac_permissions.sys.executable', str(executable)):
         assert _running_app_bundle() == bundle
@@ -64,10 +64,10 @@ def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
 
 
 def test_packaged_launch_uses_its_own_app(tmp_path):
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     with patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=bundle), \
             patch('openlp.core.common.mac_permissions._launching_app_bundle') as find_launcher:
-        assert _accessibility_drag_target() == (bundle, 'OpenLP+')
+        assert _accessibility_drag_target() == (bundle, 'Opal Presenter')
     find_launcher.assert_not_called()
 
 
@@ -96,7 +96,7 @@ def test_native_accessibility_request_sets_prompt_option_and_releases_dictionary
 def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     resources = bundle / 'Contents' / 'Resources'
     resources.mkdir(parents=True)
     with (bundle / 'Contents' / 'Info.plist').open('wb') as info_file:
@@ -104,7 +104,7 @@ def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     sample_icon = QtGui.QPixmap(64, 64)
     sample_icon.fill(QtCore.Qt.GlobalColor.red)
     sample_icon.save(str(resources / 'sample.png'))
-    icon = _DraggableFileIcon(bundle, 'OpenLP+.app', None)
+    icon = _DraggableFileIcon(bundle, 'Opal Presenter.app', None)
     assert icon.pixmap().toImage().pixelColor(32, 32) == QtGui.QColor('red')
     icon._drag_start_pos = QtCore.QPoint(0, 0)
     event = MagicMock()
@@ -194,7 +194,7 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     parent = QtWidgets.QWidget()
     parent.resize(800, 700)
     parent.show()
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     bundle.mkdir()
     interpreter = tmp_path / 'python3.14'
     interpreter.touch()
@@ -213,7 +213,7 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
             patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
             patch('openlp.core.common.mac_permissions._accessibility_drag_target',
-                  side_effect=[(bundle, 'OpenLP+.app'), (interpreter, 'Python 3.14')]):
+                  side_effect=[(bundle, 'Opal Presenter.app'), (interpreter, 'Python 3.14')]):
         QtCore.QTimer.singleShot(0, inspect_dialog)
         request_presentation_permissions(parent)
         QtCore.QTimer.singleShot(0, inspect_dialog)

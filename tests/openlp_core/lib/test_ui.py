@@ -187,7 +187,7 @@ def test_create_action(mocked_log):
     dialog = QtWidgets.QDialog()
 
     # WHEN: We create an action with some properties
-    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/openlp-osx-wizard.png',
+    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/opal-presenter-about.png',
                            tooltip='my tooltip', statustip='my statustip', test=1)
 
     # THEN: These properties should be set

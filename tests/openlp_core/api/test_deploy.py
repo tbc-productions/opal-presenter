@@ -26,8 +26,9 @@ from openlp.core.api.deploy import REMOTE_URL, deploy_zipfile, download_version_
     get_installed_version
 
 
-CONFIG_FILE = '{"latest": {"version": "0.1", "filename": "remote-0.1.zip", "sha256": "", "size": 854039}}'
-CONFIG_DICT = json.loads(CONFIG_FILE)
+CONFIG_FILE = '{"tag_name":"0.1","draft":false,"prerelease":false,"assets":[{"name":"opal-presenter-web-remote.zip","size":854039,"browser_download_url":"https://git.tbcproductions.net/tbcproductions/opal-presenter-web-remote/releases/download/0.1/opal-presenter-web-remote.zip"}]}'
+CONFIG_DICT = {'latest': {'version': '0.1', 'filename': 'opal-presenter-web-remote.zip', 'size': 854039,
+                         'url': json.loads(CONFIG_FILE)['assets'][0]['browser_download_url']}}
 
 
 @patch('openlp.core.api.deploy.ZipFile')
@@ -37,7 +38,7 @@ def test_deploy_zipfile(MockZipFile):
     """
     # GIVEN: A new downloaded zip file
     mocked_zipfile = MagicMock()
-    MockZipFile.return_value = mocked_zipfile
+    MockZipFile.return_value.__enter__.return_value = mocked_zipfile
     root_path = Path('/') / 'tmp' / 'remotes'
 
     # WHEN: deploy_zipfile() is called
@@ -159,7 +160,7 @@ def test_download_and_install(mocked_download_version_info, mocked_download_file
     # THEN: The correct things should have been done
     assert result == CONFIG_DICT['latest']['version'], 'The correct version is returned'
     mocked_download_file.assert_called_once_with(
-        mocked_callback, REMOTE_URL + '0.1/remote-0.1.zip', mocked_remote_zip, session=None
+        mocked_callback, CONFIG_DICT['latest']['url'], mocked_remote_zip, session=None
     )
     mocked_deploy_zipfile.assert_called_once_with(mocked_remote_path, 'remote.zip')
 

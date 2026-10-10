@@ -36,14 +36,14 @@ def test_profile_allowlist_excludes_tokens_and_custom_endpoints(profile):
 def test_shared_connection_conceals_client_details_and_excludes_tokens(profile, tmp_path):
     profile['refresh_token'] = 'private-user-token'
     profile['installed']['access_token'] = 'private-access-token'
-    path = tmp_path / 'church.librarysync.json'
+    path = tmp_path / 'church.opal-connection'
     write_profile(path, profile)
     exported = path.read_text()
     assert 'church.apps.googleusercontent.com' not in exported
     assert 'desktop-client' not in exported
     assert read_profile(path) == validate_profile(profile)
     value = json.loads(exported)
-    unpacked = zlib.decompress(base64.b64decode(value['data'])).decode()
+    unpacked = zlib.decompress(base64.b64decode(value['data']['data'])).decode()
     assert 'private' not in unpacked
 
 

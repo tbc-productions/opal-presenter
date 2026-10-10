@@ -337,7 +337,7 @@ def test_long_content_message_has_bounded_width_and_wrapped_text(qapp):
                              'Are you sure you want to re-run the First Time Wizard?',
                              fluent.QMessageBox.StandardButton.Yes | fluent.QMessageBox.StandardButton.No, parent)
     box.setInformativeText(
-        'Re-running this wizard may make changes to your current OpenLP+ configuration and possibly '
+        'Re-running this wizard may make changes to your current Opal Presenter configuration and possibly '
         'add songs to your existing songs list and change your default theme.')
     box.setDefaultButton(box.StandardButton.No)
     box.setAnimationEnabled(False)
@@ -463,13 +463,13 @@ def test_plain_horizontal_dialog_puts_heading_above_content(qapp, qtbot):
     parent.resize(900, 600)
     parent.show()
     dialog = fluent.QDialog(parent)
-    dialog.setWindowTitle('About OpenLP+')
+    dialog.setWindowTitle('About Opal Presenter')
     layout = QtWidgets.QHBoxLayout(dialog)
     body = fluent.QLabel('About text')
     layout.addWidget(body)
     dialog.setAnimationEnabled(False)
     dialog.open()
-    assert dialog._heading.text() == 'About OpenLP+'
+    assert dialog._heading.text() == 'About Opal Presenter'
     assert dialog._heading.mapTo(dialog, QtCore.QPoint()).y() < body.mapTo(dialog, QtCore.QPoint()).y()
     dialog.setWindowTitle('Updated title')
     assert dialog._heading.text() == 'Updated title'

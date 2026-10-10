@@ -337,8 +337,8 @@ class ConnectionWizard(QtWidgets.QWizard):
             profile = self.connection_profile()
             if self.export_check.isChecked():
                 path, _ = FileDialog.getSaveFileName(
-                    self, tr('Export Library Sync connection'), Path('organisation-library.librarysync.json'),
-                    tr('Connection file (*.json)'))
+                    self, tr('Export Library Sync connection'), Path('organisation-library.opal-connection'),
+                    tr('Connection file (*.opal-connection)'))
                 if not path:
                     return False
                 write_profile(path, profile)

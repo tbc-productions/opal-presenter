@@ -895,8 +895,8 @@ def test_single_click_preview_false(settings: Settings):
 
 
 @patch('openlp.core.ui.servicemanager.zipfile')
-@patch('openlp.core.ui.servicemanager.shutil')
-def test_save_file_raises_permission_error(mocked_shutil: MagicMock, mocked_zipfile: MagicMock,
+@patch('openlp.core.ui.servicemanager.Path')
+def test_save_file_raises_permission_error(mocked_path: MagicMock, mocked_zipfile: MagicMock,
                                            settings: Settings):
     """
     Test that when a PermissionError is raised when trying to save a file, it is handled correctly
@@ -906,12 +906,13 @@ def test_save_file_raises_permission_error(mocked_shutil: MagicMock, mocked_zipf
     Registry().register('main_window', mocked_main_window)
     service_manager = ServiceManager(None)
     service_manager._service_path = MagicMock()
+    service_manager._service_path.suffix.lower.return_value = '.opal-service'
     service_manager._save_lite = False
     service_manager.service_items = []
     service_manager.service_theme = 'Default'
     service_manager.service_manager_list = MagicMock()
     mocked_zipfile.ZipFile.return_value = MagicMock()
-    mocked_shutil.move.side_effect = PermissionError
+    mocked_path.return_value.replace.side_effect = PermissionError
 
     # WHEN: The service is saved and a PermissionError is raised
     with patch.object(service_manager, 'save_file_as') as mocked_save_file_as:
@@ -944,6 +945,7 @@ def test_save_file_large_file(mocked_len: MagicMock, mocked_shutil: MagicMock, m
     Registry().register('settings', MagicMock())
     service_manager = ServiceManager(None)
     service_manager._service_path = MagicMock()
+    service_manager._service_path.suffix.lower.return_value = '.opal-service'
     service_manager._save_lite = False
     service_manager.service_items = []
     service_manager.service_theme = 'Default'
@@ -952,7 +954,8 @@ def test_save_file_large_file(mocked_len: MagicMock, mocked_shutil: MagicMock, m
     mocked_len.return_value = 10000000000000
 
     # WHEN: The service is saved and no error is raised
-    with patch.object(service_manager, 'save_file_as') as mocked_save_file_as:
+    with patch.object(service_manager, 'save_file_as') as mocked_save_file_as, \
+            patch('openlp.core.ui.servicemanager.Path'):
         mocked_save_file_as.return_value = False
         result = service_manager.save_file()
 
@@ -2227,8 +2230,12 @@ def test_load_file_extract_and_fix(MockPath: MagicMock, MockZipFile: MagicMock, 
         MagicMock(compress_size=156, filename='7213e6a21ae0a45ceef509a2d107d0bd7d8a4aff2cef9bc94cc3ebd2a40ab352/.jpg'),
         MagicMock(compress_size=149, filename='df665978e046ac45e0e638dd85f533d52cce2e6d4de33e6628f9b4c4ee57b09f/.jpg'),
     ]
+    mocked_zip_file.namelist.return_value = [info.filename for info in mocked_zip_file.infolist.return_value]
+    for info in mocked_zip_file.infolist.return_value:
+        info.external_attr = 0
     mocked_zip_file.open.return_value.__enter__.return_value.read.return_value = service_json
     MockZipFile.return_value.__enter__.return_value = mocked_zip_file
+    MockPath.return_value.suffix.lower.return_value = '.osz'
     service_manager = ServiceManager(None)
 
     _add_toolbar_action = partial(_create_mock_action, service_manager)
@@ -2252,8 +2259,8 @@ def test_load_file_extract_and_fix(MockPath: MagicMock, MockZipFile: MagicMock, 
     service_manager.new_file.assert_called_once_with()
     service_manager.process_service_items.assert_called_once_with(expected_service)
     service_manager.set_file_name.assert_called_once()
-    service_manager.set_modified.assert_called_once_with(False)
-    service_manager.save_file.assert_called_once_with()
+    assert service_manager.set_modified.call_args_list == [call(False), call(True)]
+    service_manager.save_file.assert_not_called()
 
 
 def test_bootstrap_initialise(service_manager: ServiceManager):

@@ -163,7 +163,7 @@ def test_save(mocked_information, api_tab, registry, settings):
 
     # THEN: The text should have been changed to the default value
     mocked_information.assert_called_once_with(api_tab, 'Restart Required',
-                                               'This change will only take effect once OpenLP+ has been restarted.')
+                                               'This change will only take effect once Opal Presenter has been restarted.')
     mocked_settings_form.register_post_process.assert_called_once_with('remotes_config_updated')
     assert settings.value('api/twelve hour') is True
     assert settings.value('api/thumbnails') is True

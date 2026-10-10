@@ -39,6 +39,7 @@ import logging
 import json
 from lxml import etree, objectify
 from openlp.core.lib.slidedesign import normalise_design
+from openlp.core.lib.nativefile import DESIGN_NAMESPACE, LEGACY_DESIGN_NAMESPACE, design_element
 
 
 log = logging.getLogger(__name__)
@@ -65,17 +66,18 @@ class CustomXML(object):
 
     def get_design(self):
         """Read the optional portable design extension; older XML inherits its theme."""
-        element = self.custom_xml.find('{https://openlp.org/ns/slide-design/1}design')
+        element = design_element(self.custom_xml)
         return normalise_design(element.text if element is not None else None)
 
     def set_design(self, value):
-        tag = '{https://openlp.org/ns/slide-design/1}design'
-        element = self.custom_xml.find(tag)
-        if element is not None:
-            self.custom_xml.remove(element)
+        tag = '{' + DESIGN_NAMESPACE + '}design'
+        for namespace in (DESIGN_NAMESPACE, LEGACY_DESIGN_NAMESPACE):
+            element = self.custom_xml.find('{' + namespace + '}design')
+            if element is not None:
+                self.custom_xml.remove(element)
         design = normalise_design(value)
         if design:
-            element = etree.Element(tag, nsmap={'olp': 'https://openlp.org/ns/slide-design/1'})
+            element = etree.Element(tag, nsmap={'opal': DESIGN_NAMESPACE})
             element.text = json.dumps(design)
             self.custom_xml.append(element)
 

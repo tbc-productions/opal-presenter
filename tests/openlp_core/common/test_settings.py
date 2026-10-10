@@ -39,6 +39,16 @@ from openlp.core.ui.style import UiThemes
 from tests.utils.constants import RESOURCE_PATH
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def restore_schema_version():
+    original = modsettings.__version__
+    yield
+    modsettings.__version__ = original
+
+
 def test_media_players_conv():
     """Test the media players conversion function"""
     # GIVEN: A list of media players
@@ -444,7 +454,7 @@ def test_settings_zip_export_import(settings, monkeypatch):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir_path = Path(tmp_dir)
             monkeypatch.setattr(AppLocation, 'get_data_path', lambda: tmp_dir_path / 'data')
-            zip_path = tmp_dir_path / 'backup.zip'
+            zip_path = tmp_dir_path / 'backup.opal-settings'
             logo_path = tmp_dir_path / 'my_logo.png'
             # Create a dummy logo file
             logo_path.write_text("dummy image content")
@@ -463,12 +473,13 @@ def test_settings_zip_export_import(settings, monkeypatch):
             import zipfile
             with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
                 namelist = zip_ref.namelist()
-                assert 'openlp.conf' in namelist
-                assert 'my_logo.png' in namelist
+                assert 'manifest.json' in namelist
+                assert 'settings.ini' in namelist
+                assert 'logo/my_logo.png' in namelist
 
             # GIVEN: Clear current settings and import from ZIP
             settings.setValue('core/ccli number', '0')
-            settings.setValue('core/logo file', Path(':/graphics/openlp-logo-background.svg'))
+            settings.setValue('core/logo file', Path(':/graphics/opal-presenter-background.png'))
             settings.sync()
 
             # WHEN: Importing settings from the ZIP
@@ -478,7 +489,8 @@ def test_settings_zip_export_import(settings, monkeypatch):
             assert success is True
             assert settings.value('core/ccli number') == '12345'
             restored_logo_path = settings.value('core/logo file')
-            assert restored_logo_path.name == 'my_logo.png'
+            assert restored_logo_path.suffix == '.png'
+            assert restored_logo_path.read_bytes() == logo_path.read_bytes()
             assert restored_logo_path.exists()
     finally:
         modsettings.__version__ = original_version
@@ -571,3 +583,28 @@ def test_service_colours_upgrade(settings, monkeypatch):
     assert all(key not in Settings.__default_settings__ for key, _, _ in Settings.__setting_upgrade_8__)
     assert settings.value('servicemanager/service theme') == 'Sunday'
     assert settings.value('advanced/delete service item confirmation') is False
+
+
+def test_legacy_settings_import_preserves_profile(settings, tmp_path):
+    source = tmp_path / 'legacy.conf'
+    source.write_text('[SettingsImport]\ntype=OpenLP_settings_export\n[settings]\nversion=8\n'
+                      '[advanced]\ndata%20path=/old/application/profile\n[core]\nccli%20number=12345\n')
+    original = source.read_bytes()
+    settings.setValue('advanced/data path', tmp_path / 'opal-profile')
+    assert settings.import_settings(source)
+    assert settings.value('advanced/data path') == tmp_path / 'opal-profile'
+    assert settings.value('core/ccli number') == '12345'
+    assert source.read_bytes() == original
+
+
+def test_invalid_native_settings_do_not_change_values(settings, tmp_path):
+    import zipfile
+    from openlp.core.lib.nativefile import write_manifest
+    source = tmp_path / 'invalid.opal-settings'
+    settings.setValue('core/ccli number', 'before')
+    with zipfile.ZipFile(source, 'w') as archive:
+        write_manifest(archive, 'song', 'settings.ini')
+        archive.writestr('settings.ini', '[SettingsImport]\ntype=OpalPresenter_settings_export\n'
+                         '[settings]\nversion=8\n[core]\nccli%20number=after\n')
+    assert not settings.import_settings(source)
+    assert settings.value('core/ccli number') == 'before'

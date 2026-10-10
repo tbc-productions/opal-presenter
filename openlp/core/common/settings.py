@@ -251,7 +251,8 @@ def check_for_variant_migration(settings):
             return settings
         elif is_win():
             # search through OpenLP windows registry keys for variants and do a search and replace.
-            key_val = r'SOFTWARE\OpenLP\OpenLP'
+            key_val = r'SOFTWARE\{org}\{app}'.format(
+                org=QtCore.QCoreApplication.organizationName(), app=QtCore.QCoreApplication.applicationName())
             for key in _wingreg_subkeys(key_val):
                 subkey = '{main_key}\\{sub_key}'.format(main_key=key_val, sub_key=key)
                 for value in _wingreg_subvalues(subkey):
@@ -436,9 +437,9 @@ class Settings(QtCore.QSettings):
         'core/screens': '{}',
         'core/layout startup pending': False,
         'core/screen blank': False,
-        'core/logo background color': '#ffffff',
-        'core/logo file': Path(':/graphics/openlp-logo-background.svg'),
-        'core/logo fit': 'contain',
+        'core/logo background color': '#000000',
+        'core/logo file': Path(':/graphics/opal-presenter-background.png'),
+        'core/logo fit': 'cover',
         'core/logo hide on startup': False,
         'core/songselect password': '',
         'core/songselect username': '',
@@ -519,7 +520,7 @@ class Settings(QtCore.QSettings):
         'servicemanager/service theme': None,
         'SettingsImport/file_date_created': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         'SettingsImport/Make_Changes': 'At_Own_RISK',
-        'SettingsImport/type': 'OpenLP_settings_export',
+        'SettingsImport/type': 'OpalPresenter_settings_export',
         'SettingsImport/version': '',
         'slide_designer/status': PluginStatus.Active,
         'songs/status': PluginStatus.Inactive,
@@ -796,6 +797,7 @@ class Settings(QtCore.QSettings):
             QtCore.QSettings.__init__(self, Settings.__file_path__, Settings.IniFormat)
         else:
             QtCore.QSettings.__init__(self, *args)
+        self.setFallbacksEnabled(False)
 
     def init_default_shortcuts(self):
         # Add shortcuts here so QKeySequence has a QApplication instance to use.
@@ -1115,211 +1117,139 @@ class Settings(QtCore.QSettings):
         return setting
 
     def export(self, dest_path):
-        """
-        Export the settings to file.
+        """Write the INI payload used inside an Opal settings backup."""
+        from tempfile import TemporaryDirectory, NamedTemporaryFile
 
-        :param Path dest_path: The file path to create the export file.
-        :return: Success
-        :rtype: bool
-        """
-        temp_path = Path(gettempdir(), 'openlp', 'exportConf.tmp')
-        # Delete old files if found.
-        if temp_path.exists():
-            temp_path.unlink()
-        if dest_path.exists():
-            dest_path.unlink()
-        self.remove('SettingsImport')
-        # Get the settings keys from both custom settings and default settings
-        keys = set(self.allKeys()) | set(Settings.__default_settings__.keys())
-        export_settings = QtCore.QSettings(str(temp_path), QtCore.QSettings.Format.IniFormat)
-        # Add a header section.
-        # This is to insure it's our conf file for import.
-        now = datetime.datetime.now()
-        # Write INI format using QSettings.
-        # Write our header.
-        export_settings.setValue('SettingsImport/Make_Changes', 'At_Own_RISK')
-        export_settings.setValue('SettingsImport/type', 'OpenLP_settings_export')
-        export_settings.setValue('SettingsImport/file_date_created', now.strftime("%Y-%m-%d %H:%M"))
-        # Write all the sections and keys.
-        for section_key in keys:
+        dest_path = Path(dest_path)
+        with TemporaryDirectory(prefix='opal-settings-') as directory:
+            payload = Path(directory) / 'settings.ini'
+            output = QtCore.QSettings(str(payload), QtCore.QSettings.Format.IniFormat)
+            output.setValue('SettingsImport/type', 'OpalPresenter_settings_export')
+            output.setValue('SettingsImport/file_date_created', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+            keys = set(self.allKeys()) | set(Settings.__default_settings__)
+            for key in sorted(keys):
+                if key.startswith('SettingsImport/'):
+                    continue
+                try:
+                    if self.contains(key):
+                        value = super().value(key)
+                    else:
+                        value = Settings.__default_settings__.get(key)
+                        if (is_serializable(value) or isinstance(value, dict)
+                                or isinstance(value, list) and value and is_serializable(value[0])):
+                            value = json.dumps(value, cls=OpenLPJSONEncoder)
+                    if value is not None:
+                        output.setValue(key, value)
+                except TypeError:
+                    log.exception('Invalid settings value omitted: %s', key)
+            output.sync()
+            if output.status() != QtCore.QSettings.Status.NoError:
+                raise OSError('Could not serialise the settings backup.')
+            text = ''.join(line.replace('%20', ' ') for line in payload.read_text(encoding='utf-8').splitlines(True)
+                           if '@Invalid()' not in line)
+            temporary_path = None
             try:
-                if self.contains(section_key):
-                    key_value = super().value(section_key)
-                else:
-                    key_value = Settings.__default_settings__.get(section_key)
-                    if is_serializable(key_value) or isinstance(key_value, dict) or \
-                            (isinstance(key_value, list) and key_value and is_serializable(key_value[0])):
-                        key_value = json.dumps(key_value, cls=OpenLPJSONEncoder)
-                
-                if key_value is not None:
-                    export_settings.setValue(section_key, key_value)
-            except TypeError:
-                log.exception(f'Key Value invalid and bypassed for {section_key}')
-        export_settings.sync()
-        # Temp CONF file has been written.  Blanks in keys are now '%20'.
-        # Read the  temp file and output the user's CONF file with blanks to
-        # make it more readable.
-        try:
-            with dest_path.open('w') as export_conf_file, temp_path.open('r') as temp_conf:
-                for file_record in temp_conf:
-                    # Get rid of any invalid entries.
-                    if file_record.find('@Invalid()') == -1:
-                        file_record = file_record.replace('%20', ' ')
-                        export_conf_file.write(file_record)
-        finally:
-            temp_path.unlink()
+                with NamedTemporaryFile(mode='w', encoding='utf-8', dir=dest_path.parent, delete=False) as temporary:
+                    temporary_path = Path(temporary.name)
+                    temporary.write(text)
+                temporary_path.replace(dest_path)
+            finally:
+                if temporary_path:
+                    temporary_path.unlink(missing_ok=True)
 
     def export_zip(self, dest_path):
-        """
-        Export settings and custom logo background image (if specified) as a ZIP file.
+        """Atomically export settings and the optional custom logo as a native package."""
+        from tempfile import TemporaryDirectory
+        from openlp.core.lib.itemexport import export_archive
 
-        :param Path dest_path: The ZIP file path to create.
-        :return: True on success, False on failure.
-        :rtype: bool
-        """
-        import zipfile
-        import shutil
-        temp_dir = Path(gettempdir(), 'openlp_export')
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        temp_dir.mkdir(parents=True, exist_ok=True)
         try:
-            temp_conf_path = temp_dir / 'openlp.conf'
-            self.export(temp_conf_path)
-
-            with zipfile.ZipFile(str(dest_path), 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                zip_file.write(str(temp_conf_path), 'openlp.conf')
-
-                # Check logo background image
-                logo_path = self.value('core/logo file')
-                if logo_path and isinstance(logo_path, Path) and not str(logo_path).startswith(':/'):
-                    if logo_path.exists() and logo_path.is_file():
-                        zip_file.write(str(logo_path), logo_path.name)
+            with TemporaryDirectory(prefix='opal-settings-') as directory:
+                payload = Path(directory) / 'settings.ini'
+                self.export(payload)
+                with export_archive(Path(dest_path), 'settings', 'settings.ini') as archive:
+                    archive.write(payload, 'settings.ini')
+                    logo = self.value('core/logo file')
+                    if isinstance(logo, Path) and logo.is_file():
+                        archive.write(logo, 'logo/' + logo.name)
             return True
-        except Exception:
-            log.exception("Error during settings export")
+        except (OSError, ValueError, RuntimeError):
+            log.exception('Could not export settings')
             return False
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def import_settings(self, import_file_path):
-        """
-        Import settings from a .conf or .zip file.
-        Returns True if successful, False otherwise.
-
-        :param Path import_file_path: The file path to import settings from.
-        :return: True on success, False on failure.
-        :rtype: bool
-        """
+        """Import native settings or legacy INI/ZIP backups without modifying the source."""
+        import hashlib
         import shutil
         import zipfile
+        from tempfile import TemporaryDirectory
         from openlp.core.common.applocation import AppLocation
-        
-        # 1. Create a temporary folder
-        temp_dir_path = Path(gettempdir(), 'openlp_import_temp')
-        if temp_dir_path.exists():
-            shutil.rmtree(temp_dir_path, ignore_errors=True)
-        temp_dir_path.mkdir(parents=True, exist_ok=True)
-        
-        logo_imported_path = None
-        
+        from openlp.core.lib.nativefile import read_manifest
+
+        import_file_path = Path(import_file_path)
         try:
-            # 2. Extract ZIP or copy CONF
-            if import_file_path.suffix.lower() == '.zip':
-                with zipfile.ZipFile(str(import_file_path), 'r') as zip_ref:
-                    zip_ref.extractall(str(temp_dir_path))
-                conf_files = list(temp_dir_path.glob('*.conf'))
-                if not conf_files:
-                    log.error("ZIP file does not contain a .conf settings file.")
-                    return False
-                temp_config_path = conf_files[0]
-                
-                # Check for logo file in zip
-                logo_filename = None
-                with zipfile.ZipFile(str(import_file_path), 'r') as zip_ref:
-                    for name in zip_ref.namelist():
-                        if not name.endswith('.conf'):
-                            logo_filename = name
-                            break
-                if logo_filename:
-                    extracted_logo = temp_dir_path / logo_filename
-                    if extracted_logo.exists() and extracted_logo.is_file():
-                        data_dir = AppLocation.get_data_path()
-                        data_dir.mkdir(parents=True, exist_ok=True)
-                        dest_logo = data_dir / logo_filename
-                        shutil.copyfile(extracted_logo, dest_logo)
-                        logo_imported_path = dest_logo
-            else:
-                temp_config_path = temp_dir_path / import_file_path.name
-                shutil.copyfile(import_file_path, temp_config_path)
-                
-            # 3. Load from the temp config path
-            import_settings = Settings(str(temp_config_path), QtCore.QSettings.Format.IniFormat)
-            
-            # If settings are from the future, we can't import.
-            if import_settings.from_future():
-                log.error("Cannot import settings from a newer version.")
-                return False
-                
-            # Upgrade settings to prepare the import.
-            if import_settings.version_mismatched():
-                import_settings.upgrade_settings()
-                
-            # Basic sanity check
-            if import_settings.value('SettingsImport/type') != 'OpenLP_settings_export':
-                log.error("Invalid OpenLP+ settings file.")
-                return False
-                
-            # Allowed setting sections: core sections and built-in plugins, plus any plugin
-            # currently registered with State() (may be empty during the First Time Wizard).
-            from openlp.core.state import State
-            setting_sections = [
-                'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager',
-                'themes', 'projector', 'players', 'displayTags', 'SettingsImport', 'crashreport',
-                'songs', 'bibles', 'presentations', 'images', 'media', 'custom',
-                'songusage', 'alerts', 'obs_studio', 'planningcenter',
-            ]
-            if hasattr(State(), 'modules'):
-                for plugin in State().list_plugins():
-                    if plugin.name not in setting_sections:
-                        setting_sections.append(plugin.name)
-            
-            # Import keys
-            import_keys = import_settings.allKeys()
-            for section_key in import_keys:
-                # Handle bad files
-                try:
-                    section, key = section_key.split('/')
-                except ValueError:
-                    section = 'unknown'
-                    key = ''
-                if section == 'General' or section == '%General':
-                    section = 'general'
-                    section_key = section + "/" + key
-                if section not in setting_sections:
-                    continue
-                    
-                if 'eneral' in section_key:
-                    section_key = section_key.lower()
-                try:
-                    value = import_settings.value(section_key)
-                except KeyError:
-                    value = None
-                if value is not None:
-                    self.setValue(section_key, value)
-            
-            # Set logo path if imported
-            if logo_imported_path:
-                self.setValue('core/logo file', logo_imported_path)
-                
-            now = datetime.datetime.now()
-            self.setValue('SettingsImport/file_imported', str(import_file_path))
-            self.setValue('SettingsImport/file_date_imported', now.strftime("%Y-%m-%d %H:%M"))
-            self.sync()
-            return True
-            
-        except Exception as e:
-            log.exception("Error during settings import")
+            with TemporaryDirectory(prefix='opal-settings-import-') as directory:
+                directory = Path(directory)
+                logo = None
+                native = import_file_path.suffix.lower() == '.opal-settings'
+                if native or import_file_path.suffix.lower() == '.zip':
+                    with zipfile.ZipFile(import_file_path) as archive:
+                        manifest = read_manifest(archive, 'settings', required=native)
+                        native = manifest is not None
+                        names = ([manifest['payload']] if manifest else
+                                 [name for name in archive.namelist() if name.lower().endswith('.conf')])
+                        if len(names) != 1:
+                            raise ValueError('The backup must contain exactly one settings payload.')
+                        archive.extractall(directory)
+                        payload = directory / names[0]
+                        images = [name for name in archive.namelist()
+                                  if Path(name).suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp')]
+                        if len(images) == 1:
+                            logo = directory / images[0]
+                else:
+                    payload = directory / 'settings.ini'
+                    shutil.copyfile(import_file_path, payload)
+                imported = Settings(str(payload), QtCore.QSettings.Format.IniFormat)
+                marker = QtCore.QSettings.value(imported, 'SettingsImport/type', None)
+                expected = ('OpalPresenter_settings_export',) if native else (
+                    'OpalPresenter_settings_export', 'OpenLP_settings_export')
+                if marker not in expected or imported.from_future():
+                    raise ValueError('The backup is invalid or uses a newer settings version.')
+                if imported.version_mismatched():
+                    imported.upgrade_settings()
+                from openlp.core.state import State
+                sections = {
+                    'core', 'advanced', 'user interface', 'shortcuts', 'servicemanager', 'themes', 'projector',
+                    'players', 'displayTags', 'SettingsImport', 'crashreport', 'songs', 'bibles', 'presentations',
+                    'images', 'media', 'custom', 'songusage', 'alerts', 'obs_studio', 'planningcenter',
+                    'librarysync', 'slide_designer', 'remote_interface', 'formattingTags'}
+                if hasattr(State(), 'modules'):
+                    sections.update(plugin.name for plugin in State().list_plugins())
+                values = {}
+                for key in imported.allKeys():
+                    section = key.split('/', 1)[0]
+                    if section not in sections:
+                        continue
+                    if not native and key in ('advanced/data path', 'advanced/is portable'):
+                        continue
+                    try:
+                        value = imported.value(key)
+                    except KeyError:
+                        continue
+                    if value is not None:
+                        values[key] = value
+                if logo:
+                    digest = hashlib.sha256(logo.read_bytes()).hexdigest()
+                    destination = AppLocation.get_data_path() / 'settings-logos' / (digest + logo.suffix.lower())
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(logo, destination)
+                    values['core/logo file'] = destination
+                for key, value in values.items():
+                    self.setValue(key, value)
+                self.setValue('SettingsImport/type', 'OpalPresenter_settings_export')
+                self.setValue('SettingsImport/file_imported', str(import_file_path))
+                self.setValue('SettingsImport/file_date_imported', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+                self.sync()
+                return self.status() == QtCore.QSettings.Status.NoError
+        except Exception:
+            log.exception('Could not import settings')
             return False
-        finally:
-            shutil.rmtree(temp_dir_path, ignore_errors=True)

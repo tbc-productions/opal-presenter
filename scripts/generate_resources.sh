@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 #
-# This script automates the generation of resources.py for OpenLP+ saving a
+# This script automates the generation of resources.py for Opal Presenter saving a
 # backup of the old resources, inserting the coding and copyright header and
 # conforming it to the project coding standards.
 #
@@ -99,7 +99,7 @@ if [ ! -f "$PROJECT_ROOT/openlp/core/resources.py.new" ]; then
 fi
 cat "$PROJECT_ROOT/openlp/core/resources.py.new" | sed '1,5d' > "$PROJECT_ROOT/openlp/core/resources.py"
 
-# Patch resources.py to OpenLP+ coding style
+# Patch resources.py to Opal Presenter coding style
 ARCH=`uname -m`
 echo "Architecture is: $ARCH"
 PATCH_STATUS=0

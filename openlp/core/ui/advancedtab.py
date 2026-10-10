@@ -137,28 +137,28 @@ class AdvancedTab(SettingsTab):
         self.data_directory_new_label.setText(translate('OpenLP.AdvancedTab', 'Path:'))
         self.data_directory_cancel_button.setText(translate('OpenLP.AdvancedTab', 'Cancel'))
         self.data_directory_cancel_button.setToolTip(
-            translate('OpenLP.AdvancedTab', 'Cancel OpenLP+ data directory location change.'))
+            translate('OpenLP.AdvancedTab', 'Cancel Opal Presenter data directory location change.'))
         self.data_directory_copy_check_box.setText(translate('OpenLP.AdvancedTab', 'Copy data to new location.'))
         self.data_directory_copy_check_box.setToolTip(translate(
-            'OpenLP.AdvancedTab', 'Copy the OpenLP+ data files to the new location.'))
+            'OpenLP.AdvancedTab', 'Copy the Opal Presenter data files to the new location.'))
         self.data_directory_protect_check_box.setText(translate(
             'OpenLP.AdvancedTab', 'Protect the data directory with a locking mechanism.'))
         self.data_directory_protect_check_box.setToolTip(translate(
             'OpenLP.AdvancedTab', 'Protect the data directory with a locking mechanism to avoid data corruption if '
                                   'multiple users access the data at the same time. Useful for instances shared via '
                                   'network. <strong>NOTE:</strong> This will only work if the network sharing is '
-                                  'available when OpenLP+ is running.'))
+                                  'available when Opal Presenter is running.'))
         self.copy_library_files_check_box.setText(translate(
             'OpenLP.AdvancedTab', 'Copy library files to data folder.'))
         self.copy_library_files_check_box.setToolTip(translate(
-            'OpenLP.AdvancedTab', 'Store Images, Media, and Presentations in the OpenLP+ data folder for reliability.'))
+            'OpenLP.AdvancedTab', 'Store Images, Media, and Presentations in the Opal Presenter data folder for reliability.'))
         self.migrate_library_files_button.setText(translate(
             'OpenLP.AdvancedTab', 'Migrate existing library files to data folder'))
         self.migrate_library_files_button.setToolTip(translate(
-            'OpenLP.AdvancedTab', 'Copy existing Images, Media, and Presentations into OpenLP+-managed storage.'))
+            'OpenLP.AdvancedTab', 'Copy existing Images, Media, and Presentations into Opal Presenter-managed storage.'))
         self.new_data_directory_has_files_label.setText(
             translate('OpenLP.AdvancedTab', '<strong>WARNING:</strong> New data directory location contains '
-                      'OpenLP+ data files.  These files WILL be replaced during a copy.'))
+                      'Opal Presenter data files.  These files WILL be replaced during a copy.'))
         self.display_workaround_group_box.setTitle(translate('OpenLP.AdvancedTab', 'Display Workarounds'))
         self.x11_bypass_check_box.setText(translate('OpenLP.AdvancedTab', 'Bypass X11 Window Manager'))
         self.proxy_widget.retranslate_ui()
@@ -211,14 +211,14 @@ class AdvancedTab(SettingsTab):
         # Make sure they want to change the data.
         if self.data_directory_copy_check_box.isChecked():
             warning_string = translate('OpenLP.AdvancedTab', 'Are you sure you want to change the '
-                                                             'location of the OpenLP+ data directory to:\n\n{path}'
+                                                             'location of the Opal Presenter data directory to:\n\n{path}'
                                                              '\n\nExisting files in this directory could be '
                                                              'overwritten. The data directory will be changed when '
-                                                             'OpenLP+ is closed.').format(path=new_path)
+                                                             'Opal Presenter is closed.').format(path=new_path)
         else:
             warning_string = translate('OpenLP.AdvancedTab', 'Are you sure you want to change the '
-                                                             'location of the OpenLP+ data directory to:\n\n{path}'
-                                                             '\n\nThe data directory will be changed when OpenLP+ is '
+                                                             'location of the Opal Presenter data directory to:\n\n{path}'
+                                                             '\n\nThe data directory will be changed when Opal Presenter is '
                                                              'closed.').format(path=new_path)
         answer = QtWidgets.QMessageBox.question(self, translate('OpenLP.AdvancedTab', 'Confirm Data Directory Change'),
                                                 warning_string, defaultButton=QtWidgets.QMessageBox.StandardButton.No)
@@ -254,7 +254,7 @@ class AdvancedTab(SettingsTab):
                                                    translate('OpenLP.AdvancedTab', 'Overwrite Existing Data'),
                                                    translate('OpenLP.AdvancedTab',
                                                              'WARNING: \n\nThe location you have selected \n\n{path}'
-                                                             '\n\nappears to contain OpenLP+ data files. '
+                                                             '\n\nappears to contain Opal Presenter data files. '
                                                              'Do you wish to replace these files with the current data '
                                                              'files?').format(path=data_path),
                                                    QtWidgets.QMessageBox.StandardButton(
@@ -329,13 +329,13 @@ class AdvancedTab(SettingsTab):
 
     def on_migrate_library_files_button_clicked(self):
         """
-        Migrate existing external library files into OpenLP+-managed storage.
+        Migrate existing external library files into Opal Presenter-managed storage.
         """
         answer = QtWidgets.QMessageBox.question(
             self,
             translate('OpenLP.AdvancedTab', 'Migrate library files'),
             translate('OpenLP.AdvancedTab',
-                      'Copy existing Image, Media, and Presentation files into the OpenLP+ data folder now?')
+                      'Copy existing Image, Media, and Presentation files into the Opal Presenter data folder now?')
         )
         if answer != QtWidgets.QMessageBox.StandardButton.Yes:
             return

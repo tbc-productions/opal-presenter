@@ -192,7 +192,7 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
         if getattr(self.active_plugin, 'requires_restart', False) is True:
             show_restart_message(
                 self, translate('OpenLP.PluginForm', 'Restart Required'),
-                translate('OpenLP.PluginForm', 'Restart OpenLP+ to apply this plugin change.'))
+                translate('OpenLP.PluginForm', 'Restart Opal Presenter to apply this plugin change.'))
 
     def on_open_folder_clicked(self):
         """Open the selected plugin's installed directory in the system file manager."""

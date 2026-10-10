@@ -37,6 +37,7 @@ from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action
 from openlp.core.ui.icons import UiIcons
+from openlp.core.widgets.dialogs import FileDialog
 from openlp.plugins.custom.forms.editcustomform import EditCustomForm
 from openlp.plugins.custom.lib.customxmlhandler import CustomXML
 from openlp.plugins.custom.lib.db import CustomSlide
@@ -77,6 +78,7 @@ class CustomMediaItem(MediaManagerItem):
     def required_icons(self):
         super().required_icons()
         self.add_to_service_item = True
+        self.has_import_icon = True
 
     def on_selection_change(self):
         """
@@ -130,8 +132,28 @@ class CustomMediaItem(MediaManagerItem):
                         self.service_manager.suggested_presentation_file_path(suffix))
         export_items_dialog(self, items, suffix, default_path)
 
+    def on_import_click(self, checked=False, file_paths=None):
+        """Import native slide packages and legacy XML without modifying the source."""
+        from openlp.plugins.librarysync.lib.transfer import read_xml_item, import_item, local_item
+        from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError
+        if file_paths is None:
+            file_paths, _ = FileDialog.getOpenFileNames(
+                self, translate('CustomPlugin.MediaItem', 'Import custom slides'),
+                filter=translate('CustomPlugin.MediaItem', 'Custom slides (*.opal-slides *.xml *.osz)'))
+        for path in file_paths:
+            try:
+                prepared = read_xml_item(path)
+                title = prepared[0].findtext('title') or path.stem
+                existing = local_item('custom', self.plugin, title)
+                if existing and not self.confirm_service_item_import(title, [existing]):
+                    continue
+                item = CloudItem(str(path), path.name, category='custom', title=title)
+                import_item(item, path, self.plugin, prepared=prepared, overwrite=existing.id if existing else None)
+            except (OSError, ValueError, SyncError) as error:
+                QtWidgets.QMessageBox.critical(self, translate('CustomPlugin.MediaItem', 'Import failed'), str(error))
+
     def on_export_custom(self):
-        """Export each selected custom slide in an OpenLP+ service file."""
+        """Export each selected custom slide in an Opal Presenter service file."""
         selected = self.list_view.selectedItems()
         if not selected:
             QtWidgets.QMessageBox.information(self, translate('CustomPlugin.MediaItem', 'Export custom slides'),
@@ -141,17 +163,22 @@ class CustomMediaItem(MediaManagerItem):
             service_item = self.build_service_item(item=item)
             if not service_item:
                 continue
-            custom = self.plugin.manager.get_object(CustomSlide, item.data(QtCore.Qt.ItemDataRole.UserRole))
+            custom = self.plugin.db_manager.get_object(CustomSlide, item.data(QtCore.Qt.ItemDataRole.UserRole))
             xml = CustomXML(custom.text)
             xml.add_title_and_credit(custom.title, custom.credits)
             from openlp.core.lib.slidedesign import package_design
             xml.set_design(package_design(service_item.slide_design, service_item.get_theme_data(include_design=False)))
+            if custom.theme_name:
+                from lxml import etree
+                from openlp.core.lib.nativefile import SYNC_NAMESPACE
+                etree.SubElement(xml.custom_xml, '{' + SYNC_NAMESPACE + '}theme',
+                                 nsmap={'opal': SYNC_NAMESPACE})._setText(custom.theme_name)
             exported_xml = xml.extract_xml(keep_title_and_credit=True)
-            default_path = suggested_item_export_path(self.service_manager, service_item.title, '.osz')
+            default_path = suggested_item_export_path(self.service_manager, service_item.title, '.opal-slides')
             export_item_dialog(
-                self, default_path, '.osz', translate('CustomPlugin.MediaItem', 'OpenLP+ Service (*.osz)'),
+                self, default_path, '.opal-slides', translate('CustomPlugin.MediaItem', 'Opal Presenter Slides (*.opal-slides)'),
                 lambda path, service_item=service_item, xml=exported_xml:
-                write_item_service(path, service_item, xml, 'custom-slides.xml'))
+                write_item_service(path, service_item, xml, 'slides.xml'))
 
     def on_save_to_image_library(self):
         """Render selected custom slides into the Image library, optionally inside a folder."""

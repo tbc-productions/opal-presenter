@@ -914,7 +914,7 @@ def test_theme_exit_guard_unwinds_window_before_service_prompt(interactive_theme
     def service_prompt():
         observed.append((form.isVisible(), form._event_loop,
                          main._closing_designers_for_exit))
-        return False  # A cancelled service save must keep OpenLP+ running.
+        return False  # A cancelled service save must keep Opal Presenter running.
 
     with patch.object(main, 'close', side_effect=service_prompt):
         # Sending a close event still exercises the guard installed by _exec_window().

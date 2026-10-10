@@ -204,7 +204,7 @@ class PresentationMediaItem(FolderLibraryItem):
             critical_error_message_box(
                 translate('PresentationPlugin.MediaItem', 'PowerPoint slideshow settings'),
                 translate('PresentationPlugin.MediaItem',
-                          'Could not open Set Up Show. Stop any running slideshow and allow OpenLP+ in macOS '
+                          'Could not open Set Up Show. Stop any running slideshow and allow Opal Presenter in macOS '
                           'Accessibility settings, or open Slide Show → Set Up Show directly in PowerPoint.'))
 
     def _pdf_export_selection(self):

@@ -67,7 +67,7 @@ class Ui_FirstTimeLanguageDialog(object):
         """
         self.setWindowTitle(translate('OpenLP.FirstTimeLanguageForm', 'Select Translation'))
         self.info_label.setText(
-            translate('OpenLP.FirstTimeLanguageForm', 'Choose the translation you\'d like to use in OpenLP+.'))
+            translate('OpenLP.FirstTimeLanguageForm', 'Choose the translation you\'d like to use in Opal Presenter.'))
         self.language_label.setText(translate('OpenLP.FirstTimeLanguageForm', 'Translation:'))
         self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
             translate('OpenLP.FirstTimeLanguageForm', 'Select'))

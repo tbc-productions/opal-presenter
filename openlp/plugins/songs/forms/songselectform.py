@@ -152,7 +152,7 @@ class SongSelectForm(QtWidgets.QDialog, Ui_SongSelectDialog, RegistryProperties)
             download_item.cancel()
             QtWidgets.QMessageBox.information(self, translate('SongsPlugin.SongSelectForm', 'Unsupported format'),
                                               translate('SongsPlugin.SongSelectForm',
-                                                        'OpenLP+ can only import simple lyrics or ChordPro'))
+                                                        'Opal Presenter can only import simple lyrics or ChordPro'))
 
     def exec(self):
         """

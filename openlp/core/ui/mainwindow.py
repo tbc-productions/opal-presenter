@@ -506,26 +506,26 @@ class Ui_MainWindow(object):
         self.print_service_order_item.setText(UiStrings().PrintService)
         self.print_service_order_item.setStatusTip(translate('OpenLP.MainWindow', 'Print the current service.'))
         self.file_exit_item.setText(translate('OpenLP.MainWindow', 'E&xit'))
-        self.file_exit_item.setStatusTip(translate('OpenLP.MainWindow', 'Close OpenLP+ - Shut down the program.'))
+        self.file_exit_item.setStatusTip(translate('OpenLP.MainWindow', 'Close Opal Presenter - Shut down the program.'))
         self.import_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.import_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.export_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.export_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', '&Shortcuts'))
         self.formatting_tag_item.setText(translate('OpenLP.MainWindow', '&Formatting styles'))
-        self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP+...'))
+        self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure Opal Presenter...'))
         self.settings_export_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
+            translate('OpenLP.MainWindow', 'Export settings to a *.opal-settings file.'))
         self.settings_export_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_export_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Export formatting styles to a *.json file.'))
+            translate('OpenLP.MainWindow', 'Export formatting styles to a *.opal-styles file.'))
         self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.settings_import_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Import settings from a *.config file previously exported from '
+            translate('OpenLP.MainWindow', 'Import settings from a *.opal-settings file previously exported from '
                                            'this or another machine.'))
         self.settings_import_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_import_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Import formatting styles from a *.json file.'))
+            translate('OpenLP.MainWindow', 'Import formatting styles from a *.opal-styles file.'))
         self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.view_projector_manager_item.setText(translate('OpenLP.MainWindow', '&Projector Controller'))
         self.view_projector_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show Projectors.'))
@@ -561,13 +561,13 @@ class Ui_MainWindow(object):
         self.view_switch_projection_item.setText(translate(
             'OpenLP.MainWindow', 'Toggle display output'))
         self.view_switch_projection_item.setStatusTip(translate(
-            'OpenLP.MainWindow', 'Bring the projection forward. Use the shortcut again to return to OpenLP+.'))
+            'OpenLP.MainWindow', 'Bring the projection forward. Use the shortcut again to return to Opal Presenter.'))
         self.settings_plugin_list_item.setText(translate('OpenLP.MainWindow', '&Manage Plugins'))
         self.settings_plugin_list_item.setStatusTip(translate('OpenLP.MainWindow', 'You can enable and disable plugins '
                                                                                    'from here.'))
         self.about_item.setText(translate('OpenLP.MainWindow', '&About'))
         self.about_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'More information about OpenLP+ (a fork of OpenLP).'))
+            translate('OpenLP.MainWindow', 'More information about Opal Presenter (a fork of OpenLP).'))
         self.search_shortcut_action.setText(UiStrings().Search)
         self.search_shortcut_action.setToolTip(
             translate('OpenLP.MainWindow', 'Jump to the search box of the current active plugin.'))
@@ -854,10 +854,10 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
 
         :param version: The Version to be displayed.
         """
-        version_text = translate('OpenLP.MainWindow', 'Version {new} of OpenLP+ is now available for download (you are '
+        version_text = translate('OpenLP.MainWindow', 'Version {new} of Opal Presenter is now available for download (you are '
                                  'currently running version {current}). \n\nYou can download the latest version from '
-                                 'https://openlp.org/.').format(new=version, current=get_version()[u'full'])
-        QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP+ Version Updated'), version_text)
+                                 'https://git.tbcproductions.net/tbcproductions/opal-presenter/releases.').format(new=version, current=get_version()[u'full'])
+        QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'Opal Presenter Version Updated'), version_text)
 
     def on_new_remote_version(self, version: str):
         """
@@ -953,7 +953,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                                                translate('OpenLP.MainWindow',
                                                          'Are you sure you want to re-run the First '
                                                          'Time Wizard?\n\nRe-running this wizard may make changes to '
-                                                         'your current OpenLP+ configuration.'),
+                                                         'your current Opal Presenter configuration.'),
                                                QtWidgets.QMessageBox.StandardButton(
                                                    QtWidgets.QMessageBox.StandardButton.Yes |
                                                    QtWidgets.QMessageBox.StandardButton.No),
@@ -1071,7 +1071,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if self.shortcut_form.exec():
             self.shortcut_form.save()
 
-    def on_settings_import_item_clicked(self):
+    def on_settings_import_item_clicked(self, checked=False, import_file_path=None):
         """
         Import settings from an export CONF or ZIP file
         """
@@ -1079,9 +1079,9 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to import '
                                                                                'settings?\n\n Importing settings will '
                                                                                'make permanent changes to your current '
-                                                                               'OpenLP+ configuration.\n\n Importing '
+                                                                               'Opal Presenter configuration.\n\n Importing '
                                                                                'incorrect settings may cause erratic '
-                                                                               'behaviour or OpenLP+ to terminate '
+                                                                               'behaviour or Opal Presenter to terminate '
                                                                                'abnormally.'),
                                                 QtWidgets.QMessageBox.StandardButton(
                                                     QtWidgets.QMessageBox.StandardButton.Yes |
@@ -1089,11 +1089,12 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                                                 QtWidgets.QMessageBox.StandardButton.No)
         if answer == QtWidgets.QMessageBox.StandardButton.No:
             return
-        import_file_path, filter_used = FileDialog.getOpenFileName(
-            self,
-            translate('OpenLP.MainWindow', 'Import settings'),
-            None,
-            translate('OpenLP.MainWindow', 'OpenLP+ Settings (*.conf *.zip)'))
+        if import_file_path is None:
+            import_file_path, filter_used = FileDialog.getOpenFileName(
+                self,
+                translate('OpenLP.MainWindow', 'Import settings'),
+                None,
+                translate('OpenLP.MainWindow', 'Opal Presenter and OpenLP Settings (*.opal-settings *.conf *.zip)'))
         if import_file_path is None:
             return
 
@@ -1104,8 +1105,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if not success:
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import settings'),
                                            translate('OpenLP.MainWindow', 'The file you have selected does not appear '
-                                                                          'to be a valid OpenLP+ settings file, or is from '
-                                                                          'a newer version of OpenLP+.\n\n'
+                                                                          'to be a valid Opal Presenter settings file, or is from '
+                                                                          'a newer version of Opal Presenter.\n\n'
                                                                           'Processing has terminated and '
                                                                           'no changes have been made.'),
                                            QtWidgets.QMessageBox.StandardButton(
@@ -1116,8 +1117,8 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         # application terminates normally.   We need to exit without saving configuration.
         QtWidgets.QMessageBox.information(self, translate('OpenLP.MainWindow', 'Import settings'),
                                           translate('OpenLP.MainWindow',
-                                                    'OpenLP+ will now close. Imported settings will '
-                                                    'be applied the next time you start OpenLP+.'))
+                                                    'Opal Presenter will now close. Imported settings will '
+                                                    'be applied the next time you start Opal Presenter.'))
         self.settings_replaced = True
         self.clean_up()
         QtCore.QCoreApplication.exit()
@@ -1130,15 +1131,16 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self,
             translate('OpenLP.MainWindow', 'Export Settings File'),
             None,
-            translate('OpenLP.MainWindow', 'OpenLP+ Settings Backup (*.zip)'))
+            translate('OpenLP.MainWindow', 'Opal Presenter Settings Backup (*.opal-settings)'))
         if not export_file_path:
             return
         # Make sure it's a .zip file.
-        export_file_path = export_file_path.with_suffix('.zip')
+        export_file_path = export_file_path.with_suffix('.opal-settings')
         self.save_settings()
         self.application.set_busy_cursor()
         try:
-            self.settings.export_zip(export_file_path)
+            if not self.settings.export_zip(export_file_path):
+                raise OSError('Could not write the settings backup.')
         except OSError as ose:
             QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Export setting error'),
                                            translate('OpenLP.MainWindow',
@@ -1305,14 +1307,14 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             if (self.settings.value('advanced/enable exit confirmation') and has_open_service
                     and not getattr(self, '_closing_designers_for_exit', False)):
                 msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
-                                                translate('OpenLP.MainWindow', 'Exit OpenLP+'),
-                                                translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP+?'),
+                                                translate('OpenLP.MainWindow', 'Exit Opal Presenter'),
+                                                translate('OpenLP.MainWindow', 'Are you sure you want to exit Opal Presenter?'),
                                                 QtWidgets.QMessageBox.StandardButton(
                                                     QtWidgets.QMessageBox.StandardButton.Close |
                                                     QtWidgets.QMessageBox.StandardButton.Cancel),
                                                 self)
                 close_button = msg_box.button(QtWidgets.QMessageBox.StandardButton.Close)
-                close_button.setText(translate('OpenLP.MainWindow', '&Exit OpenLP+'))
+                close_button.setText(translate('OpenLP.MainWindow', '&Exit Opal Presenter'))
                 msg_box.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Close)
                 if msg_box.exec() == QtWidgets.QMessageBox.StandardButton.Close:
                     event.accept()
@@ -2267,7 +2269,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
             self.log_info('Copying data to new path')
             try:
                 self.show_status_message(
-                    translate('OpenLP.MainWindow', 'Copying OpenLP+ data to new data directory location - {path} '
+                    translate('OpenLP.MainWindow', 'Copying Opal Presenter data to new data directory location - {path} '
                               '- Please wait for copy to finish').format(path=self.new_data_path))
                 shutil.copytree(str(old_data_path), str(self.new_data_path), dirs_exist_ok=True)
                 self.log_info('Copy successful')
@@ -2275,7 +2277,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                 self.application.set_normal_cursor()
                 self.log_exception('Data copy failed {err}'.format(err=str(why)))
                 err_text = translate('OpenLP.MainWindow',
-                                     'OpenLP+ data directory copy failed\n\n{err}').format(err=str(why))
+                                     'Opal Presenter data directory copy failed\n\n{err}').format(err=str(why))
                 QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'New Data Directory Error'),
                                                err_text,
                                                QtWidgets.QMessageBox.StandardButton(
@@ -2341,8 +2343,39 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     file_path = None
             else:
                 file_path = None
-        if file_path and file_path.suffix in ['.osz', '.oszl']:
+        if file_path and file_path.suffix.lower() in ['.opal-service', '.opal-service-lite', '.osz', '.oszl']:
             self.log_info("File name found")
             self.service_manager_contents.load_file(file_path)
+        elif file_path and file_path.suffix.lower() in ('.opal-theme', '.otz'):
+            self.theme_manager_contents.update_preview_images([self.theme_manager_contents.unzip_theme(file_path)])
+        elif file_path and file_path.suffix.lower() == '.opal-settings':
+            self.on_settings_import_item_clicked(import_file_path=file_path)
+        elif file_path and file_path.suffix.lower() == '.opal-styles':
+            self.formatting_tag_form.on_import_clicked(import_file_path=file_path)
+        elif file_path and file_path.suffix.lower() in ('.opal-song', '.opal-slides'):
+            category = 'songs' if file_path.suffix.lower() == '.opal-song' else 'custom'
+            plugin = self.plugin_manager.get_plugin_by_name(category)
+            if plugin and plugin.is_active():
+                if category == 'custom':
+                    plugin.media_item.on_import_click(file_paths=[file_path])
+                else:
+                    from openlp.plugins.librarysync.lib.transfer import read_xml_item, import_item, local_item
+                    from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError
+                    try:
+                        prepared = read_xml_item(file_path)
+                        namespace = '{http://openlyrics.info/namespace/2009/song}'
+                        title = prepared[0].findtext(namespace + 'properties/' + namespace + 'titles/' +
+                                                    namespace + 'title') or file_path.stem
+                        existing = local_item(category, plugin, title)
+                        if not existing or plugin.media_item.confirm_service_item_import(title, [existing]):
+                            item = CloudItem(str(file_path), file_path.name, category=category, title=title)
+                            import_item(item, file_path, plugin, prepared=prepared,
+                                        overwrite=existing.id if existing else None)
+                    except (OSError, ValueError, SyncError) as error:
+                        QtWidgets.QMessageBox.critical(self, translate('OpenLP.MainWindow', 'Import failed'), str(error))
+        elif file_path and file_path.suffix.lower() == '.opal-connection':
+            plugin = self.plugin_manager.get_plugin_by_name('librarysync')
+            if plugin and plugin.is_active() and plugin.panel:
+                plugin.panel.import_connection(path=file_path)
         else:
             self.log_debug(f"File {file_path} not found for arg {args}")

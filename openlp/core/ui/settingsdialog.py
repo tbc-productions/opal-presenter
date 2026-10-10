@@ -110,5 +110,5 @@ class Ui_SettingsDialog(object):
         """
         Translate the UI on the fly
         """
-        settings_dialog.setWindowTitle(translate('OpenLP.SettingsForm', 'Configure OpenLP+'))
+        settings_dialog.setWindowTitle(translate('OpenLP.SettingsForm', 'Configure Opal Presenter'))
         self.reset_defaults_button.setText(translate('OpenLP.SettingsForm', 'Reset to defaults'))

@@ -223,7 +223,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.webview.page().setWebChannel(self.channel)
         self.display_watcher.initialised.connect(self.on_initialised)
         self.display_watcher.register_event_listener("runJavascriptCallback", self.handle_javascript_result, False)
-        self.openlp_splash_screen_path = 'openlp://display/openlp-splash-screen.png'
+        self.openlp_splash_screen_path = 'openlp://display/opal-presenter-splash.png'
         # Using custom display if provided
         if Registry().has('display_custom_url') and Registry().get('display_custom_url') is not None:
             display_custom_url = Registry().get('display_custom_url')
@@ -368,8 +368,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         image = self.settings.value('core/logo file')
         logo_fit = _normalise_logo_fit(self.settings.value('core/logo fit'))
         qt_resource_map = {
-            ':/graphics/openlp-splash-screen.png': self.openlp_splash_screen_path,
-            ':/graphics/openlp-logo-background.svg': 'openlp://display/openlp-logo-background.svg',
+            ':/graphics/opal-presenter-splash.png': self.openlp_splash_screen_path,
+            ':/graphics/opal-presenter-background.png': 'openlp://display/opal-presenter-background.png',
         }
         image_str = path_to_str(image)
         if image_str.startswith(':'):

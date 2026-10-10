@@ -105,10 +105,10 @@ class FileLock():
                              .format(user=data['username'], host=data['hostname']))
                 QtWidgets.QMessageBox.critical(
                     None, translate('OpenLP', 'Data Directory Lock Error'),
-                    translate('OpenLP', 'You have lost the OpenLP+ shared Data Directory Lock, which instead has '
-                                        'been claimed by "{user}" on "{host}"! You should close OpenLP+ '
+                    translate('OpenLP', 'You have lost the Opal Presenter shared Data Directory Lock, which instead has '
+                                        'been claimed by "{user}" on "{host}"! You should close Opal Presenter '
                                         'immediately to avoid data corruption! You can try to reclaim the Data '
-                                        'Directory Lock by restarting OpenLP+')
+                                        'Directory Lock by restarting Opal Presenter')
                     .format(user=data['username'], host=data['hostname']),
                     QtWidgets.QMessageBox.StandardButton(QtWidgets.QMessageBox.StandardButton.Ok),
                     QtWidgets.QMessageBox.StandardButton.Ok)
@@ -146,7 +146,7 @@ class FileLock():
             data = self.parse_lock_file_content()
             QtWidgets.QMessageBox.critical(
                 None, translate('OpenLP', 'Data Directory Locked'),
-                translate('OpenLP', 'The OpenLP+ shared Data Directory is being used by "{user}" on "{host}". '
+                translate('OpenLP', 'The Opal Presenter shared Data Directory is being used by "{user}" on "{host}". '
                                     'To avoid data corruption only one user can access the data at a time! Please '
                                     'wait a few minutes and try again.')
                 .format(user=data['username'], host=data['hostname']),

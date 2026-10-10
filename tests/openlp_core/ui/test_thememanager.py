@@ -47,23 +47,24 @@ def theme_manager(registry: Registry, settings: Settings, tmp_path) -> ThemeMana
         yield thm
 
 
-@patch('openlp.core.ui.thememanager.zipfile.ZipFile.__init__')
-@patch('openlp.core.ui.thememanager.zipfile.ZipFile.write')
-def test_export_theme(mocked_zipfile_write: MagicMock, mocked_zipfile_init: MagicMock, theme_manager: ThemeManager):
-    """
-    Test exporting a theme .
-    """
-    # GIVEN: A new ThemeManager instance.
-    theme_manager.theme_path = RESOURCE_PATH / 'themes'
-    mocked_zipfile_init.return_value = None
-
-    # WHEN: The theme is exported
-    theme_manager._export_theme(Path('some', 'path', 'Default.otz'), 'Default')
-
-    # THEN: The zipfile should be created at the given path
-    mocked_zipfile_init.assert_called_with(Path('some', 'path', 'Default.otz'), 'w')
-    mocked_zipfile_write.assert_called_with(RESOURCE_PATH / 'themes' / 'Default' / 'Default.xml',
-                                            Path('Default', 'Default.xml'))
+@patch('openlp.core.lib.theme.ScreenList')
+def test_export_theme(mocked_screens, theme_manager: ThemeManager, tmp_path):
+    """Native themes contain a versioned manifest and the existing JSON payload."""
+    import zipfile
+    from openlp.core.lib.nativefile import read_manifest
+    mocked_screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+    theme_manager.theme_path = tmp_path / 'themes'
+    folder = theme_manager.theme_path / 'Default'
+    folder.mkdir(parents=True)
+    theme = Theme()
+    theme.theme_name = 'Default'
+    (folder / 'Default.json').write_text(theme.export_theme())
+    destination = tmp_path / 'Default.opal-theme'
+    assert theme_manager._export_theme(destination, 'Default')
+    with zipfile.ZipFile(destination) as archive:
+        manifest = read_manifest(archive, 'theme', required=True)
+        assert manifest['payload'] == 'Default/Default.json'
+        assert 'Default' in archive.read(manifest['payload']).decode()
 
 
 def test_initial_theme_manager(theme_manager: ThemeManager):

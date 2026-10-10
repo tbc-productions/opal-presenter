@@ -109,7 +109,7 @@ boxes below. Personal Access Tokens are created by doing the following:
       <a href=https://api.planningcenteronline.com/oauth/applications>
       https://api.planningcenteronline.com/oauth/applications</a></li>
   <li>Click the "New Personal Access Token" button at the bottom of the screen.</li>
-  <li>Enter a description of your use case (eg. "OpenLP+ Integration")</li>
+  <li>Enter a description of your use case (eg. "Opal Presenter Integration")</li>
   <li>Copy and paste the provided Application ID and Secret values below.</li>
 </ol>"""))
 

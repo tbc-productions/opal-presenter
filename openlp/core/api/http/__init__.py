@@ -53,9 +53,9 @@ def authenticate():
     """
     resp = Response(status=401)
     if WERKZEUG_VERSION.startswith('2.4') or WERKZEUG_VERSION.startswith('3.'):
-        resp.www_authenticate = WWWAuthenticate('basic', {'realm': 'OpenLP+ Login Required'})
+        resp.www_authenticate = WWWAuthenticate('basic', {'realm': 'Opal Presenter Login Required'})
     else:
-        resp.www_authenticate.set_basic('OpenLP+ Login Required')
+        resp.www_authenticate.set_basic('Opal Presenter Login Required')
     return resp
 
 

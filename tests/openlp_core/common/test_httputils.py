@@ -174,7 +174,7 @@ def test_get_web_page_with_user_agent_in_headers(mocked_get_random_user_agent, m
     # GIVEN: Mocked out objects, a fake URL and a fake header
     mocked_requests.get.return_value = MagicMock(text='text')
     fake_url = 'this://is.a.fake/url'
-    user_agent_headers = {'User-Agent': 'OpenLP+/2.2.0'}
+    user_agent_headers = {'User-Agent': 'Opal Presenter/2.2.0'}
 
     # WHEN: The get_web_page() method is called
     returned_page = get_web_page(fake_url, headers=user_agent_headers)

@@ -15,7 +15,7 @@ from openlp.plugins.librarysync.lib.provider import SyncError
 
 TOKEN_URL = 'https://oauth2.googleapis.com/token'
 SCOPE = 'https://www.googleapis.com/auth/drive'
-SERVICE = 'OpenLP+ Library Sync Google Drive'
+SERVICE = 'Opal Presenter Library Sync Google Drive'
 
 
 class TokenStore:
@@ -99,7 +99,7 @@ class GoogleAuth:
                 self.send_header('Content-Type', 'text/plain; charset=utf-8')
                 self.send_header('Cache-Control', 'no-store')
                 self.end_headers()
-                self.wfile.write(b'You can return to OpenLP+.' if valid else b'Invalid sign-in response.')
+                self.wfile.write(b'You can return to Opal Presenter.' if valid else b'Invalid sign-in response.')
 
             def log_message(self, *args):
                 pass  # OAuth codes must never enter request logs.

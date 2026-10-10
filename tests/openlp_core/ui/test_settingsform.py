@@ -55,7 +55,7 @@ def test_insert_tab_visible(registry: Registry, mock_settings: MagicMock):
     general_tab = MagicMock()
     general_tab.tab_title = 'mock'
     general_tab.tab_title_visible = 'Mock'
-    general_tab.icon_path = ':/icon/openlp-logo.svg'
+    general_tab.icon_path = ':/icon/opal-presenter.png'
     expected_icon = QtGui.QIcon(QtGui.QPixmap(16, 16))
 
     # WHEN: We insert the general tab
@@ -75,7 +75,7 @@ def test_build_settings_tab_icon_uses_fluent_colour_for_song_tabs(registry: Regi
     settings.setValue('servicemanager/theme color song', '#123456')
     song_tab = MagicMock()
     song_tab.tab_title = 'songs'
-    song_tab.icon_path = ':/icon/openlp-logo.svg'
+    song_tab.icon_path = ':/icon/opal-presenter.png'
 
     icon = settings_form._build_settings_tab_icon(song_tab)
 
@@ -108,9 +108,9 @@ def test_accept_with_inactive_plugins(registry: Registry, mock_settings: MagicMo
     # GIVEN: A visible general tab and an invisible theme tab in a Settings Form
 
     settings_form = SettingsForm(None)
-    general_tab = MockTab(None, 'mock-general', 'Mock General', ':/icon/openlp-logo.svg')
+    general_tab = MockTab(None, 'mock-general', 'Mock General', ':/icon/opal-presenter.png')
     settings_form.insert_tab(general_tab, is_visible=True)
-    themes_tab = MockTab(None, 'mock-themes', 'Mock Themes', ':/icon/openlp-logo.svg')
+    themes_tab = MockTab(None, 'mock-themes', 'Mock Themes', ':/icon/opal-presenter.png')
     settings_form.insert_tab(themes_tab, is_visible=False)
 
     # WHEN: The accept() method is called
@@ -127,7 +127,7 @@ def test_list_item_changed_invalid_item(registry: Registry, mock_settings: Magic
     """
     # GIVEN: A mocked tab inserted into a Settings Form
     settings_form = SettingsForm(None)
-    general_tab = MockTab(None, 'mock', 'Mock', ':/icon/openlp-logo.svg')
+    general_tab = MockTab(None, 'mock', 'Mock', ':/icon/opal-presenter.png')
     settings_form.insert_tab(general_tab, is_visible=True)
 
     # WHEN: The list_item_changed() slot is called with an invalid item index
@@ -143,9 +143,9 @@ def test_reject_with_inactive_items(registry: Registry, mock_settings: MagicMock
     """
     # GIVEN: A visible general tab and an invisible theme tab in a Settings Form
     settings_form = SettingsForm(None)
-    general_tab = MockTab(None, 'mock-general', 'Mock General', ':/icon/openlp-logo.svg')
+    general_tab = MockTab(None, 'mock-general', 'Mock General', ':/icon/opal-presenter.png')
     settings_form.insert_tab(general_tab, is_visible=True)
-    themes_tab = MockTab(None, 'mock-themes', 'Mock Themes', ':/icon/openlp-logo.svg')
+    themes_tab = MockTab(None, 'mock-themes', 'Mock Themes', ':/icon/opal-presenter.png')
     settings_form.insert_tab(themes_tab, is_visible=False)
 
     # WHEN: The reject() method is called
@@ -201,20 +201,20 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     """
     # GIVEN: A settings form with unordered core tabs and plugin tabs
     settings_form = SettingsForm(None)
-    settings_form.general_tab = MockTab(None, 'general', 'General', ':/icon/openlp-logo.svg')
-    settings_form.advanced_tab = MockTab(None, 'advanced', 'Advanced', ':/icon/openlp-logo.svg')
-    settings_form.service_tab = MockTab(None, 'service', 'Service', ':/icon/openlp-logo.svg')
-    settings_form.screens_tab = MockTab(None, 'screens', 'Screens', ':/icon/openlp-logo.svg')
-    settings_form.themes_tab = MockTab(None, 'themes', 'Themes', ':/icon/openlp-logo.svg')
-    settings_form.player_tab = MockTab(None, 'media', 'Media', ':/icon/openlp-logo.svg')
-    settings_form.projector_tab = MockTab(None, 'projector', 'Projectors', ':/icon/openlp-logo.svg')
-    settings_form.api_tab = MockTab(None, 'api', 'API', ':/icon/openlp-logo.svg')
+    settings_form.general_tab = MockTab(None, 'general', 'General', ':/icon/opal-presenter.png')
+    settings_form.advanced_tab = MockTab(None, 'advanced', 'Advanced', ':/icon/opal-presenter.png')
+    settings_form.service_tab = MockTab(None, 'service', 'Service', ':/icon/opal-presenter.png')
+    settings_form.screens_tab = MockTab(None, 'screens', 'Screens', ':/icon/opal-presenter.png')
+    settings_form.themes_tab = MockTab(None, 'themes', 'Themes', ':/icon/opal-presenter.png')
+    settings_form.player_tab = MockTab(None, 'media', 'Media', ':/icon/opal-presenter.png')
+    settings_form.projector_tab = MockTab(None, 'projector', 'Projectors', ':/icon/opal-presenter.png')
+    settings_form.api_tab = MockTab(None, 'api', 'API', ':/icon/opal-presenter.png')
 
     active_plugin = MagicMock()
-    active_plugin.settings_tab = MockTab(None, 'alerts', 'Alerts', ':/icon/openlp-logo.svg')
+    active_plugin.settings_tab = MockTab(None, 'alerts', 'Alerts', ':/icon/opal-presenter.png')
     active_plugin.is_active.return_value = True
     inactive_plugin = MagicMock()
-    inactive_plugin.settings_tab = MockTab(None, 'songs', 'Songs', ':/icon/openlp-logo.svg')
+    inactive_plugin.settings_tab = MockTab(None, 'songs', 'Songs', ':/icon/opal-presenter.png')
     inactive_plugin.is_active.return_value = False
 
     with patch('openlp.core.ui.settingsform.State') as mocked_state:

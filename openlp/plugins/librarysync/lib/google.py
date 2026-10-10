@@ -505,7 +505,9 @@ class GoogleDriveProvider:
         if overwrite is None:
             metadata['parents'] = [target.id]
         else:
-            metadata = {'title': name, 'properties': self.write_properties(category, title)}
+            metadata = {'title': name, 'mimeType': 'application/zip' if source.suffix.startswith('.opal-') else
+                        mimetypes.guess_type(source.name)[0] or 'application/octet-stream',
+                        'properties': self.write_properties(category, title)}
             parameters['fields'] = 'id'
         version = 'v2' if overwrite else 'v3'
         url = f'https://www.googleapis.com/upload/drive/{version}/files' + (f'/{overwrite.id}' if overwrite else '')

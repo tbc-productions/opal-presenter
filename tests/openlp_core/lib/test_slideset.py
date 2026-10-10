@@ -268,7 +268,7 @@ def test_transition_dialog_refreshes_already_rendered_set(set_manager, set_env, 
         choices[1].setCurrentIndex(choices[1].findData(TransitionSpeed.Slow))
         return QtWidgets.QDialog.DialogCode.Accepted
 
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QDialog.exec', accept):
+    with patch('openlp.core.ui.servicemanager.QtWidgets.FormDialog.exec', accept):
         set_manager.on_service_item_transition_form()
     assert target.rendered_slides != original
     for frame in target.rendered_slides:

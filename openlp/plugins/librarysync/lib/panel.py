@@ -346,9 +346,10 @@ class CloudLibrary(QtWidgets.QWidget):
         if not QtGui.QDesktopServices.openUrl(url):
             self.set_status(tr('Couldn’t open storage'), error=True)
 
-    def import_connection(self):
-        path, _ = FileDialog.getOpenFileName(
-            self, tr('Import Library Sync connection'), filter=tr('Library Sync connection (*.json)'))
+    def import_connection(self, checked=False, path=None):
+        if path is None:
+            path, _ = FileDialog.getOpenFileName(
+                self, tr('Import Library Sync connection'), filter=tr('Library Sync connection (*.opal-connection *.json)'))
         if path:
             try:
                 self.set_profile(read_profile(path))
@@ -367,7 +368,7 @@ class CloudLibrary(QtWidgets.QWidget):
             return
         path, _ = FileDialog.getSaveFileName(
             self, tr('Export Library Sync connection'),
-            Path('organisation-library.librarysync.json'), tr('Connection file (*.json)'))
+            Path('organisation-library.opal-connection'), tr('Connection file (*.opal-connection)'))
         if path:
             try:
                 write_profile(path, self.profile)

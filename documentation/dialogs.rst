@@ -121,7 +121,7 @@ First-time setup configures plugins and displays locally and can restore a
 settings backup. It does not contact OpenLP servers or download songs, Bibles,
 themes, thumbnails or the web remote. Built-in themes are installed from local
 files on first startup. Re-running setup preserves the current theme unless a
-settings backup changes it. OpenLP+ is independent and is not endorsed by OpenLP.
+settings backup changes it. Opal Presenter is independent and is not endorsed by OpenLP.
 
 The Bible import wizard refreshes translation lists only on request and disables
 sources whose lists cannot be retrieved, marking them with `` - unavailable``.

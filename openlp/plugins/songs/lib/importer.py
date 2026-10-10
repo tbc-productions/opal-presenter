@@ -209,7 +209,7 @@ class SongFormat(object):
             'class': OpenLyricsImport,
             'name': 'OpenLyrics',
             'prefix': 'openLyrics',
-            'filter': '{text} (*.xml *.osz)'.format(text=translate('SongsPlugin.ImportWizardForm', 'OpenLyrics Files')),
+            'filter': '{text} (*.opal-song *.xml *.osz)'.format(text=translate('SongsPlugin.ImportWizardForm', 'OpenLyrics Files')),
             'comboBoxText': translate('SongsPlugin.ImportWizardForm', 'OpenLyrics or OpenLP 2 Exported Song')
         },
         OpenLP2: {
@@ -225,7 +225,7 @@ class SongFormat(object):
             'canDisable': True,
             'disabledLabelText': translate('SongsPlugin.ImportWizardForm',
                                            'The generic document/presentation importer has been disabled '
-                                           'because OpenLP+ cannot access OpenOffice or LibreOffice.'),
+                                           'because Opal Presenter cannot access OpenOffice or LibreOffice.'),
             'getFilesTitle': translate('SongsPlugin.ImportWizardForm', 'Select Document/Presentation Files')
         },
         CCLI: {
@@ -409,7 +409,7 @@ class SongFormat(object):
                                                              'Songs Of Fellowship Song Files')),
             'disabledLabelText': translate('SongsPlugin.ImportWizardForm',
                                            'The Songs of Fellowship importer has been disabled because '
-                                           'OpenLP+ cannot access OpenOffice or LibreOffice.')
+                                           'Opal Presenter cannot access OpenOffice or LibreOffice.')
         },
         SundayPlus: {
             'class': SundayPlusImport,

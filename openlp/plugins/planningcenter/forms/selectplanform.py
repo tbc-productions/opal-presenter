@@ -74,7 +74,7 @@ class SelectPlanForm(QtWidgets.FormDialog, Ui_SelectPlanDialog):
         if len(organization) == 0:
             warning_message_box(translate('PlanningCenterPlugin.PlanningCenterForm', 'Authentication Failed'),
                                 translate('PlanningCenterPlugin.PlanningCenterForm',
-                                          'Authentiation Failed. Check your credentials in OpenLP+ Settings.'),
+                                          'Authentiation Failed. Check your credentials in Opal Presenter Settings.'),
                                 self.parent())
             return
         # set the Service Type Dropdown Box from PCO

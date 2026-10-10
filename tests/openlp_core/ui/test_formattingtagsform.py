@@ -77,28 +77,19 @@ def test_on_new_clicked(style_form):
 
 
 @patch('openlp.core.ui.formattingtagform.FileDialog.getSaveFileName')
-@patch('openlp.core.ui.formattingtagform.json.dump')
-def test_on_export_clicked_exports_tags(mock_json_dump, mock_get_save_file_name, tagform_env, mock_settings):
-    """
-    Test that clicking export writes custom tags to a JSON file.
-    """
-    # GIVEN: A formatting tag form with valid custom tags
+def test_on_export_clicked_exports_tags(mock_get_save_file_name, tagform_env, mock_settings, tmp_path):
     form = FormattingTagForm(None)
     form.services = MagicMock()
     form.services.custom_tags = [{'desc': 'My Tag'}]
     form._validate_tags_for_save = MagicMock(return_value=True)
     form._reloadTable = MagicMock()
-    export_file_path = Path('/tmp/formatting-tags')
+    export_file_path = tmp_path / 'styles.opal-styles'
     mock_get_save_file_name.return_value = export_file_path, ''
-
-    # WHEN: on_export_clicked is called
-    with patch.object(Path, 'open') as mocked_path_open:
-        form.on_export_clicked()
-
-    # THEN: The selected path should be used with a .json suffix and tag data should be written
-    mocked_path_open.assert_called_once_with('w', encoding='utf-8')
-    mock_json_dump.assert_called_once_with(form.services.custom_tags, mocked_path_open().__enter__(), indent=2)
-    mock_settings.setValue.assert_called_with('formattingTags/last directory export', Path('/tmp'))
+    form.on_export_clicked()
+    value = json.loads(export_file_path.read_text())
+    assert value['format'] == 'opal-presenter'
+    assert value['type'] == 'styles'
+    assert value['data'] == [{'desc': 'My Tag'}]
 
 
 @patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
@@ -601,8 +592,8 @@ def test_main_window_export_uses_saved_styles_not_stale_draft(style_form, settin
     style_form.on_new_clicked()
     style_form.accept()
     style_form.on_new_clicked()
-    exported = tmp_path / 'styles.json'
+    exported = tmp_path / 'styles.opal-styles'
     with patch('openlp.core.ui.formattingtagform.FileDialog.getSaveFileName', return_value=(exported, '')):
         style_form.on_export_clicked()
-    assert len(json.loads(exported.read_text())) == 1
+    assert len(json.loads(exported.read_text())['data']) == 1
     assert len(json.loads(settings.value('formattingTags/html_tags'))) == 1

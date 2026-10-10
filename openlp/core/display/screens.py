@@ -312,7 +312,7 @@ class ScreenList(metaclass=Singleton):
                     None, translate('OpenLP.Screen', 'Screen settings and screen setup is not the same'),
                     translate('OpenLP.Screen',
                               'There is a mismatch between screens and screen settings. '
-                              'OpenLP+ will try to automatically select a display screen, but '
+                              'Opal Presenter will try to automatically select a display screen, but '
                               'you should consider updating the screen settings.'))
                 self.find_new_display_screen()
                 if configure_screens:

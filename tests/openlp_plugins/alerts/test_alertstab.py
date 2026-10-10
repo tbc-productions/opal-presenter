@@ -33,7 +33,7 @@ def test_update_display_uses_preview_palette_colors(registry, settings: Settings
     """
     # GIVEN: An alerts settings tab with explicit preview colors
     settings.setValue('alerts/font face', QtGui.QFont().family())
-    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/openlp-logo.svg')
+    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/opal-presenter.png')
     alerts_tab.background_color = '#112233'
     alerts_tab.font_color = '#ddeeff'
     alerts_tab.font_size = 24
@@ -63,7 +63,7 @@ def test_update_display_prefers_antialiased_font_rendering(registry, settings: S
     """
     # GIVEN: An alerts settings tab with default preview settings
     settings.setValue('alerts/font face', QtGui.QFont().family())
-    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/openlp-logo.svg')
+    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/opal-presenter.png')
 
     # WHEN: The preview is updated
     alerts_tab.update_display()

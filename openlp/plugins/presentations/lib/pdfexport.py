@@ -131,7 +131,7 @@ def pdf_export_error_text(error):
     if getattr(error, 'number', None) == -1743 or '-1743' in reason or \
             'not authorized to send apple events' in reason.lower():
         return translate('PresentationPlugin.PdfExport',
-                         'macOS blocked access to the presentation application. Allow OpenLP+ to control it '
+                         'macOS blocked access to the presentation application. Allow Opal Presenter to control it '
                          'in System Settings → Privacy & Security → Automation.')
     return reason or translate('PresentationPlugin.PdfExport', 'The application did not provide an error message.')
 

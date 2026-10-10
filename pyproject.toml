@@ -3,14 +3,14 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "openlp-plus"
+name = "opal-presenter"
 dynamic = ["version"]
 description = "Open-source church presentation and lyrics projection application."
 readme = "README.rst"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.14,<3.15"
 authors = [
-    { name = "OpenLP+ Developers", email = "developer@tbcproductions.net" },
+    { name = "Opal Presenter Developers", email = "developer@tbcproductions.net" },
 ]
 keywords = [
     "bible",
@@ -127,15 +127,15 @@ test = [
 ]
 
 [project.scripts]
-openlp = "openlp.__main__:start"
+opal-presenter = "openlp.__main__:start"
 
 [project.entry-points.pyinstaller40]
 hook-dirs = "openlp.__pyinstaller:get_hook_dirs"
 
 [project.urls]
-Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
-Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
-Issues = "https://git.tbcproductions.net/tbcproductions/openlp-plus/issues"
+Homepage = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
+Source = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
+Issues = "https://git.tbcproductions.net/tbcproductions/opal-presenter/issues"
 
 [tool.hatch.version]
 source = "vcs"
@@ -161,8 +161,8 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-# For those who have problems running "hatch run openlp"
-run_openlp = "python run_openlp.py"
+# For those who have problems running "hatch run opal-presenter"
+run_opal_presenter = "python run_opal_presenter.py"
 
 dependencies = [
     "flake8",

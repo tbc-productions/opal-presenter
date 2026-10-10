@@ -256,9 +256,14 @@ class LocalStorageProvider:
             raise SyncError('This name already exists. Confirm overwrite before uploading.')
         if overwrite is not None and (existing is None or existing.id != overwrite.id):
             raise SyncError('The item to overwrite changed. Refresh before uploading again.')
-        destination = self.checked(overwrite) if overwrite else self.path(target.id) / filename
+        original = self.checked(overwrite) if overwrite else None
+        destination = (original.with_name(filename) if original else self.path(target.id) / filename)
+        if original and destination != original and destination.exists():
+            raise SyncError('The replacement filename already exists.')
         self.transfer(source, destination, cancel, progress,
                       (lambda: self.checked(overwrite)) if overwrite else lambda: None, overwrite=bool(overwrite))
+        if original and original != destination:
+            original.unlink()
         return self.item(destination)
 
     def rename(self, item, folder, title):

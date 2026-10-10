@@ -1,12 +1,12 @@
 [Desktop Entry]
 Categories=AudioVideo;
-Exec=openlp %F
+Exec=opal-presenter %F
 GenericName=Church lyrics projection
-Comment=OpenLP+ (fork of OpenLP): project lyrics, Bible verses, media and more.
-Icon=openlp
-StartupWMClass=openlp-plus
-MimeType=application/x-openlp-service;
-Name=OpenLP+
+Comment=Opal Presenter (fork of OpenLP): project lyrics, Bible verses, media and more.
+Icon=opal-presenter
+StartupWMClass=opal-presenter
+MimeType=application/x-opal-service;application/x-opal-service-lite;application/x-opal-song;application/x-opal-slides;application/x-opal-theme;application/x-opal-settings;application/x-opal-styles;application/x-opal-connection;
+Name=Opal Presenter
 StartupNotify=true
 Terminal=false
 Type=Application

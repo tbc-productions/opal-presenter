@@ -21,7 +21,7 @@
 ##########################################################################
 
 """
-This script is used to maintain the translation files in OpenLP+.
+This script is used to maintain the translation files in Opal Presenter.
 It generates the base en.ts file used to drive all translations
 on Transifex.
 For more details on the translation process see the Translation pages on the

@@ -307,7 +307,7 @@ class LanguageManager(object):
             show_restart_message(None,
                                               translate('OpenLP.LanguageManager', 'Language'),
                                               translate('OpenLP.LanguageManager',
-                                                        'Please restart OpenLP+ to use your new language setting.'))
+                                                        'Please restart Opal Presenter to use your new language setting.'))
 
     @staticmethod
     def init_qm_list():
@@ -431,9 +431,9 @@ class UiStrings(metaclass=Singleton):
         self.NISs = translate('OpenLP.Ui', 'No Item Selected', 'Singular')
         self.NISp = translate('OpenLP.Ui', 'No Items Selected', 'Plural')
         self.NoResults = translate('OpenLP.Ui', 'No Search Results')
-        self.OpenLP = translate('OpenLP.Ui', 'OpenLP+')
-        self.OpenLPv2AndUp = translate('OpenLP.Ui', 'OpenLP+ Song Database')
-        self.OpenLPStart = translate('OpenLP.Ui', 'OpenLP+ is already running on this machine. \nClosing this instance')
+        self.OpenLP = translate('OpenLP.Ui', 'Opal Presenter')
+        self.OpenLPv2AndUp = translate('OpenLP.Ui', 'Opal Presenter Song Database')
+        self.OpenLPStart = translate('OpenLP.Ui', 'Opal Presenter is already running on this machine. \nClosing this instance')
         self.OpenService = translate('OpenLP.Ui', 'Open service')
         self.OptionalShowInFooter = translate('OpenLP.Ui', 'Optional, this will be displayed in footer.')
         self.OptionalHideInFooter = translate('OpenLP.Ui', 'Optional, this won\'t be displayed in footer.')
@@ -460,7 +460,7 @@ class UiStrings(metaclass=Singleton):
         self.SaveAndPreview = translate('OpenLP.Ui', 'Save && Preview')
         self.ScreenSetupHasChangedTitle = translate('OpenLP.MainWindow', 'Screen setup has changed')
         self.ScreenSetupHasChanged = translate('OpenLP.MainWindow',
-                                               'The screen setup has changed. OpenLP+ will try to '
+                                               'The screen setup has changed. Opal Presenter will try to '
                                                'automatically select a display screen, but '
                                                'you should consider updating the screen settings.')
         self.Search = translate('OpenLP.Ui', 'Search')

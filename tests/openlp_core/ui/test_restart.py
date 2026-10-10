@@ -20,7 +20,7 @@ def test_restart_reminder_has_secondary_action(qapp, registry, restart):
 
     def choose_action(dialog):
         assert dialog.primaryButtonText() == 'OK'
-        assert dialog.secondaryButtonText() == 'Restart OpenLP+'
+        assert dialog.secondaryButtonText() == 'Restart Opal Presenter'
         assert dialog.defaultButton() == fluent.fluentqt.ContentDialogButton.Primary
         return dialog.ResultSecondary if restart else dialog.ResultPrimary
 
@@ -115,7 +115,7 @@ def test_restart_failure_shows_manual_relaunch_message(qapp):
         process_class.return_value.startDetached.return_value = False
         OpenLP()._restart_process()
     message.assert_called_once_with(
-        None, 'Restart failed', 'OpenLP+ could not restart automatically. Please start it again.')
+        None, 'Restart failed', 'Opal Presenter could not restart automatically. Please start it again.')
 
 
 def test_restart_process_with_real_qprocess(qapp, qtbot, tmp_path, monkeypatch):

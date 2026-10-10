@@ -545,9 +545,9 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
 
     presentation = Presentation()
     presentation.core_properties.title = destination.stem
-    presentation.core_properties.author = 'OpenLP+'
-    presentation.core_properties.last_modified_by = 'OpenLP+'
-    presentation.core_properties.comments = 'Exported from OpenLP+'
+    presentation.core_properties.author = 'Opal Presenter'
+    presentation.core_properties.last_modified_by = 'Opal Presenter'
+    presentation.core_properties.comments = 'Exported from Opal Presenter'
     presentation.slide_width = Inches(13.333)
     presentation.slide_height = round(presentation.slide_width * height / width)
     source = next((page.presentation for page in pages if page.presentation is not None), None)
@@ -770,7 +770,7 @@ def _write_odp(pages, destination, width, height, *, progress=None, logo_setting
 
     document = OpenDocumentPresentation()
     document.meta.addElement(dc.Title(text=destination.stem))
-    document.meta.addElement(dc.Description(text='Exported from OpenLP+'))
+    document.meta.addElement(dc.Description(text='Exported from Opal Presenter'))
     slide_width = 33.866  # 13.333 inches in cm
     slide_height = slide_width * height / width
     layout = style.PageLayout(name='OpenLPLayout')

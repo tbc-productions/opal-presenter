@@ -33,7 +33,7 @@ from openlp.core.ui.firsttimewizard import UiFirstTimeWizard
 
 
 class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
-    """Configure OpenLP+ locally, without downloading upstream resources."""
+    """Configure Opal Presenter locally, without downloading upstream resources."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

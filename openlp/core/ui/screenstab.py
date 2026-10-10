@@ -79,7 +79,7 @@ class ScreensTab(SettingsTab):
         self.always_on_top_check.setText(translate(
             'OpenLP.ScreensTab', 'Always keep display output above other windows'))
         self.display_on_monitor_check.setToolTip(translate(
-            'OpenLP.ScreensTab', 'Allow the display window to open on the same screen as the OpenLP+ main window.'))
+            'OpenLP.ScreensTab', 'Allow the display window to open on the same screen as the Opal Presenter main window.'))
         self.always_on_top_check.setToolTip(translate(
             'OpenLP.ScreensTab', 'Keep the projection window above other windows.'))
 

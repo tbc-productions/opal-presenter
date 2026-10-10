@@ -43,6 +43,8 @@ from openlp.core.common.utils import wait_for
 from openlp.core.lib import build_icon, check_item_selected, create_thumb, get_text_file_string, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.theme import Theme
+from openlp.core.lib.itemexport import export_archive
+from openlp.core.lib.nativefile import read_manifest
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.display.screens import ScreenList
 from openlp.core.threading import ThreadWorker, run_thread
@@ -758,14 +760,14 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                                        translate('OpenLP.ThemeManager',
                                                  'Save Theme - ({name})').format(name=theme_name),
                                        self.settings.value('themes/last directory export'),
-                                       translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'),
-                                       translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
+                                       translate('OpenLP.ThemeManager', 'Opal Presenter Themes (*.opal-theme)'),
+                                       translate('OpenLP.ThemeManager', 'Opal Presenter Themes (*.opal-theme)'))
         if not export_path:
             return
         self.application.set_busy_cursor()
         try:
             self.settings.setValue('themes/last directory export', export_path.parent)
-            if self._export_theme(export_path.with_suffix('.otz'), theme_name):
+            if self._export_theme(export_path.with_suffix('.opal-theme'), theme_name):
                 QtWidgets.QMessageBox.information(self,
                                                   translate('OpenLP.ThemeManager', 'Theme Exported'),
                                                   translate('OpenLP.ThemeManager',
@@ -783,10 +785,12 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         :rtype: bool
         """
         try:
-            with zipfile.ZipFile(theme_path, 'w') as theme_zip:
+            with export_archive(theme_path, 'theme', f'{theme_name}/{theme_name}.json') as theme_zip:
                 source_path = self.theme_path / theme_name
                 media_hash = None
                 descriptor = source_path / f'{theme_name}.json'
+                if not descriptor.is_file():
+                    raise OSError('The theme descriptor is missing.')
                 if descriptor.is_file():
                     exported_theme = Theme()
                     exported_theme.load_theme(descriptor.read_text(), self.theme_path)
@@ -814,8 +818,6 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                                        translate('OpenLP.ThemeManager',
                                                  'The {theme_name} export failed because this error occurred: {err}')
                                        .format(theme_name=theme_name, err=ose.strerror))
-            if theme_path.exists():
-                shutil.rmtree(theme_path, ignore_errors=True)
             return False
 
     def on_import_theme(self, checked=None):
@@ -830,7 +832,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
             self,
             translate('OpenLP.ThemeManager', 'Select Theme Import File'),
             self.settings.value('themes/last directory import'),
-            translate('OpenLP.ThemeManager', 'OpenLP+ Themes (*.otz)'))
+            translate('OpenLP.ThemeManager', 'Themes (*.opal-theme *.otz)'))
         self.log_info('New Themes {file_paths}'.format(file_paths=file_paths))
         if not file_paths:
             return
@@ -1009,7 +1011,9 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         theme_name = ""
         try:
             with zipfile.ZipFile(file_path) as theme_zip:
-                json_file = [name for name in theme_zip.namelist() if os.path.splitext(name)[1].lower() == '.json']
+                manifest = read_manifest(theme_zip, 'theme', required=file_path.suffix.lower() == '.opal-theme')
+                json_file = ([manifest['payload']] if manifest else [name for name in theme_zip.namelist()
+                             if os.path.splitext(name)[1].lower() == '.json'])
                 if len(json_file) != 1:
                     # TODO: remove XML handling after once the upgrade path from 2.4 is no longer required
                     xml_file = [name for name in theme_zip.namelist() if os.path.splitext(name)[1].lower() == '.xml']
@@ -1026,16 +1030,24 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     new_theme = Theme()
                     descriptor = theme_zip.read(json_file[0]).decode('utf-8')
                     from openlp.core.lib.designmedia import restore_media, ASSET
-                    restore_media(json.loads(descriptor), archive=theme_zip)
                     new_theme.load_theme(descriptor)
                     theme_name = new_theme.theme_name
                     json_theme = True
+                if not theme_name or Path(theme_name).name != theme_name or theme_name in ('.', '..'):
+                    raise ValidationError
+                from openlp.core.lib.designmedia import ASSET
+                if any(Path(name).parts[0] != theme_name and name != 'manifest.json'
+                       and not ASSET.fullmatch(name) and len(Path(name).parts) > 1
+                       for name in theme_zip.namelist()):
+                    raise ValidationError
                 theme_folder = self.theme_path / theme_name
                 if theme_folder.exists() and not self.over_write_message_box(theme_name):
                     abort_import = True
                     return
                 else:
                     abort_import = False
+                if json_theme:
+                    restore_media(json.loads(descriptor), archive=theme_zip)
                 for zipped_file in theme_zip.namelist():
                     if json_theme and ASSET.fullmatch(zipped_file):
                         continue  # Assets are retained in the shared store before the descriptor is loaded.

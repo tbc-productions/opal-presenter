@@ -135,14 +135,14 @@ def _get_os_dir_path(dir_type):
         if directory.exists():
             return directory
     if is_win():
-        openlp_folder_path = Path(os.getenv('APPDATA'), 'openlp+')
+        openlp_folder_path = Path(os.getenv('APPDATA'), 'opal-presenter')
         if dir_type == AppLocation.DataDir:
             return openlp_folder_path / 'data'
         elif dir_type == AppLocation.LanguageDir:
             return Path(openlp.__file__).parent
         return openlp_folder_path
 
-    dirs = PlatformDirs('openlp+', multipath=True)
+    dirs = PlatformDirs('opal-presenter', multipath=True)
     if is_macosx():
         openlp_folder_path = Path(dirs.user_data_dir)
         if dir_type == AppLocation.DataDir:
@@ -154,7 +154,7 @@ def _get_os_dir_path(dir_type):
         if dir_type == AppLocation.LanguageDir:
             site_dirs = dirs.site_data_dir.split(os.pathsep)
             for site_dir in site_dirs:
-                if 'share/openlp' not in site_dir:
+                if 'share/opal-presenter' not in site_dir:
                     continue
                 directory = Path(site_dir)
                 if (directory / 'i18n').exists():
@@ -165,5 +165,5 @@ def _get_os_dir_path(dir_type):
         elif dir_type == AppLocation.CacheDir:
             return Path(dirs.user_cache_dir)
         if dir_type == AppLocation.DataDir:
-            return Path(os.getenv('HOME'), '.openlp+', 'data')
-        return Path(os.getenv('HOME'), '.openlp+')
+            return Path(os.getenv('HOME'), '.opal-presenter', 'data')
+        return Path(os.getenv('HOME'), '.opal-presenter')

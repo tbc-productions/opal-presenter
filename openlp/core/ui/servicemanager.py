@@ -47,6 +47,7 @@ from openlp.core.lib import build_icon, create_thumb, ItemCapabilities, validate
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.serviceitem import ServiceItem
+from openlp.core.lib.nativefile import SERVICE_SUFFIXES, service_payload, validate_service, write_manifest
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box, find_and_set_in_combo_box
 from openlp.core.state import State
@@ -187,7 +188,7 @@ class ServiceManagerList(QtWidgets.QTreeWidget):
                 return mime.item is self.service_manager._internal_drag_item['service_item']
             return mime.can_drop('service')
         if mime.hasUrls():
-            return all(url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in ('.osz', '.oszl')
+            return all(url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in SERVICE_SUFFIXES
                        for url in mime.urls()) and bool(mime.urls())
         return False
 
@@ -637,6 +638,9 @@ class ServiceLoadWorker(ThreadWorker):
     def start(self):
         try:
             with zipfile.ZipFile(str(self.file_path)) as zip_file:
+                payload_name = service_payload(
+                    zip_file, required=self.file_path.suffix.lower().startswith('.opal-'),
+                    file_type='service-lite' if self.file_path.suffix.lower() == '.opal-service-lite' else 'service')
                 zip_infos = zip_file.infolist()
                 compressed_size = sum(zip_info.compress_size for zip_info in zip_infos)
                 self.progress_max.emit(compressed_size // 1024)
@@ -644,13 +648,14 @@ class ServiceLoadWorker(ThreadWorker):
                     translate('OpenLP.ServiceManager', 'Reading service metadata...'))
                 service_data = None
                 for zip_info in zip_infos:
-                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                    if zip_info.filename == payload_name:
                         with zip_file.open(zip_info, 'r') as json_file:
                             service_data = json_file.read()
                         break
                 if not service_data:
                     raise ValidationError(msg='No service data found')
                 items = json.loads(service_data, cls=OpenLPJSONDecoder)
+                validate_service(items)
                 servicefile_version = 2
                 for item in items:
                     if 'openlp_core' in item:
@@ -659,10 +664,12 @@ class ServiceLoadWorker(ThreadWorker):
                         break
                 is_broken_file = False
                 for zip_info in zip_infos:
+                    if zip_info.filename == 'manifest.json':
+                        continue
                     self.status.emit(
                         translate('OpenLP.ServiceManager', 'Importing file: {file_name}')
                         .format(file_name=Path(zip_info.filename).name))
-                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                    if zip_info.filename == payload_name:
                         self.progress_increment.emit(zip_info.compress_size // 1024)
                         continue
                     if servicefile_version < 3:
@@ -679,7 +686,7 @@ class ServiceLoadWorker(ThreadWorker):
                     'servicefile_version': servicefile_version,
                     'is_broken_file': is_broken_file
                 })
-        except (NameError, OSError, ValidationError, zipfile.BadZipFile):
+        except (NameError, OSError, ValueError, ValidationError, zipfile.BadZipFile):
             self.failed.emit(str(self.file_path))
         finally:
             self.quit.emit()
@@ -885,7 +892,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._service_path = file_path
         self.set_modified(self.is_modified())
         self.settings.setValue('servicemanager/last file', file_path)
-        if file_path and file_path.suffix == '.oszl':
+        if file_path and file_path.suffix.lower() in ('.opal-service-lite', '.oszl'):
             self._save_lite = True
         else:
             self._save_lite = False
@@ -969,7 +976,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.main_window,
                 translate('OpenLP.ServiceManager', 'Open File'),
                 self.settings.value('servicemanager/last directory'),
-                translate('OpenLP.ServiceManager', 'OpenLP+ Service Files (*.osz *.oszl)'))
+                translate('OpenLP.ServiceManager', 'Opal Presenter and OpenLP Services (*.opal-service *.opal-service-lite *.osz *.oszl)'))
             if not file_path:
                 return False
         self.settings.setValue('servicemanager/last directory', file_path.parent)
@@ -1066,7 +1073,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             self.main_window.add_recent_file(file_path)
             self.set_modified(False)
             if payload.get('is_broken_file', False):
-                self.save_file()
+                self.set_modified(True)
             self.settings.setValue('servicemanager/last file', file_path)
             self._loading_status_timer.stop()
             self._pending_loading_status_message = ''
@@ -1227,6 +1234,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         into the zip file.
         """
         file_path = self.file_name()
+        if file_path and file_path.suffix.lower() not in ('.opal-service', '.opal-service-lite'):
+            return self.save_file_as()
         self.log_debug('ServiceManager.save_file - {name}'.format(name=file_path))
         self.application.set_busy_cursor()
         try:
@@ -1281,7 +1290,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 tmp_file_path = str(file_path) + ".saving"
                 with zipfile.ZipFile(tmp_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                     # First we add service contents..
-                    zip_file.writestr('service_data.osj', service_content)
+                    write_manifest(zip_file, 'service-lite' if self._save_lite else 'service', 'service.json')
+                    zip_file.writestr('service.json', service_content)
                     if not self._save_lite:
                         from openlp.core.lib.designmedia import write_media
                         write_media(zip_file, service)
@@ -1290,10 +1300,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                     for local_file_item, zip_file_item in write_list:
                         zip_file.write(str(local_file_item), str(zip_file_item))
                         self.main_window.increment_progress_bar(local_file_item.stat().st_size / total_size * 1000)
-                    with suppress(FileNotFoundError):
-                        file_path.unlink()
-                # Move rather than copy to prevent writing another file if possible
-                shutil.move(tmp_file_path, file_path)
+                Path(tmp_file_path).replace(file_path)
                 self.settings.setValue('servicemanager/last directory', file_path.parent)
             except (PermissionError, OSError) as error:
                 self.log_exception('Failed to save service to disk: {name}'.format(name=file_path))
@@ -1341,15 +1348,15 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Get a file name and then call :func:`ServiceManager.save_file` to save the file.
         """
         default_file_path = self._default_service_file_path()
-        lite_filter = translate('OpenLP.ServiceManager', 'OpenLP+ Service Files - lite (*.oszl)')
-        packaged_filter = translate('OpenLP.ServiceManager', 'OpenLP+ Service Files (*.osz)')
-        if self._service_path and self._service_path.suffix == '.oszl':
+        lite_filter = translate('OpenLP.ServiceManager', 'Opal Presenter Service - external files (*.opal-service-lite)')
+        packaged_filter = translate('OpenLP.ServiceManager', 'Opal Presenter Service (*.opal-service)')
+        if self._service_path and self._service_path.suffix.lower() in ('.opal-service-lite', '.oszl'):
             default_filter = lite_filter
         else:
             default_filter = packaged_filter
         # SaveAs from osz to oszl is not valid as the files will be deleted on exit which is not sensible or usable in
         # the long term.
-        if self._service_path and self._service_path.suffix == '.oszl' or self.service_has_all_original_files:
+        if self._service_path and self._service_path.suffix.lower() in ('.opal-service-lite', '.oszl') or self.service_has_all_original_files:
             file_path, filter_used = FileDialog.getSaveFileName(
                 self.main_window, UiStrings().SaveService, default_file_path,
                 '{packaged};; {lite}'.format(packaged=packaged_filter, lite=lite_filter),
@@ -1361,9 +1368,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         if not file_path:
             return False
         if filter_used == lite_filter:
-            file_path = file_path.with_suffix('.oszl')
+            file_path = file_path.with_suffix('.opal-service-lite')
         else:
-            file_path = file_path.with_suffix('.osz')
+            file_path = file_path.with_suffix('.opal-service')
         self.set_file_name(file_path)
         return self.decide_save_method()
 
@@ -1398,6 +1405,9 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         try:
             # TODO: figure out a way to use the presentation thumbnails from the service file
             with zipfile.ZipFile(str(file_path)) as zip_file:
+                payload_name = service_payload(
+                    zip_file, required=file_path.suffix.lower().startswith('.opal-'),
+                    file_type='service-lite' if file_path.suffix.lower() == '.opal-service-lite' else 'service')
                 compressed_size = 0
                 for zip_info in zip_file.infolist():
                     compressed_size += zip_info.compress_size
@@ -1406,12 +1416,13 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 # First find the osj-file to find out how to handle the file
                 for zip_info in zip_file.infolist():
                     # The json file has been called 'service_data.osj' since OpenLP 3.0
-                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                    if zip_info.filename == payload_name:
                         with zip_file.open(zip_info, 'r') as json_file:
                             service_data = json_file.read()
                         break
                 if service_data:
                     items = json.loads(service_data, cls=OpenLPJSONDecoder)
+                    validate_service(items)
                 else:
                     raise ValidationError(msg='No service data found')
                 # Extract the service file version
@@ -1422,12 +1433,14 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         break
                 self.log_debug('Service format version: %{ver}'.format(ver=self.servicefile_version))
                 for zip_info in zip_file.infolist():
+                    if zip_info.filename == 'manifest.json':
+                        continue
                     self.log_debug('Extract file: {name}'.format(name=zip_info.filename))
                     self._show_loading_status(
                         translate('OpenLP.ServiceManager', 'Importing file: {file_name}')
                         .format(file_name=Path(zip_info.filename).name))
                     # The json file has been called 'service_data.osj' since OpenLP 3.0
-                    if zip_info.filename == 'service_data.osj' or zip_info.filename.endswith('osj'):
+                    if zip_info.filename == payload_name:
                         with zip_file.open(zip_info, 'r') as json_file:
                             service_data = json_file.read()
                     else:
@@ -1452,10 +1465,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.set_modified(False)
                 # If this file was broken due to a bug in 2.9.x, save the file to fix it.
                 if is_broken_file:
-                    self.save_file()
+                    self.set_modified(True)
                 self.settings.setValue('servicemanager/last file', file_path)
                 is_loaded = True
-        except (NameError, OSError, ValidationError, zipfile.BadZipFile):
+        except (NameError, OSError, ValueError, ValidationError, zipfile.BadZipFile):
             self.application.set_normal_cursor()
             self.log_exception('Problem loading service file {name}'.format(name=file_path))
             critical_error_message_box(
@@ -3418,10 +3431,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             event.accept()
             for url in link.urls():
                 file_path = Path(url.toLocalFile())
-                if file_path.suffix.lower() == '.osz':
-                    self.load_service(file_path)
-                elif file_path.suffix.lower() == '.oszl':
-                    # todo correct
+                if file_path.suffix.lower() in SERVICE_SUFFIXES:
                     self.load_service(file_path)
         else:
             event.ignore()

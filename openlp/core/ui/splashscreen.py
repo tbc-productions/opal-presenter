@@ -42,11 +42,11 @@ class SplashScreen(fluentqt.SplashScreen):
         self.setObjectName('splashScreen')
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.PreventContextMenu)
         self.setWindowFlags(QtCore.Qt.WindowType.SplashScreen | QtCore.Qt.WindowType.FramelessWindowHint)
-        self.setWindowTitle('OpenLP+')
+        self.setWindowTitle('Opal Presenter')
         self.setPresentation(fluentqt.SplashScreen.Presentation.Simple)
-        self.setIcon(QtGui.QIcon(':/icon/openlp-logo.svg'))
+        self.setIcon(QtGui.QIcon(':/icon/opal-presenter.png'))
         self.setIconSize(QtCore.QSize(128, 128))
-        self.setText(translate('OpenLP.SplashScreen', 'Starting OpenLP+'))
+        self.setText(translate('OpenLP.SplashScreen', 'Starting Opal Presenter'))
         # Keep the percentage row visible throughout startup.
         self.setIndeterminate(False)
         self._refresh_progress_display()
@@ -99,7 +99,7 @@ def _run_splash(connection, theme, font, text, platform, parent_pid):
         # Qt otherwise activates this helper as a separate application when its event loop starts.
         os.environ['QT_MAC_DISABLE_FOREGROUND_APPLICATION_TRANSFORM'] = '1'
     fluentqt.prepare_high_dpi_application()
-    app = QtWidgets.QApplication(['OpenLP+', '-platform', platform])
+    app = QtWidgets.QApplication(['Opal Presenter', '-platform', platform])
     app.setQuitOnLastWindowClosed(False)
     if platform == 'cocoa':
         import AppKit

@@ -47,7 +47,7 @@ def test_wizard_exports_on_finish_and_retains_folder_key(wizard, tmp_path, monke
     wizard.connection_name.setText('North Campus Library')
     wizard.next()
     wizard.next()
-    exported = tmp_path / 'church.librarysync.json'
+    exported = tmp_path / 'church.opal-connection'
     monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName',
                         lambda *args, **kwargs: (exported, ''))
     assert wizard.validateCurrentPage()
@@ -55,7 +55,7 @@ def test_wizard_exports_on_finish_and_retains_folder_key(wizard, tmp_path, monke
     assert wizard.profile['name'] == 'North Campus Library'
     assert wizard.profile['folders'][0]['name'] == 'North Campus Library'
     assert read_profile(exported) == wizard.profile
-    assert json.loads(exported.read_text())['name'] == 'North Campus Library'
+    assert json.loads(exported.read_text())['data']['name'] == 'North Campus Library'
     assert 'desktop-client' not in exported.read_text()
 
 

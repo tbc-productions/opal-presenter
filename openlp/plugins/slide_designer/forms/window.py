@@ -36,8 +36,8 @@ class DesignerWindow(fluentqt.Window):
         dialog.setObjectName('designer_exit_dialog')
         dialog.setTitle(tr('Save Song?') if self.editor.design_kind == 'song' else tr('Save Custom Slides?'))
         title = self.editor.design_owner.title_edit.text().strip()
-        message = tr('Save changes to “{title}” before exiting OpenLP+?').format(title=title) if title else \
-            tr('Save your changes before exiting OpenLP+?')
+        message = tr('Save changes to “{title}” before exiting Opal Presenter?').format(title=title) if title else \
+            tr('Save your changes before exiting Opal Presenter?')
         label = QtWidgets.QLabel(message)
         label.setWordWrap(True)
         dialog.setContent(label)
@@ -70,7 +70,7 @@ class DesignerWindow(fluentqt.Window):
         if not title:
             title = translate('SongsPlugin.SlideDesigner',
                               'New Song' if self.editor.design_kind == 'song' else 'New Custom Slide')
-        self.setWindowTitle(f'{title} - OpenLP+')
+        self.setWindowTitle(f'{title} - Opal Presenter')
         self.heading.setText(self.windowTitle())
 
     def closeEvent(self, event):
@@ -79,7 +79,7 @@ class DesignerWindow(fluentqt.Window):
 
 
 def exec_designer_window(editor):
-    """Keep the existing draft/accept contract without placing a modal window over OpenLP+."""
+    """Keep the existing draft/accept contract without placing a modal window over Opal Presenter."""
     owner = editor.design_owner
     owner_visible = owner.isVisible()
     owner._designer_open = True

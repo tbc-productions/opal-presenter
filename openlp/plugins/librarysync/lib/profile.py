@@ -8,6 +8,7 @@ from tempfile import NamedTemporaryFile
 from urllib.parse import parse_qs, urlparse
 
 from openlp.plugins.librarysync.lib.provider import SyncError
+from openlp.core.lib.nativefile import document, read_document
 
 
 ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,200}$')
@@ -92,9 +93,9 @@ def serialize_profile(profile):
     """Conceal public Desktop client details from casual reading, without claiming encryption."""
     profile = validate_profile(profile)
     data = json.dumps(profile, separators=(',', ':')).encode('utf-8')
-    return json.dumps({'format': 'openlp-library-sync', 'version': 1, 'encoding': 'zlib+base64',
+    return json.dumps(document('connection', {'format': 'openlp-library-sync', 'version': 1, 'encoding': 'zlib+base64',
                        'name': profile['name'],
-                       'data': base64.b64encode(zlib.compress(data)).decode('ascii')},
+                       'data': base64.b64encode(zlib.compress(data)).decode('ascii')}),
                       indent=2, ensure_ascii=False) + '\n'
 
 
@@ -107,6 +108,8 @@ def deserialize_profile(text):
         raise SyncError('The connection file is too large.')
     try:
         value = json.loads(text)
+        if isinstance(value, dict) and value.get('format') == 'opal-presenter':
+            value = read_document(value, 'connection')
         if isinstance(value, dict) and value.get('format') == 'openlp-library-sync':
             if value.get('version') != 1 or value.get('encoding') != 'zlib+base64':
                 raise SyncError('Unsupported Library Sync connection format.')
@@ -124,6 +127,7 @@ def deserialize_profile(text):
 
 
 def write_profile(path, profile):
+    path = path.with_suffix('.opal-connection')
     text = serialize_profile(profile)
     temporary = None
     try:
@@ -140,6 +144,9 @@ def read_profile(path):
     if path.stat().st_size > MAX_PROFILE:
         raise SyncError('The connection file is too large.')
     try:
-        return deserialize_profile(path.read_text(encoding='utf-8'))
-    except UnicodeError as error:
+        text = path.read_text(encoding='utf-8')
+        if path.suffix.lower() == '.opal-connection':
+            read_document(json.loads(text), 'connection')
+        return deserialize_profile(text)
+    except (ValueError, TypeError) as error:
         raise SyncError('The connection file is invalid or damaged.') from error

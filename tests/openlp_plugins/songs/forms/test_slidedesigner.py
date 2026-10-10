@@ -819,8 +819,8 @@ def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
 
 
 @pytest.mark.parametrize('kind,title,expected', [
-    ('song', 'Amazing Grace', 'Amazing Grace - OpenLP+'), ('song', '', 'New Song - OpenLP+'),
-    ('custom', 'Welcome', 'Welcome - OpenLP+'), ('custom', '  ', 'New Custom Slide - OpenLP+')])
+    ('song', 'Amazing Grace', 'Amazing Grace - Opal Presenter'), ('song', '', 'New Song - Opal Presenter'),
+    ('custom', 'Welcome', 'Welcome - Opal Presenter'), ('custom', '  ', 'New Custom Slide - Opal Presenter')])
 def test_designer_uses_independent_nonmodal_fluent_window_and_restores_editor_layout(designer, kind, title, expected):
     from openlp.plugins.slide_designer.forms.window import exec_designer_window, DesignerWindow
     from openlp.core.widgets import fluent as QtWidgets

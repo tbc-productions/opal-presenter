@@ -83,7 +83,7 @@ def _launching_app_bundle():
                     return candidate
             pid = int(parent_pid)
     except (OSError, ValueError, subprocess.SubprocessError):
-        log.debug('Could not identify the app that launched OpenLP+', exc_info=True)
+        log.debug('Could not identify the app that launched Opal Presenter', exc_info=True)
     return None
 
 
@@ -131,7 +131,7 @@ def request_post_event_access():
 
 def accessibility_target_name():
     """Name the same permission entry in startup guidance and slide errors."""
-    return _accessibility_drag_target()[1] or translate('OpenLP.MacPermissions', 'the app that launched OpenLP+')
+    return _accessibility_drag_target()[1] or translate('OpenLP.MacPermissions', 'the app that launched Opal Presenter')
 
 
 class _DraggableFileIcon(QtWidgets.QLabel):
@@ -293,7 +293,7 @@ def request_presentation_permissions(parent):
             return
         missing_label.setText(translate('OpenLP.MacPermissions', 'Access needed: {names}').format(
             names=', '.join(remaining)))
-        status.setText(translate('OpenLP.MacPermissions', 'Still unavailable. Restart OpenLP+ after enabling access.'))
+        status.setText(translate('OpenLP.MacPermissions', 'Still unavailable. Restart Opal Presenter after enabling access.'))
         status.show()
 
     check_button.clicked.connect(check_again)

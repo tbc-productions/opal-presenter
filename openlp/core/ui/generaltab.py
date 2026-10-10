@@ -49,7 +49,7 @@ class GeneralTab(SettingsTab):
         Initialise the general settings tab
         """
         self.logo_background_color = '#ffffff'
-        self.icon_path = ':/icon/openlp-logo.svg'
+        self.icon_path = ':/icon/opal-presenter.png'
         general_translated = translate('OpenLP.GeneralTab', 'General')
         super(GeneralTab, self).__init__(parent, 'Core', general_translated)
 
@@ -82,7 +82,7 @@ class GeneralTab(SettingsTab):
         self.logo_file_label = QtWidgets.QLabel(self.logo_group_box)
         self.logo_file_label.setObjectName('logo_file_label')
         self.logo_file_path_edit = PathEdit(self.logo_group_box,
-                                            default_path=Path(':/graphics/openlp-logo-background.svg'))
+                                            default_path=Path(':/graphics/opal-presenter-background.png'))
         self.logo_layout.addRow(self.logo_file_label, self.logo_file_path_edit)
         self.logo_color_label = QtWidgets.QLabel(self.logo_group_box)
         self.logo_color_label.setObjectName('logo_color_label')
@@ -184,9 +184,9 @@ class GeneralTab(SettingsTab):
         self.logo_fit_combo_box.setItemText(2, translate('OpenLP.GeneralTab', 'Stretch'))
         self.logo_fit_combo_box.setItemText(3, translate('OpenLP.GeneralTab', 'Tile'))
         self.logo_hide_on_startup_check_box.setText(translate('OpenLP.GeneralTab', 'Don\'t show logo on startup'))
-        self.check_for_updates_check_box.setText(translate('OpenLP.GeneralTab', 'Check for updates to OpenLP+'))
+        self.check_for_updates_check_box.setText(translate('OpenLP.GeneralTab', 'Check for updates to Opal Presenter'))
         self.check_for_remote_updates_check_box.setText(translate('OpenLP.GeneralTab',
-                                                                  'Check for updates to OpenLP+ Remote UI'))
+                                                                  'Check for updates to Opal Presenter Remote UI'))
         # CCLI Details
         self.ccli_group_box.setTitle(translate('OpenLP.GeneralTab', 'CCLI Details'))
         self.number_label.setText(UiStrings().CCLINumberLabel)

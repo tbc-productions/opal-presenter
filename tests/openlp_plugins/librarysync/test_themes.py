@@ -77,7 +77,7 @@ def test_remote_theme_cannot_reference_local_paths_or_arbitrary_urls(theme, back
     with zipfile.ZipFile(path, 'w') as archive:
         archive.writestr('theme/theme.json', json.dumps(data))
         archive.writestr('../../outside.txt', 'must never be extracted')
-    with pytest.raises(SyncError, match='portable background'):
+    with pytest.raises(SyncError, match='unsafe|portable background'):
         read_theme_item(path)
     assert not (tmp_path.parent / 'outside.txt').exists()
 

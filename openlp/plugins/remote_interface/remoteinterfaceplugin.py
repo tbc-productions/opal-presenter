@@ -28,4 +28,4 @@ class RemoteInterfacePlugin(RestartRequiredFeature, Plugin):
     def about():
         return translate('RemoteInterfacePlugin', 'Provide remote control, stage, live and chords views '
                          'through the HTTP and WebSocket servers. Enable or disable this plugin, then '
-                         'restart OpenLP+ to apply the change. Saved remote configuration is kept when disabled.')
+                         'restart Opal Presenter to apply the change. Saved remote configuration is kept when disabled.')

@@ -387,12 +387,12 @@ def test_set_startup_screen_default_image(display_window_env, mock_settings):
     display_window = DisplayWindow()
     display_window._is_initialised = True
     display_window.run_in_display = MagicMock()
-    splash_screen_path = 'openlp://display/openlp-splash-screen.png'
+    splash_screen_path = 'openlp://display/opal-presenter-splash.png'
     expect_splash_screen_path = splash_screen_path
     display_window.openlp_splash_screen_path = splash_screen_path
     settings = {
         'core/logo background color': 'blue',
-        'core/logo file': Path(':/graphics/openlp-splash-screen.png'),
+        'core/logo file': Path(':/graphics/opal-presenter-splash.png'),
         'core/logo fit': 'contain',
         'core/logo hide on startup': False
     }

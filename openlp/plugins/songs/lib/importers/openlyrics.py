@@ -53,31 +53,14 @@ class OpenLyricsImport(SongImport):
         Imports the songs.
         """
         self.import_wizard.progress_bar.setMaximum(len(self.import_source))
-        parser = etree.XMLParser(remove_blank_text=True, remove_pis=True)
         for file_path in self.import_source:
             if self.stop_import_flag:
                 return
             self.import_wizard.increment_progress_bar(WizardStrings.ImportingType.format(source=file_path.name))
             try:
-                # Pass a file object, because lxml does not cope with some
-                # special characters in the path (see lp:757673 and lp:744337).
-                from openlp.core.lib.designmedia import restore_media
-                from openlp.core.lib.itemexport import xml_design
-                if file_path.suffix.lower() == '.osz':
-                    with zipfile.ZipFile(file_path) as archive:
-                        xml_names = [name for name in archive.namelist() if name.lower().endswith('.xml')]
-                        if len(xml_names) != 1:
-                            raise ValueError('The song package must contain exactly one XML file.')
-                        packaged_xml = archive.read(xml_names[0])
-                        restore_media(xml_design(packaged_xml), archive=archive)
-                        parsed_file = etree.ElementTree(etree.fromstring(packaged_xml, parser))
-                else:
-                    with file_path.open('rb') as source:
-                        parsed_file = etree.parse(source, parser)
-                    restore_media(xml_design(etree.tostring(parsed_file)), directory=file_path.parent)
-
-                # Remove whitespaces from <lines> tags and its descendants
-                root = parsed_file.getroot()
+                from openlp.core.lib.itemexport import read_xml_package
+                root, _ = read_xml_package(file_path, 'song')
+                # Remove whitespace while preserving spaces around supported chords.
                 for elem in root.iter('{*}lines'):
                     self._strip_whitespace(elem)
                     for subelem in elem.iter('{*}br'):

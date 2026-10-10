@@ -1,13 +1,13 @@
 <RCC>
   <qresource prefix="icon">
-    <file>openlp-logo.svg</file>
+    <file>opal-presenter.png</file>
   </qresource>
   <qresource prefix="graphics">
-    <file>openlp-splash-screen.png</file>
-    <file>openlp-logo-background.svg</file>
+    <file>opal-presenter-splash.png</file>
+    <file>opal-presenter-background.png</file>
   </qresource>
   <qresource prefix="wizards">
-    <file>openlp-osx-wizard.png</file>
+    <file>opal-presenter-about.png</file>
   </qresource>
   <qresource prefix="remotes">
     <file>app_qr.svg</file>

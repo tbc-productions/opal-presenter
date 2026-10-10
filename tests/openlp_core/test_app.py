@@ -314,7 +314,7 @@ def test_is_already_running_is_running_continue(MockedStandardButton, mocked_cri
     # THEN: The result should be false
     MockedStandardButton.assert_called_once_with(QtWidgets.QMessageBox.StandardButton.Ok)
     mocked_critical.assert_called_once_with(None, 'Error',
-                                            'OpenLP+ is already running on this machine. \nClosing this instance', 0)
+                                            'Opal Presenter is already running on this machine. \nClosing this instance', 0)
 
 
 @patch('openlp.core.app.QtWidgets.QApplication.processEvents')
@@ -482,8 +482,8 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
     mock_web_cache.assert_called_once()
     mock_sys.exit.assert_called_once()
     mocked_qapp.setOrganizationName.assert_called_once_with('tbcproductions')
-    mocked_qapp.setApplicationName.assert_called_once_with('OpenLPPlus')
-    mocked_qapp.setApplicationDisplayName.assert_called_once_with('OpenLP+')
+    mocked_qapp.setApplicationName.assert_called_once_with('OpalPresenter')
+    mocked_qapp.setApplicationDisplayName.assert_called_once_with('Opal Presenter')
     mocked_qapp.setOrganizationDomain.assert_called_once_with('tbcproductions.net')
     # Qt already scales point-sized fonts. Startup must not enlarge the application font again.
     mocked_qapp.return_value.setFont.assert_not_called()
@@ -651,9 +651,9 @@ else:
 
 
 @pytest.mark.parametrize('portable_path, settings_path',
-                         [('settings', str(Path(p_prefix + '/openlp/settings/Data/OpenLP.ini'))),
-                          (None, str(Path(p_prefix + '/Data/OpenLP.ini'))),
-                          (p_prefix + '/openlp/settings/', str(Path(p_prefix + '/openlp/settings/Data/OpenLP.ini')))])
+                         [('settings', str(Path(p_prefix + '/openlp/settings/Data/OpalPresenter.ini'))),
+                          (None, str(Path(p_prefix + '/Data/OpalPresenter.ini'))),
+                          (p_prefix + '/openlp/settings/', str(Path(p_prefix + '/openlp/settings/Data/OpalPresenter.ini')))])
 @patch('openlp.core.app.Settings')
 @patch('openlp.core.app.AppLocation')
 def test_setup_portable_settings(MockAppLocation: MagicMock, MockSettings: MagicMock, portable_path: str,

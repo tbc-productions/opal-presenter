@@ -119,7 +119,7 @@ class SongExportForm(OpenLPWizard):
         self.grid_layout.setObjectName('range_layout')
         self.selected_list_widget = QtWidgets.QListWidget(self.export_song_page)
         self.selected_list_widget.setObjectName('selected_list_widget')
-        self.grid_layout.addWidget(self.selected_list_widget, 1, 0, 1, 2)
+        self.grid_layout.addWidget(self.selected_list_widget, 3, 0, 1, 2)
         self.output_directory_path_edit = PathEdit(
             self.export_song_page, PathEditType.Directories,
             dialog_caption=translate('SongsPlugin.ExportWizardForm', 'Select Destination Folder'), show_revert=False)
@@ -128,6 +128,15 @@ class SongExportForm(OpenLPWizard):
         self.directory_label.setObjectName('directory_label')
         self.grid_layout.addWidget(self.directory_label, 0, 0)
         self.grid_layout.addWidget(self.output_directory_path_edit, 0, 1)
+        self.format_combo = QtWidgets.QComboBox(self.export_song_page)
+        self.format_combo.addItem(translate('SongsPlugin.ExportWizardForm', 'Opal Presenter song packages'))
+        self.format_combo.addItem(translate('SongsPlugin.ExportWizardForm', 'Plain OpenLyrics XML'))
+        self.grid_layout.addWidget(self.format_combo, 1, 0, 1, 2)
+        self.format_description = QtWidgets.QLabel(translate('SongsPlugin.ExportWizardForm',
+            'Plain OpenLyrics includes lyrics, metadata and supported chords. Designs, theme snapshots and media '
+            'are included only in Opal song packages.'), self.export_song_page)
+        self.format_description.setWordWrap(True)
+        self.grid_layout.addWidget(self.format_description, 2, 0, 1, 2)
         self.export_song_layout.addLayout(self.grid_layout)
         self.addPage(self.export_song_page)
 
@@ -139,8 +148,7 @@ class SongExportForm(OpenLPWizard):
         self.title_label.setText(
             WizardStrings.HeaderStyle.format(text=translate('OpenLP.Ui', 'Welcome to the Song Export Wizard')))
         self.information_label.setText(
-            translate('SongsPlugin.ExportWizardForm', 'This wizard will help to export your songs to the open and free '
-                                                      '<strong>OpenLyrics </strong> worship song format.'))
+            translate('SongsPlugin.ExportWizardForm', 'Export songs as Opal Presenter packages, or share plain OpenLyrics XML with other applications.'))
         self.available_songs_page.setTitle(translate('SongsPlugin.ExportWizardForm', 'Select Songs'))
         self.available_songs_page.setSubTitle(translate('SongsPlugin.ExportWizardForm',
                                               'Check the songs you want to export.'))
@@ -188,6 +196,7 @@ class SongExportForm(OpenLPWizard):
                     translate('SongsPlugin.ExportWizardForm', 'No Save Location specified'),
                     translate('SongsPlugin.ExportWizardForm', 'You need to specify a directory.'))
                 return False
+            self.plain_openlyrics = self.format_combo.currentIndex() == 1
             self.settings.setValue('songs/last directory export', self.output_directory_path_edit.path)
             return True
         elif self.currentPage() == self.progress_page:

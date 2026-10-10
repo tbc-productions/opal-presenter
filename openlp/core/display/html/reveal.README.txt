@@ -6,7 +6,7 @@ Release: https://github.com/hakimel/reveal.js/releases/tag/6.0.2
 Licence: reveal.LICENSE (MIT)
 
 Vendored assets are package/dist/reveal.js and package/dist/reveal.css.
-OpenLP+ loads the UMD bundle locally; it does not require npm or a CDN at runtime.
+Opal Presenter loads the UMD bundle locally; it does not require npm or a CDN at runtime.
 
 Local patches in reveal.js:
 
@@ -17,7 +17,7 @@ becomes:
 
 This keeps existing percent escapes intact while encoding raw characters and
 retaining upstream RFC 3986 escaping. Upstream decodeURI preserves reserved
-escapes such as %23, which are then encoded again as %2523. OpenLP+ library
+escapes such as %23, which are then encoded again as %2523. Opal Presenter library
 filenames containing # must keep %23; decoding it to # would turn it into a
 URL fragment. Existing rendering tests cover spaces, #, %, parentheses and
 non-ASCII characters, including after a full Reveal.sync().

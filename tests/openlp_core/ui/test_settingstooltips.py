@@ -18,8 +18,8 @@ def test_general_settings_show_help_only_for_useful_hints(settings):
     form.insert_tab(general_tab)
 
     assert form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
-    assert 'OpenLP+' in general_tab.check_for_updates_check_box.text()
-    assert 'OpenLP+' in general_tab.check_for_remote_updates_check_box.text()
+    assert 'Opal Presenter' in general_tab.check_for_updates_check_box.text()
+    assert 'Opal Presenter' in general_tab.check_for_remote_updates_check_box.text()
     assert not general_tab.auto_open_check_box.property('settings_help_icon_added')
     assert not general_tab.single_click_preview_check_box.property('settings_help_icon_added')
 

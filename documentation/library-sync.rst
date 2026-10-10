@@ -217,10 +217,10 @@ Uploading at the shared root creates these item-type folders as needed::
         Presentations/
             Weekly notices.pptx
         Themes/
-            Organisation theme.otz
+            Organisation theme.opal-theme
 
 Songs use OpenLyrics. Custom Slides retain their title, credits and design in
-native XML. Text items with embedded design media use portable ``.osz`` packages.
+native Opal song and slide packages. Legacy XML and ``.osz`` packages remain readable.
 Images, media and presentations retain their original file format. Themes use native
 portable theme packages. Bible items are excluded. Friendly titles are retained in
 Drive metadata and local records; managed download directories keep internal IDs
@@ -245,7 +245,7 @@ and `content updates <https://developers.google.com/workspace/drive/api/referenc
 New uploads check for duplicates before and after creation and retract their own
 later copy when a simultaneous creation is detected. Drive itself has no unique-name
 constraint, so strict uniqueness across simultaneous creators or changes outside
-OpenLP+ would require a shared index. This implementation has no background mirroring
+Opal Presenter would require a shared index. This implementation has no background mirroring
 or automatic conflict merging.
 
 Connection file format

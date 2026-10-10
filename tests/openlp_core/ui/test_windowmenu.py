@@ -11,7 +11,7 @@ from openlp.core.ui.windowmenu import WindowMenu
 @pytest.fixture
 def window_menu(qapp, qtbot, monkeypatch):
     host = QtWidgets.QMainWindow()
-    host.setWindowTitle('OpenLP+')
+    host.setWindowTitle('Opal Presenter')
     qtbot.addWidget(host)
     host.show()
     controller = WindowMenu(host, host.menuBar())
@@ -69,13 +69,13 @@ def test_live_list_filters_surfaces_and_refreshes_titles(window_menu, qtbot):
     child.show()
     window_menu.menu.aboutToShow.emit()
     assert [action.text() for action in window_menu._window_actions] == [
-        'OpenLP+', 'Floating Library', 'Song && Slides']
+        'Opal Presenter', 'Floating Library', 'Song && Slides']
     assert [action.isChecked() for action in window_menu._window_actions] == [True, False, False]
     editor.setWindowTitle('Renamed[*]')
     editor.setWindowModified(True)
     floating.hide()
     window_menu.menu.aboutToShow.emit()
-    assert [action.text() for action in window_menu._window_actions] == ['OpenLP+', 'Renamed*']
+    assert [action.text() for action in window_menu._window_actions] == ['Opal Presenter', 'Renamed*']
 
 
 def test_selecting_minimised_window_preserves_maximised_state(window_menu, qtbot, monkeypatch):

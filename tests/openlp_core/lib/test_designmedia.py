@@ -114,11 +114,11 @@ def test_imported_media_cannot_reference_arbitrary_files_or_active_content(sourc
 def test_xml_archive_contains_design_and_original_media(assets):
     reference = cache_media(image_file(assets / 'large.png', large=True))
     design = {'version': 1, 'background': {'type': 'solid', 'image': reference}}
-    xml = '<song><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(design) + '</design></song>'
-    path = assets / 'Song.osz'
+    xml = '<song xmlns="http://openlyrics.info/namespace/2009/song"><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(design) + '</design></song>'
+    path = assets / 'Song.opal-song'
     write_xml_package(path, xml)
     with zipfile.ZipFile(path) as archive:
-        assert set(archive.namelist()) == {'song.xml', reference}
+        assert set(archive.namelist()) == {'manifest.json', 'song.xml', reference}
         assert archive.read(reference) == resolve_media(reference).read_bytes()
         assert reference.encode() in archive.read('song.xml')
 
@@ -174,13 +174,13 @@ def test_theme_archive_inlines_small_backgrounds_and_bundles_large_ones(assets, 
     theme.background_source = path
     (theme_directory / 'Test.json').write_text(theme.export_theme(assets / 'themes'))
     manager = SimpleNamespace(theme_path=assets / 'themes')
-    target = assets / 'Test.otz'
+    target = assets / 'Test.opal-theme'
     assert ThemeManager._export_theme(manager, target, 'Test')
     with zipfile.ZipFile(target) as archive:
         descriptor = json.loads(archive.read('Test/Test.json'))
         assert str(descriptor['background_filename']).startswith('data:') != large
         assert len(media_references(descriptor)) == (1 if large else 0)
-        assert set(archive.namelist()) == {'Test/Test.json'} | media_references(descriptor)
+        assert set(archive.namelist()) == {'manifest.json', 'Test/Test.json'} | media_references(descriptor)
         if large:
             reference = descriptor['background_filename']
             resolve_media(reference).unlink()
@@ -210,12 +210,12 @@ def test_item_archive_restores_large_assets_before_temporary_service_files_are_r
     header['header'].update(title='Welcome', name='custom', slide_design=design)
     exported = MagicMock()
     exported.get_service_repr.return_value = header
-    archive_path = assets / 'Welcome.osz'
+    archive_path = assets / 'Welcome.opal-slides'
     write_item_service(archive_path, exported)
     resolve_media(reference).unlink()
     extracted = assets / 'extracted'
     with zipfile.ZipFile(archive_path) as archive:
-        service = json.loads(archive.read('service_data.osj'))
+        service = json.loads(archive.read('service.json'))
         archive.extractall(extracted)
     with patch('openlp.core.lib.serviceitem.UiIcons'):
         item = ServiceItem()
@@ -228,15 +228,25 @@ def test_item_archive_restores_large_assets_before_temporary_service_files_are_r
     assert resolve_media(item.slide_design['elements'][0]['src']).is_file()
 
 
-@pytest.mark.parametrize('suffix', ['.xml', '.osz'])
+@pytest.mark.parametrize('suffix', ['.xml', '.osz', '.opal-song'])
 def test_song_import_retains_media_from_xml_companions_or_an_archive(assets, suffix):
     from types import SimpleNamespace
     from openlp.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
     reference = cache_media(image_file(assets / 'photo.png', large=True))
     design = {'version': 1, 'background': {'type': 'solid', 'image': reference}}
-    xml = '<song><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(design) + '</design></song>'
+    xml = '<song xmlns="http://openlyrics.info/namespace/2009/song"><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(design) + '</design></song>'
     path = assets / ('Song' + suffix)
-    write_xml_package(path, xml)
+    if suffix in ('.xml', '.osz'):
+        if suffix == '.osz':
+            with zipfile.ZipFile(path, 'w') as archive:
+                archive.writestr('song.xml', xml)
+                write_media(archive, design)
+        else:
+            path.write_text(xml)
+            (assets / reference).parent.mkdir(parents=True, exist_ok=True)
+            (assets / reference).write_bytes(resolve_media(reference).read_bytes())
+    else:
+        write_xml_package(path, xml)
     resolve_media(reference).unlink()
     importer = SimpleNamespace(import_source=[path], stop_import_flag=False,
                                import_wizard=MagicMock(), open_lyrics=MagicMock(), log_error=MagicMock())
@@ -248,14 +258,14 @@ def test_song_import_retains_media_from_xml_companions_or_an_archive(assets, suf
 
 def test_failed_archive_export_preserves_existing_destination(assets):
     reference = 'assets/' + 'c' * 64 + '.png'
-    xml = '<song><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(
+    xml = '<song xmlns="http://openlyrics.info/namespace/2009/song"><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(
         {'version': 1, 'elements': [{'id': 'picture', 'kind': 'image', 'src': reference}]}) + '</design></song>'
-    path = assets / 'Song.osz'
+    path = assets / 'Song.opal-song'
     path.write_bytes(b'previous export')
     with pytest.raises(OSError):
         write_xml_package(path, xml)
     assert path.read_bytes() == b'previous export'
-    assert sorted(item.name for item in assets.iterdir()) == ['Song.osz']
+    assert sorted(item.name for item in assets.iterdir()) == ['Song.opal-song']
 
 
 @pytest.mark.parametrize('kind', ['image', 'video'])

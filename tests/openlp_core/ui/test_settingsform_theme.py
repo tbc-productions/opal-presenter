@@ -31,7 +31,7 @@ def test_changed_theme_prompts_after_saving(settings, form, index):
         form.accept()
 
     reminder.assert_called_once_with(
-        form, 'Restart required', 'Your interface theme has been saved. Restart OpenLP+ to apply it.')
+        form, 'Restart required', 'Your interface theme has been saved. Restart Opal Presenter to apply it.')
 
 
 def test_unchanged_theme_does_not_prompt(settings, form):

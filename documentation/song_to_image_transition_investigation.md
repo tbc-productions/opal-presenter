@@ -308,7 +308,7 @@ across a song→image switch.
 
 Manual reproduction:
 
-1. Start OpenLP+ with a two-monitor setup.
+1. Start Opal Presenter with a two-monitor setup.
 2. Load a service with: song → image → song → image → PDF presentation.
 3. Set the song theme transition to **off**; set image/PDF transitions to
    **fade**.

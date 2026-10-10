@@ -71,7 +71,7 @@ class OpenLyricsExport(RegistryProperties):
             xml = open_lyrics.song_to_xml(song)
             from openlp.core.lib.designmedia import media_references
             from openlp.core.lib.itemexport import write_xml_package, xml_design
-            suffix = ".osz" if media_references(xml_design(xml)) else ".xml"
+            suffix = '.xml' if getattr(self.parent, 'plain_openlyrics', False) else '.opal-song'
             tree = etree.ElementTree(etree.fromstring(xml.encode()))
             filename = '{title} ({author})'.format(title=song.title,
                                                    author=', '.join([author.display_name for author in
@@ -91,7 +91,7 @@ class OpenLyricsExport(RegistryProperties):
             # characters in the path (see lp:757673 and lp:744337).
             output = etree.tostring(tree, encoding='utf-8', xml_declaration=True, pretty_print=True)
             service_item = None
-            if suffix == '.osz':
+            if suffix == '.opal-song':
                 from PySide6 import QtCore
                 from openlp.core.widgets import fluent as QtWidgets
                 library_item = QtWidgets.QListWidgetItem()

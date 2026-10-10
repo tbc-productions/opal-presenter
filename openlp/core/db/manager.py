@@ -82,7 +82,7 @@ class DBManager(object):
                 critical_error_message_box(
                     translate('OpenLP.Manager', 'Database Error'),
                     translate('OpenLP.Manager', 'The database being loaded was created in a more recent version of '
-                              'OpenLP+. The database is version {db_ver}, while OpenLP+ expects version {db_up}. '
+                              'Opal Presenter. The database is version {db_ver}, while Opal Presenter expects version {db_up}. '
                               'The database will not be loaded.\n\nDatabase: {db_name}').format(db_ver=db_ver,
                                                                                                 db_up=up_ver,
                                                                                                 db_name=self.db_url))

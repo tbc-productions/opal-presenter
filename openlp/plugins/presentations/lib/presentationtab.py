@@ -105,7 +105,7 @@ class PresentationTab(SettingsTab):
             translate('PresentationPlugin.PresentationTab', 'Automatically select the output display'))
         self.ppt_auto_display_check_box.setToolTip(translate(
             'PresentationPlugin.PresentationTab',
-            'Use OpenLP+’s selected output screen for fullscreen PowerPoint presentations. '
+            'Use Opal Presenter’s selected output screen for fullscreen PowerPoint presentations. '
             'Supports the primary display or a single secondary display. Turn off to choose a monitor '
             'in PowerPoint’s Set Up Show dialog. Requires macOS Accessibility access.'))
         self.impress_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'Impress options'))

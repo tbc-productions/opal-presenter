@@ -127,7 +127,7 @@
     <name>BiblesPlugin.SwordImport</name>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/importers/sword.py" line="94"/>
-        <source>An unexpected error happened while importing the SWORD bible, please report this to the OpenLP+ developers.
+        <source>An unexpected error happened while importing the SWORD bible, please report this to the Opal Presenter developers.
 {error}</source>
         <translation>SWORD形式の聖書をインポート中に予期せぬエラーが発生しました。OpenLPの開発者に報告してください。
 {error}</translation>
@@ -763,7 +763,7 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="462"/>
-        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from OpenLP+?
+        <source>Are you sure you want to completely delete &quot;{bible}&quot; Bible from Opal Presenter?
 
 You will need to re-import this Bible to use it again.</source>
         <translation>本当にOpenLPから聖書「{bible}」を削除しても良いですか。
@@ -782,7 +782,7 @@ You will need to re-import this Bible to use it again.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="591"/>
-        <source>OpenLP+ cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
+        <source>Opal Presenter cannot combine single and dual Bible verse search results. Do you want to clear your saved results?</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1246,8 +1246,8 @@ minimum of {count} characters and a space for performance reasons)</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="70"/>
-        <source>OpenLP+ is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
-        <translation>OpenLP+ はこの聖書の訳の言語を判定できませんでした。以下の一覧から言語を選択してください。</translation>
+        <source>Opal Presenter is unable to determine the language of this translation of the Bible. Please select the language from the list below.</source>
+        <translation>Opal Presenter はこの聖書の訳の言語を判定できませんでした。以下の一覧から言語を選択してください。</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
@@ -1490,6 +1490,20 @@ minimum of {count} characters and a space for performance reasons)</source>
         <source>Welcome to the Bible Import Wizard</source>
         <translation>聖書インポートウィザードへようこそ</translation>
     </message>
+    <message>
+        <source>OpenLP is already running on this machine.
+Closing this instance</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter is already running on this machine.&#32;
+Closing this instance</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>BiblesPlugin.BibleEditForm</name>
@@ -1548,7 +1562,7 @@ It is not possible to customize the Book Names.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibleform.py" line="101"/>
-        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure OpenLP+.</source>
+        <source>To use the customized book names, &quot;Bible language&quot; must be selected on the Meta Data tab or, if &quot;Global settings&quot; is selected, on the Bible page in Configure Opal Presenter.</source>
         <translation>任意の書名を使用するには、メタデータタブにて&amp;quot;聖書言語&amp;quot;を選択するか、&amp;quot;全体設定&amp;quot;の聖書タブにて設定し
 てください。</translation>
     </message>
@@ -1681,7 +1695,7 @@ It is not possible to customize the Book Names.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="103"/>
-        <source>Enter your &lt;b&gt;Planning Center Online&lt;/b&gt; &lt;i&gt;Personal Access Token&lt;/i&gt; details in the text 
+        <source>Enter your &lt;b&gt;Planning Center Online&lt;/b&gt; &lt;i&gt;Personal Access Token&lt;/i&gt; details in the text&#32;
 boxes below. Personal Access Tokens are created by doing the following:
 &lt;ol&gt;
   &lt;li&gt;Login to your Planning Center Online account at&lt;br&gt;
@@ -1703,6 +1717,31 @@ boxes below. Personal Access Tokens are created by doing the following:
         <source>Default service type:</source>
         <translation type="unfinished"/>
     </message>
+    <message>
+        <source>Enter your &lt;b&gt;Planning Center Online&lt;/b&gt; &lt;i&gt;Personal Access Token&lt;/i&gt; details in the text
+boxes below. Personal Access Tokens are created by doing the following:
+&lt;ol&gt;
+  &lt;li&gt;Login to your Planning Center Online account at&lt;br&gt;
+      &lt;a href=https://api.planningcenteronline.com/oauth/applications&gt;
+      https://api.planningcenteronline.com/oauth/applications&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Click the "New Personal Access Token" button at the bottom of the screen.&lt;/li&gt;
+  &lt;li&gt;Enter a description of your use case (eg. "OpenLP Integration")&lt;/li&gt;
+  &lt;li&gt;Copy and paste the provided Application ID and Secret values below.&lt;/li&gt;
+&lt;/ol&gt;</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Enter your &lt;b&gt;Planning Center Online&lt;/b&gt; &lt;i&gt;Personal Access Token&lt;/i&gt; details in the text boxes below. Personal Access Tokens are created by doing the following:
+&lt;ol&gt;
+  &lt;li&gt;Login to your Planning Center Online account at&lt;br&gt;
+      &lt;a href=https://api.planningcenteronline.com/oauth/applications&gt;
+      https://api.planningcenteronline.com/oauth/applications&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Click the "New Personal Access Token" button at the bottom of the screen.&lt;/li&gt;
+  &lt;li&gt;Enter a description of your use case (eg. "Opal Presenter Integration")&lt;/li&gt;
+  &lt;li&gt;Copy and paste the provided Application ID and Secret values below.&lt;/li&gt;
+&lt;/ol&gt;</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>PlanningCenterPlugin</name>
@@ -1721,7 +1760,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/forms/selectplanform.py" line="75"/>
-        <source>Authentiation Failed. Check your credentials in OpenLP+ Settings.</source>
+        <source>Authentiation Failed. Check your credentials in Opal Presenter Settings.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1972,7 +2011,7 @@ Do you want to add the other images anyway?</source>
     <name>ImagePlugin</name>
     <message>
         <location filename="../../openlp/plugins/images/imageplugin.py" line="54"/>
-        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of OpenLP+&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
+        <source>&lt;strong&gt;Image Plugin&lt;/strong&gt;&lt;br /&gt;The image plugin provides displaying of images.&lt;br /&gt;One of the distinguishing features of this plugin is the ability to group a number of images together in the service manager, making the displaying of multiple images easier. This plugin can also make use of Opal Presenter&apos;s &quot;timed looping&quot; feature to create a slide show that runs automatically. In addition to this, images from the plugin can be used to override the current theme&apos;s background, which renders text-based items like songs with the selected image as a background instead of the background provided by the theme.</source>
         <translation>&lt;strong&gt;画像プラグイン&lt;/strong&gt;&lt;br /&gt;画像プラグインは、画像を表示する機能を提供します。&lt;br /&gt;礼拝プログラムで複数の画像をグループ化したり、複数の画像を簡単に表示することができます。タイムアウト ループの機能を使用してスライドショーを自動的に表示することもできます。さらに、賛美などのテキスト ベースの項目の背景を、外観テーマで指定されたものからこのプラグインの画像に変更することもできます。</translation>
     </message>
     <message>
@@ -2068,6 +2107,22 @@ Do you want to add the other images anyway?</source>
         <comment>For item cloning</comment>
         <translation>コピー</translation>
     </message>
+    <message>
+        <source>Custom slides (*.opal-slides *.xml *.osz)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Import custom slides</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Import failed</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Slides (*.opal-slides)</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>OpenLP.MediaManagerItem</name>
@@ -2088,6 +2143,22 @@ Do you want to add the other images anyway?</source>
         <location filename="../../openlp/plugins/custom/lib/mediaitem.py" line="109"/>
         <source>Search Titles...</source>
         <translation>タイトルを検索...</translation>
+    </message>
+    <message>
+        <source>Includes supported chords. Omits designs, theme snapshots and media.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Song</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Plain OpenLyrics XML</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Plain OpenLyrics XML (lyrics and metadata only)</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -2553,6 +2624,11 @@ Do you want to add the other images anyway?</source>
         <source>Display &amp;&amp; Cl&amp;ose</source>
         <translation>表示して閉じる(&amp;O)</translation>
     </message>
+    <message>
+        <source>You haven't specified any text for your alert.
+Please type in some text before clicking New.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>AlertsPlugin.AlertForm</name>
@@ -2563,7 +2639,7 @@ Do you want to add the other images anyway?</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertform.py" line="112"/>
-        <source>You haven't specified any text for your alert. 
+        <source>You haven't specified any text for your alert.&#32;
 Please type in some text before clicking New.</source>
         <translation>警告テキストが何も指定されていません。
 新規作成をクリックする前にテキストを入力してください。</translation>
@@ -2806,7 +2882,7 @@ File extension not supported</source>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="108"/>
-        <source>You have lost OpenLP+s shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close OpenLP+ immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting OpenLP+</source>
+        <source>You have lost Opal Presenters shared Data Directory Lock, which instead has been claimed by &quot;{user}&quot; on &quot;{host}&quot;! You should close Opal Presenter immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting Opal Presenter</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -2816,7 +2892,50 @@ File extension not supported</source>
     </message>
     <message>
         <location filename="../../openlp/core/lib/filelock.py" line="149"/>
-        <source>OpenLP+s shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
+        <source>Opal Presenters shared Data Directory is being used by &quot;{user}&quot; on &quot;{host}&quot;. To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter data folder was not found in:
+
+{path}
+
+The location of the data folder was previously changed from the Opal Presenter default location. If the data was stored on removable device, that device needs to be made available.
+
+You may reset the data location back to the default location, or you can try to make the current location available.
+
+Do you want to reset to the default data location? If not, Opal Presenter will be closed so you can try to fix the problem.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter has been upgraded, do you want to create
+a backup of the old data folder?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter has found a configuration file created by a newer version of Opal Presenter. Opal Presenter will start with a fresh install as downgrading data is not supported. Any existing data will be backed up to:
+
+{data_folder_backup_path}
+
+Do you want to continue?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Settings back up failed.
+
+Opal Presenter will attempt to continue.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>The Opal Presenter shared Data Directory is being used by "{user}" on "{host}". To avoid data corruption only one user can access the data at a time! Please wait a few minutes and try again.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>The saved window layout was reset to allow Opal Presenter to start.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>You have lost the Opal Presenter shared Data Directory Lock, which instead has been claimed by "{user}" on "{host}"! You should close Opal Presenter immediately to avoid data corruption! You can try to reclaim the Data Directory Lock by restarting Opal Presenter</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -2994,6 +3113,10 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="323"/>
         <source>You need to select at least one screen to be used as a display. Select the screen you wish to use as a display, and check the checkbox for that screen.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Allow the display window to open on the same screen as the Opal Presenter main window.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -3286,6 +3409,10 @@ File extension not supported</source>
         <source>Please restart OpenLP to use your new language setting.</source>
         <translation>新しい言語設定を使用には OpenLP を再起動してください。</translation>
     </message>
+    <message>
+        <source>Please restart Opal Presenter to use your new language setting.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>OpenLP.MainWindow</name>
@@ -3303,6 +3430,116 @@ File extension not supported</source>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="454"/>
         <source>The screen setup has changed. OpenLP will try to automatically select a display screen, but you should consider updating the screen settings.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Version {new} of OpenLP is now available for download (you are currently running version {current}).
+
+You can download the latest version from https://openlp.org/.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>&amp;Configure Opal Presenter...</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>&amp;Exit Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Are you sure you want to exit Opal Presenter?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Are you sure you want to import settings?
+
+ Importing settings will make permanent changes to your current Opal Presenter configuration.
+
+ Importing incorrect settings may cause erratic behaviour or Opal Presenter to terminate abnormally.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Are you sure you want to re-run the First Time Wizard?
+
+Re-running this wizard may make changes to your current Opal Presenter configuration.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Bring the projection forward. Use the shortcut again to return to Opal Presenter.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Close Opal Presenter - Shut down the program.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Copying Opal Presenter data to new data directory location - {path} - Please wait for copy to finish</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Exit Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Export formatting styles to a *.opal-styles file.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Export settings to a *.opal-settings file.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Import failed</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Import formatting styles from a *.opal-styles file.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Import settings from a *.opal-settings file previously exported from this or another machine.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>More information about Opal Presenter (a fork of OpenLP).</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Settings Backup (*.opal-settings)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Version Updated</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter and OpenLP Settings (*.opal-settings *.conf *.zip)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter data directory copy failed
+
+{err}</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter will now close. Imported settings will be applied the next time you start Opal Presenter.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>The file you have selected does not appear to be a valid Opal Presenter settings file, or is from a newer version of Opal Presenter.
+
+Processing has terminated and no changes have been made.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>The screen setup has changed. Opal Presenter will try to automatically select a display screen, but you should consider updating the screen settings.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Version {new} of Opal Presenter is now available for download (you are currently running version {current}).&#32;
+
+You can download the latest version from https://git.tbcproductions.net/tbcproductions/opal-presenter/releases.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -3688,12 +3925,12 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="427"/>
-        <source>OpenLP+ Song Database</source>
+        <source>Opal Presenter Song Database</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="428"/>
-        <source>OpenLP is already running on this machine. 
+        <source>OpenLP is already running on this machine.&#32;
 Closing this instance</source>
         <translation type="unfinished"/>
     </message>
@@ -6135,7 +6372,7 @@ Closing this instance</source>
     <name>OpenLP.SourceSelectForm</name>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="150"/>
-        <source>Ignoring current changes and return to OpenLP+</source>
+        <source>Ignoring current changes and return to Opal Presenter</source>
         <translation>現在の変更を破棄しOpenLPに戻ります</translation>
     </message>
     <message>
@@ -6150,7 +6387,7 @@ Closing this instance</source>
     </message>
     <message>
         <location filename="../../openlp/core/projectors/sourceselectform.py" line="159"/>
-        <source>Save changes and return to OpenLP+</source>
+        <source>Save changes and return to Opal Presenter</source>
         <translation>変更を保存しOpenLPに戻ります</translation>
     </message>
     <message>
@@ -6615,8 +6852,8 @@ OpenLP will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="405"/>
-        <source>OpenLP+ Backup</source>
-        <translation>OpenLP+ バックアップ</translation>
+        <source>Opal Presenter Backup</source>
+        <translation>Opal Presenter バックアップ</translation>
     </message>
     <message>
         <location filename="../../openlp/core/app.py" line="406"/>
@@ -6641,6 +6878,18 @@ OpenLP will attempt to continue.</source>
         <source>Playing time: </source>
         <translation>再生時間: </translation>
     </message>
+    <message>
+        <source>Opal Presenter Service (*.opal-service)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Service - external files (*.opal-service-lite)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter and OpenLP Services (*.opal-service *.opal-service-lite *.osz *.oszl)</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>SongsPlugin.SongProImport</name>
@@ -6656,6 +6905,22 @@ OpenLP will attempt to continue.</source>
         <location filename="../../openlp/core/ui/settingsdialog.py" line="62"/>
         <source>Configure OpenLP</source>
         <translation>OpenLPの設定</translation>
+    </message>
+    <message>
+        <source>Configure Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Preferences reset. Restart Opal Presenter to apply all changes.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Reset preferences to their defaults? Your library data, its location, and enabled plugins will be kept. Restart Opal Presenter to apply the changes.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Your interface theme has been saved. Restart Opal Presenter to apply it.</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -7014,6 +7279,14 @@ OpenLP will attempt to continue.</source>
         <location filename="../../openlp/core/ui/formattingtagform.py" line="208"/>
         <source>Tag is missing</source>
         <translation>タグがみつかりません</translation>
+    </message>
+    <message>
+        <source>Opal Presenter Formatting Styles (*.opal-styles)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter and OpenLP Formatting Styles (*.opal-styles *.json)</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -7567,6 +7840,10 @@ OpenLP will attempt to continue.</source>
         <source>{name} (Inactive)</source>
         <translation>{name} (無効)</translation>
     </message>
+    <message>
+        <source>Restart Opal Presenter to apply this plugin change.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>SongsPlugin.DreamBeamImport</name>
@@ -7585,8 +7862,8 @@ OpenLP will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="70"/>
-        <source>Choose the translation you&apos;d like to use in OpenLP+.</source>
-        <translation>OpenLP+ で利用する言語を選択してください。</translation>
+        <source>Choose the translation you&apos;d like to use in Opal Presenter.</source>
+        <translation>Opal Presenter で利用する言語を選択してください。</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
@@ -7808,8 +8085,8 @@ OpenLP will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="521"/>
-        <source>OpenLP+ Service Files (*.osz *.oszl)</source>
-        <translation>OpenLP+ 礼拝プログラムファイル (*.osz *.oszl)</translation>
+        <source>Opal Presenter Service Files (*.osz *.oszl)</source>
+        <translation>Opal Presenter 礼拝プログラムファイル (*.osz *.oszl)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="532"/>
@@ -7849,13 +8126,13 @@ These files will be removed if you continue to save.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="772"/>
-        <source>OpenLP+ Service Files - lite (*.oszl)</source>
+        <source>Opal Presenter Service Files - lite (*.oszl)</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="773"/>
-        <source>OpenLP+ Service Files (*.osz)</source>
-        <translation>OpenLP+ 礼拝プログラムファイル (*.osz)</translation>
+        <source>Opal Presenter Service Files (*.osz)</source>
+        <translation>Opal Presenter 礼拝プログラムファイル (*.osz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="882"/>
@@ -8087,8 +8364,8 @@ Add some items to it then press Save</source>
         <location filename="../../openlp/core/ui/thememanager.py" line="477"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="478"/>
         <location filename="../../openlp/core/ui/thememanager.py" line="526"/>
-        <source>OpenLP+ Themes (*.otz)</source>
-        <translation>OpenLP+ テーマファイル (*.otz)</translation>
+        <source>Opal Presenter Themes (*.otz)</source>
+        <translation>Opal Presenter テーマファイル (*.otz)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="484"/>
@@ -8169,11 +8446,25 @@ It is corrupt, inaccessible or not a valid theme.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/thememanager.py" line="865"/>
-        <source>Theme is currently used 
+        <source>Theme is currently used&#32;
 
 {text}</source>
         <translation>以下のテーマは使用中です
 {text}</translation>
+    </message>
+    <message>
+        <source>Theme is currently used
+
+{text}</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Themes (*.opal-theme)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Themes (*.opal-theme *.otz)</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -8396,6 +8687,70 @@ in slide controller:</source>
         <source>Hide mouse cursor when over display window</source>
         <translation>ディスプレイ ウィンドウの上では、マウス カーソルを隠す</translation>
     </message>
+    <message>
+        <source>WARNING:
+
+The location you have selected
+
+{path}
+
+appears to contain OpenLP data files. Do you wish to replace these files with the current data files?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>&lt;strong&gt;WARNING:&lt;/strong&gt; New data directory location contains Opal Presenter data files.  These files WILL be replaced during a copy.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Are you sure you want to change the location of the Opal Presenter data directory to:
+
+{path}
+
+Existing files in this directory could be overwritten. The data directory will be changed when Opal Presenter is closed.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Are you sure you want to change the location of the Opal Presenter data directory to:
+
+{path}
+
+The data directory will be changed when Opal Presenter is closed.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Cancel Opal Presenter data directory location change.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Copy existing Image, Media, and Presentation files into the Opal Presenter data folder now?</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Copy existing Images, Media, and Presentations into Opal Presenter-managed storage.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Copy the Opal Presenter data files to the new location.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Protect the data directory with a locking mechanism to avoid data corruption if multiple users access the data at the same time. Useful for instances shared via network. &lt;strong&gt;NOTE:&lt;/strong&gt; This will only work if the network sharing is available when Opal Presenter is running.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Store Images, Media, and Presentations in the Opal Presenter data folder for reliability.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>WARNING:&#32;
+
+The location you have selected&#32;
+
+{path}
+
+appears to contain Opal Presenter data files. Do you wish to replace these files with the current data files?</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>OpenLP.GeneralTab</name>
@@ -8455,6 +8810,14 @@ in slide controller:</source>
         <source>CCLI Details</source>
         <translation>CCLI 詳細</translation>
     </message>
+    <message>
+        <source>Check for updates to Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Check for updates to Opal Presenter Remote UI</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>SongsPlugin.GeneralTab</name>
@@ -8496,12 +8859,12 @@ in slide controller:</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="99"/>
-        <source>&lt;strong&gt;Oops, OpenLP+ hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the OpenLP+ developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
+        <source>&lt;strong&gt;Oops, Opal Presenter hit a problem and couldn&apos;t recover!&lt;br&gt;&lt;br&gt;You can help &lt;/strong&gt; the Opal Presenter developers to &lt;strong&gt;fix this&lt;/strong&gt; by&lt;br&gt; sending them a &lt;strong&gt;bug report to {email}&lt;/strong&gt;{newlines}</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/exceptiondialog.py" line="106"/>
-        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making OpenLP+ better!&lt;br&gt;</source>
+        <source>{first_part}&lt;strong&gt;No email app? &lt;/strong&gt; You can &lt;strong&gt;save&lt;/strong&gt; this information to a &lt;strong&gt;file&lt;/strong&gt; and&lt;br&gt;send it from your &lt;strong&gt;mail on browser&lt;/strong&gt; via an &lt;strong&gt;attachment.&lt;/strong&gt;&lt;br&gt;&lt;br&gt;&lt;strong&gt;Thank you&lt;/strong&gt; for being part of making Opal Presenter better!&lt;br&gt;</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -8939,7 +9302,7 @@ in slide controller:</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="632"/>
-        <source>Version {new} of OpenLP is now available for download (you are currently running version {current}). 
+        <source>Version {new} of OpenLP is now available for download (you are currently running version {current}).&#32;
 
 You can download the latest version from https://openlp.org/.</source>
         <translation type="unfinished"/>
@@ -8969,15 +9332,15 @@ To download this version, go to the Remote settings and click the Upgrade button
         <location filename="../../openlp/core/ui/mainwindow.py" line="714"/>
         <source>Are you sure you want to re-run the First Time Wizard?
 
-Re-running this wizard may make changes to your current OpenLP+ configuration and possibly add songs to your existing songs list and change your default theme.</source>
+Re-running this wizard may make changes to your current Opal Presenter configuration and possibly add songs to your existing songs list and change your default theme.</source>
         <translation>本当に初回起動ウィザードを再実行しますか?
 
 初回起動ウィザードを再実行すると、現在のOpenLP設定および既存の賛美やテーマが変更されることがあります。</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="758"/>
-        <source>OpenLP+ Main Display Blanked</source>
-        <translation>OpenLP+ のプライマリ ディスプレイがブランクです</translation>
+        <source>Opal Presenter Main Display Blanked</source>
+        <translation>Opal Presenter のプライマリ ディスプレイがブランクです</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/mainwindow.py" line="759"/>
@@ -9209,7 +9572,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/aboutform.py" line="138"/>
-        <source>OpenLP+ would not be possible without the following software libraries:</source>
+        <source>Opal Presenter would not be possible without the following software libraries:</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9241,6 +9604,14 @@ Processing has terminated and no changes have been made.</source>
         <location filename="../../openlp/core/ui/aboutform.py" line="769"/>
         <source> build {version}</source>
         <translation>ビルド {version}</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Opal Presenter {{version}}{{revision}} - Open Source Lyrics Projection&lt;/p&gt;&lt;p&gt;Opal Presenter is a fork of OpenLP.&lt;/p&gt;&lt;p&gt;Opal Presenter project: &lt;a href="https://git.tbcproductions.net/tbcproductions/opal-presenter"&gt;https://git.tbcproductions.net/tbcproductions/opal-presenter&lt;/a&gt;&lt;/p&gt;&lt;hr&gt;&lt;p&gt;Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors&lt;/p&gt;&lt;p&gt;OpenLP project: &lt;a href="https://openlp.org/"&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href="https://www.gnu.org/licenses/"&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter is maintained by volunteers all over the world in their spare time. If you would like to see this project succeed, please consider contributing to it by clicking the "contribute" button below.</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -9299,7 +9670,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="238"/>
-        <source>OpenLP+ was unable to read the resource index file. Please try again later.</source>
+        <source>Opal Presenter was unable to read the resource index file. Please try again later.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9320,7 +9691,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="464"/>
-        <source>Please wait while OpenLP+ is set up and your data is downloaded.</source>
+        <source>Please wait while Opal Presenter is set up and your data is downloaded.</source>
         <translation>OpenLPがセットアップされ、あなたのデータがインポートされるまでお待ち下さい。</translation>
     </message>
     <message>
@@ -9330,22 +9701,22 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="481"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to return to Opal Presenter.</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="484"/>
-        <source>Download complete. Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
+        <source>Download complete. Click the &apos;{finish_button}&apos; button to start Opal Presenter.</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="488"/>
-        <source>Click the &apos;{finish_button}&apos; button to return to OpenLP+.</source>
+        <source>Click the &apos;{finish_button}&apos; button to return to Opal Presenter.</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="490"/>
-        <source>Click the &apos;{finish_button}&apos; button to start OpenLP+.</source>
+        <source>Click the &apos;{finish_button}&apos; button to start Opal Presenter.</source>
         <translation>ボタン&apos;{finish_button}&apos;をクリックして、OpenLPを開始してください。</translation>
     </message>
     <message>
@@ -9357,6 +9728,34 @@ Processing has terminated and no changes have been made.</source>
         <location filename="../../openlp/core/ui/firsttimeform.py" line="563"/>
         <source>Unable to download some files</source>
         <translation>いくつかのファイルをダウンロードできません</translation>
+    </message>
+    <message>
+        <source>Changes made when re-running setup take effect after restarting Opal Presenter.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Choose the features and display you want to use, or restore a settings backup. Songs, Bibles and themes can be imported from your own files after setup.
+
+Opal Presenter is an independent project and is not endorsed by OpenLP.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>If you have a previously exported settings file (.opal-settings, .conf or .zip), you can select it now. This will restore your configuration, including plugins, theme selections, and other preferences.
+
+Alternatively, you can leave this blank to configure Opal Presenter manually.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter Settings (*.opal-settings *.conf *.zip)</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Set up Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Welcome to Opal Presenter</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -9386,7 +9785,7 @@ Processing has terminated and no changes have been made.</source>
     <name>OpenLP.FirstTimeWizard</name>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="74"/>
-        <source>OpenLP+ has a web remote, which enables you to control OpenLP+ from another computer, phone or tablet on the same network as the OpenLP+ computer. OpenLP+ can download this web remote for you now, or you can download it later via the remote settings.</source>
+        <source>Opal Presenter has a web remote, which enables you to control Opal Presenter from another computer, phone or tablet on the same network as the Opal Presenter computer. Opal Presenter can download this web remote for you now, or you can download it later via the remote settings.</source>
         <translation>OpenLPにはウェブリモート機能があります。同じネットワーク上の他のコンピュータや携帯電話・タブレットからOpenLPを操作できます。今すぐ、または、リモート設定から後で、ウェブリモートをダウンロードすることができます。</translation>
     </message>
     <message>
@@ -9416,7 +9815,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="322"/>
-        <source>This wizard will help you to configure OpenLP+ for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
+        <source>This wizard will help you to configure Opal Presenter for initial use. Click the &apos;{next_button}&apos; button below to start.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9456,7 +9855,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="336"/>
-        <source>Choose the main display screen for OpenLP+.</source>
+        <source>Choose the main display screen for Opal Presenter.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9501,7 +9900,7 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="352"/>
-        <source>OBS Studio - Control scenes directly from OpenLP+</source>
+        <source>OBS Studio - Control scenes directly from Opal Presenter</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9511,12 +9910,12 @@ Processing has terminated and no changes have been made.</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="355"/>
-        <source>Can OpenLP+ download some resource data?</source>
+        <source>Can Opal Presenter download some resource data?</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="357"/>
-        <source>OpenLP+ has collected some resources that we have permission to distribute.
+        <source>Opal Presenter has collected some resources that we have permission to distribute.
 
 If you would like to download some of these resources click the &apos;{next_button}&apos; button, otherwise click the &apos;{finish_button}&apos; button.</source>
         <translation type="unfinished"/>
@@ -9533,13 +9932,13 @@ If you would like to download some of these resources click the &apos;{next_butt
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="365"/>
-        <source>OpenLP+ could not connect to the internet to get information about the sample data available.
+        <source>Opal Presenter could not connect to the internet to get information about the sample data available.
 
 Please check your internet connection. If your church uses a proxy server click the 'Internet Settings' button below and enter the server details there.
 
 Click the '{back_button}' button to try again.
 
-If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in OpenLP+.</source>
+If you click the &apos;{finish_button}&apos; button you can download the data at a later time by selecting &apos;Re-run First Time Wizard&apos; from the &apos;Tools&apos; menu in Opal Presenter.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -9594,7 +9993,7 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimewizard.py" line="385"/>
-        <source>Please wait while resources are downloaded and OpenLP+ is configured.</source>
+        <source>Please wait while resources are downloaded and Opal Presenter is configured.</source>
         <translation>リソースのダウンロードと構成を行なっています。しばらくお待ちください。</translation>
     </message>
 </context>
@@ -9852,9 +10251,9 @@ OpenLP終了時に変更が適用されます。</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="282"/>
-        <source>WARNING: 
+        <source>WARNING:&#32;
 
-The location you have selected 
+The location you have selected&#32;
 
 {path}
 
@@ -9933,6 +10332,10 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
         <location filename="../../openlp/core/api/tab.py" line="355"/>
         <source>This change will only take effect once OpenLP has been restarted.</source>
         <translation>この変更はOpenLPの再起動後に適用されます。</translation>
+    </message>
+    <message>
+        <source>This change will only take effect once Opal Presenter has been restarted.</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -10098,7 +10501,7 @@ appears to contain OpenLP data files. Do you wish to replace these files with th
     </message>
     <message>
         <location filename="../../openlp/core/db/helpers.py" line="108"/>
-        <source>OpenLP+ cannot load your database.
+        <source>Opal Presenter cannot load your database.
 
 Database: {db}</source>
         <translation>OpenLPはデータベースを読み込むことができません。
@@ -10115,7 +10518,7 @@ Database: {db}</source>
     </message>
     <message>
         <location filename="../../openlp/core/db/manager.py" line="83"/>
-        <source>The database being loaded was created in a more recent version of OpenLP+. The database is version {db_ver}, while OpenLP+ expects version {db_up}. The database will not be loaded.
+        <source>The database being loaded was created in a more recent version of Opal Presenter. The database is version {db_ver}, while Opal Presenter expects version {db_up}. The database will not be loaded.
 
 Database: {db_name}</source>
         <translation>読み込まれたデータベースは新しいバージョンのOpenLPで作成されました。データベースのバージョンは{db_ver}ですが、OpenLPのバージョンは{db_up}です。データベースは読み込まれません。
@@ -10174,7 +10577,7 @@ Database: {db_name}</source>
     </message>
     <message>
         <location filename="../../openlp/core/display/screens.py" line="298"/>
-        <source>There is a mismatch between screens and screen settings. OpenLP+ will try to automatically select a display screen, but you should consider updating the screen settings.</source>
+        <source>There is a mismatch between screens and screen settings. Opal Presenter will try to automatically select a display screen, but you should consider updating the screen settings.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -10260,7 +10663,7 @@ Database: {db_name}</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="226"/>
-        <source>The generic document/presentation importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
+        <source>The generic document/presentation importer has been disabled because Opal Presenter cannot access OpenOffice or LibreOffice.</source>
         <translation>OpenOfficeまたはLibreOfficeに接続できないため、汎用ドキュメント/プレゼンテーションのインポート機能は無効になっています。</translation>
     </message>
     <message>
@@ -10415,7 +10818,7 @@ Database: {db_name}</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/importer.py" line="412"/>
-        <source>The Songs of Fellowship importer has been disabled because OpenLP+ cannot access OpenOffice or LibreOffice.</source>
+        <source>The Songs of Fellowship importer has been disabled because Opal Presenter cannot access OpenOffice or LibreOffice.</source>
         <translation>OpenOfficeまたはLibreOfficeに接続できないため、Songs of Fellowshipのインポート機能は無効になっています。</translation>
     </message>
     <message>
@@ -11221,6 +11624,22 @@ You can disable this warning message in songs settings.</source>
         <source>Starting export...</source>
         <translation>エクスポートを開始しています...</translation>
     </message>
+    <message>
+        <source>Export songs as Opal Presenter packages, or share plain OpenLyrics XML with other applications.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Opal Presenter song packages</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Plain OpenLyrics XML</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Plain OpenLyrics includes lyrics, metadata and supported chords. Designs, theme snapshots and media are included only in Opal song packages.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>SongsPlugin.SongExportForm</name>
@@ -11625,7 +12044,7 @@ You can disable this warning message in songs settings.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectform.py" line="153"/>
-        <source>OpenLP+ can only import simple lyrics or ChordPro</source>
+        <source>Opal Presenter can only import simple lyrics or ChordPro</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -12009,8 +12428,8 @@ Please correct these tags before continuing.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/reporting.py" line="85"/>
-        <source>Report 
-{name} 
+        <source>Report&#32;
+{name}&#32;
 has been successfully created. </source>
         <translation>レポート
         {name}
@@ -12024,6 +12443,12 @@ has been successfully created. </source>
     <message>
         <location filename="../../openlp/plugins/songs/reporting.py" line="92"/>
         <source>An error occurred while extracting: {error}</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Report
+{name}
+has been successfully created.&#32;</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -12182,10 +12607,15 @@ has been successfully created. </source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songusage/forms/songusagedeletedialog.py" line="67"/>
-        <source>Select the date up to which the song usage data should be deleted. 
+        <source>Select the date up to which the song usage data should be deleted.&#32;
 All data recorded before this date will be permanently deleted.</source>
         <translation>利用記録を削除する日を選択してください。
 この日以前の記録は全て削除されます。</translation>
+    </message>
+    <message>
+        <source>Select the date up to which the song usage data should be deleted.
+All data recorded before this date will be permanently deleted.</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 <context>
@@ -12528,6 +12958,10 @@ has been successfully created.</source>
         <source>The presentation {name} is incomplete, please reload.</source>
         <translation>プレゼンテーション {name} は不完全です。再読み込みしてください。</translation>
     </message>
+    <message>
+        <source>Could not open Set Up Show. Stop any running slideshow and allow Opal Presenter in macOS Accessibility settings, or open Slide Show → Set Up Show directly in PowerPoint.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>PresentationsPlugin</name>
@@ -12580,6 +13014,10 @@ has been successfully created.</source>
         <source>{name} (unavailable)</source>
         <translation>{name} (利用不可)</translation>
     </message>
+    <message>
+        <source>Use Opal Presenter’s selected output screen for fullscreen PowerPoint presentations. Supports the primary display or a single secondary display. Turn off to choose a monitor in PowerPoint’s Set Up Show dialog. Requires macOS Accessibility access.</source>
+        <translation type="unfinished"/>
+    </message>
 </context>
 <context>
     <name>SongsPlugin.CCLIFileImport</name>
@@ -12592,6 +13030,74 @@ has been successfully created.</source>
         <location filename="../../openlp/plugins/songs/lib/importers/cclifile.py" line="90"/>
         <source>The file does not have a valid extension.</source>
         <translation>ファイルの拡張子が無効です。</translation>
+    </message>
+</context>
+<context>
+    <name>OpenLP.Restart</name>
+    <message>
+        <source>Opal Presenter could not restart automatically. Please start it again.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Restart Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>OpenLP.SplashScreen</name>
+    <message>
+        <source>Starting Opal Presenter</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>ProjectorPlugin</name>
+    <message>
+        <source>Control network projectors using PJLink. Enable or disable this plugin, then restart Opal Presenter to apply the change. Saved projector configuration is kept when disabled.</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>RemoteInterfacePlugin</name>
+    <message>
+        <source>Provide remote control, stage, live and chords views through the HTTP and WebSocket servers. Enable or disable this plugin, then restart Opal Presenter to apply the change. Saved remote configuration is kept when disabled.</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>PresentationPlugin.PowerPointMac</name>
+    <message>
+        <source>Could not select the PowerPoint output monitor. Allow Opal Presenter in macOS Accessibility, or turn off “Automatically select the output display” in Presentation settings and choose the monitor using “PowerPoint slideshow settings…” in the library. Send the presentation live again to retry.</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>PresentationPlugin.PdfExport</name>
+    <message>
+        <source>macOS blocked access to the presentation application. Allow Opal Presenter to control it in System Settings → Privacy &amp; Security → Automation.</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>OpenLP.SettingsTooltips</name>
+    <message>
+        <source>Copy imported library files into the Opal Presenter data directory.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>Prevent multiple Opal Presenter instances from using the data directory at once.</source>
+        <translation type="unfinished"/>
+    </message>
+</context>
+<context>
+    <name>OpenLP.MacPermissions</name>
+    <message>
+        <source>Still unavailable. Restart Opal Presenter after enabling access.</source>
+        <translation type="unfinished"/>
+    </message>
+    <message>
+        <source>the app that launched Opal Presenter</source>
+        <translation type="unfinished"/>
     </message>
 </context>
 </TS>

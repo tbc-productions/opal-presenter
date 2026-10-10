@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-The :mod:`settingsform` provides a user interface for the OpenLP+ settings
+The :mod:`settingsform` provides a user interface for the Opal Presenter settings
 """
 import logging
 
@@ -49,7 +49,7 @@ log = logging.getLogger(__name__)
 
 class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
     """
-    Provide the form to manipulate the settings for OpenLP+
+    Provide the form to manipulate the settings for Opal Presenter
     """
     SERVICE_ICON_MAP = {
         'songs': 'music', 'bibles': 'bible', 'presentations': 'presentation',
@@ -261,7 +261,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         warning = translate(
             'OpenLP.SettingsForm',
             'Reset preferences to their defaults? Your library data, its location, and enabled plugins will be kept. '
-            'Restart OpenLP+ to apply the changes.')
+            'Restart Opal Presenter to apply the changes.')
         answer = QtWidgets.QMessageBox.warning(
             self, title, warning,
             QtWidgets.QMessageBox.StandardButton.Reset | QtWidgets.QMessageBox.StandardButton.Cancel,
@@ -294,7 +294,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.processes = []
         QtWidgets.QDialog.reject(self)
         show_restart_message(
-            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
+            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart Opal Presenter to apply all changes.'))
 
     def accept(self):
         """
@@ -333,7 +333,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             show_restart_message(
                 self, translate('OpenLP.SettingsForm', 'Restart required'),
                 translate('OpenLP.SettingsForm',
-                          'Your interface theme has been saved. Restart OpenLP+ to apply it.'))
+                          'Your interface theme has been saved. Restart Opal Presenter to apply it.'))
         return result
 
     def _execute_deferred_config_screen_changed(self):

@@ -15,7 +15,7 @@ def show_restart_message(parent, title, text):
     dialog.setContent(label)
     dialog.setMinimumWidth(420)
     dialog.setPrimaryButtonText(translate('OpenLP.Restart', 'OK'))
-    dialog.setSecondaryButtonText(translate('OpenLP.Restart', 'Restart OpenLP+'))
+    dialog.setSecondaryButtonText(translate('OpenLP.Restart', 'Restart Opal Presenter'))
     dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Primary)
     result = dialog.exec()
     if result == dialog.ResultSecondary:

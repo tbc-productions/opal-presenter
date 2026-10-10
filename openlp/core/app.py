@@ -44,7 +44,7 @@ from openlp.core.common.mixins import LogMixin
 from openlp.core.common.path import create_paths, resolve
 from openlp.core.common.platform import is_macosx, is_wayland_compositor, is_win
 from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings, check_for_variant_migration, migrate_legacy_openlp_settings
+from openlp.core.common.settings import Settings, check_for_variant_migration
 from openlp.core.display.screens import ScreenList
 from openlp.core.display.webengine import init_webview_custom_schemes, set_webview_display_path
 from openlp.core.lib.filelock import FileLock
@@ -120,7 +120,7 @@ class OpenLP(QtCore.QObject, LogMixin):
         if not started:
             QtWidgets.QMessageBox.critical(
                 None, translate('OpenLP.Restart', 'Restart failed'),
-                translate('OpenLP.Restart', 'OpenLP+ could not restart automatically. Please start it again.'))
+                translate('OpenLP.Restart', 'Opal Presenter could not restart automatically. Please start it again.'))
 
     def exec(self):
         """
@@ -146,11 +146,11 @@ class OpenLP(QtCore.QObject, LogMixin):
         # On Windows, the args passed into the constructor are ignored. Not very handy, so set the ones we want to use.
         # On Linux and FreeBSD, in order to set the WM_CLASS property for X11, we pass "OpenLP" in as a command line
         # argument. This interferes with files being passed in as command line arguments, so we remove it from the list.
-        if 'OpenLP' in args:
-            args.remove('OpenLP')
+        if 'Opal Presenter' in args:
+            args.remove('Opal Presenter')
         self.args.extend(args)
         # set desktop file name, which is used to display the proper window icon on Wayland
-        QtGui.QGuiApplication.setDesktopFileName("openlp")
+        QtGui.QGuiApplication.setDesktopFileName("net.tbcproductions.OpalPresenter")
         # Initialise Fluent before startup dialogs, icons and plugin UI are constructed.
         set_default_theme(app)
         # Decide how many screens we have and their size
@@ -241,7 +241,7 @@ class OpenLP(QtCore.QObject, LogMixin):
             self.main_window.activateWindow()
         if layout_recovered:
             self.main_window.show_status_message(
-                translate('OpenLP', 'The saved window layout was reset to allow OpenLP+ to start.'), 15000)
+                translate('OpenLP', 'The saved window layout was reset to allow Opal Presenter to start.'), 15000)
         # Queue this after the deferred dock rebuild. Clearing it before processEvents/show
         # would miss the native layout crash that this marker is intended to recover from.
         QtCore.QTimer.singleShot(0, lambda: complete_layout_startup(self.settings, screens))
@@ -264,12 +264,12 @@ class OpenLP(QtCore.QObject, LogMixin):
             log.critical('Database was not found in: %s', data_folder_path)
             status = QtWidgets.QMessageBox.critical(
                 None, translate('OpenLP', 'Data Directory Error'),
-                translate('OpenLP', 'OpenLP+ data folder was not found in:\n\n{path}\n\nThe location of the data folder '
-                                    'was previously changed from the OpenLP+ default location. If the data was '
+                translate('OpenLP', 'Opal Presenter data folder was not found in:\n\n{path}\n\nThe location of the data folder '
+                                    'was previously changed from the Opal Presenter default location. If the data was '
                                     'stored on removable device, that device needs to be made available.\n\nYou may '
                                     'reset the data location back to the default location, or you can try to make the '
                                     'current location available.\n\nDo you want to reset to the default data location? '
-                                    'If not, OpenLP+ will be closed so you can try to fix the problem.')
+                                    'If not, Opal Presenter will be closed so you can try to fix the problem.')
                 .format(path=data_folder_path),
                 QtWidgets.QMessageBox.StandardButton(QtWidgets.QMessageBox.StandardButton.Yes |
                                                      QtWidgets.QMessageBox.StandardButton.No),
@@ -323,7 +323,7 @@ class OpenLP(QtCore.QObject, LogMixin):
             if can_show_splash and self.splash.isVisible():
                 self.splash.hide()
             if (QtWidgets.QMessageBox.question(None, translate('OpenLP', 'Backup'),
-                                               translate('OpenLP', 'OpenLP+ has been upgraded, do you want to create\n'
+                                               translate('OpenLP', 'Opal Presenter has been upgraded, do you want to create\n'
                                                                    'a backup of the old data folder?'),
                                                defaultButton=QtWidgets.QMessageBox.StandardButton.Yes) ==
                     QtWidgets.QMessageBox.StandardButton.Yes):
@@ -421,7 +421,7 @@ def set_up_logging(log_path: str, display_on_console: bool = False):
     :rtype: None
     """
     create_paths(log_path, do_not_log=True)
-    file_path = log_path / 'openlp.log'
+    file_path = log_path / 'opal-presenter.log'
     logfile = logging.FileHandler(file_path, 'w', encoding='UTF-8')
     formatter = logging.Formatter('%(asctime)s %(threadName)s %(name)-55s %(levelname)-8s %(message)s')
     logfile.setFormatter(formatter)
@@ -473,8 +473,8 @@ def backup_if_version_changed(settings):
     if is_downgrade:
         close_result = QtWidgets.QMessageBox.warning(
             None, translate('OpenLP', 'Downgrade'),
-            translate('OpenLP', 'OpenLP+ has found a configuration file created by a newer version of OpenLP+. '
-                      'OpenLP+ will start with a fresh install as downgrading data is not supported. Any existing '
+            translate('OpenLP', 'Opal Presenter has found a configuration file created by a newer version of Opal Presenter. '
+                      'Opal Presenter will start with a fresh install as downgrading data is not supported. Any existing '
                       'data '
                       'will be backed up to:\n\n{data_folder_backup_path}\n\n'
                       'Do you want to continue?').format(data_folder_backup_path=data_folder_backup_path),
@@ -486,7 +486,7 @@ def backup_if_version_changed(settings):
             return False
     # Backup the settings
     if settings.version_mismatched() or is_downgrade:
-        settings_back_up_path = data_folder_path / (now.strftime('%Y-%m-%d %H-%M') + '.conf')
+        settings_back_up_path = data_folder_path / (now.strftime('%Y-%m-%d %H-%M') + '.opal-settings')
         log.info(f'Settings are being backed up to {settings_back_up_path}')
         if not is_downgrade:
             # Inform user of settings backup location
@@ -496,11 +496,12 @@ def backup_if_version_changed(settings):
                                     '{settings_back_up_path}').format(settings_back_up_path=settings_back_up_path))
         # Backup the settings
         try:
-            settings.export(settings_back_up_path)
+            if not settings.export_zip(settings_back_up_path):
+                raise OSError('Could not export the settings backup.')
         except OSError:
             QtWidgets.QMessageBox.warning(
                 None, translate('OpenLP', 'Settings Backup'),
-                translate('OpenLP', 'Settings back up failed.\n\nOpenLP+ will attempt to continue.'))
+                translate('OpenLP', 'Settings back up failed.\n\nOpal Presenter will attempt to continue.'))
     # Backup and remove data folder if downgrading
     if is_downgrade:
         log.info(f'Data folder being backed up to {data_folder_backup_path}')
@@ -509,7 +510,7 @@ def backup_if_version_changed(settings):
             move(data_folder_path, data_folder_backup_path)
         except OSError:
             log.exception('Failed to backup data for downgrade')
-            QtWidgets.QMessageBox.critical(None, translate('OpenLP', 'OpenLP+ Backup'),
+            QtWidgets.QMessageBox.critical(None, translate('OpenLP', 'Opal Presenter Backup'),
                                            translate('OpenLP', 'Backup of the data folder failed during downgrade.'))
             return False
     # Reset all the settings if we're downgrading
@@ -531,7 +532,7 @@ def setup_portable_settings(portable_path: Path | str | None) -> Settings:
     else:
         portable_path = AppLocation.get_directory(AppLocation.AppDir) / '..' / '..'
     portable_path = resolve(portable_path)
-    portable_settings_path = portable_path / 'Data' / 'OpenLP.ini'
+    portable_settings_path = portable_path / 'Data' / 'OpalPresenter.ini'
     # Make this our settings file
     log.info(f'INI file: {portable_settings_path}')
     Settings.set_filename(portable_settings_path)
@@ -555,7 +556,7 @@ def main():
     qt_args.extend(args.rargs)
     # Bug #1018855: Set the WM_CLASS property in X11
     if not is_win() and not is_macosx():
-        qt_args.append('openlp-plus')
+        qt_args.append('opal-presenter')
     elif is_macosx() and getattr(sys, 'frozen', False) and not os.environ.get('QTWEBENGINEPROCESS_PATH'):
         # Set the location to the QtWebEngineProcess binary, normally set by PyInstaller, but it moves around...
         os.environ['QTWEBENGINEPROCESS_PATH'] = str((AppLocation.get_directory(AppLocation.AppDir) / 'PySide6' /
@@ -571,15 +572,14 @@ def main():
     app = OpenLP()
     Registry.create()
     QtWidgets.QApplication.setOrganizationName('tbcproductions')
-    QtWidgets.QApplication.setApplicationName('OpenLPPlus')
-    QtWidgets.QApplication.setApplicationDisplayName('OpenLP+')
+    QtWidgets.QApplication.setApplicationName('OpalPresenter')
+    QtWidgets.QApplication.setApplicationDisplayName('Opal Presenter')
     QtWidgets.QApplication.setOrganizationDomain('tbcproductions.net')
     if args.portable:
         # This has to be done here so that we can load the settings before instantiating the application object
-        QtWidgets.QApplication.setApplicationName('OpenLPPlusPortable')
+        QtWidgets.QApplication.setApplicationName('OpalPresenterPortable')
         portable_path, settings = setup_portable_settings(args.portablepath)
     else:
-        migrate_legacy_openlp_settings()
         settings = Settings()
     settings = check_for_variant_migration(settings)
     Registry().register('settings', settings)

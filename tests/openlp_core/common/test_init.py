@@ -221,7 +221,7 @@ def test_trace_error_handler():
 
         # THEN: The mocked_logger.error() method should have been called with the correct parameters
         mocked_logger.error.assert_called_with(
-            'OpenLP+ Error trace\n   File openlp.fake at line 56 \n\t called trace_error_handler_test')
+            'Opal Presenter Error trace\n   File openlp.fake at line 56 \n\t called trace_error_handler_test')
 
 
 def test_singleton_metaclass_multiple_init():

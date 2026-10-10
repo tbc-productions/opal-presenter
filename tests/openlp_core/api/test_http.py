@@ -37,4 +37,4 @@ def test_authenticate():
     result = authenticate()
     assert isinstance(result, Response)
     assert result.status_code == 401
-    assert result.www_authenticate.realm == 'OpenLP+ Login Required'
+    assert result.www_authenticate.realm == 'Opal Presenter Login Required'

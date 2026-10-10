@@ -989,7 +989,7 @@ class PowerPointMacDocument(AppleScriptBaseDocument):
                     main_window = Registry().get('main_window')
                     if main_window:
                         message = translate('PresentationPlugin.PowerPointMac',
-                                            'Could not select the PowerPoint output monitor. Allow OpenLP+ in macOS '
+                                            'Could not select the PowerPoint output monitor. Allow Opal Presenter in macOS '
                                             'Accessibility, or turn off “Automatically select the output display” '
                                             'in Presentation settings and choose the monitor using '
                                             '“PowerPoint slideshow settings…” in the library. '

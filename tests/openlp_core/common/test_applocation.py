@@ -234,11 +234,11 @@ def test_get_directory_for_language_dir_from_linux(mocked_exists, MockPlatformDi
     Test the AppLocation.get_directory() method for AppLocation.LanguageDir
     """
     # GIVEN: OpenLP is running standalone
-    openlp_i18n_path = Path('/usr/share/openlp/i18n')
+    openlp_i18n_path = Path('/usr/share/opal-presenter/i18n')
     mocked_resolve.return_value = openlp_i18n_path
     mocked_is_win.return_value = False
     mocked_is_macosx.return_value = False
-    candidate_dirs = ['/usr/share/gnome/openlp', '/usr/local/share/openlp', '/usr/share/openlp']
+    candidate_dirs = ['/usr/share/gnome/opal-presenter', '/usr/local/share/opal-presenter', '/usr/share/opal-presenter']
     mocked_dirs = MagicMock(site_data_dir=os.pathsep.join(candidate_dirs))
     MockPlatformDirs.return_value = mocked_dirs
     mocked_exists.side_effect = lambda p: p in candidate_dirs + [openlp_i18n_path]

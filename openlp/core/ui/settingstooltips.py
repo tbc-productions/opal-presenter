@@ -120,10 +120,10 @@ def apply_settings_tooltips(tab):
         'AdvancedTab': [
             ('data_directory_protect_check_box', None, translate(
                 'OpenLP.SettingsTooltips',
-                'Prevent multiple OpenLP+ instances from using the data directory at once.')),
+                'Prevent multiple Opal Presenter instances from using the data directory at once.')),
             ('copy_library_files_check_box', None, translate(
                 'OpenLP.SettingsTooltips',
-                'Copy imported library files into the OpenLP+ data directory.')),
+                'Copy imported library files into the Opal Presenter data directory.')),
             ('x11_bypass_check_box', None, translate(
                 'OpenLP.SettingsTooltips',
                 'Try this on X11 if the display window disappears or draws incorrectly.')),
