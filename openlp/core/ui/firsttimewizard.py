@@ -142,6 +142,10 @@ class UiFirstTimeWizard:
         self.custom_check_box.setChecked(True)
         self.custom_check_box.setObjectName('custom_check_box')
         self.plugin_layout.addWidget(self.custom_check_box)
+        self.slide_designer_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.slide_designer_check_box.setChecked(True)
+        self.slide_designer_check_box.setObjectName('slide_designer_check_box')
+        self.plugin_layout.addWidget(self.slide_designer_check_box)
         self.bible_check_box = QtWidgets.QCheckBox(self.plugin_page)
         self.bible_check_box.setChecked(True)
         self.bible_check_box.setObjectName('bible_check_box')
@@ -158,6 +162,10 @@ class UiFirstTimeWizard:
         self.media_check_box.setChecked(True)
         self.media_check_box.setObjectName('media_check_box')
         self.plugin_layout.addWidget(self.media_check_box)
+        self.library_sync_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.library_sync_check_box.setChecked(True)
+        self.library_sync_check_box.setObjectName('library_sync_check_box')
+        self.plugin_layout.addWidget(self.library_sync_check_box)
         self.song_usage_check_box = QtWidgets.QCheckBox(self.plugin_page)
         self.song_usage_check_box.setChecked(False)
         self.song_usage_check_box.setObjectName('song_usage_check_box')
@@ -211,12 +219,14 @@ class UiFirstTimeWizard:
         self.custom_check_box.setText(
             translate('OpenLP.FirstTimeWizard',
                       'Custom Slides – Easier to manage than songs and they have their own list of slides'))
+        self.slide_designer_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Slide Designer'))
         self.bible_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Bibles – Import and show Bibles'))
         self.image_check_box.setText(translate('OpenLP.FirstTimeWizard',
                                                'Images – Show images or replace background with them'))
         self.presentation_check_box.setText(translate('OpenLP.FirstTimeWizard',
                                                       'Presentations – Show .ppt, .odp and .pdf files'))
         self.media_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Media – Playback of Audio and Video files'))
+        self.library_sync_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Library Sync'))
         self.song_usage_check_box.setText(translate('OpenLP.FirstTimeWizard', 'Song Usage Monitor'))
         self.alert_check_box.setText(translate('OpenLP.FirstTimeWizard',
                                                'Alerts – Display informative messages while showing other slides'))

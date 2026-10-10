@@ -70,6 +70,9 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             except Exception:
                 self.media_check_box.setEnabled(False)
             self.custom_check_box.setChecked(self.plugin_manager.get_plugin_by_name('custom').is_active())
+            self.slide_designer_check_box.setChecked(
+                self.plugin_manager.get_plugin_by_name('slide_designer').is_active())
+            self.library_sync_check_box.setChecked(self.plugin_manager.get_plugin_by_name('librarysync').is_active())
             self.song_usage_check_box.setChecked(self.plugin_manager.get_plugin_by_name('songusage').is_active())
             self.alert_check_box.setChecked(self.plugin_manager.get_plugin_by_name('alerts').is_active())
             self.obs_studio_check_box.setChecked(self.plugin_manager.get_plugin_by_name('obs_studio').is_active())
@@ -98,6 +101,8 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             self._set_plugin_status(self.image_check_box, 'images/status')
             self._set_plugin_status(self.media_check_box, 'media/status')
             self._set_plugin_status(self.custom_check_box, 'custom/status')
+            self._set_plugin_status(self.slide_designer_check_box, 'slide_designer/status')
+            self._set_plugin_status(self.library_sync_check_box, 'librarysync/status')
             self._set_plugin_status(self.song_usage_check_box, 'songusage/status')
             self._set_plugin_status(self.alert_check_box, 'alerts/status')
             self._set_plugin_status(self.obs_studio_check_box, 'obs_studio/status')

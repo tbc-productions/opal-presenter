@@ -63,24 +63,50 @@ def test_exec_restores_defaults(wizard):
         execute.assert_called_once()
 
 
-def test_accept_saves_local_choices(wizard):
+def test_new_features_selected_by_default(wizard):
+    wizard.settings.value.return_value = False
+    wizard.set_defaults()
+    assert wizard.slide_designer_check_box.text() == 'Slide Designer'
+    assert wizard.slide_designer_check_box.isChecked()
+    assert wizard.library_sync_check_box.text() == 'Library Sync'
+    assert wizard.library_sync_check_box.isChecked()
+
+
+@pytest.mark.parametrize('enabled', [True, False])
+def test_accept_saves_local_choices(wizard, enabled):
     wizard.songs_check_box.setChecked(False)
     wizard.remote_interface_check_box.setChecked(True)
+    wizard.slide_designer_check_box.setChecked(enabled)
+    wizard.library_sync_check_box.setChecked(enabled)
     with patch.object(wizard.screen_selection_widget, 'save') as save, patch.object(QtWidgets.QWizard, 'accept'):
         wizard.accept()
     wizard.settings.setValue.assert_any_call('songs/status', PluginStatus.Inactive)
     wizard.settings.setValue.assert_any_call('remote_interface/status', PluginStatus.Active)
+    status = PluginStatus.Active if enabled else PluginStatus.Inactive
+    wizard.settings.setValue.assert_any_call('slide_designer/status', status)
+    wizard.settings.setValue.assert_any_call('librarysync/status', status)
     save.assert_called_once()
 
 
-def test_rerun_restores_plugins(wizard):
+@pytest.mark.parametrize('enabled', [True, False])
+def test_rerun_restores_plugins(wizard, enabled):
     wizard.settings.value.return_value = True
     plugin = MagicMock()
     plugin.is_active.return_value = False
-    with patch.object(Registry(), 'get', return_value=MagicMock(get_plugin_by_name=MagicMock(return_value=plugin))):
+    manager = MagicMock()
+    manager.get_plugin_by_name.side_effect = lambda name: (
+        MagicMock(is_active=MagicMock(return_value=enabled))
+        if name in ('slide_designer', 'librarysync') else plugin)
+    wizard.slide_designer_check_box.setChecked(not enabled)
+    wizard.library_sync_check_box.setChecked(not enabled)
+    with patch.object(Registry(), 'get', return_value=manager):
         wizard.set_defaults()
     assert not wizard.songs_check_box.isChecked()
     assert not wizard.bible_check_box.isChecked()
+    assert wizard.slide_designer_check_box.isChecked() == enabled
+    assert wizard.library_sync_check_box.isChecked() == enabled
+    manager.get_plugin_by_name.assert_any_call('slide_designer')
+    manager.get_plugin_by_name.assert_any_call('librarysync')
 
 
 @pytest.mark.parametrize('exists', [True, False])
