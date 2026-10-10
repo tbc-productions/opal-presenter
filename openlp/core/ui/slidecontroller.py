@@ -25,9 +25,9 @@ from collections import deque
 from pathlib import Path, PurePath
 from threading import Lock
 
-from fluentqt import FontIcon, FontRole
+from fluentqt import FontRole
 from fluentqt.design import Spacing
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore, QtGui, QtWidgets as NativeWidgets
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import SlideLimits
@@ -264,19 +264,8 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
             self.top_label_horizontal.addStrut(28)
             if self.is_live:
                 self.top_label_horizontal.setContentsMargins(0, 4, Spacing.Medium, 4)
-                self.output_status_icon = FontIcon('ic_fluent_record_24_regular', self.panel)
-                self.output_status_icon.setObjectName('output_status_icon')
-                self.output_status_icon.setIconSize(16)
-                self.output_status_icon.setFixedSize(16, 16)
-                self.output_status_icon.hide()
-                self.top_label_horizontal.addWidget(self.output_status_icon)
-                self.output_status_label = QtWidgets.QLabel(self.panel)
-                self.output_status_label.setObjectName('output_status')
-                self.output_status_label.setText(translate('OpenLP.SlideController', 'Ready'))
-                self.output_status_label.setProperty('onAir', False)
-                self.output_status_label.setToolTip(translate('OpenLP.SlideController',
-                                                              'OpenLP output state; not a projector connection status.'))
-                self.top_label_horizontal.addWidget(self.output_status_label)
+                self._setup_output_status()
+                self.top_label_horizontal.addWidget(self.output_status_badge)
         # Splitter
         self.splitter = QtWidgets.QSplitter(self.panel)
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
@@ -735,28 +724,67 @@ class SlideController(QtWidgets.QWidget, LogMixin, RegistryProperties):
         self.logo_screen.setChecked(active_action is self.logo_screen)
         self.desktop_screen.setChecked(active_action is self.desktop_screen)
 
+    def _setup_output_status(self):
+        """Keep the output icon and label together in a compact, non-interactive badge."""
+        self.output_status_badge = QtWidgets.QWidget(self.panel)
+        self.output_status_badge.setObjectName('output_status_badge')
+        self.output_status_badge.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground)
+        self.output_status_badge.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
+                                             QtWidgets.QSizePolicy.Policy.Fixed)
+        layout = QtWidgets.QHBoxLayout(self.output_status_badge)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(6)
+        # Native labels honour the badge colours; Fluent labels paint their own text colours.
+        self.output_status_icon = NativeWidgets.QLabel(self.output_status_badge)
+        self.output_status_icon.setObjectName('output_status_icon')
+        self.output_status_icon.setFixedSize(16, 16)
+        self.output_status_icon.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.output_status_icon)
+        self.output_status_label = NativeWidgets.QLabel(self.output_status_badge)
+        self.output_status_label.setObjectName('output_status')
+        font = self.output_status_label.font()
+        font.setWeight(QtGui.QFont.Weight.DemiBold)
+        self.output_status_label.setFont(font)
+        layout.addWidget(self.output_status_label)
+        self.output_status_badge.setToolTip(translate('OpenLP.SlideController',
+                                                    'OpenLP output state; not a projector connection status.'))
+        self.output_status_badge.hide()
+
     def _update_output_status(self, has_item):
         """Reflect controller state without implying that a projector is connected."""
         label = getattr(self, 'output_status_label', None)
         if label is None:
             return
         hide_mode = getattr(self, '_current_hide_mode', None)
+        visible = bool(has_item and self.displays)
+        on_air = visible and hide_mode is None
+        states = {
+            HideMode.Blank: (translate('OpenLP.SlideController', 'Black'), 'live_black'),
+            HideMode.Theme: (translate('OpenLP.SlideController', 'Theme'), 'live_theme'),
+            HideMode.Logo: (translate('OpenLP.SlideController', 'Logo'), 'live_logo'),
+            HideMode.Screen: (translate('OpenLP.SlideController', 'Desktop'), 'live_desktop'),
+        }
+        text, icon_name = states.get(hide_mode, (translate('OpenLP.SlideController', 'Live'), None))
+        label.setText(text if visible else '')
+        label.setProperty('onAir', on_air)
+        badge = getattr(self, 'output_status_badge', None)
+        if badge is not None:
+            badge.setVisible(visible)
+            badge.setProperty('outputState', 'live' if on_air else
+                              'desktop' if hide_mode == HideMode.Screen else 'neutral')
+        for widget in (badge, label, getattr(self, 'output_status_icon', None)):
+            if widget is not None:
+                widget.style().unpolish(widget)
+                widget.style().polish(widget)
         icon = getattr(self, 'output_status_icon', None)
         if icon is not None:
-            icon.setVisible(bool(self.displays) and hide_mode != HideMode.Screen)
-        on_air = has_item and hide_mode is None and bool(self.displays)
-        labels = {
-            HideMode.Blank: translate('OpenLP.SlideController', 'Blank'),
-            HideMode.Theme: translate('OpenLP.SlideController', 'Theme'),
-            HideMode.Logo: translate('OpenLP.SlideController', 'Logo'),
-            HideMode.Screen: translate('OpenLP.SlideController', 'Desktop'),
-        }
-        text = translate('OpenLP.SlideController', 'Live') if on_air else labels.get(
-            hide_mode, translate('OpenLP.SlideController', 'Ready'))
-        label.setText(text)
-        label.setProperty('onAir', on_air)
-        label.style().unpolish(label)
-        label.style().polish(label)
+            icon.clear()
+            if hide_mode is None or hide_mode == HideMode.Blank:
+                icon.setText('●' if hide_mode is None else '■')
+            else:
+                color = '#6b4d00' if hide_mode == HideMode.Screen else label.palette().color(
+                    QtGui.QPalette.ColorRole.WindowText).name()
+                icon.setPixmap(UiIcons().get_icon_variant(icon_name, color=color).pixmap(16, 16))
 
     def new_song_menu(self):
         """

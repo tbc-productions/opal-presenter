@@ -2983,35 +2983,50 @@ def test_wide_hide_controls_are_not_temporarily_hidden(settings, is_text):
             assert 'show_screen_button' not in args[0]
 
 
-@mark.parametrize('hide_mode,has_item,has_display,expected_icon', [
-    (None, True, True, True),
-    (HideMode.Blank, True, True, True),
-    (HideMode.Theme, True, True, True),
-    (HideMode.Logo, True, True, True),
-    (HideMode.Screen, True, True, False),
-    (None, False, True, True),
-    (None, True, False, False),
+@mark.parametrize('hide_mode,expected,icon_text', [
+    (None, 'Live', '●'),
+    (HideMode.Blank, 'Black', '■'),
+    (HideMode.Theme, 'Theme', ''),
+    (HideMode.Logo, 'Logo', ''),
+    (HideMode.Screen, 'Desktop', ''),
 ])
-def test_live_status_record_icon(settings, hide_mode, has_item, has_display, expected_icon):
-    """Record indicates an active OpenLP display, including blank, theme and logo output."""
-    from fluentqt import FontIcon
-    from openlp.core.widgets import fluent as QtWidgets
-
+@mark.parametrize('has_item,has_display', [(True, True), (False, True), (True, False), (False, False)])
+def test_live_status_badge(settings, hide_mode, expected, icon_text, has_item, has_display):
+    """Only loaded output has a badge, and each mode uses its own label and symbol."""
     controller = SlideController(None)
-    controller.output_status_label = QtWidgets.QLabel(controller)
-    controller.output_status_icon = FontIcon('ic_fluent_record_24_regular', controller)
+    controller.panel = controller
+    controller._setup_output_status()
     controller.displays = [MagicMock()] if has_display else []
     controller._current_hide_mode = hide_mode
 
     controller._update_output_status(has_item)
 
-    assert controller.output_status_icon.isHidden() is not expected_icon
-    assert controller.output_status_label.property('onAir') is (has_item and hide_mode is None and has_display)
-    if hide_mode == HideMode.Screen:
-        assert controller.output_status_label.text() == 'Desktop'
-
+    visible = has_item and has_display
+    assert controller.output_status_badge.isHidden() is not visible
+    assert controller.output_status_label.text() == (expected if visible else '')
+    assert controller.output_status_label.property('onAir') is (visible and hide_mode is None)
+    assert controller.output_status_icon.text() == icon_text
+    if not icon_text:
+        assert not controller.output_status_icon.pixmap().isNull()
     controller.close_displays()
-    assert controller.output_status_icon.isHidden()
+    assert controller.output_status_badge.isHidden()
+
+
+def test_live_status_badge_mode_transitions(settings):
+    """Changing mode updates the icon and tint without retaining the previous state."""
+    controller = SlideController(None)
+    controller.panel = controller
+    controller._setup_output_status()
+    controller.displays = [MagicMock()]
+    for mode, state, text in [(HideMode.Screen, 'desktop', 'Desktop'),
+                              (HideMode.Theme, 'neutral', 'Theme'),
+                              (None, 'live', 'Live'),
+                              (HideMode.Blank, 'neutral', 'Black')]:
+        controller._current_hide_mode = mode
+        controller._update_output_status(True)
+        assert controller.output_status_badge.property('outputState') == state
+        assert controller.output_status_label.text() == text
+        assert controller.output_status_icon.pixmap().isNull() is (mode in (None, HideMode.Blank))
 
 
 @mark.parametrize('narrow', [False, True])

@@ -8,7 +8,7 @@ from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui import HideMode
 from openlp.core.ui.modernstyle import (
-    ModernPresetTabBar, apply_mica, is_modern_style, refine_modern_layout, set_modern_palette
+    ModernPresetTabBar, apply_mica, get_modern_stylesheet, is_modern_style, refine_modern_layout, set_modern_palette
 )
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.style import UiThemes, get_application_stylesheet, get_library_stylesheet, set_default_theme
@@ -98,10 +98,10 @@ def test_modern_navigation_preserves_keyboard_selection(settings):
 
 
 @pytest.mark.parametrize('has_item, hide_mode, displays, expected', [
-    (False, None, [], 'Ready'),
-    (True, None, [], 'Ready'),
+    (False, None, [], ''),
+    (True, None, [], ''),
     (True, None, [object()], 'Live'),
-    (True, HideMode.Blank, [object()], 'Blank'),
+    (True, HideMode.Blank, [object()], 'Black'),
     (True, HideMode.Screen, [object()], 'Desktop'),
 ])
 def test_output_badge_tracks_item_and_hide_state(settings, has_item, hide_mode, displays, expected):
@@ -240,3 +240,20 @@ def test_macos_modern_preserves_system_font(settings, qapp):
     finally:
         app.setPalette(old_palette)
         app.setFont(old_font)
+
+
+def test_output_badge_colours_follow_mode_changes(settings):
+    """Both child labels must refresh when the parent badge changes colour."""
+    window = QtWidgets.QMainWindow()
+    window.setObjectName('MainWindow')
+    window.setStyleSheet(get_modern_stylesheet())
+    controller = SlideController(window)
+    controller.panel = controller
+    controller._setup_output_status()
+    controller.displays = [object()]
+    for mode, expected in [(None, '#107c41'), (HideMode.Screen, '#6b4d00'), (None, '#107c41')]:
+        controller._current_hide_mode = mode
+        controller._update_output_status(True)
+        for label in (controller.output_status_icon, controller.output_status_label):
+            assert label.palette().color(QtGui.QPalette.ColorRole.WindowText).name() == expected
+    window.close()
