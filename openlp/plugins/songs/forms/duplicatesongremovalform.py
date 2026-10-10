@@ -75,7 +75,7 @@ class DuplicateSongRemovalForm(OpenLPWizard, RegistryProperties):
         super(DuplicateSongRemovalForm, self).__init__(
             Registry().get('main_window'), plugin, 'duplicateSongRemovalWizard',
             ':/wizards/wizard_duplicateremoval.png', False)
-        self.setMinimumWidth(730)
+        self.resize(730, self.height())
 
     def custom_signals(self):
         """

@@ -686,3 +686,12 @@ def test_monitor_name_prefers_model_and_falls_back_to_connector():
     assert screen.name == ''
     assert Screen(0).name == ''
     assert 'name' not in screen.to_dict()
+
+
+def test_monitor_name_survives_deleted_qscreen():
+    """A screen configuration view can outlive Qt's monitor object during disconnection."""
+    raw_screen = MagicMock()
+    raw_screen.model.side_effect = RuntimeError('Internal C++ object (PySide6.QtGui.QScreen) already deleted.')
+    screen = Screen(0, QtCore.QRect(0, 0, 1920, 1080), raw_screen=raw_screen)
+    assert screen.name == ''
+    raw_screen.name.assert_not_called()

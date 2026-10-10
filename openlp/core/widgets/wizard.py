@@ -23,7 +23,7 @@ The :mod:``wizard`` module provides generic wizard tools for OpenLP.
 """
 import logging
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
@@ -35,9 +35,9 @@ from openlp.core.ui.icons import UiIcons
 
 log = logging.getLogger(__name__)
 
-# Fixed outer size for all OpenLP wizards (non-resizable, consistent layout).
+# Initial size for OpenLP wizards; page content scrolls on smaller hosts.
 WIZARD_FIXED_WIDTH = 640
-WIZARD_FIXED_HEIGHT = 440
+WIZARD_FIXED_HEIGHT = 540
 
 
 class WizardStrings(object):
@@ -56,7 +56,7 @@ class WizardStrings(object):
     # These strings should need a good reason to be retranslated elsewhere.
     FinishedImport = translate('OpenLP.Ui', 'Finished import.')
     FormatLabel = translate('OpenLP.Ui', 'Format:')
-    HeaderStyle = '<span style="font-size:14pt; font-weight:600;">{text}</span>'
+    HeaderStyle = '{text}'
     Importing = translate('OpenLP.Ui', 'Importing')
     ImportingType = translate('OpenLP.Ui', 'Importing "{source}"...')
     ImportSelect = translate('OpenLP.Ui', 'Select Import Source')
@@ -77,8 +77,7 @@ class WizardStrings(object):
 class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
     """
     Generic OpenLP wizard to provide generic functionality and a unified look
-    and feel. The window uses a fixed size (see ``WIZARD_FIXED_WIDTH`` and
-    ``WIZARD_FIXED_HEIGHT``) and is not user-resizable.
+    and feel. Pages scroll so content remains reachable on smaller hosts.
 
     ``parent``
         The QWidget-derived parent of the wizard.
@@ -110,7 +109,7 @@ class OpenLPWizard(QtWidgets.QWizard, RegistryProperties):
                                            QtCore.Qt.WindowType.WindowCloseButtonHint)
         self.plugin = plugin
         self.with_progress_page = add_progress_page
-        self.setFixedSize(WIZARD_FIXED_WIDTH, WIZARD_FIXED_HEIGHT)
+        self.resize(WIZARD_FIXED_WIDTH, WIZARD_FIXED_HEIGHT)
         self.setObjectName(name)
         self.open_icon = UiIcons().open
         self.delete_icon = UiIcons().delete

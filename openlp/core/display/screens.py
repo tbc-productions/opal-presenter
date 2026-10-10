@@ -88,7 +88,11 @@ class Screen(object):
         """The monitor model reported by the OS, falling back to its display/connector name."""
         if self.raw_screen is not None:
             for attribute in ('model', 'name'):
-                value = getattr(self.raw_screen, attribute)()
+                try:
+                    value = getattr(self.raw_screen, attribute)()
+                except RuntimeError:
+                    # Qt destroys QScreen objects when monitors are disconnected.
+                    return ''
                 if isinstance(value, str) and value.strip():
                     return value.strip()
         return ''

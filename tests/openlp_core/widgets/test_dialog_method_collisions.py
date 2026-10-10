@@ -10,7 +10,7 @@ from openlp.core.widgets.dialogs import DownloadProgressDialog
 from openlp.core.widgets.widgets import ProxyDialog
 
 
-@pytest.mark.parametrize('kind', ['proxy', 'proxy_download', 'source_single', 'source_single_edit',
+@pytest.mark.parametrize('kind', ['proxy', 'source_single', 'source_single_edit',
                                  'source_tabs', 'source_tabs_edit', 'projector', 'download'])
 def test_dialog_exec_retains_qt_methods(settings, kind):
     parent = QtWidgets.QWidget()
@@ -22,7 +22,7 @@ def test_dialog_exec_retains_qt_methods(settings, kind):
     projector = MagicMock(source_available=['11'], source='11')
     args = ()
     if kind.startswith('proxy'):
-        dialog = ProxyDialog(parent, show_ftw_options=kind == 'proxy_download')
+        dialog = ProxyDialog(parent)
     elif kind.startswith('source'):
         factory = SourceSelectTabs if 'tabs' in kind else SourceSelectSingle
         dialog = factory(parent, manager, edit=kind.endswith('_edit'))

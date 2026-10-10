@@ -47,10 +47,7 @@ def test_on_web_update_button_clicked(mocked_bsextract: MagicMock, mocked_bgextr
     Test that on_web_update_button_clicked handles problems correctly
     """
     # GIVEN: Some mocked GUI components and mocked bibleextractors
-    with patch.object(import_form, 'web_source_combo_box'), \
-            patch.object(import_form, 'web_translation_combo_box'), \
-            patch.object(import_form, 'web_update_button'), \
-            patch.object(import_form, 'web_progress_bar'):
+    with patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box'):
         mocked_bsextract.return_value = None
         mocked_bgextract.return_value = None
         mocked_cwextract.return_value = None
@@ -90,3 +87,62 @@ def test_help(import_form: BibleImportForm):
 
     # THEN: The Help function should be called
     mocked_help.assert_called_once()
+
+
+@pytest.mark.parametrize('result', [None, {}, {1: ''}, {1: '   '}])
+def test_web_download_rejects_empty_chapter(import_form, result):
+    """Even a listed translation with books must return actual verse text."""
+    from openlp.plugins.bibles.lib import SearchResults
+    import_form.web_bible_list = {0: {'King James Version': ('kjv', 'en')}}
+    import_form.web_translation_combo_box.addItem('King James Version')
+    chapter = SearchResults('Genesis', 1, result) if result is not None else None
+    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
+        extractor.return_value.get_books_from_http.return_value = ['Genesis']
+        extractor.return_value.get_bible_chapter.return_value = chapter
+        assert not import_form.validate_web_download()
+        error.assert_called_once()
+
+
+def test_web_download_validates_selected_translation(import_form):
+    from openlp.plugins.bibles.lib import SearchResults
+    import_form.web_bible_list = {1: {'King James Version': ('KJV', 'en')}}
+    import_form.web_source_combo_box.setCurrentIndex(1)
+    import_form.web_translation_combo_box.addItem('King James Version')
+    with patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as extractor:
+        extractor.return_value.get_books_from_http.return_value = ['Genesis']
+        extractor.return_value.get_bible_chapter.return_value = SearchResults('Genesis', 1, {1: 'In the beginning'})
+        assert import_form.validate_web_download()
+        extractor.return_value.get_books_from_http.assert_called_once_with('KJV')
+        extractor.return_value.get_bible_chapter.assert_called_once_with('KJV', 'Genesis', 1)
+
+
+@pytest.mark.parametrize('books', [None, [], ValueError('Website changed'), ConnectionError('Offline')])
+def test_web_download_handles_failed_books(import_form, books):
+    import_form.web_bible_list = {0: {'King James Version': ('kjv', 'en')}}
+    import_form.web_translation_combo_box.addItem('King James Version')
+    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
+        if isinstance(books, Exception):
+            extractor.return_value.get_books_from_http.side_effect = books
+        else:
+            extractor.return_value.get_books_from_http.return_value = books
+        assert not import_form.validate_web_download()
+        extractor.return_value.get_bible_chapter.assert_not_called()
+        error.assert_called_once()
+
+
+def test_web_lists_disable_unavailable_sources(import_form):
+    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
+            patch('openlp.plugins.bibles.forms.bibleimportform.BSExtract') as server:
+        crosswalk.return_value.get_bibles_from_http.return_value = []
+        gateway.return_value.get_bibles_from_http.return_value = [('King James Version', 'KJV', 'en')]
+        server.return_value.get_bibles_from_http.return_value = []
+        import_form.on_web_update_button_clicked()
+    assert not import_form.web_source_combo_box.model().item(0).isEnabled()
+    assert import_form.web_source_combo_box.model().item(1).isEnabled()
+    assert not import_form.web_source_combo_box.model().item(2).isEnabled()
+    assert import_form.web_source_combo_box.currentIndex() == 1
+    assert import_form.web_translation_combo_box.currentText() == 'King James Version'
+    assert import_form.web_update_button.isEnabled()

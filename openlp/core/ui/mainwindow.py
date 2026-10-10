@@ -27,7 +27,6 @@ import webbrowser
 from contextlib import contextmanager
 from datetime import datetime, date
 from pathlib import Path
-from tempfile import gettempdir
 from threading import Lock
 
 from PySide6 import QtCore, QtGui
@@ -41,7 +40,7 @@ from openlp.core.common.applocation import AppLocation
 from openlp.core.common.i18n import LanguageManager, UiStrings, translate
 from openlp.core.common.json import OpenLPJSONDecoder
 from openlp.core.common.mixins import LogMixin, RegistryProperties
-from openlp.core.common.path import create_paths, resolve
+from openlp.core.common.path import resolve
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
@@ -950,34 +949,24 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
 
     def first_time(self):
         """
-        Import themes if first time
+        Install the locally bundled themes on first startup.
         """
-        self.application.process_events()
-        for plugin in State().list_plugins():
-            if hasattr(plugin, 'first_time'):
-                self.application.process_events()
-                plugin.first_time()
         self.application.process_events()
         # Load the themes from files
         self.theme_manager_contents.load_first_time_themes()
         # Update the theme widget
         self.theme_manager_contents.load_themes()
-        temp_path = Path(gettempdir(), 'openlp')
-        shutil.rmtree(temp_path, True)
 
     def on_first_time_wizard_clicked(self):
         """
-        Re-run the first time wizard.  Prompts the user for run confirmation.If wizard is run, songs, bibles and
-        themes are imported.  The default theme is changed (if necessary).  The plugins in pluginmanager are
-        set active/in-active to match the selection in the wizard.
+        Re-run local setup and apply the selected plugin and display settings.
         """
         answer = QtWidgets.QMessageBox.warning(self,
                                                translate('OpenLP.MainWindow', 'Re-run First Time Wizard?'),
                                                translate('OpenLP.MainWindow',
                                                          'Are you sure you want to re-run the First '
                                                          'Time Wizard?\n\nRe-running this wizard may make changes to '
-                                                         'your current OpenLP+ configuration and possibly add songs to '
-                                                         'your existing songs list and change your default theme.'),
+                                                         'your current OpenLP+ configuration.'),
                                                QtWidgets.QMessageBox.StandardButton(
                                                    QtWidgets.QMessageBox.StandardButton.Yes |
                                                    QtWidgets.QMessageBox.StandardButton.No),
@@ -989,7 +978,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         if first_run_wizard.exec() == QtWidgets.QDialog.DialogCode.Rejected:
             return
         self.application.set_busy_cursor()
-        self.first_time()
+        self.theme_manager_contents.load_themes()
         # Check if Projectors panel should be visible or not after wizard.
         if self.settings.value('projector/show after wizard') and not Registry().get_flag('projector_disabled'):
             _set_dock_visible(self.projector_manager_dock, True)
@@ -1007,7 +996,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
                     self.active_plugin.toggle_status(PluginStatus.Inactive)
         # Set global theme and
         Registry().execute('theme_change_global')
-        # Check if any Bibles downloaded.  If there are, they will be processed.
+        # Refresh the Bible list after any settings import.
         Registry().execute('bibles_load_list')
         self.application.set_normal_cursor()
 

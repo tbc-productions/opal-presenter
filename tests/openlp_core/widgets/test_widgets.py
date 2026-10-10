@@ -276,14 +276,6 @@ def test_proxy_widget_save_manual_settings(qapp: OpenLP, settings: Settings):
     ])
 
 
-def test_proxy_dialog_init_with_ftw_options(settings: Settings):
-    """Test that the FTW Internet Settings dialog creates the extra controls."""
-    dialog = ProxyDialog(show_ftw_options=True, timeout=7, retries=2)
-
-    assert dialog.timeout_spin_box.value() == 7
-    assert dialog.retries_spin_box.value() == 2
-
-
 def test_proxy_dialog_init(settings: Settings):
     """Test that the ProxyDialog is created successfully"""
     # GIVEN: ProxyDialog class

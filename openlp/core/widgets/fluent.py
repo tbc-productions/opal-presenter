@@ -401,11 +401,47 @@ class FluentDialogButtonBox(_qt.QDialogButtonBox):
 QDialogButtonBox = FluentDialogButtonBox
 
 
+class FluentWizardPage(_qt.QWizardPage):
+    """Render page headings in Fluent typography instead of Qt's banner."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.heading = QLabel(self, fluentTypography=fluentqt.FontRole.Title)
+        self.description = QLabel(self, fluentTypography=fluentqt.FontRole.Body)
+        self.step_label = QLabel(self)
+        for label in (self.heading, self.description, self.step_label):
+            label.setWordWrap(True)
+            label.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+            label.hide()
+        for label in (self.description, self.step_label):
+            label.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+
+    def setTitle(self, title):
+        self.heading.setText(title)
+        self.heading.setVisible(bool(title))
+
+    def title(self):
+        return self.heading.text()
+
+    def setSubTitle(self, subtitle):
+        self.description.setText(subtitle)
+        self.description.setVisible(bool(subtitle))
+
+    def subTitle(self):
+        return self.description.text()
+
+
+QWizardPage = FluentWizardPage
+
+
 class FluentWizard(_qt.QWizard):
-    """Preserve wizard page/lifecycle APIs and replace its command buttons."""
+    """Keep Qt navigation and validation with Fluent headings and a scrolling body."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setDefaultProperty('QSpinBox', 'numericValue', 'valueChanged(int)')
+        self.setWizardStyle(self.WizardStyle.ModernStyle)
+        self.setMinimumSize(420, 320)
+        self.resize(640, 540)
+        self.setOption(self.WizardOption.NoBackButtonOnStartPage)
         # Qt's macOS fallback loads a wizard background from NSBundle.
         # Unbundled/offscreen Python has no bundle URL, so supply our own canvas.
         from PySide6 import QtGui
@@ -420,6 +456,62 @@ class FluentWizard(_qt.QWizard):
             old = self.button(role)
             button = QPushButton(old.text(), self)
             self.setButton(role, button)
+            if role in (self.WizardButton.NextButton, self.WizardButton.CommitButton, self.WizardButton.FinishButton):
+                button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+        self._update_button_layout()
+        from openlp.core.common.i18n import translate
+        self.setButtonText(self.WizardButton.NextButton, translate('OpenLP.Wizard', 'Next'))
+        self.setButtonText(self.WizardButton.BackButton, translate('OpenLP.Wizard', 'Back'))
+
+    def setOptions(self, options):
+        super().setOptions(options)
+        self._update_button_layout()
+
+    def setOption(self, option, enabled=True):
+        super().setOption(option, enabled)
+        self._update_button_layout()
+
+    def _update_button_layout(self):
+        roles = []
+        for option, role in ((self.WizardOption.HaveHelpButton, self.WizardButton.HelpButton),
+                             (self.WizardOption.HaveCustomButton1, self.WizardButton.CustomButton1),
+                             (self.WizardOption.HaveCustomButton2, self.WizardButton.CustomButton2),
+                             (self.WizardOption.HaveCustomButton3, self.WizardButton.CustomButton3)):
+            enabled = self.testOption(option)
+            self.button(role).setVisible(enabled)
+            if enabled:
+                roles.append(role)
+        self.setButtonLayout(
+            roles + [self.WizardButton.Stretch, self.WizardButton.BackButton, self.WizardButton.NextButton,
+                     self.WizardButton.CommitButton, self.WizardButton.FinishButton, self.WizardButton.CancelButton])
+
+    def initializePage(self, page_id):
+        page = self.page(page_id)
+        page_layout = _qt.QWidget.layout(page)
+        if page_layout and not hasattr(page, 'scroll_area'):
+            content = _qt.QWidget(page)
+            content.setLayout(page_layout)
+            content.layout().setContentsMargins(0, 0, 0, 0)
+            layout = _qt.QVBoxLayout(page)
+            layout.setContentsMargins(24, 16, 24, 16)
+            layout.setSpacing(16)
+            if isinstance(page, FluentWizardPage) and page.title():
+                for label in (page.step_label, page.heading, page.description):
+                    layout.addWidget(label)
+            page.scroll_area = _qt.QScrollArea(page)
+            page.scroll_area.setVerticalScrollBar(fluentqt.ScrollBar(QtCore.Qt.Orientation.Vertical, page.scroll_area))
+            page.scroll_area.setHorizontalScrollBar(
+                fluentqt.ScrollBar(QtCore.Qt.Orientation.Horizontal, page.scroll_area))
+            page.scroll_area.setWidgetResizable(True)
+            page.scroll_area.setFrameShape(_qt.QFrame.Shape.NoFrame)
+            page.scroll_area.setWidget(content)
+            layout.addWidget(page.scroll_area, 1)
+        if isinstance(page, FluentWizardPage) and page.title():
+            from openlp.core.common.i18n import translate
+            page.step_label.setText(translate('OpenLP.Wizard', 'Step {step}').format(
+                step=self.pageIds().index(page_id) + 1))
+            page.step_label.show()
+        super().initializePage(page_id)
 
 
 QWizard = FluentWizard

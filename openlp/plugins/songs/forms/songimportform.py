@@ -120,8 +120,6 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
         self.format_h_spacing = self.format_layout.horizontalSpacing()
         self.format_v_spacing = self.format_layout.verticalSpacing()
         self.format_layout.setVerticalSpacing(0)
-        self.stack_spacer = QtWidgets.QSpacerItem(10, 0, QtWidgets.QSizePolicy.Policy.Fixed,
-                                                  QtWidgets.QSizePolicy.Policy.Expanding)
         self.format_stack = QtWidgets.QStackedLayout()
         self.format_stack.setObjectName('format_stack')
         self.disablable_formats = []
@@ -408,7 +406,7 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
             path_edit.path = self.settings.value('songs/last directory import')
             file_path_layout.addWidget(path_edit)
             import_layout.addLayout(file_path_layout)
-            import_layout.addSpacerItem(self.stack_spacer)
+            import_layout.addStretch()
             self.format_widgets[this_format]['filepathLabel'] = file_path_label
             self.format_widgets[this_format]['path_edit'] = path_edit
         elif select_mode == SongFormatSelect.MultipleFiles:
@@ -457,7 +455,7 @@ class SongImportForm(OpenLPWizard, RegistryProperties):
         disabled_label.setWordWrap(True)
         disabled_label.setObjectName(prefix + '_disabled_label')
         disabled_layout.addWidget(disabled_label)
-        disabled_layout.addSpacerItem(self.stack_spacer)
+        disabled_layout.addStretch()
         layout.addWidget(disabled_widget)
         import_widget = QtWidgets.QWidget(page)
         import_widget.setObjectName(prefix + '_import_widget')

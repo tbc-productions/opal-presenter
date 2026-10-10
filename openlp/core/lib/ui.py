@@ -38,88 +38,20 @@ from openlp.core.widgets.labels import FormLabel
 log = logging.getLogger(__name__)
 
 
-class _WelcomeSideImageWidget(QtWidgets.QWidget):
-    """
-    Paints the welcome pixmap scaled to fill the widget (aspect preserved, edges cropped).
-
-    Uses "cover" scaling so the side column has no empty bands above/below the image.
-    Replaces the built-in wizard watermark pixmap, which uses a fixed pixmap size and
-    can inflate the wizard's minimum size for large assets.
-    """
-
-    def __init__(self, source: QtGui.QPixmap, parent=None):
-        super().__init__(parent)
-        self._source = source
-        self._scaled_cache = None
-        self._debounce = QtCore.QTimer(self)
-        self._debounce.setSingleShot(True)
-        self._debounce.setInterval(40)
-        self._debounce.timeout.connect(self._rebuild_scaled_pixmap)
-        self.setObjectName('welcome_side_image')
-        self.setMinimumWidth(80)
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Preferred,
-            QtWidgets.QSizePolicy.Policy.Expanding,
-        )
-
-    def sizeHint(self):
-        return QtCore.QSize(163, 350)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._debounce.start()
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self._rebuild_scaled_pixmap()
-
-    def _rebuild_scaled_pixmap(self):
-        if self._source.isNull():
-            self._scaled_cache = None
-            self.update()
-            return
-        cr = self.contentsRect()
-        if cr.width() < 1 or cr.height() < 1:
-            return
-        self._scaled_cache = self._source.scaled(
-            cr.size(),
-            QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            QtCore.Qt.TransformationMode.SmoothTransformation,
-        )
-        self.update()
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        if self._scaled_cache is None or self._scaled_cache.isNull():
-            return
-        cr = self.contentsRect()
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
-        painter.setClipRect(cr)
-        x = cr.center().x() - self._scaled_cache.width() // 2
-        y = cr.center().y() - self._scaled_cache.height() // 2
-        painter.drawPixmap(x, y, self._scaled_cache)
-
-
 def add_welcome_page(parent, image):
     """
-    Generate an opening welcome page for a wizard using a provided image.
+    Generate an opening welcome page with Fluent typography.
 
     :param parent: A ``QWizard`` object to add the welcome page to.
-    :param image: A splash image for the wizard. It fills the left column (cropped if
-        needed) so there is no empty band above or below the picture.
+    :param image: Legacy image argument retained for existing wizard callers.
     """
     parent.welcome_page = QtWidgets.QWizardPage()
     parent.welcome_page.setObjectName('welcome_page')
-    source_pixmap = QtGui.QPixmap(image)
 
     root_layout = QtWidgets.QHBoxLayout(parent.welcome_page)
     root_layout.setObjectName('WelcomeRootLayout')
     root_layout.setContentsMargins(0, 0, 0, 0)
     root_layout.setSpacing(12)
-
-    parent.welcome_side_image = _WelcomeSideImageWidget(source_pixmap, parent.welcome_page)
-    root_layout.addWidget(parent.welcome_side_image, 1)
 
     welcome_content = QtWidgets.QWidget(parent.welcome_page)
     welcome_content.setObjectName('WelcomeContentWidget')
@@ -127,11 +59,13 @@ def add_welcome_page(parent, image):
     parent.welcome_layout.setObjectName('WelcomeLayout')
     parent.title_label = QtWidgets.QLabel(welcome_content)
     parent.title_label.setObjectName('title_label')
+    parent.title_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Title)
     parent.welcome_layout.addWidget(parent.title_label)
     parent.title_label.setWordWrap(True)
-    parent.welcome_layout.addSpacing(40)
+    parent.welcome_layout.setSpacing(16)
     parent.information_label = QtWidgets.QLabel(welcome_content)
     parent.information_label.setWordWrap(True)
+    parent.information_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
     parent.information_label.setObjectName('information_label')
     parent.welcome_layout.addWidget(parent.information_label)
     parent.welcome_layout.addStretch()

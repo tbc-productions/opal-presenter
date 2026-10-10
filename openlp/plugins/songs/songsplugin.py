@@ -24,9 +24,6 @@ for the Songs plugin.
 """
 
 import logging
-import sqlite3
-from pathlib import Path
-from tempfile import gettempdir
 
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
@@ -46,7 +43,6 @@ from openlp.plugins.songs.forms.songselectform import SongSelectForm
 from openlp.plugins.songs.lib import clean_song, upgrade
 from openlp.plugins.songs.lib.db import Song, init_schema
 from openlp.plugins.songs.lib.importer import SongFormat
-from openlp.plugins.songs.lib.importers.openlp import OpenLPSongImport
 from openlp.plugins.songs.lib.mediaitem import SongMediaItem
 from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 from openlp.plugins.songs.lib.songstab import SongsTab
@@ -352,42 +348,6 @@ class SongsPlugin(Plugin):
         }
         self.set_plugin_ui_text_strings(tooltips)
 
-    def first_time(self):
-        """
-        If the first time wizard has run, this function is run to import all the new songs into the database.
-        """
-        self.application.process_events()
-        db_dir_path = Path(gettempdir(), 'openlp')
-        if not db_dir_path.exists():
-            return
-        song_db_paths = []
-        song_count = 0
-        for db_file_path in db_dir_path.glob('songs_*.sqlite'):
-            self.application.process_events()
-            song_db_paths.append(db_file_path)
-            song_count += SongsPlugin._count_songs(db_file_path)
-        if not song_db_paths:
-            return
-        self.application.process_events()
-        progress = QtWidgets.QProgressDialog(self.main_window)
-        progress.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-        progress.setWindowTitle(translate('SongsPlugin', 'Importing Songs'))
-        progress.setLabelText(UiStrings().StartingImport)
-        progress.setCancelButton(None)
-        progress.setRange(0, song_count)
-        progress.setMinimumDuration(0)
-        progress.forceShow()
-        self.application.process_events()
-        for db_path in song_db_paths:
-            importer = OpenLPSongImport(self.manager, file_path=db_path)
-            importer.do_import(progress)
-            self.application.process_events()
-        progress.setValue(song_count)
-        self.application.process_events()
-        self.on_tools_reindex_item_triggered()
-        self.application.process_events()
-        self.media_item.on_search_text_button_clicked()
-
     def finalise(self):
         """
         Time to tidy up on exit
@@ -414,23 +374,3 @@ class SongsPlugin(Plugin):
         songs = self.manager.get_all_objects(Song, Song.temporary == True)  # noqa: E712
         for song in songs:
             self.manager.delete_object(Song, song.id)
-
-    @staticmethod
-    def _count_songs(db_path):
-        """
-        Provide a count of the songs in the database
-
-        :param Path db_path: The database to use
-        :return: The number of songs in the db.
-        :rtype: int
-        """
-        connection = sqlite3.connect(str(db_path))
-        cursor = connection.cursor()
-        cursor.execute('SELECT COUNT(id) AS song_count FROM songs')
-        song_count = cursor.fetchone()[0]
-        connection.close()
-        try:
-            song_count = int(song_count)
-        except (TypeError, ValueError):
-            song_count = 0
-        return song_count

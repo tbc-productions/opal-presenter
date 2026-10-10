@@ -197,7 +197,6 @@ class ConnectionWizard(QtWidgets.QWizard):
         self.setWindowTitle(tr('Set up Library Sync'))
         self.setWindowFlag(QtCore.Qt.WindowType.WindowMaximizeButtonHint, False)
         self.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
-        self.setMinimumSize(WIZARD_FIXED_WIDTH, 540)
         self.resize(WIZARD_FIXED_WIDTH, 540)
         self.setOption(QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage)
         # Keep typed provider details when users go back to rename the connection.

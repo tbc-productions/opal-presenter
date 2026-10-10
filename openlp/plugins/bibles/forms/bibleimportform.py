@@ -230,6 +230,7 @@ class BibleImportForm(OpenLPWizard):
         self.web_bible_layout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.web_update_label)
         self.web_update_button = QtWidgets.QPushButton(self.web_widget)
         self.web_update_button.setObjectName('WebUpdateButton')
+        self.web_update_label.setBuddy(self.web_update_button)
         self.web_bible_layout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.web_update_button)
         self.web_source_label = QtWidgets.QLabel(self.web_widget)
         self.web_source_label.setObjectName('WebSourceLabel')
@@ -238,6 +239,7 @@ class BibleImportForm(OpenLPWizard):
         self.web_source_combo_box.setObjectName('WebSourceComboBox')
         self.web_source_combo_box.addItems(['', '', ''])
         self.web_source_combo_box.setEnabled(False)
+        self.web_source_label.setBuddy(self.web_source_combo_box)
         self.web_bible_layout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.web_source_combo_box)
         self.web_translation_label = QtWidgets.QLabel(self.web_bible_tab)
         self.web_translation_label.setObjectName('web_translation_label')
@@ -246,12 +248,18 @@ class BibleImportForm(OpenLPWizard):
         self.web_translation_combo_box.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.web_translation_combo_box.setObjectName('WebTranslationComboBox')
         self.web_translation_combo_box.setEnabled(False)
+        self.web_translation_label.setBuddy(self.web_translation_combo_box)
         self.web_bible_layout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.web_translation_combo_box)
         self.web_progress_bar = QtWidgets.QProgressBar(self)
         self.web_progress_bar.setRange(0, 3)
         self.web_progress_bar.setObjectName('WebTranslationProgressBar')
         self.web_progress_bar.setVisible(False)
         self.web_bible_layout.setWidget(3, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.web_progress_bar)
+        self.web_status_label = QtWidgets.QLabel(self.web_widget)
+        self.web_status_label.setWordWrap(True)
+        self.web_status_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
+        self.web_status_label.setTextColorRole(QtWidgets.fluentqt.Label.TextColorRole.Secondary)
+        self.web_bible_layout.setWidget(4, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.web_status_label)
         self.select_stack.addWidget(self.web_widget)
         self.zefania_widget = QtWidgets.QWidget(self.select_page)
         self.zefania_widget.setObjectName('ZefaniaWidget')
@@ -407,11 +415,15 @@ class BibleImportForm(OpenLPWizard):
         self.csv_books_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Books file:'))
         self.csv_verses_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Verses file:'))
         self.open_song_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.web_source_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Location:'))
+        self.web_source_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Web source:'))
         self.zefania_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
         self.wordproject_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.web_update_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Click to download bible list'))
-        self.web_update_button.setText(translate('BiblesPlugin.ImportWizardForm', 'Download bible list'))
+        self.web_update_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Translations:'))
+        self.web_update_button.setText(translate('BiblesPlugin.ImportWizardForm', 'Refresh translations'))
+        self.web_status_label.setText(translate(
+            'BiblesPlugin.ImportWizardForm', 'Refresh the lists and choose a translation. '
+            'Next checks that its books and verses can be retrieved. '
+            'Web Bibles require an internet connection when displaying uncached verses.'))
         self.web_source_combo_box.setItemText(WebDownload.Crosswalk, translate('BiblesPlugin.ImportWizardForm',
                                                                                'Crosswalk'))
         self.web_source_combo_box.setItemText(WebDownload.BibleGateway, translate('BiblesPlugin.ImportWizardForm',
@@ -507,11 +519,9 @@ class BibleImportForm(OpenLPWizard):
                     self.wordproject_path_edit.setFocus()
                     return False
             elif self.field('source_format') == BibleFormat.WebDownload:
-                # If count is 0 the bible list has not yet been downloaded
-                if self.web_translation_combo_box.count() == 0:
+                if not self.validate_web_download():
                     return False
-                else:
-                    self.version_name_edit.setText(self.web_translation_combo_box.currentText().strip())
+                self.version_name_edit.setText(self.web_translation_combo_box.currentText().strip())
             elif self.field('source_format') == BibleFormat.SWORD:
                 # Test the SWORD tab that is currently active
                 if self.sword_tab_widget.currentIndex() == self.sword_tab_widget.indexOf(self.sword_folder_tab):
@@ -605,17 +615,17 @@ class BibleImportForm(OpenLPWizard):
         self.web_update_button.setEnabled(False)
         self.web_progress_bar.setVisible(True)
         self.web_progress_bar.setValue(0)
-        # TODO: Where does critical_error_message_box get %s string from?
-        # NOTE: BibleServer support has been disabled since we can't currently parse it. Re-add if/when fixed.
         for (download_type, extractor) in ((WebDownload.Crosswalk, CWExtract()),
                                            (WebDownload.BibleGateway, BGExtract()),
                                            (WebDownload.BibleServer, BSExtract())):
             try:
                 bibles = extractor.get_bibles_from_http()
-            except (urllib.error.URLError, ConnectionError):
+            except (urllib.error.URLError, ConnectionError, ValueError, KeyError, AttributeError, TypeError):
+                log.exception('Could not retrieve the Bible list from %s', extractor.NAME)
                 critical_error_message_box(translate('BiblesPlugin.ImportWizardForm', 'Error during download'),
                                            translate('BiblesPlugin.ImportWizardForm',
-                                                     'An error occurred while downloading the list of bibles from %s.'))
+                                                     'Could not retrieve the Bible list from {source}.').format(
+                                               source=extractor.NAME))
                 bibles = None
             if bibles:
                 self.web_bible_list[download_type] = {}
@@ -623,12 +633,64 @@ class BibleImportForm(OpenLPWizard):
                     self.web_bible_list[download_type][bible_name] = (bible_key, language_code)
             self.web_progress_bar.setValue(download_type + 1)
         # Update combo box if something got into the list
+        self.web_translation_combo_box.clear()
+        unavailable = []
+        for index in range(self.web_source_combo_box.count()):
+            self.web_source_combo_box.model().item(index).setEnabled(index in self.web_bible_list)
+            if index not in self.web_bible_list:
+                unavailable.append(self.web_source_combo_box.itemText(index))
+        self.web_status_label.setText(translate(
+            'BiblesPlugin.ImportWizardForm', 'Next checks the selected translation\'s books and verses.'))
+        if unavailable:
+            self.web_status_label.setText(translate(
+                'BiblesPlugin.ImportWizardForm', 'Translation lists unavailable: {sources}. '
+                'Retry, choose an available source, or import a local Bible file. '
+                'Next checks the selected translation\'s books and verses.').format(
+                    sources=', '.join(unavailable)))
         if self.web_bible_list:
-            self.on_web_source_combo_box_index_changed(0)
-        self.web_source_combo_box.setEnabled(True)
-        self.web_translation_combo_box.setEnabled(True)
+            index = min(self.web_bible_list)
+            self.web_source_combo_box.setCurrentIndex(index)
+            self.on_web_source_combo_box_index_changed(index)
+        else:
+            critical_error_message_box(
+                translate('BiblesPlugin.ImportWizardForm', 'Web sources unavailable'),
+                translate('BiblesPlugin.ImportWizardForm',
+                          'No Bible lists could be retrieved. Check your connection and retry, '
+                          'or choose a Bible file format to import a local file.'))
+        self.web_source_combo_box.setEnabled(bool(self.web_bible_list))
+        self.web_translation_combo_box.setEnabled(bool(self.web_bible_list))
         self.web_update_button.setEnabled(True)
         self.web_progress_bar.setVisible(False)
+
+    def validate_web_download(self):
+        """Check real books and verses; a translation catalogue alone can be stale."""
+        source = self.web_source_combo_box.currentIndex()
+        translation = self.web_translation_combo_box.currentText()
+        entry = self.web_bible_list.get(source, {}).get(translation)
+        if not entry:
+            critical_error_message_box(
+                translate('BiblesPlugin.ImportWizardForm', 'Select a translation'),
+                translate('BiblesPlugin.ImportWizardForm', 'Refresh the translation lists and choose a Bible first.'))
+            return False
+        extractor = (CWExtract, BGExtract, BSExtract)[source]()
+        self.application.set_busy_cursor()
+        try:
+            books = extractor.get_books_from_http(entry[0])
+            chapter = extractor.get_bible_chapter(entry[0], books[0], 1) if books else None
+            if chapter and chapter.verse_list and all(
+                    isinstance(text, str) and text.strip() for text in chapter.verse_list.values()):
+                return True
+        except (urllib.error.URLError, ConnectionError, ValueError, KeyError, AttributeError, TypeError):
+            log.exception('Could not validate %s from %s', translation, extractor.NAME)
+        finally:
+            self.application.set_normal_cursor()
+        critical_error_message_box(
+            translate('BiblesPlugin.ImportWizardForm', 'Web source unavailable'),
+            translate('BiblesPlugin.ImportWizardForm',
+                      'Could not retrieve books and verses for {bible} from {source}. '
+                      'Check your connection and retry, or import a local Bible file.').format(
+                          bible=translation, source=extractor.NAME))
+        return False
 
     def on_sword_folder_path_edit_path_changed(self, new_path):
         """

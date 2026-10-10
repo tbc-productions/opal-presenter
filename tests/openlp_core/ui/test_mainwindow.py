@@ -819,12 +819,14 @@ def test_on_first_time_wizard_clicked_show_projectors_after(mocked_warning, Mock
     Registry().set_flag('projector_disabled', False)
 
     with patch.object(main_window, 'projector_manager_dock') as mocked_dock, \
-            patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents'):
+            patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents') as theme_manager:
         # WHEN: on_first_time_wizard_clicked is called
         main_window.on_first_time_wizard_clicked()
 
     # THEN: projector_manager_dock.setVisible should had been called once
     mocked_dock.setVisible.assert_called_once_with(True)
+    theme_manager.load_themes.assert_called_once()
+    theme_manager.load_first_time_themes.assert_not_called()
 
 
 @patch('openlp.core.ui.mainwindow.FirstTimeForm')

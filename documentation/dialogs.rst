@@ -23,8 +23,9 @@ retain their platform implementation.
 Actions and wording
 -------------------
 
-The primary action is always on the left, secondary in the middle and Cancel
-or Close on the right. The default action changes keyboard activation and
+For prompts and forms, the primary action is on the left, secondary in the
+middle and Cancel or Close on the right. Wizards use the navigation order
+described below. The default action changes keyboard activation and
 accent emphasis, not position. Destructive confirmations default to Cancel.
 Use concrete verbs: Save, Rename, Copy, Create, Select, Apply, Export or Delete.
 Use Discard consistently for abandoning unsaved changes. Instructions must
@@ -93,3 +94,43 @@ confirmations. Check long messages and a resized host: content must remain
 reachable and footer commands visible. The main regression suite is
 ``tests/openlp_core/widgets/test_fluent_dialogs.py``; form-specific tests cover
 validation, song-usage deletion boundaries and network field updates.
+
+Wizard presentation
+-------------------
+
+Keep multi-step workflows on ``QtWidgets.QWizard`` and ``QtWidgets.QWizardPage``
+from ``openlp.core.widgets.fluent``. The shared adapters retain Qt's page IDs,
+registered fields, completion checks, validation and result contracts. Set page
+headings with ``setTitle()`` and instructions with ``setSubTitle()``; these use
+Fluent Title and Body typography with a step caption rather than Qt's banner.
+Page headings, step captions and short subtitles remain visible above the
+scrolling body. Put long instructions in the body. Footer actions remain
+visible. Use an initial size rather than a fixed window size.
+
+Group Back, Next (or Commit/Finish) and Cancel at the bottom right, in that
+order. Next, Commit and Finish retain their accent style and default keyboard
+action. Help and custom actions stay on the left. This follows Qt's conventional
+wizard navigation order rather than the primary-left prompt layout. See
+`Qt's wizard documentation <https://doc.qt.io/qt-6/qwizard.html>`_. Enable optional actions
+through the corresponding wizard options so unused buttons remain hidden.
+Existing welcome pages use the same typography without decorative side images.
+Cloud Library retains its provider-specific step count and validation.
+
+First-time setup configures plugins and displays locally and can restore a
+settings backup. It does not contact OpenLP servers or download songs, Bibles,
+themes, thumbnails or the web remote. Built-in themes are installed from local
+files on first startup. Re-running setup preserves the current theme unless a
+settings backup changes it. OpenLP+ is independent and is not endorsed by OpenLP.
+
+The Bible import wizard refreshes translation lists only on request and disables
+sources whose lists cannot be retrieved. Before advancing with a web translation,
+it uses that source's existing extractors to retrieve its book list and the first
+chapter of its first book, requiring non-empty verse text. Failed checks keep the
+source page open and allow retrying or choosing a local Bible file. This is a
+current sample check; it cannot guarantee every chapter or future availability.
+Web Bibles still retrieve uncached chapters on demand.
+
+Wizard regressions are covered by ``tests/openlp_core/widgets/test_wizard.py``,
+``tests/openlp_core/ui/test_firsttimeform.py`` and the Bible and Cloud Library
+wizard tests. Check light/dark rendering, long instructions, narrow windows,
+Enter/Escape, mouse clicks, failed validation and Help.

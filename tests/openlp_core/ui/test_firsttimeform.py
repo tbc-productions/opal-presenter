@@ -21,854 +21,158 @@
 """
 Package to test the openlp.core.ui.firsttimeform package.
 """
-import json
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, call, patch, DEFAULT
+from unittest.mock import MagicMock, patch
 
+import pytest
 from PySide6 import QtCore, QtTest
+from openlp.core.common.registry import Registry
+from openlp.core.lib.plugin import PluginStatus
+from openlp.core.ui.firsttimeform import FirstTimeForm
+from openlp.core.ui.firsttimewizard import FirstTimePage
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.app import OpenLP
-from openlp.core.common.enum import PluginStatus
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.firsttimeform import FirstTimeForm, ResourceIndexDownloadWorker, ThemeListWidgetItem
-from openlp.core.ui.firsttimewizard import FirstTimePage, RemotePage, ThemeListWidget
-from openlp.core.ui.icons import UiIcons
 
-
-INVALID_CONFIG = """
-{
-  "_comments": "The most recent version should be added to https://openlp.org/files/frw/download_3.0.json",
-  "_meta": {
-}
-"""
-
-VALID_CONFIG = json.dumps({
-    '_meta': {
-        'base_url': 'https://get.openlp.org/ftw/',
-        'songs_dir': 'songs',
-        'bibles_dir': 'bibles',
-        'themes_dir': 'themes'
-    },
-    'songs': {
-        'song_1': {
-            'title': 'Song 1',
-            'file_name': 'song_1.xml',
-            'sha256': 'song_sha'
-        }
-    },
-    'bibles': {
-        'english': {
-            'title': 'English',
-            'translations': {
-                'kjv': {
-                    'title': 'King James Version',
-                    'file_name': 'kjv.sqlite',
-                    'sha256': 'bible_sha'
-                }
-            }
-        }
-    },
-    'themes': {
-        'theme_1': {
-            'title': 'Theme 1',
-            'file_name': 'theme_1.otz',
-            'thumbnail': 'theme_1.png',
-            'sha256': 'theme_sha'
-        }
-    }
-})
-
-sample_theme_data = {'file_name': 'BlueBurst.otz', 'sha256': 'sha_256_hash',
-                     'thumbnail': 'BlueBurst.png', 'title': 'Blue Burst'}
-
-
-@pytest.fixture()
-def ftf_app(registry: Registry, qapp: OpenLP):
-    Registry().register('application', qapp)
-
-
-@pytest.fixture()
-def download_env(registry: Registry):
-    download_worker_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker')
-    run_thread_patcher = patch('openlp.core.ui.firsttimeform.run_thread')
-    mocked_download_worker = download_worker_patcher.start()
-    mocked_run_thread = run_thread_patcher.start()
-    yield mocked_download_worker, mocked_run_thread
-    download_worker_patcher.stop()
-    run_thread_patcher.stop()
-
-
-@pytest.fixture()
-def mocked_set_icon(mock_settings):
-    icons = {name: UiIcons().get_icon_variant(name) for name in ('picture', 'exception')}
-    icon_patcher = patch('openlp.core.ui.firsttimeform.UiIcons.get_icon_variant',
-                         side_effect=lambda name: icons[name])
-    icon_patcher.start()
-    move_to_thread_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker.moveToThread')
-    set_icon_patcher = patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem.setIcon')
-    q_thread_patcher = patch('openlp.core.ui.firsttimeform.QtCore.QThread')
-    move_to_thread_patcher.start()
-    mocked_set_icon = set_icon_patcher.start()
-    q_thread_patcher.start()
-    mocked_app = MagicMock()
-    mocked_app.worker_threads = {}
-    mocked_main_window = MagicMock()
-    Registry().remove('application')
-    Registry().register('application', mocked_app)
-    Registry().register('main_window', mocked_main_window)
-    yield mocked_set_icon
-    move_to_thread_patcher.stop()
-    set_icon_patcher.stop()
-    q_thread_patcher.stop()
-    icon_patcher.stop()
-
-
-def test_init_sample_data(download_env, mock_settings):
-    """
-    Test that the theme data is loaded correctly in to a ThemeListWidgetItem object when instantiated
-    """
-    # GIVEN: A sample theme dictionary object
-    mocked_download_worker = download_env[0]
-
-    # WHEN: Creating an instance of `ThemeListWidgetItem`
-    instance = ThemeListWidgetItem('url', sample_theme_data)
-
-    # THEN: The data should have been set correctly, and no download should have started yet
-    assert instance.file_name == 'BlueBurst.otz'
-    assert instance.sha256 == 'sha_256_hash'
-    assert instance.text() == 'Blue Burst'
-    assert instance.toolTip() == 'Blue Burst'
-    mocked_download_worker.assert_not_called()
-
-
-def test_init_download_worker(download_env, mock_settings):
-    """
-    Test that the `DownloadWorker` worker is set up correctly when start_download() is called.
-    """
-    # GIVEN: A sample theme dictionary object and an instance of ThemeListWidgetItem
-    mocked_download_worker = download_env[0]
-    mocked_run_thread = download_env[1]
-    mocked_ftw = MagicMock(spec=FirstTimeForm)
-    mocked_ftw.thumbnail_download_threads = []
-    mocked_ftw.ftw_download_timeout = 5
-    mocked_ftw.ftw_download_retries = 0
-    instance = ThemeListWidgetItem('url', sample_theme_data)
-
-    # WHEN: start_download() is called
-    instance.start_download(mocked_ftw)
-
-    # THEN: The `DownloadWorker` should have been set up with the appropriate data
-    mocked_download_worker.assert_called_once_with('url', 'BlueBurst.png', timeout=5, retries=0)
-    mocked_download_worker().download_failed.connect.assert_called_once_with(instance._relay.on_failed)
-    mocked_download_worker().download_succeeded.connect.assert_called_once_with(instance._relay.on_downloaded)
-    mocked_run_thread.assert_called_once_with(mocked_download_worker(), 'thumbnail_download_BlueBurst.png')
-    assert mocked_ftw.thumbnail_download_threads == ['thumbnail_download_BlueBurst.png']
-
-
-def test_firsttimeform_initialise(mock_settings):
-    """
-    Test if we can intialise the FirstTimeForm
-    """
-    # GIVEN: A First Time Wizard and an expected screen object
-    frw = FirstTimeForm(None)
-    expected_screens = MagicMock()
-
-    # WHEN: The First Time Wizard is initialised
-    frw.initialize(expected_screens)
-
-    # THEN: The screens should be set up, and the default values initialised
-    assert expected_screens == frw.screens, 'The screens should be correct'
-    assert frw.has_web_access is True, 'The default value of self.web_access should be True'
-    assert [] == frw.thumbnail_download_threads, 'The list of threads should be empty'
-    assert frw.has_run_wizard is False, 'has_run_wizard should be False'
-
-
-@patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.exec')
-def test_firsttimeform_exec(mocked_qwizard_exec, mock_settings):
-
-    # GIVEN: An instance of FirstTimeForm
-    frw = FirstTimeForm(None)
-    with patch.object(frw, 'set_defaults') as mocked_set_defaults:
-
-        # WHEN: exec is called
-        frw.exec()
-
-        # THEN: The wizard should be reset and the exec methon on the super class should have been called
-        mocked_set_defaults.assert_called_once()
-        mocked_qwizard_exec.assert_called_once()
-
-
-def test_set_defaults(mock_settings):
-    """
-    Test that the default values are set when set_defaults() is run
-    """
-    # GIVEN: An initialised FRW and a whole lot of stuff mocked out
-    frw = FirstTimeForm(None)
-    frw.initialize(MagicMock())
-    mocked_settings = MagicMock()
-    mocked_settings.value.side_effect = lambda key: {'core/has run wizard': False}[key]
-    with patch.object(frw, 'restart') as mocked_restart, \
-            patch.object(frw, 'currentIdChanged') as mocked_currentIdChanged, \
-            patch.object(frw, 'theme_combo_box') as mocked_theme_combo_box, \
-            patch.object(frw, 'songs_check_box') as mocked_songs_check_box, \
-            patch.object(Registry, 'register_function') as mocked_register_function, \
-            patch('openlp.core.ui.firsttimeform.gettempdir', return_value='temp') as mocked_gettempdir, \
-            patch('openlp.core.ui.firsttimeform.create_paths') as mocked_create_paths, \
-            patch.object(frw.application, 'set_normal_cursor'):
-        mocked_theme_manager = MagicMock()
-        Registry().register('theme_manager', mocked_theme_manager)
-        Registry().remove('settings')
-        Registry().register('settings', mocked_settings)
-
-        # WHEN: The set_defaults() method is run
-        frw.set_defaults()
-
-        # THEN: The default values should have been set
-        mocked_restart.assert_called_once()
-        assert 'https://get.openlp.org/ftw/' == frw.web, 'The default URL should be set'
-        mocked_currentIdChanged.connect.assert_called_once_with(frw.on_current_id_changed)
-        mocked_register_function.assert_called_once_with('config_screen_changed', frw.screen_selection_widget.load)
-        mocked_settings.value.assert_has_calls([call('core/has run wizard')])
-        mocked_gettempdir.assert_called_once()
-        mocked_create_paths.assert_called_once_with(Path('temp', 'openlp'))
-        mocked_theme_combo_box.clear.assert_called_once()
-        mocked_theme_manager.assert_not_called()
-        mocked_songs_check_box.assert_not_called()
-
-
-@patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept')
-def test_accept_method(mocked_qwizard_accept, mock_settings):
-    """
-    Test the FirstTimeForm.accept method
-    """
-    # GIVEN: An instance of FirstTimeForm
-    ftw = FirstTimeForm(None)
-    with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
-            patch.multiple(ftw, songs_check_box=DEFAULT, bible_check_box=DEFAULT, presentation_check_box=DEFAULT,
-                           image_check_box=DEFAULT, media_check_box=DEFAULT, custom_check_box=DEFAULT,
-                           song_usage_check_box=DEFAULT, alert_check_box=DEFAULT, obs_studio_check_box=DEFAULT,
-                           projector_check_box=DEFAULT, remote_interface_check_box=DEFAULT) \
-            as mocked_check_boxes, \
-            patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget:
-        # WHEN: Calling accept
-        ftw.accept()
-
-        # THEN: The selected plugins should be enabled, the screen selection saved and the super method called
-        mocked_set_plugin_status.assert_has_calls([
-            call(mocked_check_boxes['songs_check_box'], 'songs/status'),
-            call(mocked_check_boxes['bible_check_box'], 'bibles/status'),
-            call(mocked_check_boxes['presentation_check_box'], 'presentations/status'),
-            call(mocked_check_boxes['image_check_box'], 'images/status'),
-            call(mocked_check_boxes['media_check_box'], 'media/status'),
-            call(mocked_check_boxes['custom_check_box'], 'custom/status'),
-            call(mocked_check_boxes['song_usage_check_box'], 'songusage/status'),
-            call(mocked_check_boxes['alert_check_box'], 'alerts/status'),
-            call(mocked_check_boxes['obs_studio_check_box'], 'obs_studio/status'),
-            call(mocked_check_boxes['projector_check_box'], 'projector/status'),
-            call(mocked_check_boxes['remote_interface_check_box'], 'remote_interface/status')
-        ])
-        mocked_screen_selection_widget.save.assert_called_once()
-        mocked_qwizard_accept.assert_called_once()
-
-
-def test_accept_method_theme_not_selected(mock_settings):
-    """
-    Test the FirstTimeForm.accept method when there is no default theme selected
-    """
-    # GIVEN: An instance of FirstTimeForm
-    mock_settings = Registry().get('settings')
-    frw = FirstTimeForm(None)
-    with patch.object(frw, '_set_plugin_status'), patch.object(frw, 'screen_selection_widget'), \
-            patch.object(frw, 'theme_combo_box', **{'currentIndex.return_value': -1}):     # type: ignore[call-overload]
-
-        # WHEN: Calling accept and the currentIndex method of the theme_combo_box returns -1
-        frw.accept()
-
-        # THEN: OpenLP should not try to save a theme name
-        mock_settings().setValue.assert_not_called()
-
-
-@patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.reject')
-@patch('openlp.core.ui.firsttimeform.time')
-@patch('openlp.core.ui.firsttimeform.get_thread_worker')
-@patch('openlp.core.ui.firsttimeform.is_thread_finished')
-def test_reject_method(mocked_is_thread_finished, mocked_get_thread_worker,
-                       mocked_time, mocked_qwizard_reject, ftf_app):
-    """
-    Test that the reject method shuts down the threads correctly
-    """
-    # GIVEN: A FRW, some mocked threads and workers (that isn't quite done) and other mocked stuff
-    mocked_worker = MagicMock()
-    mocked_get_thread_worker.return_value = mocked_worker
-    mocked_is_thread_finished.side_effect = [False, True]
-    frw = FirstTimeForm(None)
-    frw.initialize(MagicMock())
-    frw.thumbnail_download_threads = ['test_thread']
-    with patch.object(frw.application, 'set_normal_cursor') as mocked_set_normal_cursor:
-
-        # WHEN: the reject method is called
-        frw.reject()
-
-        # THEN: The right things should be called in the right order
-        mocked_get_thread_worker.assert_called_once_with('test_thread')
-        mocked_worker.cancel_download.assert_called_once()
-        mocked_is_thread_finished.assert_called_with('test_thread')
-        assert mocked_is_thread_finished.call_count == 2, 'isRunning() should have been called twice'
-        mocked_time.sleep.assert_called_once_with(0.1)
-        mocked_set_normal_cursor.assert_called_once()
-        mocked_qwizard_reject.assert_called_once()
-
-
-@patch('openlp.core.ui.firsttimeform.ProxyDialog')
-def test_on_custom_button_clicked(mocked_proxy_dialog, mock_settings):
-    """
-    Test _on_custom_button when it is called whe the 'internet settings' (CustomButton1) button is not clicked.
-    """
-    # GIVEN: An instance of the FirstTimeForm
-    frw = FirstTimeForm(None)
-
-    # WHEN: Calling _on_custom_button_clicked with a different button to the 'internet settings button.
-    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton2.value)
-
-    # THEN: The ProxyDialog should not be shown.
-    mocked_proxy_dialog.assert_not_called()
-
-
-@patch('openlp.core.ui.firsttimeform.ProxyDialog')
-def test_on_custom_button_clicked_internet_settings(mocked_proxy_dialog, mock_settings):
-    """
-    Test _on_custom_button when it is called when the 'internet settings' (CustomButton1) button is clicked.
-    """
-    # GIVEN: An instance of the FirstTimeForm
-    frw = FirstTimeForm(None)
-
-    # WHEN: Calling _on_custom_button_clicked with the constant for the 'internet settings' button (CustomButton1)
-    mocked_proxy_dialog().exec.return_value = True
-    frw._on_custom_button_clicked(QtWidgets.QWizard.WizardButton.CustomButton1.value)
-
-    # THEN: The ProxyDialog should be shown.
-    mocked_proxy_dialog.assert_called_with(frw, show_ftw_options=True, timeout=5, retries=0)
-    mocked_proxy_dialog().retranslate_ui.assert_called_once()
-    mocked_proxy_dialog().exec.assert_called_once()
-
-
-@patch('openlp.core.ui.firsttimeform.QtWidgets.QMessageBox')
-def test__parse_config_invalid_config(mocked_message_box, mock_settings):
-    """
-    Test `FirstTimeForm._parse_config` when called with invalid data
-    """
-    # GIVEN: An instance of `FirstTimeForm`
-    first_time_form = FirstTimeForm(None)
-
-    # WHEN: Calling _parse_config with a string containing invalid data
-    result = first_time_form._parse_config(INVALID_CONFIG)
-
-    # THEN: _parse_data should return False and the user should have should have been informed.
-    assert result is False
-    mocked_message_box.critical.assert_called_once_with(
-        first_time_form, 'Invalid index file',
-        'OpenLP+ was unable to read the resource index file. Please try again later.')
-
-
-@patch('openlp.core.ui.firsttimeform.run_thread')
-@patch('openlp.core.ui.firsttimeform.is_thread_finished')
-@patch('openlp.core.ui.firsttimeform.QtWidgets.QMessageBox')
-def test_network_error(mocked_message_box, mocked_is_thread_finished, mocked_run_thread, mock_settings):
-    """
-    Test we catch a network error in First Time Wizard - bug 1409627
-    """
-    # GIVEN: Initial setup and mocks
-    first_time_form = FirstTimeForm(None)
-    first_time_form.initialize(MagicMock())
-    mocked_is_thread_finished.return_value = True
-    mocked_run_thread.side_effect = lambda worker, thread_name: worker.download_failed.emit()
-
-    # WHEN: the First Time Wizard calls to get the initial configuration
-    first_time_form._download_index()
-
-    # THEN: the critical_error_message_box should have been called
-    mocked_message_box.critical.assert_called_once_with(
-        first_time_form, 'Network Error',
-        'There was a network error attempting to connect to retrieve initial configuration information',
-        mocked_message_box.StandardButton.Ok)
-
-
-def test_download_index_worker_updates_byte_progress(mock_settings):
-    """
-    Test that the resource index download reports byte progress while streaming the file.
-    """
-    # GIVEN: A streamed HTTP response and a resource index worker
-    worker = ResourceIndexDownloadWorker('https://get.openlp.org/ftw/', 'OpenLP/test')
-    mocked_response = MagicMock()
-    mocked_response.headers = {'Content-Length': '8'}
-    mocked_response.encoding = 'utf-8'
-    mocked_response.iter_content.return_value = [b'{"a":', b' 1}']
-
-    mocked_progress_updated = MagicMock()
-    mocked_download_succeeded = MagicMock()
-    worker.progress_updated.connect(mocked_progress_updated)
-    worker.download_succeeded.connect(mocked_download_succeeded)
-
-    with patch.object(worker._http_session, 'get', return_value=mocked_response) as mocked_session_get:
-        # WHEN: the resource index file is downloaded
-        worker.start()
-
-    # THEN: the content should be returned and progress updates should include byte counts
-    mocked_session_get.assert_called_once()
-    mocked_response.raise_for_status.assert_called_once()
-    mocked_response.close.assert_called_once()
-    mocked_progress_updated.assert_has_calls([
-        call('Connecting to resource server...', None, None, True),
-        call('Downloading resource index: 0 bytes of 8 bytes (0%)', 0, 8, False),
-        call('Downloading resource index: 5 bytes of 8 bytes (62%)', 5, 8, False),
-        call('Downloading resource index: 8 bytes of 8 bytes (100%)', 8, 8, False)
-    ])
-    mocked_download_succeeded.assert_called_once_with('{"a": 1}')
-
-
-def test_update_navigation_buttons_welcome_page(mock_settings):
-    """
-    Test that the welcome page hides or disables navigation buttons that cannot act.
-    """
-    # GIVEN: A first-time wizard with mocked buttons
-    first_time_form = FirstTimeForm(None)
-    back_button = MagicMock()
-    cancel_button = MagicMock()
-    custom_button = MagicMock()
-    next_button = MagicMock()
-    button_map = {
-        QtWidgets.QWizard.WizardButton.BackButton: back_button,
-        QtWidgets.QWizard.WizardButton.CancelButton: cancel_button,
-        QtWidgets.QWizard.WizardButton.CustomButton1: custom_button,
-        QtWidgets.QWizard.WizardButton.NextButton: next_button
-    }
-
-    with patch.object(first_time_form, 'button', side_effect=lambda button_id: button_map[button_id]):
-
-        # WHEN: The welcome page buttons are updated
-        first_time_form._update_navigation_buttons(FirstTimePage.Welcome)
-
-    # THEN: Back should be unavailable, while Next and Cancel remain available
-    back_button.setVisible.assert_called_once_with(False)
-    back_button.setEnabled.assert_called_once_with(False)
-    cancel_button.setVisible.assert_called_once_with(True)
-    cancel_button.setEnabled.assert_called_once_with(True)
-    next_button.setVisible.assert_called_once_with(True)
-    next_button.setEnabled.assert_called_once_with(True)
-    custom_button.setVisible.assert_called_once_with(False)
-    custom_button.setEnabled.assert_called_once_with(False)
-
-
-def test_update_navigation_buttons_processing_page(mock_settings):
-    """
-    Test that processing pages disable navigation buttons when actions are not supported.
-    """
-    # GIVEN: A first-time wizard with mocked buttons
-    first_time_form = FirstTimeForm(None)
-    back_button = MagicMock()
-    cancel_button = MagicMock()
-    custom_button = MagicMock()
-    next_button = MagicMock()
-    button_map = {
-        QtWidgets.QWizard.WizardButton.BackButton: back_button,
-        QtWidgets.QWizard.WizardButton.CancelButton: cancel_button,
-        QtWidgets.QWizard.WizardButton.CustomButton1: custom_button,
-        QtWidgets.QWizard.WizardButton.NextButton: next_button
-    }
-
-    with patch.object(first_time_form, 'button', side_effect=lambda button_id: button_map[button_id]):
-
-        # WHEN: The download page buttons are updated
-        first_time_form._update_navigation_buttons(FirstTimePage.Download)
-
-    # THEN: Back, Next and Cancel should all be unavailable during processing
-    back_button.setVisible.assert_called_once_with(True)
-    back_button.setEnabled.assert_called_once_with(False)
-    cancel_button.setVisible.assert_called_once_with(True)
-    cancel_button.setEnabled.assert_called_once_with(False)
-    next_button.setVisible.assert_called_once_with(False)
-    next_button.setEnabled.assert_called_once_with(False)
-    custom_button.setVisible.assert_called_once_with(False)
-    custom_button.setEnabled.assert_called_once_with(False)
-
-
-@patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem')
-def test_parse_config_updates_download_progress(mocked_theme_list_widget_item, mock_settings):
-    """
-    Test that resource retrieval progress is updated as the available items are loaded.
-    """
-    # GIVEN: An instance of the first time wizard with the progress widgets mocked out
-    first_time_form = FirstTimeForm(None)
-    first_time_form.download_progress_bar = MagicMock()
-    first_time_form.download_status_label = MagicMock()
-    first_time_form.download_page = MagicMock()
-    first_time_form.application.process_events = MagicMock()
-
-    # WHEN: The configuration is parsed successfully
-    result = first_time_form._parse_config(VALID_CONFIG)
-
-    # THEN: The progress bar and status label should be updated for each retrieval stage
-    assert result is True
-    first_time_form.download_progress_bar.setRange.assert_any_call(0, 3)
-    first_time_form.download_progress_bar.setValue.assert_any_call(0)
-    first_time_form.download_progress_bar.setValue.assert_any_call(1)
-    first_time_form.download_progress_bar.setValue.assert_any_call(2)
-    first_time_form.download_progress_bar.setValue.assert_any_call(3)
-    first_time_form.download_status_label.setText.assert_has_calls([
-        call('Reading available resources...'),
-        call('Loading song: Song 1'),
-        call('Loading Bible: King James Version'),
-        call('Loading theme: Theme 1'),
-        call('Available resources loaded.')
-    ])
-    mocked_theme_list_widget_item.assert_called_once_with(
-        'https://get.openlp.org/ftw/themes/',
-        {
-            'title': 'Theme 1',
-            'file_name': 'theme_1.otz',
-            'thumbnail': 'theme_1.png',
-            'sha256': 'theme_sha'
-        },
-        first_time_form.themes_list_widget)
-
-
-def test_reset_download_progress(mock_settings):
-    """
-    Test that the resource retrieval progress widgets are reset before the download page is shown.
-    """
-    # GIVEN: An instance of the first time wizard with mocked progress widgets
-    first_time_form = FirstTimeForm(None)
-    first_time_form.download_status_label = MagicMock()
-    first_time_form.download_progress_bar = MagicMock()
-
-    # WHEN: The retrieval progress is reset
-    first_time_form._reset_download_progress()
-
-    # THEN: The progress widgets should be returned to their initial state
-    first_time_form.download_status_label.clear.assert_called_once()
-    first_time_form.download_status_label.setVisible.assert_called_once_with(False)
-    first_time_form.download_progress_bar.setVisible.assert_called_once_with(True)
-    first_time_form.download_progress_bar.setRange.assert_called_once_with(0, 1)
-    first_time_form.download_progress_bar.setValue.assert_called_once_with(0)
-
-
-def test_accept_method_theme_selected(mock_settings):
-    """
-    Test the FirstTimeForm.accept method when a default theme is selected
-    """
-    # GIVEN: An instance of FirstTimeForm
-    frw = FirstTimeForm(None)
-    mock_settings.value.return_value = True
-
-    with patch.object(frw, '_set_plugin_status'), \
-            patch.object(                                           # type: ignore[call-overload]
-                frw,
-                'theme_combo_box',
-                **{'currentIndex.return_value': 0, 'currentText.return_value': 'Test Item'}
-            ), \
-            patch.object(frw, 'screen_selection_widget'):
-
-        # WHEN: Calling accept and the currentIndex method of the theme_combo_box returns 0
-        frw.accept()
-
-        # THEN: The 'currentItem' in the combobox should have been set as the default theme.
-        mock_settings.setValue.assert_called_once_with('themes/global theme', 'Test Item')
-
-
-def test_on_projectors_check_box_checked(mock_settings):
-    """
-    Test that the projector panel is shown when the checkbox in the first time wizard is checked
-    """
-    # GIVEN: A First Time Wizard and a mocked settings object
-    frw = FirstTimeForm(None)
-    mock_settings.value.return_value = True
-    mock_settings.reset_mock()
-    mock_settings.value.return_value = True
-
-    # WHEN: on_projectors_check_box_clicked() is called
-    frw.on_projectors_check_box_clicked()
-
-    # THEN: The visibility of the projects panel should have been set
-    mock_settings.value.assert_called_once_with('projector/show after wizard')
-    mock_settings.setValue.assert_called_once_with('projector/show after wizard', False)
-
-
-def test_on_projectors_check_box_unchecked(mock_settings):
-    """
-    Test that the projector panel is shown when the checkbox in the first time wizard is checked
-    """
-    # GIVEN: A First Time Wizard and a mocked settings object
-    frw = FirstTimeForm(None)
-    mock_settings.value.return_value = False
-    mock_settings.reset_mock()
-    mock_settings.value.return_value = False
-
-    # WHEN: on_projectors_check_box_clicked() is called
-    frw.on_projectors_check_box_clicked()
-
-    # THEN: The visibility of the projects panel should have been set
-    mock_settings.value.assert_called_once_with('projector/show after wizard')
-    mock_settings.setValue.assert_called_once_with('projector/show after wizard', True)
-
-
-def test_remote_page_get_can_download_remote(ftf_app):
-    """
-    Test that the `can_download_remote` property returns the correct value
-    """
-    # GIVEN: A RemotePage object with a mocked out download_checkbox
-    remote_page = RemotePage(None)
-    remote_page.download_checkbox = MagicMock(**{"isChecked.return_value": True})
-
-    # WHEN: The can_download_remote property is accessed
-    result = remote_page.can_download_remote
-
-    # THEN: The result should be True
-    assert result is True
-
-
-def test_remote_page_set_can_download_remote(ftf_app):
-    """
-    Test that the `can_download_remote` property sets the correct value
-    """
-    # GIVEN: A RemotePage object with a mocked out download_checkbox
-    remote_page = RemotePage(None)
-    remote_page.download_checkbox = MagicMock()
-
-    # WHEN: The can_download_remote property is set
-    remote_page.can_download_remote = False
-
-    # THEN: The result should be True
-    remote_page.download_checkbox.setChecked.assert_called_once_with(False)
-
-
-def test_remote_page_set_can_download_remote_not_bool(ftf_app):
-    """
-    Test that the `can_download_remote` property throws an exception when the value is not a boolean
-    """
-    # GIVEN: A RemotePage object with a mocked out download_checkbox
-    remote_page = RemotePage(None)
-    remote_page.download_checkbox = MagicMock()
-
-    # WHEN: The can_download_remote property is set
-    # THEN: An exception is thrown
-    with pytest.raises(TypeError, match='Must be a bool'):
-        remote_page.can_download_remote = 'not a bool'
-
-
-def test_theme_list_widget_resize(ftf_app):
-    """
-    Test that the resizeEvent() method in the ThemeListWidget works correctly
-    """
-    # GIVEN: An instance of the ThemeListWidget
-    widget = ThemeListWidget(None)
-
-    # WHEN: resizeEvent() is called
-    with patch.object(widget, 'viewport') as mocked_viewport, \
-            patch.object(widget, 'setGridSize') as mocked_setGridSize:
-        mocked_viewport.return_value.width.return_value = 600
-        widget.resizeEvent(None)
-
-    # THEN: Check that the correct calculations were done
-    mocked_setGridSize.assert_called_once_with(QtCore.QSize(149, 140))
-
-
-def test_failed_download(mocked_set_icon):
-    """
-    Test that icon get set to indicate a failure when `DownloadWorker` emits the download_failed signal
-    """
-    # GIVEN: An instance of `DownloadWorker`
-    instance = ThemeListWidgetItem('url', sample_theme_data)       # noqa Overcome GC issue
-    instance.start_download(MagicMock(thumbnail_download_threads=[]))
-    worker_threads = Registry().get('application').worker_threads               # type: ignore[union-attr]
-    worker = worker_threads['thumbnail_download_BlueBurst.png']['worker']
-
-    # WHEN: `DownloadWorker` emits the `download_failed` signal
-    worker.download_failed.emit()
-    # The signal is wired with Qt.QueuedConnection so we have to spin the event loop to deliver it.
-    QtCore.QCoreApplication.processEvents()
-
-    # THEN: Then the initial loading icon should have been replaced by the exception icon
-    mocked_set_icon.assert_has_calls([call(UiIcons().get_icon_variant('picture')),
-                                      call(UiIcons().get_icon_variant('exception'))])
-
-
-@patch('openlp.core.ui.firsttimeform.build_icon')
-def test_successful_download(mocked_build_icon, mocked_set_icon):
-    """
-    Test that the downloaded thumbnail is set as the icon when `DownloadWorker` emits the `download_succeeded`
-    signal
-    """
-    # GIVEN: An instance of `DownloadWorker`
-    instance = ThemeListWidgetItem('url', sample_theme_data)       # noqa Overcome GC issue
-    instance.start_download(MagicMock(thumbnail_download_threads=[]))
-    worker_threads = Registry().get('application').worker_threads               # type: ignore[union-attr]
-    worker = worker_threads['thumbnail_download_BlueBurst.png']['worker']
-    test_path = Path('downlaoded', 'file')
-
-    # WHEN: `DownloadWorker` emits the `download_succeeded` signal
-    worker.download_succeeded.emit(test_path)
-    # The signal is wired with Qt.QueuedConnection so we have to spin the event loop to deliver it.
-    QtCore.QCoreApplication.processEvents()
-
-    # THEN: An icon should have been built from the downloaded file and used to replace the loading icon
-    mocked_build_icon.assert_called_once_with(test_path)
-    mocked_set_icon.assert_has_calls([call(UiIcons().get_icon_variant('picture')), call(mocked_build_icon())])
-
-
-def test_help(settings: Settings):
-    """
-    Test the help button
-    """
-    # GIVEN: A First Time Wizard and a patched help function
-    ftw = FirstTimeForm(None)
-
-    # WHEN: The Help button is clicked
-    with patch.object(ftw, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(ftw.button(QtWidgets.QWizard.WizardButton.HelpButton), QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
-
-
-def test_accept_method_with_imported_settings(mock_settings):
-    """
-    Test the FirstTimeForm.accept method when settings file is specified and exists
-    """
-    # GIVEN: An instance of FirstTimeForm with a valid import file path
-    ftw = FirstTimeForm(None)
-    ftw.import_settings_page = MagicMock()
-    ftw.import_settings_page.file_edit.text.return_value = '/dummy/path/backup.zip'
-    
-    with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
-            patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget, \
-            patch('openlp.core.ui.firsttimeform.Path.exists', return_value=True), \
-            patch.object(ftw.settings, 'import_settings', return_value=True) as mocked_import_settings, \
-            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept') as mocked_qwizard_accept:
-        
-        # WHEN: Calling accept
-        ftw.accept()
-
-        # THEN: settings.import_settings should be called and plugin status NOT set
-        mocked_import_settings.assert_called_once_with(Path('/dummy/path/backup.zip'))
-        mocked_set_plugin_status.assert_not_called()
-        mocked_screen_selection_widget.save.assert_called_once()
-        mocked_qwizard_accept.assert_called_once()
-
-
-def test_accept_method_without_imported_settings(mock_settings):
-    """
-    Test the FirstTimeForm.accept method when settings file input is empty
-    """
-    # GIVEN: An instance of FirstTimeForm with an empty settings file path
-    ftw = FirstTimeForm(None)
-    ftw.import_settings_page = MagicMock()
-    ftw.import_settings_page.file_edit.text.return_value = ''
-    
-    with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
-            patch.multiple(ftw, songs_check_box=DEFAULT, bible_check_box=DEFAULT, presentation_check_box=DEFAULT,
-                           image_check_box=DEFAULT, media_check_box=DEFAULT, custom_check_box=DEFAULT,
-                           song_usage_check_box=DEFAULT, alert_check_box=DEFAULT, obs_studio_check_box=DEFAULT) \
-            as mocked_check_boxes, \
-            patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget, \
-            patch.object(ftw.settings, 'import_settings') as mocked_import_settings, \
-            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept') as mocked_qwizard_accept:
-        
-        # WHEN: Calling accept
-        ftw.accept()
-
-        # THEN: settings.import_settings should NOT be called and plugin status should be set
-        mocked_import_settings.assert_not_called()
-        assert mocked_set_plugin_status.call_count > 0
-        mocked_screen_selection_widget.save.assert_called_once()
-        mocked_qwizard_accept.assert_called_once()
-
-
-
-def test_import_settings_native_clear(qapp):
-    """The native LineEdit button clears a selected backup and reports the change."""
-    from PySide6 import QtCore, QtTest, QtWidgets
-    import fluentqt
-    from openlp.core.ui.firsttimewizard import ImportSettingsPage
-
-    page = ImportSettingsPage()
-    page.setup_ui()
-    page.retranslate_ui()
-    page.show()
-    changes = []
-    page.completeChanged.connect(lambda: changes.append(page.file_edit.text()))
-    page.file_edit.setText('/dummy/path/backup.zip')
-    QtWidgets.QApplication.processEvents()
-    assert isinstance(page.file_edit, fluentqt.LineEdit)
-    assert not hasattr(page, 'clear_button')
-    clear_button = page.file_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
-    QtTest.QTest.mouseClick(clear_button, QtCore.Qt.MouseButton.LeftButton)
-    assert page.file_edit.text() == ''
-    assert changes == ['/dummy/path/backup.zip', '']
-    page.close()
-
-
-def test_optional_features_unchecked_and_fit_on_plugin_page(settings, qtbot):
-    """Both optional features are visible on the plugin page and start unchecked."""
-    wizard = FirstTimeForm(None)
-    wizard.setStartId(FirstTimePage.Plugins)
-    wizard.restart()
-    wizard.show()
-    qtbot.waitUntil(wizard.isVisible)
-    for checkbox in (wizard.projector_check_box, wizard.remote_interface_check_box):
-        assert not checkbox.isChecked()
-        assert checkbox.isVisible()
-        assert wizard.plugin_page.rect().contains(checkbox.geometry())
-    wizard.hide()
-    wizard.deleteLater()
-
-
-@pytest.mark.parametrize('enabled', [False, True])
-def test_wizard_saves_optional_plugin_choices(settings, enabled):
-    """Finishing setup persists optional plugin selections in both directions."""
-    wizard = FirstTimeForm(None)
-    wizard.projector_check_box.setChecked(enabled)
-    wizard.remote_interface_check_box.setChecked(enabled)
-    with patch.object(wizard, 'screen_selection_widget'), \
-            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept'):
+@pytest.fixture
+def wizard(mock_settings, qtbot):
+    widget = FirstTimeForm()
+    qtbot.addWidget(widget)
+    widget.initialize(MagicMock())
+    widget.restart()
+    yield widget
+    widget.reject()
+
+
+def test_setup_is_local(wizard):
+    """Every page is local, and navigating through setup never makes HTTP requests."""
+    with patch('requests.sessions.Session.request', side_effect=AssertionError('Setup accessed the network')):
+        wizard.show()
+        assert wizard.pageIds() == [FirstTimePage.Welcome, FirstTimePage.Plugins,
+                                    FirstTimePage.ScreenConfig, FirstTimePage.ImportSettings]
+        for page_id in wizard.pageIds()[1:]:
+            wizard.next()
+            assert wizard.currentId() == page_id
+        assert wizard.nextId() == -1
+        assert 'not endorsed by OpenLP' in wizard.information_label.text()
         wizard.accept()
-    expected = PluginStatus.Active if enabled else PluginStatus.Inactive
-    assert settings.value('projector/status') == expected
-    assert settings.value('remote_interface/status') == expected
-    wizard.deleteLater()
 
 
-@pytest.mark.parametrize('enabled', [False, True])
-def test_rerun_restores_optional_plugin_choices(settings, registry, enabled):
-    """Re-running setup retains saved choices instead of disabling existing users' plugins."""
-    settings.setValue('core/has run wizard', True)
-    status = PluginStatus.Active if enabled else PluginStatus.Inactive
-    settings.setValue('projector/status', status)
-    settings.setValue('remote_interface/status', status)
-    registry.register('plugin_manager', MagicMock())
-    registry.register('theme_manager', MagicMock(get_theme_names=lambda: []))
-    wizard = FirstTimeForm(None)
-    wizard.set_defaults()
-    assert wizard.projector_check_box.isChecked() is enabled
-    assert wizard.remote_interface_check_box.isChecked() is enabled
-    registry.remove_function('config_screen_changed', wizard.screen_selection_widget.load)
-    wizard.deleteLater()
+def test_exec_restores_defaults(wizard):
+    with patch.object(wizard, 'set_defaults') as defaults, patch.object(QtWidgets.QWizard, 'exec') as execute:
+        wizard.exec()
+        defaults.assert_called_once()
+        execute.assert_called_once()
 
 
-@pytest.mark.parametrize('remote,songs,bibles,expected', [
-    (True, True, True, FirstTimePage.Remote),
-    (False, True, True, FirstTimePage.Songs),
-    (False, False, True, FirstTimePage.Bibles),
-    (False, False, False, FirstTimePage.Themes),
-])
-def test_wizard_skips_remote_download_when_disabled(mock_settings, remote, songs, bibles, expected):
-    """Resource navigation only offers a remote download for an enabled Remote Interface."""
-    wizard = FirstTimeForm(None)
-    wizard.remote_interface_check_box.setChecked(remote)
-    wizard.songs_check_box.setChecked(songs)
-    wizard.bible_check_box.setChecked(bibles)
-    with patch.object(wizard, 'currentId', return_value=FirstTimePage.Download):
-        assert wizard.nextId() == expected
-    wizard.deleteLater()
+def test_accept_saves_local_choices(wizard):
+    wizard.songs_check_box.setChecked(False)
+    wizard.remote_interface_check_box.setChecked(True)
+    with patch.object(wizard.screen_selection_widget, 'save') as save, patch.object(QtWidgets.QWizard, 'accept'):
+        wizard.accept()
+    wizard.settings.setValue.assert_any_call('songs/status', PluginStatus.Inactive)
+    wizard.settings.setValue.assert_any_call('remote_interface/status', PluginStatus.Active)
+    save.assert_called_once()
+
+
+def test_rerun_restores_plugins(wizard):
+    wizard.settings.value.return_value = True
+    plugin = MagicMock()
+    plugin.is_active.return_value = False
+    with patch.object(Registry(), 'get', return_value=MagicMock(get_plugin_by_name=MagicMock(return_value=plugin))):
+        wizard.set_defaults()
+    assert not wizard.songs_check_box.isChecked()
+    assert not wizard.bible_check_box.isChecked()
+
+
+@pytest.mark.parametrize('exists', [True, False])
+def test_failed_settings_import_stays_open(wizard, tmp_path, exists):
+    path = tmp_path / 'backup.conf'
+    if exists:
+        path.write_text('invalid')
+    wizard.import_settings_page.file_edit.setText(str(path))
+    wizard.settings.import_settings.return_value = False
+    with patch.object(QtWidgets.QMessageBox, 'critical'), patch.object(QtWidgets.QWizard, 'accept') as accept, \
+            patch.object(wizard.screen_selection_widget, 'save') as save:
+        wizard.accept()
+    accept.assert_not_called()
+    save.assert_not_called()
+    wizard.settings.setValue.assert_not_called()
+    wizard.import_settings_page.file_edit.clear()
+    assert wizard.import_settings_page.file_edit.text() == ''
+
+
+def test_settings_import_preserves_restored_configuration(wizard, tmp_path):
+    path = tmp_path / 'backup.conf'
+    path.write_text('[General]')
+    wizard.import_settings_page.file_edit.setText(str(path))
+    wizard.settings.import_settings.return_value = True
+    with patch.object(QtWidgets.QWizard, 'accept') as accept, \
+            patch.object(wizard.screen_selection_widget, 'save') as save:
+        wizard.accept()
+    wizard.settings.import_settings.assert_called_once_with(path)
+    accept.assert_called_once()
+    save.assert_not_called()
+    wizard.settings.setValue.assert_not_called()
+
+
+def test_cancel_unregisters_screen_refresh(wizard):
+    with patch.object(Registry(), 'remove_function') as remove, patch.object(QtWidgets.QWizard, 'reject'):
+        wizard.reject()
+    remove.assert_called_once_with('config_screen_changed', wizard.screen_selection_widget.load)
+    wizard.settings.setValue.assert_not_called()
+
+
+def test_keyboard_setup_navigation(wizard, qtbot):
+    wizard.show()
+    qtbot.waitUntil(lambda: wizard.isVisible())
+    next_button = wizard.button(QtWidgets.QWizard.WizardButton.NextButton)
+    next_button.setFocus()
+    QtTest.QTest.keyClick(next_button, QtCore.Qt.Key.Key_Return)
+    assert wizard.currentId() == FirstTimePage.Plugins
+    QtTest.QTest.keyClick(wizard, QtCore.Qt.Key.Key_Escape)
+    assert not wizard.isVisible()
+
+
+def test_setup_display_fits_and_features_scroll_below_heading(wizard, qtbot):
+    from openlp.core.display.screens import Screen
+    widget = wizard.screen_selection_widget
+    widget.screens = [Screen(0, QtCore.QRect(0, 0, 1920, 1080), is_primary=True, is_display=True)]
+    widget.load()
+    wizard.show()
+    wizard.next()
+    wizard.resize(460, 380)
+    qtbot.waitUntil(lambda: wizard.plugin_page.scroll_area.verticalScrollBar().maximum() > 0)
+    page = wizard.plugin_page
+    heading_position = page.heading.mapTo(wizard, QtCore.QPoint())
+    scrollbar = page.scroll_area.verticalScrollBar()
+    scrollbar.setValue(scrollbar.maximum())
+    assert page.heading.mapTo(wizard, QtCore.QPoint()) == heading_position
+    wizard.resize(760, 640)
+    wizard.next()
+    QtWidgets.QApplication.processEvents()
+    viewport = wizard.screen_page.scroll_area.viewport()
+    details_bottom = widget.display_group_box.mapTo(viewport, widget.display_group_box.rect().bottomRight())
+    assert viewport.rect().contains(details_bottom)
+    assert widget.screen_frame.height() == 180
+
+
+def test_backup_field_inline_clear_and_open(wizard, qtbot, tmp_path):
+    wizard.show()
+    for _ in range(3):
+        wizard.next()
+    page = wizard.import_settings_page
+    field = page.file_edit
+    clear = field.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    assert not clear.isVisible()
+    path = tmp_path / 'backup.conf'
+    with patch('openlp.core.widgets.dialogs.FileDialog.getOpenFileName', return_value=(path, '')):
+        QtTest.QTest.mouseClick(page.browse_button, QtCore.Qt.MouseButton.LeftButton)
+    field.setFocus()
+    qtbot.waitUntil(clear.isVisible)
+    assert field.text() == str(path)
+    assert field.height() == page.browse_button.height()
+    assert not page.browse_button.icon().isNull()
+    assert '\n\nAlternatively' in page.info_label.text()
+    QtTest.QTest.mouseClick(clear, QtCore.Qt.MouseButton.LeftButton)
+    assert field.text() == ''
+    assert not clear.isVisible()
+    assert page.isComplete()
