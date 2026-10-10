@@ -529,3 +529,24 @@ def test_colour_prompt_keeps_colour_and_cancel_contract(qapp, monkeypatch, accep
     assert colour.isValid() is accept
     if accept:
         assert colour.name(QtGui.QColor.NameFormat.HexArgb) == '#80402010'
+
+
+def test_parentless_content_prompt_does_not_keep_default_window_height(qapp, qtbot):
+    dialog = fluent.ContentDialog()
+    qtbot.addWidget(dialog)
+    dialog.setTitle('Screen settings and screen setup is not the same')
+    label = fluent.QLabel(
+        'There is a mismatch between screens and screen settings. Opal Presenter will try to automatically '
+        'select a display screen, but you should consider updating the screen settings.')
+    label.setWordWrap(True)
+    dialog.setContent(label)
+    dialog.setPrimaryButtonText('OK')
+    dialog.setSecondaryButtonText('Configure screens')
+    dialog.open()
+    qtbot.waitUntil(dialog.isOpen)
+    viewport = dialog._content_scroll.viewport()
+    assert viewport.height() <= label.heightForWidth(viewport.width()) + 24
+    assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+    assert dialog.height() < 360
+    qtbot.mouseClick(dialog._native_commands['secondary'], QtCore.Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: dialog.result() == dialog.ResultSecondary)

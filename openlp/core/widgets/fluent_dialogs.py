@@ -65,7 +65,9 @@ class _DialogSizingMixin:
         parent = self.parentWidget()
         available = parent.size() if parent is not None else self.screen().availableGeometry().size()
         width = min(width, available.width(), self.maximumWidth())
-        height = max(self.height(), preferred.height(), layout.totalHeightForWidth(width))
+        height = max(preferred.height(), layout.totalHeightForWidth(width))
+        if not isinstance(self, fluentqt.ContentDialog):
+            height = max(height, self.height())
         height = min(height, available.height(), self.maximumHeight())
         self.setMinimumSize(self._preferred_minimum.boundedTo(available))
         self.resize(width, height)
