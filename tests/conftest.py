@@ -45,6 +45,8 @@ def _qt_deferred_delete_and_gc():
     yield
     app = QtWidgets.QApplication.instance()
     if app is not None:
+        # Release Python-owned MIME data before Qt's clipboard outlives the interpreter.
+        app.clipboard().clear()
         app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
         app.processEvents()
     gc.collect()
