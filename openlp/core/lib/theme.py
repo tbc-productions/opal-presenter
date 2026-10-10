@@ -327,10 +327,6 @@ class Theme(object):
         json_path = AppLocation.get_directory(AppLocation.AppDir) / 'core' / 'lib' / 'json' / 'theme.json'
         jsn = get_text_file_string(json_path)
         self.load_theme(jsn)
-        screen = ScreenList().current
-        if screen:
-            self.display_size_width = screen.display_geometry.width()
-            self.display_size_height = screen.display_geometry.height()
         self.set_default_header_footer()
         self.background_filename = None
         self.background_source = None
@@ -370,41 +366,44 @@ class Theme(object):
         screen = ScreenList().current
         if not screen:
             return
-        geometry = screen.display_geometry
-        scale_x = geometry.width() / self.display_size_width
-        scale_y = geometry.height() / self.display_size_height
+        self.scale_to_size(screen.display_geometry.size())
+        if not self.font_main_override:
+            self.set_default_header()
+        if not self.font_footer_override:
+            self.set_default_footer()
+
+    def scale_to_size(self, size):
+        """Keep geometry, point sizes and their reference dimensions in the same coordinate space."""
+        scale_x = size.width() / self.display_size_width
+        scale_y = size.height() / self.display_size_height
         for area in ('main', 'footer'):
             for field in ('x', 'width', 'y', 'height', 'size', 'outline_size', 'shadow_size',
                           'shadow_blur', 'letter_adjustment'):
                 name = f'font_{area}_{field}'
                 scale = scale_x if field in ('x', 'width') else scale_y
                 setattr(self, name, getattr(self, name) * scale)
-        self.display_size_width = geometry.width()
-        self.display_size_height = geometry.height()
-        if not self.font_main_override:
-            self.set_default_header()
-        if not self.font_footer_override:
-            self.set_default_footer()
+        self.display_size_width = size.width()
+        self.display_size_height = size.height()
 
     def set_default_header(self):
         """
         Sets the default header position and size, ignores font_main_override
         """
         current_screen_geometry = ScreenList().current.display_geometry
-        self.font_main_x = 10
-        self.font_main_y = 0
-        self.font_main_width = current_screen_geometry.width() - 20
-        self.font_main_height = current_screen_geometry.height() * 9 / 10
+        self.font_main_x = current_screen_geometry.width() * .02
+        self.font_main_y = current_screen_geometry.height() * .02
+        self.font_main_width = current_screen_geometry.width() - self.font_main_x * 2
+        self.font_main_height = current_screen_geometry.height() * .86
 
     def set_default_footer(self):
         """
         Sets the default footer position and size, ignores font_footer_override
         """
         current_screen_geometry = ScreenList().current.display_geometry
-        self.font_footer_x = 10
-        self.font_footer_y = current_screen_geometry.height() * 9 / 10
-        self.font_footer_width = current_screen_geometry.width() - 20
-        self.font_footer_height = current_screen_geometry.height() / 10
+        self.font_footer_x = current_screen_geometry.width() * .02
+        self.font_footer_y = current_screen_geometry.height() * .9
+        self.font_footer_width = current_screen_geometry.width() - self.font_footer_x * 2
+        self.font_footer_height = current_screen_geometry.height() * .08
 
     def load_theme(self, theme, theme_path=None):
         """

@@ -346,7 +346,7 @@ def test_refresh_preview_disables_theme_transitions(mocked_single_shot, mocked_s
     """
     # GIVEN: A ThemeForm with a preview box
     theme_form = ThemeForm(None)
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.preview_box = MagicMock()
     theme_form.update_area_overlay = MagicMock()
 
@@ -367,7 +367,7 @@ def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
     theme_form._updating_page_values = False
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.preview_box = MagicMock()
     mocked_theme_manager = MagicMock()
     Registry().register('theme_manager', mocked_theme_manager)
@@ -428,7 +428,7 @@ def test_on_outline_toggled(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.calculate_lines = MagicMock()
 
     # WHEN: on_outline_toggled is called
@@ -447,7 +447,7 @@ def test_on_shadow_toggled(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.calculate_lines = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -466,7 +466,7 @@ def test_update_theme_static(mocked_setup, settings):
     # GIVEN: An instance of a ThemeForm with some mocked out pages which return certain values
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock(font_name='Montserrat', font_color='#f00', font_size=50, line_spacing=12,
                                           is_outline_enabled=True, outline_color='#00f', outline_size=3,
@@ -591,7 +591,8 @@ def test_set_transition_page_values_updates_play_button_visibility(mocked_setup,
     """
     # GIVEN: A ThemeForm with a theme that has transitions enabled
     theme_form = ThemeForm(None)
-    theme_form.theme = MagicMock(display_horizontal_align='left', display_vertical_align='top',
+    theme_form.theme = MagicMock(display_size_height=1080,
+                                 display_horizontal_align='left', display_vertical_align='top',
                                  display_horizontal_align_footer='left', display_vertical_align_footer='top',
                                  display_slide_transition=True, display_slide_transition_type='slide',
                                  display_slide_transition_speed='normal',
@@ -618,7 +619,7 @@ def test_update_theme_overridden_areas(mocked_setup, settings):
     # GIVEN: An instance of a ThemeForm with some mocked out pages which return certain values
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
@@ -653,7 +654,7 @@ def test_update_theme_background(mocked_setup, background_type, settings):
     page_props = {page_prop: value for page_prop, _, value in THEME_BACKGROUNDS[background_type]}
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock(background_type=background_type, **page_props)
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
@@ -1116,3 +1117,30 @@ def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_t
     form.background_section.setExpanded(True)
     QtTest.QTest.qWait(300)
     assert form.background_section.height() == heights['gradient']
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (3840, 2160)])
+def test_theme_properties_use_percentages_and_reference_points(interactive_theme_form, width, height):
+    form = interactive_theme_form
+    form.can_update_theme = False
+    form.theme.font_main_size = 64.25
+    form.theme.font_main_letter_adjustment = 1.25
+    form.theme.font_footer_size = 24.5
+    form.theme.scale_to_size(QtCore.QSize(width, height))
+    form.set_main_area_page_values()
+    form.set_footer_area_page_values()
+    form.set_position_page_values()
+    assert form.main_area_page.font_size == pytest.approx(64.25)
+    assert form.main_area_page.letter_spacing == pytest.approx(1.25)
+    assert form.footer_area_page.font_size == pytest.approx(24.5)
+    assert form.area_position_page.main_x_spin_box.value() == pytest.approx(100 / 1920 * 100)
+    assert form.area_position_page.footer_y_spin_box.value() == pytest.approx(900 / 1080 * 100)
+    form.main_area_page.font_size = 48.75
+    form.area_position_page.main_x_spin_box.setValue(12.5)
+    form.can_update_theme = True
+    form.update_theme()
+    preview = form._preview_theme()
+    assert form.theme.font_main_size == pytest.approx(48.75 * height / 1080)
+    assert form.theme.font_main_x == pytest.approx(width * .125)
+    assert preview.font_main_size == pytest.approx(48.75)
+    assert preview.font_main_x == pytest.approx(1920 * .125)

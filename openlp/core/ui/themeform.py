@@ -483,15 +483,7 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         if not hasattr(self, 'canvas_combo') or not self.canvas_combo.currentData():
             return self.theme
         theme = copy.deepcopy(self.theme)
-        size = self._preview_size()
-        theme.display_size_width = size.width()
-        theme.display_size_height = size.height()
-        for area in ('main', 'footer'):
-            for field in ('x', 'y', 'width', 'height'):
-                scale = (size.width() / self.renderer.width() if field in ('x', 'width')
-                         else size.height() / self.renderer.height())
-                name = f'font_{area}_{field}'
-                setattr(theme, name, getattr(theme, name) * scale)
+        theme.scale_to_size(self._preview_size())
         return theme
 
     def on_preview_size_changed(self, index):
@@ -772,18 +764,19 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         """
         Handle the display and state of the Main Area page.
         """
+        point_scale = 1080 / self.theme.display_size_height
         self.main_area_page.font_name = self.theme.font_main_name
         self.main_area_page.font_color = self.theme.font_main_color
-        self.main_area_page.font_size = self.theme.font_main_size
+        self.main_area_page.font_size = self.theme.font_main_size * point_scale
         self.main_area_page.line_spacing = self.theme.font_main_line_adjustment
-        self.main_area_page.letter_spacing = self.theme.font_main_letter_adjustment
+        self.main_area_page.letter_spacing = self.theme.font_main_letter_adjustment * point_scale
         self.main_area_page.is_outline_enabled = self.theme.font_main_outline
         self.main_area_page.outline_color = self.theme.font_main_outline_color
-        self.main_area_page.outline_size = self.theme.font_main_outline_size
+        self.main_area_page.outline_size = self.theme.font_main_outline_size * point_scale
         self.main_area_page.is_shadow_enabled = self.theme.font_main_shadow
         self.main_area_page.shadow_color = self.theme.font_main_shadow_color
-        self.main_area_page.shadow_size = self.theme.font_main_shadow_size
-        self.main_area_page.shadow_blur = self.theme.font_main_shadow_blur
+        self.main_area_page.shadow_size = self.theme.font_main_shadow_size * point_scale
+        self.main_area_page.shadow_blur = self.theme.font_main_shadow_blur * point_scale
         self.main_area_page.is_bold = self.theme.font_main_bold
         self.main_area_page.font_weight = (
             self.theme.font_main_weight or (700 if self.theme.font_main_bold else 400))
@@ -793,40 +786,43 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         """
         Handle the display and state of the Footer Area page.
         """
+        point_scale = 1080 / self.theme.display_size_height
         self.footer_area_page.font_name = self.theme.font_footer_name
         self.footer_area_page.font_color = self.theme.font_footer_color
         self.footer_area_page.is_bold = self.theme.font_footer_bold
         self.footer_area_page.font_weight = (
             self.theme.font_footer_weight or (700 if self.theme.font_footer_bold else 400))
         self.footer_area_page.is_italic = self.theme.font_footer_italics
-        self.footer_area_page.font_size = self.theme.font_footer_size
+        self.footer_area_page.font_size = self.theme.font_footer_size * point_scale
         self.footer_area_page.wrap = self.theme.font_footer_wrap
         self.footer_area_page.line_spacing = self.theme.font_footer_line_adjustment
-        self.footer_area_page.letter_spacing = self.theme.font_footer_letter_adjustment
+        self.footer_area_page.letter_spacing = self.theme.font_footer_letter_adjustment * point_scale
         self.footer_area_page.is_outline_enabled = self.theme.font_footer_outline
         self.footer_area_page.outline_color = self.theme.font_footer_outline_color
-        self.footer_area_page.outline_size = self.theme.font_footer_outline_size
+        self.footer_area_page.outline_size = self.theme.font_footer_outline_size * point_scale
         self.footer_area_page.is_shadow_enabled = self.theme.font_footer_shadow
         self.footer_area_page.shadow_color = self.theme.font_footer_shadow_color
-        self.footer_area_page.shadow_size = self.theme.font_footer_shadow_size
-        self.footer_area_page.shadow_blur = self.theme.font_footer_shadow_blur
+        self.footer_area_page.shadow_size = self.theme.font_footer_shadow_size * point_scale
+        self.footer_area_page.shadow_blur = self.theme.font_footer_shadow_blur * point_scale
 
     def set_position_page_values(self):
         """
         Handle the display and state of the _position page.
         """
         # Main Area
+        self.area_position_page.canvas_width = self.theme.display_size_width
+        self.area_position_page.canvas_height = self.theme.display_size_height
         self.area_position_page.use_main_default_location = not self.theme.font_main_override
-        self.area_position_page.main_x = int(self.theme.font_main_x)
-        self.area_position_page.main_y = int(self.theme.font_main_y)
-        self.area_position_page.main_height = int(self.theme.font_main_height)
-        self.area_position_page.main_width = int(self.theme.font_main_width)
+        self.area_position_page.main_x = self.theme.font_main_x
+        self.area_position_page.main_y = self.theme.font_main_y
+        self.area_position_page.main_height = self.theme.font_main_height
+        self.area_position_page.main_width = self.theme.font_main_width
         # Footer
         self.area_position_page.use_footer_default_location = not self.theme.font_footer_override
-        self.area_position_page.footer_x = int(self.theme.font_footer_x)
-        self.area_position_page.footer_y = int(self.theme.font_footer_y)
-        self.area_position_page.footer_height = int(self.theme.font_footer_height)
-        self.area_position_page.footer_width = int(self.theme.font_footer_width)
+        self.area_position_page.footer_x = self.theme.font_footer_x
+        self.area_position_page.footer_y = self.theme.font_footer_y
+        self.area_position_page.footer_height = self.theme.font_footer_height
+        self.area_position_page.footer_width = self.theme.font_footer_width
 
     def set_alignment_page_values(self):
         """
@@ -900,18 +896,19 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
             self.theme.background_border_color = self.background_page.stream_color
             self.theme.background_source = self.background_page.stream_mrl
             self.theme.background_filename = self.background_page.stream_mrl
+        point_scale = self.theme.display_size_height / 1080
         # main page
         self.theme.font_main_name = self.main_area_page.font_name
         self.theme.font_main_color = self.main_area_page.font_color
-        self.theme.font_main_size = self.main_area_page.font_size
+        self.theme.font_main_size = self.main_area_page.font_size * point_scale
         self.theme.font_main_line_adjustment = self.main_area_page.line_spacing
-        self.theme.font_main_letter_adjustment = self.main_area_page.letter_spacing
+        self.theme.font_main_letter_adjustment = self.main_area_page.letter_spacing * point_scale
         self.theme.font_main_outline = self.main_area_page.is_outline_enabled
         self.theme.font_main_outline_color = self.main_area_page.outline_color
-        self.theme.font_main_outline_size = self.main_area_page.outline_size
+        self.theme.font_main_outline_size = self.main_area_page.outline_size * point_scale
         self.theme.font_main_shadow = self.main_area_page.is_shadow_enabled
-        self.theme.font_main_shadow_size = self.main_area_page.shadow_size
-        self.theme.font_main_shadow_blur = self.main_area_page.shadow_blur
+        self.theme.font_main_shadow_size = self.main_area_page.shadow_size * point_scale
+        self.theme.font_main_shadow_blur = self.main_area_page.shadow_blur * point_scale
         self.theme.font_main_shadow_color = self.main_area_page.shadow_color
         self.theme.font_main_bold = self.main_area_page.is_bold
         self.theme.font_main_weight = self.main_area_page.font_weight
@@ -922,16 +919,16 @@ class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
         self.theme.font_footer_bold = self.footer_area_page.is_bold
         self.theme.font_footer_weight = self.footer_area_page.font_weight
         self.theme.font_footer_italics = self.footer_area_page.is_italic
-        self.theme.font_footer_size = self.footer_area_page.font_size
+        self.theme.font_footer_size = self.footer_area_page.font_size * point_scale
         self.theme.font_footer_wrap = self.footer_area_page.wrap
         self.theme.font_footer_line_adjustment = self.footer_area_page.line_spacing
-        self.theme.font_footer_letter_adjustment = self.footer_area_page.letter_spacing
+        self.theme.font_footer_letter_adjustment = self.footer_area_page.letter_spacing * point_scale
         self.theme.font_footer_outline = self.footer_area_page.is_outline_enabled
         self.theme.font_footer_outline_color = self.footer_area_page.outline_color
-        self.theme.font_footer_outline_size = self.footer_area_page.outline_size
+        self.theme.font_footer_outline_size = self.footer_area_page.outline_size * point_scale
         self.theme.font_footer_shadow = self.footer_area_page.is_shadow_enabled
-        self.theme.font_footer_shadow_size = self.footer_area_page.shadow_size
-        self.theme.font_footer_shadow_blur = self.footer_area_page.shadow_blur
+        self.theme.font_footer_shadow_size = self.footer_area_page.shadow_size * point_scale
+        self.theme.font_footer_shadow_blur = self.footer_area_page.shadow_blur * point_scale
         self.theme.font_footer_shadow_color = self.footer_area_page.shadow_color
         # position page (main)
         self.theme.font_main_override = not self.area_position_page.use_main_default_location

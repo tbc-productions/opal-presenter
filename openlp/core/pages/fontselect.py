@@ -25,7 +25,7 @@ from PySide6 import QtCore, QtGui
 import fluentqt
 from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.i18n import translate
 from openlp.core.pages import GridLayoutPage
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.buttons import ColorButton
@@ -48,17 +48,17 @@ class FontSelectPage(GridLayoutPage):
     font_weight_changed = QtCore.Signal(int)
     is_bold_changed = QtCore.Signal(bool)
     is_italic_changed = QtCore.Signal(bool)
-    font_size_changed = QtCore.Signal(int)
+    font_size_changed = QtCore.Signal(float)
     wrap_changed = QtCore.Signal(bool)
     line_spacing_changed = QtCore.Signal(int)
     letter_spacing_changed = QtCore.Signal(float)
     is_outline_enabled_changed = QtCore.Signal(bool)
     outline_color_changed = QtCore.Signal(str)
-    outline_size_changed = QtCore.Signal(int)
+    outline_size_changed = QtCore.Signal(float)
     is_shadow_enabled_changed = QtCore.Signal(bool)
     shadow_color_changed = QtCore.Signal(str)
-    shadow_size_changed = QtCore.Signal(int)
-    shadow_blur_changed = QtCore.Signal(int)
+    shadow_size_changed = QtCore.Signal(float)
+    shadow_blur_changed = QtCore.Signal(float)
 
     def __init__(self, parent=None):
         self._font_weight = 400
@@ -134,8 +134,10 @@ class FontSelectPage(GridLayoutPage):
         self.font_size_label.setObjectName('font_size_label')
         self.text_layout.addWidget(self.font_size_label, text_row, 0)
         text_row += 1
-        self.font_size_spinbox = QtWidgets.QSpinBox(self)
-        self.font_size_spinbox.setMaximum(999)
+        self.font_size_spinbox = fluentqt.NumberBox(self)
+        self.font_size_spinbox.setRange(1, 999)
+        self.font_size_spinbox.setDisplayPrecision(0)
+        self.font_size_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.font_size_spinbox.setValue(16)
         self.font_size_spinbox.setObjectName('font_size_spinbox')
         self.text_layout.addWidget(self.font_size_spinbox, text_row, 0)
@@ -189,8 +191,10 @@ class FontSelectPage(GridLayoutPage):
         self.outline_size_label = FormLabel(self.outline_groupbox)
         self.outline_size_label.setObjectName('outline_size_label')
         self.outline_layout.addWidget(self.outline_size_label, 1, 0)
-        self.outline_size_spinbox = QtWidgets.QSpinBox(self.outline_groupbox)
-        self.outline_size_spinbox.setMaximum(9999)
+        self.outline_size_spinbox = fluentqt.NumberBox(self.outline_groupbox)
+        self.outline_size_spinbox.setRange(0, 9999)
+        self.outline_size_spinbox.setDisplayPrecision(0)
+        self.outline_size_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.outline_size_spinbox.setObjectName('outline_size_spinbox')
         self.outline_layout.addWidget(self.outline_size_spinbox, 1, 1)
         # Shadow
@@ -211,16 +215,20 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_size_label = FormLabel(self.shadow_groupbox)
         self.shadow_size_label.setObjectName('shadow_size_label')
         self.shadow_layout.addWidget(self.shadow_size_label, 1, 0)
-        self.shadow_size_spinbox = QtWidgets.QSpinBox(self.shadow_groupbox)
-        self.shadow_size_spinbox.setMaximum(9999)
+        self.shadow_size_spinbox = fluentqt.NumberBox(self.shadow_groupbox)
+        self.shadow_size_spinbox.setRange(0, 9999)
+        self.shadow_size_spinbox.setDisplayPrecision(0)
+        self.shadow_size_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.shadow_size_spinbox.setObjectName('shadow_size_spinbox')
         self.shadow_layout.addWidget(self.shadow_size_spinbox, 1, 1)
         # Shadow blur
         self.shadow_blur_label = FormLabel(self.shadow_groupbox)
         self.shadow_blur_label.setObjectName('shadow_blur_label')
         self.shadow_layout.addWidget(self.shadow_blur_label, 2, 0)
-        self.shadow_blur_spinbox = QtWidgets.QSpinBox(self.shadow_groupbox)
-        self.shadow_blur_spinbox.setMaximum(9999)
+        self.shadow_blur_spinbox = fluentqt.NumberBox(self.shadow_groupbox)
+        self.shadow_blur_spinbox.setRange(0, 9999)
+        self.shadow_blur_spinbox.setDisplayPrecision(0)
+        self.shadow_blur_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.shadow_blur_spinbox.setObjectName('shadow_blur_spinbox')
         self.shadow_layout.addWidget(self.shadow_blur_spinbox, 2, 1)
         # Connect all the signals
@@ -254,18 +262,19 @@ class FontSelectPage(GridLayoutPage):
             name=translate('OpenLP.FontSelectWidget', 'Italic'),
             shortcut=QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Italic).toString()
         ))
-        self.font_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
-        self.font_size_spinbox.setSuffix(' {unit}'.format(unit=UiStrings().FontSizePtUnit))
+        self.font_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size (pt)'))
+        self.font_size_spinbox.setToolTip(translate(
+            'OpenLP.FontSelectWidget', 'Point sizes use a 1080-high reference canvas and scale with the output.'))
         self.wrap_check_box.setText(translate('OpenLP.FontSelectWidget', 'Word Wrap'))
         self.line_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Line Spacing'))
-        self.letter_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Letter Spacing'))
+        self.letter_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Letter Spacing (px)'))
         self.outline_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Outline'))
         self.outline_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color'))
-        self.outline_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
+        self.outline_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size (pt)'))
         self.shadow_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Shadow'))
         self.shadow_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color'))
-        self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
-        self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur'))
+        self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size (pt)'))
+        self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur (pt)'))
 
     def _on_font_name_changed(self, font):
         if isinstance(font, (QtGui.QFont, str)):

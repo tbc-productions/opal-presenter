@@ -23,7 +23,7 @@ below its slide list. Title and, for songs, Alternative title are in the top
 command row. Songs without copyright information show a warning above the lyrics
 entry and a warning badge beside Copyright/Flags/Comments in the navigation rail.
 Both clear as soon as copyright information is entered.
-Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview output
+Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect ratio
 selector aligned to the right. The preview uses the assigned theme, falling back
 to the global theme. Imported theme snapshots remain in use until a new theme is chosen.
 
@@ -54,11 +54,15 @@ width/height, avoiding rounding loss when converting between pixel sizes.
 
 Theme text and footer areas use percentage sizes and offsets from their nearest
 screen edges. Their boxes are kept inside the display, including when an older
-theme contains oversized or off-screen coordinates. Text overflowing a box stays
+theme contains oversized or off-screen coordinates. Default main and footer
+areas leave a 2% margin at the display edges and a 2% gap between them. Text overflowing a box stays
 inside that box; lyrics still use the normal slide pagination, and long footers
 can use the theme's wrapping option.
 
-Font sizes remain in points in the editor. Saved themes record their reference
+Position and box size in both designers use percentages of the slide canvas,
+shown with at most one decimal place. Point sizes are shown as whole numbers.
+Font sizes use reference points on a 1080-high canvas, independently of the
+connected display or selected preview ratio. Saved themes record their reference
 display dimensions, and rendering scales fonts, spacing, outlines and shadows
 with the display height. A 64-point font designed at 1080p therefore occupies the
 same proportion of the screen at 720p or 4K. Preview zoom follows the same scaling.
@@ -145,18 +149,20 @@ beyond PowerPoint's range are baked in full to preserve their appearance and ord
 ODP exports bake all filters into the image pixels. In both formats, slide text
 remains editable and images remain separate movable objects.
 
-Choose a connected display (with its configured output size), or a common resolution
-preset, including HD, Full HD, QHD, 4K UHD, 16:10, ultrawide and 4:3. The display
-list refreshes when the picker opens; disconnected outputs fall back to Full HD. Use the profile pencil button to create a named output with a width and
-height in pixels, or edit the selected profile. Names must be unique and dimensions
-must be between 1 and 16384 pixels. The delete button removes the selected profile.
+Choose an aspect ratio: 16:9, 16:10, ultrawide 64:27 or 4:3. Connected displays
+and saved profiles show their aspect ratios; 720p, 1080p, 1440p and 4K displays
+with the same ratio produce identical previews. The display list refreshes when
+the picker opens; disconnected outputs fall back to 16:9. Use the profile pencil
+button to create or edit a named ratio, such as width 9 and height 16 for portrait.
+Names must be unique and ratio components must be between 1 and 16384.
+Existing profiles retain their proportions. The delete button removes the selected profile.
 Profiles are saved in local application settings and are available across items.
-Changing Preview output fits and centres the existing layout without resizing the
+Changing Preview aspect ratio fits and centres the existing layout without resizing the
 slide, changing the design or adding an undo step. Dragging and resizing
 objects in another output preview preserves the slide’s proportions.
 
 New slides use Theme by default. Theme locks design properties, object insertion
-and canvas manipulation; Show footer remains editable. Preview output can
+and canvas manipulation; Show footer remains editable. Preview aspect ratio can
 still be changed without modifying the saved design. Songs do not automatically
 offer a Custom layout, and existing saved formatting is preserved. Earlier shared
 designs in custom slide items remain available as Custom, which can be renamed.

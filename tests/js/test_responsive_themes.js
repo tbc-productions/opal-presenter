@@ -52,7 +52,7 @@ describe('Responsive theme layouts', function () {
     expect(bounds.bottom).toBeLessThanOrEqual(viewport.bottom + 1);
   }
 
-  [[1280, 720, 1], [3840, 2160, 1], [1024, 768, 1], [384, 216, .2]].forEach(([width, height, zoom]) => {
+  [[1280, 720, 1], [1920, 1080, 1], [2560, 1440, 1], [3840, 2160, 1], [1024, 768, 1], [384, 216, .2]].forEach(([width, height, zoom]) => {
     it(`scales fonts and keeps both areas on a ${width} x ${height} display at zoom ${zoom}`, async function () {
       frame.style.width = `${width}px`;
       frame.style.height = `${height}px`;

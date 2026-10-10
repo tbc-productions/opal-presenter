@@ -1,5 +1,5 @@
 {
-    "background" : {
+    "background": {
         "border_color": "#000000",
         "color": "#000000",
         "direction": "vertical",
@@ -9,7 +9,7 @@
         "start_color": "#000000",
         "type": "solid"
     },
-    "display" :{
+    "display": {
         "horizontal_align": 0,
         "horizontal_align_footer": 0,
         "slide_transition": false,
@@ -25,7 +25,7 @@
             "bold": false,
             "weight": 0,
             "color": "#FFFFFF",
-            "height": 78,
+            "height": 86.4,
             "italics": false,
             "line_adjustment": 0,
             "letter_adjustment": 0,
@@ -40,16 +40,16 @@
             "shadow_blur": 0,
             "shadow_size": 5,
             "size": 12,
-            "width": 1004,
+            "width": 1843.2,
             "wrap": false,
-            "x": 10,
-            "y": 690
+            "x": 38.4,
+            "y": 972
         },
         "main": {
             "bold": false,
             "weight": 0,
             "color": "#FFFFFF",
-            "height": 690,
+            "height": 928.8,
             "italics": false,
             "line_adjustment": 0,
             "letter_adjustment": 0,
@@ -64,10 +64,12 @@
             "shadow_blur": 0,
             "shadow_size": 5,
             "size": 40,
-            "width": 1004,
-            "x": 10,
-            "y": 10
+            "width": 1843.2,
+            "x": 38.4,
+            "y": 21.6
         }
     },
-    "theme_name": ""
+    "theme_name": "",
+    "display_size_width": 1920,
+    "display_size_height": 1080
 }

@@ -264,10 +264,8 @@ class Ui_ThemeWizard(object):
         self.canvas_combo = QtWidgets.QComboBox()
         self.canvas_combo.setAccessibleName(translate('OpenLP.ThemeWizard', 'Preview aspect ratio'))
         for caption, dimensions in (
-                (translate('OpenLP.ThemeWizard', 'Full HD · 16:9'), (1920, 1080)),
-                ('16:10 · 1920 × 1200', (1920, 1200)),
-                ('21:9 · 2560 × 1080', (2560, 1080)),
-                ('4:3 · 1440 × 1080', (1440, 1080))):
+                ('16:9', (1920, 1080)), ('16:10', (1728, 1080)),
+                ('64:27', (2560, 1080)), ('4:3', (1440, 1080))):
             self.canvas_combo.addItem(caption, dimensions)
         self.preview_footer.addWidget(self.canvas_combo)
         self.preview_panel_layout.addLayout(self.preview_footer)
@@ -347,12 +345,13 @@ class Ui_ThemeWizard(object):
             style_row.addWidget(font_page.style_bold_button)
             style_row.addWidget(font_page.style_italic_button)
             typography.addWidget(self.labelled_field('Weight and style', style), 2, 0, 1, 2)
-            typography.addWidget(self.labelled_field('Size', font_page.font_size_spinbox), 3, 0)
+            typography.addWidget(self.labelled_field('Size (pt)', font_page.font_size_spinbox), 3, 0)
             typography.addWidget(self.labelled_field('Colour', font_page.font_color_button), 3, 1)
 
             spacing = spacing_layouts[index]
             spacing.addWidget(self.labelled_field('Line spacing', font_page.line_spacing_spinbox), 1, 0)
-            spacing.addWidget(self.labelled_field('Letter spacing', font_page.letter_spacing_spinbox), 1, 1)
+            spacing.addWidget(self.labelled_field(
+                'Letter spacing (px)', font_page.letter_spacing_spinbox), 1, 1)
             prefix = '' if area == 'main' else 'footer_'
             horizontal = getattr(self.alignment_page, f'{prefix}horizontal_combo_box')
             vertical = getattr(self.alignment_page, f'{prefix}vertical_combo_box')
@@ -370,8 +369,8 @@ class Ui_ThemeWizard(object):
             effects.addWidget(font_page.shadow_groupbox, 2, 0, 1, 2)
             position = position_layouts[index]
             position.addWidget(getattr(self.area_position_page, f'{area}_position_check_box'), 1, 0, 1, 2)
-            for field_index, (field, caption) in enumerate((('x', 'X position'), ('y', 'Y position'),
-                                                           ('width', 'Width'), ('height', 'Height'))):
+            for field_index, (field, caption) in enumerate((('x', 'X (%)'), ('y', 'Y (%)'),
+                                                           ('width', 'Width (%)'), ('height', 'Height (%)'))):
                 widget = getattr(self.area_position_page, f'{area}_{field}_spin_box')
                 position.addWidget(self.labelled_field(caption, widget), 2 + field_index // 2, field_index % 2)
         self.transitions_page = TransitionsPage()

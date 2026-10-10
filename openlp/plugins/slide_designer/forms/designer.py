@@ -44,7 +44,7 @@ class PreviewFooter(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         self.theme_group = None
-        self.preview_group = self.group(QtWidgets.QLabel(tr('Preview output')), combo)
+        self.preview_group = self.group(QtWidgets.QLabel(tr('Preview aspect ratio')), combo)
         self.reflow(1000)
 
     def group(self, label, combo):
@@ -627,13 +627,17 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.fields = {}
         self.field_rows = {}
         for key, caption, low, high in (
-                ('x', tr('X (px)'), 0, 16384), ('y', tr('Y (px)'), 0, 16384),
-                ('width', tr('Width (px)'), 1, 16384), ('height', tr('Height (px)'), 1, 16384),
+                ('x', tr('X (%)'), 0, 100), ('y', tr('Y (%)'), 0, 100),
+                ('width', tr('Width (%)'), 0.01, 100), ('height', tr('Height (%)'), 0.01, 100),
                 ('rotation', tr('Rotation (°)'), -180, 180), ('opacity', tr('Opacity (%)'), 0, 100),
                 ('font_size', tr('Size (pt)'), 1, 400)):
             field = fluentqt.NumberBox()
             field.setRange(low, high)
-            field.setDisplayPrecision(0)
+            field.setDisplayPrecision(1 if key in ('x', 'y', 'width', 'height') else 0)
+            if key in ('x', 'y', 'width', 'height'):
+                field.setSmallChange(0.1)
+            elif key == 'font_size':
+                field.setToolTip(tr('Point sizes use a 1080-high reference canvas and scale with the output.'))
             field.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
             field.setMinimumWidth(0)
             field.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
@@ -939,9 +943,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
         self.fit_canvas()
 
     def set_field_property(self, key, value):
-        if key in ('x', 'width', 'y', 'height'):
-            dimension = self.canvas_size().width() if key in ('x', 'width') else self.canvas_size().height()
-            value = value / dimension * 100
+        if key == 'font_size':
+            value *= self.canvas_size().height() / 1080
         self.set_property(key, value)
 
     def showEvent(self, event):
@@ -1040,7 +1043,7 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
                 # Leave the window backdrop and footer live while the slide refreshes.
                 window = self.viewport.window()
                 region = QtCore.QRect(self.viewport.mapTo(window, self.preview_border.pos()),
-                                     self.preview_border.size())
+                                      self.preview_border.size())
                 snapshot = window.grab(region)
             finally:
                 self._capturing_preview = False
@@ -1090,15 +1093,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             self.freeze_preview()
             revision = self._preview_revision
             self.base_theme = copy.deepcopy(self.resolve_theme())
-            output = ScreenList().current.display_geometry.size()
             canvas = self.canvas_size()
-            for part in ('main', 'footer'):
-                for key, previous, current in (('x', output.width(), canvas.width()),
-                                               ('width', output.width(), canvas.width()),
-                                               ('y', output.height(), canvas.height()),
-                                               ('height', output.height(), canvas.height())):
-                    attr = 'font_' + part + '_' + key
-                    setattr(self.base_theme, attr, getattr(self.base_theme, attr) * current / previous)
+            self.base_theme.scale_to_size(canvas)
             preview_design = copy.deepcopy(self.design)
             self.base_theme = design_theme(self.base_theme, preview_design, self.canvas_size())
             theme = self.output_theme(preview_design)
@@ -1137,14 +1133,8 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
     def output_theme(self, design):
         """Render at the chosen output size while inspector values stay on the design canvas."""
         theme = copy.deepcopy(self.base_theme)
-        canvas, output = self.canvas_size(), self.preview_output.output_size()
-        for part in ('main', 'footer'):
-            for key, factor in (('x', output.width() / canvas.width()),
-                                ('width', output.width() / canvas.width()),
-                                ('y', output.height() / canvas.height()),
-                                ('height', output.height() / canvas.height())):
-                attr = 'font_' + part + '_' + key
-                setattr(theme, attr, getattr(theme, attr) * factor)
+        output = self.preview_output.output_size()
+        theme.scale_to_size(output)
         return apply_design(theme, design, output)
 
     def footer_key(self):
@@ -1440,9 +1430,12 @@ class SlideDesigner(QtWidgets.QWidget, RegistryProperties):
             if isinstance(field, fluentqt.NumberBox):
                 if key in ('x', 'width', 'y', 'height'):
                     dimension = self.canvas_size().width() if key in ('x', 'width') else self.canvas_size().height()
-                    field.setRange(0 if key in ('x', 'y') else 1, dimension)
+                    field.setRange(0 if key in ('x', 'y') else 100 / dimension, 100)
+                elif key == 'font_size':
+                    point_scale = 1080 / self.canvas_size().height()
+                    field.setRange(point_scale, 400 * point_scale)
                     if value is not None:
-                        value *= dimension / 100
+                        value *= point_scale
                 field.setValue(value if value is not None else float('nan'))
             elif key in ('outline', 'shadow'):
                 field.setTristate(value is None)

@@ -865,4 +865,4 @@ def test_preview_profile_form_reflows_on_narrow_hosts(qapp, qtbot, registry, moc
 
     QtCore.QTimer.singleShot(0, submit)
     PreviewOutput.edit_profile(profile)
-    profile.save_profile.assert_called_once_with('Narrow profile', 1920, 1080, None)
+    profile.save_profile.assert_called_once_with('Narrow profile', 16, 9, None)

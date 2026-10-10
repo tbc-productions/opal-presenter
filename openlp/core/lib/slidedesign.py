@@ -180,6 +180,9 @@ def apply_design(theme, value, size=None):
         result.background_direction = background['direction']
         result.background_filename = None
     size = size or ScreenList().current.display_geometry.size()
+    from openlp.core.lib.theme import Theme
+    if isinstance(result, Theme):
+        result.scale_to_size(size)
     lyrics = design['lyrics']
     for key, dimension in (('x', size.width()), ('width', size.width()),
                            ('y', size.height()), ('height', size.height())):
@@ -211,7 +214,8 @@ def apply_design(theme, value, size=None):
             for suffix in ('size', 'outline_size', 'shadow_size', 'shadow_blur', 'letter_adjustment'):
                 attr = 'font_' + part + '_' + suffix
                 if hasattr(result, attr):
-                    setattr(result, attr, getattr(result, attr) * scale)
+                    setattr(result, attr, getattr(result, attr) *
+                            fitted_height / getattr(result, 'display_size_height', canvas_height))
         if 'font_size' in lyrics:
             result.font_main_size = lyrics['font_size'] * scale
         for element in design['elements']:
@@ -330,9 +334,6 @@ def design_theme(theme, value, size=None):
     for key, data in snapshot.items():
         if re.fullmatch(r'font_(main|footer)_(x|width)', key):
             data *= size.width() / snapshot.get('display_size_width', size.width())
-        elif re.fullmatch(r'font_(main|footer)_(size|outline_size|shadow_size|shadow_blur|letter_adjustment)', key) \
-                and 'canvas_width' in design:
-            data *= design['canvas_height'] / snapshot.get('display_size_height', design['canvas_height'])
         elif re.fullmatch(r'font_(main|footer)_(y|height|size|outline_size|shadow_size|shadow_blur|'
                           r'letter_adjustment)', key):
             data *= size.height() / snapshot.get('display_size_height', size.height())

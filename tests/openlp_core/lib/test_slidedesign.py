@@ -258,3 +258,24 @@ def test_portable_theme_preserves_font_weights():
         'version': 1, 'theme': {'background_type': 'solid', 'font_main_weight': 500, 'font_footer_weight': 800}})
     assert design['theme']['font_main_weight'] == 500
     assert design['theme']['font_footer_weight'] == 800
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+@pytest.mark.parametrize('embedded', [False, True])
+def test_inherited_fonts_scale_once_with_a_pixel_canvas(settings, width, height, embedded):
+    from PySide6.QtCore import QRect
+    from openlp.core.lib.theme import Theme
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
+        theme = Theme()
+    theme.font_main_size, theme.font_footer_size = 64, 24
+    theme.font_main_outline_size = 3
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080}
+    if embedded:
+        design['theme'] = copy.deepcopy(theme.__dict__)
+    theme.scale_to_size(QSize(width, height))
+    result = apply_design(theme, design, QSize(width, height))
+    assert result.font_main_size / height == pytest.approx(64 / 1080)
+    assert result.font_footer_size / height == pytest.approx(24 / 1080)
+    assert result.font_main_outline_size / height == pytest.approx(3 / 1080)
+    assert (result.display_size_width, result.display_size_height) == (width, height)

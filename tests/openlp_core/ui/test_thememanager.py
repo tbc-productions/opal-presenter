@@ -26,7 +26,7 @@ import os
 import shutil
 from pathlib import Path
 from tempfile import mkdtemp
-from unittest.mock import ANY, Mock, MagicMock, patch, call, sentinel
+from unittest.mock import ANY, MagicMock, patch, call, sentinel
 
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
@@ -820,13 +820,13 @@ def test_install_builtin_themes(mock_defaults, theme_manager, tmp_path):
             assert theme.background_type == 'image'
             assert theme.background_filename.is_file()
             assert theme.background_filename.read_bytes().startswith(b'\xff\xd8')
-            assert theme.font_main_letter_adjustment == -1
-            assert theme.font_main_size == 55
+            assert theme.font_main_letter_adjustment == -1.1
+            assert theme.font_main_size == 60
         else:
             assert theme.background_type == 'solid'
             assert theme.background_filename is None
             assert theme.font_main_letter_adjustment == 0
-            assert theme.font_main_size == 64
+            assert theme.font_main_size == 70
         assert theme.font_main_color == ('#0E0E11' if name == 'Sans Light' else '#FFFFFF')
 
 

@@ -312,10 +312,10 @@ def test_set_default_footer(mock_geometry):
 
     # THEN: footer should be set, header should not have changed
     assert theme.font_main_x == 20, 'header should not have been changed'
-    assert theme.font_footer_x == 10, 'x pos should be reset to default of 10'
+    assert theme.font_footer_x == pytest.approx(400 * .02)
     assert theme.font_footer_y == 540, 'y pos should be reset to (screen_size_height * 9 / 10)'
-    assert theme.font_footer_width == 380, 'width should have been reset to (screen_size_width - 20)'
-    assert theme.font_footer_height == 60, 'height should have been reset to (screen_size_height / 10)'
+    assert theme.font_footer_width == pytest.approx(400 * .96)
+    assert theme.font_footer_height == pytest.approx(600 * .08)
 
 
 def test_set_default_header(mock_geometry):
@@ -336,10 +336,10 @@ def test_set_default_header(mock_geometry):
 
     # THEN: footer should be set, header should not have changed
     assert theme.font_footer_x == 200, 'footer should not have been changed'
-    assert theme.font_main_x == 10, 'x pos should be reset to default of 10'
-    assert theme.font_main_y == 0, 'y pos should be reset to 0'
-    assert theme.font_main_width == 380, 'width should have been reset to (screen_size_width - 20)'
-    assert theme.font_main_height == 540, 'height should have been reset to (screen_size_height * 9 / 10)'
+    assert theme.font_main_x == pytest.approx(400 * .02)
+    assert theme.font_main_y == pytest.approx(600 * .02)
+    assert theme.font_main_width == pytest.approx(400 * .96)
+    assert theme.font_main_height == pytest.approx(600 * .86)
 
 
 def test_set_default_header_footer(mock_geometry):
@@ -356,8 +356,8 @@ def test_set_default_header_footer(mock_geometry):
     theme.set_default_header_footer()
 
     # THEN: footer should be set, header should not have changed
-    assert theme.font_footer_x == 10, 'footer x pos should be reset to default of 10'
-    assert theme.font_main_x == 10, 'header x pos should be reset to default of 10'
+    assert theme.font_footer_x == pytest.approx(400 * .02)
+    assert theme.font_main_x == pytest.approx(400 * .02)
 
 
 @pytest.mark.parametrize('width,height', [(1280, 720), (3840, 2160), (1024, 768)])
@@ -434,3 +434,33 @@ def check_theme(theme):
     assert 'Arial' == theme.font_main_name, 'font_main_name should be "Arial"'
     assert theme.font_main_weight == theme.font_footer_weight == 0
     assert 65 == len(theme.__dict__), 'The theme should have 65 attributes'
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+def test_new_theme_defaults_use_the_same_reference_canvas(width, height):
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
+        theme = Theme()
+    assert theme.font_main_size / height == pytest.approx(40 / 1080)
+    assert theme.font_footer_size / height == pytest.approx(12 / 1080)
+    assert theme.font_main_x / width == pytest.approx(.02)
+    assert theme.font_footer_width / width == pytest.approx(.96)
+
+
+@pytest.mark.parametrize('filename', ['opal', 'opal_light', 'sans_dark', 'sans_light'])
+def test_bundled_themes_have_whole_points_and_simple_percentages(filename):
+    path = Path(__file__).parents[3] / 'openlp/core/lib/json/themes' / f'{filename}.json'
+    data = json.loads(path.read_text())
+    assert data['display_size_width'] == 1920
+    assert data['display_size_height'] == 1080
+    for area in ('main', 'footer'):
+        for field in ('size', 'outline_size', 'shadow_size', 'shadow_blur'):
+            assert type(data[f'font_{area}_{field}']) is int
+        for field in ('x', 'y', 'width', 'height'):
+            dimension = 1920 if field in ('x', 'width') else 1080
+            percent = data[f'font_{area}_{field}'] * 100 / dimension
+            assert percent == pytest.approx(round(percent, 1))
+        assert data[f'font_{area}_x'] > 0
+        assert data[f'font_{area}_y'] > 0
+        assert data[f'font_{area}_x'] + data[f'font_{area}_width'] < 1920
+        assert data[f'font_{area}_y'] + data[f'font_{area}_height'] < 1080

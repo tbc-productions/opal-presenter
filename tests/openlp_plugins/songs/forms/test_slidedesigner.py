@@ -423,12 +423,15 @@ def test_assigning_theme_releases_imported_snapshot(designer):
 
 def test_fluent_inspector_edits_keep_precision_and_undo(designer):
     import fluentqt
-    numeric_fields = [field for field in designer.fields.values() if isinstance(field, fluentqt.NumberBox)]
+    geometry = {'x', 'y', 'width', 'height'}
+    numeric_fields = [field for key, field in designer.fields.items()
+                      if isinstance(field, fluentqt.NumberBox) and key not in geometry]
+    assert all(designer.fields[key].displayPrecision() == 1 for key in geometry)
     numeric_fields.append(designer.background_image_opacity)
     assert all(field.displayPrecision() == 0 for field in numeric_fields)
     designer.fields['x'].setValue(12.5)
     designer.fields['bold'].click()
-    assert designer.design['lyrics']['x'] == pytest.approx(12.5 / 1920 * 100)
+    assert designer.design['lyrics']['x'] == pytest.approx(12.5)
     assert designer.design['lyrics']['bold'] is True
     designer.undo_stack.undo()
     assert not designer.fields['bold'].isChecked()
@@ -968,17 +971,17 @@ def test_multi_row_drop_keeps_relative_order(designer):
     assert [element['id'] for element in designer.design['elements']] == ['a']
 
 
-def test_preview_output_keeps_pixel_coordinates_and_saved_dimensions(designer):
+def test_preview_output_keeps_percentages_and_saved_dimensions(designer):
     designer.add_element('rectangle')
-    designer.fields['x'].setValue(192)
-    designer.fields['y'].setValue(108)
-    designer.fields['width'].setValue(384)
-    designer.fields['height'].setValue(216)
+    designer.fields['x'].setValue(10)
+    designer.fields['y'].setValue(10)
+    designer.fields['width'].setValue(20)
+    designer.fields['height'].setValue(20)
     original = designer.serialised_design()
     designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 1440, 1080)))
     assert designer.canvas_size() == QtCore.QSize(1920, 1080)
     assert designer.serialised_design() == original
-    assert designer.fields['width'].value() == 384
+    assert designer.fields['width'].value() == 20
     assert not hasattr(designer, 'canvas_combo')
 
 
@@ -1242,7 +1245,7 @@ def test_preview_output_does_not_resize_saved_canvas(designer):
     undo_count = designer.undo_stack.count()
     output = designer.preview_output
     output.combo.setCurrentIndex(output.index(('preset', 1920, 1200)))
-    assert output.output_size() == QtCore.QSize(1920, 1200)
+    assert output.output_size() == QtCore.QSize(1728, 1080)
     assert designer.canvas_size() == QtCore.QSize(1920, 1080)
     assert designer.serialised_design() == before
     assert designer.undo_stack.count() == undo_count
@@ -1268,8 +1271,8 @@ def test_preview_output_connected_displays_refresh(designer):
     with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[screen]):
         output.refresh_outputs()
         output.combo.setCurrentIndex(output.index(('display', 1, 1920, 1200)))
-        assert output.output_size() == QtCore.QSize(1920, 1200)
-        assert '1920 × 1200' in output.combo.currentText()
+        assert output.output_size() == QtCore.QSize(1728, 1080)
+        assert '16:10' in output.combo.currentText()
     with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[]):
         output.refresh_outputs()
     assert output.combo.currentData() == ('preset', 1920, 1080)
@@ -1329,8 +1332,8 @@ def test_preview_profile_dialog_validation_and_submission(designer, qtbot, submi
             name.setText('  Venue screen  ')
             assert save.isEnabled()
             fields = dialog.content_widget.findChildren(QtWidgets.QSpinBox)
-            fields[0].setValue(2560)
-            fields[1].setValue(1440)
+            fields[0].setValue(16)
+            fields[1].setValue(9)
             if submit == 'cancel':
                 qtbot.keyClick(name, QtCore.Qt.Key.Key_Escape)
             elif submit == 'enter':
@@ -1346,7 +1349,7 @@ def test_preview_profile_dialog_validation_and_submission(designer, qtbot, submi
         output.edit_profile()
     assert ('Venue screen' in output.profiles()) == (submit != 'cancel')
     if submit != 'cancel':
-        assert output.output_size() == QtCore.QSize(2560, 1440)
+        assert output.output_size() == QtCore.QSize(1920, 1080)
     assert output.profiles()['Existing'] == [1920, 1080]
     designer.hide()
 
@@ -1361,3 +1364,52 @@ def test_portrait_preview_keeps_output_controls_reachable(designer):
     assert designer.preview_footer.width() > width
     assert designer.preview_footer.width() <= designer.viewport.width()
     assert designer.preview_footer.geometry().bottom() < designer.viewport.height()
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+@pytest.mark.parametrize('custom_layout', [False, True])
+def test_same_aspect_preview_keeps_reference_geometry_and_typography(designer, width, height, custom_layout):
+    with patch('openlp.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.base_theme = Theme()
+    theme = designer.base_theme
+    theme.font_main_x, theme.font_main_y = 192, 108
+    theme.font_main_width, theme.font_main_height = 1536, 756
+    theme.font_main_size, theme.font_footer_size = 64, 24
+    theme.font_main_outline_size = 3
+    original = copy.deepcopy(theme.__dict__)
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080} if custom_layout else {}
+    designer.preview_output.save_profile('Resolution', width, height)
+    preview = designer.output_theme(design)
+    assert designer.preview_output.combo.currentText() == 'Resolution · 16:9'
+    assert designer.preview_output.output_size() == QtCore.QSize(1920, 1080)
+    assert (preview.display_size_width, preview.display_size_height) == (1920, 1080)
+    assert preview.font_main_x == pytest.approx(192)
+    assert preview.font_main_y == pytest.approx(108)
+    assert preview.font_main_width == pytest.approx(1536)
+    assert preview.font_main_size == pytest.approx(64)
+    assert preview.font_footer_size == pytest.approx(24)
+    assert preview.font_main_outline_size == pytest.approx(3)
+    assert theme.__dict__ == original
+
+
+@pytest.mark.parametrize('width,height,font_size,reference_size', [
+    (1280, 720, 32, 48), (1280, 720, 400, 600), (3840, 2160, 1, .5)])
+def test_legacy_slide_canvas_shows_reference_points(designer, width, height, font_size, reference_size):
+    load_editable_design(designer, {'version': 1, 'canvas_width': width, 'canvas_height': height,
+                                    'lyrics': {'font_size': font_size}})
+    designer.select_object('lyrics')
+    assert designer.fields['font_size'].value() == pytest.approx(reference_size)
+    designer.fields['font_size'].setValue(64)
+    assert designer.design['lyrics']['font_size'] == pytest.approx(64 * height / 1080)
+    designer.undo_stack.undo()
+    assert designer.fields['font_size'].value() == pytest.approx(reference_size)
+
+
+@pytest.mark.parametrize('width,height', [(9, 16), (1080, 3840), (1366, 768), (16384, 1), (1, 16384)])
+def test_custom_preview_ratios_stay_exact_and_bounded(designer, width, height):
+    designer.preview_output.save_profile('Custom ratio', width, height)
+    size = designer.preview_output.output_size()
+    assert size.width() * height == size.height() * width
+    assert 1 <= size.width() <= 16384
+    assert 1 <= size.height() <= 16384

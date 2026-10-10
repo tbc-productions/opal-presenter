@@ -1,4 +1,6 @@
-"""Local output profiles for previewing a design on another display."""
+"""Aspect ratios for previewing a design on another display."""
+
+from math import gcd
 
 from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
@@ -10,6 +12,12 @@ from openlp.core.ui.icons import UiIcons
 
 def tr(text):
     return translate('SongsPlugin.SlideDesigner', text)
+
+
+def ratio_components(width, height):
+    divisor = gcd(width, height)
+    ratio = width // divisor, height // divisor
+    return (16, 10) if ratio == (8, 5) else ratio
 
 
 class OutputCombo(QtWidgets.QComboBox):
@@ -25,17 +33,18 @@ class PreviewOutput(QtWidgets.QWidget):
         super().__init__(designer)
         self.designer = designer
         self.combo = OutputCombo()
-        self.combo.setAccessibleName(tr('Preview output'))
+        self.combo.setAccessibleName(tr('Preview aspect ratio'))
         self.combo.setMinimumWidth(100)
         self.combo.setMaximumWidth(300)
         row = QtWidgets.QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(4)
         row.addWidget(self.combo)
-        self.profile_button = designer.tool_button(tr('Create or edit output profile'), UiIcons().edit, icon_only=True)
+        self.profile_button = designer.tool_button(
+            tr('Create or edit aspect ratio profile'), UiIcons().edit, icon_only=True)
         self.profile_button.clicked.connect(self.edit_profile)
         row.addWidget(self.profile_button)
-        self.delete_button = designer.tool_button(tr('Delete output profile'), UiIcons().delete, icon_only=True)
+        self.delete_button = designer.tool_button(tr('Delete aspect ratio profile'), UiIcons().delete, icon_only=True)
         self.delete_button.clicked.connect(self.delete_profile)
         row.addWidget(self.delete_button)
         self.populate()
@@ -62,15 +71,16 @@ class PreviewOutput(QtWidgets.QWidget):
             self.combo.clear()
             for screen in ScreenList():
                 size = screen.display_geometry.size()
+                width, height = ratio_components(size.width(), size.height())
                 self.combo.addItem(f'{screen} · {screen.name or tr("Display")} · '
-                                   f'{size.width()} × {size.height()}',
+                                   f'{width}:{height}',
                                    ('display', screen.number, size.width(), size.height()))
-            for name, width, height in (('HD', 1280, 720), ('Full HD', 1920, 1080), ('QHD', 2560, 1440),
-                                        ('4K UHD', 3840, 2160), ('16:10', 1920, 1200),
-                                        ('Ultrawide', 2560, 1080), ('4:3', 1440, 1080)):
-                self.combo.addItem(f'{name} · {width} × {height}', ('preset', width, height))
+            for name, width, height in (('16:9', 1920, 1080), ('16:10', 1920, 1200),
+                                        ('64:27', 2560, 1080), ('4:3', 1440, 1080)):
+                self.combo.addItem(name, ('preset', width, height))
             for name, size in self.profiles().items():
-                self.combo.addItem(f'{name} · {size[0]} × {size[1]}', ('profile', name, *size))
+                width, height = ratio_components(*size)
+                self.combo.addItem(f'{name} · {width}:{height}', ('profile', name, *size))
             index = self.index(selected)
             if index < 0 and selected and selected[0] in ('display', 'profile'):
                 index = next((i for i in range(self.combo.count())
@@ -82,8 +92,11 @@ class PreviewOutput(QtWidgets.QWidget):
         return next((index for index in range(self.combo.count()) if self.combo.itemData(index) == data), -1)
 
     def output_size(self):
+        """Use one bounded canvas per ratio, independently of the display resolution."""
         data = self.combo.currentData()
-        return QtCore.QSize(*data[-2:])
+        width, height = ratio_components(*data[-2:])
+        scale = max(1, min(round(1080 / height), 16384 // width))
+        return QtCore.QSize(width * scale, height * scale)
 
     def changed(self):
         self.delete_button.setEnabled(self.combo.currentData()[0] == 'profile')
@@ -115,7 +128,7 @@ class PreviewOutput(QtWidgets.QWidget):
         data = self.combo.currentData()
         previous = data[1] if data[0] == 'profile' else None
         dialog = QtWidgets.FormDialog(self.window())
-        dialog.setWindowTitle(tr('Preview output profile'))
+        dialog.setWindowTitle(tr('Preview aspect ratio profile'))
         dialog.setMinimumWidth(420)
         layout = QtWidgets.QFormLayout(dialog.content_widget)
         name = QtWidgets.QLineEdit()
@@ -123,10 +136,11 @@ class PreviewOutput(QtWidgets.QWidget):
         name.setPlaceholderText(tr('Unique profile name'))
         name.selectAll()
         width, height = QtWidgets.QSpinBox(), QtWidgets.QSpinBox()
-        for field, value in ((width, self.output_size().width()), (height, self.output_size().height())):
+        ratio_width, ratio_height = ratio_components(*data[-2:])
+        for field, value in ((width, ratio_width), (height, ratio_height)):
             field.setRange(1, 16384)
             field.setValue(value)
-        for caption, field in ((tr('Name'), name), (tr('Width (pixels)'), width), (tr('Height (pixels)'), height)):
+        for caption, field in ((tr('Name'), name), (tr('Ratio width'), width), (tr('Ratio height'), height)):
             label = QtWidgets.QLabel(caption)
             label.setBuddy(field)
             layout.addRow(label, field)
