@@ -89,7 +89,8 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         self.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Import settings from a previous backup.'))
         self.info_label.setText(
             translate('OpenLP.FirstTimeWizard',
-                      'If you have a previously exported settings file (.opal-settings, .conf or .zip), you can select it now. '
+                      'If you have a previously exported settings file (.opal-settings, .conf or .zip), '
+                      'you can select it now. '
                       'This will restore your configuration, including plugins, theme selections, '
                       'and other preferences.\n\n'
                       'Alternatively, you can leave this blank to configure Opal Presenter manually.'))
@@ -239,7 +240,8 @@ class UiFirstTimeWizard:
             translate('OpenLP.FirstTimeWizard', 'Remote Interface – Remote control, stage, live and chords views'))
         for check_box in (self.projector_check_box, self.remote_interface_check_box):
             check_box.setToolTip(translate(
-                'OpenLP.FirstTimeWizard', 'Changes made when re-running setup take effect after restarting Opal Presenter.'))
+                'OpenLP.FirstTimeWizard',
+                'Changes made when re-running setup take effect after restarting Opal Presenter.'))
         for checkbox in self.plugin_page.findChildren(QtWidgets.QCheckBox):
             text = checkbox.text()
             checkbox.setToolTip(checkbox.toolTip() or text)
