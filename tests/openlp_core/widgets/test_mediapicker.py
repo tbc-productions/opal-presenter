@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+import fluentqt
 from PySide6 import QtCore, QtGui, QtWidgets
 from fluentqt import GridView, TreeView
 
@@ -71,8 +72,52 @@ def test_picker_filters_and_selection_enable_insert(qtbot, library):
     assert picker.list_view.topLevelItem(0).text(0) == 'Forest'
 
 
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+@pytest.mark.parametrize('size', [(1100, 800), (620, 480)])
+def test_picker_opaque_background_and_keyboard_submission(qtbot, library, theme, size):
+    fluentqt.initialize_resources()
+    previous_theme = fluentqt.current_theme()
+    fluentqt.set_theme(theme)
+    try:
+        host = QtWidgets.QLabel('Designer preview behind the media picker')
+        host.setObjectName('designer_preview')
+        host.setStyleSheet('QLabel#designer_preview { background-color: #ff00ff; }')
+        host.resize(*size)
+        qtbot.addWidget(host)
+        host.show()
+        picker = MediaPicker(host, kinds=('image',))
+        picker.show()
+        qtbot.wait(50)
+        grid = picker.browser.grid
+        image = grid.viewport().grab().toImage()
+        blank = image.pixelColor(image.width() // 2, image.height() - 10)
+        assert blank.alpha() == 255
+        assert blank.name() != '#ff00ff'
+        assert picker.geometry().right() < host.width()
+        assert picker.geometry().bottom() < host.height()
+        assert picker.insert_button.x() < next(button.x() for button in
+                                               picker.findChildren(QtWidgets.QPushButton)
+                                               if button.text() == 'Cancel')
+        qtbot.keyClick(picker, QtCore.Qt.Key.Key_Return)
+        assert picker.isVisible()
+        picker.search.setText('Beach')
+        qtbot.wait(20)
+        qtbot.mouseClick(grid.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=grid.visualItemRect(grid.item(0)).center())
+        assert picker.insert_button.isEnabled()
+        qtbot.keyClick(picker, QtCore.Qt.Key.Key_Return)
+        qtbot.waitUntil(lambda: not picker.isVisible())
+        assert picker.result() == QtWidgets.QDialog.DialogCode.Accepted
+        picker.show()
+        qtbot.keyClick(picker, QtCore.Qt.Key.Key_Escape)
+        qtbot.waitUntil(lambda: not picker.isVisible())
+        assert picker.result() == QtWidgets.QDialog.DialogCode.Rejected
+    finally:
+        fluentqt.set_theme(previous_theme)
+
+
 @pytest.mark.parametrize('name', ['images', 'media', 'presentations'])
-def test_picker_shares_view_and_thumbnail_preferences_with_library(qtbot, library, settings, name):
+def test_picker_keeps_grid_and_shares_thumbnail_preferences_with_library(qtbot, library, settings, name):
     host = QtWidgets.QWidget()
     qtbot.addWidget(host)
     host.plugin = SimpleNamespace(name=name)
@@ -83,7 +128,7 @@ def test_picker_shares_view_and_thumbnail_preferences_with_library(qtbot, librar
     host.list_view = TreeWidgetWithDnD(host, name)
     view = LibraryView(host)
     qtbot.addWidget(view)
-    view.set_view(1)
+    view.set_view(0)
     view.thumbnail_slider.setValue(150)
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
@@ -91,10 +136,19 @@ def test_picker_shares_view_and_thumbnail_preferences_with_library(qtbot, librar
     assert isinstance(picker.browser.grid, GridView)
     assert isinstance(picker.list_view, TreeView)
     assert picker.browser.grid_button.isChecked()
-    assert picker.browser.thumbnail_slider.value() == 150
-    picker.browser.list_button.click()
-    picker.browser.thumbnail_slider.setValue(75)
+    assert picker.list_view.isHidden()
+    assert picker.browser.list_button.isHidden()
+    assert picker.browser.grid_button.isHidden()
+    assert picker.browser.grid.backgroundVisible()
     assert view.list_button.isChecked()
+    assert settings.value('advanced/library view') == 'list'
+    assert picker.browser.thumbnail_slider.value() == 150
+    picker.browser.set_view(0)
+    picker.browser.thumbnail_slider.setValue(75)
+    view.set_view(1)
+    view.set_view(0)
+    assert picker.browser.grid_button.isChecked()
+    assert picker.list_view.isHidden()
     assert view.thumbnail_slider.value() == 75
     assert view.tree.iconSize() == picker.list_view.iconSize()
     assert settings.value('advanced/library thumbnail size') == 75
@@ -104,7 +158,6 @@ def test_picker_grid_navigation_selection_search_and_thumbnail_update(qtbot, lib
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
     picker.show()
-    picker.browser.grid_button.click()
     picker.browser.activate_tile(picker.browser.grid.item(0))
     assert [crumb.text for crumb in picker.browser.breadcrumbs.items()] == ['Library', 'Backgrounds']
     grid = picker.browser.grid
@@ -146,6 +199,7 @@ def test_picker_keeps_image_and_video_folders_separate(qtbot, library, tmp_path)
     assert picker.browser.count_label.text() == '3 items'
     assert picker.list_view.topLevelItem(0).child(0).text(0) == 'Forest'
     assert picker.list_view.topLevelItem(1).child(0).text(0) == 'Loop'
+    picker.browser.activate_tile(picker.browser.grid.item(1))
     picker.select_path(path)
     assert picker.selected_path == path
     thumbnail = tmp_path / 'Loop.png'
@@ -154,7 +208,7 @@ def test_picker_keeps_image_and_video_folders_separate(qtbot, library, tmp_path)
     image.save(str(thumbnail))
     video_library.generate_thumbnail_path = lambda item: thumbnail
     picker.thumbnail_ready(path)
-    picker.browser.grid_button.click()
+    qtbot.wait(20)
     assert picker.browser.grid.count() == 1
     assert picker.browser.grid.item(0).icon().pixmap(10, 10).toImage().pixelColor(4, 2).name() == '#008000'
     picker.kind_combo.setCurrentIndex(1)
@@ -181,18 +235,15 @@ def test_picker_adds_managed_file_to_library_and_keeps_original_name(qtbot, libr
 
 
 @pytest.mark.parametrize('mode', [0, 1])
-def test_picker_adds_files_to_the_browsed_folder(qtbot, library, tmp_path, mode):
+def test_picker_adds_files_to_the_browsed_folder(qtbot, library, tmp_path, settings, mode):
     path = tmp_path / 'New image.png'
     image = QtGui.QImage(100, 50, QtGui.QImage.Format.Format_RGB32)
     image.fill(QtGui.QColor('green'))
     image.save(str(path))
+    settings.setValue('advanced/library view', 'grid' if mode else 'list')
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
-    picker.browser.set_view(mode)
-    if mode:
-        picker.browser.activate_tile(picker.browser.grid.item(0))
-    else:
-        picker.list_view.setCurrentItem(picker.list_view.topLevelItem(0))
+    picker.browser.activate_tile(picker.browser.grid.item(0))
     with patch('openlp.core.widgets.mediapicker.FileDialog.getOpenFileNames', return_value=([path], None)):
         picker.add_files()
     added = library.manager.save_object.call_args.args[0]
@@ -247,7 +298,6 @@ def test_media_tiles_offer_context_actions_for_their_own_original(qtbot, library
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
     picker.show()
-    picker.browser.grid_button.click()
     picker.browser.activate_tile(picker.browser.grid.item(0))
     grid = picker.browser.grid
     position = grid.visualItemRect(grid.item(0)).center()
@@ -358,8 +408,6 @@ def test_thumbnail_grid_wraps_on_resize(qtbot, library):
     picker.resize(1050, 600)
     picker.show()
     qtbot.wait(50)
-    picker.browser.grid_button.click()
-    qtbot.wait(20)
     wide_row = picker.browser.grid.visualItemRect(picker.browser.grid.item(3)).top()
     picker.resize(600, 600)
     qtbot.wait(50)

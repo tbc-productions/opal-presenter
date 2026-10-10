@@ -173,9 +173,10 @@ class LibraryGrid(ListItemsMixin, GridView):
 
 class LibraryView(QtWidgets.QWidget):
     """Keep both presentations of the library tied to one tree model."""
-    def __init__(self, library):
+    def __init__(self, library, grid_only=False):
         super().__init__(library)
         self.library = library
+        self.grid_only = grid_only
         settings = library.settings
         if not hasattr(settings, '_library_view_preferences'):
             settings._library_view_preferences = LibraryViewPreferences(settings, library.plugin.name)
@@ -238,6 +239,7 @@ class LibraryView(QtWidgets.QWidget):
             button.setCheckable(True)
             self.view_buttons.addButton(button, index)
             footer_layout.addWidget(button)
+            button.setVisible(not grid_only)
         layout.addWidget(self.footer)
         self.view_buttons.idClicked.connect(self.set_view)
         self.grid.itemSelectionChanged.connect(self.select_tree_items)
@@ -251,10 +253,11 @@ class LibraryView(QtWidgets.QWidget):
         for signal in (model.rowsInserted, model.rowsRemoved, model.modelReset, model.dataChanged,
                        model.layoutChanged, model.rowsMoved):
             signal.connect(self.schedule_refresh)
-        self.preferences.view_changed.connect(self.apply_view)
+        if not grid_only:
+            self.preferences.view_changed.connect(self.apply_view)
         self.preferences.thumbnail_size_changed.connect(self.apply_thumbnail_size)
         self.apply_thumbnail_size(self.preferences.size)
-        self.apply_view(self.preferences.mode)
+        self.apply_view(1 if grid_only else self.preferences.mode)
 
     def schedule_refresh(self, *args):
         self.refresh_timer.start(0)
@@ -278,7 +281,8 @@ class LibraryView(QtWidgets.QWidget):
         return self.tree.itemFromIndex(QtCore.QModelIndex(self.folder)) if self.folder.isValid() else None
 
     def set_view(self, mode):
-        self.preferences.set_view(mode)
+        if not self.grid_only:
+            self.preferences.set_view(mode)
 
     def apply_view(self, mode):
         if mode:
