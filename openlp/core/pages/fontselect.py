@@ -243,9 +243,9 @@ class FontSelectPage(GridLayoutPage):
     def retranslate_ui(self):
         self.text_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Text'))
         self.spacing_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Spacing'))
-        self.font_name_label.setText(translate('OpenLP.FontSelectWidget', 'Font:'))
-        self.font_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
-        self.font_style_label.setText(translate('OpenLP.FontSelectWidget', 'Style:'))
+        self.font_name_label.setText(translate('OpenLP.FontSelectWidget', 'Font'))
+        self.font_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color'))
+        self.font_style_label.setText(translate('OpenLP.FontSelectWidget', 'Style'))
         self.style_bold_button.setToolTip('{name} ({shortcut})'.format(
             name=translate('OpenLP.FontSelectWidget', 'Bold'),
             shortcut=QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Bold).toString()
@@ -254,18 +254,18 @@ class FontSelectPage(GridLayoutPage):
             name=translate('OpenLP.FontSelectWidget', 'Italic'),
             shortcut=QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Italic).toString()
         ))
-        self.font_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size:'))
+        self.font_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
         self.font_size_spinbox.setSuffix(' {unit}'.format(unit=UiStrings().FontSizePtUnit))
         self.wrap_check_box.setText(translate('OpenLP.FontSelectWidget', 'Word Wrap'))
-        self.line_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Line Spacing:'))
-        self.letter_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Letter Spacing:'))
+        self.line_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Line Spacing'))
+        self.letter_spacing_label.setText(translate('OpenLP.FontSelectWidget', 'Letter Spacing'))
         self.outline_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Outline'))
-        self.outline_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
-        self.outline_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size:'))
+        self.outline_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color'))
+        self.outline_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
         self.shadow_groupbox.setTitle(translate('OpenLP.FontSelectWidget', 'Shadow'))
-        self.shadow_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color:'))
-        self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size:'))
-        self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur:'))
+        self.shadow_color_label.setText(translate('OpenLP.FontSelectWidget', 'Color'))
+        self.shadow_size_label.setText(translate('OpenLP.FontSelectWidget', 'Size'))
+        self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur'))
 
     def _on_font_name_changed(self, font):
         if isinstance(font, (QtGui.QFont, str)):

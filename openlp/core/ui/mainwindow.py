@@ -195,7 +195,7 @@ class Ui_MainWindow(object):
         default_theme_layout.setSpacing(4)
         self.default_theme_label = QtWidgets.QLabel(self.default_theme_container)
         self.default_theme_label.setObjectName('default_theme_label')
-        self.default_theme_label.setText(translate('OpenLP.MainWindow', 'Default Theme:'))
+        self.default_theme_label.setText(translate('OpenLP.MainWindow', 'Default Theme'))
         default_theme_layout.addWidget(self.default_theme_label)
         self.default_theme_button = QtWidgets.fluentqt.HyperlinkButton('', self.default_theme_container)
         self.default_theme_button.setObjectName('default_theme_button')

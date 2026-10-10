@@ -55,7 +55,7 @@ class WizardStrings(object):
     WordProject = 'WordProject'
     # These strings should need a good reason to be retranslated elsewhere.
     FinishedImport = translate('OpenLP.Ui', 'Finished import.')
-    FormatLabel = translate('OpenLP.Ui', 'Format:')
+    FormatLabel = translate('OpenLP.Ui', 'Format')
     HeaderStyle = '{text}'
     Importing = translate('OpenLP.Ui', 'Importing')
     ImportingType = translate('OpenLP.Ui', 'Importing "{source}"...')

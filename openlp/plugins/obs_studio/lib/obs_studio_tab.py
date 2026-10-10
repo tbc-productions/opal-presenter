@@ -82,14 +82,14 @@ class ObsStudioTab(SettingsTab):
         self.network_group_box.setTitle(
             translate('ObsStudioPlugin.ObsStudioTab', 'Network Settings')
         )
-        self.host_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Host:'))
-        self.port_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Port:'))
+        self.host_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Host'))
+        self.port_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Port'))
         self.auth_group_box.setTitle(
             translate('ObsStudioPlugin.ObsStudioTab', 'Authentication Settings')
         )
-        self.password_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Password:'))
+        self.password_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Password'))
         self.test_group_box.setTitle(translate('ObsStudioPlugin.ObsStudioTab', 'Test'))
-        self.message_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Message:'))
+        self.message_label.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Message'))
         self.test_button.setText(translate('ObsStudioPlugin.ObsStudioTab', 'Send'))
 
     def resizeEvent(self, event=None):

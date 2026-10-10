@@ -62,5 +62,5 @@ class Ui_SongBookDialog(object):
         Translate the UI on the fly.
         """
         song_book_dialog.setWindowTitle(translate('SongsPlugin.SongBookForm', 'Songbook Maintenance'))
-        self.name_label.setText(translate('SongsPlugin.SongBookForm', '&Name:'))
-        self.publisher_label.setText(translate('SongsPlugin.SongBookForm', '&Publisher:'))
+        self.name_label.setText(translate('SongsPlugin.SongBookForm', '&Name'))
+        self.publisher_label.setText(translate('SongsPlugin.SongBookForm', '&Publisher'))

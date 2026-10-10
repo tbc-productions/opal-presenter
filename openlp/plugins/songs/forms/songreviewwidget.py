@@ -94,7 +94,7 @@ class SongReviewWidget(QtWidgets.QWidget):
         # Add last modified date.
         self.song_last_modified_label = QtWidgets.QLabel(self)
         self.song_last_modified_label.setObjectName('last_modified_label')
-        self.song_last_modified_label.setText('Last Modified:')
+        self.song_last_modified_label.setText('Last Modified')
         self.song_info_form_layout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.song_last_modified_label)
         self.song_last_modified_content = QtWidgets.QLabel(self)
         self.song_last_modified_content.setObjectName('last_modified_content')
@@ -105,7 +105,7 @@ class SongReviewWidget(QtWidgets.QWidget):
         # Add Theme widget.
         self.song_theme_label = QtWidgets.QLabel(self)
         self.song_theme_label.setObjectName('song_theme_label')
-        self.song_theme_label.setText('Theme:')
+        self.song_theme_label.setText('Theme')
         self.song_info_form_layout.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.song_theme_label)
         self.song_theme_content = QtWidgets.QLabel(self)
         self.song_theme_content.setObjectName('song_theme_content')
@@ -212,13 +212,13 @@ class SongReviewWidget(QtWidgets.QWidget):
 
     def retranslate_ui(self):
         self.song_remove_button.setText('Remove')
-        self.song_title_label.setText('Title:')
-        self.song_alternate_title_label.setText('Alternate Title:')
-        self.song_ccli_number_label.setText('CCLI Number:')
-        self.song_verse_order_label.setText('Verse Order:')
-        self.song_copyright_label.setText('Copyright:')
-        self.song_comments_label.setText('Comments:')
-        self.song_authors_label.setText('Authors:')
+        self.song_title_label.setText('Title')
+        self.song_alternate_title_label.setText('Alternate Title')
+        self.song_ccli_number_label.setText('CCLI Number')
+        self.song_verse_order_label.setText('Verse Order')
+        self.song_copyright_label.setText('Copyright')
+        self.song_comments_label.setText('Comments')
+        self.song_authors_label.setText('Authors')
 
     def on_remove_button_clicked(self):
         """

@@ -25,6 +25,7 @@ import logging
 import urllib.error
 
 from lxml import etree
+from PySide6 import QtCore
 from openlp.core.widgets import fluent as QtWidgets
 
 try:
@@ -393,6 +394,7 @@ class BibleImportForm(OpenLPWizard):
         self.full_license_edit = QtWidgets.QPlainTextEdit(self.license_details_page)
         self.full_license_edit.setObjectName('FullLicenseEdit')
         self.license_details_layout.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.full_license_edit)
+        self.license_details_layout.setAlignment(self.full_license_label, QtCore.Qt.AlignmentFlag.AlignTop)
         self.addPage(self.license_details_page)
 
     def retranslate_ui(self):
@@ -418,21 +420,21 @@ class BibleImportForm(OpenLPWizard):
                                                                              'Web Download'))
         self.format_combo_box.setItemText(BibleFormat.Zefania, WizardStrings.ZEF)
         self.format_combo_box.setItemText(BibleFormat.SWORD, WizardStrings.SWORD)
-        self.osis_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.csv_books_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Books file:'))
-        self.csv_verses_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Verses file:'))
-        self.open_song_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.web_source_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Web source:'))
-        self.zefania_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.wordproject_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file:'))
-        self.web_update_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Translations:'))
+        self.osis_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file'))
+        self.csv_books_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Books file'))
+        self.csv_verses_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Verses file'))
+        self.open_song_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file'))
+        self.web_source_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Web source'))
+        self.zefania_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file'))
+        self.wordproject_file_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible file'))
+        self.web_update_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Translations'))
         self.web_update_button.setText(translate('BiblesPlugin.ImportWizardForm', 'Retrieve translations'))
         self.web_source_names = (translate('BiblesPlugin.ImportWizardForm', 'Crosswalk'),
                                  translate('BiblesPlugin.ImportWizardForm', 'BibleGateway'),
                                  translate('BiblesPlugin.ImportWizardForm', 'BibleServer'))
         for index, name in enumerate(self.web_source_names):
             self.web_source_combo_box.setItemText(index, name)
-        self.web_translation_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible:'))
+        self.web_translation_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bible'))
         labels = (self.format_label, self.web_update_label, self.web_source_label, self.web_translation_label)
         label_width = max(label.sizeHint().width() for label in labels)
         for label in labels:
@@ -444,10 +446,10 @@ class BibleImportForm(OpenLPWizard):
         for widget_type in (QtWidgets.QComboBox, QtWidgets.QPushButton, QtWidgets.QToolButton):
             for field in self.select_page.findChildren(widget_type):
                 field.setFixedHeight(control_height)
-        self.sword_bible_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bibles:'))
-        self.sword_folder_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD data folder:'))
-        self.sword_zipfile_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD zip-file:'))
-        self.sword_zipbible_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bibles:'))
+        self.sword_bible_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bibles'))
+        self.sword_folder_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD data folder'))
+        self.sword_zipfile_label.setText(translate('BiblesPlugin.ImportWizardForm', 'SWORD zip-file'))
+        self.sword_zipbible_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Bibles'))
         self.sword_tab_widget.setTabText(self.sword_tab_widget.indexOf(self.sword_folder_tab),
                                          translate('BiblesPlugin.ImportWizardForm', 'Import from folder'))
         self.sword_tab_widget.setTabText(self.sword_tab_widget.indexOf(self.sword_zip_tab),
@@ -462,10 +464,10 @@ class BibleImportForm(OpenLPWizard):
             translate('BiblesPlugin.ImportWizardForm', 'License Details'))
         self.license_details_page.setSubTitle(translate('BiblesPlugin.ImportWizardForm',
                                                         'Set up the Bible\'s license details.'))
-        self.version_name_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Version name:'))
-        self.copyright_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Copyright:'))
-        self.permissions_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Permissions:'))
-        self.full_license_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Full license:'))
+        self.version_name_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Version name'))
+        self.copyright_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Copyright'))
+        self.permissions_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Permissions'))
+        self.full_license_label.setText(translate('BiblesPlugin.ImportWizardForm', 'Full license'))
         self.progress_page.setTitle(WizardStrings.Importing)
         self.progress_page.setSubTitle(translate('BiblesPlugin.ImportWizardForm',
                                                  'Please wait while your Bible is imported.'))

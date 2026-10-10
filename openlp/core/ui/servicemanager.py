@@ -405,7 +405,7 @@ class Ui_ServiceManager(object):
         self.save_service_action.setEnabled(False)
         self.save_service_as_action.setEnabled(False)
         self.toolbar.add_spacer()
-        self.theme_label = QtWidgets.QLabel('{theme}:'.format(theme=UiStrings().Theme), widget)
+        self.theme_label = QtWidgets.QLabel(UiStrings().Theme, widget)
         self.theme_label.setContentsMargins(3, 3, 3, 3)
         self.theme_label.setObjectName('theme_label')
         self.toolbar.add_toolbar_widget(self.theme_label)
@@ -3137,8 +3137,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         title = service_item.title if slide_index is None else service_item.slides[slide_index]['title']
         dialog_title = translate('OpenLP.ServiceManager', 'Rename item title') if slide_index is None else \
             translate('OpenLP.ServiceManager', 'Rename slide label')
-        field_label = translate('OpenLP.ServiceManager', 'Title:') if slide_index is None else \
-            translate('OpenLP.ServiceManager', 'Label:')
+        field_label = translate('OpenLP.ServiceManager', 'Title') if slide_index is None else \
+            translate('OpenLP.ServiceManager', 'Label')
         title, ok = RenameDialog.get_text(self.main_window, dialog_title,
                                          field_label, title)
         if ok and title.strip():

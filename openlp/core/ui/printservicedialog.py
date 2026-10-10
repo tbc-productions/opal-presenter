@@ -151,8 +151,8 @@ class Ui_PrintServiceDialog(object):
         self.zoom_original_button.setToolTip(translate('OpenLP.PrintServiceForm', 'Zoom Original'))
         self.zoom_in_button.setToolTip(translate('OpenLP.PrintServiceForm', 'Zoom In'))
         self.options_group_box.setTitle(translate('OpenLP.PrintServiceForm', 'Options'))
-        self.title_label.setText(translate('OpenLP.PrintServiceForm', 'Title:'))
-        self.footer_label.setText(translate('OpenLP.PrintServiceForm', 'Service Note Text:'))
+        self.title_label.setText(translate('OpenLP.PrintServiceForm', 'Title'))
+        self.footer_label.setText(translate('OpenLP.PrintServiceForm', 'Service Note Text'))
         self.slide_text_check_box.setText(translate('OpenLP.PrintServiceForm', 'Include slide text'))
         self.page_break_after_text.setText(translate('OpenLP.PrintServiceForm', 'Page break before each text item'))
         self.notes_check_box.setText(translate('OpenLP.PrintServiceForm', 'Include service item notes'))
@@ -160,7 +160,7 @@ class Ui_PrintServiceDialog(object):
         self.show_chords_check_box.setText(translate('OpenLP.PrintServiceForm', 'Show chords'))
         self.show_icons_check_box.setText(translate('OpenLP.PrintServiceForm', 'Show icons'))
         self.title_line_edit.setText(translate('OpenLP.PrintServiceForm', 'Service Sheet'))
-        self.zoom_label.setText(translate('OpenLP.PrintServiceForm', 'Zoom:'))
+        self.zoom_label.setText(translate('OpenLP.PrintServiceForm', 'Zoom'))
         # Do not change the order.
         self.zoom_combo_box.addItems([
             translate('OpenLP.PrintServiceDialog', 'Fit Page'),

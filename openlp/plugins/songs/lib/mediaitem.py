@@ -287,7 +287,7 @@ class SongMediaItem(MediaManagerItem):
         self.add_song_from_service = self.settings.value('songs/add song from service')
 
     def retranslate_ui(self):
-        self.search_text_label.setText('{text}:'.format(text=UiStrings().Search))
+        self.search_text_edit.setAccessibleName(UiStrings().Search)
         self.search_text_button.setText(UiStrings().Search)
         self.maintenance_action.setText(SongStrings().SongMaintenance)
         self.maintenance_action.setToolTip(translate('SongsPlugin.MediaItem',

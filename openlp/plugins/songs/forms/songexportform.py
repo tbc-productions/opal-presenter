@@ -152,13 +152,13 @@ class SongExportForm(OpenLPWizard):
         self.available_songs_page.setTitle(translate('SongsPlugin.ExportWizardForm', 'Select Songs'))
         self.available_songs_page.setSubTitle(translate('SongsPlugin.ExportWizardForm',
                                               'Check the songs you want to export.'))
-        self.search_label.setText('{text}:'.format(text=UiStrings().Search))
+        self.search_label.setText(UiStrings().Search)
         self.uncheck_button.setText(translate('SongsPlugin.ExportWizardForm', 'Uncheck All'))
         self.check_button.setText(translate('SongsPlugin.ExportWizardForm', 'Check All'))
         self.export_song_page.setTitle(translate('SongsPlugin.ExportWizardForm', 'Select Directory'))
         self.export_song_page.setSubTitle(translate('SongsPlugin.ExportWizardForm',
                                           'Select the directory where you want the songs to be saved.'))
-        self.directory_label.setText(translate('SongsPlugin.ExportWizardForm', 'Directory:'))
+        self.directory_label.setText(translate('SongsPlugin.ExportWizardForm', 'Directory'))
         self.progress_page.setTitle(translate('SongsPlugin.ExportWizardForm', 'Exporting'))
         self.progress_page.setSubTitle(translate('SongsPlugin.ExportWizardForm',
                                        'Please wait while your songs are exported.'))

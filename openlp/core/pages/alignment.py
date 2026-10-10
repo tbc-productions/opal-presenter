@@ -115,17 +115,17 @@ class AlignmentTransitionsPage(GridLayoutPage):
         self.footer_alignment_group_box.setTitle(translate('OpenLP.ThemeWizard', '&Footer Area'))
         self.transitions_group_box.setTitle(translate('OpenLP.ThemeWizard', 'Transitions'))
         self.transitions_enabled_check_box.setText(translate('OpenLP.ThemeWizard', 'Enable transitions'))
-        self.transition_effect_label.setText(translate('OpenLP.ThemeWizard', 'Effect:'))
+        self.transition_effect_label.setText(translate('OpenLP.ThemeWizard', 'Effect'))
         self.transition_effect_combo_box.setItemText(TransitionType.Fade, translate('OpenLP.ThemeWizard', 'Fade'))
         self.transition_effect_combo_box.setItemText(TransitionType.Slide, translate('OpenLP.ThemeWizard', 'Slide'))
         self.transition_effect_combo_box.setItemText(TransitionType.Concave, translate('OpenLP.ThemeWizard', 'Concave'))
         self.transition_effect_combo_box.setItemText(TransitionType.Convex, translate('OpenLP.ThemeWizard', 'Convex'))
         self.transition_effect_combo_box.setItemText(TransitionType.Zoom, translate('OpenLP.ThemeWizard', 'Zoom'))
-        self.transition_speed_label.setText(translate('OpenLP.ThemeWizard', 'Speed:'))
+        self.transition_speed_label.setText(translate('OpenLP.ThemeWizard', 'Speed'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Normal, translate('OpenLP.ThemeWizard', 'Normal'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Fast, translate('OpenLP.ThemeWizard', 'Fast'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Slow, translate('OpenLP.ThemeWizard', 'Slow'))
-        self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction:'))
+        self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Horizontal,
                                                         translate('OpenLP.ThemeWizard', 'Horizontal'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Vertical,
@@ -423,7 +423,7 @@ class TransitionsPage(GridLayoutPage):
         """
         self.transitions_group_box.setTitle(translate('OpenLP.ThemeWizard', 'Transitions'))
         self.transitions_enabled_check_box.setText(translate('OpenLP.ThemeWizard', 'Enable transitions'))
-        self.transition_effect_label.setText(translate('OpenLP.ThemeWizard', 'Effect:'))
+        self.transition_effect_label.setText(translate('OpenLP.ThemeWizard', 'Effect'))
         self.transition_effect_combo_box.setItemText(TransitionType.Fade, translate('OpenLP.ThemeWizard', 'Fade'))
         self.transition_effect_combo_box.setItemText(TransitionType.Slide, translate('OpenLP.ThemeWizard', 'Slide'))
         self.transition_effect_combo_box.setItemText(TransitionType.Concave,
@@ -431,11 +431,11 @@ class TransitionsPage(GridLayoutPage):
         self.transition_effect_combo_box.setItemText(TransitionType.Convex,
                                                      translate('OpenLP.ThemeWizard', 'Convex'))
         self.transition_effect_combo_box.setItemText(TransitionType.Zoom, translate('OpenLP.ThemeWizard', 'Zoom'))
-        self.transition_speed_label.setText(translate('OpenLP.ThemeWizard', 'Speed:'))
+        self.transition_speed_label.setText(translate('OpenLP.ThemeWizard', 'Speed'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Normal, translate('OpenLP.ThemeWizard', 'Normal'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Fast, translate('OpenLP.ThemeWizard', 'Fast'))
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Slow, translate('OpenLP.ThemeWizard', 'Slow'))
-        self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction:'))
+        self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Horizontal,
                                                         translate('OpenLP.ThemeWizard', 'Horizontal'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Vertical,

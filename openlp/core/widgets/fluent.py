@@ -26,6 +26,33 @@ class FluentLabel(fluentqt.Label):
 QLabel = FluentLabel
 
 
+class FluentFormLayout(_qt.QFormLayout):
+    """Centre routine labels beside their fields, including nested control rows."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
+
+    def _expand_label(self, label):
+        if isinstance(label, _qt.QLabel) and self.labelAlignment() & QtCore.Qt.AlignmentFlag.AlignVCenter:
+            # Qt otherwise caps labels beside composite fields at their text height.
+            policy = label.sizePolicy()
+            policy.setVerticalPolicy(_qt.QSizePolicy.Policy.Expanding)
+            label.setSizePolicy(policy)
+
+    def addRow(self, *args):
+        super().addRow(*args)
+        item = self.itemAt(self.rowCount() - 1, self.ItemRole.LabelRole)
+        self._expand_label(item.widget() if item else None)
+
+    def setWidget(self, row, role, widget):
+        super().setWidget(row, role, widget)
+        if role == self.ItemRole.LabelRole:
+            self._expand_label(widget)
+
+
+QFormLayout = FluentFormLayout
+
+
 QLineEdit = fluentqt.LineEdit
 QComboBox = fluentqt.ComboBox
 CalendarDatePicker = fluentqt.CalendarDatePicker

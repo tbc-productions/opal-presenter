@@ -94,7 +94,7 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
                       'and other preferences.\n\n'
                       'Alternatively, you can leave this blank to configure Opal Presenter manually.'))
         self.browse_button.setText(translate('OpenLP.FirstTimeWizard', 'Open…'))
-        self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File:'))
+        self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File'))
 
     def on_browse_clicked(self):
         from openlp.core.widgets.dialogs import FileDialog

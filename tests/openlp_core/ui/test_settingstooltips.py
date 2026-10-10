@@ -79,7 +79,7 @@ def test_bible_reference_hint_moves_to_help_icon(settings):
     help_icon = bibles_tab.verse_separator_check_box.parentWidget().findChild(QtWidgets.QToolButton,
                                                                               'settings_help_icon')
     assert '|' in help_icon.help_text
-    assert bibles_tab.reference_format_label.text() == 'Footer reference template:'
+    assert bibles_tab.reference_format_label.text() == 'Footer reference template'
     assert not bibles_tab.reference_format_label.wordWrap()
     reference_row = bibles_tab.reference_format_label.parentWidget().layout()
     assert reference_row.itemAt(0).widget() is bibles_tab.reference_format_label

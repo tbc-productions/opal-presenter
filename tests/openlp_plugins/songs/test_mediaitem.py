@@ -231,7 +231,7 @@ def test_config_update(settings: Settings, media_item: SongMediaItem):
 def test_retranslate_ui(media_item: SongMediaItem):
     """Test that the labels are all set correctly when calling retranslate_ui()"""
     # GIVEN: A song media item with a number of mocked out attributes
-    media_item.search_text_label = MagicMock()
+    media_item.search_text_edit = MagicMock()
     media_item.search_text_button = MagicMock()
     media_item.maintenance_action = MagicMock()
     media_item.favourite_toggle_button = MagicMock()
@@ -240,7 +240,7 @@ def test_retranslate_ui(media_item: SongMediaItem):
     media_item.retranslate_ui()
 
     # THEN: The correct strings should be set
-    media_item.search_text_label.setText.assert_called_once_with('Search:')
+    media_item.search_text_edit.setAccessibleName.assert_called_once_with('Search')
     media_item.search_text_button.setText.assert_called_once_with('Search')
     media_item.maintenance_action.setText.assert_called_once_with('Song Maintenance')
     media_item.maintenance_action.setToolTip.assert_called_once_with(

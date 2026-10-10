@@ -89,8 +89,8 @@ class AddFolderForm(QtWidgets.FormDialog, FolderPopulateMixin):
 
     def retranslate_ui(self):
         self.setWindowTitle(translate('OpenLP.AddFolderForm', 'Add folder'))
-        self.parent_folder_label.setText(translate('OpenLP.AddFolderForm', 'Parent folder:'))
-        self.name_label.setText(translate('OpenLP.AddFolderForm', 'Folder name:'))
+        self.parent_folder_label.setText(translate('OpenLP.AddFolderForm', 'Parent folder'))
+        self.name_label.setText(translate('OpenLP.AddFolderForm', 'Folder name'))
         self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Save).setText(
             translate('OpenLP.AddFolderForm', 'Create'))
 
@@ -227,7 +227,7 @@ class ChooseFolderForm(QtWidgets.FormDialog, FolderPopulateMixin):
         :param self: The form object (not the class).
         """
         self.setWindowTitle(translate('OpenLP.ChooseFolderForm', 'Select Folder'))
-        self.folder_question_label.setText(translate('OpenLP.ChooseFolderForm', 'Add items to folder:'))
+        self.folder_question_label.setText(translate('OpenLP.ChooseFolderForm', 'Add items to folder'))
         self.nofolder_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'No folder'))
         self.existing_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'Existing folder'))
         self.new_radio_button.setText(translate('OpenLP.ChooseFolderForm', 'New folder'))

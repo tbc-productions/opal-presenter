@@ -134,7 +134,7 @@ class AdvancedTab(SettingsTab):
         """
         self.tab_title_visible = UiStrings().Advanced
         self.data_directory_group_box.setTitle(translate('OpenLP.AdvancedTab', 'Data Location'))
-        self.data_directory_new_label.setText(translate('OpenLP.AdvancedTab', 'Path:'))
+        self.data_directory_new_label.setText(translate('OpenLP.AdvancedTab', 'Path'))
         self.data_directory_cancel_button.setText(translate('OpenLP.AdvancedTab', 'Cancel'))
         self.data_directory_cancel_button.setToolTip(
             translate('OpenLP.AdvancedTab', 'Cancel Opal Presenter data directory location change.'))

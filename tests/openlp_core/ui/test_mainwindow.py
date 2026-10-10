@@ -1964,7 +1964,7 @@ def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
     button = main_window.default_theme_button
     assert isinstance(button, QtWidgets.fluentqt.HyperlinkButton)
     assert button.text() == 'Sunday worship'
-    assert main_window.default_theme_label.text() == 'Default Theme:'
+    assert main_window.default_theme_label.text() == 'Default Theme'
     assert button.fontRole() == QtWidgets.fluentqt.FontRole.Caption
     assert main_window.default_theme_label.font() == QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Caption)
     with patch.object(main_window.settings_form, 'exec') as open_settings:

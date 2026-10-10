@@ -87,8 +87,8 @@ class Ui_BookNameDialog(object):
         self.info_label.setText(
             translate('BiblesPlugin.BookNameDialog', 'The following book name cannot be matched up internally. '
                       'Please select the corresponding name from the list.'))
-        self.current_label.setText(translate('BiblesPlugin.BookNameDialog', 'Current name:'))
-        self.corresponding_label.setText(translate('BiblesPlugin.BookNameDialog', 'Corresponding name:'))
+        self.current_label.setText(translate('BiblesPlugin.BookNameDialog', 'Current name'))
+        self.corresponding_label.setText(translate('BiblesPlugin.BookNameDialog', 'Corresponding name'))
         self.corresponding_label.setBuddy(self.corresponding_combo_box)
         self.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText(
             translate('BiblesPlugin.BookNameDialog', 'Select'))

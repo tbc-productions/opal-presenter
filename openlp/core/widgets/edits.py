@@ -194,6 +194,7 @@ class PathEdit(QtWidgets.QWidget):
         widget_layout.addWidget(self.line_edit)
         self.browse_button = QtWidgets.QToolButton(self)
         self.browse_button.setIcon(UiIcons().open)
+        self.line_edit.setMinimumHeight(self.browse_button.sizeHint().height())
         widget_layout.addWidget(self.browse_button)
         self.revert_button = QtWidgets.QToolButton(self)
         self.revert_button.setIcon(UiIcons().undo)
@@ -1874,7 +1875,7 @@ class SpellTextEdit(QtWidgets.QWidget):
         self.setTextCursor(cursor)
         # Add menu with available languages.
         if ENCHANT_AVAILABLE:
-            lang_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Language:'))
+            lang_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Language'))
             for lang in enchant.list_languages():
                 action = create_action(lang_menu, lang, text=lang, checked=lang == self.dictionary.tag)
                 lang_menu.addAction(action)

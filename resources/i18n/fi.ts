@@ -700,18 +700,18 @@ ole hyvä ja ilmoita tästä Opal Presenter:n kehittäjille.
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="171"/>
-        <source>Book:</source>
-        <translation>Kirja:</translation>
+        <source>Book</source>
+        <translation>Kirja</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="183"/>
-        <source>From:</source>
-        <translation>Alkaen:</translation>
+        <source>From</source>
+        <translation>Alkaen</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="189"/>
-        <source>To:</source>
-        <translation>Asti:</translation>
+        <source>To</source>
+        <translation>Asti</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="195"/>
@@ -720,18 +720,18 @@ ole hyvä ja ilmoita tästä Opal Presenter:n kehittäjille.
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="200"/>
-        <source>Second:</source>
-        <translation>Vertailuteksti:</translation>
+        <source>Second</source>
+        <translation>Vertailuteksti</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="264"/>
-        <source>Chapter:</source>
-        <translation>Luku:</translation>
+        <source>Chapter</source>
+        <translation>Luku</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="265"/>
-        <source>Verse:</source>
-        <translation>Jae:</translation>
+        <source>Verse</source>
+        <translation>Jae</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="270"/>
@@ -892,8 +892,8 @@ This means that the currently selected Bible is a Web Bible.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="184"/>
-        <source>Bible theme:</source>
-        <translation>Käytettävä teema:</translation>
+        <source>Bible theme</source>
+        <translation>Käytettävä teema</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="190"/>
@@ -932,23 +932,23 @@ This means that the currently selected Bible is a Web Bible.</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="201"/>
-        <source>Verse separator:</source>
-        <translation>Jakeen erotinmerkki:</translation>
+        <source>Verse separator</source>
+        <translation>Jakeen erotinmerkki</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="202"/>
-        <source>Range separator:</source>
-        <translation>Alueen erotinmerkki:</translation>
+        <source>Range separator</source>
+        <translation>Alueen erotinmerkki</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="203"/>
-        <source>List separator:</source>
-        <translation>Luettelon erotinmerkki:</translation>
+        <source>List separator</source>
+        <translation>Luettelon erotinmerkki</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="204"/>
-        <source>End mark:</source>
-        <translation>Loppumerkki:</translation>
+        <source>End mark</source>
+        <translation>Loppumerkki</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="205"/>
@@ -967,7 +967,7 @@ Käyttääksesi oletusarvoja tyhjennä tämä kenttä.</translation>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="214"/>
         <source>Book name language in search field,
-search results and on display:</source>
+search results and on display</source>
         <translation>Kirjan nimen kieli hakukentässä,
 hakutuloksissa ja näytöllä.</translation>
     </message>
@@ -1130,12 +1130,12 @@ listasta vastaava suomenkielinen käännös</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="88"/>
-        <source>Current name:</source>
+        <source>Current name</source>
         <translation>&lt;font size=&quot;4”&gt;Kirjan nimi:&lt;/font&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="89"/>
-        <source>Corresponding name:</source>
+        <source>Corresponding name</source>
         <translation>&lt;font size=&quot;4”&gt;Vastaava nimi:&lt;/font&gt;</translation>
     </message>
     <message>
@@ -1181,23 +1181,23 @@ listasta vastaava suomenkielinen käännös</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="138"/>
-        <source>Version name:</source>
-        <translation>Käännöksen nimi:</translation>
+        <source>Version name</source>
+        <translation>Käännöksen nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="139"/>
-        <source>Copyright:</source>
-        <translation>Tekijäinoikeudet:</translation>
+        <source>Copyright</source>
+        <translation>Tekijäinoikeudet</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="140"/>
-        <source>Permissions:</source>
-        <translation>Luvat:</translation>
+        <source>Permissions</source>
+        <translation>Luvat</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="141"/>
-        <source>Full license:</source>
-        <translation>Lisenssi:</translation>
+        <source>Full license</source>
+        <translation>Lisenssi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="142"/>
@@ -1206,7 +1206,7 @@ listasta vastaava suomenkielinen käännös</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="144"/>
-        <source>Book name language in search field, search results and on display:</source>
+        <source>Book name language in search field, search results and on display</source>
         <translation>Kieli, jota käytetään Raamatun kirjoissa niin haussa kuin Esityksessäkin.</translation>
     </message>
     <message>
@@ -1262,8 +1262,8 @@ listasta vastaava suomenkielinen käännös</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
-        <source>Language:</source>
-        <translation>Kieli:</translation>
+        <source>Language</source>
+        <translation>Kieli</translation>
     </message>
 </context>
 <context>
@@ -1302,18 +1302,18 @@ listasta vastaava suomenkielinen käännös</translation>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="405"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="407"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="408"/>
-        <source>Bible file:</source>
-        <translation>Raamattutiedosto:</translation>
+        <source>Bible file</source>
+        <translation>Raamattutiedosto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="403"/>
-        <source>Books file:</source>
-        <translation>Kirjatiedosto:</translation>
+        <source>Books file</source>
+        <translation>Kirjatiedosto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="404"/>
-        <source>Verses file:</source>
-        <translation>Jaetiedosto:</translation>
+        <source>Verses file</source>
+        <translation>Jaetiedosto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="406"/>
@@ -1347,24 +1347,24 @@ listasta vastaava suomenkielinen käännös</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="417"/>
-        <source>Bible:</source>
-        <translation>Raamattu:</translation>
+        <source>Bible</source>
+        <translation>Raamattu</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="418"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="421"/>
-        <source>Bibles:</source>
-        <translation>Raamatut:</translation>
+        <source>Bibles</source>
+        <translation>Raamatut</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="419"/>
-        <source>SWORD data folder:</source>
-        <translation>SWORD hakemisto:</translation>
+        <source>SWORD data folder</source>
+        <translation>SWORD hakemisto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="420"/>
-        <source>SWORD zip-file:</source>
-        <translation>SWORD zip-tiedosto:</translation>
+        <source>SWORD zip-file</source>
+        <translation>SWORD zip-tiedosto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="423"/>
@@ -1394,23 +1394,23 @@ Tähän löydät ohjeista apua englanniksi.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="436"/>
-        <source>Version name:</source>
-        <translation>Käännöksen nimi:</translation>
+        <source>Version name</source>
+        <translation>Käännöksen nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="437"/>
-        <source>Copyright:</source>
-        <translation>Tekijäinoikeudet:</translation>
+        <source>Copyright</source>
+        <translation>Tekijäinoikeudet</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="438"/>
-        <source>Permissions:</source>
-        <translation>Luvat:</translation>
+        <source>Permissions</source>
+        <translation>Luvat</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="439"/>
-        <source>Full license:</source>
-        <translation>Lisenssi:</translation>
+        <source>Full license</source>
+        <translation>Lisenssi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="441"/>
@@ -1700,12 +1700,12 @@ Raamatuntekstejä eri lähteistä.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="94"/>
-        <source>Application ID:</source>
+        <source>Application ID</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="95"/>
-        <source>Secret:</source>
+        <source>Secret</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1734,7 +1734,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="121"/>
-        <source>Default service type:</source>
+        <source>Default service type</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1962,7 +1962,7 @@ OpenLP ei löytänyt tätä tiedostoa: &quot;{name}&quot;</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/lib/imagetab.py" line="75"/>
-        <source>Theme:</source>
+        <source>Theme</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -1993,8 +1993,8 @@ OpenLP ei löytänyt tätä tiedostoa: &quot;{name}&quot;</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="84"/>
-        <source>Add images to group:</source>
-        <translation>Lisää kuvia ryhmään:</translation>
+        <source>Add images to group</source>
+        <translation>Lisää kuvia ryhmään</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="85"/>
@@ -2199,8 +2199,8 @@ automaattisesti sekä asettaa taustakuvia.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="105"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Nimi:</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="107"/>
@@ -2224,13 +2224,13 @@ automaattisesti sekä asettaa taustakuvia.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="112"/>
-        <source>The&amp;me:</source>
-        <translation>Tee&amp;ma:</translation>
+        <source>The&amp;me</source>
+        <translation>Tee&amp;ma</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="113"/>
-        <source>&amp;Credits:</source>
-        <translation>&amp;Lopputeksti:</translation>
+        <source>&amp;Credits</source>
+        <translation>&amp;Lopputeksti</translation>
     </message>
 </context>
 <context>
@@ -2512,18 +2512,18 @@ Nämä vaativat toimiakseen mediasoittimen.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="119"/>
-        <source>Font name:</source>
-        <translation>Fontin nimi:</translation>
+        <source>Font name</source>
+        <translation>Fontin nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="120"/>
-        <source>Font color:</source>
-        <translation>Fontin väri:</translation>
+        <source>Font color</source>
+        <translation>Fontin väri</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="122"/>
-        <source>Font size:</source>
-        <translation>Fontin koko:</translation>
+        <source>Font size</source>
+        <translation>Fontin koko</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="124"/>
@@ -2537,12 +2537,12 @@ Nämä vaativat toimiakseen mediasoittimen.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="126"/>
-        <source>Alert timeout:</source>
-        <translation>Huomioviestin kesto:</translation>
+        <source>Alert timeout</source>
+        <translation>Huomioviestin kesto</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="128"/>
-        <source>Repeat (no. of times):</source>
+        <source>Repeat (no. of times)</source>
         <translation>Toista (toistojen lukumäärä)</translation>
     </message>
     <message>
@@ -2640,13 +2640,13 @@ näyttämisen esityksen aikana.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="94"/>
-        <source>Alert &amp;text:</source>
-        <translation>&amp;Viesti:</translation>
+        <source>Alert &amp;text</source>
+        <translation>&amp;Viesti</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="95"/>
-        <source>&amp;Parameter:</source>
-        <translation>&amp;Muuttuja:</translation>
+        <source>&amp;Parameter</source>
+        <translation>&amp;Muuttuja</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="96"/>
@@ -2998,8 +2998,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.ThemeWizard</name>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="339"/>
-        <source>Horizontal Align:</source>
-        <translation>Vaakasuora tasaus:</translation>
+        <source>Horizontal Align</source>
+        <translation>Vaakasuora tasaus</translation>
     </message>
 </context>
 <context>
@@ -3021,7 +3021,7 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="353"/>
-        <source>&amp;Vertical Align:</source>
+        <source>&amp;Vertical Align</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -3091,23 +3091,23 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="124"/>
-        <source>HTTP:</source>
+        <source>HTTP</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="126"/>
-        <source>HTTPS:</source>
+        <source>HTTPS</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="128"/>
-        <source>Username:</source>
-        <translation>Käyttäjätunnus:</translation>
+        <source>Username</source>
+        <translation>Käyttäjätunnus</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="129"/>
-        <source>Password:</source>
-        <translation>Salasana:</translation>
+        <source>Password</source>
+        <translation>Salasana</translation>
     </message>
 </context>
 <context>
@@ -3127,8 +3127,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="310"/>
-        <source>Width:</source>
-        <translation>Leveys:</translation>
+        <source>Width</source>
+        <translation>Leveys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="311"/>
@@ -3137,7 +3137,7 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="314"/>
-        <source>Left:</source>
+        <source>Left</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -3147,13 +3147,13 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="316"/>
-        <source>Top:</source>
+        <source>Top</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="317"/>
-        <source>Height:</source>
-        <translation>Korkeus:</translation>
+        <source>Height</source>
+        <translation>Korkeus</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="318"/>
@@ -3212,8 +3212,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.SpellTextEdit</name>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="407"/>
-        <source>Language:</source>
-        <translation>Kieli:</translation>
+        <source>Language</source>
+        <translation>Kieli</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="418"/>
@@ -3235,8 +3235,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="54"/>
-        <source>Format:</source>
-        <translation>Tiedostomuoto:</translation>
+        <source>Format</source>
+        <translation>Tiedostomuoto</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="56"/>
@@ -3684,8 +3684,8 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="349"/>
-        <source>Background color:</source>
-        <translation>Taustan väri:</translation>
+        <source>Background color</source>
+        <translation>Taustan väri</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="350"/>
@@ -3725,13 +3725,13 @@ Ole hyvä ja tuo Raamattuja &quot;Tiedosto &gt; Tuo&quot; valikon kautta.</trans
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="362"/>
-        <source>CCLI number:</source>
-        <translation>CCLI numero:</translation>
+        <source>CCLI number</source>
+        <translation>CCLI numero</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="363"/>
-        <source>CCLI song number:</source>
-        <translation>CCLI laulun numero:</translation>
+        <source>CCLI song number</source>
+        <translation>CCLI laulun numero</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="365"/>
@@ -3755,8 +3755,8 @@ Ole hyvä ja tuo Raamattuja &quot;Tiedosto &gt; Tuo&quot; valikon kautta.</trans
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="369"/>
-        <source>Default Color:</source>
-        <translation>Taustan väri:</translation>
+        <source>Default Color</source>
+        <translation>Taustan väri</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="370"/>
@@ -3772,8 +3772,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="375"/>
-        <source>Display style:</source>
-        <translation>Numeroiden sulut:</translation>
+        <source>Display style</source>
+        <translation>Numeroiden sulut</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="377"/>
@@ -3857,8 +3857,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="402"/>
-        <source>Layout style:</source>
-        <translation>Rivitys:</translation>
+        <source>Layout style</source>
+        <translation>Rivitys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="404"/>
@@ -4301,7 +4301,7 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="476"/>
-        <source>Transpose:</source>
+        <source>Transpose</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -4311,8 +4311,8 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="485"/>
-        <source>&amp;Verse type:</source>
-        <translation>&amp;Säkeen tyyppi:</translation>
+        <source>&amp;Verse type</source>
+        <translation>&amp;Säkeen tyyppi</translation>
     </message>
 </context>
 <context>
@@ -6539,8 +6539,8 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="162"/>
-        <source>Background type:</source>
-        <translation>Valitse haluttu tausta:</translation>
+        <source>Background type</source>
+        <translation>Valitse haluttu tausta</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="163"/>
@@ -6564,24 +6564,20 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="171"/>
-        <source>Color:</source>
-        <translation>Väri:</translation>
+        <source>Color</source>
+        <translation>Väri</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="172"/>
-        <source>Starting color:</source>
-        <translation>Aloittava väri:</translation>
+        <source>Starting color</source>
+        <translation>Aloittava väri</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="173"/>
-        <source>Ending color:</source>
-        <translation>Lopettava väri:</translation>
+        <source>Ending color</source>
+        <translation>Lopettava väri</translation>
     </message>
-    <message>
-        <location filename="../../openlp/core/pages/background.py" line="174"/>
-        <source>Gradient:</source>
-        <translation>Kuvio:</translation>
-    </message>
+
     <message>
         <location filename="../../openlp/core/pages/background.py" line="176"/>
         <source>Horizontal</source>
@@ -6611,8 +6607,8 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
         <location filename="../../openlp/core/pages/background.py" line="185"/>
         <location filename="../../openlp/core/pages/background.py" line="187"/>
         <location filename="../../openlp/core/pages/background.py" line="189"/>
-        <source>Background color:</source>
-        <translation>Taustan väri:</translation>
+        <source>Background color</source>
+        <translation>Taustan väri</translation>
     </message>
 </context>
 <context>
@@ -6630,8 +6626,8 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="129"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="138"/>
-        <source>X position:</source>
-        <translation>Vaakatason sisennys:</translation>
+        <source>X position</source>
+        <translation>Vaakatason sisennys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="130"/>
@@ -6648,20 +6644,20 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="132"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="140"/>
-        <source>Y position:</source>
-        <translation>Pystytason sisennys:</translation>
+        <source>Y position</source>
+        <translation>Pystytason sisennys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="134"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="142"/>
-        <source>Width:</source>
-        <translation>Leveys:</translation>
+        <source>Width</source>
+        <translation>Leveys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="136"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="144"/>
-        <source>Height:</source>
-        <translation>Korkeus:</translation>
+        <source>Height</source>
+        <translation>Korkeus</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="137"/>
@@ -6678,19 +6674,19 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     <name>OpenLP.FontSelectWidget</name>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="194"/>
-        <source>Font:</source>
-        <translation>Fontti:</translation>
+        <source>Font</source>
+        <translation>Fontti</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="195"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="211"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="214"/>
-        <source>Color:</source>
-        <translation>Väri:</translation>
+        <source>Color</source>
+        <translation>Väri</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="196"/>
-        <source>Style:</source>
+        <source>Style</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6707,8 +6703,8 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
         <location filename="../../openlp/core/pages/fontselect.py" line="205"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="212"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="215"/>
-        <source>Size:</source>
-        <translation>Koko:</translation>
+        <source>Size</source>
+        <translation>Koko</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="207"/>
@@ -6717,12 +6713,12 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="208"/>
-        <source>Line Spacing:</source>
-        <translation>Riviväli:</translation>
+        <source>Line Spacing</source>
+        <translation>Riviväli</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="209"/>
-        <source>Letter Spacing:</source>
+        <source>Letter Spacing</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6755,7 +6751,7 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="116"/>
-        <source>Effect:</source>
+        <source>Effect</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6785,7 +6781,7 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="122"/>
-        <source>Speed:</source>
+        <source>Speed</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6805,7 +6801,7 @@ mediasoitinta ei ole otettu käyttöön asetuksista.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="126"/>
-        <source>Direction:</source>
+        <source>Direction</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -7105,8 +7101,8 @@ resoluutiota sekä tekstin sisennystä reunoilta.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/themewizard.py" line="142"/>
-        <source>Theme name:</source>
-        <translation>Teeman nimi:</translation>
+        <source>Theme name</source>
+        <translation>Teeman nimi</translation>
     </message>
 </context>
 <context>
@@ -7118,18 +7114,18 @@ resoluutiota sekä tekstin sisennystä reunoilta.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="123"/>
-        <source>Hours:</source>
-        <translation>Tunnit:</translation>
+        <source>Hours</source>
+        <translation>Tunnit</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="124"/>
-        <source>Minutes:</source>
-        <translation>Minuutit:</translation>
+        <source>Minutes</source>
+        <translation>Minuutit</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="125"/>
-        <source>Seconds:</source>
-        <translation>Sekunnit:</translation>
+        <source>Seconds</source>
+        <translation>Sekunnit</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="126"/>
@@ -7257,12 +7253,12 @@ resoluutiota sekä tekstin sisennystä reunoilta.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="141"/>
-        <source>Title:</source>
-        <translation>Nimi:</translation>
+        <source>Title</source>
+        <translation>Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="142"/>
-        <source>Service Note Text:</source>
+        <source>Service Note Text</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -7582,8 +7578,8 @@ sillä kohdekohtaiset ja Listan teemat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="173"/>
-        <source>Date and Time:</source>
-        <translation>Päivä ja aika:</translation>
+        <source>Date and Time</source>
+        <translation>Päivä ja aika</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="174"/>
@@ -7632,8 +7628,8 @@ sillä kohdekohtaiset ja Listan teemat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="183"/>
-        <source>Name:</source>
-        <translation>Nimi:</translation>
+        <source>Name</source>
+        <translation>Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
@@ -7647,8 +7643,8 @@ sillä kohdekohtaiset ja Listan teemat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="188"/>
-        <source>Example:</source>
-        <translation>Esimerkki:</translation>
+        <source>Example</source>
+        <translation>Esimerkki</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="190"/>
@@ -7672,8 +7668,8 @@ sillä kohdekohtaiset ja Listan teemat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="198"/>
-        <source>Timed slide interval:</source>
-        <translation>Automaattisen toiston nopeus:</translation>
+        <source>Timed slide interval</source>
+        <translation>Automaattisen toiston nopeus</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="199"/>
@@ -7687,9 +7683,9 @@ sillä kohdekohtaiset ja Listan teemat.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="202"/>
-        <source>Behavior of next/previous on the last/first slide:</source>
+        <source>Behavior of next/previous on the last/first slide</source>
         <translation>Kun viimeistä diaa toistetaan ja siirrytään seuraavaan tai,
-kun ensimmäistä diaa toistetaan ja siirrytään edelliseen:</translation>
+kun ensimmäistä diaa toistetaan ja siirrytään edelliseen</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="203"/>
@@ -7781,12 +7777,12 @@ Voit myös kirjoitaa tunnuksen itse: {tunnus} teksti johon muotoilu tulee {/tunn
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="92"/>
-        <source>Parent folder:</source>
+        <source>Parent folder</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="93"/>
-        <source>Folder name:</source>
+        <source>Folder name</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -7814,7 +7810,7 @@ Voit myös kirjoitaa tunnuksen itse: {tunnus} teksti johon muotoilu tulee {/tunn
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="228"/>
-        <source>Add items to folder:</source>
+        <source>Add items to folder</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -7945,8 +7941,8 @@ Voit myös kirjoitaa tunnuksen itse: {tunnus} teksti johon muotoilu tulee {/tunn
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
-        <source>Translation:</source>
-        <translation>Käännös:</translation>
+        <source>Translation</source>
+        <translation>Käännös</translation>
     </message>
 </context>
 <context>
@@ -8284,8 +8280,8 @@ Voit hallita moduuleja ”Asetukset” valikon kautta.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="1739"/>
-        <source>Title:</source>
-        <translation>Nimi:</translation>
+        <source>Title</source>
+        <translation>Nimi</translation>
     </message>
 </context>
 <context>
@@ -8625,8 +8621,8 @@ ole hyvä ja valitse toinen pikanäppäin.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="219"/>
-        <source>Number of recent service files to display:</source>
-        <translation>Viimeisten näytettävien listatiedostojen määrä:</translation>
+        <source>Number of recent service files to display</source>
+        <translation>Viimeisten näytettävien listatiedostojen määrä</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="220"/>
@@ -8746,7 +8742,7 @@ in slide controller:</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="264"/>
-        <source>Interface Theme (needs restart):</source>
+        <source>Interface Theme (needs restart)</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -8874,8 +8870,8 @@ appears to contain Opal Presenter data files. Do you wish to replace these files
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="205"/>
-        <source>Logo file:</source>
-        <translation>Logon valinta:</translation>
+        <source>Logo file</source>
+        <translation>Logon valinta</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="206"/>
@@ -9643,8 +9639,8 @@ kuin voit jatkaa eteenpäin.</translation>
     <name>OpenLP.FileRenameForm</name>
     <message>
         <location filename="../../openlp/core/ui/filerenamedialog.py" line="61"/>
-        <source>New File Name:</source>
-        <translation>Uusi tiedostonimi:</translation>
+        <source>New File Name</source>
+        <translation>Uusi tiedostonimi</translation>
     </message>
 </context>
 <context>
@@ -9869,7 +9865,7 @@ Alternatively, you can leave this blank to configure Opal Presenter manually.</s
     </message>
     <message>
         <location filename="../../openlp/core/ui/plugindialog.py" line="77"/>
-        <source>Status:</source>
+        <source>Status</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -10221,8 +10217,8 @@ If you click the &apos;{finish_button}&apos; button you can download the data at
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="148"/>
-        <source>Path:</source>
-        <translation>Polku:</translation>
+        <source>Path</source>
+        <translation>Polku</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="149"/>
@@ -10461,32 +10457,32 @@ haluatko korvata nämä tiedostot?</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="203"/>
-        <source>Listen IP address (0.0.0.0 matches all addresses):</source>
+        <source>Listen IP address (0.0.0.0 matches all addresses)</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="206"/>
-        <source>Port number:</source>
-        <translation>Portti:</translation>
+        <source>Port number</source>
+        <translation>Portti</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="207"/>
-        <source>Remote URL:</source>
-        <translation>Etähallinnan osoite:</translation>
+        <source>Remote URL</source>
+        <translation>Etähallinnan osoite</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="208"/>
-        <source>Stage view URL:</source>
-        <translation>Lavanäytön osoite:</translation>
+        <source>Stage view URL</source>
+        <translation>Lavanäytön osoite</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="209"/>
-        <source>Live view URL:</source>
-        <translation>Esitysnäkymän osoite:</translation>
+        <source>Live view URL</source>
+        <translation>Esitysnäkymän osoite</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="210"/>
-        <source>Chords view URL:</source>
+        <source>Chords view URL</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -10532,17 +10528,17 @@ etähallinnassa ja lavanäkymässä</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="221"/>
-        <source>User id:</source>
-        <translation>Käyttäjän id:</translation>
+        <source>User id</source>
+        <translation>Käyttäjän id</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="222"/>
-        <source>Password:</source>
-        <translation>Salasana:</translation>
+        <source>Password</source>
+        <translation>Salasana</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="223"/>
-        <source>Installed version:</source>
+        <source>Installed version</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -10552,7 +10548,7 @@ etähallinnassa ja lavanäkymässä</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="225"/>
-        <source>Latest version:</source>
+        <source>Latest version</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -10567,12 +10563,12 @@ etähallinnassa ja lavanäkymässä</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="228"/>
-        <source>HTTP Server:</source>
+        <source>HTTP Server</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="229"/>
-        <source>Websocket Server:</source>
+        <source>Websocket Server</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -11254,7 +11250,7 @@ See log for details</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="225"/>
-        <source>Add first slide:</source>
+        <source>Add first slide</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -11304,17 +11300,17 @@ See log for details</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="237"/>
-        <source>Username:</source>
-        <translation>Käyttäjätunnus:</translation>
+        <source>Username</source>
+        <translation>Käyttäjätunnus</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="238"/>
-        <source>Password:</source>
-        <translation>Salasana:</translation>
+        <source>Password</source>
+        <translation>Salasana</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="239"/>
-        <source>Chord notation to use:</source>
+        <source>Chord notation to use</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -11709,8 +11705,8 @@ Paina &quot;Seuraava&quot; aloittaaksesi&lt;/font&gt;</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="158"/>
-        <source>Directory:</source>
-        <translation>Tiedostosijainti:</translation>
+        <source>Directory</source>
+        <translation>Tiedostosijainti</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="159"/>
@@ -11787,8 +11783,8 @@ Virhe: {error}</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/topicsdialog.py" line="61"/>
-        <source>Topic name:</source>
-        <translation>Aiheen nimi:</translation>
+        <source>Topic name</source>
+        <translation>Aiheen nimi</translation>
     </message>
 </context>
 <context>
@@ -12012,12 +12008,12 @@ joissa uusi kirja {new} esiintyy?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="67"/>
-        <source>&amp;Name:</source>
+        <source>&amp;Name</source>
         <translation>&amp;Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="68"/>
-        <source>&amp;Publisher:</source>
+        <source>&amp;Publisher</source>
         <translation>&amp;Kustantaja</translation>
     </message>
 </context>
@@ -12030,18 +12026,18 @@ joissa uusi kirja {new} esiintyy?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="75"/>
-        <source>Display name:</source>
-        <translation>Näytön nimi:</translation>
+        <source>Display name</source>
+        <translation>Näytön nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="76"/>
-        <source>First name:</source>
-        <translation>Etunimi:</translation>
+        <source>First name</source>
+        <translation>Etunimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="77"/>
-        <source>Last name:</source>
-        <translation>Sukunimi:</translation>
+        <source>Last name</source>
+        <translation>Sukunimi</translation>
     </message>
 </context>
 <context>
@@ -12217,23 +12213,23 @@ Are you sure you want to import this song?</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="396"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Nimi:</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="397"/>
-        <source>Alt&amp;ernate title:</source>
-        <translation>&amp;Vaihtoehtoinen nimi:</translation>
+        <source>Alt&amp;ernate title</source>
+        <translation>&amp;Vaihtoehtoinen nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="398"/>
-        <source>&amp;Lyrics:</source>
-        <translation>&amp;Sanat:</translation>
+        <source>&amp;Lyrics</source>
+        <translation>&amp;Sanat</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="399"/>
-        <source>&amp;Verse order:</source>
-        <translation>&amp;Säkeiden järjestys:</translation>
+        <source>&amp;Verse order</source>
+        <translation>&amp;Säkeiden järjestys</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="402"/>
@@ -12513,28 +12509,28 @@ uusi laulukirja painamalla ”Lisää lauluun” painiketta.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="148"/>
-        <source>Title:</source>
-        <translation>Nimi:</translation>
+        <source>Title</source>
+        <translation>Nimi</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="149"/>
-        <source>Author(s):</source>
-        <translation>Tekijä(t):</translation>
+        <source>Author(s)</source>
+        <translation>Tekijä(t)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="150"/>
-        <source>Copyright:</source>
-        <translation>Tekijäinoikeudet:</translation>
+        <source>Copyright</source>
+        <translation>Tekijäinoikeudet</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="151"/>
-        <source>CCLI Number:</source>
-        <translation>CCLI numero:</translation>
+        <source>CCLI Number</source>
+        <translation>CCLI numero</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="152"/>
-        <source>Lyrics:</source>
-        <translation>Sanoitus:</translation>
+        <source>Lyrics</source>
+        <translation>Sanoitus</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="153"/>
@@ -12963,12 +12959,12 @@ tilastoida käytettyjä lauluja.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="84"/>
-        <source>Host:</source>
+        <source>Host</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="85"/>
-        <source>Port:</source>
+        <source>Port</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -12978,8 +12974,8 @@ tilastoida käytettyjä lauluja.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="89"/>
-        <source>Password:</source>
-        <translation>Salasana:</translation>
+        <source>Password</source>
+        <translation>Salasana</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="90"/>
@@ -12988,7 +12984,7 @@ tilastoida käytettyjä lauluja.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="91"/>
-        <source>Message:</source>
+        <source>Message</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -13070,8 +13066,8 @@ Voit halutessasi lähettää tiedoston esitettäväksi uudestaan.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="67"/>
-        <source>Present using:</source>
-        <translation>Esitä käyttäen:</translation>
+        <source>Present using</source>
+        <translation>Esitä käyttäen</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="152"/>

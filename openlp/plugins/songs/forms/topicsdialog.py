@@ -56,4 +56,4 @@ class Ui_TopicsDialog(object):
         Translate the UI on the fly.
         """
         topics_dialog.setWindowTitle(translate('SongsPlugin.TopicsForm', 'Topic Maintenance'))
-        self.name_label.setText(translate('SongsPlugin.TopicsForm', 'Topic name:'))
+        self.name_label.setText(translate('SongsPlugin.TopicsForm', 'Topic name'))

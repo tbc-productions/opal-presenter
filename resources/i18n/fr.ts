@@ -688,18 +688,18 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="171"/>
-        <source>Book:</source>
-        <translation>Carnet de chants :</translation>
+        <source>Book</source>
+        <translation>Carnet de chants</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="183"/>
-        <source>From:</source>
-        <translation>De :</translation>
+        <source>From</source>
+        <translation>De</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="189"/>
-        <source>To:</source>
-        <translation>A :</translation>
+        <source>To</source>
+        <translation>A</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="195"/>
@@ -708,18 +708,18 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="200"/>
-        <source>Second:</source>
-        <translation>Deuxième :</translation>
+        <source>Second</source>
+        <translation>Deuxième</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="264"/>
-        <source>Chapter:</source>
-        <translation>Chapitre :</translation>
+        <source>Chapter</source>
+        <translation>Chapitre</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="265"/>
-        <source>Verse:</source>
-        <translation>Verset :</translation>
+        <source>Verse</source>
+        <translation>Verset</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="270"/>
@@ -885,8 +885,8 @@ Cela signifie que la Bible actuellement utilisée est une bible web.</translatio
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="184"/>
-        <source>Bible theme:</source>
-        <translation>Thème :</translation>
+        <source>Bible theme</source>
+        <translation>Thème</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="190"/>
@@ -925,23 +925,23 @@ Cela signifie que la Bible actuellement utilisée est une bible web.</translatio
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="201"/>
-        <source>Verse separator:</source>
-        <translation>Séparateur de verset :</translation>
+        <source>Verse separator</source>
+        <translation>Séparateur de verset</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="202"/>
-        <source>Range separator:</source>
-        <translation>Séparateur d&apos;intervalle :</translation>
+        <source>Range separator</source>
+        <translation>Séparateur d&apos;intervalle</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="203"/>
-        <source>List separator:</source>
-        <translation>Séparateur de liste :</translation>
+        <source>List separator</source>
+        <translation>Séparateur de liste</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="204"/>
-        <source>End mark:</source>
-        <translation>Marque de fin :</translation>
+        <source>End mark</source>
+        <translation>Marque de fin</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="205"/>
@@ -960,9 +960,9 @@ Veuillez supprimer cette ligne pour utiliser la valeur par défaut.</translation
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="214"/>
         <source>Book name language in search field,
-search results and on display:</source>
+search results and on display</source>
         <translation>Langue du livre dans le champ de recherche,
-résultats de recherche et à l&apos;affichage :</translation>
+résultats de recherche et à l&apos;affichage</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="216"/>
@@ -1122,13 +1122,13 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="88"/>
-        <source>Current name:</source>
+        <source>Current name</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="89"/>
-        <source>Corresponding name:</source>
-        <translation>Nom correspondant :</translation>
+        <source>Corresponding name</source>
+        <translation>Nom correspondant</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="90"/>
@@ -1173,23 +1173,23 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="138"/>
-        <source>Version name:</source>
-        <translation>Nom de la version :</translation>
+        <source>Version name</source>
+        <translation>Nom de la version</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="139"/>
-        <source>Copyright:</source>
-        <translation>Droits d&apos;auteur :</translation>
+        <source>Copyright</source>
+        <translation>Droits d&apos;auteur</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="140"/>
-        <source>Permissions:</source>
-        <translation>Autorisations :</translation>
+        <source>Permissions</source>
+        <translation>Autorisations</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="141"/>
-        <source>Full license:</source>
-        <translation>Licence complète:</translation>
+        <source>Full license</source>
+        <translation>Licence complète</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="142"/>
@@ -1198,8 +1198,8 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="144"/>
-        <source>Book name language in search field, search results and on display:</source>
-        <translation>Langue du livre dans le champ de recherche, résultats de recherche et à l&apos;affichage :</translation>
+        <source>Book name language in search field, search results and on display</source>
+        <translation>Langue du livre dans le champ de recherche, résultats de recherche et à l&apos;affichage</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="146"/>
@@ -1254,8 +1254,8 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
-        <source>Language:</source>
-        <translation>Langue :</translation>
+        <source>Language</source>
+        <translation>Langue</translation>
     </message>
 </context>
 <context>
@@ -1294,17 +1294,17 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="405"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="407"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="408"/>
-        <source>Bible file:</source>
-        <translation>Fichier Bible :</translation>
+        <source>Bible file</source>
+        <translation>Fichier Bible</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="403"/>
-        <source>Books file:</source>
+        <source>Books file</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="404"/>
-        <source>Verses file:</source>
+        <source>Verses file</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1339,24 +1339,24 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="417"/>
-        <source>Bible:</source>
-        <translation>Bible :</translation>
+        <source>Bible</source>
+        <translation>Bible</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="418"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="421"/>
-        <source>Bibles:</source>
-        <translation>Bibles :</translation>
+        <source>Bibles</source>
+        <translation>Bibles</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="419"/>
-        <source>SWORD data folder:</source>
-        <translation>Répertoire de données SWORD:</translation>
+        <source>SWORD data folder</source>
+        <translation>Répertoire de données SWORD</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="420"/>
-        <source>SWORD zip-file:</source>
-        <translation>Fichier SWORD zippé:</translation>
+        <source>SWORD zip-file</source>
+        <translation>Fichier SWORD zippé</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="423"/>
@@ -1385,23 +1385,23 @@ minimum de {count} caractères et un espace pour des raisons de performances)</t
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="436"/>
-        <source>Version name:</source>
-        <translation>Nom de la version :</translation>
+        <source>Version name</source>
+        <translation>Nom de la version</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="437"/>
-        <source>Copyright:</source>
-        <translation>Droits d&apos;auteur :</translation>
+        <source>Copyright</source>
+        <translation>Droits d&apos;auteur</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="438"/>
-        <source>Permissions:</source>
-        <translation>Autorisations :</translation>
+        <source>Permissions</source>
+        <translation>Autorisations</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="439"/>
-        <source>Full license:</source>
-        <translation>License complète:</translation>
+        <source>Full license</source>
+        <translation>License complète</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="441"/>
@@ -1683,13 +1683,13 @@ Ce n&apos;est pas possible de personnaliser le nom des livres.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="94"/>
-        <source>Application ID:</source>
-        <translation>Identifiant de l&apos;application :</translation>
+        <source>Application ID</source>
+        <translation>Identifiant de l&apos;application</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="95"/>
-        <source>Secret:</source>
-        <translation>Secret:</translation>
+        <source>Secret</source>
+        <translation>Secret</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="98"/>
@@ -1717,7 +1717,7 @@ boxes below. Personal Access Tokens are created by doing the following:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="121"/>
-        <source>Default service type:</source>
+        <source>Default service type</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -1944,8 +1944,8 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/lib/imagetab.py" line="75"/>
-        <source>Theme:</source>
-        <translation>Thème:</translation>
+        <source>Theme</source>
+        <translation>Thème</translation>
     </message>
 </context>
 <context>
@@ -1975,8 +1975,8 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="84"/>
-        <source>Add images to group:</source>
-        <translation>Ajouter des images au groupe :</translation>
+        <source>Add images to group</source>
+        <translation>Ajouter des images au groupe</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="85"/>
@@ -2173,8 +2173,8 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="105"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Titre :</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Titre</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="107"/>
@@ -2198,13 +2198,13 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="112"/>
-        <source>The&amp;me:</source>
-        <translation>Thè&amp;me :</translation>
+        <source>The&amp;me</source>
+        <translation>Thè&amp;me</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="113"/>
-        <source>&amp;Credits:</source>
-        <translation>&amp;Crédits :</translation>
+        <source>&amp;Credits</source>
+        <translation>&amp;Crédits</translation>
     </message>
 </context>
 <context>
@@ -2482,18 +2482,18 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="119"/>
-        <source>Font name:</source>
-        <translation>Nom de la police :</translation>
+        <source>Font name</source>
+        <translation>Nom de la police</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="120"/>
-        <source>Font color:</source>
-        <translation>Couleur de la police :</translation>
+        <source>Font color</source>
+        <translation>Couleur de la police</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="122"/>
-        <source>Font size:</source>
-        <translation>Taille de la police :</translation>
+        <source>Font size</source>
+        <translation>Taille de la police</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="124"/>
@@ -2507,13 +2507,13 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="126"/>
-        <source>Alert timeout:</source>
-        <translation>Temps d&apos;alerte :</translation>
+        <source>Alert timeout</source>
+        <translation>Temps d&apos;alerte</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="128"/>
-        <source>Repeat (no. of times):</source>
-        <translation>Répéter (nb d&apos;occurrences) :</translation>
+        <source>Repeat (no. of times)</source>
+        <translation>Répéter (nb d&apos;occurrences)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="129"/>
@@ -2599,13 +2599,13 @@ Voulez-vous ajouter les autres images malgré tout ?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="94"/>
-        <source>Alert &amp;text:</source>
+        <source>Alert &amp;text</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="95"/>
-        <source>&amp;Parameter:</source>
-        <translation>&amp;Paramètre :</translation>
+        <source>&amp;Parameter</source>
+        <translation>&amp;Paramètre</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="96"/>
@@ -2945,8 +2945,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.ThemeWizard</name>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="339"/>
-        <source>Horizontal Align:</source>
-        <translation>Alignement horizontal :</translation>
+        <source>Horizontal Align</source>
+        <translation>Alignement horizontal</translation>
     </message>
 </context>
 <context>
@@ -2968,8 +2968,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="353"/>
-        <source>&amp;Vertical Align:</source>
-        <translation>Alignement &amp;vertical :</translation>
+        <source>&amp;Vertical Align</source>
+        <translation>Alignement &amp;vertical</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="457"/>
@@ -3038,23 +3038,23 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="124"/>
-        <source>HTTP:</source>
-        <translation>HTTP :</translation>
+        <source>HTTP</source>
+        <translation>HTTP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="126"/>
-        <source>HTTPS:</source>
-        <translation>HTTPS :</translation>
+        <source>HTTPS</source>
+        <translation>HTTPS</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="128"/>
-        <source>Username:</source>
-        <translation>Nom d&apos;utilisateur :</translation>
+        <source>Username</source>
+        <translation>Nom d&apos;utilisateur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="129"/>
-        <source>Password:</source>
-        <translation>Mot de passe :</translation>
+        <source>Password</source>
+        <translation>Mot de passe</translation>
     </message>
 </context>
 <context>
@@ -3074,8 +3074,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="310"/>
-        <source>Width:</source>
-        <translation>Largeur :</translation>
+        <source>Width</source>
+        <translation>Largeur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="311"/>
@@ -3084,8 +3084,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="314"/>
-        <source>Left:</source>
-        <translation>Gauche :</translation>
+        <source>Left</source>
+        <translation>Gauche</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="315"/>
@@ -3094,13 +3094,13 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="316"/>
-        <source>Top:</source>
-        <translation>Haut :</translation>
+        <source>Top</source>
+        <translation>Haut</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="317"/>
-        <source>Height:</source>
-        <translation>Hauteur :</translation>
+        <source>Height</source>
+        <translation>Hauteur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="318"/>
@@ -3159,8 +3159,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.SpellTextEdit</name>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="407"/>
-        <source>Language:</source>
-        <translation>Langue :</translation>
+        <source>Language</source>
+        <translation>Langue</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="418"/>
@@ -3182,8 +3182,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="54"/>
-        <source>Format:</source>
-        <translation>Format :</translation>
+        <source>Format</source>
+        <translation>Format</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="56"/>
@@ -3630,8 +3630,8 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="349"/>
-        <source>Background color:</source>
-        <translation>Couleur de fond :</translation>
+        <source>Background color</source>
+        <translation>Couleur de fond</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="350"/>
@@ -3670,13 +3670,13 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="362"/>
-        <source>CCLI number:</source>
-        <translation>Numéro CCLI :</translation>
+        <source>CCLI number</source>
+        <translation>Numéro CCLI</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="363"/>
-        <source>CCLI song number:</source>
-        <translation>Numéro de chant CCLI :</translation>
+        <source>CCLI song number</source>
+        <translation>Numéro de chant CCLI</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="365"/>
@@ -3700,8 +3700,8 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="369"/>
-        <source>Default Color:</source>
-        <translation>Couleur par défaut :</translation>
+        <source>Default Color</source>
+        <translation>Couleur par défaut</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="370"/>
@@ -3717,8 +3717,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="375"/>
-        <source>Display style:</source>
-        <translation>Style d&apos;affichage :</translation>
+        <source>Display style</source>
+        <translation>Style d&apos;affichage</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="377"/>
@@ -3802,7 +3802,7 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="402"/>
-        <source>Layout style:</source>
+        <source>Layout style</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -4246,8 +4246,8 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="476"/>
-        <source>Transpose:</source>
-        <translation>Transposer:</translation>
+        <source>Transpose</source>
+        <translation>Transposer</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="481"/>
@@ -4256,8 +4256,8 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="485"/>
-        <source>&amp;Verse type:</source>
-        <translation>&amp;Type de paragraphe :</translation>
+        <source>&amp;Verse type</source>
+        <translation>&amp;Type de paragraphe</translation>
     </message>
 </context>
 <context>
@@ -6483,7 +6483,7 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="162"/>
-        <source>Background type:</source>
+        <source>Background type</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6508,24 +6508,20 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="171"/>
-        <source>Color:</source>
-        <translation>Couleur :</translation>
+        <source>Color</source>
+        <translation>Couleur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="172"/>
-        <source>Starting color:</source>
-        <translation>Couleur de début :</translation>
+        <source>Starting color</source>
+        <translation>Couleur de début</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="173"/>
-        <source>Ending color:</source>
-        <translation>Couleur de fin :</translation>
+        <source>Ending color</source>
+        <translation>Couleur de fin</translation>
     </message>
-    <message>
-        <location filename="../../openlp/core/pages/background.py" line="174"/>
-        <source>Gradient:</source>
-        <translation type="unfinished"/>
-    </message>
+
     <message>
         <location filename="../../openlp/core/pages/background.py" line="176"/>
         <source>Horizontal</source>
@@ -6555,8 +6551,8 @@ Cette instance va s&apos;arrêter</translation>
         <location filename="../../openlp/core/pages/background.py" line="185"/>
         <location filename="../../openlp/core/pages/background.py" line="187"/>
         <location filename="../../openlp/core/pages/background.py" line="189"/>
-        <source>Background color:</source>
-        <translation>Couleur de fond :</translation>
+        <source>Background color</source>
+        <translation>Couleur de fond</translation>
     </message>
 </context>
 <context>
@@ -6574,8 +6570,8 @@ Cette instance va s&apos;arrêter</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="129"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="138"/>
-        <source>X position:</source>
-        <translation>Position x :</translation>
+        <source>X position</source>
+        <translation>Position x</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="130"/>
@@ -6592,20 +6588,20 @@ Cette instance va s&apos;arrêter</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="132"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="140"/>
-        <source>Y position:</source>
-        <translation>Position y :</translation>
+        <source>Y position</source>
+        <translation>Position y</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="134"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="142"/>
-        <source>Width:</source>
-        <translation>Largeur :</translation>
+        <source>Width</source>
+        <translation>Largeur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="136"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="144"/>
-        <source>Height:</source>
-        <translation>Hauteur :</translation>
+        <source>Height</source>
+        <translation>Hauteur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="137"/>
@@ -6622,20 +6618,20 @@ Cette instance va s&apos;arrêter</translation>
     <name>OpenLP.FontSelectWidget</name>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="194"/>
-        <source>Font:</source>
-        <translation>Police :</translation>
+        <source>Font</source>
+        <translation>Police</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="195"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="211"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="214"/>
-        <source>Color:</source>
-        <translation>Couleur :</translation>
+        <source>Color</source>
+        <translation>Couleur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="196"/>
-        <source>Style:</source>
-        <translation>Style :</translation>
+        <source>Style</source>
+        <translation>Style</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="198"/>
@@ -6651,8 +6647,8 @@ Cette instance va s&apos;arrêter</translation>
         <location filename="../../openlp/core/pages/fontselect.py" line="205"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="212"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="215"/>
-        <source>Size:</source>
-        <translation>Taille :</translation>
+        <source>Size</source>
+        <translation>Taille</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="207"/>
@@ -6661,13 +6657,13 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="208"/>
-        <source>Line Spacing:</source>
-        <translation>Espace entre les lignes :</translation>
+        <source>Line Spacing</source>
+        <translation>Espace entre les lignes</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="209"/>
-        <source>Letter Spacing:</source>
-        <translation>L&apos;espacement des lettres:</translation>
+        <source>Letter Spacing</source>
+        <translation>L&apos;espacement des lettres</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="210"/>
@@ -6699,8 +6695,8 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="116"/>
-        <source>Effect:</source>
-        <translation>Effet :</translation>
+        <source>Effect</source>
+        <translation>Effet</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="117"/>
@@ -6729,8 +6725,8 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="122"/>
-        <source>Speed:</source>
-        <translation>Vitesse :</translation>
+        <source>Speed</source>
+        <translation>Vitesse</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="123"/>
@@ -6749,8 +6745,8 @@ Cette instance va s&apos;arrêter</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="126"/>
-        <source>Direction:</source>
-        <translation>Sens :</translation>
+        <source>Direction</source>
+        <translation>Sens</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="127"/>
@@ -7059,8 +7055,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/themewizard.py" line="142"/>
-        <source>Theme name:</source>
-        <translation>Nom du thème :</translation>
+        <source>Theme name</source>
+        <translation>Nom du thème</translation>
     </message>
 </context>
 <context>
@@ -7072,18 +7068,18 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="123"/>
-        <source>Hours:</source>
-        <translation>Heures :</translation>
+        <source>Hours</source>
+        <translation>Heures</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="124"/>
-        <source>Minutes:</source>
-        <translation>Minutes :</translation>
+        <source>Minutes</source>
+        <translation>Minutes</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="125"/>
-        <source>Seconds:</source>
-        <translation>Secondes :</translation>
+        <source>Seconds</source>
+        <translation>Secondes</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="126"/>
@@ -7211,13 +7207,13 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="141"/>
-        <source>Title:</source>
-        <translation>Titre :</translation>
+        <source>Title</source>
+        <translation>Titre</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="142"/>
-        <source>Service Note Text:</source>
-        <translation>Texte de Note de Service:</translation>
+        <source>Service Note Text</source>
+        <translation>Texte de Note de Service</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="143"/>
@@ -7519,8 +7515,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="173"/>
-        <source>Date and Time:</source>
-        <translation>Date et Heure :</translation>
+        <source>Date and Time</source>
+        <translation>Date et Heure</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="174"/>
@@ -7569,8 +7565,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="183"/>
-        <source>Name:</source>
-        <translation>Nom :</translation>
+        <source>Name</source>
+        <translation>Nom</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
@@ -7584,8 +7580,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="188"/>
-        <source>Example:</source>
-        <translation>Exemple :</translation>
+        <source>Example</source>
+        <translation>Exemple</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="190"/>
@@ -7609,8 +7605,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="198"/>
-        <source>Timed slide interval:</source>
-        <translation>Intervalle de temps entre les diapositives :</translation>
+        <source>Timed slide interval</source>
+        <translation>Intervalle de temps entre les diapositives</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="199"/>
@@ -7624,8 +7620,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="202"/>
-        <source>Behavior of next/previous on the last/first slide:</source>
-        <translation>Comportement suivant/précédent sur la dernière/première diapositive :</translation>
+        <source>Behavior of next/previous on the last/first slide</source>
+        <translation>Comportement suivant/précédent sur la dernière/première diapositive</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="203"/>
@@ -7714,13 +7710,13 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="92"/>
-        <source>Parent folder:</source>
-        <translation>Dossier parent :</translation>
+        <source>Parent folder</source>
+        <translation>Dossier parent</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="93"/>
-        <source>Folder name:</source>
-        <translation>Nom de dossier:</translation>
+        <source>Folder name</source>
+        <translation>Nom de dossier</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="109"/>
@@ -7747,8 +7743,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="228"/>
-        <source>Add items to folder:</source>
-        <translation>Ajouter des éléments au dossier:</translation>
+        <source>Add items to folder</source>
+        <translation>Ajouter des éléments au dossier</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="229"/>
@@ -7880,8 +7876,8 @@ OpenLP tentera de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
-        <source>Translation:</source>
-        <translation>Traduction :</translation>
+        <source>Translation</source>
+        <translation>Traduction</translation>
     </message>
 </context>
 <context>
@@ -8217,8 +8213,8 @@ Ces fichiers seront supprimés si vous continuez à enregistrer.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="1739"/>
-        <source>Title:</source>
-        <translation>Titre :</translation>
+        <source>Title</source>
+        <translation>Titre</translation>
     </message>
 </context>
 <context>
@@ -8556,8 +8552,8 @@ veuillez utiliser un autre raccourci.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="219"/>
-        <source>Number of recent service files to display:</source>
-        <translation>Nombre de services récents à afficher :</translation>
+        <source>Number of recent service files to display</source>
+        <translation>Nombre de services récents à afficher</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="220"/>
@@ -8677,8 +8673,8 @@ in slide controller:</source>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="264"/>
-        <source>Interface Theme (needs restart):</source>
-        <translation>Thème de l&apos;interface (nécessite un redémarrage) :</translation>
+        <source>Interface Theme (needs restart)</source>
+        <translation>Thème de l&apos;interface (nécessite un redémarrage)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="265"/>
@@ -8805,8 +8801,8 @@ appears to contain Opal Presenter data files. Do you wish to replace these files
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="205"/>
-        <source>Logo file:</source>
-        <translation>Fichier de logo :</translation>
+        <source>Logo file</source>
+        <translation>Fichier de logo</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="206"/>
@@ -9567,8 +9563,8 @@ L&apos;opération est terminée et aucun changement n&apos;a été fait.</transl
     <name>OpenLP.FileRenameForm</name>
     <message>
         <location filename="../../openlp/core/ui/filerenamedialog.py" line="61"/>
-        <source>New File Name:</source>
-        <translation>Nouveau nom de fichier :</translation>
+        <source>New File Name</source>
+        <translation>Nouveau nom de fichier</translation>
     </message>
 </context>
 <context>
@@ -9793,8 +9789,8 @@ Alternatively, you can leave this blank to configure Opal Presenter manually.</s
     </message>
     <message>
         <location filename="../../openlp/core/ui/plugindialog.py" line="77"/>
-        <source>Status:</source>
-        <translation>État:</translation>
+        <source>Status</source>
+        <translation>État</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/plugindialog.py" line="78"/>
@@ -10153,8 +10149,8 @@ Si vous cliquez sur le bouton « {finish_button} », vous pouvez télécharger l
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="148"/>
-        <source>Path:</source>
-        <translation>Chemin :</translation>
+        <source>Path</source>
+        <translation>Chemin</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="149"/>
@@ -10393,33 +10389,33 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="203"/>
-        <source>Listen IP address (0.0.0.0 matches all addresses):</source>
-        <translation>Adresse IP d&apos;écoute (0.0.0.0 correspond à toutes les adresses) :</translation>
+        <source>Listen IP address (0.0.0.0 matches all addresses)</source>
+        <translation>Adresse IP d&apos;écoute (0.0.0.0 correspond à toutes les adresses)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="206"/>
-        <source>Port number:</source>
-        <translation>Numéro de port :</translation>
+        <source>Port number</source>
+        <translation>Numéro de port</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="207"/>
-        <source>Remote URL:</source>
+        <source>Remote URL</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="208"/>
-        <source>Stage view URL:</source>
+        <source>Stage view URL</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="209"/>
-        <source>Live view URL:</source>
-        <translation>URL du direct :</translation>
+        <source>Live view URL</source>
+        <translation>URL du direct</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="210"/>
-        <source>Chords view URL:</source>
-        <translation>URL de visualisation des accords:</translation>
+        <source>Chords view URL</source>
+        <translation>URL de visualisation des accords</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="211"/>
@@ -10463,18 +10459,18 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="221"/>
-        <source>User id:</source>
-        <translation>ID utilisateur :</translation>
+        <source>User id</source>
+        <translation>ID utilisateur</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="222"/>
-        <source>Password:</source>
-        <translation>Mot de passe :</translation>
+        <source>Password</source>
+        <translation>Mot de passe</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="223"/>
-        <source>Installed version:</source>
-        <translation>Version installé:</translation>
+        <source>Installed version</source>
+        <translation>Version installé</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="224"/>
@@ -10483,8 +10479,8 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="225"/>
-        <source>Latest version:</source>
-        <translation>Dernière version:</translation>
+        <source>Latest version</source>
+        <translation>Dernière version</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="226"/>
@@ -10498,13 +10494,13 @@ semble contenir des fichiers de données OpenLP. Souhaitez-vous remplacer ces fi
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="228"/>
-        <source>HTTP Server:</source>
-        <translation>Serveur HTTP:</translation>
+        <source>HTTP Server</source>
+        <translation>Serveur HTTP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="229"/>
-        <source>Websocket Server:</source>
-        <translation>Serveur Websocket:</translation>
+        <source>Websocket Server</source>
+        <translation>Serveur Websocket</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="230"/>
@@ -11172,8 +11168,8 @@ Voir le journal pour plus de détails</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="225"/>
-        <source>Add first slide:</source>
-        <translation>Ajouter la première diapositif:</translation>
+        <source>Add first slide</source>
+        <translation>Ajouter la première diapositif</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="226"/>
@@ -11222,18 +11218,18 @@ Voir le journal pour plus de détails</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="237"/>
-        <source>Username:</source>
-        <translation>Nom d&apos;utilisateur :</translation>
+        <source>Username</source>
+        <translation>Nom d&apos;utilisateur</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="238"/>
-        <source>Password:</source>
-        <translation>Mot de passe :</translation>
+        <source>Password</source>
+        <translation>Mot de passe</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="239"/>
-        <source>Chord notation to use:</source>
-        <translation>Notation d&apos;accords à utiliser:</translation>
+        <source>Chord notation to use</source>
+        <translation>Notation d&apos;accords à utiliser</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="240"/>
@@ -11628,8 +11624,8 @@ Vous pouvez désactiver ce message d&apos;avertissement dans les paramètres des
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="158"/>
-        <source>Directory:</source>
-        <translation>Répertoire :</translation>
+        <source>Directory</source>
+        <translation>Répertoire</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="159"/>
@@ -11705,8 +11701,8 @@ Vous pouvez désactiver ce message d&apos;avertissement dans les paramètres des
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/topicsdialog.py" line="61"/>
-        <source>Topic name:</source>
-        <translation>Nom du sujet :</translation>
+        <source>Topic name</source>
+        <translation>Nom du sujet</translation>
     </message>
 </context>
 <context>
@@ -11918,13 +11914,13 @@ Vous pouvez désactiver ce message d&apos;avertissement dans les paramètres des
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="67"/>
-        <source>&amp;Name:</source>
-        <translation>&amp;Nom :</translation>
+        <source>&amp;Name</source>
+        <translation>&amp;Nom</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="68"/>
-        <source>&amp;Publisher:</source>
-        <translation>&amp;Éditeur :</translation>
+        <source>&amp;Publisher</source>
+        <translation>&amp;Éditeur</translation>
     </message>
 </context>
 <context>
@@ -11936,18 +11932,18 @@ Vous pouvez désactiver ce message d&apos;avertissement dans les paramètres des
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="75"/>
-        <source>Display name:</source>
-        <translation>Nom affiché :</translation>
+        <source>Display name</source>
+        <translation>Nom affiché</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="76"/>
-        <source>First name:</source>
-        <translation>Prénom :</translation>
+        <source>First name</source>
+        <translation>Prénom</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="77"/>
-        <source>Last name:</source>
-        <translation>Nom :</translation>
+        <source>Last name</source>
+        <translation>Nom</translation>
     </message>
 </context>
 <context>
@@ -12123,23 +12119,23 @@ Are you sure you want to import this song?</source>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="396"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Titre :</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Titre</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="397"/>
-        <source>Alt&amp;ernate title:</source>
-        <translation>Titre alt&amp;ernatif :</translation>
+        <source>Alt&amp;ernate title</source>
+        <translation>Titre alt&amp;ernatif</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="398"/>
-        <source>&amp;Lyrics:</source>
-        <translation>&amp;Paroles :</translation>
+        <source>&amp;Lyrics</source>
+        <translation>&amp;Paroles</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="399"/>
-        <source>&amp;Verse order:</source>
-        <translation>Ordre des &amp;paragraphes :</translation>
+        <source>&amp;Verse order</source>
+        <translation>Ordre des &amp;paragraphes</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="402"/>
@@ -12413,28 +12409,28 @@ Veuillez corriger ces balises avant de continuer.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="148"/>
-        <source>Title:</source>
-        <translation>Titre :</translation>
+        <source>Title</source>
+        <translation>Titre</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="149"/>
-        <source>Author(s):</source>
-        <translation>Auteur(s):</translation>
+        <source>Author(s)</source>
+        <translation>Auteur(s)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="150"/>
-        <source>Copyright:</source>
-        <translation>Droits d&apos;auteur :</translation>
+        <source>Copyright</source>
+        <translation>Droits d&apos;auteur</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="151"/>
-        <source>CCLI Number:</source>
-        <translation>Numéro CCLI :</translation>
+        <source>CCLI Number</source>
+        <translation>Numéro CCLI</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="152"/>
-        <source>Lyrics:</source>
-        <translation>Paroles :</translation>
+        <source>Lyrics</source>
+        <translation>Paroles</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="153"/>
@@ -12861,12 +12857,12 @@ a été créé avec succès.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="84"/>
-        <source>Host:</source>
+        <source>Host</source>
         <translation type="unfinished"/>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="85"/>
-        <source>Port:</source>
+        <source>Port</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -12876,8 +12872,8 @@ a été créé avec succès.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="89"/>
-        <source>Password:</source>
-        <translation>Mot de passe :</translation>
+        <source>Password</source>
+        <translation>Mot de passe</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="90"/>
@@ -12886,7 +12882,7 @@ a été créé avec succès.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="91"/>
-        <source>Message:</source>
+        <source>Message</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -12966,7 +12962,7 @@ a été créé avec succès.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="67"/>
-        <source>Present using:</source>
+        <source>Present using</source>
         <translation type="unfinished"/>
     </message>
     <message>

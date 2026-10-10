@@ -299,7 +299,7 @@ class SongsTab(SettingsTab):
         self.update_on_edit_check_box.setText(translate('SongsPlugin.SongsTab', 'Update service from song edit'))
         self.add_from_service_check_box.setText(translate('SongsPlugin.SongsTab',
                                                           'Import missing songs from Service files'))
-        self.first_slide_mode_label.setText(translate('SongsPlugin.SongsTab', 'Add first slide:'))
+        self.first_slide_mode_label.setText(translate('SongsPlugin.SongsTab', 'Add first slide'))
         self.first_slide_mode_combobox.setItemText(0, translate('SongsPlugin.SongsTab', 'None'))
         self.first_slide_mode_combobox.setItemText(1, translate('SongsPlugin.SongsTab', 'Songbook'))
         self.first_slide_mode_combobox.setItemText(2, translate('SongsPlugin.SongsTab', 'Same as Footer'))
@@ -311,9 +311,9 @@ class SongsTab(SettingsTab):
         self.disable_chords_import_check_box.setText(translate('SongsPlugin.SongsTab',
                                                                'Ignore chords when importing songs'))
         self.ccli_login_group_box.setTitle(translate('SongsPlugin.SongsTab', 'SongSelect Login'))
-        self.ccli_username_label.setText(translate('SongsPlugin.SongsTab', 'Username:'))
-        self.ccli_password_label.setText(translate('SongsPlugin.SongsTab', 'Password:'))
-        self.chord_notation_label.setText(translate('SongsPlugin.SongsTab', 'Chord notation to use:'))
+        self.ccli_username_label.setText(translate('SongsPlugin.SongsTab', 'Username'))
+        self.ccli_password_label.setText(translate('SongsPlugin.SongsTab', 'Password'))
+        self.chord_notation_label.setText(translate('SongsPlugin.SongsTab', 'Chord notation to use'))
         self.english_notation_radio_button.setText(translate('SongsPlugin.SongsTab', 'English') + ' (C-D-E-F-G-A-B)')
         self.german_notation_radio_button.setText(translate('SongsPlugin.SongsTab', 'German') + ' (C-D-E-F-G-A-H)')
         self.neolatin_notation_radio_button.setText(
@@ -321,18 +321,18 @@ class SongsTab(SettingsTab):
         self.song_key_warning_check_box.setText(translate('SongsPlugin.SongsTab', 'Warn about missing song key'))
         self.footer_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Footer'))
         self.section_colors_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Section Theme'))
-        self.section_color_intro_label.setText(translate('SongsPlugin.SongsTab', 'Intro:'))
-        self.section_color_verse_label.setText(translate('SongsPlugin.SongsTab', 'Verse:'))
-        self.section_color_pre_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Pre-Chorus:'))
-        self.section_color_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Chorus:'))
-        self.section_color_bridge_label.setText(translate('SongsPlugin.SongsTab', 'Bridge:'))
-        self.section_color_ending_label.setText(translate('SongsPlugin.SongsTab', 'Ending:'))
-        self.section_color_other_label.setText(translate('SongsPlugin.SongsTab', 'Other:'))
+        self.section_color_intro_label.setText(translate('SongsPlugin.SongsTab', 'Intro'))
+        self.section_color_verse_label.setText(translate('SongsPlugin.SongsTab', 'Verse'))
+        self.section_color_pre_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Pre-Chorus'))
+        self.section_color_chorus_label.setText(translate('SongsPlugin.SongsTab', 'Chorus'))
+        self.section_color_bridge_label.setText(translate('SongsPlugin.SongsTab', 'Bridge'))
+        self.section_color_ending_label.setText(translate('SongsPlugin.SongsTab', 'Ending'))
+        self.section_color_other_label.setText(translate('SongsPlugin.SongsTab', 'Other'))
         self.section_colors_defaults_button.setText(translate('SongsPlugin.SongsTab', 'Restore Defaults'))
         self.section_background_opacity_maximum_label.setText(
-            translate('SongsPlugin.SongsTab', 'Maximum background opacity:'))
+            translate('SongsPlugin.SongsTab', 'Maximum background opacity'))
         self.section_background_opacity_minimum_label.setText(
-            translate('SongsPlugin.SongsTab', 'Minimum background opacity:'))
+            translate('SongsPlugin.SongsTab', 'Minimum background opacity'))
         # Preview first line feature
         self.preview_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Preview'))
         self.preview_info_label.setText(translate('SongsPlugin.SongsTab',

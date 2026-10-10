@@ -122,7 +122,7 @@ class Ui_CustomEditDialog(object):
 
     def retranslate_ui(self, custom_edit_dialog):
         custom_edit_dialog.setWindowTitle(translate('CustomPlugin.EditCustomForm', 'Edit Custom Slides'))
-        self.title_label.setText(translate('CustomPlugin.EditCustomForm', '&Title:'))
+        self.title_label.setText(translate('CustomPlugin.EditCustomForm', '&Title'))
         self.add_action.setText(UiStrings().Add)
         self.add_action.setToolTip(translate('CustomPlugin.EditCustomForm', 'Add a new slide at bottom.'))
         self.edit_action.setText(UiStrings().Edit)
@@ -135,7 +135,7 @@ class Ui_CustomEditDialog(object):
         self.up_action.setToolTip(translate('OpenLP.Ui', 'Move selection up one position.'))
         self.down_action.setText(UiStrings().Down)
         self.down_action.setToolTip(translate('OpenLP.Ui', 'Move selection down one position.'))
-        self.theme_label.setText(translate('CustomPlugin.EditCustomForm', 'The&me:'))
-        self.credit_label.setText(translate('CustomPlugin.EditCustomForm', '&Credits:'))
+        self.theme_label.setText(translate('CustomPlugin.EditCustomForm', 'The&me'))
+        self.credit_label.setText(translate('CustomPlugin.EditCustomForm', '&Credits'))
         self.preview_button.setText(UiStrings().SaveAndPreview)
         self.save_button.setText(UiStrings().SaveAndClose)

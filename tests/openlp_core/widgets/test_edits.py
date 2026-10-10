@@ -86,6 +86,16 @@ def path_edit(mock_settings: MagicMock) -> PathEdit:
         return PathEdit()
 
 
+def test_path_input_matches_adjacent_buttons(qapp, settings, qtbot):
+    field = PathEdit()
+    qtbot.addWidget(field)
+    field.show()
+    for width in (600, 300):
+        field.resize(width, field.sizeHint().height())
+        qapp.process_events()
+        assert field.line_edit.height() == field.browse_button.height() == field.revert_button.height()
+
+
 def test_path_getter(path_edit: PathEdit):
     """
     Test the `path` property getter.

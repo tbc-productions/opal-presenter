@@ -203,7 +203,7 @@ class BiblesTab(SettingsTab):
         self.new_chapters_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Only show new chapter numbers'))
         self.layout_style_label.setText(UiStrings().LayoutStyle)
         self.display_style_label.setText(UiStrings().DisplayStyle)
-        self.bible_theme_label.setText(translate('BiblesPlugin.BiblesTab', 'Bible theme:'))
+        self.bible_theme_label.setText(translate('BiblesPlugin.BiblesTab', 'Bible theme'))
         self.layout_style_combo_box.setItemText(LayoutStyle.VersePerSlide, UiStrings().VersePerSlide)
         self.layout_style_combo_box.setItemText(LayoutStyle.VersePerLine, UiStrings().VersePerLine)
         self.layout_style_combo_box.setItemText(LayoutStyle.Continuous, UiStrings().Continuous)
@@ -220,10 +220,10 @@ class BiblesTab(SettingsTab):
                                        'Note: Changes do not affect verses in the Service'))
         self.bible_second_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Display second Bible verses'))
         self.scripture_reference_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Custom Scripture References'))
-        self.verse_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Verse separator:'))
-        self.range_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Range separator:'))
-        self.list_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'List separator:'))
-        self.end_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'End mark:'))
+        self.verse_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Verse separator'))
+        self.range_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'Range separator'))
+        self.list_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'List separator'))
+        self.end_separator_check_box.setText(translate('BiblesPlugin.BiblesTab', 'End mark'))
         tip_text = translate('BiblesPlugin.BiblesTab',
                              'Multiple alternative verse separators may be defined.\nThey have to be separated by a '
                              'vertical bar "|".\nPlease clear this edit line to use the default value.')
@@ -233,7 +233,7 @@ class BiblesTab(SettingsTab):
         self.end_separator_line_edit.setToolTip(tip_text)
         self.language_selection_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Default Bible Language'))
         self.language_selection_label.setText(
-            translate('BiblesPlugin.BiblesTab', 'Book name language in search field,\nsearch results and on display:'))
+            translate('BiblesPlugin.BiblesTab', 'Book name language in search field,\nsearch results and on display'))
         self.language_selection_combo_box.setItemText(
             LanguageSelection.Bible, translate('BiblesPlugin.BiblesTab', 'Bible Language'))
         self.language_selection_combo_box.setItemText(
@@ -248,7 +248,7 @@ class BiblesTab(SettingsTab):
             'BiblesPlugin.BiblesTab', 'Search automatically while typing'))
         self.reference_format_group_box.setTitle(translate('BiblesPlugin.BiblesTab', 'Bible Reference Format'))
         self.reference_format_label.setText(
-            translate('BiblesPlugin.BiblesTab', 'Footer reference template:'))
+            translate('BiblesPlugin.BiblesTab', 'Footer reference template'))
         self.reference_format_text_edit.setToolTip(translate(
             'BiblesPlugin.BiblesTab',
             'Mako variables:\n${bible_reference}\n${version}\n${copyright}\n${permission}'))

@@ -117,7 +117,7 @@ class PresentationMediaItem(FolderLibraryItem):
         super().retranslate_ui()
         self.on_new_prompt = translate('PresentationPlugin.MediaItem', 'Select Presentation(s)')
         self.automatic = translate('PresentationPlugin.MediaItem', 'Automatic')
-        self.display_type_label.setText(translate('PresentationPlugin.MediaItem', 'Present using:'))
+        self.display_type_label.setText(translate('PresentationPlugin.MediaItem', 'Present using'))
 
     def setup_item(self):
         """

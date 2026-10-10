@@ -172,7 +172,7 @@ class ServiceTab(SettingsTab):
         # Default Service Name
         self.service_name_group_box.setTitle(translate('OpenLP.ServiceTab', 'Default Service Name'))
         self.service_name_check_box.setText(translate('OpenLP.ServiceTab', 'Enable default service name'))
-        self.service_name_time_label.setText(translate('OpenLP.ServiceTab', 'Date and Time:'))
+        self.service_name_time_label.setText(translate('OpenLP.ServiceTab', 'Date and Time'))
         self.service_name_day.setItemText(0, translate('OpenLP.ServiceTab', 'Monday'))
         self.service_name_day.setItemText(1, translate('OpenLP.ServiceTab', 'Tuesday'))
         self.service_name_day.setItemText(2, translate('OpenLP.ServiceTab', 'Wednesday'))
@@ -182,13 +182,13 @@ class ServiceTab(SettingsTab):
         self.service_name_day.setItemText(6, translate('OpenLP.ServiceTab', 'Sunday'))
         self.service_name_day.setItemText(7, translate('OpenLP.ServiceTab', 'Now'))
         self.service_name_time.setToolTip(translate('OpenLP.ServiceTab', 'Time service usually starts.'))
-        self.service_name_label.setText(translate('OpenLP.ServiceTab', 'Name:'))
+        self.service_name_label.setText(translate('OpenLP.ServiceTab', 'Name'))
         self.service_name_edit.setToolTip(translate('OpenLP.ServiceTab',
                                                   'Use date and time codes to build a suggested service filename.'))
         self.service_name_revert_button.setToolTip(
             translate('OpenLP.ServiceTab',
                       'Revert to the default service name "{name}".').format(name=UiStrings().DefaultServiceName))
-        self.service_name_example_label.setText(translate('OpenLP.ServiceTab', 'Example:'))
+        self.service_name_example_label.setText(translate('OpenLP.ServiceTab', 'Example'))
         # Slide Controller
         self.slide_controller_groupbox.setTitle(translate('OpenLP.ServiceTab', 'Slide Controller'))
         self.click_live_slide_to_unblank_check_box.setText(translate('OpenLP.ServiceTab',
@@ -200,11 +200,11 @@ class ServiceTab(SettingsTab):
         self.live_preview_shows_presentation_screen_check_box.setText(
             UiStrings().LivePreviewShowsPresentationScreen
         )
-        self.timeout_label.setText(translate('OpenLP.ServiceTab', 'Timed slide interval:'))
+        self.timeout_label.setText(translate('OpenLP.ServiceTab', 'Timed slide interval'))
         self.timeout_spin_box.setSuffix(translate('OpenLP.ServiceTab', ' sec'))
         # Service Item Wrapping
         self.slide_group_box.setTitle(translate('OpenLP.ServiceTab', 'Service Item Wrapping'))
-        self.slide_label.setText(translate('OpenLP.ServiceTab', 'Behavior of next/previous on the last/first slide:'))
+        self.slide_label.setText(translate('OpenLP.ServiceTab', 'Behavior of next/previous on the last/first slide'))
         self.end_slide_radio_button.setText(translate('OpenLP.ServiceTab', '&Remain on Slide'))
         self.wrap_slide_radio_button.setText(translate('OpenLP.ServiceTab', '&Wrap around'))
         self.next_item_radio_button.setText(translate('OpenLP.ServiceTab', '&Move to next/previous service item'))

@@ -241,7 +241,7 @@ class CustomMediaItem(MediaManagerItem):
         """
 
         """
-        self.search_text_label.setText('{text}:'.format(text=UiStrings().Search))
+        self.search_text_edit.setAccessibleName(UiStrings().Search)
         self.search_text_button.setToolTip(UiStrings().Search)
 
     def initialise(self):

@@ -179,7 +179,7 @@ class Ui_ThemeWizard(object):
 
         self.command_row = QtWidgets.QHBoxLayout()
         self.command_row.setSpacing(12)
-        self.theme_name_label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', 'Theme name:'))
+        self.theme_name_label = QtWidgets.QLabel(translate('OpenLP.ThemeWizard', 'Theme name'))
         self.theme_name_edit = QtWidgets.QLineEdit()
         self.theme_name_edit.setValidator(QtGui.QRegularExpressionValidator(
             QtCore.QRegularExpression(r'[^/\\?*|<>\[\]":<>+%]+'), theme_dialog))
@@ -402,7 +402,7 @@ class Ui_ThemeWizard(object):
         self.play_transition_action.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setText(translate('OpenLP.ThemeWizard', 'Play'))
         self.play_transition_button.setToolTip(translate('OpenLP.ThemeWizard', 'Preview transition'))
-        self.theme_name_label.setText(translate('OpenLP.ThemeWizard', 'Theme name:'))
+        self.theme_name_label.setText(translate('OpenLP.ThemeWizard', 'Theme name'))
 
     def add_property_section(self, caption, widget, expanded=False):
         caption = translate('OpenLP.ThemeWizard', caption)

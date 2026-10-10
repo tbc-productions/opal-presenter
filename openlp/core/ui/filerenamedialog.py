@@ -57,4 +57,4 @@ class Ui_FileRenameDialog(object):
         """
         Translate the UI on the fly.
         """
-        self.file_name_label.setText(translate('OpenLP.FileRenameForm', 'New File Name:'))
+        self.file_name_label.setText(translate('OpenLP.FileRenameForm', 'New File Name'))

@@ -280,7 +280,7 @@ def test_create_valign_selection_widgets():
     label, combo = create_valign_selection_widgets(dialog)
 
     # THEN: We should get a label and a combobox.
-    assert translate('OpenLP.Ui', '&Vertical Align:') == label.text()
+    assert translate('OpenLP.Ui', '&Vertical Align') == label.text()
     assert isinstance(combo, QtWidgets.QComboBox)
     assert combo == label.buddy()
     for text in [UiStrings().Top, UiStrings().Middle, UiStrings().Bottom]:

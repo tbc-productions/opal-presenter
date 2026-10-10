@@ -92,8 +92,8 @@ class PlanningCenterTab(SettingsTab):
     def retranslate_ui(self):
         # === AUTH GROUP ===
         self.auth_group_box.setTitle(translate('PlanningCenterPlugin.PlanningCenterTab', 'Authentication Settings'))
-        self.application_id_label.setText(translate('PlanningCenterPlugin.PlanningCenterTab', 'Application ID:'))
-        self.secret_label.setText(translate('PlanningCenterPlugin.PlanningCenterTab', 'Secret:'))
+        self.application_id_label.setText(translate('PlanningCenterPlugin.PlanningCenterTab', 'Application ID'))
+        self.secret_label.setText(translate('PlanningCenterPlugin.PlanningCenterTab', 'Secret'))
 
         self.notice_label.setText(
             translate('PlanningCenterPlugin.PlanningCenterTab', '<strong>Note:</strong> '
@@ -119,7 +119,7 @@ boxes below. Personal Access Tokens are created by doing the following:
         # === DEFAULTS GROUP ===
         self.defaults_group_box.setTitle(translate('PlanningCenterPlugin.PlanningCenterTab', 'Defaults'))
         self.def_service_type_label.setText(
-            translate('PlanningCenterPlugin.PlanningCenterTab', 'Default service type:')
+            translate('PlanningCenterPlugin.PlanningCenterTab', 'Default service type')
         )
 
     def resizeEvent(self, event=None):

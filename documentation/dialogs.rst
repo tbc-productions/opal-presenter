@@ -64,6 +64,9 @@ paragraphs and enable word wrapping; routine field labels use Caption.
 Associate labels with fields via ``setBuddy()`` and provide accessible names
 when a field has no visible label. Related controls need distinct labels;
 date ranges use two compact CalendarDatePicker fields labelled From and To.
+Omit trailing colons from control labels. Centre single-line labels vertically
+beside their fields and match input height to adjacent command buttons. Keep
+labels for multiline editors aligned with the top of their content.
 
 The adapters preserve ContentDialog's native padding, give fields at least
 32 px height, disable the problematic opacity effect on macOS and constrain

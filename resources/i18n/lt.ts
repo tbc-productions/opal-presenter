@@ -688,18 +688,18 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="171"/>
-        <source>Book:</source>
-        <translation>Knyga:</translation>
+        <source>Book</source>
+        <translation>Knyga</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="183"/>
-        <source>From:</source>
-        <translation>Nuo:</translation>
+        <source>From</source>
+        <translation>Nuo</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="189"/>
-        <source>To:</source>
-        <translation>Iki:</translation>
+        <source>To</source>
+        <translation>Iki</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="195"/>
@@ -708,18 +708,18 @@
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="200"/>
-        <source>Second:</source>
-        <translation>Antroji:</translation>
+        <source>Second</source>
+        <translation>Antroji</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="264"/>
-        <source>Chapter:</source>
-        <translation>Skyrius:</translation>
+        <source>Chapter</source>
+        <translation>Skyrius</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="265"/>
-        <source>Verse:</source>
-        <translation>Eilutė:</translation>
+        <source>Verse</source>
+        <translation>Eilutė</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/mediaitem.py" line="270"/>
@@ -886,8 +886,8 @@ Tai reiškia, kad šiuo metu pasirinkta Biblija yra saityno Biblija.</translatio
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="184"/>
-        <source>Bible theme:</source>
-        <translation>Biblijos apipavidalinimas:</translation>
+        <source>Bible theme</source>
+        <translation>Biblijos apipavidalinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="190"/>
@@ -926,23 +926,23 @@ Tai reiškia, kad šiuo metu pasirinkta Biblija yra saityno Biblija.</translatio
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="201"/>
-        <source>Verse separator:</source>
-        <translation>Eilutės skirtukas:</translation>
+        <source>Verse separator</source>
+        <translation>Eilutės skirtukas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="202"/>
-        <source>Range separator:</source>
-        <translation>Atkarpos skirtukas:</translation>
+        <source>Range separator</source>
+        <translation>Atkarpos skirtukas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="203"/>
-        <source>List separator:</source>
-        <translation>Sąrašo skirtukas:</translation>
+        <source>List separator</source>
+        <translation>Sąrašo skirtukas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="204"/>
-        <source>End mark:</source>
-        <translation>Pabaigos žymė:</translation>
+        <source>End mark</source>
+        <translation>Pabaigos žymė</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="205"/>
@@ -961,9 +961,9 @@ Norėdami naudoti numatytąją reikšmę, išvalykite šią eilutę.</translatio
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="214"/>
         <source>Book name language in search field,
-search results and on display:</source>
+search results and on display</source>
         <translation>Knygų pavadinimų kalba paieškos laukelyje,
-paieškos rezultatuose ir ekrane:</translation>
+paieškos rezultatuose ir ekrane</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/lib/biblestab.py" line="216"/>
@@ -1123,13 +1123,13 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="88"/>
-        <source>Current name:</source>
-        <translation>Dabartinis pavadinimas:</translation>
+        <source>Current name</source>
+        <translation>Dabartinis pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="89"/>
-        <source>Corresponding name:</source>
-        <translation>Atitinkamas pavadinimas:</translation>
+        <source>Corresponding name</source>
+        <translation>Atitinkamas pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/booknamedialog.py" line="90"/>
@@ -1174,23 +1174,23 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="138"/>
-        <source>Version name:</source>
-        <translation>Versijos pavadinimas:</translation>
+        <source>Version name</source>
+        <translation>Versijos pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="139"/>
-        <source>Copyright:</source>
-        <translation>Autorių teisės:</translation>
+        <source>Copyright</source>
+        <translation>Autorių teisės</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="140"/>
-        <source>Permissions:</source>
-        <translation>Leidimai:</translation>
+        <source>Permissions</source>
+        <translation>Leidimai</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="141"/>
-        <source>Full license:</source>
-        <translation>Visa licencija:</translation>
+        <source>Full license</source>
+        <translation>Visa licencija</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="142"/>
@@ -1199,8 +1199,8 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="144"/>
-        <source>Book name language in search field, search results and on display:</source>
-        <translation>Knygų pavadinimų kalba paieškos laukelyje, paieškos rezultatuose ir ekrane:</translation>
+        <source>Book name language in search field, search results and on display</source>
+        <translation>Knygų pavadinimų kalba paieškos laukelyje, paieškos rezultatuose ir ekrane</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/editbibledialog.py" line="146"/>
@@ -1255,8 +1255,8 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/languagedialog.py" line="73"/>
-        <source>Language:</source>
-        <translation>Kalba:</translation>
+        <source>Language</source>
+        <translation>Kalba</translation>
     </message>
 </context>
 <context>
@@ -1295,18 +1295,18 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="405"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="407"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="408"/>
-        <source>Bible file:</source>
-        <translation>Biblijos failas:</translation>
+        <source>Bible file</source>
+        <translation>Biblijos failas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="403"/>
-        <source>Books file:</source>
-        <translation>Knygų failas:</translation>
+        <source>Books file</source>
+        <translation>Knygų failas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="404"/>
-        <source>Verses file:</source>
-        <translation>Eilučių failas:</translation>
+        <source>Verses file</source>
+        <translation>Eilučių failas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="406"/>
@@ -1340,24 +1340,24 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="417"/>
-        <source>Bible:</source>
-        <translation>Biblija:</translation>
+        <source>Bible</source>
+        <translation>Biblija</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="418"/>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="421"/>
-        <source>Bibles:</source>
-        <translation>Biblijos:</translation>
+        <source>Bibles</source>
+        <translation>Biblijos</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="419"/>
-        <source>SWORD data folder:</source>
-        <translation>SWORD duomenų aplankas:</translation>
+        <source>SWORD data folder</source>
+        <translation>SWORD duomenų aplankas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="420"/>
-        <source>SWORD zip-file:</source>
-        <translation>SWORD zip-failas:</translation>
+        <source>SWORD zip-file</source>
+        <translation>SWORD zip-failas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="423"/>
@@ -1386,23 +1386,23 @@ teksto paieškoje privalo būti mažiausiai {count} simboliai ir tarpas)</transl
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="436"/>
-        <source>Version name:</source>
-        <translation>Versijos pavadinimas:</translation>
+        <source>Version name</source>
+        <translation>Versijos pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="437"/>
-        <source>Copyright:</source>
-        <translation>Autorių teisės:</translation>
+        <source>Copyright</source>
+        <translation>Autorių teisės</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="438"/>
-        <source>Permissions:</source>
-        <translation>Leidimai:</translation>
+        <source>Permissions</source>
+        <translation>Leidimai</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="439"/>
-        <source>Full license:</source>
-        <translation>Visa licencija:</translation>
+        <source>Full license</source>
+        <translation>Visa licencija</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/bibles/forms/bibleimportform.py" line="441"/>
@@ -1684,13 +1684,13 @@ Neįmanoma nustatyti pasirinktinus knygų pavadinimus.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="94"/>
-        <source>Application ID:</source>
-        <translation>Programos ID:</translation>
+        <source>Application ID</source>
+        <translation>Programos ID</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="95"/>
-        <source>Secret:</source>
-        <translation>Paslaptis:</translation>
+        <source>Secret</source>
+        <translation>Paslaptis</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="98"/>
@@ -1727,8 +1727,8 @@ Asmeninius prieigos raktus galima susikurti atlikus šiuos veiksmus:
     </message>
     <message>
         <location filename="../../openlp/plugins/planningcenter/lib/planningcentertab.py" line="121"/>
-        <source>Default service type:</source>
-        <translation>Numatytasis pamaldų tipas:</translation>
+        <source>Default service type</source>
+        <translation>Numatytasis pamaldų tipas</translation>
     </message>
     <message>
         <source>Enter your &lt;b&gt;Planning Center Online&lt;/b&gt; &lt;i&gt;Personal Access Token&lt;/i&gt; details in the text
@@ -1954,8 +1954,8 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/lib/imagetab.py" line="75"/>
-        <source>Theme:</source>
-        <translation>Apipavidalinimas:</translation>
+        <source>Theme</source>
+        <translation>Apipavidalinimas</translation>
     </message>
 </context>
 <context>
@@ -1985,8 +1985,8 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="84"/>
-        <source>Add images to group:</source>
-        <translation>Pridėti paveikslus į grupę:</translation>
+        <source>Add images to group</source>
+        <translation>Pridėti paveikslus į grupę</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/images/forms/choosegroupdialog.py" line="85"/>
@@ -2183,8 +2183,8 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="105"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Pavadinimas:</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="107"/>
@@ -2208,13 +2208,13 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="112"/>
-        <source>The&amp;me:</source>
-        <translation>Te&amp;ma:</translation>
+        <source>The&amp;me</source>
+        <translation>Te&amp;ma</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/custom/forms/editcustomdialog.py" line="113"/>
-        <source>&amp;Credits:</source>
-        <translation>&amp;Padėkos:</translation>
+        <source>&amp;Credits</source>
+        <translation>&amp;Padėkos</translation>
     </message>
 </context>
 <context>
@@ -2492,18 +2492,18 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="119"/>
-        <source>Font name:</source>
-        <translation>Šrifto pavadinimas:</translation>
+        <source>Font name</source>
+        <translation>Šrifto pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="120"/>
-        <source>Font color:</source>
-        <translation>Šrifto spalva:</translation>
+        <source>Font color</source>
+        <translation>Šrifto spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="122"/>
-        <source>Font size:</source>
-        <translation>Fono šriftas:</translation>
+        <source>Font size</source>
+        <translation>Fono šriftas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="124"/>
@@ -2517,13 +2517,13 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="126"/>
-        <source>Alert timeout:</source>
-        <translation>Įspėjimui skirtas laikas:</translation>
+        <source>Alert timeout</source>
+        <translation>Įspėjimui skirtas laikas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="128"/>
-        <source>Repeat (no. of times):</source>
-        <translation>Kartoti (kiek kartų):</translation>
+        <source>Repeat (no. of times)</source>
+        <translation>Kartoti (kiek kartų)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/lib/alertstab.py" line="129"/>
@@ -2609,13 +2609,13 @@ Ar vis tiek norite pridėti kitus paveikslus?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="94"/>
-        <source>Alert &amp;text:</source>
-        <translation>Įspėjimo &amp;tekstas:</translation>
+        <source>Alert &amp;text</source>
+        <translation>Įspėjimo &amp;tekstas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="95"/>
-        <source>&amp;Parameter:</source>
-        <translation>&amp;Parametras:</translation>
+        <source>&amp;Parameter</source>
+        <translation>&amp;Parametras</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/alerts/forms/alertdialog.py" line="96"/>
@@ -2957,8 +2957,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.ThemeWizard</name>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="339"/>
-        <source>Horizontal Align:</source>
-        <translation>Horizontalus lygiavimas:</translation>
+        <source>Horizontal Align</source>
+        <translation>Horizontalus lygiavimas</translation>
     </message>
 </context>
 <context>
@@ -2980,8 +2980,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="353"/>
-        <source>&amp;Vertical Align:</source>
-        <translation>&amp;Vertikalus lygiavimas:</translation>
+        <source>&amp;Vertical Align</source>
+        <translation>&amp;Vertikalus lygiavimas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/lib/ui.py" line="457"/>
@@ -3050,23 +3050,23 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="124"/>
-        <source>HTTP:</source>
-        <translation>HTTP:</translation>
+        <source>HTTP</source>
+        <translation>HTTP</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="126"/>
-        <source>HTTPS:</source>
-        <translation>HTTPS:</translation>
+        <source>HTTPS</source>
+        <translation>HTTPS</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="128"/>
-        <source>Username:</source>
-        <translation>Naudotojo vardas:</translation>
+        <source>Username</source>
+        <translation>Naudotojo vardas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="129"/>
-        <source>Password:</source>
-        <translation>Slaptažodis:</translation>
+        <source>Password</source>
+        <translation>Slaptažodis</translation>
     </message>
 </context>
 <context>
@@ -3086,8 +3086,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="310"/>
-        <source>Width:</source>
-        <translation>Plotis:</translation>
+        <source>Width</source>
+        <translation>Plotis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="311"/>
@@ -3096,8 +3096,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="314"/>
-        <source>Left:</source>
-        <translation>Kairė:</translation>
+        <source>Left</source>
+        <translation>Kairė</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="315"/>
@@ -3106,13 +3106,13 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="316"/>
-        <source>Top:</source>
-        <translation>Viršus:</translation>
+        <source>Top</source>
+        <translation>Viršus</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="317"/>
-        <source>Height:</source>
-        <translation>Aukštis:</translation>
+        <source>Height</source>
+        <translation>Aukštis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/widgets.py" line="318"/>
@@ -3171,8 +3171,8 @@ Opal Presenter will attempt to continue.</source>
     <name>OpenLP.SpellTextEdit</name>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="407"/>
-        <source>Language:</source>
-        <translation>Kalba:</translation>
+        <source>Language</source>
+        <translation>Kalba</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/edits.py" line="418"/>
@@ -3194,8 +3194,8 @@ Opal Presenter will attempt to continue.</source>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="54"/>
-        <source>Format:</source>
-        <translation>Formatas:</translation>
+        <source>Format</source>
+        <translation>Formatas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/widgets/wizard.py" line="56"/>
@@ -3642,8 +3642,8 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="349"/>
-        <source>Background color:</source>
-        <translation>Fono spalva:</translation>
+        <source>Background color</source>
+        <translation>Fono spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="350"/>
@@ -3682,13 +3682,13 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="362"/>
-        <source>CCLI number:</source>
-        <translation>CCLI numeris:</translation>
+        <source>CCLI number</source>
+        <translation>CCLI numeris</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="363"/>
-        <source>CCLI song number:</source>
-        <translation>CCLI giesmės numeris:</translation>
+        <source>CCLI song number</source>
+        <translation>CCLI giesmės numeris</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="365"/>
@@ -3712,8 +3712,8 @@ You can download the latest version from https://git.tbcproductions.net/tbcprodu
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="369"/>
-        <source>Default Color:</source>
-        <translation>Numatytoji spalva:</translation>
+        <source>Default Color</source>
+        <translation>Numatytoji spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="370"/>
@@ -3729,8 +3729,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="375"/>
-        <source>Display style:</source>
-        <translation>Rodymo stilius:</translation>
+        <source>Display style</source>
+        <translation>Rodymo stilius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="377"/>
@@ -3814,8 +3814,8 @@ See http://docs.python.org/library/datetime.html#strftime-strptime-behavior for 
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="402"/>
-        <source>Layout style:</source>
-        <translation>Išdėstymo stilius:</translation>
+        <source>Layout style</source>
+        <translation>Išdėstymo stilius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="404"/>
@@ -4258,8 +4258,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="476"/>
-        <source>Transpose:</source>
-        <translation>Transponuoti:</translation>
+        <source>Transpose</source>
+        <translation>Transponuoti</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="481"/>
@@ -4268,8 +4268,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/common/i18n.py" line="485"/>
-        <source>&amp;Verse type:</source>
-        <translation>&amp;Posmo tipas:</translation>
+        <source>&amp;Verse type</source>
+        <translation>&amp;Posmo tipas</translation>
     </message>
 </context>
 <context>
@@ -6495,8 +6495,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="162"/>
-        <source>Background type:</source>
-        <translation>Fono tipas:</translation>
+        <source>Background type</source>
+        <translation>Fono tipas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="163"/>
@@ -6520,24 +6520,20 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="171"/>
-        <source>Color:</source>
-        <translation>Spalva:</translation>
+        <source>Color</source>
+        <translation>Spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="172"/>
-        <source>Starting color:</source>
-        <translation>Pradinė spalva:</translation>
+        <source>Starting color</source>
+        <translation>Pradinė spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/background.py" line="173"/>
-        <source>Ending color:</source>
-        <translation>Galutinė spalva:</translation>
+        <source>Ending color</source>
+        <translation>Galutinė spalva</translation>
     </message>
-    <message>
-        <location filename="../../openlp/core/pages/background.py" line="174"/>
-        <source>Gradient:</source>
-        <translation>Gradientas:</translation>
-    </message>
+
     <message>
         <location filename="../../openlp/core/pages/background.py" line="176"/>
         <source>Horizontal</source>
@@ -6567,8 +6563,8 @@ Užveriamas šis egzempliorius</translation>
         <location filename="../../openlp/core/pages/background.py" line="185"/>
         <location filename="../../openlp/core/pages/background.py" line="187"/>
         <location filename="../../openlp/core/pages/background.py" line="189"/>
-        <source>Background color:</source>
-        <translation>Fono spalva:</translation>
+        <source>Background color</source>
+        <translation>Fono spalva</translation>
     </message>
 </context>
 <context>
@@ -6586,8 +6582,8 @@ Užveriamas šis egzempliorius</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="129"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="138"/>
-        <source>X position:</source>
-        <translation>X vieta:</translation>
+        <source>X position</source>
+        <translation>X vieta</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="130"/>
@@ -6604,20 +6600,20 @@ Užveriamas šis egzempliorius</translation>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="132"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="140"/>
-        <source>Y position:</source>
-        <translation>Y vieta:</translation>
+        <source>Y position</source>
+        <translation>Y vieta</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="134"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="142"/>
-        <source>Width:</source>
-        <translation>Plotis:</translation>
+        <source>Width</source>
+        <translation>Plotis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="136"/>
         <location filename="../../openlp/core/pages/areaposition.py" line="144"/>
-        <source>Height:</source>
-        <translation>Aukštis:</translation>
+        <source>Height</source>
+        <translation>Aukštis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/areaposition.py" line="137"/>
@@ -6634,20 +6630,20 @@ Užveriamas šis egzempliorius</translation>
     <name>OpenLP.FontSelectWidget</name>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="194"/>
-        <source>Font:</source>
-        <translation>Šriftas:</translation>
+        <source>Font</source>
+        <translation>Šriftas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="195"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="211"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="214"/>
-        <source>Color:</source>
-        <translation>Spalva:</translation>
+        <source>Color</source>
+        <translation>Spalva</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="196"/>
-        <source>Style:</source>
-        <translation>Stilius:</translation>
+        <source>Style</source>
+        <translation>Stilius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="198"/>
@@ -6663,8 +6659,8 @@ Užveriamas šis egzempliorius</translation>
         <location filename="../../openlp/core/pages/fontselect.py" line="205"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="212"/>
         <location filename="../../openlp/core/pages/fontselect.py" line="215"/>
-        <source>Size:</source>
-        <translation>Dydis:</translation>
+        <source>Size</source>
+        <translation>Dydis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="207"/>
@@ -6673,13 +6669,13 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="208"/>
-        <source>Line Spacing:</source>
-        <translation>Tarpas tarp eilučių:</translation>
+        <source>Line Spacing</source>
+        <translation>Tarpas tarp eilučių</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="209"/>
-        <source>Letter Spacing:</source>
-        <translation>Tarpas tarp raidžių:</translation>
+        <source>Letter Spacing</source>
+        <translation>Tarpas tarp raidžių</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/fontselect.py" line="210"/>
@@ -6711,8 +6707,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="116"/>
-        <source>Effect:</source>
-        <translation>Efektas:</translation>
+        <source>Effect</source>
+        <translation>Efektas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="117"/>
@@ -6741,8 +6737,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="122"/>
-        <source>Speed:</source>
-        <translation>Greitis:</translation>
+        <source>Speed</source>
+        <translation>Greitis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="123"/>
@@ -6761,8 +6757,8 @@ Užveriamas šis egzempliorius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="126"/>
-        <source>Direction:</source>
-        <translation>Kryptis:</translation>
+        <source>Direction</source>
+        <translation>Kryptis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/pages/alignment.py" line="127"/>
@@ -7072,8 +7068,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/themewizard.py" line="142"/>
-        <source>Theme name:</source>
-        <translation>Apipavidalinimo pavadinimas:</translation>
+        <source>Theme name</source>
+        <translation>Apipavidalinimo pavadinimas</translation>
     </message>
 </context>
 <context>
@@ -7085,18 +7081,18 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="123"/>
-        <source>Hours:</source>
-        <translation>Valandos:</translation>
+        <source>Hours</source>
+        <translation>Valandos</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="124"/>
-        <source>Minutes:</source>
-        <translation>Minutės:</translation>
+        <source>Minutes</source>
+        <translation>Minutės</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="125"/>
-        <source>Seconds:</source>
-        <translation>Sekundės:</translation>
+        <source>Seconds</source>
+        <translation>Sekundės</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/starttimedialog.py" line="126"/>
@@ -7224,13 +7220,13 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="141"/>
-        <source>Title:</source>
-        <translation>Pavadinimas:</translation>
+        <source>Title</source>
+        <translation>Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="142"/>
-        <source>Service Note Text:</source>
-        <translation>Pamaldų programos pastabų tekstas:</translation>
+        <source>Service Note Text</source>
+        <translation>Pamaldų programos pastabų tekstas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/printservicedialog.py" line="143"/>
@@ -7532,8 +7528,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="173"/>
-        <source>Date and Time:</source>
-        <translation>Data ir laikas:</translation>
+        <source>Date and Time</source>
+        <translation>Data ir laikas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="174"/>
@@ -7582,8 +7578,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="183"/>
-        <source>Name:</source>
-        <translation>Pavadinimas:</translation>
+        <source>Name</source>
+        <translation>Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="184"/>
@@ -7597,8 +7593,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="188"/>
-        <source>Example:</source>
-        <translation>Pavyzdys:</translation>
+        <source>Example</source>
+        <translation>Pavyzdys</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="190"/>
@@ -7622,8 +7618,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="198"/>
-        <source>Timed slide interval:</source>
-        <translation>Skaidrės laiko intervalas:</translation>
+        <source>Timed slide interval</source>
+        <translation>Skaidrės laiko intervalas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="199"/>
@@ -7637,8 +7633,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="202"/>
-        <source>Behavior of next/previous on the last/first slide:</source>
-        <translation>Perjungimo kita/ankstesnė, elgsena, esant paskutinei/pirmai skaidrei:</translation>
+        <source>Behavior of next/previous on the last/first slide</source>
+        <translation>Perjungimo kita/ankstesnė, elgsena, esant paskutinei/pirmai skaidrei</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicetab.py" line="203"/>
@@ -7727,13 +7723,13 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="92"/>
-        <source>Parent folder:</source>
-        <translation>Viršaplankis:</translation>
+        <source>Parent folder</source>
+        <translation>Viršaplankis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="93"/>
-        <source>Folder name:</source>
-        <translation>Aplanko pavadinimas:</translation>
+        <source>Folder name</source>
+        <translation>Aplanko pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="109"/>
@@ -7760,8 +7756,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="228"/>
-        <source>Add items to folder:</source>
-        <translation>Pridėti elementus į aplanką:</translation>
+        <source>Add items to folder</source>
+        <translation>Pridėti elementus į aplanką</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/folders.py" line="229"/>
@@ -7893,8 +7889,8 @@ OpenLP pabandys tęsti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/firsttimelanguagedialog.py" line="71"/>
-        <source>Translation:</source>
-        <translation>Vertimas:</translation>
+        <source>Translation</source>
+        <translation>Vertimas</translation>
     </message>
 </context>
 <context>
@@ -8230,8 +8226,8 @@ Jei tęsite įrašymą, šie failai bus pašalinti.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/servicemanager.py" line="1739"/>
-        <source>Title:</source>
-        <translation>Pavadinimas:</translation>
+        <source>Title</source>
+        <translation>Pavadinimas</translation>
     </message>
 </context>
 <context>
@@ -8570,8 +8566,8 @@ prašome pasirinkti kitą spartųjį klavišą.</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="219"/>
-        <source>Number of recent service files to display:</source>
-        <translation>Rodomų, paskiausiai naudotų pamaldų programų failų skaičius:</translation>
+        <source>Number of recent service files to display</source>
+        <translation>Rodomų, paskiausiai naudotų pamaldų programų failų skaičius</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="220"/>
@@ -8692,8 +8688,8 @@ aukštis skaidrių valdiklyje:</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="264"/>
-        <source>Interface Theme (needs restart):</source>
-        <translation>Sąsajos apipavidalinimas (reikalingas paleidimas iš naujo):</translation>
+        <source>Interface Theme (needs restart)</source>
+        <translation>Sąsajos apipavidalinimas (reikalingas paleidimas iš naujo)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="265"/>
@@ -8820,8 +8816,8 @@ appears to contain Opal Presenter data files. Do you wish to replace these files
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="205"/>
-        <source>Logo file:</source>
-        <translation>Logotipo failas:</translation>
+        <source>Logo file</source>
+        <translation>Logotipo failas</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/generaltab.py" line="206"/>
@@ -9584,8 +9580,8 @@ Apdorojimas buvo nutrauktas ir nepadaryta jokių pokyčių.</translation>
     <name>OpenLP.FileRenameForm</name>
     <message>
         <location filename="../../openlp/core/ui/filerenamedialog.py" line="61"/>
-        <source>New File Name:</source>
-        <translation>Naujas failo pavadinimas:</translation>
+        <source>New File Name</source>
+        <translation>Naujas failo pavadinimas</translation>
     </message>
 </context>
 <context>
@@ -9810,8 +9806,8 @@ Alternatively, you can leave this blank to configure Opal Presenter manually.</s
     </message>
     <message>
         <location filename="../../openlp/core/ui/plugindialog.py" line="77"/>
-        <source>Status:</source>
-        <translation>Būsena:</translation>
+        <source>Status</source>
+        <translation>Būsena</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/plugindialog.py" line="78"/>
@@ -10170,8 +10166,8 @@ Jei spustelėsite ant mygtuko „{finish_button}“, vėliau galėsite atsisiųs
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="148"/>
-        <source>Path:</source>
-        <translation>Kelias:</translation>
+        <source>Path</source>
+        <translation>Kelias</translation>
     </message>
     <message>
         <location filename="../../openlp/core/ui/advancedtab.py" line="149"/>
@@ -10410,33 +10406,33 @@ yra OpenLP duomenų failai. Ar norėtumėte pakeisti tuos failus esamais duomen�
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="203"/>
-        <source>Listen IP address (0.0.0.0 matches all addresses):</source>
-        <translation>Klausytis ties IP adresu (0.0.0.0 atitinka visus adresus):</translation>
+        <source>Listen IP address (0.0.0.0 matches all addresses)</source>
+        <translation>Klausytis ties IP adresu (0.0.0.0 atitinka visus adresus)</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="206"/>
-        <source>Port number:</source>
-        <translation>Prievado numeris:</translation>
+        <source>Port number</source>
+        <translation>Prievado numeris</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="207"/>
-        <source>Remote URL:</source>
-        <translation>Nuotolinis URL:</translation>
+        <source>Remote URL</source>
+        <translation>Nuotolinis URL</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="208"/>
-        <source>Stage view URL:</source>
-        <translation>Scenos rodinio URL:</translation>
+        <source>Stage view URL</source>
+        <translation>Scenos rodinio URL</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="209"/>
-        <source>Live view URL:</source>
-        <translation>Gyvo rodinio URL:</translation>
+        <source>Live view URL</source>
+        <translation>Gyvo rodinio URL</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="210"/>
-        <source>Chords view URL:</source>
-        <translation>Akordų rodinio URL:</translation>
+        <source>Chords view URL</source>
+        <translation>Akordų rodinio URL</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="211"/>
@@ -10480,18 +10476,18 @@ yra OpenLP duomenų failai. Ar norėtumėte pakeisti tuos failus esamais duomen�
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="221"/>
-        <source>User id:</source>
-        <translation>Naudotojo id:</translation>
+        <source>User id</source>
+        <translation>Naudotojo id</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="222"/>
-        <source>Password:</source>
-        <translation>Slaptažodis:</translation>
+        <source>Password</source>
+        <translation>Slaptažodis</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="223"/>
-        <source>Installed version:</source>
-        <translation>Įdiegta versija:</translation>
+        <source>Installed version</source>
+        <translation>Įdiegta versija</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="224"/>
@@ -10500,8 +10496,8 @@ yra OpenLP duomenų failai. Ar norėtumėte pakeisti tuos failus esamais duomen�
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="225"/>
-        <source>Latest version:</source>
-        <translation>Naujausia versija:</translation>
+        <source>Latest version</source>
+        <translation>Naujausia versija</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="226"/>
@@ -10515,13 +10511,13 @@ yra OpenLP duomenų failai. Ar norėtumėte pakeisti tuos failus esamais duomen�
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="228"/>
-        <source>HTTP Server:</source>
-        <translation>HTTP serveris:</translation>
+        <source>HTTP Server</source>
+        <translation>HTTP serveris</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="229"/>
-        <source>Websocket Server:</source>
-        <translation>Websocket serveris:</translation>
+        <source>Websocket Server</source>
+        <translation>Websocket serveris</translation>
     </message>
     <message>
         <location filename="../../openlp/core/api/tab.py" line="230"/>
@@ -11192,8 +11188,8 @@ Išsamesnei informacijai, žiūrėkite žurnalą</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="225"/>
-        <source>Add first slide:</source>
-        <translation>Pridėti pirmą skaidrę:</translation>
+        <source>Add first slide</source>
+        <translation>Pridėti pirmą skaidrę</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="226"/>
@@ -11242,18 +11238,18 @@ Išsamesnei informacijai, žiūrėkite žurnalą</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="237"/>
-        <source>Username:</source>
-        <translation>Naudotojo vardas:</translation>
+        <source>Username</source>
+        <translation>Naudotojo vardas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="238"/>
-        <source>Password:</source>
-        <translation>Slaptažodis:</translation>
+        <source>Password</source>
+        <translation>Slaptažodis</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="239"/>
-        <source>Chord notation to use:</source>
-        <translation>Naudojama akordų notacija:</translation>
+        <source>Chord notation to use</source>
+        <translation>Naudojama akordų notacija</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/lib/songstab.py" line="240"/>
@@ -11648,8 +11644,8 @@ Giesmių nustatymuose galite išjungti šį įspėjimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="158"/>
-        <source>Directory:</source>
-        <translation>Katalogas:</translation>
+        <source>Directory</source>
+        <translation>Katalogas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songexportform.py" line="159"/>
@@ -11725,8 +11721,8 @@ Giesmių nustatymuose galite išjungti šį įspėjimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/topicsdialog.py" line="61"/>
-        <source>Topic name:</source>
-        <translation>Temos pavadinimas:</translation>
+        <source>Topic name</source>
+        <translation>Temos pavadinimas</translation>
     </message>
 </context>
 <context>
@@ -11938,13 +11934,13 @@ Giesmių nustatymuose galite išjungti šį įspėjimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="67"/>
-        <source>&amp;Name:</source>
-        <translation>&amp;Pavadinimas:</translation>
+        <source>&amp;Name</source>
+        <translation>&amp;Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songbookdialog.py" line="68"/>
-        <source>&amp;Publisher:</source>
-        <translation>&amp;Leidėjas:</translation>
+        <source>&amp;Publisher</source>
+        <translation>&amp;Leidėjas</translation>
     </message>
 </context>
 <context>
@@ -11956,18 +11952,18 @@ Giesmių nustatymuose galite išjungti šį įspėjimą.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="75"/>
-        <source>Display name:</source>
-        <translation>Rodomas vardas:</translation>
+        <source>Display name</source>
+        <translation>Rodomas vardas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="76"/>
-        <source>First name:</source>
-        <translation>Vardas:</translation>
+        <source>First name</source>
+        <translation>Vardas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/authorsdialog.py" line="77"/>
-        <source>Last name:</source>
-        <translation>Pavardė:</translation>
+        <source>Last name</source>
+        <translation>Pavardė</translation>
     </message>
 </context>
 <context>
@@ -12143,23 +12139,23 @@ Ar tikrai norite importuoti šią giesmę?</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="396"/>
-        <source>&amp;Title:</source>
-        <translation>&amp;Pavadinimas:</translation>
+        <source>&amp;Title</source>
+        <translation>&amp;Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="397"/>
-        <source>Alt&amp;ernate title:</source>
-        <translation>Alt&amp;ernatyvus pavadinimas:</translation>
+        <source>Alt&amp;ernate title</source>
+        <translation>Alt&amp;ernatyvus pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="398"/>
-        <source>&amp;Lyrics:</source>
-        <translation>Giesmės žodžiai:</translation>
+        <source>&amp;Lyrics</source>
+        <translation>Giesmės žodžiai</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="399"/>
-        <source>&amp;Verse order:</source>
-        <translation>P&amp;osmelių tvarka:</translation>
+        <source>&amp;Verse order</source>
+        <translation>P&amp;osmelių tvarka</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/editsongform.py" line="402"/>
@@ -12433,28 +12429,28 @@ Prieš tęsiant, prašome ištaisyti šias žymes.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="148"/>
-        <source>Title:</source>
-        <translation>Pavadinimas:</translation>
+        <source>Title</source>
+        <translation>Pavadinimas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="149"/>
-        <source>Author(s):</source>
-        <translation>Autorius(-iai):</translation>
+        <source>Author(s)</source>
+        <translation>Autorius(-iai)</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="150"/>
-        <source>Copyright:</source>
-        <translation>Autorių teisės:</translation>
+        <source>Copyright</source>
+        <translation>Autorių teisės</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="151"/>
-        <source>CCLI Number:</source>
-        <translation>CCLI numeris:</translation>
+        <source>CCLI Number</source>
+        <translation>CCLI numeris</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="152"/>
-        <source>Lyrics:</source>
-        <translation>Giesmės žodžiai:</translation>
+        <source>Lyrics</source>
+        <translation>Giesmės žodžiai</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/songs/forms/songselectdialog.py" line="153"/>
@@ -12881,13 +12877,13 @@ sėkmingai sukurta.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="84"/>
-        <source>Host:</source>
-        <translation>Serveris:</translation>
+        <source>Host</source>
+        <translation>Serveris</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="85"/>
-        <source>Port:</source>
-        <translation>Prievadas:</translation>
+        <source>Port</source>
+        <translation>Prievadas</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="87"/>
@@ -12896,8 +12892,8 @@ sėkmingai sukurta.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="89"/>
-        <source>Password:</source>
-        <translation>Slaptažodis:</translation>
+        <source>Password</source>
+        <translation>Slaptažodis</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="90"/>
@@ -12906,8 +12902,8 @@ sėkmingai sukurta.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="91"/>
-        <source>Message:</source>
-        <translation>Žinutė:</translation>
+        <source>Message</source>
+        <translation>Žinutė</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/obs_studio/lib/obs_studio_tab.py" line="92"/>
@@ -12986,8 +12982,8 @@ sėkmingai sukurta.</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="67"/>
-        <source>Present using:</source>
-        <translation>Pateikti, naudojant:</translation>
+        <source>Present using</source>
+        <translation>Pateikti, naudojant</translation>
     </message>
     <message>
         <location filename="../../openlp/plugins/presentations/lib/mediaitem.py" line="152"/>

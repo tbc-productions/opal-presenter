@@ -185,7 +185,7 @@ class ServiceItemEditForm(FluentWindow, Ui_ServiceItemEditDialog, RegistryProper
         row = rows[0]
         title, accepted = RenameDialog.get_text(
             self, translate('OpenLP.ServiceItemEditForm', 'Rename slide label'),
-            translate('OpenLP.ServiceItemEditForm', 'Label:'), self.item_list[row]['title'])
+            translate('OpenLP.ServiceItemEditForm', 'Label'), self.item_list[row]['title'])
         if accepted and title.strip():
             self.item_list[row]['title'] = title.strip()
             self.load_data()

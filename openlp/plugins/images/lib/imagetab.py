@@ -81,9 +81,9 @@ class ImageTab(SettingsTab):
         self.image_theme_group_box.setTitle(translate('ImagesPlugin.ImageTab', 'Image Background'))
         self.use_black_radio.setText(translate('ImagesPlugin.ImageTab', 'Use blank theme'))
         self.custom_theme_radio.setText(translate('ImagesPlugin.ImageTab', 'Custom theme'))
-        self.image_theme_label.setText(translate('ImagesPlugin.ImageTab', 'Theme:'))
+        self.image_theme_label.setText(translate('ImagesPlugin.ImageTab', 'Theme'))
         self.image_fit_group_box.setTitle(translate('ImagesPlugin.ImageTab', 'Image Sizing'))
-        self.image_fit_label.setText(translate('ImagesPlugin.ImageTab', 'Fit:'))
+        self.image_fit_label.setText(translate('ImagesPlugin.ImageTab', 'Fit'))
         for index, label in enumerate(('Contain', 'Cover', 'Stretch')):
             self.image_fit_combo_box.setItemText(index, translate('ImagesPlugin.ImageTab', label))
         self.image_fit_combo_box.setToolTip(translate(

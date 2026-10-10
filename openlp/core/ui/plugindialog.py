@@ -86,7 +86,7 @@ class Ui_PluginViewDialog(object):
         """
         plugin_view_dialog.setWindowTitle(translate('OpenLP.PluginForm', 'Manage Plugins'))
         self.plugin_info_group_box.setTitle(translate('OpenLP.PluginForm', 'Plugin Details'))
-        self.status_label.setText(translate('OpenLP.PluginForm', 'Status:'))
+        self.status_label.setText(translate('OpenLP.PluginForm', 'Status'))
         self.status_checkbox.setText(translate('OpenLP.PluginForm', 'Active'))
         self.open_folder_button.setText(translate('OpenLP.PluginForm', 'Open Plugin Folder'))
         self.plugin_list_widget.setHeaderLabel(translate('OpenLP.PluginForm', 'Plugin'))

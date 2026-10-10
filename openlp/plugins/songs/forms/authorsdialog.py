@@ -70,6 +70,6 @@ class Ui_AuthorsDialog(object):
         Translate the UI on the fly.
         """
         authors_dialog.setWindowTitle(translate('SongsPlugin.AuthorsForm', 'Author Maintenance'))
-        self.display_label.setText(translate('SongsPlugin.AuthorsForm', 'Display name:'))
-        self.first_name_label.setText(translate('SongsPlugin.AuthorsForm', 'First name:'))
-        self.last_name_label.setText(translate('SongsPlugin.AuthorsForm', 'Last name:'))
+        self.display_label.setText(translate('SongsPlugin.AuthorsForm', 'Display name'))
+        self.first_name_label.setText(translate('SongsPlugin.AuthorsForm', 'First name'))
+        self.last_name_label.setText(translate('SongsPlugin.AuthorsForm', 'Last name'))

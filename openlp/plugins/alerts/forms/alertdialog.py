@@ -92,8 +92,8 @@ class AlertDialog(object):
         :param alert_dialog: The dialog
         """
         alert_dialog.setWindowTitle(translate('AlertsPlugin.AlertForm', 'Alert Message'))
-        self.alert_entry_label.setText(translate('AlertsPlugin.AlertForm', 'Alert &text:'))
-        self.alert_parameter.setText(translate('AlertsPlugin.AlertForm', '&Parameter:'))
+        self.alert_entry_label.setText(translate('AlertsPlugin.AlertForm', 'Alert &text'))
+        self.alert_parameter.setText(translate('AlertsPlugin.AlertForm', '&Parameter'))
         self.new_button.setText(translate('AlertsPlugin.AlertForm', '&New'))
         self.save_button.setText(translate('AlertsPlugin.AlertForm', '&Save'))
         self.display_button.setText(translate('AlertsPlugin.AlertForm', 'Displ&ay'))

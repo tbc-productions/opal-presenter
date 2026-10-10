@@ -353,7 +353,7 @@ class UiStrings(metaclass=Singleton):
         self.AllFiles = translate('OpenLP.Ui', 'All Files')
         self.Automatic = translate('OpenLP.Ui', 'Automatic')
         self.BackgroundColor = translate('OpenLP.Ui', 'Background Color')
-        self.BackgroundColorColon = translate('OpenLP.Ui', 'Background color:')
+        self.BackgroundColorColon = translate('OpenLP.Ui', 'Background color')
         self.BibleShortSearchTitle = translate('OpenLP.Ui', 'Search is Empty or too Short')
         self.BibleShortSearch = translate('OpenLP.Ui', '<strong>The search you have entered is empty or shorter '
                                                        'than 3 characters long.</strong><br><br>Please try again with '
@@ -366,20 +366,20 @@ class UiStrings(metaclass=Singleton):
         self.Browse = translate('OpenLP.Ui', 'Browse...')
         self.Cancel = translate('OpenLP.Ui', 'Cancel')
         self.Center = translate('OpenLP.ThemeWizard', 'Center')
-        self.CCLINumberLabel = translate('OpenLP.Ui', 'CCLI number:')
-        self.CCLISongNumberLabel = translate('OpenLP.Ui', 'CCLI song number:')
+        self.CCLINumberLabel = translate('OpenLP.Ui', 'CCLI number')
+        self.CCLISongNumberLabel = translate('OpenLP.Ui', 'CCLI song number')
         self.Chorus = translate('SongsPlugin.VerseType', 'Chorus')
         self.CreateService = translate('OpenLP.Ui', 'Create a new service.')
         self.ConfirmDelete = translate('OpenLP.Ui', 'Confirm Delete')
         self.Continuous = translate('OpenLP.Ui', 'Continuous')
         self.Default = translate('OpenLP.Ui', 'Default')
-        self.DefaultColor = translate('OpenLP.Ui', 'Default Color:')
+        self.DefaultColor = translate('OpenLP.Ui', 'Default Color')
         self.DefaultServiceName = translate('OpenLP.Ui', 'Service %Y-%m-%d %H-%M',
                                             'This may not contain any of the following characters: /\\?*|<>[]":+\n'
                                             'See http://docs.python.org/library/datetime'
                                             '.html#strftime-strptime-behavior for more information.')
         self.Delete = translate('OpenLP.Ui', '&Delete')
-        self.DisplayStyle = translate('OpenLP.Ui', 'Display style:')
+        self.DisplayStyle = translate('OpenLP.Ui', 'Display style')
         self.Down = translate('SongsPlugin.EditVerseForm', 'Down')
         self.Duplicate = translate('OpenLP.Ui', 'Duplicate Error')
         self.Edit = translate('OpenLP.Ui', '&Edit')
@@ -406,7 +406,7 @@ class UiStrings(metaclass=Singleton):
                                        'Split a slide into two by inserting a verse splitter.')
         self.Intro = translate('SongsPlugin.VerseType', 'Intro')
         self.Justify = translate('OpenLP.ThemeWizard', 'Justify')
-        self.LayoutStyle = translate('OpenLP.Ui', 'Layout style:')
+        self.LayoutStyle = translate('OpenLP.Ui', 'Layout style')
         self.Left = translate('OpenLP.ThemeWizard', 'Left')
         self.Live = translate('OpenLP.Ui', 'Live')
         self.LivePreviewShowsPresentationScreen = translate('OpenLP.ServiceTab',
@@ -481,7 +481,7 @@ class UiStrings(metaclass=Singleton):
         self.Themes = translate('OpenLP.Ui', 'Themes', 'Plural')
         self.Tools = translate('OpenLP.Ui', 'Tools')
         self.Top = translate('OpenLP.Ui', 'Top')
-        self.Transpose = translate('SongsPlugin.EditVerseForm', 'Transpose:')
+        self.Transpose = translate('SongsPlugin.EditVerseForm', 'Transpose')
         self.UnableToRead = translate('OpenLP.Ui', 'Unable to read the file(s) listed below, please check that '
                                                    'your user has permission to read the file(s) or that the '
                                                    'file(s) are not using cloud storage (e.g. Dropbox, OneDrive).')
@@ -490,7 +490,7 @@ class UiStrings(metaclass=Singleton):
         self.Verse = translate('SongsPlugin.VerseType', 'Verse')
         self.VersePerSlide = translate('OpenLP.Ui', 'Verse Per Slide')
         self.VersePerLine = translate('OpenLP.Ui', 'Verse Per Line')
-        self.VerseType = translate('SongsPlugin.EditVerseForm', '&Verse type:')
+        self.VerseType = translate('SongsPlugin.EditVerseForm', '&Verse type')
         self.Version = translate('OpenLP.Ui', 'Version')
         self.View = translate('OpenLP.Ui', 'View')
         self.ViewMode = translate('OpenLP.Ui', 'View Mode')

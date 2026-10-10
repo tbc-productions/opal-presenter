@@ -350,7 +350,7 @@ def create_halign_selection_widgets(parent):
     :param parent: The parent object. This should be a ``QWidget`` descendant.
     """
     label = FormLabel(parent)
-    label.setText(translate('OpenLP.ThemeWizard', 'Horizontal Align:'))
+    label.setText(translate('OpenLP.ThemeWizard', 'Horizontal Align'))
     combo_box = QtWidgets.QComboBox(parent)
     combo_box.addItems([UiStrings().Left, UiStrings().Right, UiStrings().Center, UiStrings().Justify])
     label.setBuddy(combo_box)
@@ -364,7 +364,7 @@ def create_valign_selection_widgets(parent):
     :param parent: The parent object. This should be a ``QWidget`` descendant.
     """
     label = FormLabel(parent)
-    label.setText(translate('OpenLP.Ui', '&Vertical Align:'))
+    label.setText(translate('OpenLP.Ui', '&Vertical Align'))
     combo_box = QtWidgets.QComboBox(parent)
     combo_box.addItems([UiStrings().Top, UiStrings().Middle, UiStrings().Bottom])
     label.setBuddy(combo_box)

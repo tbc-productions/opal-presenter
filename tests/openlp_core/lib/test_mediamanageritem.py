@@ -55,6 +55,29 @@ def media_env(qapp):
     setup_patcher.stop()
 
 
+def test_search_controls_align_and_submit_with_mouse_and_enter(media_env, settings, qtbot):
+    from PySide6 import QtCore
+    from openlp.core.widgets import fluent
+
+    item = MediaManagerItem(None)
+    qtbot.addWidget(item)
+    item.settings_section = 'songs'
+    item.panel_layout = fluent.QVBoxLayout(item)
+    item.on_search_text_button_clicked = MagicMock()
+    item.on_search_text_edit_changed = MagicMock()
+    item.add_search_to_toolbar()
+    assert not hasattr(item, 'search_text_label')
+    item.search_text_edit.setPlaceholderText('Search Titles…')
+    item.show()
+    for width in (600, 300):
+        item.resize(width, 100)
+        fluent.QApplication.processEvents()
+        assert item.search_text_edit.height() == item.search_text_button.height()
+    qtbot.mouseClick(item.search_text_button, QtCore.Qt.MouseButton.LeftButton)
+    qtbot.keyClick(item.search_text_edit, QtCore.Qt.Key.Key_Return)
+    assert item.on_search_text_button_clicked.call_count == 2
+
+
 def test_custom_new_precedes_import_in_command_bar(qapp, settings, qtbot):
     from openlp.core.widgets.toolbar import OpenLPToolbar
     from openlp.plugins.custom.lib.mediaitem import CustomMediaItem

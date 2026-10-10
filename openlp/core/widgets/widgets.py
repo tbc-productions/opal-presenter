@@ -69,14 +69,14 @@ class ProxyWidget(QtWidgets.QGroupBox):
         self.radio_group.addButton(self.manual_proxy_radio, ProxyMode.MANUAL_PROXY)
         self.layout.setWidget(2, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.manual_proxy_radio)
         self.http_edit = QtWidgets.QLineEdit(self)
-        self.layout.addRow('HTTP:', self.http_edit)
+        self.layout.addRow('HTTP', self.http_edit)
         self.https_edit = QtWidgets.QLineEdit(self)
-        self.layout.addRow('HTTPS:', self.https_edit)
+        self.layout.addRow('HTTPS', self.https_edit)
         self.username_edit = QtWidgets.QLineEdit(self)
-        self.layout.addRow('Username:', self.username_edit)
+        self.layout.addRow('Username', self.username_edit)
         self.password_edit = QtWidgets.QLineEdit(self)
         self.password_edit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.layout.addRow('Password:', self.password_edit)
+        self.layout.addRow('Password', self.password_edit)
         # Signal / Slots
         self.radio_group.buttonToggled.connect(self.on_radio_group_button_toggled)
 
@@ -106,12 +106,12 @@ class ProxyWidget(QtWidgets.QGroupBox):
         self.use_sysem_proxy_radio.setText(translate('OpenLP.ProxyWidget', '&Use system proxy'))
         self.manual_proxy_radio.setText(translate('OpenLP.ProxyWidget', '&Manual proxy configuration'))
         proxy_example = translate('OpenLP.ProxyWidget', 'e.g. proxy_server_address:port_no')
-        self.layout.labelForField(self.http_edit).setText(translate('OpenLP.ProxyWidget', 'HTTP:'))
+        self.layout.labelForField(self.http_edit).setText(translate('OpenLP.ProxyWidget', 'HTTP'))
         self.http_edit.setPlaceholderText(proxy_example)
-        self.layout.labelForField(self.https_edit).setText(translate('OpenLP.ProxyWidget', 'HTTPS:'))
+        self.layout.labelForField(self.https_edit).setText(translate('OpenLP.ProxyWidget', 'HTTPS'))
         self.https_edit.setPlaceholderText(proxy_example)
-        self.layout.labelForField(self.username_edit).setText(translate('OpenLP.ProxyWidget', 'Username:'))
-        self.layout.labelForField(self.password_edit).setText(translate('OpenLP.ProxyWidget', 'Password:'))
+        self.layout.labelForField(self.username_edit).setText(translate('OpenLP.ProxyWidget', 'Username'))
+        self.layout.labelForField(self.password_edit).setText(translate('OpenLP.ProxyWidget', 'Password'))
 
     def load(self):
         """
@@ -484,14 +484,14 @@ class ScreenSelectionWidget(QtWidgets.QWidget):
 
     def retranslate_ui(self):
         self.full_screen_radio_button.setText(translate('OpenLP.ScreensTab', 'F&ull screen'))
-        self.width_label.setText(translate('OpenLP.ScreensTab', 'Width:'))
+        self.width_label.setText(translate('OpenLP.ScreensTab', 'Width'))
         use_screen_str = translate('OpenLP.ScreensTab', 'Use this screen as a display')
         self.use_screen_check_box.setText(use_screen_str)
         self.display_group_box.setTitle(use_screen_str)
-        self.left_label.setText(translate('OpenLP.ScreensTab', 'Left:'))
+        self.left_label.setText(translate('OpenLP.ScreensTab', 'Left'))
         self.custom_geometry_button.setText(translate('OpenLP.ScreensTab', 'Custom &geometry'))
-        self.top_label.setText(translate('OpenLP.ScreensTab', 'Top:'))
-        self.height_label.setText(translate('OpenLP.ScreensTab', 'Height:'))
+        self.top_label.setText(translate('OpenLP.ScreensTab', 'Top'))
+        self.height_label.setText(translate('OpenLP.ScreensTab', 'Height'))
         self.identify_button.setText(translate('OpenLP.ScreensTab', 'Identify Screens'))
         self.overlapping_screen_combo.setAccessibleName(translate('OpenLP.ScreensTab', 'Select a screen'))
         self.overlapping_screen_combo.setToolTip(translate(

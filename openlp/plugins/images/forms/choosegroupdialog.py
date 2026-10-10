@@ -82,7 +82,7 @@ class Ui_ChooseGroupDialog(object):
         :param choose_group_dialog: The form object (not the class).
         """
         choose_group_dialog.setWindowTitle(translate('ImagePlugin.ChooseGroupForm', 'Select Image Group'))
-        self.group_question_label.setText(translate('ImagePlugin.ChooseGroupForm', 'Add images to group:'))
+        self.group_question_label.setText(translate('ImagePlugin.ChooseGroupForm', 'Add images to group'))
         self.nogroup_radio_button.setText(translate('ImagePlugin.ChooseGroupForm', 'No group'))
         self.existing_radio_button.setText(translate('ImagePlugin.ChooseGroupForm', 'Existing group'))
         self.new_radio_button.setText(translate('ImagePlugin.ChooseGroupForm', 'New group'))

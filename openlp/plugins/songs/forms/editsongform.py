@@ -426,10 +426,10 @@ class EditSongForm(QtWidgets.QDialog, RegistryProperties):
         Translate the UI on the fly.
         """
         self.setWindowTitle(translate('SongsPlugin.EditSongForm', 'Song Editor'))
-        self.title_label.setText(translate('SongsPlugin.EditSongForm', '&Title:'))
-        self.alternative_title_label.setText(translate('SongsPlugin.EditSongForm', 'Alt&ernate title:'))
-        self.lyrics_label.setText(translate('SongsPlugin.EditSongForm', '&Lyrics:'))
-        self.verse_order_label.setText(translate('SongsPlugin.EditSongForm', '&Verse order:'))
+        self.title_label.setText(translate('SongsPlugin.EditSongForm', '&Title'))
+        self.alternative_title_label.setText(translate('SongsPlugin.EditSongForm', 'Alt&ernate title'))
+        self.lyrics_label.setText(translate('SongsPlugin.EditSongForm', '&Lyrics'))
+        self.verse_order_label.setText(translate('SongsPlugin.EditSongForm', '&Verse order'))
         self.verse_add_action.setText(UiStrings().Add)
         self.verse_edit_action.setText(UiStrings().Edit)
         self.verse_edit_all_action.setText(translate('SongsPlugin.EditSongForm', 'Ed&it All'))

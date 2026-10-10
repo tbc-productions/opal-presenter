@@ -177,8 +177,8 @@ class GeneralTab(SettingsTab):
         # Logo
         self.logo_group_box.setTitle(translate('OpenLP.GeneralTab', 'Logo'))
         self.logo_color_label.setText(UiStrings().BackgroundColorColon)
-        self.logo_file_label.setText(translate('OpenLP.GeneralTab', 'Logo file:'))
-        self.logo_fit_label.setText(translate('OpenLP.GeneralTab', 'Logo fit:'))
+        self.logo_file_label.setText(translate('OpenLP.GeneralTab', 'Logo file'))
+        self.logo_fit_label.setText(translate('OpenLP.GeneralTab', 'Logo fit'))
         self.logo_fit_combo_box.setItemText(0, translate('OpenLP.GeneralTab', 'Zoom to fill (Cover)'))
         self.logo_fit_combo_box.setItemText(1, translate('OpenLP.GeneralTab', 'Zoom to fit (Contain)'))
         self.logo_fit_combo_box.setItemText(2, translate('OpenLP.GeneralTab', 'Stretch'))
@@ -196,7 +196,7 @@ class GeneralTab(SettingsTab):
             text=get_images_filter(), names=UiStrings().AllFiles)
         # UI Settings
         self.ui_group_box.setTitle(translate('OpenLP.AdvancedTab', 'UI Settings'))
-        self.recent_label.setText(translate('OpenLP.AdvancedTab', 'Number of recent service files to display:'))
+        self.recent_label.setText(translate('OpenLP.AdvancedTab', 'Number of recent service files to display'))
         self.double_click_live_check_box.setText(translate('OpenLP.AdvancedTab',
                                                            'Double-click to send items straight to Live'))
         self.single_click_preview_check_box.setText(translate('OpenLP.AdvancedTab',
@@ -209,7 +209,7 @@ class GeneralTab(SettingsTab):
                                                            'Enable application exit confirmation'))
         self.slide_no_in_footer_checkbox.setText(translate('SongsPlugin.GeneralTab', 'Include slide number in footer'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
-        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
+        self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart)'))
         theme_labels = (
             translate('OpenLP.GeneralTab', 'Auto'),
             translate('OpenLP.GeneralTab', 'Dark'),

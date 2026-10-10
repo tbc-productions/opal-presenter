@@ -146,11 +146,11 @@ class Ui_SongSelectDialog(object):
         Translate the GUI.
         """
         songselect_dialog.setWindowTitle(translate('SongsPlugin.SongSelectForm', 'CCLI SongSelect Importer'))
-        self.title_label.setText(translate('SongsPlugin.SongSelectForm', 'Title:'))
-        self.authors_label.setText(translate('SongsPlugin.SongSelectForm', 'Author(s):'))
-        self.copyright_label.setText(translate('SongsPlugin.SongSelectForm', 'Copyright:'))
-        self.ccli_label.setText(translate('SongsPlugin.SongSelectForm', 'CCLI Number:'))
-        self.lyrics_label.setText(translate('SongsPlugin.SongSelectForm', 'Lyrics:'))
+        self.title_label.setText(translate('SongsPlugin.SongSelectForm', 'Title'))
+        self.authors_label.setText(translate('SongsPlugin.SongSelectForm', 'Author(s)'))
+        self.copyright_label.setText(translate('SongsPlugin.SongSelectForm', 'Copyright'))
+        self.ccli_label.setText(translate('SongsPlugin.SongSelectForm', 'CCLI Number'))
+        self.lyrics_label.setText(translate('SongsPlugin.SongSelectForm', 'Lyrics'))
         self.back_button.setText(translate('SongsPlugin.SongSelectForm', 'Back',
                                            'When pressed takes user to the CCLI home page'))
         self.close_button.setText(translate('SongsPlugin.SongSelectForm', 'Close'))

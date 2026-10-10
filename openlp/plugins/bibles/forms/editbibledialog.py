@@ -88,6 +88,7 @@ class Ui_EditBibleDialog(object):
                                              QtWidgets.QSizePolicy.Policy.Expanding)
         self.full_license_label.setBuddy(self.full_license_edit)
         self.license_details_layout.addRow(self.full_license_label, self.full_license_edit)
+        self.license_details_layout.setAlignment(self.full_license_label, QtCore.Qt.AlignmentFlag.AlignTop)
         self.meta_tab_layout.addWidget(self.license_details_group_box)
         self.language_selection_group_box = QtWidgets.QGroupBox(self.meta_tab)
         self.language_selection_group_box.setObjectName('language_selection_group_box')
@@ -164,14 +165,14 @@ class Ui_EditBibleDialog(object):
         self.bible_tab_widget.setTabText(
             self.bible_tab_widget.indexOf(self.meta_tab), translate('SongsPlugin.EditBibleForm', 'Meta Data'))
         self.license_details_group_box.setTitle(translate('BiblesPlugin.EditBibleForm', 'License Details'))
-        self.version_name_label.setText(translate('BiblesPlugin.EditBibleForm', 'Version name:'))
-        self.copyright_label.setText(translate('BiblesPlugin.EditBibleForm', 'Copyright:'))
-        self.permissions_label.setText(translate('BiblesPlugin.EditBibleForm', 'Permissions:'))
-        self.full_license_label.setText(translate('BiblesPlugin.EditBibleForm', 'Full license:'))
+        self.version_name_label.setText(translate('BiblesPlugin.EditBibleForm', 'Version name'))
+        self.copyright_label.setText(translate('BiblesPlugin.EditBibleForm', 'Copyright'))
+        self.permissions_label.setText(translate('BiblesPlugin.EditBibleForm', 'Permissions'))
+        self.full_license_label.setText(translate('BiblesPlugin.EditBibleForm', 'Full license'))
         self.language_selection_group_box.setTitle(translate('BiblesPlugin.EditBibleForm', 'Default Bible Language'))
         self.language_selection_label.setText(
             translate('BiblesPlugin.EditBibleForm', 'Book name language in search field, search results and '
-                                                    'on display:'))
+                                                    'on display'))
         self.language_selection_combo_box.setItemText(0, translate('BiblesPlugin.EditBibleForm', 'Global Settings'))
         self.language_selection_combo_box.setItemText(
             LanguageSelection.Bible + 1,
@@ -187,5 +188,5 @@ class Ui_EditBibleDialog(object):
             translate('SongsPlugin.EditBibleForm', 'Custom Book Names'))
         for book in BiblesResourcesDB.get_books():
             self.book_name_label[book['abbreviation']].setText(
-                '{text}:'.format(text=self.book_names[book['abbreviation']]))
+                self.book_names[book['abbreviation']])
         self.book_name_group_box.setTitle(translate('BiblesPlugin.EditBibleForm', 'Book Name Settings'))
