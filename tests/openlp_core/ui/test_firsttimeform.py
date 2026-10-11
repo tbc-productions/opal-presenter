@@ -26,9 +26,11 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch, DEFAULT
 
-from PySide6 import QtCore, QtWidgets, QtTest
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.app import OpenLP
+from openlp.core.common.enum import PluginStatus
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.ui.firsttimeform import FirstTimeForm, ResourceIndexDownloadWorker, ThemeListWidgetItem
@@ -101,19 +103,27 @@ def download_env(registry: Registry):
 
 @pytest.fixture()
 def mocked_set_icon(mock_settings):
-    move_to_thread_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker.moveToThread').start()
-    set_icon_patcher = patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem.setIcon').start()
-    q_thread_patcher = patch('openlp.core.ui.firsttimeform.QtCore.QThread').start()
+    icons = {name: UiIcons().get_icon_variant(name) for name in ('picture', 'exception')}
+    icon_patcher = patch('openlp.core.ui.firsttimeform.UiIcons.get_icon_variant',
+                         side_effect=lambda name: icons[name])
+    icon_patcher.start()
+    move_to_thread_patcher = patch('openlp.core.ui.firsttimeform.DownloadWorker.moveToThread')
+    set_icon_patcher = patch('openlp.core.ui.firsttimeform.ThemeListWidgetItem.setIcon')
+    q_thread_patcher = patch('openlp.core.ui.firsttimeform.QtCore.QThread')
+    move_to_thread_patcher.start()
+    mocked_set_icon = set_icon_patcher.start()
+    q_thread_patcher.start()
     mocked_app = MagicMock()
     mocked_app.worker_threads = {}
     mocked_main_window = MagicMock()
     Registry().remove('application')
     Registry().register('application', mocked_app)
     Registry().register('main_window', mocked_main_window)
-    yield set_icon_patcher
+    yield mocked_set_icon
     move_to_thread_patcher.stop()
     set_icon_patcher.stop()
     q_thread_patcher.stop()
+    icon_patcher.stop()
 
 
 def test_init_sample_data(download_env, mock_settings):
@@ -239,7 +249,8 @@ def test_accept_method(mocked_qwizard_accept, mock_settings):
     with patch.object(ftw, '_set_plugin_status') as mocked_set_plugin_status, \
             patch.multiple(ftw, songs_check_box=DEFAULT, bible_check_box=DEFAULT, presentation_check_box=DEFAULT,
                            image_check_box=DEFAULT, media_check_box=DEFAULT, custom_check_box=DEFAULT,
-                           song_usage_check_box=DEFAULT, alert_check_box=DEFAULT, obs_studio_check_box=DEFAULT) \
+                           song_usage_check_box=DEFAULT, alert_check_box=DEFAULT, obs_studio_check_box=DEFAULT,
+                           projector_check_box=DEFAULT, remote_interface_check_box=DEFAULT) \
             as mocked_check_boxes, \
             patch.object(ftw, 'screen_selection_widget') as mocked_screen_selection_widget:
         # WHEN: Calling accept
@@ -255,7 +266,9 @@ def test_accept_method(mocked_qwizard_accept, mock_settings):
             call(mocked_check_boxes['custom_check_box'], 'custom/status'),
             call(mocked_check_boxes['song_usage_check_box'], 'songusage/status'),
             call(mocked_check_boxes['alert_check_box'], 'alerts/status'),
-            call(mocked_check_boxes['obs_studio_check_box'], 'obs_studio/status')
+            call(mocked_check_boxes['obs_studio_check_box'], 'obs_studio/status'),
+            call(mocked_check_boxes['projector_check_box'], 'projector/status'),
+            call(mocked_check_boxes['remote_interface_check_box'], 'remote_interface/status')
         ])
         mocked_screen_selection_widget.save.assert_called_once()
         mocked_qwizard_accept.assert_called_once()
@@ -772,3 +785,90 @@ def test_accept_method_without_imported_settings(mock_settings):
         mocked_screen_selection_widget.save.assert_called_once()
         mocked_qwizard_accept.assert_called_once()
 
+
+
+def test_import_settings_native_clear(qapp):
+    """The native LineEdit button clears a selected backup and reports the change."""
+    from PySide6 import QtCore, QtTest, QtWidgets
+    import fluentqt
+    from openlp.core.ui.firsttimewizard import ImportSettingsPage
+
+    page = ImportSettingsPage()
+    page.setup_ui()
+    page.retranslate_ui()
+    page.show()
+    changes = []
+    page.completeChanged.connect(lambda: changes.append(page.file_edit.text()))
+    page.file_edit.setText('/dummy/path/backup.zip')
+    QtWidgets.QApplication.processEvents()
+    assert isinstance(page.file_edit, fluentqt.LineEdit)
+    assert not hasattr(page, 'clear_button')
+    clear_button = page.file_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    QtTest.QTest.mouseClick(clear_button, QtCore.Qt.MouseButton.LeftButton)
+    assert page.file_edit.text() == ''
+    assert changes == ['/dummy/path/backup.zip', '']
+    page.close()
+
+
+def test_optional_features_unchecked_and_fit_on_plugin_page(settings, qtbot):
+    """Both optional features are visible on the plugin page and start unchecked."""
+    wizard = FirstTimeForm(None)
+    wizard.setStartId(FirstTimePage.Plugins)
+    wizard.restart()
+    wizard.show()
+    qtbot.waitUntil(wizard.isVisible)
+    for checkbox in (wizard.projector_check_box, wizard.remote_interface_check_box):
+        assert not checkbox.isChecked()
+        assert checkbox.isVisible()
+        assert wizard.plugin_page.rect().contains(checkbox.geometry())
+    wizard.hide()
+    wizard.deleteLater()
+
+
+@pytest.mark.parametrize('enabled', [False, True])
+def test_wizard_saves_optional_plugin_choices(settings, enabled):
+    """Finishing setup persists optional plugin selections in both directions."""
+    wizard = FirstTimeForm(None)
+    wizard.projector_check_box.setChecked(enabled)
+    wizard.remote_interface_check_box.setChecked(enabled)
+    with patch.object(wizard, 'screen_selection_widget'), \
+            patch('openlp.core.ui.firsttimeform.QtWidgets.QWizard.accept'):
+        wizard.accept()
+    expected = PluginStatus.Active if enabled else PluginStatus.Inactive
+    assert settings.value('projector/status') == expected
+    assert settings.value('remote_interface/status') == expected
+    wizard.deleteLater()
+
+
+@pytest.mark.parametrize('enabled', [False, True])
+def test_rerun_restores_optional_plugin_choices(settings, registry, enabled):
+    """Re-running setup retains saved choices instead of disabling existing users' plugins."""
+    settings.setValue('core/has run wizard', True)
+    status = PluginStatus.Active if enabled else PluginStatus.Inactive
+    settings.setValue('projector/status', status)
+    settings.setValue('remote_interface/status', status)
+    registry.register('plugin_manager', MagicMock())
+    registry.register('theme_manager', MagicMock(get_theme_names=lambda: []))
+    wizard = FirstTimeForm(None)
+    wizard.set_defaults()
+    assert wizard.projector_check_box.isChecked() is enabled
+    assert wizard.remote_interface_check_box.isChecked() is enabled
+    registry.remove_function('config_screen_changed', wizard.screen_selection_widget.load)
+    wizard.deleteLater()
+
+
+@pytest.mark.parametrize('remote,songs,bibles,expected', [
+    (True, True, True, FirstTimePage.Remote),
+    (False, True, True, FirstTimePage.Songs),
+    (False, False, True, FirstTimePage.Bibles),
+    (False, False, False, FirstTimePage.Themes),
+])
+def test_wizard_skips_remote_download_when_disabled(mock_settings, remote, songs, bibles, expected):
+    """Resource navigation only offers a remote download for an enabled Remote Interface."""
+    wizard = FirstTimeForm(None)
+    wizard.remote_interface_check_box.setChecked(remote)
+    wizard.songs_check_box.setChecked(songs)
+    wizard.bible_check_box.setChecked(bibles)
+    with patch.object(wizard, 'currentId', return_value=FirstTimePage.Download):
+        assert wizard.nextId() == expected
+    wizard.deleteLater()

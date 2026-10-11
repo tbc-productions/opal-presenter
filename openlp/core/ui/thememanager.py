@@ -23,12 +23,14 @@ The Theme Manager manages adding, deleteing and modifying of themes.
 """
 import os
 import threading
+import json
 import shutil
 import zipfile
 from pathlib import Path
 from xml.etree.ElementTree import XML, ElementTree
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
 from openlp.core.common import delete_file
@@ -41,19 +43,21 @@ from openlp.core.common.utils import wait_for
 from openlp.core.lib import build_icon, check_item_selected, create_thumb, get_text_file_string, validate_thumb
 from openlp.core.lib.exceptions import ValidationError
 from openlp.core.lib.theme import Theme
-from openlp.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, create_widget_action, \
-    critical_error_message_box, set_list_view_mode_toolbar_state
+from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.display.screens import ScreenList
-from openlp.core.threading import ThreadWorker, is_thread_finished, run_thread
+from openlp.core.threading import ThreadWorker, run_thread
 from openlp.core.ui.filerenameform import FileRenameForm
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.themeform import ThemeForm
 from openlp.core.ui.themeprogressform import ThemeProgressForm
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.toolbar import OpenLPToolbar
+from openlp.core.widgets.themeviews import ThemeViews
+from openlp.core.widgets.libraryfooter import LibraryFooter
 
 THEME_LIST_ICON_WIDTH = 124
 THEME_LIST_ICON_HEIGHT = 70
+DEFAULT_BUILTIN_THEME = 'Bold Sans Dark'
 
 
 class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
@@ -78,12 +82,14 @@ class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
         icon = index.data(QtCore.Qt.ItemDataRole.DecorationRole)
         if icon and not icon.isNull():
             icon_x = rect.left() + 4
-            icon_y = rect.top() + (rect.height() - THEME_LIST_ICON_HEIGHT) // 2
-            icon_rect = QtCore.QRect(icon_x, icon_y, THEME_LIST_ICON_WIDTH, THEME_LIST_ICON_HEIGHT)
+            icon_size = list_widget.iconSize()
+            icon_y = rect.top() + (rect.height() - icon_size.height()) // 2
+            icon_rect = QtCore.QRect(icon_x, icon_y, icon_size.width(), icon_size.height())
             icon.paint(painter, icon_rect, QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        text_rect = QtCore.QRect(rect.left() + THEME_LIST_ICON_WIDTH + 12, rect.top(),
-                                 rect.width() - THEME_LIST_ICON_WIDTH - 16, rect.height())
+        icon_width = list_widget.iconSize().width()
+        text_rect = QtCore.QRect(rect.left() + icon_width + 12, rect.top(),
+                                 rect.width() - icon_width - 16, rect.height())
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole) or ''
 
         if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
@@ -100,7 +106,7 @@ class ThemeListDelegate(QtWidgets.QStyledItemDelegate):
         list_widget = self.parent()
         if isinstance(list_widget, QtWidgets.QListWidget) and \
                 list_widget.viewMode() == QtWidgets.QListWidget.ViewMode.ListMode:
-            return QtCore.QSize(0, THEME_LIST_ICON_HEIGHT + 8)
+            return QtCore.QSize(0, list_widget.iconSize().height() + 8)
         return super().sizeHint(option, index)
 
 
@@ -180,12 +186,11 @@ class Ui_ThemeManager(object):
                                         triggers=self.on_export_theme)
         self.export_toolbar_action.setEnabled(False)
         self.toolbar.addSeparator()
-        add_list_view_mode_items_to_toolbar(self.toolbar, self)
         self.layout.addWidget(self.toolbar)
         self.theme_widget = QtWidgets.QWidgetAction(self.toolbar)
         self.theme_widget.setObjectName('theme_widget')
         # create theme manager list
-        self.theme_list_widget = MultipleViewModeList(widget)
+        self.theme_list_widget = ThemeViews(widget)
         self.theme_list_widget.setAlternatingRowColors(True)
         self.theme_list_widget.setIconSize(QtCore.QSize(THEME_LIST_ICON_WIDTH, THEME_LIST_ICON_HEIGHT))
         self.theme_list_widget.set_icon_size_by_view_mode(QtWidgets.QListView.ViewMode.ListMode,
@@ -195,15 +200,37 @@ class Ui_ThemeManager(object):
         self.theme_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.theme_list_widget.activate_drag('themes')
         self.theme_list_widget.setObjectName('theme_list_widget')
-        self.theme_list_widget.setItemDelegate(ThemeListDelegate(self.theme_list_widget))
-        self.layout.addWidget(self.theme_list_widget)
-        self.footer_status_bar = QtWidgets.QStatusBar(widget)
+        self.theme_list_widget.setItemDelegate(ThemeListDelegate(self.theme_list_widget.list_view))
+        self.layout.addWidget(self.theme_list_widget, 1)
+        self.footer_status_bar = LibraryFooter(widget)
         self.footer_status_bar.setObjectName('footer_status_bar')
-        self.footer_status_bar.setSizeGripEnabled(False)
-        self.footer_status_bar.setStyleSheet('QStatusBar { padding-left: 8px; }')
         self.footer_status_label = QtWidgets.QLabel(self.footer_status_bar)
         self.footer_status_label.setObjectName('footer_status_label')
-        self.footer_status_bar.addWidget(self.footer_status_label, 1)
+        self.footer_status_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Caption)
+        self.footer_status_bar.layout().addWidget(self.footer_status_label)
+        self.thumbnail_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self.footer_status_bar,
+                                                  show_value_tooltip=False)
+        self.thumbnail_slider.setRange(50, 200)
+        self.thumbnail_slider.setMaximumWidth(100)
+        self.thumbnail_slider.setAccessibleName(translate('OpenLP.ThemeManager', 'Thumbnail size'))
+        self.thumbnail_slider.setValue(self.settings.value('user interface/theme thumbnail size'))
+        self.thumbnail_slider.valueChanged.connect(self.set_thumbnail_size)
+        self.footer_status_bar.layout().addWidget(self.thumbnail_slider)
+        self.view_buttons = QtWidgets.QButtonGroup(widget)
+        for index, (text, icon, callback) in enumerate([
+                ('List', UiIcons().view_list, self.on_set_view_mode_list),
+                ('Grid', UiIcons().view_grid, self.on_set_view_mode_grid)]):
+            button = QtWidgets.QPushButton(translate('OpenLP.ThemeManager', text), self.footer_status_bar)
+            button.setIcon(icon)
+            button.setCheckable(True)
+            button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+            button.setFluentStyle(QtWidgets.fluentqt.Button.ButtonStyle.Subtle)
+            button.clicked.connect(callback)
+            self.view_buttons.addButton(button, index)
+            self.footer_status_bar.layout().addWidget(button)
+        model = self.theme_list_widget.model()
+        for signal in (model.rowsInserted, model.rowsRemoved, model.modelReset):
+            signal.connect(self.update_theme_count)
         self.footer_status_label.setText('')
         self.layout.addWidget(self.footer_status_bar)
         self.theme_list_widget.customContextMenuRequested.connect(self.context_menu)
@@ -244,6 +271,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
     theme_update_global = QtCore.Signal()
     theme_level_updated = QtCore.Signal()
 
+    @QtCore.Slot()
+    def update_theme_count(self):
+        self.footer_status_bar.set_count(self.sender().rowCount())
+
     def __init__(self, parent=None):
         """
         Constructor
@@ -251,6 +282,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         super(ThemeManager, self).__init__(parent)
         # Variables
         self._theme_list = {}
+        self._loading_themes = False
+        self._theme_reload_pending = False
         self.old_background_image_path = None
         self._thumbnail_dimensions = None
         self._thumbnail_refresh_worker = None
@@ -311,7 +344,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         except Exception:
             view_mode_value = QtWidgets.QListWidget.ViewMode.ListMode
             self.settings.setValue('user interface/theme manager view mode', view_mode_value)
-        set_list_view_mode_toolbar_state(self.toolbar, view_mode_value)
+        self.view_buttons.button(1 if view_mode_value == QtWidgets.QListView.ViewMode.IconMode else 0).setChecked(True)
+        self.set_thumbnail_size(self.thumbnail_slider.value())
 
     def save_settings(self):
         if self.theme_list_widget:
@@ -330,7 +364,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         if current_dimensions and current_dimensions != self._thumbnail_dimensions:
             self._thumbnail_dimensions = current_dimensions
             if self._theme_list:
-                if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+                if self._thumbnail_refresh_worker is not None:
                     self._thumbnail_refresh_pending = True
                 else:
                     # Screen-size-triggered regeneration should run silently in the background.
@@ -495,12 +529,21 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
     def on_set_view_mode_list(self):
         mode = QtWidgets.QListView.ViewMode.ListMode
         self.theme_list_widget.setViewMode(mode)
-        set_list_view_mode_toolbar_state(self.toolbar, mode)
+        self.view_buttons.button(0).setChecked(True)
+        self.settings.setValue('user interface/theme manager view mode', mode)
 
     def on_set_view_mode_grid(self):
         mode = QtWidgets.QListView.ViewMode.IconMode
         self.theme_list_widget.setViewMode(mode)
-        set_list_view_mode_toolbar_state(self.toolbar, mode)
+        self.view_buttons.button(1).setChecked(True)
+        self.settings.setValue('user interface/theme manager view mode', mode)
+
+    def set_thumbnail_size(self, size):
+        self.settings.setValue('user interface/theme thumbnail size', size)
+        self.theme_list_widget.set_icon_size_by_view_mode(
+            QtWidgets.QListView.ViewMode.IconMode, QtCore.QSize(round(176 * size / 100), round(100 * size / 100)))
+        self.theme_list_widget.set_icon_size_by_view_mode(
+            QtWidgets.QListView.ViewMode.ListMode, QtCore.QSize(round(124 * size / 100), round(70 * size / 100)))
 
     def on_theme_level_updated(self):
         """
@@ -529,12 +572,25 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 self.settings.setValue('themes/global theme', self.global_theme)
         Registry().execute('theme_change_global')
 
+    def _focus_open_theme_designer(self):
+        """Keep the existing draft when another theme edit is requested."""
+        form = getattr(self, 'theme_form', None)
+        if form is None or not form.isVisible():
+            return False
+        form.setWindowState(form.windowState() & ~QtCore.Qt.WindowState.WindowMinimized)
+        form.show()
+        form.raise_()
+        form.activateWindow()
+        return True
+
     def on_add_theme(self, field=None):
         """
         Loads a new theme with the default settings and then launches the theme editing form for the user to make
         their customisations.
         :param field:
         """
+        if self._focus_open_theme_designer():
+            return
         theme = Theme()
         self.theme_form.theme = theme
         self.theme_form.exec()
@@ -605,6 +661,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         theme editing form so the user can make their changes.
         :param field:
         """
+        if self._focus_open_theme_designer():
+            return
         if check_item_selected(self.theme_list_widget,
                                translate('OpenLP.ThemeManager', 'You must select a theme to edit.')):
             item = self.theme_list_widget.currentItem()
@@ -727,8 +785,28 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         try:
             with zipfile.ZipFile(theme_path, 'w') as theme_zip:
                 source_path = self.theme_path / theme_name
+                media_hash = None
+                descriptor = source_path / f'{theme_name}.json'
+                if descriptor.is_file():
+                    exported_theme = Theme()
+                    exported_theme.load_theme(descriptor.read_text(), self.theme_path)
+                    portable = exported_theme.export_theme(self.theme_path)
+                    background = json.loads(portable).get('background_filename')
+                    from openlp.core.lib.designmedia import valid_media_source, write_media
+                    if valid_media_source(background):
+                        from openlp.core.common import sha256_file_hash
+                        media_hash = sha256_file_hash(exported_theme.background_filename)
+                    write_media(theme_zip, json.loads(portable))
                 for file_path in source_path.iterdir():
-                    theme_zip.write(file_path, Path(theme_name, file_path.name))
+                    if file_path.suffix == '.json':
+                        exported_theme = Theme()
+                        exported_theme.load_theme(file_path.read_text(), self.theme_path)
+                        theme_zip.writestr(str(Path(theme_name, file_path.name)),
+                                           exported_theme.export_theme(self.theme_path))
+                    else:
+                        if media_hash and sha256_file_hash(file_path) == media_hash:
+                            continue
+                        theme_zip.write(file_path, Path(theme_name, file_path.name))
             return True
         except OSError as ose:
             self.log_exception('Export Theme Failed')
@@ -778,17 +856,33 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 theme_path = self.theme_path / theme_path
                 new_themes.append(self.unzip_theme(theme_path))
                 delete_file(theme_path)
-            # No themes have been found so create one
+            # No themes have been found so install the built-in themes
             if not theme_paths:
-                theme = Theme()
-                theme.theme_name = UiStrings().Default
-                self.save_theme(theme)
-                self.settings.setValue('themes/global theme', theme.theme_name)
-                new_themes = [theme.theme_name]
+                new_themes = self.install_builtin_themes()
+                self.settings.setValue('themes/global theme', DEFAULT_BUILTIN_THEME)
             if new_themes:
                 self._regenerate_previews_with_progress_dialog(new_themes, reason='first_time_import')
         finally:
             self.application.set_normal_cursor()
+
+    def install_builtin_themes(self):
+        """
+        Install the themes bundled in core/lib/json/themes, skipping any that already exist so user edits are kept.
+
+        :return: The names of the themes that were installed.
+        :rtype: list[str]
+        """
+        installed = []
+        json_path = AppLocation.get_directory(AppLocation.AppDir) / 'core' / 'lib' / 'json' / 'themes'
+        for theme_file in sorted(json_path.glob('*.json')):
+            theme = Theme()
+            theme.load_theme(get_text_file_string(theme_file))
+            if (self.theme_path / theme.theme_name).exists():
+                continue
+            theme.set_default_header_footer()
+            self.save_theme(theme)
+            installed.append(theme.theme_name)
+        return installed
 
     def load_themes(self):
         """
@@ -796,13 +890,33 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         events for the plugins.
         The plugins will call back in to get the real list if they want it.
         """
+        # Rendering previews processes events. A thumbnail worker can finish and
+        # request another reload while this one is still populating the list.
+        if self._loading_themes:
+            self._theme_reload_pending = True
+            return
+        self._loading_themes = True
+        try:
+            while True:
+                self._theme_reload_pending = False
+                self._load_themes()
+                if not self._theme_reload_pending:
+                    break
+        finally:
+            self._loading_themes = False
+
+    def _load_themes(self):
+        """Rebuild the theme collection for one non-overlapping reload."""
         self._theme_list.clear()
         self.theme_list_widget.clear()
-        files = AppLocation.get_files('themes', '/*.json')
+        files = [file for file in AppLocation.get_files('themes', '/*.json')
+                 if (self.theme_path / file).exists()]
         # Sort the themes by its name considering language specific
         files.sort(key=lambda file_name: get_locale_key(str(file_name)))
-        # now process the file list of png files
-        for file in files:
+        stage = translate('OpenLP.SplashScreen', 'Loading themes')
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', stage, 0, len(files), progress_range=(75, 90))
+        for completed, file in enumerate(files, 1):
             # check to see file is in theme root directory
             theme_path = self.theme_path / file
             if theme_path.exists():
@@ -832,6 +946,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 item_name.setData(QtCore.Qt.ItemDataRole.UserRole, text_name)
                 self.theme_list_widget.addItem(item_name)
                 self._theme_list[text_name] = theme_obj
+            if Registry().has_function('startup_progress'):
+                Registry().execute('startup_progress', stage, completed, len(files), progress_range=(75, 90))
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading library and themes'))
         self._push_themes()
 
     def _push_themes(self):
@@ -906,7 +1024,10 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     theme_name = xml_tree.find('name').text.strip()
                 else:
                     new_theme = Theme()
-                    new_theme.load_theme(theme_zip.read(json_file[0]).decode("utf-8"))
+                    descriptor = theme_zip.read(json_file[0]).decode('utf-8')
+                    from openlp.core.lib.designmedia import restore_media, ASSET
+                    restore_media(json.loads(descriptor), archive=theme_zip)
+                    new_theme.load_theme(descriptor)
                     theme_name = new_theme.theme_name
                     json_theme = True
                 theme_folder = self.theme_path / theme_name
@@ -916,6 +1037,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                 else:
                     abort_import = False
                 for zipped_file in theme_zip.namelist():
+                    if json_theme and ASSET.fullmatch(zipped_file):
+                        continue  # Assets are retained in the shared store before the descriptor is loaded.
                     zipped_file_rel_path = Path(zipped_file)
                     split_name = zipped_file_rel_path.parts
                     if split_name[-1] == '' or len(split_name) == 1:
@@ -930,7 +1053,7 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
                     else:
                         with full_name.open('wb') as out_file:
                             out_file.write(theme_zip.read(zipped_file))
-        except (OSError, ValidationError, zipfile.BadZipFile):
+        except (OSError, ValueError, KeyError, ValidationError, zipfile.BadZipFile):
             self.log_exception('Importing theme from zip failed {name}'.format(name=file_path))
             critical_error_message_box(
                 translate('OpenLP.ThemeManager', 'Import Error'),
@@ -975,6 +1098,16 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         :rtype: None
         """
         name = theme.theme_name
+        # Theme saves retain originals even when called outside Theme Designer.
+        if theme.background_type in ('image', 'video'):
+            from openlp.core.lib.designmedia import cache_media, resolve_media, media_label, MIME_TYPES
+            source = background_file or theme.background_filename
+            if not isinstance(source, Path) or not source.is_file():
+                source = theme.background_source
+            if (isinstance(source, Path) and source.is_file()
+                    and source.suffix.lower().lstrip('.') in MIME_TYPES):
+                theme.background_label = getattr(theme, 'background_label', None) or media_label(source)
+                theme.background_filename = resolve_media(cache_media(source))
         theme_pretty = theme.export_theme(self.theme_path)
         theme_dir = self.theme_path / name
         create_paths(theme_dir)
@@ -984,11 +1117,16 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         except OSError:
             self.log_exception('Saving theme to file failed')
         if theme.background_filename and theme.background_type != 'stream':
+            from openlp.core.lib.designmedia import asset_root
             # Use theme source image if override doesn't exist
             if not background_file or not background_file.exists():
                 background_file = theme.background_source
-            if self.old_background_image_path and theme.background_filename != self.old_background_image_path:
+            if (self.old_background_image_path and theme.background_filename != self.old_background_image_path
+                    and not self.old_background_image_path.is_relative_to(asset_root())):
                 delete_file(self.old_background_image_path)
+            if (isinstance(theme.background_filename, Path) and theme.background_filename.is_file()
+                    and theme.background_filename.is_relative_to(asset_root())):
+                return  # The original has already been retained; library/theme edits must not overwrite it.
             if not background_file or not background_file.exists():
                 self.log_warning('Background source does not exist, retaining cached background')
             elif background_file != theme.background_filename:
@@ -1019,16 +1157,18 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         if not theme_name_list:
             return
         self._show_thumbnail_refresh_status = show_status
-        self._thumbnail_refresh_pending = False
-        if self._thumbnail_refresh_worker is not None and not is_thread_finished('theme_thumbnail_refresh'):
+        # Keep the worker reserved until QThread cleanup has released its registry entry.
+        if self._thumbnail_refresh_worker is not None:
+            self._thumbnail_refresh_pending = True
             return
+        self._thumbnail_refresh_pending = False
         worker = ThemeThumbnailRefreshWorker(theme_name_list)
-        worker.thumbnail_requested.connect(self._refresh_thumbnail_for_theme)
-        worker.status_changed.connect(self._set_thumbnail_status)
-        worker.finished.connect(self._thumbnail_refresh_finished)
         worker.finished.connect(worker.quit.emit)
         self._thumbnail_refresh_worker = worker
-        run_thread(worker, 'theme_thumbnail_refresh')
+        run_thread(worker, 'theme_thumbnail_refresh', queued_connections=[
+            (worker.thumbnail_requested, self._refresh_thumbnail_for_theme),
+            (worker.status_changed, self._set_thumbnail_status)
+        ], on_finished=self._thumbnail_refresh_finished)
 
     def _get_themes_requiring_preview_refresh(self):
         """

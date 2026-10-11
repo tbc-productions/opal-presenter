@@ -25,7 +25,7 @@ import logging
 import os
 import re
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import CONTROL_CHARS
 from openlp.core.common.applocation import AppLocation

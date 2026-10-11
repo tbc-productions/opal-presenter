@@ -24,7 +24,7 @@ Tests for choosegroupform from the openlp.plugins.images.forms package.
 import pytest
 from unittest.mock import MagicMock
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.plugins.images.forms.choosegroupform import ChooseGroupForm
@@ -47,12 +47,12 @@ def test_no_group_selected_by_default(form):
     assert form.nogroup_radio_button.isChecked()
 
 
-def test_provided_group_is_selected(form):
+def test_provided_group_is_selected(form, monkeypatch):
     """
     Tests preselected group initialization
     """
     # GIVEN: There are some existing groups
-    QtWidgets.QDialog.exec = MagicMock(return_value=QtWidgets.QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(QtWidgets.QDialog, 'exec', MagicMock(return_value=QtWidgets.QDialog.DialogCode.Accepted))
     form.group_combobox.addItem('Group 1', 0)
     form.group_combobox.addItem('Group 2', 1)
 

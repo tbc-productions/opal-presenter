@@ -1264,6 +1264,101 @@ def test_loading_new_media_cancels_previous_delayed_hide(media_env, settings):
 
     media_env.media_controller.media_reset(controller)
 
-    media_env.media_controller.live_hide_timer.stop.assert_called_once()
+    media_env.media_controller.live_hide_timer.stop.assert_called()
     media_env.media_controller.live_kill_timer.stop.assert_called()
     assert controller.media_play_item.media_autostart is False
+
+
+@pytest.mark.parametrize('enabled,speed,expected', [
+    (False, 'slow', 0), (True, 'fast', 500), (True, 'normal', 900), (True, 'slow', 1300)
+])
+def test_output_transition_delay_matches_settings(media_env, settings, enabled, speed, expected):
+    settings.setValue('themes/item transitions', enabled)
+    settings.setValue('themes/item transition speed', speed)
+
+    assert media_env._output_transition_delay() == expected
+
+
+def test_delayed_media_reset_retains_frame_until_output_fade_finishes(media_env, settings):
+    settings.setValue('themes/item transitions', True)
+    settings.setValue('themes/item transition speed', 'slow')
+    controller = MagicMock(is_live=True)
+    controller.current_hide_mode = None
+    Registry().register('live_controller', controller)
+    media_env.live_hide_timer = MagicMock()
+    media_env.live_kill_timer = MagicMock()
+    media_env._media_bar = MagicMock()
+    media_env._media_set_visibility = MagicMock()
+
+    media_env.media_reset(controller, delayed=True)
+
+    controller.media_player.pause.assert_called_once_with()
+    controller.media_player.reset.assert_not_called()
+    controller.audio_player.reset.assert_called_once_with()
+    media_env.live_kill_timer.start.assert_called_once_with(1300)
+
+    media_env._on_media_kill_live()
+
+    media_env._media_set_visibility.assert_called_once_with(controller, False)
+    controller.media_player.reset.assert_called_once_with()
+
+
+@pytest.mark.parametrize('hide_mode', [HideMode.Screen, HideMode.Logo, HideMode.Blank, HideMode.Theme])
+def test_hidden_media_is_retired_before_showing_song(media_env, settings, hide_mode):
+    """MP4 -> Display off -> Song -> Show must not retain or restart the old video."""
+    settings.setValue('themes/item transitions', True)
+    controller = MagicMock(is_live=True, current_hide_mode=hide_mode)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('video.mp4')
+    controller.media_play_item.media_type = MediaType.Video
+    Registry().register('live_controller', controller)
+    media_env.live_hide_timer = MagicMock()
+    media_env.live_kill_timer = MagicMock(isActive=MagicMock(return_value=False))
+    media_env._media_bar = MagicMock()
+    media_env.media_play = MagicMock()
+
+    media_env.media_reset(controller, delayed=True)
+    controller.current_hide_mode = None
+    with patch('openlp.core.ui.media.mediacontroller.Registry.execute') as execute:
+        media_env.media_unblank([None, True])
+
+    controller.media_player.reset.assert_called_once_with()
+    controller.media_player.set_visible.assert_called_once_with(False)
+    controller.media_player.pause.assert_not_called()
+    media_env.live_kill_timer.start.assert_not_called()
+    media_env.live_hide_timer.stop.assert_called()
+    assert controller.media_play_item.media_file is None
+    execute.assert_called_once_with('live_display_show')
+    media_env.media_play.assert_not_called()
+
+
+def test_media_reset_without_transitions_is_immediate(media_env, settings):
+    settings.setValue('themes/item transitions', False)
+    controller = MagicMock(is_live=True, current_hide_mode=None)
+    media_env.live_hide_timer = MagicMock()
+    media_env.live_kill_timer = MagicMock()
+    media_env._media_bar = MagicMock()
+
+    media_env.media_reset(controller, delayed=True)
+
+    controller.media_player.reset.assert_called_once_with()
+    controller.media_player.set_visible.assert_called_once_with(False)
+    controller.media_player.pause.assert_not_called()
+    media_env.live_kill_timer.start.assert_not_called()
+
+
+def test_show_during_media_cleanup_shows_new_item(media_env):
+    """Pending cleanup of retired media must not swallow Show Presentation."""
+    controller = MagicMock(is_live=True)
+    controller.media_play_item = MediaPlayItem()
+    controller.media_play_item.media_file = Path('retired-video.mp4')
+    Registry().register('live_controller', controller)
+    media_env.live_kill_timer = MagicMock(isActive=MagicMock(return_value=True))
+    media_env.media_play = MagicMock()
+
+    with patch('openlp.core.ui.media.mediacontroller.Registry.execute') as execute:
+        media_env.media_unblank([None, True])
+
+    execute.assert_called_once_with('live_display_show')
+    media_env.media_play.assert_not_called()
+    media_env.live_kill_timer.stop.assert_not_called()

@@ -23,18 +23,19 @@ The :mod:`settingsform` provides a user interface for the OpenLP+ settings
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
-from openlp.core.api.tab import ApiTab
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
+from openlp.core.common.restart import show_restart_message
 from openlp.core.lib import build_icon
-from openlp.core.projectors.tab import ProjectorTab
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.fluenticons import service_icon
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.screenstab import ScreensTab
 from openlp.core.ui.themestab import ThemesTab
@@ -50,13 +51,9 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
     """
     Provide the form to manipulate the settings for OpenLP+
     """
-    SERVICE_COLOR_ICON_MAP = {
-        'songs': ('music', ServiceTab.ICON_THEME_COLOR_SETTINGS['song']),
-        'bibles': ('bible', ServiceTab.ICON_THEME_COLOR_SETTINGS['bible']),
-        'presentations': ('presentation', ServiceTab.ICON_THEME_COLOR_SETTINGS['presentation']),
-        'images': ('picture', ServiceTab.ICON_THEME_COLOR_SETTINGS['image']),
-        'media': ('video', ServiceTab.ICON_THEME_COLOR_SETTINGS['media']),
-        'custom': ('custom', ServiceTab.ICON_THEME_COLOR_SETTINGS['custom_slide'])
+    SERVICE_ICON_MAP = {
+        'songs': 'music', 'bibles': 'bible', 'presentations': 'presentation',
+        'images': 'picture', 'media': 'video', 'custom': 'custom'
     }
     RESET_PRESERVED_KEYS = (
         'settings/version', 'core/application version', 'core/has run wizard',
@@ -113,6 +110,11 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.setting_list_widget.setCurrentRow(starting_tab_row)
         return QtWidgets.QDialog.exec(self)
 
+    def showEvent(self, event):
+        """Start each Preferences visit at the top of the active settings page."""
+        super().showEvent(event)
+        self.scroll_area.verticalScrollBar().setValue(0)
+
     def _get_ordered_tabs(self):
         """
         Return all settings tabs in display order:
@@ -124,9 +126,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             (self.advanced_tab, True),
             (self.screens_tab, True),
             (self.themes_tab, True),
-            (self.player_tab, True),
-            (self.projector_tab, True),
-            (self.api_tab, True)
+            (self.player_tab, True)
         ]
         for plugin in State().list_plugins():
             if plugin.settings_tab:
@@ -182,19 +182,11 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 log.exception('Could not add settings help icons for %s', tab_widget.tab_title)
 
     def _build_settings_tab_icon(self, tab_widget):
-        """
-        Build a settings tab list icon.
-
-        Service item tabs use the user-configured Service theme colors. All other tabs keep their
-        existing icons unchanged.
-        """
+        """Use matching Fluent colours for service plugin Settings tabs."""
         tab_key = str(tab_widget.tab_title).strip().lower()
-        service_color_icon = self.SERVICE_COLOR_ICON_MAP.get(tab_key)
-        if service_color_icon:
-            icon_name, color_setting = service_color_icon
-            color_value = self.settings.value(color_setting)
-            if color_value:
-                return UiIcons().get_icon_variant(icon_name, color=color_value)
+        icon_name = self.SERVICE_ICON_MAP.get(tab_key)
+        if icon_name:
+            return service_icon(getattr(UiIcons(), icon_name), tab_key)
         return build_icon(tab_widget.icon_path)
 
     @staticmethod
@@ -248,7 +240,10 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             if combo_box.minimumHeight() < minimum_input_height:
                 combo_box.setMinimumHeight(minimum_input_height)
 
-        for abstract_spin_box in tab_widget.findChildren(QtWidgets.QAbstractSpinBox):
+        spin_boxes = (tab_widget.findChildren(QtWidgets.QAbstractSpinBox) +
+                      tab_widget.findChildren(QtWidgets.QSpinBox) +
+                      tab_widget.findChildren(QtWidgets.QTimeEdit))
+        for abstract_spin_box in spin_boxes:
             if abstract_spin_box.minimumHeight() < minimum_input_height:
                 abstract_spin_box.setMinimumHeight(minimum_input_height)
 
@@ -279,11 +274,14 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         # Plugin activation is part of the installation state. Clearing it hides plugin settings tabs
         # (including Songs) and disables their Library sections after the next restart.
         preserved_keys = set(self.RESET_PRESERVED_KEYS)
-        preserved_keys.update(key for key in self.settings.allKeys() if key.endswith('/status'))
-        preserved = {key: self.settings.value(key) for key in preserved_keys if self.settings.contains(key)}
+        preserved_keys.update(key for key in self.settings.__default_settings__ if key.endswith('/status'))
+        # Preserve the stored representation without decoding and re-encoding library paths.
+        # Status keys without registered defaults belong to removed plugins and are cleared.
+        preserved = {key: QtCore.QSettings.value(self.settings, key)
+                     for key in preserved_keys if self.settings.contains(key)}
         self.settings.clear()
         for key, value in preserved.items():
-            self.settings.setValue(key, value)
+            QtCore.QSettings.setValue(self.settings, key, value)
         self.settings.sync()
         if self.settings.status() != QtCore.QSettings.Status.NoError:
             QtWidgets.QMessageBox.critical(
@@ -294,15 +292,17 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         if main_window is not None:
             main_window.settings_replaced = True
         self.processes = []
-        QtWidgets.QMessageBox.information(
-            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
         QtWidgets.QDialog.reject(self)
+        show_restart_message(
+            self, title, translate('OpenLP.SettingsForm', 'Preferences reset. Restart OpenLP+ to apply all changes.'))
 
     def accept(self):
         """
         Process the form saving the settings
         """
         log.debug('Processing settings exit')
+        theme_keys = ('advanced/interface style', 'advanced/ui_theme_name')
+        previous_theme = tuple(self.settings.value(key) for key in theme_keys)
         # All tab widgets are registered even if the plugin is inactive,
         # but we don't add the item to the list on the side if the plugin is inactive,
         # so loop through the list items, and then find the tab for that item.
@@ -328,7 +328,13 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 QtCore.QTimer.singleShot(0, self._execute_deferred_config_screen_changed)
             else:
                 Registry().execute(process)
-        return QtWidgets.QDialog.accept(self)
+        result = QtWidgets.QDialog.accept(self)
+        if tuple(self.settings.value(key) for key in theme_keys) != previous_theme:
+            show_restart_message(
+                self, translate('OpenLP.SettingsForm', 'Restart required'),
+                translate('OpenLP.SettingsForm',
+                          'Your interface theme has been saved. Restart OpenLP+ to apply it.'))
+        return result
 
     def _execute_deferred_config_screen_changed(self):
         main_window = Registry().get('main_window')
@@ -369,10 +375,8 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             self.general_tab = GeneralTab(self)
             self.service_tab = ServiceTab(self)
             self.themes_tab = ThemesTab(self)
-            self.projector_tab = ProjectorTab(self)
             self.advanced_tab = AdvancedTab(self)
             self.player_tab = MediaTab(self)
-            self.api_tab = ApiTab(self)
             self.screens_tab = ScreensTab(self)
         except Exception as e:
             print(e)
@@ -380,7 +384,6 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.themes_tab.post_set_up()
         self.advanced_tab.post_set_up()
         self.player_tab.post_set_up()
-        self.api_tab.post_set_up()
         for plugin in State().list_plugins():
             if plugin.settings_tab:
                 plugin.settings_tab.post_set_up()
@@ -408,6 +411,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
                 self.content_tabs_layout.addWidget(tab_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop)
                 tab_widget.show()
                 tab_widget.tab_visible()
+                self.scroll_area.verticalScrollBar().setValue(0)
 
     def register_post_process(self, function):
         """

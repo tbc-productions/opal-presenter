@@ -22,7 +22,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.platform import is_win
 from openlp.core.ui.library import FolderLibraryItem
@@ -103,6 +104,65 @@ def test_folderlibrary_add_custom_context_actions(folder_library_item):
         folder_library_item.add_custom_context_actions()
     assert mocked_create_widget_action.call_count == 1
     mocked_separator.assert_called_once_with(folder_library_item.list_view)
+
+
+@pytest.mark.parametrize('plugin', ['images', 'media', 'presentations'])
+def test_file_libraries_offer_inspect_for_one_file(folder_library_item, plugin):
+    folder_library_item.plugin.name = plugin
+    with patch('openlp.core.ui.library.create_widget_action') as create_action:
+        folder_library_item.add_custom_context_actions()
+    assert any(call.kwargs.get('text') == 'Inspect' for call in create_action.call_args_list)
+    folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(MockItem())]
+    with patch.object(folder_library_item, 'inspect_item') as inspect:
+        folder_library_item.on_inspect_click()
+    assert inspect.call_args.args[0].file_path == MockItem.file_path
+
+
+@pytest.mark.parametrize('items', [[], [MockFolder()], [MockItem(), MockItem()],
+                                   [MockItem(file_path='networkstream:Camera')],
+                                   [MockItem(file_path='devicestream:Camera')]])
+def test_inspect_ignores_folders_multiple_selection_and_streams(folder_library_item, items):
+    folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(item) for item in items]
+    with patch.object(folder_library_item, 'inspect_item') as inspect:
+        folder_library_item.on_inspect_click()
+    inspect.assert_not_called()
+
+
+def test_real_file_library_wraps_tree_with_footer_and_grid(settings, registry, qtbot, tmp_path):
+    registry.register('service_manager', MagicMock())
+    registry.register('main_window', MagicMock())
+    plugin = MagicMock()
+    plugin.name = 'images'
+    plugin.icon = QtGui.QIcon()
+    plugin.get_string.return_value = {'title': 'Images', 'tooltip': 'Images'}
+    library = FolderLibraryItem(None, plugin, MockFolder, MockItem)
+    qtbot.addWidget(library)
+    library.show()
+    item = QtWidgets.QTreeWidgetItem(['Background'])
+    path = tmp_path / 'Background.png'
+    item.setData(0, QtCore.Qt.ItemDataRole.UserRole, MockItem(file_path=str(path)))
+    library.list_view.addTopLevelItem(item)
+    qtbot.waitUntil(lambda: library.library_view.count_label.text() == '1 item')
+    library.library_view.grid_button.click()
+    assert library.library_view.grid.count() == 1
+    library.library_view.grid.setCurrentRow(0)
+    assert library.inspect_action.isEnabled()
+    with patch('openlp.core.ui.library.MediaPreview.show_media') as preview:
+        library.inspect_action.trigger()
+    preview.assert_called_once_with(library, path, 'video.mp4', kind='image')
+    with patch.object(library.menu, 'exec') as menu:
+        point = library.library_view.grid.visualItemRect(library.library_view.grid.item(0)).center()
+        library.context_menu(point)
+    menu.assert_called_once()
+    library.list_view.activateDnD()
+    assert library.list_view.parent() is library.library_view
+    folder = QtWidgets.QTreeWidgetItem(['Backgrounds'])
+    folder.setData(0, QtCore.Qt.ItemDataRole.UserRole, MockFolder(name='Backgrounds'))
+    library.list_view.addTopLevelItem(folder)
+    library.library_view.refresh()
+    library.library_view.activate_tile(library.library_view.grid.item(1))
+    assert not library.list_view.selectedItems()
+    assert library.current_folder.name == 'Backgrounds'
 
 
 @patch('openlp.core.ui.library.is_win', return_value=True)
@@ -331,6 +391,35 @@ def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path
 
 
 @patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+def test_cloud_download_already_in_managed_storage_is_not_copied(mocked_data_path, folder_library_item, tmp_path):
+    source = tmp_path / 'library' / 'cloud-id' / 'clip.mp4'
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b'media')
+    mocked_data_path.return_value = tmp_path
+    folder_library_item.settings_section = 'tests'
+    folder_library_item._copy_file_to_library_storage = MagicMock()
+    assert folder_library_item._prepare_library_file(source) == source
+    folder_library_item._copy_file_to_library_storage.assert_not_called()
+
+
+@patch('openlp.core.ui.library.sha256_file_hash')
+def test_cloud_import_reuses_worker_checksum(mocked_hash, folder_library_item, tmp_path):
+    source = tmp_path / 'clip.mp4'
+    source.write_bytes(b'media')
+    folder_library_item.choose_folder_form = MagicMock(**{'exec.return_value': QtWidgets.QDialog.DialogCode.Rejected})
+    folder_library_item.manager.get_all_objects.return_value = []
+    folder_library_item.manager.save_object.return_value = True
+    folder_library_item._prepare_library_file = MagicMock(return_value=source)
+    folder_library_item._insert_saved_items = MagicMock()
+    folder_library_item.settings_section = 'tests'
+    folder_library_item.validate_and_load([source], file_hashes={source: 'verified-sha256'},
+                                         file_names={source: 'Welcome video.mp4'})
+    mocked_hash.assert_not_called()
+    assert folder_library_item.manager.save_object.call_args.args[0].file_hash == 'verified-sha256'
+    assert folder_library_item.manager.save_object.call_args.args[0].name == 'Welcome video.mp4'
+
+
+@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
 def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_path, folder_library_item, tmp_path):
     """Imported files with the same name keep distinct copies and library names."""
     sources = []
@@ -519,7 +608,7 @@ def test_on_delete_click_as_folder(mocked_question, mocked_sha256_file_hash, fol
     folder_library_item.service_path = Path()
     folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder)]
     mocked_sha256_file_hash.return_value = 'abcd'
-    mocked_question.return_value = QtWidgets.QMessageBox.Yes
+    mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
 
     # WHEN: Calling on_delete_click
     folder_library_item.on_delete_click()
@@ -545,7 +634,7 @@ def test_on_delete_click_as_folder_with_parent(mocked_question, mocked_sha256_fi
     folder_library_item.service_path = Path()
     folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(mocked_folder, MockTreeParent())]
     mocked_sha256_file_hash.return_value = 'abcd'
-    mocked_question.return_value = QtWidgets.QMessageBox.Yes
+    mocked_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
 
     # WHEN: Calling on_delete_click
     folder_library_item.on_delete_click()

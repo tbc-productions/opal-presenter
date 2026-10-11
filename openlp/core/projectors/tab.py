@@ -23,7 +23,7 @@ The :mod:`openlp.core.ui.projector.tab` module provides the settings tab in the 
 """
 import logging
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry

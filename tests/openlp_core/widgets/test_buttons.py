@@ -59,19 +59,12 @@ def test_setup(mock_settings: MagicMock):
 
 
 def test_change_color():
-    """
-    Test that change_color sets the new color and the stylesheet
-    """
-    # GIVEN: An instance of the ColorButton object, and a mocked out setStyleSheet
+    """The native Fluent button shows the selected colour and exposes its value."""
     widget = ColorButton()
-
-    # WHEN: Changing the color
-    with patch.object(widget, 'setStyleSheet') as mocked_set_style_sheet:
-        widget.change_color('#000000')
-
-    # THEN: The _color attribute should be set to #000000 and setStyleSheet should have been called twice
-    assert widget._color == '#000000', '_color should have been set to #000000'
-    mocked_set_style_sheet.assert_called_once_with('background-color: #000000')
+    widget.change_color('#000000')
+    assert widget.color == '#000000'
+    assert widget.accessibleName() == '#000000'
+    assert widget.icon().pixmap(24, 20).toImage().pixelColor(12, 10).name() == '#000000'
 
 
 def test_color():

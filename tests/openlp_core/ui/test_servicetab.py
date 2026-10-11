@@ -21,6 +21,8 @@
 """
 Package to test the openlp.core.ui.servicetab package.
 """
+from PySide6 import QtWidgets
+
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.settingsform import SettingsForm
 
@@ -68,3 +70,13 @@ def test_live_preview_shows_presentation_screen_save(settings):
 
     # THEN: The setting should be saved
     assert service_tab.settings.value('core/live preview shows presentation screen') is True
+
+
+def test_service_colour_settings_removed(settings):
+    """Saving Service settings cannot recreate the retired colour editors or keys."""
+    service_tab = ServiceTab(SettingsForm(None))
+    service_tab.load()
+    service_tab.save()
+
+    assert service_tab.findChild(QtWidgets.QWidget, 'theme_group_box') is None
+    assert all(not settings.contains(key) for key, _, _ in settings.__setting_upgrade_8__)

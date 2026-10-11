@@ -21,10 +21,14 @@
 """
 The Theme wizard
 """
+import copy
 import logging
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+import fluentqt
+from fluentqt import Window as FluentWindow
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import is_not_image_file
 from openlp.core.common.enum import ServiceItemType
@@ -41,11 +45,15 @@ from openlp.core.widgets.dialogs import FileDialog
 log = logging.getLogger(__name__)
 
 
-class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
+class ThemeForm(FluentWindow, Ui_ThemeWizard, RegistryProperties):
     """
     This is the Theme dialog, which allows easy creation and editing of
     OpenLP themes.
     """
+    accepted = QtCore.Signal()
+    rejected = QtCore.Signal()
+    finished = QtCore.Signal(int)
+
     log.info('ThemeWizardForm loaded')
 
     def __init__(self, parent):
@@ -54,10 +62,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
 
         :param parent: The QWidget-derived parent of the wizard.
         """
-        super(ThemeForm, self).__init__(parent,
-                                        QtCore.Qt.WindowType.WindowSystemMenuHint |
-                                        QtCore.Qt.WindowType.WindowTitleHint |
-                                        QtCore.Qt.WindowType.WindowCloseButtonHint)
+        super().__init__(parent)
+        # Cocoa suppresses Dock Quit while a native modal session is active,
+        # before OpenLPApplication receives Quit and resolves designer drafts.
+        self.setWindowModality(QtCore.Qt.WindowModality.NonModal)
+        self._event_loop = None
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
         self._setup()
 
     def _setup(self):
@@ -65,41 +75,33 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         Set up the class. This method is mocked out by the tests.
         """
         self.setup_ui(self)
-        self.setMinimumSize(900, 400)
-        self.setMaximumHeight(640)
+        self.setMinimumSize(1000, 640)
         self.can_update_theme = True
         self._updating_page_values = False
         self._initial_preview_refresh_pending = False
         self._applying_preview_layout_geometry = False
         self.temp_background_filename = None
         self._last_preview_scale = None
-        self.layout_guides_visible = False
         if hasattr(self, 'preview_area_layout'):
             try:
                 self.preview_area_layout.set_aspect_ratio(self.renderer.width() / self.renderer.height())
             except ZeroDivisionError:
                 self.preview_area_layout.set_aspect_ratio(1)
             self.preview_area_layout.resize.connect(self._on_preview_area_resized)
-        self.layout_guide_button.clicked.connect(self.on_toggle_layout_guide_clicked)
-        self._update_layout_guide_button_tooltip(False)
-        if hasattr(self, 'refresh_preview_button'):
-            self.refresh_preview_button.clicked.connect(self.on_refresh_preview_clicked)
         if hasattr(self, 'play_transition_button'):
-            self.play_transition_button.clicked.connect(self.preview_transition)
+            self.play_transition_button.triggered.connect(self.preview_transition)
             self._set_play_transition_button_visible(False)
         if hasattr(self, 'preview_box'):
             self.preview_box.allow_theme_transitions = False
-        if hasattr(self, 'help_button'):
-            self.help_button.clicked.connect(self.provide_help)
-        if hasattr(self, 'export_theme_button'):
-            self.export_theme_button.clicked.connect(self.on_export_theme_clicked)
-            self.export_theme_button.setEnabled(False)
+        if hasattr(self, 'export_theme_action'):
+            self.export_theme_action.triggered.connect(self.on_export_theme_clicked)
+            self.export_theme_action.setEnabled(False)
         if hasattr(self, 'theme_name_edit'):
             self.theme_name_edit.textChanged.connect(self.on_theme_name_changed)
-        self.page_list_widget.currentRowChanged.connect(self.on_current_id_changed)
         Registry().register_function('theme_line_count', self.update_lines_text)
         self.main_area_page.font_name_changed.connect(self.calculate_lines)
         self.main_area_page.font_color_changed.connect(self.calculate_lines)
+        self.main_area_page.font_weight_changed.connect(self.calculate_lines)
         self.main_area_page.is_bold_changed.connect(self.calculate_lines)
         self.main_area_page.is_italic_changed.connect(self.calculate_lines)
         self.main_area_page.font_size_changed.connect(self.calculate_lines)
@@ -114,6 +116,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.main_area_page.shadow_blur_changed.connect(self.calculate_lines)
         self.footer_area_page.font_name_changed.connect(self.calculate_lines)
         self.footer_area_page.font_color_changed.connect(self.calculate_lines)
+        self.footer_area_page.font_weight_changed.connect(self.calculate_lines)
         self.footer_area_page.is_bold_changed.connect(self.calculate_lines)
         self.footer_area_page.is_italic_changed.connect(self.calculate_lines)
         self.footer_area_page.font_size_changed.connect(self.calculate_lines)
@@ -128,18 +131,21 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.shadow_size_changed.connect(self.calculate_lines)
         self.footer_area_page.shadow_blur_changed.connect(self.calculate_lines)
         self._connect_live_preview_signals()
-
-    def provide_help(self):
-        """
-        Provide help within the wizard by opening the appropriate page of the openlp manual in the user's browser
-        """
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://manual.openlp.org/themes.html"))
+        if hasattr(self, 'area_overlay'):
+            self.area_overlay.areaSelected.connect(self.on_area_selected)
+            self.area_overlay.areaChanged.connect(self.on_area_geometry_changed)
+            self.area_overlay.gestureFinished.connect(self.on_area_gesture_finished)
+            self.area_preview_timer = QtCore.QTimer(self)
+            self.area_preview_timer.setSingleShot(True)
+            self.area_preview_timer.setInterval(16)
+            self.area_preview_timer.timeout.connect(self.update_preview_area_geometry)
+            self.canvas_combo.currentIndexChanged.connect(self.on_preview_size_changed)
+            self.on_area_selected('main')
 
     def set_defaults(self):
         """
         Set up display at start of theme edit.
         """
-        self.page_list_widget.setCurrentRow(0)
         self.set_background_page_values()
         self.set_main_area_page_values()
         self.set_footer_area_page_values()
@@ -173,9 +179,9 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.preview_box.run_in_display('setAllowThemeTransitions', True)
         self.preview_box.clear_slides()
         self.preview_box.show()
-        self.preview_box.generate_preview_two_slides(self.theme)
+        self.preview_box.generate_preview_two_slides(self._preview_theme())
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
         # Tell the JS side to handle the timed transition demo
         self.preview_box.run_in_display('previewTransition', 300, 3500)
 
@@ -202,13 +208,13 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         if not event:
             event = QtGui.QResizeEvent(self.size(), self.size())
-        QtWidgets.QDialog.resizeEvent(self, event)
+        FluentWindow.resizeEvent(self, event)
 
     def showEvent(self, event):
         """
         Ensure preview layout and scaling are recomputed whenever the dialog is shown.
         """
-        QtWidgets.QDialog.showEvent(self, event)
+        FluentWindow.showEvent(self, event)
         self._apply_preview_layout_geometry()
         if getattr(self, '_initial_preview_refresh_pending', False):
             QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
@@ -216,75 +222,39 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             QtCore.QTimer.singleShot(0, self._set_preview_scale)
 
     def validateCurrentPage(self):
-        """
-        Validate the currently selected page
-        """
-        if self.page_stack.currentWidget() == self.background_page:
-            background_image = BackgroundType.to_string(BackgroundType.Image)
-            background_video = BackgroundType.to_string(BackgroundType.Video)
-            background_stream = BackgroundType.to_string(BackgroundType.Stream)
-            if self.background_page.background_type == background_image and \
-                    is_not_image_file(self.background_page.image_path):
-                QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Image Empty'),
-                                               translate('OpenLP.ThemeWizard', 'You have not selected a '
-                                                         'background image. Please select one before continuing.'))
-                return False
-            elif self.background_page.background_type == background_video and \
-                    not self.background_page.video_path:
-                QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Video Empty'),
-                                               translate('OpenLP.ThemeWizard', 'You have not selected a '
-                                                         'background video. Please select one before continuing.'))
-                return False
-            elif self.background_page.background_type == background_stream and \
-                    not self.background_page.stream_mrl.strip():
-                QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Stream Empty'),
-                                               translate('OpenLP.ThemeWizard', 'You have not selected a '
-                                                         'background stream. Please select one before continuing.'))
-                return False
-            else:
-                return True
-        return True
+        """Validate the background before saving or exporting the theme."""
+        background_image = BackgroundType.to_string(BackgroundType.Image)
+        background_video = BackgroundType.to_string(BackgroundType.Video)
+        background_stream = BackgroundType.to_string(BackgroundType.Stream)
+        if self.background_page.background_type == background_image and \
+                is_not_image_file(self.background_page.image_path):
+            QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Image Empty'),
+                                           translate('OpenLP.ThemeWizard', 'You have not selected a '
+                                                     'background image. Please select one before continuing.'))
+            return False
+        elif self.background_page.background_type == background_video and \
+                not self.background_page.video_path:
+            QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Video Empty'),
+                                           translate('OpenLP.ThemeWizard', 'You have not selected a '
+                                                     'background video. Please select one before continuing.'))
+            return False
+        elif self.background_page.background_type == background_stream and \
+                not self.background_page.stream_mrl.strip():
+            QtWidgets.QMessageBox.critical(self, translate('OpenLP.ThemeWizard', 'Background Stream Empty'),
+                                           translate('OpenLP.ThemeWizard', 'You have not selected a '
+                                                     'background stream. Please select one before continuing.'))
+            return False
+        else:
+            return True
 
     def validate_background_page(self):
-        """
-        Validate background settings regardless of the selected tab.
-        """
-        current_widget = self.page_stack.currentWidget()
-        self.page_stack.setCurrentWidget(self.background_page)
-        is_valid = self.validateCurrentPage()
-        self.page_stack.setCurrentWidget(current_widget)
-        return is_valid
-
-    def on_current_id_changed(self, page_id):
-        """
-        Detects Page changes and updates as appropriate.
-        :param page_id: current page number
-        """
-        if page_id < 0 or page_id >= self.page_stack.count():
-            return
-        self.page_stack.setCurrentIndex(page_id)
-
-    def on_toggle_layout_guide_clicked(self, is_checked=False):
-        """
-        Toggle the layout guide overlay in the preview.
-        """
-        self.layout_guides_visible = bool(is_checked)
-        self._update_layout_guide_button_tooltip(self.layout_guides_visible)
-        self.update_layout_guide_overlay()
+        return self.validateCurrentPage()
 
     def on_refresh_preview_clicked(self):
         """
         Manually refresh the preview slide rendering.
         """
         self.refresh_preview()
-
-    def _update_layout_guide_button_tooltip(self, is_enabled):
-        """
-        Update tooltip text for the layout guide toggle button.
-        """
-        tooltip = translate('OpenLP.ThemeWizard', 'Hide layout guide') if is_enabled else \
-            translate('OpenLP.ThemeWizard', 'Show layout guide')
-        self.layout_guide_button.setToolTip(tooltip)
 
     def on_export_theme_clicked(self):
         """
@@ -326,8 +296,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         Enable export only when a non-empty theme name is entered.
         """
-        if hasattr(self, 'export_theme_button'):
-            self.export_theme_button.setEnabled(bool(str(theme_name).strip()))
+        if hasattr(self, 'export_theme_action'):
+            self.export_theme_action.setEnabled(bool(str(theme_name).strip()))
 
     def on_outline_toggled(self, is_enabled):
         """
@@ -354,15 +324,15 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.can_update_theme = False
         if hasattr(self, 'preview_box'):
             self.preview_box.set_scale(1)
+        if hasattr(self, 'canvas_combo'):
+            with QtCore.QSignalBlocker(self.canvas_combo):
+                self.canvas_combo.setCurrentIndex(0)
         self.set_defaults()
         self.can_update_theme = True
         self.edit_mode = edit
-        self.layout_guides_visible = False
         self._last_preview_scale = None
         self._sync_preview_to_current_screen()
         self._apply_preview_layout_geometry()
-        self.layout_guide_button.setChecked(False)
-        self._update_layout_guide_button_tooltip(False)
         if edit:
             self.setWindowTitle(translate('OpenLP.ThemeWizard', 'Edit Theme - {name}'
                                           ).format(name=self.theme.theme_name))
@@ -370,11 +340,238 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             self.setWindowTitle(UiStrings().NewTheme)
         self._initial_preview_refresh_pending = True
         QtCore.QTimer.singleShot(0, self._refresh_preview_when_ready)
-        return QtWidgets.QDialog.exec(self)
+        if hasattr(self, 'window_title_label'):
+            self.window_title_label.setText(self.windowTitle())
+        if hasattr(self, 'area_overlay'):
+            self.area_overlay.select_area('main')
+            self.update_area_overlay()
+        return self._exec_window()
+
+    def _exec_window(self):
+        """Wait for Save/Cancel while displaying the native Fluent window."""
+        from openlp.core.ui.designerexitguard import designer_exit_guard
+        self.mark_saved()
+        self._exit_guard = designer_exit_guard()
+        self._exit_guard.add(self)
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
+        loop = QtCore.QEventLoop(self)
+        self._event_loop = loop
+        try:
+            # ADS can disable painting on the Theme Manager during startup. Qt
+            # does not restore it on this separately owned top-level window.
+            self.setUpdatesEnabled(True)
+            self.ensurePolished()
+            self.layout().activate()
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            loop.exec()
+        finally:
+            self._exit_guard.remove(self)
+            self._event_loop = None
+            loop.deleteLater()
+        return self._result
+
+    def result(self):
+        return self._result
+
+    def done(self, result):
+        self._result = result
+        if getattr(self, '_exit_guard', None) is not None:
+            self._exit_guard.remove(self)
+        self._initial_preview_refresh_pending = False
+        if hasattr(self, 'area_preview_timer'):
+            self.area_preview_timer.stop()
+        self.hide()
+        if self._event_loop is not None:
+            self._event_loop.quit()
+        if result == QtWidgets.QDialog.DialogCode.Accepted:
+            self.accepted.emit()
+        else:
+            self.rejected.emit()
+        self.finished.emit(result)
+
+    def reject(self):
+        self.done(QtWidgets.QDialog.DialogCode.Rejected)
+
+    def closeEvent(self, event):
+        self.reject()
+        event.accept()
+
+    def _theme_state(self):
+        """Compare editable settings, excluding geometry derived from the output screen."""
+        self.update_theme()
+        state = copy.deepcopy(vars(self.theme))
+        state['theme_name'] = self.theme_name_edit.text()
+        for area in ('main', 'footer'):
+            if not state.get(f'font_{area}_override'):
+                for field in ('x', 'y', 'width', 'height'):
+                    state.pop(f'font_{area}_{field}', None)
+        return state
+
+    def mark_saved(self):
+        self._saved_theme_state = self._theme_state()
+
+    def has_unsaved_changes(self):
+        return self._theme_state() != self._saved_theme_state
+
+    def request_close_for_exit(self):
+        """Resolve this theme draft before the application's normal service-save prompt."""
+        focused = QtWidgets.QApplication.focusWidget()
+        if focused is not None and self.isAncestorOf(focused):
+            focused.clearFocus()
+        if not self.has_unsaved_changes():
+            self.reject()
+            return True
+
+        def tr(text):
+            return translate('OpenLP.ThemeWizard', text)
+
+        dialog = fluentqt.ContentDialog(self)
+        dialog.setObjectName('theme_exit_dialog')
+        dialog.setTitle(tr('Save Theme?'))
+        title = self.theme_name_edit.text().strip()
+        message = tr('Save changes to “{title}” before exiting OpenLP+?').format(title=title) if title else \
+            tr('Save your changes before exiting OpenLP+?')
+        label = QtWidgets.QLabel(message)
+        label.setWordWrap(True)
+        dialog.setContent(label)
+        dialog.setPrimaryButtonText(tr('Save'))
+        dialog.setSecondaryButtonText(tr('Discard'))
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+        dialog.setSmokeEnabled(True)
+        dialog.setDragEnabled(False)
+        dialog.setMinimumWidth(420)
+        try:
+            choice = dialog.exec()
+        finally:
+            dialog.deleteLater()
+        if choice == dialog.ResultSecondary:
+            self.reject()
+            return True
+        if choice != dialog.ResultPrimary:
+            return False
+        finished = []
+        self.finished.connect(finished.append)
+        try:
+            self.accept()
+        finally:
+            self.finished.disconnect(finished.append)
+        return finished == [QtWidgets.QDialog.DialogCode.Accepted]
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            self.reject()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def on_area_selected(self, area):
+        """Show typography, alignment and position controls for the selected area."""
+        for stack in self.area_property_stacks:
+            stack.setCurrentIndex(0 if area == 'main' else 1)
+
+    def _preview_size(self):
+        dimensions = self.canvas_combo.currentData() if hasattr(self, 'canvas_combo') else None
+        if dimensions:
+            return QtCore.QSize(*dimensions)
+        return QtCore.QSize(int(self.renderer.width()), int(self.renderer.height()))
+
+    def _preview_theme(self):
+        """Preview other aspect ratios without modifying saved output coordinates."""
+        if not hasattr(self, 'canvas_combo') or not self.canvas_combo.currentData():
+            return self.theme
+        theme = copy.deepcopy(self.theme)
+        size = self._preview_size()
+        theme.display_size_width = size.width()
+        theme.display_size_height = size.height()
+        for area in ('main', 'footer'):
+            for field in ('x', 'y', 'width', 'height'):
+                scale = (size.width() / self.renderer.width() if field in ('x', 'width')
+                         else size.height() / self.renderer.height())
+                name = f'font_{area}_{field}'
+                setattr(theme, name, getattr(theme, name) * scale)
+        return theme
+
+    def on_preview_size_changed(self, index):
+        self.area_preview_timer.stop()
+        self._last_preview_scale = None
+        size = self._preview_size()
+        self.preview_area_layout.set_aspect_ratio(size.width() / max(1, size.height()))
+        self._apply_preview_layout_geometry()
+        self.update_area_overlay()
+        self._initial_preview_refresh_pending = True
+        self._refresh_preview_when_ready()
+
+    def on_area_geometry_changed(self, area, rect):
+        """An interactive edit opts the area into custom geometry and updates its fields."""
+        if not self.can_update_theme or self._updating_page_values:
+            return
+        size = self._preview_size()
+        scale_x = self.renderer.width() / max(1, size.width())
+        scale_y = self.renderer.height() / max(1, size.height())
+        rect = QtCore.QRectF(rect.x() * scale_x, rect.y() * scale_y,
+                             rect.width() * scale_x, rect.height() * scale_y).toRect()
+        self._updating_page_values = True
+        try:
+            setattr(self.area_position_page, f'use_{area}_default_location', False)
+            for field, value in (('x', rect.x()), ('y', rect.y()),
+                                 ('width', rect.width()), ('height', rect.height())):
+                setattr(self.area_position_page, f'{area}_{field}', value)
+        finally:
+            self._updating_page_values = False
+        self.update_theme()
+        # Move existing text in place; pagination rebuilds the slide only after the gesture.
+        if not self.area_preview_timer.isActive():
+            self.area_preview_timer.start()
+
+    def update_preview_area_geometry(self):
+        """Keep the current slide and background mounted throughout a drag or resize."""
+        if not getattr(self.preview_box, 'is_initialised', True):
+            return
+        theme = self._preview_theme()
+        self.preview_box.run_in_display('setThemePreviewAreas', {
+            area: {field: getattr(theme, f'font_{area}_{field}') for field in ('x', 'y', 'width', 'height')}
+            for area in ('main', 'footer')})
+
+    def on_area_gesture_finished(self):
+        self.area_preview_timer.stop()
+        self.calculate_lines()
+
+    def update_area_overlay(self):
+        if not hasattr(self, 'area_overlay') or not hasattr(self, 'theme'):
+            return
+        size = self._preview_size()
+        theme = self._preview_theme()
+        self.area_overlay.set_areas(size, {
+            area: QtCore.QRectF(*(float(getattr(theme, f'font_{area}_{field}'))
+                                  for field in ('x', 'y', 'width', 'height')))
+            for area in ('main', 'footer')})
+        self.area_overlay.raise_()
+
+    def align_area(self, operation):
+        """Align the selected area to the slide, independently of its text alignment."""
+        if not self.can_update_theme or not hasattr(self, 'theme'):
+            return
+        self.update_area_overlay()
+        area = self.area_overlay.selected
+        rect = QtCore.QRectF(self.area_overlay.areas[area])
+        width, height = self.area_overlay.canvas_size.width(), self.area_overlay.canvas_size.height()
+        if operation in ('left', 'center', 'right'):
+            rect.moveLeft({'left': 0, 'center': (width - rect.width()) / 2,
+                           'right': width - rect.width()}[operation])
+        elif operation in ('top', 'middle', 'bottom'):
+            rect.moveTop({'top': 0, 'middle': (height - rect.height()) / 2,
+                          'bottom': height - rect.height()}[operation])
+        else:
+            return
+        self.on_area_geometry_changed(area, rect.toRect())
+        self.on_area_gesture_finished()
 
     def _sync_preview_to_current_screen(self):
         """
-        Make the preview widget match the current screen geometry before rendering.
+        Sync output coordinates while keeping the selected preview aspect ratio.
         """
         try:
             current_screen = ScreenList().current
@@ -382,35 +579,14 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         except (AttributeError, IndexError):
             return
         if hasattr(self, 'preview_area_layout'):
+            dimensions = self.canvas_combo.currentData() if hasattr(self, 'canvas_combo') else None
+            width, height = dimensions or (screen_geometry.width(), screen_geometry.height())
             try:
-                self.preview_area_layout.set_aspect_ratio(screen_geometry.width() / screen_geometry.height())
+                self.preview_area_layout.set_aspect_ratio(width / height)
             except ZeroDivisionError:
                 self.preview_area_layout.set_aspect_ratio(1)
         if hasattr(self, 'preview_box'):
             self.preview_box.update_from_screen(current_screen)
-
-    def initializePage(self, page_id):
-        """
-        Set up values for the selected page.
-        """
-        log.debug('initializePage {page}'.format(page=page_id))
-        self._updating_page_values = True
-        wizard_page = self.page_stack.widget(page_id)
-        try:
-            if wizard_page == self.background_page:
-                self.set_background_page_values()
-            elif wizard_page == self.main_area_page:
-                self.set_main_area_page_values()
-            elif wizard_page == self.footer_area_page:
-                self.set_footer_area_page_values()
-            elif wizard_page == self.alignment_page:
-                self.set_alignment_page_values()
-            elif (tw := self._transition_settings_widget()) is not None and wizard_page == tw:
-                self.set_transition_page_values()
-            elif wizard_page == self.area_position_page:
-                self.set_position_page_values()
-        finally:
-            self._updating_page_values = False
 
     def _transition_settings_widget(self):
         """
@@ -478,15 +654,18 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self._initial_preview_refresh_pending = False
         self.preview_box.clear_slides()
         self.preview_box.show()
-        self.preview_box.generate_preview(self.theme, bool(force_page), False)
+        self.preview_box.generate_preview(self._preview_theme(), bool(force_page), False)
         QtCore.QTimer.singleShot(0, self._set_preview_scale)
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
 
     def _refresh_preview_when_ready(self):
         """
         Refresh the preview once the preview widget has a usable size.
         """
         if not getattr(self, '_initial_preview_refresh_pending', False) or not hasattr(self, 'preview_box'):
+            return
+        if not getattr(self.preview_box, 'is_initialised', True):
+            QtCore.QTimer.singleShot(25, self._refresh_preview_when_ready)
             return
         self._apply_preview_layout_geometry()
         renderer = getattr(self, 'renderer', None)
@@ -514,7 +693,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             self._refresh_preview_when_ready()
             return
         self._set_preview_scale(size.width())
-        self.update_layout_guide_overlay()
+        self.update_area_overlay()
 
     def _apply_preview_layout_geometry(self):
         """
@@ -548,7 +727,7 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         """
         Compute and apply a stable preview scale from the current preview width.
         """
-        renderer_width = self.renderer.width()
+        renderer_width = self._preview_size().width()
         if renderer_width <= 0:
             return
         if preview_width is None:
@@ -560,32 +739,6 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if self._last_preview_scale is None or abs(scale - self._last_preview_scale) > 0.01:
             self._last_preview_scale = scale
             self.preview_box.set_scale(scale)
-
-    def update_layout_guide_overlay(self):
-        """
-        Update and paint layout guide rectangles over the preview.
-        """
-        if not hasattr(self, 'preview_box') or self.preview_box is None:
-            return
-        if not self.layout_guides_visible:
-            self.preview_box.run_in_display('clearLayoutGuide')
-            return
-        if not hasattr(self, 'theme'):
-            return
-        self.preview_box.run_in_display('setLayoutGuide', {
-            'main': {
-                'x': int(self.theme.font_main_x),
-                'y': int(self.theme.font_main_y),
-                'width': int(self.theme.font_main_width),
-                'height': int(self.theme.font_main_height)
-            },
-            'footer': {
-                'x': int(self.theme.font_footer_x),
-                'y': int(self.theme.font_footer_y),
-                'width': int(self.theme.font_footer_width),
-                'height': int(self.theme.font_footer_height)
-            }
-        })
 
     def set_background_page_values(self):
         """
@@ -632,6 +785,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.main_area_page.shadow_size = self.theme.font_main_shadow_size
         self.main_area_page.shadow_blur = self.theme.font_main_shadow_blur
         self.main_area_page.is_bold = self.theme.font_main_bold
+        self.main_area_page.font_weight = (
+            self.theme.font_main_weight or (700 if self.theme.font_main_bold else 400))
         self.main_area_page.is_italic = self.theme.font_main_italics
 
     def set_footer_area_page_values(self):
@@ -641,6 +796,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.footer_area_page.font_name = self.theme.font_footer_name
         self.footer_area_page.font_color = self.theme.font_footer_color
         self.footer_area_page.is_bold = self.theme.font_footer_bold
+        self.footer_area_page.font_weight = (
+            self.theme.font_footer_weight or (700 if self.theme.font_footer_bold else 400))
         self.footer_area_page.is_italic = self.theme.font_footer_italics
         self.footer_area_page.font_size = self.theme.font_footer_size
         self.footer_area_page.wrap = self.theme.font_footer_wrap
@@ -733,10 +890,12 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
             self.theme.background_border_color = self.background_page.image_color
             self.theme.background_source = self.background_page.image_path
             self.theme.background_filename = self.background_page.image_path
+            self.theme.background_label = self.background_page.image_path_edit.line_edit.text()
         elif self.theme.background_type == BackgroundType.to_string(BackgroundType.Video):
             self.theme.background_border_color = self.background_page.video_color
             self.theme.background_source = self.background_page.video_path
             self.theme.background_filename = self.background_page.video_path
+            self.theme.background_label = self.background_page.video_path_edit.line_edit.text()
         elif self.theme.background_type == BackgroundType.to_string(BackgroundType.Stream):
             self.theme.background_border_color = self.background_page.stream_color
             self.theme.background_source = self.background_page.stream_mrl
@@ -755,11 +914,13 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         self.theme.font_main_shadow_blur = self.main_area_page.shadow_blur
         self.theme.font_main_shadow_color = self.main_area_page.shadow_color
         self.theme.font_main_bold = self.main_area_page.is_bold
+        self.theme.font_main_weight = self.main_area_page.font_weight
         self.theme.font_main_italics = self.main_area_page.is_italic
         # footer page
         self.theme.font_footer_name = self.footer_area_page.font_name
         self.theme.font_footer_color = self.footer_area_page.font_color
         self.theme.font_footer_bold = self.footer_area_page.is_bold
+        self.theme.font_footer_weight = self.footer_area_page.font_weight
         self.theme.font_footer_italics = self.footer_area_page.is_italic
         self.theme.font_footer_size = self.footer_area_page.font_size
         self.theme.font_footer_wrap = self.footer_area_page.wrap
@@ -815,18 +976,23 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         if not self.theme.theme_name:
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Missing'),
-                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a name for the theme.'), parent=self)
             return
         if self.theme.theme_name == '-1' or self.theme.theme_name == 'None':
             critical_error_message_box(
                 translate('OpenLP.ThemeWizard', 'Theme Name Invalid'),
-                translate('OpenLP.ThemeWizard', 'Please enter a valid theme name.'))
+                translate('OpenLP.ThemeWizard', 'Please enter a valid theme name.'), parent=self)
             return
         destination_path = None
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Image) or \
                 self.theme.background_type == BackgroundType.to_string(BackgroundType.Video):
             file_name = self.theme.background_filename.name
             destination_path = self.path / self.theme.theme_name / file_name
+            from openlp.core.lib.designmedia import cache_media, resolve_media, MIME_TYPES
+            source = self.theme.background_filename
+            if (isinstance(source, Path) and source.is_file()
+                    and source.suffix.lower().lstrip('.') in MIME_TYPES):
+                destination_path = resolve_media(cache_media(source))
         if self.theme.background_type == BackgroundType.to_string(BackgroundType.Stream):
             destination_path = self.theme.background_source
         if not self.edit_mode and not self.theme_manager.check_if_theme_exists(self.theme.theme_name):
@@ -834,5 +1000,8 @@ class ThemeForm(QtWidgets.QDialog, Ui_ThemeWizard, RegistryProperties):
         # Set the theme background to the cache location
         self.theme.background_filename = destination_path
         self.theme_manager.save_theme(self.theme)
-        self.theme_manager.save_preview(self.theme.theme_name, self.preview_box.save_screenshot())
-        return QtWidgets.QDialog.accept(self)
+        preview = (self.theme_manager.generate_image(self.theme)
+                   if hasattr(self, 'canvas_combo') and self.canvas_combo.currentData()
+                   else self.preview_box.save_screenshot())
+        self.theme_manager.save_preview(self.theme.theme_name, preview)
+        self.done(QtWidgets.QDialog.DialogCode.Accepted)

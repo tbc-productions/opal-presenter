@@ -19,7 +19,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.settingstab import SettingsTab
@@ -65,38 +66,32 @@ class AlertsTab(SettingsTab):
         self.background_color_button.setObjectName('background_color_button')
         self.background_layout.addRow(self.background_color_label, self.background_color_button)
         self.left_layout.addWidget(self.background_group_box)
-        # Scroll Settings
-        self.scroll_group_box = QtWidgets.QGroupBox(self.left_column)
-        self.scroll_group_box.setObjectName('scroll_group_box')
-        self.scroll_group_layout = QtWidgets.QFormLayout(self.scroll_group_box)
-        self.scroll_group_layout.setObjectName('scroll_group_layout')
-        self.scroll_check_box = QtWidgets.QCheckBox(self.scroll_group_box)
-        self.scroll_check_box.setObjectName('scroll_check_box')
-        self.scroll_group_layout.addRow(self.scroll_check_box)
-        self.repeat_label = QtWidgets.QLabel(self.scroll_group_box)
-        self.repeat_label.setObjectName('repeat_label')
-        self.repeat_spin_box = QtWidgets.QSpinBox(self.scroll_group_box)
-        self.repeat_spin_box.setObjectName('repeat_spin_box')
-        self.scroll_group_layout.addRow(self.repeat_label, self.repeat_spin_box)
-        self.left_layout.addWidget(self.scroll_group_box)
-        # Other Settings
+        # Display Settings
         self.settings_group_box = QtWidgets.QGroupBox(self.left_column)
         self.settings_group_box.setObjectName('settings_group_box')
         self.settings_layout = QtWidgets.QFormLayout(self.settings_group_box)
         self.settings_layout.setObjectName('settings_layout')
+        self.scroll_check_box = QtWidgets.QCheckBox(self.settings_group_box)
+        self.scroll_check_box.setObjectName('scroll_check_box')
+        self.settings_layout.addRow(self.scroll_check_box)
+        self.repeat_label = QtWidgets.QLabel(self.settings_group_box)
+        self.repeat_label.setObjectName('repeat_label')
+        self.repeat_spin_box = QtWidgets.QSpinBox(self.settings_group_box)
+        self.repeat_spin_box.setObjectName('repeat_spin_box')
+        self.settings_layout.addRow(self.repeat_label, self.repeat_spin_box)
         self.timeout_label = QtWidgets.QLabel(self.settings_group_box)
         self.timeout_label.setObjectName('timeout_label')
         self.timeout_spin_box = QtWidgets.QSpinBox(self.settings_group_box)
         self.timeout_spin_box.setMaximum(180)
         self.timeout_spin_box.setObjectName('timeout_spin_box')
         self.settings_layout.addRow(self.timeout_label, self.timeout_spin_box)
-        self.vertical_label, self.vertical_combo_box = create_valign_selection_widgets(self.font_group_box)
+        self.vertical_label, self.vertical_combo_box = create_valign_selection_widgets(self.settings_group_box)
         self.vertical_label.setObjectName('vertical_label')
         self.vertical_combo_box.setObjectName('vertical_combo_box')
         self.settings_layout.addRow(self.vertical_label, self.vertical_combo_box)
         self.left_layout.addWidget(self.settings_group_box)
         self.left_layout.addStretch()
-        self.preview_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.preview_group_box = QtWidgets.QGroupBox(self.left_column)
         self.preview_group_box.setObjectName('preview_group_box')
         self.preview_layout = QtWidgets.QVBoxLayout(self.preview_group_box)
         self.preview_layout.setObjectName('preview_layout')
@@ -107,7 +102,7 @@ class AlertsTab(SettingsTab):
         self.font_preview.setMinimumHeight(72)
         self.font_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft)
         self.preview_layout.addWidget(self.font_preview)
-        self.right_layout.addWidget(self.preview_group_box)
+        self.left_layout.insertWidget(0, self.preview_group_box)
         self.right_layout.addStretch()
         # Signals and slots
         self.background_color_button.colorChanged.connect(self.on_background_color_changed)
@@ -126,7 +121,7 @@ class AlertsTab(SettingsTab):
         self.font_size_label.setText(translate('AlertsPlugin.AlertsTab', 'Font size:'))
         self.font_size_spin_box.setSuffix(' {unit}'.format(unit=UiStrings().FontSizePtUnit))
         self.background_group_box.setTitle(translate('AlertsPlugin.AlertsTab', 'Background Settings'))
-        self.settings_group_box.setTitle(translate('AlertsPlugin.AlertsTab', 'Other Settings'))
+        self.settings_group_box.setTitle(translate('AlertsPlugin.AlertsTab', 'Display Settings'))
         self.timeout_label.setText(translate('AlertsPlugin.AlertsTab', 'Alert timeout:'))
         self.timeout_spin_box.setSuffix(' {unit}'.format(unit=UiStrings().Seconds))
         self.repeat_label.setText(translate('AlertsPlugin.AlertsTab', 'Repeat (no. of times):'))

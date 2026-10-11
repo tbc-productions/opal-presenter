@@ -18,13 +18,39 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtGui
+import fluentqt
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
-from openlp.core.lib.ui import create_button, create_button_box
+from openlp.core.lib.ui import create_button_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.style import use_alternate_rows
 from openlp.core.widgets.edits import FormattingTagDelegate
+
+
+class CustomSlideListWidget(QtWidgets.QListWidget):
+    """One numbered, fully selectable row per custom slide, including optional splits."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setItemDelegate(FormattingTagDelegate(self))
+        header = self.verticalHeader()
+        header.show()
+        header.setDefaultAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+        header.setMinimumWidth(32)
+        header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        for signal in (self.model().rowsInserted, self.model().rowsRemoved, self.model().dataChanged,
+                       self.model().modelReset):
+            signal.connect(self._resize_slide_rows)
+
+    def _resize_slide_rows(self, *args):
+        self.resizeRowsToContents()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resizeRowsToContents()
 
 
 class Ui_CustomEditDialog(object):
@@ -35,7 +61,7 @@ class Ui_CustomEditDialog(object):
         """
         custom_edit_dialog.setObjectName('custom_edit_dialog')
         custom_edit_dialog.setWindowIcon(UiIcons().main_icon)
-        custom_edit_dialog.resize(550, 550)
+        custom_edit_dialog.resize(900, 600)
         self.dialog_layout = QtWidgets.QVBoxLayout(custom_edit_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.title_layout = QtWidgets.QHBoxLayout()
@@ -48,38 +74,29 @@ class Ui_CustomEditDialog(object):
         self.title_edit.setObjectName('title_edit')
         self.title_layout.addWidget(self.title_edit)
         self.dialog_layout.addLayout(self.title_layout)
-        self.central_layout = QtWidgets.QHBoxLayout()
-        self.central_layout.setObjectName('central_layout')
-        self.slide_list_view = QtWidgets.QListWidget(custom_edit_dialog)
+        self.slide_command_bar = fluentqt.CommandBar(custom_edit_dialog)
+        self.slide_command_bar.setObjectName('slide_command_bar')
+        self.slide_command_bar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)
+        self.slide_command_bar.setBackgroundVisible(True)
+        self.slide_command_bar.setDynamicOverflowEnabled(True)
+        for name, icon, caption in (('add_action', UiIcons().add, UiStrings().Add),
+                                    ('edit_action', UiIcons().edit, UiStrings().Edit),
+                                    ('edit_all_action', UiIcons().edit,
+                                     translate('CustomPlugin.EditCustomForm', 'Ed&it All')),
+                                    ('delete_action', UiIcons().delete, UiStrings().Delete),
+                                    ('up_action', UiIcons().arrow_up, UiStrings().Up),
+                                    ('down_action', UiIcons().arrow_down, UiStrings().Down)):
+            action = QtGui.QAction(icon, caption, self.slide_command_bar)
+            action.setObjectName(name)
+            setattr(self, name, action)
+            self.slide_command_bar.addPrimaryAction(action)
+        for action in (self.edit_action, self.delete_action, self.up_action, self.down_action):
+            action.setEnabled(False)
+        self.dialog_layout.addWidget(self.slide_command_bar)
+        self.slide_list_view = CustomSlideListWidget(custom_edit_dialog)
         self.slide_list_view.setAlternatingRowColors(use_alternate_rows())
         self.slide_list_view.setObjectName('slide_list_view')
-        self.slide_list_view.setItemDelegate(FormattingTagDelegate(self.slide_list_view))
-        self.central_layout.addWidget(self.slide_list_view)
-        self.button_layout = QtWidgets.QVBoxLayout()
-        self.button_layout.setObjectName('button_layout')
-        self.add_button = QtWidgets.QPushButton(custom_edit_dialog)
-        self.add_button.setObjectName('add_button')
-        self.button_layout.addWidget(self.add_button)
-        self.edit_button = QtWidgets.QPushButton(custom_edit_dialog)
-        self.edit_button.setEnabled(False)
-        self.edit_button.setObjectName('edit_button')
-        self.button_layout.addWidget(self.edit_button)
-        self.edit_all_button = QtWidgets.QPushButton(custom_edit_dialog)
-        self.edit_all_button.setObjectName('edit_all_button')
-        self.button_layout.addWidget(self.edit_all_button)
-        self.delete_button = create_button(custom_edit_dialog, 'delete_button', role='delete',
-                                           click=custom_edit_dialog.on_delete_button_clicked)
-        self.delete_button.setEnabled(False)
-        self.button_layout.addWidget(self.delete_button)
-        self.button_layout.addStretch()
-        self.up_button = create_button(custom_edit_dialog, 'up_button', role='up', enabled=False,
-                                       click=custom_edit_dialog.on_up_button_clicked)
-        self.down_button = create_button(custom_edit_dialog, 'down_button', role='down', enabled=False,
-                                         click=custom_edit_dialog.on_down_button_clicked)
-        self.button_layout.addWidget(self.up_button)
-        self.button_layout.addWidget(self.down_button)
-        self.central_layout.addLayout(self.button_layout)
-        self.dialog_layout.addLayout(self.central_layout)
+        self.dialog_layout.addWidget(self.slide_list_view, 1)
         self.bottom_form_layout = QtWidgets.QFormLayout()
         self.bottom_form_layout.setObjectName('bottom_form_layout')
         self.theme_label = QtWidgets.QLabel(custom_edit_dialog)
@@ -106,12 +123,18 @@ class Ui_CustomEditDialog(object):
     def retranslate_ui(self, custom_edit_dialog):
         custom_edit_dialog.setWindowTitle(translate('CustomPlugin.EditCustomForm', 'Edit Custom Slides'))
         self.title_label.setText(translate('CustomPlugin.EditCustomForm', '&Title:'))
-        self.add_button.setText(UiStrings().Add)
-        self.add_button.setToolTip(translate('CustomPlugin.EditCustomForm', 'Add a new slide at bottom.'))
-        self.edit_button.setText(UiStrings().Edit)
-        self.edit_button.setToolTip(translate('CustomPlugin.EditCustomForm', 'Edit the selected slide.'))
-        self.edit_all_button.setText(translate('CustomPlugin.EditCustomForm', 'Ed&it All'))
-        self.edit_all_button.setToolTip(translate('CustomPlugin.EditCustomForm', 'Edit all the slides at once.'))
+        self.add_action.setText(UiStrings().Add)
+        self.add_action.setToolTip(translate('CustomPlugin.EditCustomForm', 'Add a new slide at bottom.'))
+        self.edit_action.setText(UiStrings().Edit)
+        self.edit_action.setToolTip(translate('CustomPlugin.EditCustomForm', 'Edit the selected slide.'))
+        self.edit_all_action.setText(translate('CustomPlugin.EditCustomForm', 'Ed&it All'))
+        self.edit_all_action.setToolTip(translate('CustomPlugin.EditCustomForm', 'Edit all the slides at once.'))
+        self.delete_action.setText(UiStrings().Delete)
+        self.delete_action.setToolTip(translate('OpenLP.Ui', 'Delete the selected item.'))
+        self.up_action.setText(UiStrings().Up)
+        self.up_action.setToolTip(translate('OpenLP.Ui', 'Move selection up one position.'))
+        self.down_action.setText(UiStrings().Down)
+        self.down_action.setToolTip(translate('OpenLP.Ui', 'Move selection down one position.'))
         self.theme_label.setText(translate('CustomPlugin.EditCustomForm', 'The&me:'))
         self.credit_label.setText(translate('CustomPlugin.EditCustomForm', '&Credits:'))
         self.preview_button.setText(UiStrings().SaveAndPreview)

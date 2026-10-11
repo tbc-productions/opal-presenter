@@ -21,13 +21,16 @@
 """
 The :mod:`~openlp.core.pages.fontselect` module contains the font selection page used in the theme wizard
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+import fluentqt
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.pages import GridLayoutPage
 from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.labels import FormLabel
+from openlp.core.widgets.fluent_inputs import FontPreviewComboBox
 
 
 class FontSelectPage(GridLayoutPage):
@@ -42,12 +45,13 @@ class FontSelectPage(GridLayoutPage):
 
     font_name_changed = QtCore.Signal(str)
     font_color_changed = QtCore.Signal(str)
+    font_weight_changed = QtCore.Signal(int)
     is_bold_changed = QtCore.Signal(bool)
     is_italic_changed = QtCore.Signal(bool)
     font_size_changed = QtCore.Signal(int)
     wrap_changed = QtCore.Signal(bool)
     line_spacing_changed = QtCore.Signal(int)
-    letter_spacing_changed = QtCore.Signal(int)
+    letter_spacing_changed = QtCore.Signal(float)
     is_outline_enabled_changed = QtCore.Signal(bool)
     outline_color_changed = QtCore.Signal(str)
     outline_size_changed = QtCore.Signal(int)
@@ -57,7 +61,9 @@ class FontSelectPage(GridLayoutPage):
     shadow_blur_changed = QtCore.Signal(int)
 
     def __init__(self, parent=None):
+        self._font_weight = 400
         super().__init__(parent)
+        self._populate_font_weights()
         self.feature_widgets = {
             FontSelectPage.Outline: [self.outline_groupbox],
             FontSelectPage.Shadow: [self.shadow_groupbox],
@@ -110,6 +116,10 @@ class FontSelectPage(GridLayoutPage):
         self.style_bold_button.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Bold))
         self.style_bold_button.setObjectName('style_bold_button')
         self.style_layout.addWidget(self.style_bold_button)
+        self.font_weight_combo = FontPreviewComboBox(self)
+        self.font_weight_combo.setAccessibleName(translate('OpenLP.FontSelectWidget', 'Font weight'))
+        self.style_layout.addWidget(self.font_weight_combo)
+        self.font_weight_combo.currentIndexChanged.connect(self._on_font_weight_changed)
         self.style_italic_button = QtWidgets.QToolButton(self)
         self.style_italic_button.setCheckable(True)
         self.style_italic_button.setIcon(UiIcons().italic)
@@ -151,9 +161,12 @@ class FontSelectPage(GridLayoutPage):
         self.letter_spacing_label.setObjectName('letter_spacing_label')
         self.spacing_layout.addWidget(self.letter_spacing_label, spacing_row, 0)
         spacing_row += 1
-        self.letter_spacing_spinbox = QtWidgets.QDoubleSpinBox(self)
-        self.letter_spacing_spinbox.setMinimum(-250)
-        self.letter_spacing_spinbox.setMaximum(250)
+        self.letter_spacing_spinbox = fluentqt.NumberBox(self)
+        self.letter_spacing_spinbox.setRange(-250, 250)
+        self.letter_spacing_spinbox.setDisplayPrecision(1)
+        self.letter_spacing_spinbox.setSmallChange(0.1)
+        self.letter_spacing_spinbox.setValue(0)
+        self.letter_spacing_spinbox.setSpinButtonPlacementMode(fluentqt.NumberBox.SpinButtonPlacementMode.Compact)
         self.letter_spacing_spinbox.setObjectName('letter_spacing_spinbox')
         self.spacing_layout.addWidget(self.letter_spacing_spinbox, spacing_row, 0)
         spacing_row += 1
@@ -255,6 +268,8 @@ class FontSelectPage(GridLayoutPage):
         self.shadow_blur_label.setText(translate('OpenLP.FontSelectWidget', 'Blur:'))
 
     def _on_font_name_changed(self, font):
+        if isinstance(font, (QtGui.QFont, str)):
+            self._populate_font_weights(font.family() if isinstance(font, QtGui.QFont) else font)
         if isinstance(font, QtGui.QFont):
             self.font_name_changed.emit(font.family())
         elif isinstance(font, str):
@@ -264,6 +279,7 @@ class FontSelectPage(GridLayoutPage):
         self.font_color_changed.emit(color)
 
     def _on_style_bold_toggled(self, is_bold):
+        self.font_weight = 700 if is_bold else 400
         self.is_bold_changed.emit(is_bold)
 
     def _on_style_italic_toggled(self, is_italic):
@@ -338,13 +354,62 @@ class FontSelectPage(GridLayoutPage):
     def font_color(self, color):
         self.font_color_button.color = color
 
+    @staticmethod
+    def supported_weights(family):
+        """Deduplicate regular/italic faces into the family's installed weight choices."""
+        return sorted({QtGui.QFontDatabase.weight(family, style)
+                       for style in QtGui.QFontDatabase.styles(family)
+                       if 1 <= QtGui.QFontDatabase.weight(family, style) <= 1000})
+
+    def _populate_font_weights(self, family=None):
+        family = family or self.font_name
+        weights = self.supported_weights(family)
+        labels = {100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regular', 500: 'Medium',
+                  600: 'Semi bold', 700: 'Bold', 800: 'Extra bold', 900: 'Black'}
+        with QtCore.QSignalBlocker(self.font_weight_combo):
+            self.font_weight_combo.clear()
+            for weight in weights:
+                caption = translate('OpenLP.FontSelectWidget', labels.get(weight, 'Weight'))
+                self.font_weight_combo.addItem(f'{caption} ({weight})', weight)
+                font = QtGui.QFont(self.font_weight_combo.font())
+                font.setStyleName('')
+                font.setFamily(family)
+                font.setWeight(QtGui.QFont.Weight(weight))
+                self.font_weight_combo.setItemData(
+                    self.font_weight_combo.count() - 1, font, QtCore.Qt.ItemDataRole.FontRole)
+        self.font_weight_combo.setVisible(len(weights) > 1)
+        self.style_bold_button.setVisible(len(weights) <= 1)
+        self.font_weight = min(weights, key=lambda weight: abs(weight - self._font_weight)) if len(weights) > 1 \
+            else (700 if self._font_weight >= 600 else 400)
+
+    def _on_font_weight_changed(self, index):
+        weight = self.font_weight_combo.itemData(index)
+        if weight is not None:
+            self.font_weight = weight
+            self.font_weight_changed.emit(self.font_weight)
+
+    @property
+    def font_weight(self):
+        return self._font_weight
+
+    @font_weight.setter
+    def font_weight(self, weight):
+        self._font_weight = max(1, min(1000, int(weight)))
+        with QtCore.QSignalBlocker(self.style_bold_button):
+            self.style_bold_button.setChecked(self.is_bold)
+        with QtCore.QSignalBlocker(self.font_weight_combo):
+            weights = [self.font_weight_combo.itemData(i) for i in range(self.font_weight_combo.count())]
+            if weights:
+                closest = min(weights, key=lambda candidate: abs(candidate - self._font_weight))
+                self.font_weight_combo.setCurrentIndex(weights.index(closest))
+
     @property
     def is_bold(self):
-        return self.style_bold_button.isChecked()
+        return self._font_weight >= 600
 
     @is_bold.setter
     def is_bold(self, is_bold):
-        self.style_bold_button.setChecked(is_bold)
+        self.font_weight = 700 if is_bold else 400
 
     @property
     def is_italic(self):

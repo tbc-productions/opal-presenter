@@ -21,7 +21,8 @@
 """
 The :mod:`~openlp.core.widgets.labels` module contains specialised labels
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 
 class FormLabel(QtWidgets.QLabel):

@@ -40,6 +40,7 @@ from openlp.core.lib import ItemCapabilities, ServiceItemAction
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.core.ui import HideMode
+from openlp.core.ui.media import MediaState, MediaType
 from openlp.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
     InfoLabel, LiveController, PreviewController, SlideController
 
@@ -738,6 +739,38 @@ def test_update_slide_action_enabled_state_preview(settings: Settings):
     slide_controller.add_to_service_action.setEnabled.assert_called_with(True)
 
 
+def test_preview_add_action_hidden_for_service_items(settings: Settings):
+    controller = SlideController(None)
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 2
+    controller.add_to_service_action = MagicMock()
+    controller.service_item = ServiceItem()
+    controller.service_item.from_service = True
+
+    controller._update_slide_action_enabled_state()
+    controller.add_to_service_action.setVisible.assert_called_with(False)
+
+    controller.service_item = ServiceItem()
+    controller._update_slide_action_enabled_state()
+    controller.add_to_service_action.setVisible.assert_called_with(True)
+
+
+def test_preview_add_action_hidden_after_adding(settings: Settings):
+    controller = SlideController(None)
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.slide_count.return_value = 2
+    controller.add_to_service_action = MagicMock()
+    controller.service_item = ServiceItem()
+    manager = MagicMock()
+    Registry().register('service_manager', manager)
+    manager.add_service_item.side_effect = lambda item: setattr(item, 'from_service', True)
+
+    controller.on_preview_add_to_service()
+
+    manager.add_service_item.assert_called_once_with(controller.service_item)
+    controller.add_to_service_action.setVisible.assert_called_with(False)
+
+
 def test_powerpoint_timing_action_remembers_each_presentation(settings: Settings):
     controller = SlideController(None)
     controller.is_live = True
@@ -1084,6 +1117,60 @@ def test_add_service_item_without_song_edit(settings: Settings):
     # THEN: The item is processed, the slide number is correct, and the song is not editable (or something)
     assert slide_controller.song_edit is False, 'song_edit should be False'
     mocked_process_item.assert_called_once_with(mocked_item, 0)
+
+
+@mark.parametrize('is_live, item_type, slide_no, reuse', [
+    (False, 'text', -1, True),
+    (False, 'image', -1, True),
+    (False, 'media', -1, False),
+    (True, 'text', -1, False),
+    (True, 'image', -1, False),
+    (False, 'text', 2, True),
+    (True, 'text', 2, True),
+])
+def test_add_service_manager_item_reuses_loaded_preview(settings, is_live, item_type, slide_no, reuse):
+    """Repeated text/image Preview clicks reuse slides; Live and media parent clicks still restart."""
+    controller = SlideController(None)
+    controller.is_live = is_live
+    controller.preview_widget = MagicMock()
+    controller._process_item = MagicMock()
+    controller.slide_selected = MagicMock()
+    item = MagicMock()
+    item.is_text.return_value = item_type == 'text'
+    item.is_image.return_value = item_type == 'image'
+    item.auto_play_slides_loop = False
+    item.auto_play_slides_once = False
+    controller.service_item = item
+
+    controller.add_service_manager_item(item, slide_no, service_list_index=3)
+
+    assert controller._service_manager_item_index == 3
+    slide_num = max(0, slide_no)
+    if reuse:
+        controller._process_item.assert_not_called()
+        controller.preview_widget.change_slide.assert_called_once_with(slide_num)
+        controller.slide_selected.assert_called_once_with()
+    else:
+        controller._process_item.assert_called_once_with(item, slide_num)
+        controller.preview_widget.change_slide.assert_not_called()
+
+
+def test_add_service_manager_item_loads_new_preview(settings):
+    """Clicking a different text item still loads its content and theme."""
+    controller = SlideController(None)
+    controller.is_live = False
+    controller.preview_widget = MagicMock()
+    controller._process_item = MagicMock()
+    controller.service_item = None
+    controller._service_manager_item_index = 3
+    item = MagicMock()
+    item.is_text.return_value = True
+
+    controller.add_service_manager_item(item, -1)
+
+    assert controller._service_manager_item_index is None
+    controller._process_item.assert_called_once_with(item, 0)
+    controller.preview_widget.change_slide.assert_not_called()
 
 
 def test_replace_service_manager_item_different_items(settings: Settings):
@@ -1771,12 +1858,30 @@ def test_set_theme_applies_pdf_transition_settings(settings: Settings):
     # WHEN: _set_theme is called
     slide_controller._set_theme(service_item)
 
-    # THEN: The theme transition settings should be overridden and sent to display/preview
-    assert theme_data.display_slide_transition is True
-    assert theme_data.display_slide_transition_type == TransitionType.Zoom
-    assert theme_data.display_slide_transition_speed == TransitionSpeed.Slow
-    slide_controller.preview_display.set_theme.assert_called_once_with(theme_data, service_item_type='image')
-    slide_controller.displays[0].set_theme.assert_called_once_with(theme_data, service_item_type='image')
+    # THEN: Both displays receive the override without changing the shared theme.
+    applied_theme = slide_controller.preview_display.set_theme.call_args.args[0]
+    assert applied_theme is not theme_data
+    assert applied_theme.display_slide_transition is True
+    assert applied_theme.display_slide_transition_type == TransitionType.Zoom
+    assert applied_theme.display_slide_transition_speed == TransitionSpeed.Slow
+    assert theme_data.display_slide_transition is False
+    assert theme_data.display_slide_transition_type == TransitionType.Fade
+    assert theme_data.display_slide_transition_speed == TransitionSpeed.Normal
+    slide_controller.preview_display.set_theme.assert_called_once_with(applied_theme, service_item_type='image')
+    slide_controller.displays[0].set_theme.assert_called_once_with(applied_theme, service_item_type='image')
+
+
+@mark.parametrize('is_image,expected', [(True, False), (False, True)])
+def test_disabled_collection_transition_does_not_inherit_theme(settings, is_image, expected):
+    controller = SlideController(None)
+    item = MagicMock()
+    item.is_image.return_value = is_image
+    item.slide_transition_settings = {'enabled': False, 'type': TransitionType.Fade}
+    theme = MagicMock(display_slide_transition=True)
+
+    controller._apply_service_item_transitions(item, theme)
+
+    assert theme.display_slide_transition is expected
 
 
 def test_live_stolen_focus_shortcuts(settings: Settings):
@@ -2099,8 +2204,9 @@ def test_update_preview_live_mirror_presentation_screen(settings: Settings):
 
 
 @mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
-def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type):
-    """Leaving Show Desktop restores the current slide in the live preview."""
+@mark.parametrize('intermediate_mode', [HideMode.Screen, HideMode.Logo, HideMode.Blank, HideMode.Theme, None])
+def test_update_preview_restores_slides_after_show_desktop(settings: Settings, item_type, intermediate_mode):
+    """A desktop capture is replaced even after a cover or mirror-setting change."""
     controller = SlideController(None)
     controller.is_live = True
     controller._current_hide_mode = None
@@ -2112,10 +2218,23 @@ def test_update_preview_restores_slides_after_show_desktop(settings: Settings, i
     controller.selected_row = 1
     controller.slide_changed_time = datetime.datetime.now()
     controller.preview_display = MagicMock()
-    controller.preview_display.hide_mode = HideMode.Screen
+    controller.preview_display.hide_mode = intermediate_mode
     controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
+    controller._capture_maindisplay = MagicMock(return_value='desktop capture')
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+        controller.display_maindisplay()
+    assert controller._live_preview_is_capture is True
+
+    # An intermediate cover must not lose track of the captured slide underneath.
+    if intermediate_mode is not None:
+        controller._current_hide_mode = intermediate_mode
+        with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+            controller.update_preview()
+        controller.preview_display.load_verses.assert_not_called()
+        controller.preview_display.load_images.assert_not_called()
+    controller._current_hide_mode = None
 
     controller.update_preview()
 
@@ -2126,7 +2245,48 @@ def test_update_preview_restores_slides_after_show_desktop(settings: Settings, i
         controller.preview_display.load_images.assert_called_once_with(controller.service_item.slides)
         controller.preview_display.load_verses.assert_not_called()
     controller.preview_display.go_to_slide.assert_called_once_with(1)
-    controller.preview_display.show_display.assert_called_once_with()
+    if intermediate_mode is not None:
+        controller.preview_display.show_display.assert_called_once_with()
+    assert controller._live_preview_is_capture is False
+
+    # Ordinary slide navigation must not rebuild the deck or lose its transitions.
+    controller.preview_display.reset_mock()
+    controller.update_preview()
+    controller.preview_display.load_verses.assert_not_called()
+    controller.preview_display.load_images.assert_not_called()
+
+
+@mark.parametrize('capture_available', [False, True])
+def test_desktop_monitor_captures_screen_without_becoming_transparent(settings: Settings, capture_available):
+    """Desktop mode keeps the monitor visible and never uses a native slide thumbnail."""
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._current_hide_mode = HideMode.Screen
+    controller.service_item = MagicMock(processor='PowerPointMac')
+    controller.preview_display = MagicMock()
+    controller.preview_display.hide_mode = HideMode.Logo
+    controller.preview_display.show_display.side_effect = lambda: setattr(controller.preview_display, 'hide_mode', None)
+    controller.slide_changed_time = datetime.datetime.now()
+    controller._capture_maindisplay_desktop = MagicMock(return_value='desktop' if capture_available else None)
+    controller._update_desktop_capture_timer = MagicMock()
+    controller.output_has_changed = MagicMock()
+
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop jpeg'):
+        controller.update_preview()
+
+    controller._capture_maindisplay_desktop.assert_called_once_with()
+    controller.preview_display.hide_display.assert_not_called()
+    controller.preview_display.go_to_slide.assert_not_called()
+    controller.preview_display.set_single_image.assert_not_called()
+    controller._update_desktop_capture_timer.assert_called_once_with()
+    if capture_available:
+        controller.preview_display.assert_has_calls([
+            call.set_single_image_data('#000', 'desktop jpeg'), call.show_display()
+        ])
+        assert controller._live_preview_is_capture is True
+    else:
+        controller.preview_display.set_single_image_data.assert_not_called()
+        controller.preview_display.show_display.assert_not_called()
 
 
 def test_on_live_preview_capture_timer_runs_pending_capture(settings: Settings):
@@ -2176,6 +2336,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
     live_display._is_initialised = True
     preview_display = MagicMock()
     preview_display._is_initialised = True
+    preview_display.allow_item_transitions = False
     slide_controller.displays = [live_display]
     slide_controller.preview_display = preview_display
     settings.setValue('themes/item transitions', True)
@@ -2187,7 +2348,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
 
     # THEN: Both displays should receive the update command
     live_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
-    preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', True, 1.2, 'ease-in')
+    preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', False, 1.2, 'ease-in')
 
 
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
@@ -2508,6 +2669,56 @@ def test__update_desktop_capture_timer_uses_fixed_interval(settings: Settings):
     slide_controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
 
 
+@mark.parametrize('media_type', [MediaType.Video, MediaType.DeviceStream, MediaType.NetworkStream])
+@mark.parametrize('state', [MediaState.Playing, MediaState.Paused])
+def test_live_media_monitor_keeps_refreshing_without_screen_mirroring(settings: Settings, media_type, state):
+    """The timer that starts for native video must survive its first tick."""
+    settings.setValue('core/live preview shows presentation screen', False)
+    controller = SlideController(None)
+    controller.is_live = True
+    controller.service_item = ServiceItem(None)
+    controller.service_item.name = 'media'
+    controller.service_item.service_item_type = ServiceItemType.Command
+    controller.service_item.capabilities = [ItemCapabilities.RequiresMedia]
+    controller._current_hide_mode = None
+    controller.media_play_item.media_type = media_type
+    controller.media_play_item.is_playing = state
+    controller.preview_display = MagicMock(hide_mode=None)
+    controller.desktop_capture_timer = MagicMock()
+    controller.desktop_capture_timer.isActive.return_value = False
+    controller.slide_changed_time = datetime.datetime.now()
+    controller._schedule_live_preview_capture = MagicMock()
+    controller.output_has_changed = MagicMock()
+    controller._capture_maindisplay_desktop = MagicMock(return_value='video frame')
+
+    controller.update_preview()
+    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='video jpeg'):
+        controller._on_desktop_capture_timer()
+        controller._on_desktop_capture_timer()
+
+    controller.desktop_capture_timer.start.assert_called_once_with(DESKTOP_CAPTURE_INTERVAL_MS)
+    controller.desktop_capture_timer.stop.assert_not_called()
+    assert controller._capture_maindisplay_desktop.call_count == 2
+    assert controller.preview_display.set_single_image_data.call_count == 2
+    controller.preview_display.set_single_image_data.assert_called_with('#000', 'video jpeg')
+    controller.preview_display.go_to_slide.assert_not_called()
+
+    # A cover must stop media-specific mirroring, even before playback pauses.
+    for mode in (HideMode.Logo, HideMode.Blank, HideMode.Theme):
+        controller._current_hide_mode = mode
+        controller._on_desktop_capture_timer()
+    assert controller.desktop_capture_timer.stop.call_count == 3
+    assert controller._capture_maindisplay_desktop.call_count == 2
+
+    # A retired video's delayed cleanup must not keep capturing over a new song.
+    controller._current_hide_mode = None
+    controller.service_item.name = 'songs'
+    controller.service_item.capabilities = []
+    controller._on_desktop_capture_timer()
+    assert controller.desktop_capture_timer.stop.call_count == 4
+    assert controller._capture_maindisplay_desktop.call_count == 2
+
+
 @patch('openlp.core.ui.slidecontroller.image_to_byte')
 def test_grab_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry):
     """
@@ -2564,23 +2775,20 @@ def test_paint_event_text_fits():
     with patch('openlp.core.ui.slidecontroller.QtWidgets.QLabel'), \
             patch('openlp.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
 
-        # GIVEN: An instance of InfoLabel, with mocked text return, width and rect methods
+        # GIVEN: An instance of InfoLabel, with horizontal padding and mocked text
         info_label = InfoLabel()
         test_string = 'Label Text'
-        mocked_rect = MagicMock()
         mocked_text = MagicMock()
-        mocked_width = MagicMock()
         mocked_text.return_value = test_string
-        info_label.rect = mocked_rect
+        info_label.setContentsMargins(8, 0, 8, 0)
         info_label.text = mocked_text
-        info_label.width = mocked_width
 
         # WHEN: The instance is wider than its text, and the paintEvent method is called
-        info_label.width.return_value = metrics.boundingRect(test_string).width() + 20
+        info_label.resize(metrics.boundingRect(test_string).width() + 36, 30)
         info_label.paintEvent(MagicMock())
 
         # THEN: The text should be drawn left with the complete test_string
-        mocked_qpainter().drawText.assert_called_once_with(mocked_rect(),
+        mocked_qpainter().drawText.assert_called_once_with(info_label.contentsRect(),
                                                            QtCore.Qt.AlignmentFlag.AlignLeft |
                                                            QtCore.Qt.AlignmentFlag.AlignVCenter, test_string)
 
@@ -2595,27 +2803,24 @@ def test_paint_event_text_doesnt_fit():
     with patch('openlp.core.ui.slidecontroller.QtWidgets.QLabel'), \
             patch('openlp.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
 
-        # GIVEN: An instance of InfoLabel, with mocked text return, width and rect methods
+        # GIVEN: An instance of InfoLabel, with horizontal padding and mocked text
         info_label = InfoLabel()
         test_string = 'Label Text'
-        mocked_rect = MagicMock()
         mocked_text = MagicMock()
-        mocked_width = MagicMock()
         mocked_text.return_value = test_string
-        info_label.rect = mocked_rect
+        info_label.setContentsMargins(8, 0, 8, 0)
         info_label.text = mocked_text
-        info_label.width = mocked_width
 
         # WHEN: The instance is narrower than its text, and the paintEvent method is called
         label_width = metrics.boundingRect(test_string).width() - 20
-        info_label.width.return_value = label_width
+        info_label.resize(label_width + 16, 30)
         info_label.paintEvent(MagicMock())
 
         # THEN: The text should be drawn aligned left with an elided test_string
         elided_test_string = metrics.elidedText(test_string, QtCore.Qt.TextElideMode.ElideRight, label_width)
         mocked_qpainter().drawText.assert_called_once()
         draw_args = mocked_qpainter().drawText.call_args.args
-        assert draw_args[0] == mocked_rect()
+        assert draw_args[0] == info_label.contentsRect()
         assert draw_args[1] == (QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         assert draw_args[2].endswith('…')
         assert len(draw_args[2]) <= len(test_string)
@@ -2776,3 +2981,119 @@ def test_wide_hide_controls_are_not_temporarily_hidden(settings, is_text):
         if len(args) > 1 and args[1] is False:
             assert 'logo_screen_button' not in args[0]
             assert 'show_screen_button' not in args[0]
+
+
+@mark.parametrize('hide_mode,has_item,has_display,expected_icon', [
+    (None, True, True, True),
+    (HideMode.Blank, True, True, True),
+    (HideMode.Theme, True, True, True),
+    (HideMode.Logo, True, True, True),
+    (HideMode.Screen, True, True, False),
+    (None, False, True, True),
+    (None, True, False, False),
+])
+def test_live_status_record_icon(settings, hide_mode, has_item, has_display, expected_icon):
+    """Record indicates an active OpenLP display, including blank, theme and logo output."""
+    from fluentqt import FontIcon
+    from openlp.core.widgets import fluent as QtWidgets
+
+    controller = SlideController(None)
+    controller.output_status_label = QtWidgets.QLabel(controller)
+    controller.output_status_icon = FontIcon('ic_fluent_record_24_regular', controller)
+    controller.displays = [MagicMock()] if has_display else []
+    controller._current_hide_mode = hide_mode
+
+    controller._update_output_status(has_item)
+
+    assert controller.output_status_icon.isHidden() is not expected_icon
+    assert controller.output_status_label.property('onAir') is (has_item and hide_mode is None and has_display)
+    if hide_mode == HideMode.Screen:
+        assert controller.output_status_label.text() == 'Desktop'
+
+    controller.close_displays()
+    assert controller.output_status_icon.isHidden()
+
+
+@mark.parametrize('narrow', [False, True])
+def test_priority_display_modes_stay_visible(settings, narrow):
+    """Resizing cannot move priority Live display modes into a menu."""
+    controller = SlideController(None)
+    controller._pinned_display_controls = True
+    controller.toolbar = MagicMock()
+    controller._update_desktop_hide_action_state = MagicMock()
+
+    controller.set_hide_mode_menu(narrow)
+
+    visible = {name for args in controller.toolbar.set_widget_visible.call_args_list
+               for name in args.args[0] if args.args[1]}
+    assert visible == set(WIDE_MENU + NON_TEXT_MENU)
+    controller._update_desktop_hide_action_state.assert_called_once()
+
+
+def test_slides_to_end_shows_stop_icon_when_started(settings):
+    """Starting playback shows the Stop command on the selected action."""
+    from openlp.core.common.i18n import UiStrings
+    from openlp.core.ui.icons import UiIcons
+
+    controller = SlideController(None)
+    controller.play_slides_once = QtGui.QAction(controller)
+    controller.play_slides_once.setCheckable(True)
+    controller.play_slides_loop = QtGui.QAction(controller)
+    controller.play_slides_menu = MagicMock()
+    controller.on_toggle_loop = MagicMock()
+
+    controller.on_play_slides_once(True)
+
+    assert controller.play_slides_once.isChecked()
+    assert controller.play_slides_once.icon().cacheKey() == UiIcons().stop.cacheKey()
+    assert controller.play_slides_once.text() == UiStrings().StopPlaySlidesToEnd
+    controller.play_slides_menu.setDefaultAction.assert_called_once_with(controller.play_slides_once)
+    controller.on_toggle_loop.assert_called_once()
+
+
+def test_pinned_live_modes_have_no_unmanaged_dropdown(settings, registry, qapp):
+    """Mode changes must not reveal the old dropdown over the pinned buttons."""
+    from openlp.core.widgets.toolbar import OpenLPToolbar
+    from openlp.core.widgets import fluent as QtWidgets
+
+    registry.register('application-qt', QtWidgets.QApplication.instance())
+    controller = SlideController(None)
+    controller.is_live = True
+    controller._pinned_display_controls = True
+    controller.category = 'Live'
+    controller.toolbar = OpenLPToolbar(controller)
+    controller._update_desktop_hide_action_state = MagicMock()
+    controller._setup_display_mode_actions()
+    controller.toolbar.resize(400, 48)
+    controller.toolbar.show()
+    qapp.process_events()
+
+    assert not hasattr(controller, 'hide_menu')
+    assert controller.toolbar.findChildren(QtWidgets.QSplitButton) == []
+    actions = [controller.show_screen, controller.theme_screen, controller.logo_screen,
+               controller.blank_screen, controller.desktop_screen]
+    for mode in (None, HideMode.Theme, HideMode.Logo, HideMode.Blank, HideMode.Screen):
+        controller._current_hide_mode = mode
+        controller._sync_live_hide_action_state(True)
+        qapp.process_events()
+        buttons = [controller.toolbar.widgetForAction(action) for action in actions]
+        assert all(not button.isHidden() for button in buttons)
+        assert controller.toolbar.findChildren(QtWidgets.QSplitButton) == []
+        for left, right in zip(buttons, buttons[1:]):
+            assert left.geometry().right() < right.geometry().left()
+    controller._sync_live_hide_action_state(False)
+    assert not any(action.isChecked() for action in actions)
+    controller.toolbar.close()
+
+
+def test_song_bar_uses_current_slide_list_width(registry):
+    """Detached controllers size slides from their own view, with no central splitter."""
+    controller = SlideController(None)
+    controller.sender = MagicMock(return_value=MagicMock(text=MagicMock(return_value='V1')))
+    controller.slide_list = {'V1': 2}
+    controller.service_item = MagicMock()
+    controller.preview_widget = MagicMock()
+    controller.preview_widget.width.return_value = 345
+    controller.slide_selected = MagicMock()
+    controller.on_song_bar_handler()
+    controller.preview_widget.replace_service_item.assert_called_once_with(controller.service_item, 345, 2)

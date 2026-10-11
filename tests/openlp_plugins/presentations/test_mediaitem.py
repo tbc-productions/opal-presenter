@@ -20,11 +20,15 @@
 This module contains tests for the lib submodule of the Presentations plugin.
 """
 import tempfile
+
+import pytest
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
+import fluentqt
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_file_type_glob
 from openlp.core.lib import ServiceItemContext
@@ -32,6 +36,24 @@ from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.lib.theme import TransitionSpeed, TransitionType
 from openlp.plugins.presentations.lib.db import Folder, Item
 from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
+
+
+def test_inspect_presentation_uses_cached_slides_without_loading_controller(media_item, tmp_path):
+    path = tmp_path / 'Sunday.pptx'
+    path.write_bytes(b'presentation')
+    item = Item(name='Sunday', file_path=str(path))
+    controller = MagicMock()
+    doc = controller.add_document.return_value
+    doc.get_slide_image_paths.return_value = []
+    slides = [tmp_path / 'slide1.png', tmp_path / 'slide2.png']
+    doc.get_thumbnail_path.side_effect = slides + [None]
+    media_item.controllers = {'Powerpoint': controller}
+    with patch.object(media_item, 'find_controller_by_type', return_value='Powerpoint'), \
+            patch('openlp.plugins.presentations.lib.mediaitem.MediaPreview.show_media') as preview:
+        media_item.inspect_item(item)
+    preview.assert_called_once_with(media_item, path, 'Sunday', kind='presentation', preview_paths=slides)
+    doc.load_presentation.assert_not_called()
+    controller.remove_doc.assert_called_once_with(doc)
 
 
 def test_build_file_mask_string(media_item):
@@ -118,6 +140,7 @@ def test_display_type_combo_uses_controller_keys(media_item):
 
     media_item.populate_display_types()
 
+    media_item.presentation_widget.setVisible.assert_called_once_with(True)
     combo = media_item.display_type_combo_box
     assert [combo.itemText(index) for index in range(combo.count())] == \
         ['Automatic', 'PDF', 'PowerPoint (macOS)']
@@ -125,6 +148,10 @@ def test_display_type_combo_uses_controller_keys(media_item):
         ['automatic', 'Pdf', 'PowerPointMac']
     combo.setCurrentIndex(2)
     assert media_item._selected_controller_name() == 'PowerPointMac'
+
+    media_item.controllers = {'Pdf': pdf_controller}
+    media_item.populate_display_types()
+    media_item.presentation_widget.setVisible.assert_called_with(False)
 
 
 def test_validate_and_load_reports_only_unsupported_imports(media_item, tmp_path):
@@ -216,6 +243,8 @@ def test_clean_up_thumbnails_missing_file(media_item):
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     mocked_controller.supports = ['tmp']
     media_item.controllers = {
         'Mocked': mocked_controller
@@ -277,10 +306,285 @@ def test_generate_slide_data_with_file_path_from_item(media_item):
     list_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
 
     # WHEN: generate_slide_data is called
-    result = media_item.generate_slide_data(mocked_service_item, item=list_item)
+    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog'):
+        result = media_item.generate_slide_data(mocked_service_item, item=list_item)
 
     # THEN: The result should be false
     assert result is False
+
+
+@pytest.mark.parametrize('suffix', ['pptx', 'odp'])
+@pytest.mark.parametrize('context', [ServiceItemContext.Preview, ServiceItemContext.Live])
+@pytest.mark.parametrize('selection', ['empty', 'automatic', 'disabled', 'unsupported'])
+def test_existing_library_presentation_without_controller_shows_dialog(
+        media_item, tmp_path, suffix, context, selection):
+    """Preview and Live reject stored presentations with an actionable ContentDialog."""
+    path = tmp_path / f'Sunday sermon.{suffix}'
+    path.write_bytes(b'presentation')
+    tree_item = QtWidgets.QTreeWidgetItem()
+    tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, Item(id=1, file_path=str(path)))
+    controller = MagicMock()
+    controller.enabled.return_value = False
+    controller.supports = [suffix]
+    controller.also_supports = []
+    selected = {'empty': '', 'automatic': 'automatic', 'disabled': 'Powerpoint', 'unsupported': 'Pdf'}[selection]
+    if selection == 'unsupported':
+        controller.enabled.return_value = True
+        controller.supports = ['pdf']
+    media_item.controllers = {selected: controller} if selected else {}
+    media_item.display_type_combo_box = MagicMock()
+    media_item.display_type_combo_box.itemData.return_value = selected
+    service_item = MagicMock()
+
+    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+        result = media_item.generate_slide_data(service_item, item=tree_item, context=context)
+
+    assert result is False
+    dialog.assert_called_once()
+    dialog.return_value.setTitle.assert_called_once_with('Presentation Unavailable')
+    message = dialog.return_value.setContent.call_args.args[0]
+    assert message.text() == 'No presentation application is available.'
+    dialog.return_value.setPrimaryButtonText.assert_called_once_with('OK')
+    dialog.return_value.setSecondaryButtonText.assert_called_once_with('Open Settings')
+    controller.add_document.assert_not_called()
+    service_item.add_from_command.assert_not_called()
+
+
+def test_unavailable_remote_presentation_does_not_open_modal_dialog(media_item, tmp_path):
+    """Remote failure must not block the operator with a local modal dialog."""
+    path = tmp_path / 'sermon.pptx'
+    path.write_bytes(b'presentation')
+    tree_item = QtWidgets.QTreeWidgetItem()
+    tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, Item(id=1, file_path=str(path)))
+    media_item.controllers = {}
+    media_item.display_type_combo_box = MagicMock()
+    media_item.display_type_combo_box.itemData.return_value = ''
+
+    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+        assert not media_item.generate_slide_data(MagicMock(), item=tree_item, remote=True)
+    dialog.assert_not_called()
+
+
+@pytest.mark.parametrize('open_settings', [False, True])
+def test_unavailable_presentation_dialog_commands(media_item, open_settings):
+    """OK dismisses the dialog; the secondary command opens the Presentations settings tab."""
+    from openlp.core.common.registry import Registry
+
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    settings_form = MagicMock()
+    Registry().register('settings_form', settings_form)
+
+    def choose():
+        dialog = parent.findChild(fluentqt.ContentDialog)
+        assert dialog.title() == 'Presentation Unavailable'
+        assert dialog.content().text() == 'No presentation application is available.'
+        assert dialog.primaryButtonText() == 'OK'
+        assert dialog.secondaryButtonText() == 'Open Settings'
+        assert dialog.closeButtonText() == ''
+        assert dialog.defaultButton() == fluentqt.ContentDialogButton.Primary
+        text = 'Open Settings' if open_settings else 'OK'
+        button = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == text)
+        button.click()
+
+    QtCore.QTimer.singleShot(0, choose)
+    try:
+        with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent):
+            media_item._show_unavailable_presentation(Path('sermon.pptx'))
+        if open_settings:
+            settings_form.exec.assert_called_once_with('Presentations')
+        else:
+            settings_form.exec.assert_not_called()
+    finally:
+        parent.close()
+
+
+def test_convert_pdf_menu_position(media_item):
+    """Conversion belongs after the separator and immediately before Show in folder."""
+    media_item.list_view = QtWidgets.QTreeWidget()
+    media_item.add_custom_context_actions()
+    actions = media_item.list_view.actions()
+    assert actions[-4].isSeparator()
+    assert actions[-3] is media_item.powerpoint_settings_action
+    assert actions[-2] is media_item.convert_pdf_action
+    assert actions[-2].text() == 'Convert to PDF'
+    assert actions[-1].text() == 'Show in folder'
+    assert not media_item.convert_pdf_action.isVisible()
+
+
+@pytest.mark.parametrize('suffix,enabled,name,accessible,multiple,expected', [
+    ('pptx', True, 'PowerPointMac', True, False, True),
+    ('odp', True, 'Impress', True, False, True),
+    ('pptx', True, 'Keynote', True, False, True),
+    ('pptx', False, 'PowerPointMac', True, False, False),
+    ('pdf', True, 'PowerPointMac', True, False, False),
+    ('pptx', True, 'PowerPointMac', False, False, False),
+    ('pptx', True, 'PowerPointMac', True, True, False),
+    ('pptx', True, 'Viewer', True, False, False),
+])
+def test_convert_pdf_availability(media_item, tmp_path, suffix, enabled, name, accessible, multiple, expected):
+    source = tmp_path / f'sermon.{suffix}'
+    if accessible:
+        source.write_bytes(b'presentation')
+    tree_item = QtWidgets.QTreeWidgetItem()
+    item = Item(name=source.name, file_path=str(source))
+    tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+    media_item.list_view = MagicMock()
+    media_item.list_view.selectedItems.return_value = [tree_item, tree_item] if multiple else [tree_item]
+    controller = MagicMock()
+    controller.name = name
+    controller.enabled.return_value = enabled
+    controller.supports = ['odp']
+    controller.also_supports = ['pptx']
+    media_item.controllers = {name: controller}
+    assert bool(media_item._pdf_export_selection()) is expected
+
+
+@pytest.mark.parametrize('folder_id', [None, 12])
+def test_convert_pdf_adds_and_selects_copy_in_same_folder(media_item, tmp_path, folder_id):
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    source = tmp_path / 'sermon.pptx'
+    output = tmp_path / 'sermon.pdf'
+    source.write_bytes(b'presentation')
+    output.write_bytes(b'%PDF-1.7 converted')
+    original = Item(name=source.name, file_path=str(source), folder_id=folder_id)
+    media_item.list_view = QtWidgets.QTreeWidget()
+    original_tree = QtWidgets.QTreeWidgetItem(media_item.list_view)
+    original_tree.setData(0, QtCore.Qt.ItemDataRole.UserRole, original)
+    controller = MagicMock()
+    controller.name = 'PowerPointMac'
+    folder = Folder(id=folder_id, name='Sermons') if folder_id else None
+    media_item.manager.get_object.return_value = folder
+
+    def insert(items, target_folder):
+        assert target_folder is folder
+        converted_tree = QtWidgets.QTreeWidgetItem(media_item.list_view)
+        converted_tree.setData(0, QtCore.Qt.ItemDataRole.UserRole, items[0])
+
+    try:
+        with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent), \
+                patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
+                patch.object(media_item, '_prepare_library_file', return_value=output), \
+                patch.object(media_item, '_insert_saved_items', side_effect=insert), \
+                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', return_value=output):
+            media_item.on_convert_to_pdf()
+        added = media_item.manager.save_object.call_args.args[0]
+        assert added.file_path == str(output)
+        assert added.folder_id == folder_id
+        assert added.file_hash
+        selected = media_item.list_view.selectedItems()
+        assert len(selected) == 1
+        assert selected[0].data(0, QtCore.Qt.ItemDataRole.UserRole) is added
+        assert source.read_bytes() == b'presentation'
+    finally:
+        parent.close()
+
+
+def test_convert_pdf_failure_shows_error_without_adding_item(media_item, tmp_path):
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    original = Item(file_path=str(tmp_path / 'sermon.pptx'))
+    controller = MagicMock()
+    controller.name = 'Keynote'
+    try:
+        with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent), \
+                patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
+                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=RuntimeError('failed')), \
+                patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+            media_item.on_convert_to_pdf()
+        media_item.manager.save_object.assert_not_called()
+        error.assert_called_once_with('Conversion Failed', 'The presentation could not be converted to PDF.\n\nfailed')
+    finally:
+        parent.close()
+
+
+def test_repair_converted_pdf_names_preserves_custom_labels(media_item, tmp_path):
+    hashed_stem = 'a' * 64
+    source = Item(name='Sunday sermon.pptx', file_path=str(tmp_path / f'{hashed_stem}.pptx'))
+    converted = Item(name=f'{hashed_stem}.pdf', file_path=str(tmp_path / f'{hashed_stem}.pdf'))
+    duplicate = Item(name=f'{hashed_stem} (2).pdf', file_path=str(tmp_path / f'{hashed_stem} (2).pdf'))
+    custom = Item(name='Custom title.pdf', file_path=str(tmp_path / f'{hashed_stem} (3).pdf'))
+    unrelated = Item(name='b' * 64 + '.pdf', file_path=str(tmp_path / ('b' * 64 + '.pdf')))
+    media_item._repair_converted_pdf_names([source, converted, duplicate, custom, unrelated])
+    assert converted.name == 'Sunday sermon.pdf'
+    assert duplicate.name == 'Sunday sermon (2).pdf'
+    assert custom.name == 'Custom title.pdf'
+    assert unrelated.name == 'b' * 64 + '.pdf'
+    assert media_item.manager.save_object.call_args_list == [call(converted), call(duplicate)]
+
+
+@pytest.mark.parametrize('dismiss', ['button', 'escape', 'close'])
+def test_cancel_conversion_waits_and_discards_result(media_item, tmp_path, dismiss):
+    from openlp.plugins.presentations.lib.mediaitem import PdfConversionProgressDialog
+
+    parent = QtWidgets.QWidget()
+    parent.resize(1000, 700)
+    parent.show()
+    source = tmp_path / 'sermon.pptx'
+    output = tmp_path / 'sermon.pdf'
+    source.write_bytes(b'original')
+    original = Item(name=source.name, file_path=str(source))
+    controller = MagicMock()
+    controller.name = 'Keynote'
+
+    def export(*args, cancel_event, **kwargs):
+        assert cancel_event.wait(timeout=2)
+        output.write_bytes(b'%PDF-1.7')
+        return output
+
+    def cancel():
+        dialog = parent.findChild(PdfConversionProgressDialog)
+        if dismiss == 'button':
+            button = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == 'Cancel')
+            button.click()
+        elif dismiss == 'escape':
+            from PySide6 import QtTest
+            QtTest.QTest.keyClick(dialog, QtCore.Qt.Key.Key_Escape)
+        else:
+            dialog.close()
+        assert dialog.wasCanceled()
+        assert dialog.isVisible()
+        assert dialog.labelText() == 'Cancelling…'
+
+    QtCore.QTimer.singleShot(0, cancel)
+    try:
+        with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent), \
+                patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
+                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=export), \
+                patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+            media_item.on_convert_to_pdf()
+        assert not output.exists()
+        assert source.read_bytes() == b'original'
+        media_item.manager.save_object.assert_not_called()
+        error.assert_not_called()
+    finally:
+        parent.close()
+
+
+@pytest.mark.parametrize('suffix,icon_name', [
+    ('pptx', 'slide_text_person'), ('odp', 'slide_text'), ('key', 'slide_text_sparkle'), ('pdf', 'pdf')
+])
+def test_presentation_file_type_icon_follows_name_for_missing_files(media_item, tmp_path, suffix, icon_name):
+    from openlp.core.ui.icons import UiIcons
+    from openlp.core.widgets.fluent_tree import LIBRARY_FILE_TYPE_ICON_ROLE, FluentLibraryTreeDelegate
+
+    media_item.list_view = QtWidgets.QTreeWidget()
+    source = tmp_path / f'sermon.{suffix}'
+    item = Item(name=source.name, file_path=str(source))
+    tree_item = media_item.load_item(item)
+    media_item.list_view.addTopLevelItem(tree_item)
+    delegate = FluentLibraryTreeDelegate(media_item.list_view)
+    index = media_item.list_view.indexFromItem(tree_item)
+    assert tree_item.text(0) == 'sermon'
+    assert tree_item.icon(0).cacheKey() == UiIcons().document_question_mark.cacheKey()
+    assert tree_item.data(0, LIBRARY_FILE_TYPE_ICON_ROLE).cacheKey() == getattr(UiIcons(), icon_name).cacheKey()
+    icons = delegate.trailingIcons(index)
+    assert len(icons) == 1
+    assert icons[0].cacheKey() == getattr(UiIcons(), icon_name).cacheKey()
 
 
 def test_generate_slide_data_from_pdf(media_item):
@@ -320,6 +624,8 @@ def test_generate_slide_data_from_pdf_inherits_item_transition_settings(media_it
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Pdf': mocked_controller}
 
     source_item = ServiceItem(None)
@@ -368,6 +674,8 @@ def test_generate_slide_data_from_pdf_ignores_default_target_settings_and_uses_s
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Pdf': mocked_controller}
 
     source_item = ServiceItem(None)
@@ -421,6 +729,8 @@ def test_generate_slide_data_from_pdf_uses_target_custom_settings_over_source(me
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Pdf': mocked_controller}
 
     source_item = ServiceItem(None)
@@ -472,6 +782,8 @@ def test_generate_slide_data_from_pdf_uses_legacy_pdf_transition_settings_when_p
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Pdf': mocked_controller}
 
     source_item = ServiceItem(None)
@@ -516,6 +828,8 @@ def test_generate_slide_data_from_pdf_preserves_existing_service_item_transition
     mocked_controller = MagicMock()
     mocked_doc = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Pdf': mocked_controller}
 
     target_service_item = ServiceItem(None)
@@ -572,6 +886,8 @@ def test_generate_slide_data_rebuilds_missing_first_thumbnail_cache(media_item):
     mocked_doc.get_titles_and_notes.return_value = ([], [])
     mocked_controller = MagicMock()
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'Powerpoint': mocked_controller}
 
     with patch.object(Path, 'exists', return_value=True), patch('os.access', return_value=True):
@@ -631,6 +947,7 @@ def test_generate_slide_data_with_inaccessible_path(MockRegistry, media_item):
         # GIVEN: A fake file which "exists" cannot be read - so it's inaccessible
         mocked_path.exists.return_value = True
         file_path = mocked_path('test.pdf')
+        file_path.suffix = '.pdf'
 
         # WHEN: generate_slide_data is called with a file_path that can't be read
         success = media_item.generate_slide_data(
@@ -698,6 +1015,8 @@ def test_load_item_metadata_columns(media_item):
     mocked_doc = MagicMock()
     mocked_doc.get_thumbnail_path.return_value = None
     mocked_controller.add_document.return_value = mocked_doc
+    mocked_controller.supports = ['pptx']
+    mocked_controller.also_supports = []
     media_item.controllers = {'pptx': mocked_controller}
 
     with patch.object(Path, 'exists', return_value=True), \
@@ -706,7 +1025,7 @@ def test_load_item_metadata_columns(media_item):
             patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.find_controller_by_type',
                   return_value='pptx'), \
             patch('openlp.plugins.presentations.lib.mediaitem.UiIcons') as mocked_icons:
-        mocked_icons.return_value.delete = QtGui.QIcon()
+        mocked_icons.return_value.document_question_mark = QtGui.QIcon()
 
         # WHEN: load_item() is called for initial load (skips generating thumbnails)
         result = media_item.load_item(item, is_initial_load=True)

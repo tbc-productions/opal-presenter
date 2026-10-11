@@ -133,3 +133,27 @@ def test_add_existing_version():
 
     # THEN: the data will not be appended to the list
     assert len(reference_list.version_list) == 1, 'The version data should not be appended'
+
+
+def test_format_verses_consolidates_chapters(settings):
+    from openlp.plugins.bibles.lib import update_reference_separators
+
+    update_reference_separators()
+    references = VerseReferenceList()
+    for chapter, count in enumerate([31, 25, 24, 26, 3], start=1):
+        for verse in range(1, count + 1):
+            references.add('Genesis', chapter, verse, 'NIV', '', '')
+
+    assert references.format_verses(consolidate_chapters=True) == 'Genesis 1:1-5:3'
+    assert references.format_verses() == 'Genesis 1:1-31, 2:1-25, 3:1-24, 4:1-26, 5:1-3'
+
+
+def test_consolidated_references_keep_separate_selections(settings):
+    from openlp.plugins.bibles.lib import update_reference_separators
+
+    update_reference_separators()
+    references = VerseReferenceList()
+    for book, chapter, verse in [('Genesis', 1, 1), ('Genesis', 1, 3), ('Genesis', 3, 1),
+                                 ('Genesis', 4, 5), ('Exodus', 1, 1)]:
+        references.add(book, chapter, verse, 'NIV', '', '')
+    assert references.format_verses(consolidate_chapters=True) == 'Genesis 1:1, 3, 3:1, 4:5, Exodus 1:1'

@@ -16,7 +16,7 @@ class CommunicationBridge {
         }
 
         if (action == 'init') {
-            this._onInitialized();
+            this._onInitialized(returnValue);
         }
 
         return returnValue;
@@ -42,8 +42,8 @@ class CommunicationBridge {
     setDisplayTarget(newTarget) {
         this.target = newTarget;
         if (this.initOptions) {
-            this.target._handleNativeCall('init', ...[this.initOptions]);
-            this._onInitialized();
+            const initialisation = this.target._handleNativeCall('init', ...[this.initOptions]);
+            this._onInitialized(initialisation);
         }
     }
 
@@ -57,7 +57,11 @@ class CommunicationBridge {
         }
     }
 
-    _onInitialized() {
+    _onInitialized(initialisation) {
+        if (initialisation && typeof initialisation.then === 'function') {
+            initialisation.then(() => this._onInitialized());
+            return;
+        }
         if (window.displayWatcher) {
             window.displayWatcher.setInitialised(true);
         }

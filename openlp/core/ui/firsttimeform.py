@@ -28,7 +28,8 @@ from pathlib import Path
 from tempfile import gettempdir
 
 import requests
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.api.deploy import REMOTE_URL, download_and_install
 from openlp.core.common import trace_error_handler
@@ -572,8 +573,14 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         if self.currentId() == FirstTimePage.Download:
             if not self.has_web_access:
                 return FirstTimePage.NoInternet
-            else:
+            elif self.remote_interface_check_box.isChecked():
                 return FirstTimePage.Remote
+            elif self.songs_check_box.isChecked():
+                return FirstTimePage.Songs
+            elif self.bible_check_box.isChecked():
+                return FirstTimePage.Bibles
+            else:
+                return FirstTimePage.Themes
         elif self.currentId() == FirstTimePage.Progress:
             return -1
         elif self.currentId() == FirstTimePage.NoInternet:
@@ -881,7 +888,8 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         for item in self.themes_list_widget.selectedItems():
             themes.append((item.file_name, item.sha256))
         worker = DownloadSetupWorker(self.songs_url, self.bibles_url, self.themes_url,
-                         songs, bibles, themes, self.remote_page.can_download_remote,
+                         songs, bibles, themes,
+                         self.remote_interface_check_box.isChecked() and self.remote_page.can_download_remote,
                          self.ftw_download_timeout, self.ftw_download_retries)
         worker.progress_updated.connect(self._update_download_progress)
         worker.download_succeeded.connect(self._on_download_setup_finished)
@@ -913,7 +921,8 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         for item in self.themes_list_widget.selectedItems():
             themes.append((item.file_name, item.sha256))
         worker = DownloadResourcesWorker(self.songs_url, self.bibles_url, self.themes_url,
-                         songs, bibles, themes, self.remote_page.can_download_remote,
+                         songs, bibles, themes,
+                         self.remote_interface_check_box.isChecked() and self.remote_page.can_download_remote,
                          self.ftw_download_timeout, self.ftw_download_retries)
         worker.progress_updated.connect(self._on_download_resources_progress_updated)
         worker.status_updated.connect(self._on_download_resources_status_updated)
@@ -1042,6 +1051,10 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
         self.themes_loading_widget.setVisible(False)
         self._reset_download_progress()
         self.button(QtWidgets.QWizard.WizardButton.CustomButton1).setVisible(False)
+        self.projector_check_box.setChecked(
+            self.has_run_wizard and self.settings.value('projector/status') == PluginStatus.Active)
+        self.remote_interface_check_box.setChecked(
+            self.has_run_wizard and self.settings.value('remote_interface/status') == PluginStatus.Active)
         if self.has_run_wizard and self.plugin_manager is not None:
             self.songs_check_box.setChecked(self.plugin_manager.get_plugin_by_name('songs').is_active())
             self.bible_check_box.setChecked(self.plugin_manager.get_plugin_by_name('bibles').is_active())
@@ -1107,6 +1120,8 @@ class FirstTimeForm(QtWidgets.QWizard, UiFirstTimeWizard, RegistryProperties):
             self._set_plugin_status(self.song_usage_check_box, 'songusage/status')
             self._set_plugin_status(self.alert_check_box, 'alerts/status')
             self._set_plugin_status(self.obs_studio_check_box, 'obs_studio/status')
+            self._set_plugin_status(self.projector_check_box, 'projector/status')
+            self._set_plugin_status(self.remote_interface_check_box, 'remote_interface/status')
             if self.theme_combo_box.currentIndex() != -1:
                 self.settings.setValue('themes/global theme', self.theme_combo_box.currentText())
 

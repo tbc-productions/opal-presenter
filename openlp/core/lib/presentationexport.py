@@ -9,6 +9,7 @@
 ##########################################################################
 """Export rendered service pages as editable PPTX or ODP presentations."""
 import html
+import base64
 import mimetypes
 from dataclasses import dataclass, replace
 from io import BytesIO
@@ -239,7 +240,8 @@ def service_pages(items, insert_logo=False, *, native_pptx=False, progress=None)
             theme = item.get_theme_data()
             for rendered, displayed in zip(item.rendered_slides, item.display_slides):
                 footer_html = _expand_footer_tags(rendered.get('footer') or '')
-                item_pages.append(PresentationPage(theme=theme, text=html.unescape(displayed['text']),
+                page_theme = item.get_slide_theme(rendered['design_key']) if rendered.get('design_key') else theme
+                item_pages.append(PresentationPage(theme=page_theme, text=html.unescape(displayed['text']),
                                                    footer=_plain_text(footer_html),
                                                    html_text=rendered.get('text') or '',
                                                    html_footer=footer_html,
@@ -279,7 +281,18 @@ def _page_sections(pages):
 
 
 def _load_image(path):
+    from openlp.core.lib.designmedia import resolve_media
+    path = resolve_media(path)
     path = str(path)
+    if path.startswith('data:image/'):
+        data = QtCore.QByteArray(base64.b64decode(path.split(',', 1)[1]))
+        buffer = QtCore.QBuffer(data)
+        buffer.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+        reader = QtGui.QImageReader(buffer)
+        reader.setAutoTransform(True)
+        return reader.read()
+    if path.startswith('file:'):
+        path = QtCore.QUrl(path).toLocalFile()
     if path.lower().endswith('.svg'):
         renderer = QtSvg.QSvgRenderer(path)
         if renderer.isValid():
@@ -290,7 +303,9 @@ def _load_image(path):
             renderer.render(painter)
             painter.end()
             return image
-    return QtGui.QImage(path)
+    reader = QtGui.QImageReader(path)
+    reader.setAutoTransform(True)
+    return reader.read()
 
 
 def _image_bytes(image):
@@ -304,6 +319,12 @@ def _image_bytes(image):
 
 def _fit_image(painter, image, width, height, fit='cover'):
     if image.isNull():
+        return
+    if fit == 'stretch':
+        painter.drawImage(QtCore.QRectF(0, 0, width, height), image)
+        return
+    if fit == 'repeat':
+        painter.fillRect(QtCore.QRectF(0, 0, width, height), QtGui.QBrush(image))
         return
     scale = (max if fit == 'cover' else min)(width / image.width(), height / image.height())
     target_width, target_height = image.width() * scale, image.height() * scale
@@ -341,8 +362,8 @@ def _media_poster(page, aspect_ratio):
     return _image_bytes(poster)
 
 
-def _background(theme, width, height, logo=False, logo_settings=None):
-    """Rasterize non-solid fills once while keeping foreground text editable."""
+def _background(theme, width, height, logo=False, logo_settings=None, *, filtered=True, force_image=False):
+    """Rasterise non-solid or filtered fills while keeping foreground text editable."""
     if logo:
         if logo_settings is None:
             settings = Registry().get('settings')
@@ -356,7 +377,11 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         filename = getattr(theme, 'background_filename', None)
         fit = getattr(theme, 'background_fit', 'cover')
         kind = theme.background_type
-    if kind == 'solid' or (kind not in ('image', 'gradient') and not logo):
+    overlay = (getattr(theme, 'song_design', {}) or {}).get('background', {}) if not logo else {}
+    design = (getattr(theme, 'song_design', {}) or {}) if not logo else {}
+    filters = design.get('background_filters', {}) if filtered else {}
+    if (kind == 'solid' or (kind not in ('image', 'gradient') and not logo)) and \
+            not overlay.get('image') and not filters and not force_image:
         return str(color), None
     image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_ARGB32)
     image.fill(QtGui.QColor(color))
@@ -365,6 +390,12 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         direction = getattr(theme, 'background_direction', 'vertical')
         if direction == 'horizontal':
             gradient = QtGui.QLinearGradient(0, 0, width, 0)
+        elif direction == 'leftTop':
+            gradient = QtGui.QLinearGradient(0, 0, width, height)
+        elif direction == 'leftBottom':
+            gradient = QtGui.QLinearGradient(0, height, width, 0)
+        elif direction == 'circular':
+            gradient = QtGui.QRadialGradient(width / 2, height / 2, max(width, height) / 2)
         else:
             gradient = QtGui.QLinearGradient(0, 0, 0, height)
         gradient.setColorAt(0, QtGui.QColor(theme.background_start_color))
@@ -372,8 +403,45 @@ def _background(theme, width, height, logo=False, logo_settings=None):
         painter.fillRect(0, 0, width, height, gradient)
     elif filename:
         _fit_image(painter, _load_image(filename), width, height, fit)
+    if overlay.get('image'):
+        painter.setOpacity(overlay.get('image_opacity', 100) / 100)
+        _fit_image(painter, _load_image(overlay['image']), width, height, overlay.get('fit', 'cover'))
     painter.end()
+    if filters:
+        from openlp.core.lib.imagefilters import apply_filters
+        scale = getattr(theme, 'song_design_output_height', height) / design.get('canvas_height', height)
+        image, _ = apply_filters(image, filters, scale)
     return str(color), _image_bytes(image)
+
+
+def _design_image(element, width, height, scale, *, bake_effects=False):
+    """Rasterise one contain-fit image; include filter overflow without moving its centre."""
+    from openlp.core.lib.imagefilters import apply_filters, add_shadow
+
+    image = QtGui.QImage(max(1, round(element['width'] / 100 * width)),
+                         max(1, round(element['height'] / 100 * height)), QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtCore.Qt.GlobalColor.transparent)
+    painter = QtGui.QPainter(image)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+    border = 0
+    if bake_effects:
+        border = (element.get('outline_width', 2) if element.get('outline') else
+                  element.get('border_width', 0) if 'outline' not in element else 0) * scale
+        border = min(border, image.width() / 2, image.height() / 2)
+    painter.translate(border, border)
+    _fit_image(painter, _load_image(element.get('src', '')), max(1, image.width() - 2 * border),
+               max(1, image.height() - 2 * border), 'contain')
+    painter.resetTransform()
+    if border:
+        painter.setPen(QtGui.QPen(QtGui.QColor(element.get('outline_colour', element.get('border_colour', '#000000'))),
+                                  border))
+        painter.drawRect(QtCore.QRectF(border / 2, border / 2, image.width() - border, image.height() - border))
+    painter.end()
+    image, padding = apply_filters(image, element.get('filters'), scale, expand=True)
+    if bake_effects:
+        image, shadow_padding = add_shadow(image, element, scale)
+        padding += shadow_padding
+    return image, padding
 
 
 def _geometry(theme, part, width, height):
@@ -467,6 +535,10 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
     from pptx import Presentation
     from pptx.dml.color import RGBColor
     from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.enum.shapes import MSO_SHAPE
+    from openlp.core.lib.slidedesign import layer_order
+    from openlp.core.lib.pptxdesign import apply_object_properties, text_properties, element_theme
+    from openlp.core.lib.pptxfilters import native_filter_effects, apply_native_filters
     from pptx.oxml.ns import qn
     from pptx.opc.constants import RELATIONSHIP_TYPE as RT
     from pptx.util import Inches, Pt
@@ -484,9 +556,11 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
         presentation.slide_width, presentation.slide_height = source.size
     blank = presentation.slide_layouts[6]
     backgrounds = {}
+    background_originals = {}
+    originals = {}
     posters = {}
 
-    def add_text(slide, markup, theme, part):
+    def add_text(slide, markup, theme, part, properties=None):
         if not markup:
             return
         x, y, w, h = _geometry(theme, part, width, height)
@@ -502,7 +576,10 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
         vertical = getattr(theme, 'display_vertical_align' + ('_footer' if part == 'footer' else ''), 0)
         frame.vertical_anchor = (MSO_ANCHOR.TOP, MSO_ANCHOR.MIDDLE, MSO_ANCHOR.BOTTOM)[vertical]
         align = getattr(theme, 'display_horizontal_align' + ('_footer' if part == 'footer' else ''), 0)
-        for index, line in enumerate(_styled_lines(markup, _base_text_style(theme, part))):
+        base = _base_text_style(theme, part)
+        if properties is not None:
+            base = replace(base, size=base.size * 4 / 3)
+        for index, line in enumerate(_styled_lines(markup, base)):
             paragraph = frame.paragraphs[0] if index == 0 else frame.add_paragraph()
             paragraph.alignment = (PP_ALIGN.LEFT, PP_ALIGN.RIGHT, PP_ALIGN.CENTER, PP_ALIGN.JUSTIFY)[align]
             paragraph.space_before = paragraph.space_after = Pt(0)
@@ -515,10 +592,64 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
                 font.bold = run_style.bold
                 font.italic = run_style.italic
                 font.underline = run_style.underline
-                font.color.rgb = RGBColor.from_string(_hex_color(_run_color(run_style, theme)).upper())
+                font.color.rgb = RGBColor.from_string(_hex_color(
+                    run_style.color if properties is not None else _run_color(run_style, theme)).upper())
+                if properties is not None and run_style.opacity < 1:
+                    colour = run._r.get_or_add_rPr().find(qn('a:solidFill'))[0]
+                    etree.SubElement(colour, qn('a:alpha'), val=str(round(run_style.opacity * 100000)))
                 if run_style.baseline:
                     baseline = '30000' if run_style.baseline == 'super' else '-25000'
                     run._r.get_or_add_rPr().set('baseline', baseline)
+        if properties is not None:
+            apply_object_properties(box, properties, presentation.slide_width / width, text=True)
+        return box
+
+    def add_element(slide, theme, element, scale):
+        original, effects = None, []
+        properties = dict(element)
+        for key in ('outline_width', 'border_width', 'shadow_x', 'shadow_y', 'shadow_blur'):
+            if key in properties:
+                properties[key] *= scale
+        if element['kind'] == 'text':
+            element_style = element_theme(theme, element, width, height, scale)
+            box = add_text(slide, html.escape(element.get('text', '')).replace('\n', '<br>'),
+                           element_style, 'main', properties)
+            if box is not None:
+                box.name = 'Text box'
+            return
+        x, y = round(element['x'] / 100 * presentation.slide_width), \
+            round(element['y'] / 100 * presentation.slide_height)
+        w, h = round(element['width'] / 100 * presentation.slide_width), \
+            round(element['height'] / 100 * presentation.slide_height)
+        if element['kind'] == 'image':
+            filtered = bool(element.get('filters'))
+            # CSS filters also affect the border; Office filters only affect image pixels.
+            # Preserve the complete appearance when a filtered border cannot stay native.
+            if not element.get('outline') and not element.get('border_width'):
+                effects = native_filter_effects(element.get('filters'), scale)
+            image, padding = _design_image(element, width, height, scale, bake_effects=filtered and not effects)
+            if effects:
+                from PIL import ImageOps
+                from openlp.core.lib.imagefilters import to_pillow, to_qimage
+
+                original, _ = _design_image(dict(element, filters={}), width, height, scale)
+                if padding:
+                    original = to_qimage(ImageOps.expand(to_pillow(original), padding, fill=(0, 0, 0, 0)))
+            elif filtered:
+                properties.update(outline=False, shadow=False, border_width=0)
+            pad_x = round(padding * presentation.slide_width / width)
+            pad_y = round(padding * presentation.slide_height / height)
+            x, y, w, h = x - pad_x, y - pad_y, w + 2 * pad_x, h + 2 * pad_y
+            shape = slide.shapes.add_picture(BytesIO(_image_bytes(image)), x, y, w, h)
+        else:
+            shape = slide.shapes.add_shape(MSO_SHAPE.OVAL if element['kind'] == 'ellipse' else MSO_SHAPE.RECTANGLE,
+                                           x, y, w, h)
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = RGBColor.from_string(element.get('fill', '#315efb').lstrip('#'))
+        shape.name = element['kind'].capitalize()
+        apply_object_properties(shape, properties, presentation.slide_width / width)
+        if effects:
+            apply_native_filters(shape, original, effects, originals)
 
     for page_index, page in enumerate(pages):
         _progress(progress, 'Embedding media' if page.media else 'Building presentation',
@@ -555,14 +686,34 @@ def _write_pptx(pages, destination, width, height, *, progress=None, logo_settin
             backgrounds[key] = _background(page.theme, width, height, page.logo, logo_settings)
         color, image = backgrounds[key]
         if image:
-            slide.shapes.add_picture(BytesIO(image), 0, 0, presentation.slide_width, presentation.slide_height)
+            background = slide.shapes.add_picture(BytesIO(image), 0, 0,
+                                                  presentation.slide_width, presentation.slide_height)
+            design = getattr(page.theme, 'song_design', {}) or {} if not page.logo else {}
+            scale = getattr(page.theme, 'song_design_output_height', height) / design.get('canvas_height', height)
+            effects = native_filter_effects(design.get('background_filters'), scale)
+            if effects:
+                if key not in background_originals:
+                    _, original = _background(page.theme, width, height, filtered=False, force_image=True)
+                    background_originals[key] = QtGui.QImage.fromData(original)
+                apply_native_filters(background, background_originals[key], effects, originals)
         else:
             fill = slide.background.fill
             fill.solid()
             fill.fore_color.rgb = RGBColor.from_string(_hex_color(color).upper())
         if page.theme:
-            add_text(slide, page.html_text or html.escape(page.text).replace('\n', '<br>'), page.theme, 'main')
-            add_text(slide, page.html_footer or html.escape(page.footer).replace('\n', '<br>'), page.theme, 'footer')
+            design = getattr(page.theme, 'song_design', {}) or {}
+            elements = {element['id']: element for element in design.get('elements', [])}
+            scale = getattr(page.theme, 'song_design_output_height', height) / design.get('canvas_height', height)
+            for identifier in layer_order(design):
+                if identifier == 'lyrics':
+                    box = add_text(slide, page.html_text or html.escape(page.text).replace('\n', '<br>'),
+                                   page.theme, 'main', text_properties(page.theme, 'main', design) if design else None)
+                    if box is not None:
+                        box.name = 'Slide text'
+                else:
+                    add_element(slide, page.theme, elements[identifier], scale)
+            add_text(slide, page.html_footer or html.escape(page.footer).replace('\n', '<br>'), page.theme, 'footer',
+                     text_properties(page.theme, 'footer') if design else None)
     _progress(progress, 'Building presentation', len(pages), len(pages))
     sections = _page_sections(pages)
     if sections:
@@ -614,6 +765,8 @@ def _write_odp(pages, destination, width, height, *, progress=None, logo_setting
     from odf.element import Element
     from odf.namespaces import LOEXTNS
     from odf.opendocument import OpenDocumentPresentation
+    from openlp.core.lib.imagefilters import to_pillow, to_qimage
+    from openlp.core.lib.slidedesign import layer_order
 
     document = OpenDocumentPresentation()
     document.meta.addElement(dc.Title(text=destination.stem))
@@ -687,6 +840,31 @@ def _write_odp(pages, destination, width, height, *, progress=None, logo_setting
         frame.addElement(box)
         page.addElement(frame)
 
+    def add_image(page, element, scale):
+        from PIL import Image, ImageOps
+
+        image, _ = _design_image(element, width, height, scale, bake_effects=True)
+        pixels = to_pillow(image)
+        if element.get('flip_horizontal'):
+            pixels = ImageOps.mirror(pixels)
+        if element.get('flip_vertical'):
+            pixels = ImageOps.flip(pixels)
+        if element.get('rotation'):
+            pixels = pixels.rotate(-element['rotation'], resample=Image.Resampling.BICUBIC, expand=True)
+        opacity = element.get('opacity', 100) / 100
+        if opacity != 1:
+            pixels.putalpha(pixels.getchannel('A').point(lambda alpha: round(alpha * opacity)))
+        # Expanded blur/shadow/rotation bounds stay centred on the original image box.
+        x = (element['x'] + element['width'] / 2) / 100 * width - pixels.width / 2
+        y = (element['y'] + element['height'] / 2) / 100 * height - pixels.height / 2
+        picture = document.addPictureFromString(_image_bytes(to_qimage(pixels)), 'image/png')
+        frame = draw.Frame(name='Image', x=f'{x / width * slide_width:.3f}cm',
+                           y=f'{y / height * slide_height:.3f}cm',
+                           width=f'{pixels.width / width * slide_width:.3f}cm',
+                           height=f'{pixels.height / height * slide_height:.3f}cm')
+        frame.addElement(draw.Image(href=picture))
+        page.addElement(frame)
+
     for index, source in enumerate(pages):
         _progress(progress, 'Embedding media' if source.media else 'Building presentation',
                   index, len(pages), source.title or source.section_name)
@@ -729,7 +907,15 @@ def _write_odp(pages, destination, width, height, *, progress=None, logo_setting
             frame.addElement(draw.Image(href=picture))
             page.addElement(frame)
         if source.theme:
-            add_text(page, source.html_text or html.escape(source.text).replace('\n', '<br>'), source.theme, 'main')
+            design = getattr(source.theme, 'song_design', {}) or {}
+            elements = {element['id']: element for element in design.get('elements', [])}
+            scale = getattr(source.theme, 'song_design_output_height', height) / design.get('canvas_height', height)
+            for identifier in layer_order(design):
+                if identifier == 'lyrics':
+                    add_text(page, source.html_text or html.escape(source.text).replace('\n', '<br>'),
+                             source.theme, 'main')
+                elif elements[identifier]['kind'] == 'image':
+                    add_image(page, elements[identifier], scale)
             add_text(page, source.html_footer or html.escape(source.footer).replace('\n', '<br>'),
                      source.theme, 'footer')
     _progress(progress, 'Building presentation', len(pages), len(pages))

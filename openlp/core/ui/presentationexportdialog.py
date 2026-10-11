@@ -1,5 +1,6 @@
 """Responsive progress feedback for presentation exports."""
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 
@@ -71,7 +72,8 @@ def write_with_progress(action, progress):
     worker = _ExportWriter(action)
     loop = QtCore.QEventLoop()
     worker.progressed.connect(progress, QtCore.Qt.ConnectionType.QueuedConnection)
-    worker.finished.connect(loop.quit)
+    # Queue completion even when a fast writer finishes before the local loop starts.
+    worker.finished.connect(loop.quit, QtCore.Qt.ConnectionType.QueuedConnection)
     worker.start()
     loop.exec()
     worker.wait()

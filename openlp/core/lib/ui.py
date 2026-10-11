@@ -23,7 +23,8 @@ The :mod:`ui` module provides standard UI components for OpenLP.
 """
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.actions import ActionList
 from openlp.core.common.i18n import UiStrings, translate
@@ -197,6 +198,8 @@ def critical_error_message_box(title=None, message=None, parent=None, question=F
                                               QtWidgets.QMessageBox.StandardButton(
             QtWidgets.QMessageBox.StandardButton.Yes |
             QtWidgets.QMessageBox.StandardButton.No))
+    if parent is not None:
+        return QtWidgets.QMessageBox.critical(parent, title if title else UiStrings().Error, message)
     # If used before the main window is created, fall back to direct use of QMessageBox
     main_window = Registry().get('main_window')
     if main_window:
@@ -515,18 +518,18 @@ class MultipleViewModeList(QtWidgets.QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if (self.mime_data_text and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
+
+    def startDrag(self, supported_actions):
         if not self.mime_data_text:
-            super().mouseMoveEvent(event)
-            return
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
-            return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
+            super().startDrag(supported_actions)
             return
         drag = QtGui.QDrag(self)
         mime_data = QtCore.QMimeData()

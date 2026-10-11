@@ -24,7 +24,7 @@ Provide the generic plugin functionality for OpenLP plugins.
 import logging
 
 from openlp.core.common.enum import PluginStatus
-from openlp.core.common.i18n import UiStrings
+from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry, RegistryBase
 from openlp.core.version import get_version
@@ -134,6 +134,9 @@ class Plugin(RegistryBase, RegistryProperties):
         Registry().register_function('{name}_add_service_item'.format(name=self.name), self.process_add_service_event)
         Registry().register_function('{name}_config_updated'.format(name=self.name), self.config_update)
         Registry().register_function('{name}_visible_name'.format(name=self.name), self.get_visible_name)
+        if Registry().has_function('startup_progress'):
+            Registry().execute('startup_progress', translate('OpenLP.SplashScreen', 'Loading {plugin}').format(
+                plugin=self.name_strings['plural']))
         self._setup(version)
 
     def _setup(self, version):
@@ -264,6 +267,8 @@ class Plugin(RegistryBase, RegistryProperties):
         if self.media_item:
             self.media_item.initialise()
             self.main_window.media_dock_manager.add_item_to_dock(self.media_item)
+            if Registry().has_function('librarysync_install_drop_targets'):
+                Registry().execute('librarysync_install_drop_targets')
 
     def finalise(self):
         """

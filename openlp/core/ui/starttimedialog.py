@@ -21,7 +21,8 @@
 """
 The UI widgets for the time dialog
 """
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.lib.ui import create_button_box
@@ -38,7 +39,6 @@ class Ui_StartTimeDialog(object):
         """
         StartTimeDialog.setObjectName('StartTimeDialog')
         StartTimeDialog.setWindowIcon(UiIcons().main_icon)
-        StartTimeDialog.resize(350, 10)
         self.dialog_layout = QtWidgets.QGridLayout(StartTimeDialog)
         self.dialog_layout.setObjectName('dialog_layout')
         self.start_label = QtWidgets.QLabel(StartTimeDialog)
@@ -107,7 +107,6 @@ class Ui_StartTimeDialog(object):
         self.button_box = create_button_box(StartTimeDialog, 'button_box', ['cancel', 'ok'])
         self.dialog_layout.addWidget(self.button_box, 5, 2, 1, 2)
         self.retranslate_ui(StartTimeDialog)
-        self.setMaximumHeight(self.sizeHint().height())
 
     def retranslate_ui(self, StartTimeDialog):
         """

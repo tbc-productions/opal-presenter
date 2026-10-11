@@ -139,4 +139,4 @@ class AudioPlayer(MediaBase, LogMixin):
         :param controller: The controller where the media is
         :return:
         """
-        self.media_player.stop()
+        super().reset()

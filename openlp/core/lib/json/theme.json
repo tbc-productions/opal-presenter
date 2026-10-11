@@ -23,6 +23,7 @@
     "font": {
         "footer": {
             "bold": false,
+            "weight": 0,
             "color": "#FFFFFF",
             "height": 78,
             "italics": false,
@@ -46,6 +47,7 @@
         },
         "main": {
             "bold": false,
+            "weight": 0,
             "color": "#FFFFFF",
             "height": 690,
             "italics": false,

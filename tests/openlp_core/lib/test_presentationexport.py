@@ -706,3 +706,162 @@ def test_export_menu_has_separate_presentation_formats(request):
     main_window.export_opendocument_item.trigger()
     calls = main_window.service_manager_contents.on_export_presentation.call_args_list
     assert [call.args[0] for call in calls] == ['.pptx', '.odp']
+
+
+def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(tmp_path):
+    import base64
+    from pptx import Presentation
+    from PySide6.QtCore import QSize
+    from openlp.core.lib.presentationexport import _image_bytes
+    from openlp.core.lib.slidedesign import apply_design
+
+    picture = QtGui.QImage(80, 40, QtGui.QImage.Format.Format_ARGB32)
+    picture.fill(QtGui.QColor('#ff0000'))
+    uri = 'data:image/png;base64,' + base64.b64encode(_image_bytes(picture)).decode()
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
+              'lyrics': {'x': 10, 'y': 10, 'width': 80, 'height': 20, 'outline': True,
+                         'outline_width': 2, 'shadow': True, 'rotation': 5},
+              'background': {'type': 'gradient', 'colour': '#123456', 'end_colour': '#654321',
+                             'image': uri, 'image_opacity': 30},
+              'order': ['ellipse', 'lyrics', 'caption', 'image'],
+              'elements': [
+                  {'id': 'ellipse', 'kind': 'ellipse', 'x': 10, 'y': 30, 'width': 20, 'height': 20,
+                   'fill': '#00ff00', 'opacity': 40, 'outline': True, 'outline_width': 4, 'shadow': True},
+                  {'id': 'caption', 'kind': 'text', 'text': 'Editable caption', 'x': 35, 'y': 60,
+                   'width': 30, 'height': 20, 'font_size': 36, 'opacity': 60,
+                   'outline': True, 'shadow': True, 'shadow_x': -8, 'flip_vertical': True},
+                  {'id': 'image', 'kind': 'image', 'src': uri, 'x': 70, 'y': 50, 'width': 20, 'height': 30,
+                   'opacity': 50, 'flip_horizontal': True, 'outline': True, 'outline_width': 3, 'shadow': True}]}
+    theme = apply_design(_theme(), design, QSize(1920, 1080))
+    destination = tmp_path / 'rich.pptx'
+    _write_pptx([PresentationPage(theme=theme, text='Slide lyrics', footer='')], destination, 1920, 1080)
+    deck = Presentation(str(destination))
+    shapes = deck.slides[0].shapes
+    assert [shape.name for shape in shapes][1:] == ['Ellipse', 'Slide text', 'Text box', 'Image']
+    assert shapes[2].text == 'Slide lyrics'
+    assert shapes[3].text == 'Editable caption'
+    assert shapes[2].rotation == 5
+    assert shapes[1].width == pytest.approx(deck.slide_width * .2, abs=1)
+    assert shapes[3]._element.xpath('./p:spPr/a:scene3d/a:camera/a:rot')[0].get('lat') == '10800000'
+    assert shapes[4]._element.xpath('./p:spPr/a:xfrm')[0].get('flipH') == '1'
+    assert shapes[4]._element.xpath('./p:blipFill/a:blip/a:alphaModFix')[0].get('amt') == '50000'
+    assert shapes[1]._element.xpath('./p:spPr/a:solidFill/a:srgbClr/a:alpha')[0].get('val') == '40000'
+    assert shapes[1]._element.xpath('./p:spPr/a:effectLst/a:outerShdw')
+    assert shapes[3]._element.xpath('.//a:rPr/a:ln/a:solidFill')
+    assert shapes[3]._element.xpath('.//a:rPr/a:effectLst/a:outerShdw')
+    assert len(shapes) == 5  # Background plus four editable objects, without a footer.
+
+
+@pytest.mark.parametrize('suffix, writer', [('.pptx', _write_pptx), ('.odp', _write_odp)])
+def test_exports_bake_background_and_image_filters_without_flattening_text(tmp_path, suffix, writer):
+    import base64
+    from copy import deepcopy
+    from lxml import etree
+    from pptx import Presentation
+    from openlp.core.lib.presentationexport import _image_bytes
+
+    image = QtGui.QImage(40, 40, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtGui.QColor('#ff0000'))
+    uri = 'data:image/png;base64,' + base64.b64encode(_image_bytes(image)).decode()
+    theme = _theme()
+    theme.background_color = '#000000'
+    theme.song_design = {
+        'canvas_width': 320, 'canvas_height': 180,
+        'background': {'image': uri, 'image_opacity': 50},
+        'background_filters': {'invert': 100},
+        'order': ['behind', 'lyrics', 'front'],
+        'elements': [
+            {'id': identifier, 'kind': 'image', 'src': uri, 'x': x, 'y': 20,
+             'width': 25, 'height': 25, 'opacity': 50, 'filters': {'invert': 100, 'blur': 2},
+             'outline': True, 'outline_width': 2, 'outline_colour': '#000000',
+             'shadow': True, 'shadow_x': 4, 'shadow_y': 2, 'shadow_blur': 2}
+            for identifier, x in [('behind', 10), ('front', 50)]]}
+    original = deepcopy(theme.song_design)
+    destination = tmp_path / ('effects' + suffix)
+
+    writer([PresentationPage(theme=theme, text='Editable lyrics')], destination, 320, 180)
+
+    if suffix == '.pptx':
+        deck = Presentation(str(destination))
+        objects = deck.slides[0].shapes
+        assert [shape.name for shape in objects][1:] == ['Image', 'Slide text', 'Image']
+        assert objects[2].text == 'Editable lyrics'
+        background = QtGui.QImage.fromData(objects[0].image.blob)
+        filtered = QtGui.QImage.fromData(objects[1].image.blob)
+        assert objects[1]._element.xpath('./p:blipFill/a:blip/a:alphaModFix')[0].get('amt') == '50000'
+        assert not objects[1]._element.xpath('./p:spPr/a:effectLst/a:outerShdw')  # Already baked.
+        assert (objects[1].left + objects[1].width / 2) / deck.slide_width == pytest.approx(.225, abs=1e-6)
+        expected_alpha = 255
+    else:
+        ns = {'draw': 'urn:oasis:names:tc:opendocument:xmlns:drawing:1.0',
+              'xlink': 'http://www.w3.org/1999/xlink',
+              'svg': 'urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0'}
+        with ZipFile(destination) as package:
+            xml = etree.fromstring(package.read('content.xml'))
+            frames = xml.xpath('//draw:page/draw:frame', namespaces=ns)
+            assert [etree.QName(frame[0]).localname for frame in frames] == ['image', 'image', 'text-box', 'image']
+            assert 'Editable lyrics' in ''.join(frames[2].itertext())
+            pictures = [frame[0].get('{' + ns['xlink'] + '}href') for frame in (frames[0], frames[1])]
+            background, filtered = [QtGui.QImage.fromData(package.read(path)) for path in pictures]
+            x, w = [float(frames[1].get('{' + ns['svg'] + '}' + key)[:-2]) for key in ('x', 'width')]
+            assert (x + w / 2) / 33.866 == pytest.approx(.225, abs=.0001)
+        expected_alpha = 128
+    assert background.pixelColor(160, 90).getRgb()[:3] == pytest.approx((127, 255, 255), abs=1)
+    assert filtered.pixelColor(filtered.width() // 2, filtered.height() // 2).getRgb() == (0, 255, 255, expected_alpha)
+    assert filtered.width() > 80  # Blur and shadow overflow are retained.
+    assert theme.song_design == original
+
+
+def test_solid_background_filters_and_gradient_filters_are_exported():
+    from openlp.core.lib.presentationexport import _background
+
+    theme = _theme()
+    theme.background_color = '#ff0000'
+    theme.song_design = {'background_filters': {'grayscale': 100}}
+    _, png = _background(theme, 100, 100)
+    image = QtGui.QImage.fromData(png)
+    assert image.pixelColor(50, 50).getRgb() == (54, 54, 54, 255)
+
+    theme.background_type = 'gradient'
+    theme.background_start_color, theme.background_end_color = '#ff0000', '#00ff00'
+    _, png = _background(theme, 100, 100)
+    image = QtGui.QImage.fromData(png)
+    top, bottom = image.pixelColor(50, 0), image.pixelColor(50, 99)
+    assert top.red() == top.green() == top.blue()
+    assert bottom.red() == bottom.green() == bottom.blue()
+    assert bottom.red() > top.red()
+
+
+@pytest.mark.parametrize('rotation', [0, 90])
+def test_odp_filtered_images_keep_flips_rotation_and_opacity(tmp_path, rotation):
+    import base64
+    from lxml import etree
+    from openlp.core.lib.presentationexport import _image_bytes
+
+    image = QtGui.QImage(80, 40, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtGui.QColor('#ff0000'))
+    painter = QtGui.QPainter(image)
+    painter.fillRect(40, 0, 40, 40, QtGui.QColor('#00ff00'))
+    painter.end()
+    uri = 'data:image/png;base64,' + base64.b64encode(_image_bytes(image)).decode()
+    theme = _theme()
+    theme.song_design = {'elements': [
+        {'id': 'image', 'kind': 'image', 'src': uri, 'x': 20, 'y': 20, 'width': 25, 'height': 25,
+         'filters': {'invert': 100}, 'flip_horizontal': True, 'rotation': rotation, 'opacity': 25}]}
+    target = tmp_path / 'transformed.odp'
+
+    _write_odp([PresentationPage(theme=theme)], target, 320, 180)
+
+    with ZipFile(target) as package:
+        xml = etree.fromstring(package.read('content.xml'))
+        frame = xml.xpath('//*[local-name()="frame"]')[0]
+        path = frame[0].get('{http://www.w3.org/1999/xlink}href')
+        result = QtGui.QImage.fromData(package.read(path))
+    if rotation:
+        assert (result.width(), result.height()) == (45, 80)
+        first, second = result.pixelColor(22, 20), result.pixelColor(22, 60)
+    else:
+        assert (result.width(), result.height()) == (80, 45)
+        first, second = result.pixelColor(20, 22), result.pixelColor(60, 22)
+    assert first.getRgb() == (255, 0, 255, 64)
+    assert second.getRgb() == (0, 255, 255, 64)

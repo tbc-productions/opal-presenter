@@ -510,7 +510,7 @@ def test_parse_xml_file_permission_error_exception(mocked_log_exception, mocked_
     assert result is None
 
 
-def test_set_current_chapter(settings):
+def test_set_current_chapter(settings, mocked_setup):
     """
     Test set_current_chapter
     """
@@ -526,7 +526,7 @@ def test_set_current_chapter(settings):
 
 
 @patch.object(BibleImport, 'is_compressed', return_value=True)
-def test_validate_xml_file_compressed_file(mocked_is_compressed, settings):
+def test_validate_xml_file_compressed_file(mocked_is_compressed, settings, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError when is_compressed returns True
     """
@@ -542,7 +542,7 @@ def test_validate_xml_file_compressed_file(mocked_is_compressed, settings):
 
 @patch.object(BibleImport, 'parse_xml', return_value=None)
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_parse_xml_fails(mocked_is_compressed, mocked_parse_xml, settings):
+def test_validate_xml_file_parse_xml_fails(mocked_is_compressed, mocked_parse_xml, settings, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError when parse_xml returns None
     """
@@ -559,7 +559,7 @@ def test_validate_xml_file_parse_xml_fails(mocked_is_compressed, mocked_parse_xm
 
 @patch.object(BibleImport, 'parse_xml', return_value=objectify.fromstring('<bible></bible>'))
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_success(mocked_is_compressed, mocked_parse_xml, settings):
+def test_validate_xml_file_success(mocked_is_compressed, mocked_parse_xml, settings, mocked_setup):
     """
     Test that validate_xml_file returns True with valid XML
     """
@@ -575,7 +575,7 @@ def test_validate_xml_file_success(mocked_is_compressed, mocked_parse_xml, setti
 
 @patch.object(BibleImport, 'parse_xml', return_value=objectify.fromstring('<bible></bible>'))
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_opensong_root(mocked_is_compressed, mocked_parse_xml, error_message_box):
+def test_validate_xml_file_opensong_root(mocked_is_compressed, mocked_parse_xml, error_message_box, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError with an OpenSong root tag
     """
@@ -594,7 +594,7 @@ def test_validate_xml_file_opensong_root(mocked_is_compressed, mocked_parse_xml,
 
 @patch.object(BibleImport, 'parse_xml')
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_osis_root(mocked_is_compressed, mocked_parse_xml, error_message_box):
+def test_validate_xml_file_osis_root(mocked_is_compressed, mocked_parse_xml, error_message_box, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError with an OSIS root tag
     """
@@ -615,7 +615,7 @@ def test_validate_xml_file_osis_root(mocked_is_compressed, mocked_parse_xml, err
 
 @patch.object(BibleImport, 'parse_xml', return_value=objectify.fromstring('<xmlbible></xmlbible>'))
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_zefania_root(mocked_is_compressed, mocked_parse_xml, error_message_box):
+def test_validate_xml_file_zefania_root(mocked_is_compressed, mocked_parse_xml, error_message_box, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError with an Zefania root tag
     """
@@ -634,7 +634,7 @@ def test_validate_xml_file_zefania_root(mocked_is_compressed, mocked_parse_xml, 
 
 @patch.object(BibleImport, 'parse_xml', return_value=objectify.fromstring('<unknownbible></unknownbible>'))
 @patch.object(BibleImport, 'is_compressed', return_value=False)
-def test_validate_xml_file_unknown_root(mocked_is_compressed, mocked_parse_xml, error_message_box):
+def test_validate_xml_file_unknown_root(mocked_is_compressed, mocked_parse_xml, error_message_box, mocked_setup):
     """
     Test that validate_xml_file raises a ValidationError with an unknown root tag
     """

@@ -27,12 +27,14 @@ from qrcode.image.svg import SvgPathFillImage
 
 from time import sleep
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.api.deploy import download_and_install, download_version_info, get_installed_version
 from openlp.core.common import get_network_interfaces
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
+from openlp.core.common.restart import show_restart_message
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.threading import is_thread_finished
 from openlp.core.ui.icons import UiIcons
@@ -164,18 +166,20 @@ class ApiTab(SettingsTab):
         self.app_qr_layout = QtWidgets.QVBoxLayout(self.app_group_box)
         self.app_qr_layout.setObjectName('app_qr_layout')
         self.app_qr_code_label = QtWidgets.QLabel(self.app_group_box)
-        self.app_qr_code_label.setPixmap(QtGui.QPixmap(':/remotes/app_qr.svg'))
+        self.app_qr_code_label.setFixedSize(160, 160)
+        self.app_qr_code_label.setPixmap(QtGui.QPixmap(':/remotes/app_qr.svg').scaled(
+            160, 160, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
         self.app_qr_code_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.app_qr_code_label.setObjectName('app_qr_code_label')
-        self.app_qr_layout.addWidget(self.app_qr_code_label)
+        self.app_qr_layout.addWidget(self.app_qr_code_label, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.app_qr_description_label = QtWidgets.QLabel(self.app_group_box)
         self.app_qr_description_label.setObjectName('app_qr_description_label')
         self.app_qr_description_label.setOpenExternalLinks(True)
         self.app_qr_description_label.setWordWrap(True)
         self.app_qr_layout.addWidget(self.app_qr_description_label)
-        self.server_state_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.server_state_group_box = QtWidgets.QGroupBox(self.left_column)
         self.server_state_group_box.setObjectName('server_state_group_box')
-        self.right_layout.addWidget(self.server_state_group_box)
+        self.left_layout.insertWidget(0, self.server_state_group_box)
         self.server_state_layout = QtWidgets.QFormLayout(self.server_state_group_box)
         self.server_http_state_title = QtWidgets.QLabel(self.server_state_group_box)
         self.server_http_state_title.setObjectName('server_http_state_title')
@@ -286,12 +290,14 @@ class ApiTab(SettingsTab):
         self.stage_url.setText(f'<a href="{http_url}stage">{http_url}stage</a>')
         self.chords_url.setText(f'<a href="{http_url}chords">{http_url}chords</a>')
         self.live_url.setText(f'<a href="{http_url}main">{http_url}main</a>')
-        # create a QR code SVG, size will be about 300x300
+        # Render at a compact size while retaining the complete QR quiet zone.
         qr = qrcode.QRCode(box_size=24)
         qr.add_data(http_url)
         img = qr.make_image(image_factory=SvgPathFillImage)
         qimg = QtGui.QImage.fromData(img.to_string())
-        self.app_qr_code_label.setPixmap(QtGui.QPixmap.fromImage(qimg))
+        self.app_qr_code_label.setPixmap(QtGui.QPixmap.fromImage(qimg).scaled(
+            self.app_qr_code_label.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation))
 
     def set_server_states(self):
         """
@@ -351,7 +357,7 @@ class ApiTab(SettingsTab):
         Save the configuration and update the server configuration if necessary
         """
         if self.settings.value('api/ip address') != self.address_edit.text():
-            QtWidgets.QMessageBox.information(self, translate('OpenLP.RemoteTab', 'Restart Required'),
+            show_restart_message(self, translate('OpenLP.RemoteTab', 'Restart Required'),
                                               translate('OpenLP.RemoteTab',
                                                         'This change will only take effect once OpenLP+ '
                                                         'has been restarted.'))

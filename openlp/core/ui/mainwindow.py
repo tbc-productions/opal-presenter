@@ -30,7 +30,8 @@ from pathlib import Path
 from tempfile import gettempdir
 from threading import Lock
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.api.http.server import HttpServer
 from openlp.core.api.websockets import WebSocketServer
@@ -44,12 +45,14 @@ from openlp.core.common.path import create_paths, resolve
 from openlp.core.common.platform import is_macosx, is_win
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
+from openlp.core.common.screen_settings import request_screen_configuration, show_screen_setup_message
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.ui import create_action
 from openlp.core.projectors.manager import ProjectorManager
 from openlp.core.state import State
 from openlp.core.ui.aboutform import AboutForm
+from openlp.core.ui.advanceddocking import AdvancedDockingMixin, AdvancedDockWidget
 from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.formattingtagform import FormattingTagForm
 from openlp.core.ui.icons import UiIcons
@@ -57,21 +60,40 @@ from openlp.core.ui.pluginform import PluginForm
 from openlp.core.ui.printserviceform import PrintServiceForm
 from openlp.core.ui.servicemanager import ServiceManager
 from openlp.core.ui.settingsform import SettingsForm
+from openlp.core.widgets.statusbar import FooterStatusBar
 from openlp.core.ui.shortcutlistform import ShortcutListForm
 from openlp.core.ui import HideMode
-from openlp.core.ui.style import PROGRESSBAR_STYLE, get_library_stylesheet
+from openlp.core.ui.style import get_library_stylesheet
+from openlp.core.ui.modernstyle import is_modern_style
+from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
 from openlp.core.ui.thememanager import ThemeManager
+from openlp.core.ui.windowmenu import WindowMenu
 from openlp.core.version import get_version
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.docks import MediaDockManager, MediaToolBox, OpenLPDockWidget
+from openlp.core.widgets.docks import MediaDockManager, MediaToolBox
 
 # Layout preset ids (match ``core/view mode`` values) for per-preset saved window layout.
-_PRESET_LAYOUT_MODES = ('default', 'setup', 'live')
+_PRESET_LAYOUT_MODES = ('default', 'setup', 'live', 'librarysync')
 _PRESET_VISIBILITY_SNAPSHOT_KEY = 'visibility snapshot'
 
 
 def _preset_layout_storage_key(mode: str, fragment: str) -> str:
-    return 'user interface/preset layout/{}/{}'.format(mode, fragment)
+    return 'user interface/modern preset layout/{}/{}'.format(mode, fragment)
+
+
+def _window_state_storage_key() -> str:
+    return 'user interface/modern window state'
+
+
+def _set_dock_visible(dock, visible):
+    if isinstance(dock, AdvancedDockWidget):
+        dock.setDockVisible(visible)
+    else:
+        dock.setVisible(visible)
+
+
+def _dock_is_visible(dock):
+    return dock.isDockOpen() if isinstance(dock, AdvancedDockWidget) else dock.isVisible()
 
 
 def _preset_layout_has_saved_state(settings: Settings, mode: str) -> bool:
@@ -88,6 +110,8 @@ class Ui_MainWindow(object):
         Set up the user interface
         """
         main_window.setObjectName('MainWindow')
+        self.settings.setValue('advanced/interface style', 'modern')
+        main_window.setProperty('fluentUi', True)
         main_window.setWindowIcon(UiIcons().main_icon)
         main_window.setDockNestingEnabled(True)
         if is_macosx():
@@ -103,97 +127,99 @@ class Ui_MainWindow(object):
         show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
         if show_layout_preset_tabs is None:
             show_layout_preset_tabs = True
-        self.layout_preset_toolbar = QtWidgets.QToolBar(main_window)
-        self.layout_preset_toolbar.setObjectName('layout_preset_toolbar')
-        self.layout_preset_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.layout_preset_toolbar.setMovable(False)
-        self.layout_preset_toolbar.setFloatable(False)
-        self.layout_preset_toolbar.setIconSize(QtCore.QSize(1, 1))
-        main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.layout_preset_toolbar)
-        self.layout_preset_tab_bar = QtWidgets.QTabBar(self.layout_preset_toolbar)
-        self.layout_preset_tab_bar.setObjectName('layout_preset_tab_bar')
-        self.layout_preset_tab_bar.setShape(QtWidgets.QTabBar.Shape.RoundedWest)
-        if is_macosx():
-            self.layout_preset_tab_bar.setDocumentMode(True)
-        self.layout_preset_tab_bar.setDrawBase(False)
-        self.layout_preset_tab_bar.setMovable(False)
-        self.layout_preset_tab_bar.setExpanding(True)
-        self.layout_preset_tab_bar.setSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Fixed,
-            QtWidgets.QSizePolicy.Policy.Expanding)
-        self.layout_preset_tab_bar.addTab('')
-        self.layout_preset_tab_bar.addTab('')
-        self.layout_preset_tab_bar.addTab('')
-        self.layout_preset_toolbar.addWidget(self.layout_preset_tab_bar)
-        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
         self.control_splitter = QtWidgets.QSplitter(self.main_content)
         self.control_splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.control_splitter.setObjectName('control_splitter')
+        self.main_content_layout.setContentsMargins(6, 6, 6, 6)
+        self.control_splitter.setHandleWidth(8)
         self.main_content_layout.addWidget(self.control_splitter)
+        main_window.initialize_advanced_docking()
+        self.layout_preset_navigation = LayoutPresetNavigation(main_window)
+        self.layout_preset_navigation.setObjectName('layout_preset_navigation')
+        for button, icon in zip(self.layout_preset_navigation.buttons,
+                                (UiIcons().dashboard, UiIcons().mode_setup, UiIcons().live, UiIcons().library_sync)):
+            button.setIcon(icon)
+        self.layout_preset_navigation.buttons[3].hide()
+        self.layout_preset_navigation.contentHost().addOwnedPage(main_window.takeCentralWidget())
+        self.layout_preset_navigation.contentHost().setCurrentIndex(0, animated=False)
+        main_window.setCentralWidget(self.layout_preset_navigation)
+        self.layout_preset_navigation.setNavigationVisible(show_layout_preset_tabs)
+        dock_widget_class = AdvancedDockWidget
         preview_visible = self.settings.value('user interface/preview panel')
         live_visible = self.settings.value('user interface/live panel')
         panel_locked = self.settings.value('user interface/lock panel')
         # Create menu
-        self.menu_bar = QtWidgets.QMenuBar(main_window)
+        self.menu_bar = QtWidgets.create_application_menu_bar(main_window)
         self.menu_bar.setObjectName('menu_bar')
-        self.file_menu = QtWidgets.QMenu(self.menu_bar)
+        self.file_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.file_menu.setObjectName('fileMenu')
-        self.recent_files_menu = QtWidgets.QMenu(self.file_menu)
+        self.recent_files_menu = QtWidgets.create_application_menu(self.file_menu)
         self.recent_files_menu.setIcon(UiIcons().time)
         self.recent_files_menu.setObjectName('recentFilesMenu')
-        self.file_import_menu = QtWidgets.QMenu(self.file_menu)
+        self.file_import_menu = QtWidgets.create_application_menu(self.file_menu)
         self.file_import_menu.setIcon(UiIcons().download)
         self.file_import_menu.setObjectName('file_import_menu')
-        self.file_export_menu = QtWidgets.QMenu(self.file_menu)
+        self.file_export_menu = QtWidgets.create_application_menu(self.file_menu)
         self.file_export_menu.setIcon(UiIcons().upload)
         self.file_export_menu.setObjectName('file_export_menu')
         # View Menu
-        self.view_menu = QtWidgets.QMenu(self.menu_bar)
+        self.view_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.view_menu.setObjectName('viewMenu')
-        self.view_mode_menu = QtWidgets.QMenu(self.view_menu)
+        self.view_mode_menu = QtWidgets.create_application_menu(self.view_menu)
         self.view_mode_menu.setIcon(UiIcons().dashboard)
         self.view_mode_menu.setObjectName('viewModeMenu')
         # Tools Menu
-        self.tools_menu = QtWidgets.QMenu(self.menu_bar)
+        self.tools_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.tools_menu.setObjectName('tools_menu')
         # Settings Menu
-        self.settings_menu = QtWidgets.QMenu(self.menu_bar)
+        self.settings_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.settings_menu.setObjectName('settingsMenu')
-        self.settings_language_menu = QtWidgets.QMenu(self.settings_menu)
+        self.settings_language_menu = QtWidgets.create_application_menu(self.settings_menu)
         self.settings_language_menu.setIcon(UiIcons().translation)
         self.settings_language_menu.setObjectName('settingsLanguageMenu')
+        self.window_menu_controller = WindowMenu(main_window, self.menu_bar)
+        self.window_menu = self.window_menu_controller.menu
         # Help Menu
-        self.help_menu = QtWidgets.QMenu(self.menu_bar)
+        self.help_menu = QtWidgets.create_application_menu(self.menu_bar)
         self.help_menu.setObjectName('helpMenu')
         main_window.setMenuBar(self.menu_bar)
-        self.status_bar = QtWidgets.QStatusBar(main_window)
+        self.status_bar = FooterStatusBar(main_window)
         self.status_bar.setObjectName('status_bar')
-        self.status_bar.setStyleSheet('QStatusBar { padding-left: 16px; }')
         main_window.setStatusBar(self.status_bar)
         self.load_progress_bar = QtWidgets.QProgressBar(self.status_bar)
         self.load_progress_bar.setObjectName('load_progress_bar')
-        self.status_bar.addPermanentWidget(self.load_progress_bar)
+        self.status_bar.add_left_widget(self.load_progress_bar, 1)
         self.load_progress_bar.hide()
         self.load_progress_bar.setValue(0)
-        self.load_progress_bar.setStyleSheet(PROGRESSBAR_STYLE)
-        self.default_theme_label = QtWidgets.QLabel(self.status_bar)
+        self.default_theme_container = QtWidgets.QWidget(self.status_bar)
+        default_theme_layout = QtWidgets.QHBoxLayout(self.default_theme_container)
+        default_theme_layout.setContentsMargins(0, 0, 0, 0)
+        default_theme_layout.setSpacing(4)
+        self.default_theme_label = QtWidgets.QLabel(self.default_theme_container)
         self.default_theme_label.setObjectName('default_theme_label')
-        self.default_theme_label.setContentsMargins(8, 0, 12, 0)
-        self.status_bar.addPermanentWidget(self.default_theme_label)
+        self.default_theme_label.setText(translate('OpenLP.MainWindow', 'Default Theme:'))
+        default_theme_layout.addWidget(self.default_theme_label)
+        self.default_theme_button = QtWidgets.fluentqt.HyperlinkButton('', self.default_theme_container)
+        self.default_theme_button.setObjectName('default_theme_button')
+        self.default_theme_button.setFluentSize(QtWidgets.fluentqt.Button.ButtonSize.Small)
+        self.default_theme_button.setToolTip(translate('OpenLP.MainWindow', 'Open Themes settings'))
+        self.default_theme_button.clicked.connect(self.on_default_theme_clicked)
+        default_theme_layout.addWidget(self.default_theme_button)
+        self.status_bar.add_right_widget(self.default_theme_container)
         # Library and Themes are separate dock widgets; Qt tabifies them in the same dock area.
-        self.media_manager_dock = OpenLPDockWidget(main_window, 'media_manager_dock',
-                                                   UiIcons().box)
+        self.media_manager_dock = dock_widget_class(main_window, 'media_manager_dock',
+                                                   UiIcons().library)
         self.media_tool_box = MediaToolBox()
         self.media_tool_box.setObjectName('media_tool_box')
         self.media_tool_box.setStyleSheet(get_library_stylesheet())
         self.media_manager_dock.setWidget(self.media_tool_box)
-        self.theme_manager_dock = OpenLPDockWidget(main_window, 'theme_manager_dock',
+        self.theme_manager_dock = dock_widget_class(main_window, 'theme_manager_dock',
                                                    UiIcons().theme)
         self.theme_manager_contents = ThemeManager(self.theme_manager_dock)
         self.theme_manager_contents.setObjectName('theme_manager_contents')
         self.theme_manager_dock.setWidget(self.theme_manager_contents)
         # Create the service manager
-        self.service_manager_dock = OpenLPDockWidget(main_window, 'service_manager_dock',
+        self.service_manager_dock = dock_widget_class(main_window, 'service_manager_dock',
                                                      UiIcons().live)
         self.service_manager_contents = ServiceManager(self.service_manager_dock)
         self.service_manager_dock.setWidget(self.service_manager_contents)
@@ -205,13 +231,13 @@ class Ui_MainWindow(object):
         main_window.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
         self.media_manager_dock.raise_()
         # Create the projector manager
-        self.projector_manager_dock = OpenLPDockWidget(parent=main_window,
+        self.projector_manager_dock = dock_widget_class(parent=main_window,
                                                        name='projector_manager_dock',
                                                        icon=UiIcons().projector)
         self.projector_manager_contents = ProjectorManager(self.projector_manager_dock)
         self.projector_manager_contents.setObjectName('projector_manager_contents')
         self.projector_manager_dock.setWidget(self.projector_manager_contents)
-        self.projector_manager_dock.setVisible(False)
+        _set_dock_visible(self.projector_manager_dock, False)
         main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.projector_manager_dock)
         # Create the menu items
         action_list = ActionList.get_instance()
@@ -251,22 +277,22 @@ class Ui_MainWindow(object):
         action_list.add_category(UiStrings().Import, CategoryOrder.standard_menu)
         self.view_projector_manager_item = create_action(main_window, 'viewProjectorManagerItem',
                                                          icon=UiIcons().projector,
-                                                         checked=self.projector_manager_dock.isVisible(),
+                                                         checked=_dock_is_visible(self.projector_manager_dock),
                                                          can_shortcuts=True,
                                                          category=UiStrings().View,
                                                          triggers=self.toggle_projector_manager)
         self.view_media_manager_item = create_action(main_window, 'viewMediaManagerItem',
                                                      icon=UiIcons().library,
-                                                     checked=self.media_manager_dock.isVisible(),
+                                                     checked=_dock_is_visible(self.media_manager_dock),
                                                      can_shortcuts=True,
                                                      category=UiStrings().View, triggers=self.toggle_media_manager)
         self.view_theme_manager_item = create_action(main_window, 'viewThemeManagerItem', can_shortcuts=True,
                                                      icon=UiIcons().theme,
-                                                     checked=self.theme_manager_dock.isVisible(),
+                                                     checked=_dock_is_visible(self.theme_manager_dock),
                                                      category=UiStrings().View, triggers=self.toggle_theme_manager)
         self.view_service_manager_item = create_action(main_window, 'viewServiceManagerItem', can_shortcuts=True,
                                                        icon=UiIcons().live,
-                                                       checked=self.service_manager_dock.isVisible(),
+                                                       checked=_dock_is_visible(self.service_manager_dock),
                                                        category=UiStrings().View, triggers=self.toggle_service_manager)
         self.view_preview_panel = create_action(main_window, 'viewPreviewPanel', icon=UiIcons().preview,
                                                 can_shortcuts=True, checked=preview_visible,
@@ -307,6 +333,10 @@ class Ui_MainWindow(object):
         self.mode_reset_layout_presets_item = create_action(
             main_window, 'modeResetLayoutPresetsItem', category=UiStrings().ViewMode,
             can_shortcuts=False, triggers=self.on_mode_reset_layout_presets_clicked)
+        self.mode_library_sync_item = create_action(
+            main_window, 'modeLibrarySyncItem', checked=False, can_shortcuts=False,
+            triggers=lambda: self._activate_layout_preset('librarysync'))
+        self.mode_library_sync_item.setVisible(False)
         self.view_layout_preset_tabs_item = create_action(
             main_window,
             'viewLayoutPresetTabsItem',
@@ -401,6 +431,7 @@ class Ui_MainWindow(object):
                     self.file_import_menu.menuAction(), self.file_export_menu.menuAction(), None,
                     self.print_service_order_item, self.file_exit_item))
         add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item,
+                                          self.mode_library_sync_item,
                                           None, self.view_layout_preset_tabs_item,
                                           self.mode_reset_layout_presets_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
@@ -425,12 +456,14 @@ class Ui_MainWindow(object):
         add_actions(self.tools_menu, [self.update_theme_images])
         add_actions(self.help_menu, (self.user_manual_item, None, self.web_site_item, self.about_item))
         add_actions(self.menu_bar, (self.file_menu.menuAction(), self.view_menu.menuAction(),
-                    self.tools_menu.menuAction(), self.settings_menu.menuAction(), self.help_menu.menuAction()))
+                    self.tools_menu.menuAction(), self.settings_menu.menuAction(), self.window_menu.menuAction(),
+                    self.help_menu.menuAction()))
+        self.window_menu_controller.share_on_macos(self.menu_bar)
         add_actions(self, [self.search_shortcut_action])
         # Initialise the translation
         self.retranslate_ui(main_window)
         self.media_tool_box.setCurrentIndex(0)
-        self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
+        _set_dock_visible(self.theme_manager_dock, self.settings.value('user interface/show themes'))
         # Tabified docks report isVisible() false when not the active tab; use saved intent.
         self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
         # Connect up some signals and slots
@@ -441,6 +474,10 @@ class Ui_MainWindow(object):
         self.import_language_item.setVisible(False)
         self.export_language_item.setVisible(False)
         self.set_lock_panel(panel_locked)
+        self.preview_controller_dock.setDockVisible(preview_visible)
+        self.live_controller_dock.setDockVisible(live_visible)
+        self.preview_controller_dock.visibilityChanged.connect(self.set_preview_panel_visibility)
+        self.live_controller_dock.visibilityChanged.connect(self.set_live_panel_visibility)
         self.settings_replaced = False
 
     def retranslate_ui(self, main_window):
@@ -457,6 +494,7 @@ class Ui_MainWindow(object):
         self.tools_menu.setTitle(translate('OpenLP.MainWindow', '&Tools'))
         self.settings_menu.setTitle(translate('OpenLP.MainWindow', '&Settings'))
         self.settings_language_menu.setTitle(translate('OpenLP.MainWindow', '&Language'))
+        self.window_menu_controller.sync_actions()
         self.help_menu.setTitle(translate('OpenLP.MainWindow', '&Help'))
         self.service_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Service'))
         self.media_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Library'))
@@ -483,22 +521,22 @@ class Ui_MainWindow(object):
         self.import_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
         self.export_theme_item.setText(translate('OpenLP.MainWindow', '&Theme'))
         self.export_language_item.setText(translate('OpenLP.MainWindow', '&Language'))
-        self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', 'Configure &Shortcuts...'))
-        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', 'Configure &Formatting Tags...'))
+        self.settings_shortcuts_item.setText(translate('OpenLP.MainWindow', '&Shortcuts'))
+        self.formatting_tag_item.setText(translate('OpenLP.MainWindow', '&Formatting styles'))
         self.settings_configure_item.setText(translate('OpenLP.MainWindow', '&Configure OpenLP+...'))
         self.settings_export_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Export settings to a *.config file.'))
         self.settings_export_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_export_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Export formatting tags to a *.json file.'))
-        self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
+            translate('OpenLP.MainWindow', 'Export formatting styles to a *.json file.'))
+        self.formatting_tags_export_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.settings_import_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Import settings from a *.config file previously exported from '
                                            'this or another machine.'))
         self.settings_import_item.setText(translate('OpenLP.MainWindow', 'Settings'))
         self.formatting_tags_import_item.setStatusTip(
-            translate('OpenLP.MainWindow', 'Import formatting tags from a *.json file.'))
-        self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting tags'))
+            translate('OpenLP.MainWindow', 'Import formatting styles from a *.json file.'))
+        self.formatting_tags_import_item.setText(translate('OpenLP.MainWindow', 'Formatting styles'))
         self.view_projector_manager_item.setText(translate('OpenLP.MainWindow', '&Projector Controller'))
         self.view_projector_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show Projectors.'))
         self.view_projector_manager_item.setStatusTip(translate('OpenLP.MainWindow',
@@ -563,34 +601,43 @@ class Ui_MainWindow(object):
         self.update_theme_images.setText(translate('OpenLP.MainWindow', 'Update Theme Images'))
         self.update_theme_images.setStatusTip(translate('OpenLP.MainWindow',
                                                         'Update the preview images for all themes.'))
-        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Show all'))
+        self.mode_default_item.setText(translate('OpenLP.MainWindow', '&Workspace'))
         self.mode_default_item.setStatusTip(translate('OpenLP.MainWindow', 'Reset the interface back to the '
                                                                            'default layout and show all the panels.'))
-        self.layout_preset_tab_bar.setTabText(0, translate('OpenLP.MainWindow', 'Show all'))
-        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Setup'))
+        self.layout_preset_navigation.setItemText(0, translate('OpenLP.MainWindow',
+                                                        'Workspace'))
+        self.layout_preset_navigation.pane_toggle.setToolTip(translate('OpenLP.MainWindow', 'Toggle Compact mode'))
+        self.layout_preset_navigation.pane_toggle.setAccessibleName(
+            translate('OpenLP.MainWindow', 'Toggle Compact mode'))
+        self.mode_setup_item.setText(translate('OpenLP.MainWindow', '&Prepare'))
         self.mode_setup_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Service beside Library and Themes, with Preview (Live panel hidden) for setting up the service.'))
-        self.layout_preset_tab_bar.setTabText(1, translate('OpenLP.MainWindow', 'Setup'))
+        self.layout_preset_navigation.setItemText(1, translate('OpenLP.MainWindow', 'Prepare'))
         self.mode_live_item.setText(translate('OpenLP.MainWindow', '&Live'))
         self.mode_live_item.setStatusTip(translate(
             'OpenLP.MainWindow',
             'Use layout that focuses on Live: Preview and Live slide controllers, without the Library.'))
-        self.layout_preset_tab_bar.setTabText(2, translate('OpenLP.MainWindow', 'Live'))
-        self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &tabs'))
+        self.layout_preset_navigation.setItemText(2, translate('OpenLP.MainWindow', 'Live'))
+        self.layout_preset_navigation.setItemText(3, translate('OpenLP.MainWindow', 'Library Sync'))
+        self.mode_library_sync_item.setText(translate('OpenLP.MainWindow', 'Library Sync'))
+        self.view_layout_preset_tabs_item.setText(translate('OpenLP.MainWindow', 'Show layout &navigation'))
         self.view_layout_preset_tabs_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Show or hide the vertical layout preset tabs on the left side of the window.'))
+            'Show or hide the layout navigation pane on the left side of the window.'))
         self.mode_reset_layout_presets_item.setText(translate('OpenLP.MainWindow', '&Reset'))
         self.mode_reset_layout_presets_item.setStatusTip(translate(
             'OpenLP.MainWindow',
-            'Discard saved custom layouts for Show all, Setup, and Live. Built-in preset behaviour is restored.'))
+            'Discard saved custom layouts for all presets. Built-in preset behaviour is restored.'))
 
 
-class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
+class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryProperties):
     """
     The main window.
     """
+    def _preset_layout_storage_key(self, mode, fragment):
+        return _preset_layout_storage_key(mode, fragment)
+
     def __init__(self):
         """
         This constructor sets up the interface, the various managers, and the plugins.
@@ -603,13 +650,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.new_data_path = None
         self.copy_data = False
         self.settings.set_up_default_values()
+        # Capture service activation for this session; plugin changes take effect after a restart.
+        Registry().set_flag('projector_disabled', self.settings.value('projector/status') != PluginStatus.Active)
+        Registry().set_flag('no_web_server', Registry().get_flag('no_web_server') or
+                            self.settings.value('remote_interface/status') != PluginStatus.Active)
         self.about_form = AboutForm(self)
-        SettingsForm()
+        SettingsForm(self)
         self.formatting_tag_form = FormattingTagForm(self)
         self.shortcut_form = ShortcutListForm(self)
         # Set up the interface
         self.setup_ui(self)
-        self.export_presentation_menu = QtWidgets.QMenu(self.file_export_menu)
+        self.view_projector_manager_item.setVisible(not Registry().get_flag('projector_disabled'))
+        self.import_projector_item.setVisible(not Registry().get_flag('projector_disabled'))
+        self.export_presentation_menu = QtWidgets.create_application_menu(self.file_export_menu)
         self.export_presentation_menu.setTitle(translate('OpenLP.MainWindow', '&Presentation'))
         self.export_presentation_menu.setObjectName('export_presentation_menu')
         self.export_powerpoint_item = self.export_presentation_menu.addAction(
@@ -652,7 +705,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.mode_default_item.triggered.connect(self.on_mode_default_item_clicked)
         self.mode_setup_item.triggered.connect(self.on_mode_setup_item_clicked)
         self.mode_live_item.triggered.connect(self.on_mode_live_item_clicked)
-        self.layout_preset_tab_bar.currentChanged.connect(self.on_layout_preset_tab_changed)
+        self.layout_preset_navigation.currentChanged.connect(self.on_layout_preset_tab_changed)
         # Media Manager
         self.media_tool_box.currentChanged.connect(self.on_media_tool_box_changed)
         self.application.set_busy_cursor()
@@ -660,8 +713,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # Simple message boxes
         Registry().register_function('theme_change_global', self.default_theme_changed)
         Registry().register_function('config_screen_changed', self.screen_changed)
-        Registry().register_function('media_dock_refresh_icons', self.refresh_media_dock_icons)
-        Registry().register_function('alternate_rows_changed', self.alternate_rows_changed)
         Registry().register_function('bootstrap_post_set_up', self.bootstrap_post_set_up)
         # Reset the cursor
         self.application.set_normal_cursor()
@@ -722,34 +773,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                     # If the worker has a stop method, run it
                     worker.stop()
                 if thread and thread.isRunning():
-                    # If the thread is running, let's wait 5 seconds for it
+                    # Network workers need time for their bounded request to unwind safely.
+                    wait_limit = getattr(type(worker), 'shutdown_wait_ms', 5000) // 100
                     retry = 0
-                    while thread.isRunning() and retry < 50:
+                    while thread.isRunning() and retry < wait_limit:
                         # Make the GUI responsive while we wait
                         QtWidgets.QApplication.processEvents()
                         thread.wait(100)
                         retry += 1
                     if thread.isRunning():
-                        # If the thread is still running after 5 seconds, kill it
+                        # Terminate only after the worker's shutdown allowance expires.
                         thread.terminate()
             except RuntimeError:
                 # Ignore the RuntimeError that is thrown when Qt has already deleted the C++ thread object
                 pass
-
-    def refresh_media_dock_icons(self):
-        """
-        Refresh library tab icons so updated service theme colors are reflected immediately.
-        """
-        self.media_dock_manager.refresh_item_icons()
-
-    def alternate_rows_changed(self):
-        """
-        Update alternating row colors on all open item views.
-        """
-        use_alternate_rows = self.settings.value('advanced/alternate rows')
-        for widget in QtWidgets.QApplication.allWidgets():
-            if isinstance(widget, QtWidgets.QAbstractItemView):
-                widget.setAlternatingRowColors(use_alternate_rows)
 
     def bootstrap_post_set_up(self):
         """
@@ -800,18 +837,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Called on start up to restore the last active media plugin.
         """
         self.log_info('Load data from Settings')
-        if self.settings.value('advanced/save current plugin'):
-            saved_plugin_id = self.settings.value('advanced/current media plugin')
-            if saved_plugin_id != -1:
-                self.media_tool_box.setCurrentIndex(saved_plugin_id)
+        saved_plugin_id = self.settings.value('advanced/current media plugin')
+        if saved_plugin_id != -1:
+            self.media_tool_box.setCurrentIndex(saved_plugin_id)
 
     def on_search_shortcut_triggered(self):
         """
         Called when the search shortcut has been pressed.
         """
         # Make sure the media_dock is visible.
-        if not self.media_manager_dock.isVisible():
-            self.media_manager_dock.setVisible(True)
+        if not _dock_is_visible(self.media_manager_dock):
+            _set_dock_visible(self.media_manager_dock, True)
         widget = self.media_tool_box.currentWidget()
         if widget:
             widget.on_focus()
@@ -869,7 +905,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         view_mode = self.settings.value('core/view mode')
         # If we are using a default mode set accordingly
         if self.settings.value('user interface/is preset layout'):
-            if view_mode not in _PRESET_LAYOUT_MODES:
+            if (view_mode not in _PRESET_LAYOUT_MODES or
+                    view_mode == 'librarysync' and not getattr(self, 'cloud_library_dock', None)):
                 view_mode = 'default'
                 self.settings.setValue('core/view mode', 'default')
             if view_mode == 'default':
@@ -894,6 +931,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                     self.set_view_mode(True, True, True, True, False, False, 'setup')
                 elif view_mode == 'live':
                     self.set_view_mode(False, True, False, True, True, False, 'live')
+                elif view_mode == 'librarysync':
+                    self._apply_canonical_preset_visibility('librarysync')
                 self.settings.setValue('user interface/is preset layout', True)
         else:
             self.set_view_mode(
@@ -951,10 +990,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.application.set_busy_cursor()
         self.first_time()
         # Check if Projectors panel should be visible or not after wizard.
-        if self.settings.value('projector/show after wizard'):
-            self.projector_manager_dock.setVisible(True)
+        if self.settings.value('projector/show after wizard') and not Registry().get_flag('projector_disabled'):
+            _set_dock_visible(self.projector_manager_dock, True)
         else:
-            self.projector_manager_dock.setVisible(False)
+            _set_dock_visible(self.projector_manager_dock, False)
         for plugin in State().list_plugins():
             self.active_plugin = plugin
             old_status = self.active_plugin.status
@@ -970,15 +1009,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # Check if any Bibles downloaded.  If there are, they will be processed.
         Registry().execute('bibles_load_list')
         self.application.set_normal_cursor()
-
-    def is_display_blank(self):
-        """
-        Check and display message if screen blank on setup.
-        """
-        if self.settings.value('core/screen blank'):
-            if self.settings.value('core/blank warning'):
-                QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'OpenLP+ Main Display Blanked'),
-                                               translate('OpenLP.MainWindow', 'The Main Display has been blanked out'))
 
     def error_message(self, title: str, message: str):
         """
@@ -1066,6 +1096,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Show the Settings dialog
         """
         self.settings_form.exec()
+
+    def on_default_theme_clicked(self):
+        """Open Settings at the Themes section from the footer link."""
+        self.settings_form.exec(UiStrings().Themes)
 
     def on_settings_shortcuts_item_clicked(self):
         """
@@ -1172,21 +1206,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
 
     @staticmethod
     def _layout_preset_mode_to_tab_index(mode: str) -> int:
-        mode_to_index = {'default': 0, 'setup': 1, 'live': 2}
+        mode_to_index = {'default': 0, 'setup': 1, 'live': 2, 'librarysync': 3}
         return mode_to_index.get(mode, 0)
 
     @staticmethod
     def _layout_preset_tab_index_to_mode(index: int) -> str | None:
-        index_to_mode = {0: 'default', 1: 'setup', 2: 'live'}
+        index_to_mode = {0: 'default', 1: 'setup', 2: 'live', 3: 'librarysync'}
         return index_to_mode.get(index)
 
     def _sync_layout_preset_tab_from_settings(self) -> None:
-        if not hasattr(self, 'layout_preset_tab_bar'):
+        if not hasattr(self, 'layout_preset_navigation'):
             return
         mode = self.settings.value('core/view mode')
         index = self._layout_preset_mode_to_tab_index(mode)
-        signal_blocker = QtCore.QSignalBlocker(self.layout_preset_tab_bar)
-        self.layout_preset_tab_bar.setCurrentIndex(index)
+        signal_blocker = QtCore.QSignalBlocker(self.layout_preset_navigation)
+        self.layout_preset_navigation.setCurrentIndex(index)
         del signal_blocker
 
     def on_layout_preset_tab_changed(self, index: int) -> None:
@@ -1205,7 +1239,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Show or hide the left layout preset tabs and persist the user preference.
         """
         self.settings.setValue('user interface/show layout preset tabs', checked)
-        self.layout_preset_toolbar.setVisible(checked)
+        self.layout_preset_navigation.setNavigationVisible(checked)
         self.view_layout_preset_tabs_item.setChecked(checked)
 
     def on_mode_setup_item_clicked(self):
@@ -1227,10 +1261,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         if mode:
             self.settings.setValue('core/view mode', mode)
-        self.media_manager_dock.setVisible(media)
-        self.service_manager_dock.setVisible(service)
-        self.theme_manager_dock.setVisible(theme)
-        self.projector_manager_dock.setVisible(projector)
+        _set_dock_visible(self.media_manager_dock, media)
+        _set_dock_visible(self.service_manager_dock, service)
+        _set_dock_visible(self.theme_manager_dock, theme)
+        _set_dock_visible(self.projector_manager_dock, projector and not Registry().get_flag('projector_disabled'))
         # Menu reflects layout intent, not QDockWidget.isVisible() (false for inactive tabified tabs).
         self.view_media_manager_item.setChecked(media)
         self.view_service_manager_item.setChecked(service)
@@ -1251,6 +1285,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         The screen has changed so we have to update components such as the renderer.
         """
+        configure_screens = False
         try:
             # If a warning has been shown before, skip showing again to avoid spamming user.
             # Also do not show if the settings window is visible.
@@ -1258,11 +1293,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             if should_show_messagebox:
                 self.should_show_screen_change_message = False
                 self.live_controller.toggle_display('desktop')
-                QtWidgets.QMessageBox.information(self,
-                                                  UiStrings().ScreenSetupHasChangedTitle,
-                                                  UiStrings().ScreenSetupHasChanged,
-                                                  QtWidgets.QMessageBox.StandardButtons(
-                                                      QtWidgets.QMessageBox.StandardButton.Ok))
+                configure_screens = show_screen_setup_message(
+                    self, UiStrings().ScreenSetupHasChangedTitle, UiStrings().ScreenSetupHasChanged)
                 self.screen_change_timestamp = datetime.now()
             self.screen_updating_lock.acquire()
             self.application.set_busy_cursor()
@@ -1282,6 +1314,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         finally:
             self.screen_updating_lock.release()
             self.should_show_screen_change_message = True
+        if configure_screens:
+            request_screen_configuration()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         """
@@ -1305,7 +1339,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 event.ignore()
         else:
             has_open_service = bool(self.service_manager_contents.service_items)
-            if self.settings.value('advanced/enable exit confirmation') and has_open_service:
+            if (self.settings.value('advanced/enable exit confirmation') and has_open_service
+                    and not getattr(self, '_closing_designers_for_exit', False)):
                 msg_box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Question,
                                                 translate('OpenLP.MainWindow', 'Exit OpenLP+'),
                                                 translate('OpenLP.MainWindow', 'Are you sure you want to exit OpenLP+?'),
@@ -1365,8 +1400,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 # End nested modal loop so shutdown is not blocked (ThemeForm uses QDialog.exec).
                 theme_form.reject()
         if save_settings:
-            if self.settings.value('advanced/save current plugin'):
-                self.settings.setValue('advanced/current media plugin', self.media_tool_box.currentIndex())
+            self.settings.setValue('advanced/current media plugin', self.media_tool_box.currentIndex())
         # Call the cleanup method to shutdown plugins.
         self.log_info('cleanup plugins')
         self.plugin_manager.finalise_plugins()
@@ -1413,14 +1447,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         Update the default theme indicator in the status bar
         """
         theme_name = self.settings.value('themes/global theme')
-        self.default_theme_label.setText(translate('OpenLP.MainWindow',
-                                                   'Default Theme: {theme}').format(theme=theme_name))
+        self.default_theme_button.setText(theme_name)
 
     def _dock_hidden_only_as_inactive_tab(self, dock: QtWidgets.QDockWidget) -> bool:
         """
         When Library and Themes are tabified, the inactive tab's dock is hidden but still "in" the layout.
         """
-        if dock.isVisible():
+        if isinstance(dock, AdvancedDockWidget) or _dock_is_visible(dock):
             return False
         return any(w.isVisible() for w in self.tabifiedDockWidgets(dock))
 
@@ -1471,17 +1504,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.setValue('user interface/live panel', live_panel)
         self.settings.setValue('user interface/show projectors', show_projectors)
         with self._mute_left_dock_visibility_signals():
-            self.media_manager_dock.setVisible(show_library)
-            self.service_manager_dock.setVisible(show_service)
-            self.theme_manager_dock.setVisible(show_themes)
+            _set_dock_visible(self.media_manager_dock, show_library)
+            _set_dock_visible(self.service_manager_dock, show_service)
+            _set_dock_visible(self.theme_manager_dock, show_themes)
         self.view_media_manager_item.setChecked(show_library)
         self.view_service_manager_item.setChecked(show_service)
         self.view_theme_manager_item.setChecked(show_themes)
-        self.preview_controller.panel.setVisible(preview_panel)
+        self.set_controller_panel_visible('preview', preview_panel)
         self.view_preview_panel.setChecked(preview_panel)
-        self.live_controller.panel.setVisible(live_panel)
+        self.set_controller_panel_visible('live', live_panel)
         self.view_live_panel.setChecked(live_panel)
-        self.projector_manager_dock.setVisible(show_projectors)
+        show_projectors = show_projectors and not Registry().get_flag('projector_disabled')
+        _set_dock_visible(self.projector_manager_dock, show_projectors)
         self.view_projector_manager_item.setChecked(show_projectors)
         return True
 
@@ -1495,31 +1529,35 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.set_view_mode(True, True, True, True, False, False, 'setup')
         elif mode == 'live':
             self.set_view_mode(False, True, False, True, True, False, 'live')
+        elif mode == 'librarysync':
+            self.set_view_mode(True, False, True, False, False, False, 'librarysync')
 
     def _save_current_layout_to_preset(self, mode: str) -> None:
-        self.settings.setValue(_preset_layout_storage_key(mode, 'main window state'), self.saveState())
+        self.settings.setValue(self._preset_layout_storage_key(mode, 'main window state'), self.saveState())
         self.settings.setValue(
-            _preset_layout_storage_key(mode, 'main window splitter geometry'), self.control_splitter.saveState())
+            self._preset_layout_storage_key(mode, 'main window splitter geometry'), self.control_splitter.saveState())
         self.settings.setValue(
-            _preset_layout_storage_key(mode, 'live splitter geometry'), self.live_controller.splitter.saveState())
+            self._preset_layout_storage_key(mode, 'live splitter geometry'), self.live_controller.splitter.saveState())
         self.settings.setValue(
-            _preset_layout_storage_key(mode, 'preview splitter geometry'), self.preview_controller.splitter.saveState())
+            self._preset_layout_storage_key(mode, 'preview splitter geometry'), self.preview_controller.splitter.saveState())
         self.settings.setValue(
-            _preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), self._preset_visibility_snapshot_json())
+            self._preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), self._preset_visibility_snapshot_json())
 
     def _restore_layout_from_preset(self, mode: str) -> None:
-        state = self.settings.value(_preset_layout_storage_key(mode, 'main window state'))
+        state = self.settings.value(self._preset_layout_storage_key(mode, 'main window state'))
         if state and len(state) > 0:
             self.restoreState(state)
         self.live_controller.splitter.restoreState(
-            self.settings.value(_preset_layout_storage_key(mode, 'live splitter geometry')))
+            self.settings.value(self._preset_layout_storage_key(mode, 'live splitter geometry')))
         self.preview_controller.splitter.restoreState(
-            self.settings.value(_preset_layout_storage_key(mode, 'preview splitter geometry')))
+            self.settings.value(self._preset_layout_storage_key(mode, 'preview splitter geometry')))
         self.control_splitter.restoreState(
-            self.settings.value(_preset_layout_storage_key(mode, 'main window splitter geometry')))
+            self.settings.value(self._preset_layout_storage_key(mode, 'main window splitter geometry')))
         self.control_splitter.setChildrenCollapsible(False)
 
     def _activate_layout_preset(self, mode: str) -> None:
+        if mode == 'librarysync' and not getattr(self, 'cloud_library_dock', None):
+            return
         prev = self.settings.value('core/view mode')
         if (self.settings.value('user interface/is preset layout') and prev in _PRESET_LAYOUT_MODES and prev != mode):
             self._save_current_layout_to_preset(prev)
@@ -1529,17 +1567,23 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             # restoreState() reapplies saved dock visibility; a stored snapshot (or canonical fallback)
             # must run after so Setup/Live preview+live flags stay correct.
             self._restore_layout_from_preset(mode)
-            snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
+            snap = self.settings.value(self._preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
             if not self._apply_preset_visibility_snapshot(snap):
                 self._apply_canonical_preset_visibility(mode)
         else:
             self._apply_canonical_preset_visibility(mode)
+            if getattr(self, 'dock_manager', None):
+                self._reset_dock_layout = True
         if mode == 'default':
             self.mode_default_item.setChecked(True)
         elif mode == 'setup':
             self.mode_setup_item.setChecked(True)
         elif mode == 'live':
             self.mode_live_item.setChecked(True)
+        elif mode == 'librarysync':
+            self.mode_default_item.setChecked(False)
+            self.mode_setup_item.setChecked(False)
+            self.mode_live_item.setChecked(False)
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
         if mode == 'default':
@@ -1552,7 +1596,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.mode_default_item.setChecked(False)
             self.mode_setup_item.setChecked(False)
         self._sync_layout_preset_tab_from_settings()
+        self._set_cloud_library_visibility(mode)
         self._schedule_left_column_dock_layout()
+
+    def _set_cloud_library_visibility(self, mode):
+        dock = getattr(self, 'cloud_library_dock', None)
+        if dock is not None:
+            _set_dock_visible(dock, mode == 'librarysync')
+        self.mode_library_sync_item.setChecked(mode == 'librarysync')
+
+    def _reapply_library_sync_dock_layout(self):
+        docks = (self.theme_manager_dock, self.media_manager_dock, self.service_manager_dock,
+                 self.cloud_library_dock)
+        for dock in docks:
+            dock.setFloating(False)
+            self.removeDockWidget(dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.media_manager_dock)
+        self.splitDockWidget(self.media_manager_dock, self.cloud_library_dock, QtCore.Qt.Orientation.Horizontal)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.theme_manager_dock)
+        for dock in (self.media_manager_dock, self.theme_manager_dock, self.cloud_library_dock):
+            _set_dock_visible(dock, True)
+        self.tabifyDockWidget(self.media_manager_dock, self.theme_manager_dock)
+        self.media_manager_dock.raise_()
+        self.resizeDocks([self.media_manager_dock, self.cloud_library_dock],
+                         [max(320, self.width() // 2)] * 2, QtCore.Qt.Orientation.Horizontal)
 
     def on_mode_reset_layout_presets_clicked(self) -> None:
         answer = QtWidgets.QMessageBox.warning(
@@ -1569,18 +1636,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             return
         empty = QtCore.QByteArray()
         for preset_mode in _PRESET_LAYOUT_MODES:
-            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'main window state'), empty)
-            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'main window splitter geometry'), empty)
-            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'live splitter geometry'), empty)
-            self.settings.setValue(_preset_layout_storage_key(preset_mode, 'preview splitter geometry'), empty)
-            self.settings.setValue(_preset_layout_storage_key(preset_mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '')
+            self.settings.setValue(self._preset_layout_storage_key(preset_mode, 'main window state'), empty)
+            self.settings.setValue(self._preset_layout_storage_key(preset_mode, 'main window splitter geometry'), empty)
+            self.settings.setValue(self._preset_layout_storage_key(preset_mode, 'live splitter geometry'), empty)
+            self.settings.setValue(self._preset_layout_storage_key(preset_mode, 'preview splitter geometry'), empty)
+            self.settings.setValue(self._preset_layout_storage_key(preset_mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '')
         view_mode = self.settings.value('core/view mode')
         if view_mode not in _PRESET_LAYOUT_MODES:
             return
         # Drop in-memory window/dock/splitter state so the factory preset can take effect visually; clearing preset
         # keys alone leaves QMainWindow.restoreState() layout and global splitter bytes unchanged.
         self.restoreState(empty)
-        self.settings.setValue('user interface/main window state', empty)
+        self.settings.setValue(_window_state_storage_key(), empty)
+        self._reset_dock_layout = True
         self.control_splitter.restoreState(empty)
         self.settings.setValue('user interface/main window splitter geometry', empty)
         self.live_controller.splitter.restoreState(empty)
@@ -1593,6 +1661,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.set_view_mode(True, True, True, True, True, False, 'default')
         elif view_mode == 'setup':
             self.set_view_mode(True, True, True, True, False, False, 'setup')
+        elif view_mode == 'librarysync':
+            self._apply_canonical_preset_visibility('librarysync')
         else:
             self.set_view_mode(False, True, False, True, True, False, 'live')
         self.settings.setValue('user interface/is preset layout', True)
@@ -1606,14 +1676,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             # Use saved intent, not isVisible() (inactive tabified tab reports hidden).
             want_visible = not self.settings.value('user interface/show library')
             self.settings.setValue('user interface/show library', want_visible)
-            self.media_manager_dock.setVisible(want_visible)
+            _set_dock_visible(self.media_manager_dock, want_visible)
             self.view_media_manager_item.setChecked(want_visible)
             self._leave_named_preset_layout_if_unpinned()
             return
         if self.sender() is self.media_manager_dock and self._dock_hidden_only_as_inactive_tab(self.media_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
-        self.settings.setValue('user interface/show library', self.media_manager_dock.isVisible())
+        self.settings.setValue('user interface/show library', _dock_is_visible(self.media_manager_dock))
         self._leave_named_preset_layout_if_unpinned()
         self.view_media_manager_item.setChecked(self.settings.value('user interface/show library'))
 
@@ -1621,11 +1691,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         Toggle visibility of the projector manager
         """
+        if Registry().get_flag('projector_disabled'):
+            _set_dock_visible(self.projector_manager_dock, False)
+            self.view_projector_manager_item.setChecked(False)
+            return
         if self.sender() is self.view_projector_manager_item:
-            self.projector_manager_dock.setVisible(not self.projector_manager_dock.isVisible())
-        self.view_projector_manager_item.setChecked(self.projector_manager_dock.isVisible())
+            _set_dock_visible(self.projector_manager_dock, not _dock_is_visible(self.projector_manager_dock))
+        self.view_projector_manager_item.setChecked(_dock_is_visible(self.projector_manager_dock))
         self._leave_named_preset_layout_if_unpinned()
-        self.settings.setValue('user interface/show projectors', self.projector_manager_dock.isVisible())
+        self.settings.setValue('user interface/show projectors', _dock_is_visible(self.projector_manager_dock))
         # Check/uncheck checkbox on First time wizard based on visibility of this panel.
         if not self.settings.value('projector/show after wizard'):
             self.settings.setValue('projector/show after wizard', True)
@@ -1639,7 +1713,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         if self.sender() is self.view_service_manager_item:
             want_visible = not self.settings.value('user interface/show service')
             self.settings.setValue('user interface/show service', want_visible)
-            self.service_manager_dock.setVisible(want_visible)
+            _set_dock_visible(self.service_manager_dock, want_visible)
             self.view_service_manager_item.setChecked(want_visible)
             self._leave_named_preset_layout_if_unpinned()
             return
@@ -1647,7 +1721,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.service_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
-        self.settings.setValue('user interface/show service', self.service_manager_dock.isVisible())
+        self.settings.setValue('user interface/show service', _dock_is_visible(self.service_manager_dock))
         self._leave_named_preset_layout_if_unpinned()
         self.view_service_manager_item.setChecked(self.settings.value('user interface/show service'))
 
@@ -1658,14 +1732,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         if self.sender() is self.view_theme_manager_item:
             want_visible = not self.settings.value('user interface/show themes')
             self.settings.setValue('user interface/show themes', want_visible)
-            self.theme_manager_dock.setVisible(want_visible)
+            _set_dock_visible(self.theme_manager_dock, want_visible)
             self.view_theme_manager_item.setChecked(want_visible)
             self._leave_named_preset_layout_if_unpinned()
             return
         if self.sender() is self.theme_manager_dock and self._dock_hidden_only_as_inactive_tab(self.theme_manager_dock):
             self._sync_left_dock_menu_checks_from_settings()
             return
-        self.settings.setValue('user interface/show themes', self.theme_manager_dock.isVisible())
+        self.settings.setValue('user interface/show themes', _dock_is_visible(self.theme_manager_dock))
         self._leave_named_preset_layout_if_unpinned()
         self.view_theme_manager_item.setChecked(self.settings.value('user interface/show themes'))
 
@@ -1678,7 +1752,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 False - Hidden
 
         """
-        self.preview_controller.panel.setVisible(is_visible)
+        self.set_controller_panel_visible('preview', is_visible)
         self.settings.setValue('user interface/preview panel', is_visible)
         self.view_preview_panel.setChecked(is_visible)
         if update_preset_layout_flag:
@@ -1713,6 +1787,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.view_projector_manager_item.setEnabled(True)
             self.view_preview_panel.setEnabled(True)
             self.view_live_panel.setEnabled(True)
+        for name in ('preview_controller_dock', 'live_controller_dock', 'cloud_library_dock'):
+            dock = getattr(self, name, None)
+            if dock is not None:
+                dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+                                 if is_locked else all_dock_features)
         self.settings.setValue('user interface/lock panel', is_locked)
 
     def _left_dock_visibility_from_settings(self) -> tuple[bool, bool, bool]:
@@ -1732,6 +1811,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 return (lib, svc, thm)
             if mode == 'live':
                 return False, True, False
+            if mode == 'librarysync':
+                return True, False, True
             if mode in ('default', 'setup'):
                 return True, True, True
 
@@ -1785,6 +1866,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         if width <= 0 or height <= 0:
             return
         mode = self.settings.value('core/view mode')
+        if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
+            self.resizeDocks([self.media_manager_dock, self.cloud_library_dock],
+                             [max(320, width // 2)] * 2, QtCore.Qt.Orientation.Horizontal)
+            return
         # Setup: Service | Library+Themes horizontally — size both columns so Library is not squeezed.
         if (
             mode == 'setup'
@@ -1809,6 +1894,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.resizeDocks([ref], [target_w], QtCore.Qt.Orientation.Horizontal)
         except (TypeError, AttributeError):
             pass
+        if getattr(self, 'dock_manager', None) and show_svc and (show_lib or show_thm):
+            self.resizeDocks([self.service_manager_dock, self.media_manager_dock],
+                             [int(height * 0.35), int(height * 0.65)], QtCore.Qt.Orientation.Vertical)
     def _deferred_apply_left_column_dock_layout(self) -> None:
         """
         Rebuild the left column after the main window is shown. Called via QTimer so
@@ -1820,9 +1908,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.settings.value('user interface/is preset layout')
                 and mode in _PRESET_LAYOUT_MODES
                 and _preset_layout_has_saved_state(self.settings, mode))
+            if getattr(self, 'dock_manager', None):
+                # Preserve floating groups and auto-hide positions across restarts, including custom layouts.
+                skip_for_saved_preset = skip_for_saved_preset or bool(
+                    self.settings.value(_window_state_storage_key()))
+                if getattr(self, '_reset_dock_layout', False):
+                    skip_for_saved_preset = False
+                    self.reset_controller_docks()
+                    self._reset_dock_layout = False
             with self._mute_left_dock_visibility_signals():
                 if not skip_for_saved_preset:
-                    if mode == 'setup':
+                    if mode == 'librarysync' and getattr(self, 'cloud_library_dock', None):
+                        self._reapply_library_sync_dock_layout()
+                    elif mode == 'setup':
                         self._reapply_left_column_dock_layout_setup()
                     else:
                         self._reapply_left_column_dock_layout()
@@ -1830,11 +1928,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.settings.setValue('user interface/show library', show_lib)
                 self.settings.setValue('user interface/show service', show_svc)
                 self.settings.setValue('user interface/show themes', show_thm)
-                self.service_manager_dock.setVisible(show_svc)
-                self.media_manager_dock.setVisible(show_lib)
-                self.theme_manager_dock.setVisible(show_thm)
+                _set_dock_visible(self.service_manager_dock, show_svc)
+                _set_dock_visible(self.media_manager_dock, show_lib)
+                _set_dock_visible(self.theme_manager_dock, show_thm)
             self._sync_left_dock_menu_checks_from_settings()
-            self._ensure_left_column_dock_sizes()
+            self._set_cloud_library_visibility(mode)
+            if not (getattr(self, 'dock_manager', None) and skip_for_saved_preset):
+                self._ensure_left_column_dock_sizes()
+            if (is_modern_style() and mode in ('default', 'live') and not skip_for_saved_preset
+                    and not self.settings.value('user interface/main window splitter geometry')):
+                self.control_splitter.setSizes([600, 600])
         except Exception:
             self.log_exception('Failed to rebuild left column dock layout')
 
@@ -1937,11 +2040,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 True - Visible
                 False - Hidden
         """
-        self.live_controller.panel.setVisible(is_visible)
+        self.set_controller_panel_visible('live', is_visible)
         self.settings.setValue('user interface/live panel', is_visible)
         self.view_live_panel.setChecked(is_visible)
         if update_preset_layout_flag:
             self._leave_named_preset_layout_if_unpinned()
+
+    def _restore_main_window_geometry(self):
+        """Restore the last window geometry, or choose a useful first-start size."""
+        saved_geometry = self.settings.value('user interface/main window geometry')
+        if saved_geometry and self.restoreGeometry(saved_geometry):
+            # Restore the normal/maximised state, but never reopen the app minimised.
+            self.setWindowState(self.windowState() & ~QtCore.Qt.WindowState.WindowMinimized)
+            return
+        screen = self.screen() or QtGui.QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        geometry = screen.geometry()
+        self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+        if geometry.width() * 9 >= geometry.height() * 21:
+            # Use half an ultrawide screen, centred, without covering its taskbar or dock.
+            target = QtCore.QRect(available)
+            target.setWidth(available.width() // 2)
+            target.moveLeft(available.x() + (available.width() - target.width()) // 2)
+            handle = self.windowHandle()
+            if handle is not None:
+                margins = handle.frameMargins()
+                target.adjust(margins.left(), margins.top(), -margins.right(), -margins.bottom())
+            self.setGeometry(target)
+        else:
+            self.setWindowState(QtCore.Qt.WindowState.WindowMaximized)
 
     def load_settings(self):
         """
@@ -1951,9 +2080,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.remove('custom slide')
         self.settings.remove('service')
         self.recent_files = self.settings.value('core/recent files')
-        self.move(self.settings.value('user interface/main window position'))
-        self.restoreGeometry(self.settings.value('user interface/main window geometry'))
-        self.restoreState(self.settings.value('user interface/main window state'))
+        self._restore_main_window_geometry()
+        self.restoreState(self.settings.value(_window_state_storage_key()))
         if not self._window_position_is_valid(self.pos(), self.geometry()):
             self.move(0, 0)
         self.live_controller.splitter.restoreState(self.settings.value('user interface/live splitter geometry'))
@@ -1962,22 +2090,22 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         # This needs to be called after restoreState(), because saveState() also saves the "Collapsible" property
         # which was True (by default) < OpenLP 2.1.
         self.control_splitter.setChildrenCollapsible(False)
-        self.service_manager_dock.setVisible(self.settings.value('user interface/show service'))
-        self.media_manager_dock.setVisible(self.settings.value('user interface/show library'))
-        self.theme_manager_dock.setVisible(self.settings.value('user interface/show themes'))
+        _set_dock_visible(self.service_manager_dock, self.settings.value('user interface/show service'))
+        _set_dock_visible(self.media_manager_dock, self.settings.value('user interface/show library'))
+        _set_dock_visible(self.theme_manager_dock, self.settings.value('user interface/show themes'))
         self._sync_left_dock_menu_checks_from_settings()
         if self.settings.value('user interface/is preset layout'):
             mode = self.settings.value('core/view mode')
             if mode in _PRESET_LAYOUT_MODES and _preset_layout_has_saved_state(self.settings, mode):
                 self._restore_layout_from_preset(mode)
-                snap = self.settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
+                snap = self.settings.value(self._preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) or ''
                 if not self._apply_preset_visibility_snapshot(snap):
                     self._apply_canonical_preset_visibility(mode)
                 self._sync_left_dock_menu_checks_from_settings()
         show_layout_preset_tabs = self.settings.value('user interface/show layout preset tabs')
         if show_layout_preset_tabs is None:
             show_layout_preset_tabs = True
-        self.layout_preset_toolbar.setVisible(show_layout_preset_tabs)
+        self.layout_preset_navigation.setNavigationVisible(show_layout_preset_tabs)
         self.view_layout_preset_tabs_item.setChecked(show_layout_preset_tabs)
         self._sync_layout_preset_tab_from_settings()
 
@@ -2013,7 +2141,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             return
         self.settings.setValue('core/recent files', self.recent_files)
         self.settings.setValue('user interface/main window position', self.pos())
-        self.settings.setValue('user interface/main window state', self.saveState())
+        self.settings.setValue(_window_state_storage_key(), self.saveState())
         self.settings.setValue('user interface/main window geometry', self.saveGeometry())
         self.settings.setValue('user interface/live splitter geometry', self.live_controller.splitter.saveState())
         self.settings.setValue('user interface/preview splitter geometry', self.preview_controller.splitter.saveState())

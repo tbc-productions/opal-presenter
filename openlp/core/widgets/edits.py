@@ -25,8 +25,11 @@ import logging
 import re
 from pathlib import Path
 
-import qtawesome as qta
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+import fluentqt
+from fluentqt import Spacing
+from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.widgets.toolbar import OpenLPToolbar
 
 from openlp.core.common import CONTROL_CHARS
 from openlp.core.common.i18n import UiStrings, translate
@@ -53,7 +56,7 @@ log = logging.getLogger(__name__)
 
 class SearchEdit(QtWidgets.QLineEdit):
     """
-    This is a specialised QLineEdit with a "clear" button inside for searches.
+    A Fluent LineEdit with a search-type selector and native clearing.
     """
     searchTypeChanged = QtCore.Signal(int)
 
@@ -65,46 +68,18 @@ class SearchEdit(QtWidgets.QLineEdit):
         self.settings_section = settings_section
         self._current_search_type = -1
         self._search_button_gap = 4
-        self.clear_button = QtWidgets.QToolButton(self)
-        self.clear_button.setIcon(UiIcons().backspace)
-        self.clear_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
-        self.clear_button.setStyleSheet('QToolButton { border: none; padding: 0px; }')
-        self.clear_button.resize(18, 18)
-        self.clear_button.hide()
-        self.clear_button.clicked.connect(self._on_clear_button_clicked)
-        self.textChanged.connect(self._on_search_edit_text_changed)
-        self._update_style_sheet()
         self.settings = Registry().get('settings')
         self.setAcceptDrops(False)
 
-    def _update_style_sheet(self):
-        """
-        Internal method to update the stylesheet depending on which widgets are available and visible.
-        """
-        frame_width = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth)
-        right_padding = self.clear_button.width() + frame_width
-        if hasattr(self, 'menu_button'):
-            right_padding += self.menu_button.width() + self._search_button_gap
-        stylesheet = 'QLineEdit {{ padding-right: {right}px; }} '.format(right=right_padding)
-        self.setStyleSheet(stylesheet)
-        msz = self.minimumSizeHint()
-        self.setMinimumSize(max(msz.width(), self.clear_button.width() + (frame_width * 2) + 2),
-                            max(msz.height(), self.clear_button.height() + (frame_width * 2) + 2))
-
     def resizeEvent(self, event):
-        """
-        Reimplemented method to react to resizing of the widget.
-
-        :param event: The event that happened.
-        """
-        size = self.clear_button.size()
-        frame_width = self.style().pixelMetric(QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth)
-        self.clear_button.move(self.rect().right() - frame_width - size.width(),
-                               (self.rect().bottom() + 1 - size.height()) // 2)
+        """Keep the selector on the left, away from the native clear button."""
+        super().resizeEvent(event)
         if hasattr(self, 'menu_button'):
-            size = self.menu_button.size()
-            menu_left = self.clear_button.x() - self._search_button_gap - size.width()
-            self.menu_button.move(menu_left, (self.rect().bottom() + 1 - size.height()) // 2)
+            self._position_menu_button()
+
+    def _position_menu_button(self):
+        x = self._search_button_gap
+        self.menu_button.move(x, (self.height() - self.menu_button.height()) // 2)
 
     def current_search_type(self):
         """
@@ -158,31 +133,15 @@ class SearchEdit(QtWidgets.QLineEdit):
             self.menu_button.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
             self.menu_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
             self.menu_button.setAutoRaise(True)
-            self.menu_button.setStyleSheet(
-                'QToolButton { border: none; padding: 0px 18px 0px 4px; } '
-                'QToolButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: center right; right: 2px; }'
-            )
-            self.menu_button.resize(QtCore.QSize(40, 18))
+            self.menu_button.resize(40, self.menu_button.sizeHint().height())
+            margins = self.contentMargins()
+            margins.setLeft(margins.left() + self.menu_button.width() + self._search_button_gap)
+            self.setContentMargins(margins)
         self.menu_button.setMenu(menu)
         self.set_current_search_type(
             self.settings.value('{section}/last used search type'.format(section=self.settings_section)))
         self.menu_button.show()
-        self._update_style_sheet()
-
-    def _on_search_edit_text_changed(self, text):
-        """
-        Internally implemented slot to react to when the text in the line edit has changed so that we can show or hide
-        the clear button.
-
-        :param text: A :class:`~PySide6.QtCore.QString` instance which represents the text in the line edit.
-        """
-        self.clear_button.setVisible(bool(text))
-
-    def _on_clear_button_clicked(self):
-        """
-        Internally implemented slot to react to the clear button being clicked to clear the line edit.
-        """
-        self.clear()
+        self._position_menu_button()
 
     def _on_menu_action_triggered(self):
         """
@@ -366,7 +325,22 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
     suitable for read-only list/table views that display lyrics or slides.
     """
 
-    HORIZONTAL_PADDING = 6
+    HORIZONTAL_PADDING = 2 * Spacing.Small
+    VERTICAL_PADDING = Spacing.Small
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._theme_host = fluentqt.FluentWidget(parent)
+        self._theme_host.hide()
+
+    def _paint_separator(self, painter, option, index):
+        """Separate neighbouring slides across the full text column."""
+        if index.row() >= index.model().rowCount(index.parent()) - 1:
+            return
+        painter.save()
+        painter.setPen(QtGui.QPen(self._theme_host.theme_tokens().colors.strokeDivider, 1))
+        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.restore()
 
     @staticmethod
     def _tags_to_html(text):
@@ -375,8 +349,14 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         HTML special characters in the source text are escaped first so that
         ampersands and angle brackets in lyrics are not mis-interpreted.
         """
+        tags = FormattingTags.get_html_tags()
+        known_tokens = {tag[key] for tag in tags for key in ('start tag', 'end tag')}
+        # Unregistered tags still belong in the stored source, but read-only
+        # previews must show their content without leaking the marker syntax.
+        text = re.sub(r'\{/?[^{}\s]+\}',
+                      lambda match: match.group(0) if match.group(0) in known_tokens else '', text)
         html = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        for tag in FormattingTags.get_html_tags():
+        for tag in tags:
             start_html = tag['start html'].replace('-webkit-text-fill-color', 'color')
             end_html = tag['end html']
             html = html.replace(tag['start tag'], start_html)
@@ -440,22 +420,22 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
         painter.save()
         painter.setPen(pen)
         y = int(y_top + self._marker_line_height(painter.font()) / 2)
-        painter.drawLine(rect.left() + self.HORIZONTAL_PADDING, y,
-                         rect.right() - self.HORIZONTAL_PADDING, y)
+        painter.drawLine(rect.left(), y, rect.right(), y)
         painter.restore()
 
     def paint(self, painter, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
         if text is None or text == '':
             super().paint(painter, option, index)
+            self._paint_separator(painter, option, index)
             return
         painter.save()
         style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
         style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
-        available_width = max(0, option.rect.width() - 4)
-        x = option.rect.left() + 2
-        y = option.rect.top() + 2
+        available_width = max(0, option.rect.width() - 2 * self.HORIZONTAL_PADDING)
+        x = option.rect.left() + self.HORIZONTAL_PADDING
+        y = option.rect.top() + self.VERTICAL_PADDING
         base_color = option.palette.color(QtGui.QPalette.ColorRole.Text)
         font = option.font
         marker_height = self._marker_line_height(font)
@@ -473,13 +453,22 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
                 painter.restore()
                 y += int(doc.size().height())
         painter.restore()
+        self._paint_separator(painter, option, index)
 
     def sizeHint(self, option, index):
         text = index.data(QtCore.Qt.ItemDataRole.DisplayRole)
         if text is None or text == '':
             return super().sizeHint(option, index)
-        width = option.rect.width() if option.rect.width() > 0 else 200
-        available_width = max(0, width - 4)
+        width = option.rect.width()
+        # QTableView asks for row hints with an empty rect. Measure using the
+        # visible column, otherwise lyrics wrap to a narrow fallback width and
+        # leave oversized rows when painted across the full editor.
+        view = self.parent()
+        if width <= 0 and isinstance(view, QtWidgets.QTableView):
+            width = view.columnWidth(index.column())
+        if width <= 0:
+            width = 200
+        available_width = max(0, width - 2 * self.HORIZONTAL_PADDING)
         font = option.font
         marker_height = self._marker_line_height(font)
 
@@ -492,15 +481,97 @@ class FormattingTagDelegate(QtWidgets.QStyledItemDelegate):
                 doc = self._build_text_document(font, payload, available_width)
                 total_height += int(doc.size().height())
                 ideal_width = max(ideal_width, int(doc.idealWidth()))
-        return QtCore.QSize(ideal_width, total_height + 4)
+        return QtCore.QSize(ideal_width + 2 * self.HORIZONTAL_PADDING, total_height + 2 * self.VERTICAL_PADDING)
 
 
-class SpellTextEdit(QtWidgets.QPlainTextEdit):
+class FormattingToolbar(OpenLPToolbar):
+    """Extend the native CommandBar surface behind its adjacent input controls."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._theme_host = fluentqt.FluentWidget(self)
+        self.background_role = 'bgCanvas'
+        self._theme_host.hide()
+        self.layout().setContentsMargins(0, 0, 12, 0)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QtGui.QPainter(self)
+        painter.fillRect(self.rect(), getattr(self._theme_host.theme_tokens().colors, self.background_role))
+
+
+class FormattingStyleComboBox(QtWidgets.QComboBox):
+    """A single-choice Fluent style picker with readable format previews."""
+    popupOpened = QtCore.Signal()
+
+    def showPopup(self):
+        super().showPopup()
+        self.popupOpened.emit()
+
+
+class FormattingStyleDelegate(QtWidgets.QStyledItemDelegate):
+    """Show a style's font and colour without the multi-selection checkboxes."""
+    def __init__(self, combo, parent):
+        super().__init__(parent)
+        self.combo = combo
+        self._theme_host = fluentqt.FluentWidget(parent)
+        self._theme_host.hide()
+
+    @staticmethod
+    def contrast_ratio(first, second):
+        def luminance(colour):
+            channels = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+                        for value in (colour.redF(), colour.greenF(), colour.blueF())]
+            return sum(value * weight for value, weight in zip(channels, (0.2126, 0.7152, 0.0722)))
+        light, dark = sorted((luminance(first), luminance(second)), reverse=True)
+        return (light + 0.05) / (dark + 0.05)
+
+    @classmethod
+    def preview_background(cls, foreground, background):
+        if cls.contrast_ratio(foreground, background) >= 4:
+            return None
+        return max((QtGui.QColor('#202020'), QtGui.QColor('#ffffff')),
+                   key=lambda colour: cls.contrast_ratio(foreground, colour))
+
+    def paint(self, painter, option, index):
+        """Keep the preview's own text colour when the row is selected."""
+        styled = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(styled, index)
+        style = styled.widget.style() if styled.widget else QtWidgets.QApplication.style()
+        painter.save()
+        style.drawPrimitive(QtWidgets.QStyle.PrimitiveElement.PE_PanelItemViewItem, styled, painter, styled.widget)
+        text_rect = styled.rect.adjusted(16, 0, -12, 0)
+        foreground = index.data(QtCore.Qt.ItemDataRole.ForegroundRole)
+        colour = foreground.color() if foreground is not None else styled.palette.color(QtGui.QPalette.ColorRole.Text)
+        painter.setFont(styled.font)
+        text = QtGui.QFontMetrics(styled.font).elidedText(
+            styled.text, QtCore.Qt.TextElideMode.ElideRight, max(0, text_rect.width()))
+        background = self.preview_background(colour, self._theme_host.theme_tokens().colors.bgLayerOverlay)
+        if background is not None:
+            metrics = QtGui.QFontMetrics(styled.font)
+            patch = QtCore.QRectF(text_rect.left() - 4, text_rect.center().y() - metrics.height() / 2 - 2,
+                                  min(text_rect.width(), metrics.horizontalAdvance(text)) + 8, metrics.height() + 4)
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(background)
+            painter.drawRoundedRect(patch, 3, 3)
+        painter.setPen(colour)
+        painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft, text)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        return QtCore.QSize(size.width() + 28, max(36, size.height() + 8))
+
+
+class SpellTextEdit(QtWidgets.QWidget):
     """
-    Spell checking widget based on QPlanTextEdit.
+    Fluent TextEdit with OpenLP's tagged-source formatting and spell checking.
 
     Based on code from http://john.nachtimwald.com/2009/08/22/qplaintextedit-with-in-line-spell-check
     """
+    TEXT_INSET = 10
+    BOTTOM_PADDING = Spacing.Small
+    LABEL_PADDING = Spacing.Small // 2
+    LABEL_MARGIN = Spacing.Small
     SECTION_BOUNDARY_LINE_REGEX = re.compile(
         r'(?m)^\s*(?:\[(?:---|===|--}\{--)\]|---\[(?:.+?)(?::.*)?\]---)\s*$')
 
@@ -510,20 +581,50 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         global ENCHANT_AVAILABLE
         super(SpellTextEdit, self).__init__(parent)
+        self._toolbar = None
+        self._input = fluentqt.TextEdit(self, contentMargins=QtCore.QMargins(0, 0, 0, 0))
+        self._editor = self._input.findChild(QtWidgets.QTextEdit)
+        # Fluent's automatic line-height pass would overwrite section spacing
+        # and create extra undo commands. This adapter owns those block formats
+        # and sizes the control to the resizable editor area instead.
+        self._editor.textChanged.disconnect()
+        QtCore.QObject.disconnect(
+            self._editor.document().documentLayout(),
+            QtCore.SIGNAL('documentSizeChanged(QSizeF)'), self._input, None)
+        self._editor.textChanged.connect(self._input.update)
+        self._viewport = self._editor.viewport()
+        self._editor.setAcceptRichText(False)
+        self._editor.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._editor.installEventFilter(self)
+        self._editor.viewport().installEventFilter(self)
+        self._input.installEventFilter(self)
+        self._input.verticalScrollBar().installEventFilter(self)
+        self._input.setMinimumHeight(0)
+        self._input.setMaximumHeight(16777215)
+        self._editor.verticalScrollBar().rangeChanged.connect(self._sync_vertical_scrollbar)
+        self.setFocusProxy(self._editor)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         self.formatting_tags_allowed = formatting_tags_allowed
         self.visual_mode_only = visual_mode_only
         self.rich_text_mode = formatting_tags_allowed
+        self._visual_line_overrides = {}
+        self._updating_block_formats = False
+        self.document().setDocumentMargin(0)
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
         self.highlighter = Highlighter(self.document(), formatting_tags_allowed=self.formatting_tags_allowed)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
-        self._toolbar = None
-        self._mode_button = None
+        self._mode_switch = None
         self._tag_actions = {}       # maps start tag token → QAction for toolbar state tracking
-        self._color_actions = {}     # maps start_tag → QAction for color dropdown state
-        self._color_action_ends = {} # maps start_tag → end_tag for color toggle logic
+        self._color_tags = []
+        self._updating_custom_formatting = False
+        self._color_action_ends = {}  # maps start_tag → end_tag for color toggle logic
         self._formatting_tag_form = None
-        self._visual_line_overrides = {}
         if self.formatting_tags_allowed:
             self._setup_formatting_toolbar()
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
+        self.textChanged.connect(self._refresh_block_formats)
         # Default dictionary based on the current locale.
         if ENCHANT_AVAILABLE:
             try:
@@ -532,6 +633,153 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             except (Error, DictNotFoundError):
                 ENCHANT_AVAILABLE = False
                 log.debug('Could not load default dictionary')
+
+    def __getattr__(self, name):
+        editor = self.__dict__.get('_editor')
+        if editor is not None:
+            return getattr(editor, name)
+        raise AttributeError(name)
+
+    def sizeHint(self):
+        return QtCore.QSize(600, 320)
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(200, 120)
+
+    def viewportMargins(self):
+        return QtCore.QMargins(0, self._toolbar.sizeHint().height() + 2 if self._toolbar else 0, 0, 0)
+
+    def frameWidth(self):
+        return 1
+
+    def verticalScrollBar(self):
+        return self._input.verticalScrollBar()
+
+    def _sync_vertical_scrollbar(self, *args):
+        native = self._editor.verticalScrollBar()
+        scrollbar = self._input.verticalScrollBar()
+        scrollbar.setRange(native.minimum(), native.maximum())
+        scrollbar.setPageStep(native.pageStep())
+        scrollbar.setValue(native.value())
+        scrollbar.setVisible(native.maximum() > native.minimum())
+        if scrollbar.isVisible():
+            scrollbar.setOpacity(1.0)
+
+    def setPlainText(self, text):
+        self._editor.setPlainText(text)
+        self._refresh_block_formats()
+        self.document().clearUndoRedoStacks()
+
+    def blockBoundingRect(self, block):
+        if self.document().textWidth() <= 0:
+            self.document().setTextWidth(max(1, self._editor.viewport().width()))
+        self.document().documentLayout().documentSize()
+        rect = self.document().documentLayout().blockBoundingRect(block)
+        if block.blockFormat().lineHeightType() == QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight.value:
+            rect.setHeight(max(rect.height(), block.blockFormat().lineHeight()))
+        rect.setHeight(rect.height() + block.blockFormat().topMargin() + block.blockFormat().bottomMargin())
+        return rect
+
+    def _refresh_block_formats(self):
+        """Keep presentation formatting in the same undo step as the source edit."""
+        if self._updating_block_formats:
+            return
+        self._updating_block_formats = True
+        document = self.document()
+        cursor = QtGui.QTextCursor(document)
+        cursor.joinPreviousEditBlock()
+        block = document.begin()
+        try:
+            while block.isValid():
+                fmt = block.blockFormat()
+                desired = QtGui.QTextBlockFormat(fmt)
+                desired.setLeftMargin(self.TEXT_INSET)
+                desired.setRightMargin(self.TEXT_INSET)
+                # Section spacing is presentation shared by visual and source
+                # modes, so switching modes never changes the undo history.
+                label = bool(re.fullmatch(r'\s*---\[.+?\]---\s*', block.text()))
+                desired.setNonBreakableLines(label)
+                desired.setTopMargin(self.LABEL_MARGIN if label and block.blockNumber() else 0)
+                desired.setBottomMargin(0)
+                if label:
+                    desired.setLineHeight(self._editor.fontMetrics().lineSpacing() + 2 * self.LABEL_PADDING,
+                                          QtGui.QTextBlockFormat.LineHeightTypes.FixedHeight.value)
+                else:
+                    desired.setLineHeight(100, QtGui.QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+                if fmt != desired:
+                    cursor.setPosition(block.position())
+                    cursor.setBlockFormat(desired)
+                block = block.next()
+        finally:
+            cursor.endEditBlock()
+            self._updating_block_formats = False
+
+    def keyPressEvent(self, event):
+        if getattr(self, '_forwarding_key_event', False):
+            return super().keyPressEvent(event)
+        self._forwarding_key_event = True
+        try:
+            QtWidgets.QApplication.sendEvent(self._editor, event)
+        finally:
+            self._forwarding_key_event = False
+
+    def paste(self):
+        self.insertFromMimeData(QtWidgets.QApplication.clipboard().mimeData())
+
+    def createStandardContextMenu(self):
+        menu = self._editor.createStandardContextMenu()
+        for action in menu.actions():
+            if action.objectName() == 'edit-paste':
+                action.triggered.disconnect()
+                action.triggered.connect(self.paste)
+        return menu
+
+    def eventFilter(self, watched, event):
+        if watched == self._input.verticalScrollBar() and event.type() == QtCore.QEvent.Type.Paint:
+            # Fluent fades its rail after scrolling or leaving the field. It has
+            # no persistent-visibility setting, so keep the overflowing rail
+            # opaque and stop its fade animation before it is painted.
+            for animation in watched.findChildren(QtCore.QPropertyAnimation):
+                if animation.targetObject() == watched and animation.propertyName() == b'opacity':
+                    animation.stop()
+            if watched.opacity() != 1.0:
+                watched.setOpacity(1.0)
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.Resize:
+            QtWidgets.QTextEdit.resizeEvent(self._editor, event)
+            self._editor.setViewportMargins(0, 0, 0, 0)
+            return True
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.Show:
+            QtWidgets.QTextEdit.showEvent(self._editor, event)
+            self._editor.setViewportMargins(0, 0, 0, 0)
+            return True
+        if watched == self._input and event.type() in (QtCore.QEvent.Type.Resize, QtCore.QEvent.Type.Show):
+            # The surrounding dialog supplies the height, rather than Fluent's
+            # automatic line-count sizing. Keep its editor and native rail.
+            self._layout_text_input()
+            if self._input.maximumHeight() != 16777215:
+                # Theme refreshes reapply Fluent's fixed line-count height.
+                # Restore the container geometry after that refresh finishes.
+                QtCore.QTimer.singleShot(0, self._position_formatting_toolbar)
+            return True
+        if watched == self._viewport and event.type() == QtCore.QEvent.Type.Paint:
+            QtWidgets.QTextEdit.paintEvent(self._editor, event)
+            self._paint_visual_markers(event)
+            return True
+        if watched == self._editor and event.type() == QtCore.QEvent.Type.KeyPress:
+            if event.matches(QtGui.QKeySequence.StandardKey.Paste):
+                self.insertFromMimeData(QtWidgets.QApplication.clipboard().mimeData())
+                return True
+            for key, tag in ((QtGui.QKeySequence.StandardKey.Bold, 'st'),
+                             (QtGui.QKeySequence.StandardKey.Italic, 'it'),
+                             (QtGui.QKeySequence.StandardKey.Underline, 'u')):
+                if event.matches(key):
+                    if self.formatting_tags_allowed:
+                        self._apply_formatting_by_tag(tag)
+                    return True
+        if watched == self._viewport and event.type() == QtCore.QEvent.Type.ContextMenu:
+            self.contextMenuEvent(event)
+            return True
+        return super().eventFilter(watched, event)
 
     @staticmethod
     def split_marker_style_for_text(text):
@@ -556,29 +804,22 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         Create a lightweight formatting toolbar docked at the top of the editor.
         """
-        self._toolbar = QtWidgets.QToolBar(self)
+        self._toolbar = FormattingToolbar(self)
         self._toolbar.setIconSize(QtCore.QSize(20, 20))
         self._toolbar.setMovable(False)
         self._toolbar.setFloatable(False)
-        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
 
         self._undo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Undo'))
-        self._undo_action.setIcon(self._mdi_icon_or_fallback('mdi.undo', UiIcons().undo))
+        self._undo_action.setIcon(UiIcons().undo)
         self._undo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Undo last edit.'))
         self._undo_action.setEnabled(False)
-        undo_button = self._toolbar.widgetForAction(self._undo_action)
-        if undo_button:
-            undo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._undo_action.triggered.connect(self.undo)
 
         self._redo_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Redo'))
-        self._redo_action.setIcon(self._mdi_icon_or_fallback(
-            'mdi.redo', QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_ArrowForward)))
+        self._redo_action.setIcon(UiIcons().redo)
         self._redo_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Redo last undone edit.'))
         self._redo_action.setEnabled(False)
-        redo_button = self._toolbar.widgetForAction(self._redo_action)
-        if redo_button:
-            redo_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._redo_action.triggered.connect(self.redo)
 
         self.undoAvailable.connect(lambda available: self._undo_action.setEnabled(available))
@@ -586,108 +827,99 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
 
         button_definitions = [
             ('', 'st', translate('OpenLP.SpellTextEdit', 'Bold'),
-             self._mdi_icon_or_fallback('mdi.format-bold', UiIcons().bold), True),
+             UiIcons().bold, True),
             ('', 'it', translate('OpenLP.SpellTextEdit', 'Italic'),
-             self._mdi_icon_or_fallback('mdi.format-italic', UiIcons().italic), True),
+             UiIcons().italic, True),
             ('', 'u', translate('OpenLP.SpellTextEdit', 'Underline'),
-             self._mdi_icon_or_fallback('mdi.format-underline', UiIcons().text), True),
-            ('X₂', 'sb', translate('OpenLP.SpellTextEdit', 'Subscript'), None, False),
-            ('X²', 'su', translate('OpenLP.SpellTextEdit', 'Superscript'), None, False),
+             UiIcons().underline, True),
+            ('', 'sb', translate('OpenLP.SpellTextEdit', 'Subscript'), UiIcons().subscript, True),
+            ('', 'su', translate('OpenLP.SpellTextEdit', 'Superscript'), UiIcons().superscript, True),
             ('', 'uc', translate('OpenLP.SpellTextEdit', 'Uppercase'),
-             self._mdi_icon_or_fallback('mdi.format-letter-case-upper', UiIcons().text), True)
+             UiIcons().uppercase, True)
         ]
         for caption, tag, tooltip, icon, icon_only in button_definitions:
-            action = self._toolbar.addAction(caption)
+            action = self._toolbar.addAction(caption or tooltip)
             if icon:
                 action.setIcon(icon)
             action.setToolTip(tooltip)
             action.setCheckable(True)
             self._tag_actions[tag] = action
-            tool_button = self._toolbar.widgetForAction(action)
-            if tool_button and icon_only:
-                tool_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
             action.triggered.connect(lambda checked=False, start_tag=tag: self._apply_formatting_by_tag(start_tag))
 
-        self._color_button = QtWidgets.QToolButton(self._toolbar)
-        self._color_button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-        self._color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._color_button.setIcon(self._mdi_icon_or_fallback('mdi.format-color-text', UiIcons().theme))
-        self._color_button.setText(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Custom formatting'))
-        self._color_menu = QtWidgets.QMenu(self._color_button)
-        self._color_button.setMenu(self._color_menu)
-        self._populate_color_menu()
-        self._toolbar.addWidget(self._color_button)
-
-        self._edit_color_button = QtWidgets.QToolButton(self._toolbar)
-        self._edit_color_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._edit_color_button.setIcon(self._mdi_icon_or_fallback('mdi.palette', UiIcons().theme))
-        self._edit_color_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Edit formatting tags'))
-        self._edit_color_button.clicked.connect(self._edit_formatting_tags)
-        self._toolbar.addWidget(self._edit_color_button)
-
         self._toolbar.addSeparator()
-        remove_action = self._toolbar.addAction('')
-        remove_action.setIcon(self._mdi_icon_or_fallback('mdi.format-clear', UiIcons().delete))
+        remove_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
+        remove_action.setIcon(UiIcons().clear_formatting)
         remove_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Clear formatting'))
-        remove_button = self._toolbar.widgetForAction(remove_action)
-        if remove_button:
-            remove_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         remove_action.triggered.connect(self.remove_formatting)
 
-        remove_unused_action = self._toolbar.addAction('')
-        remove_unused_action.setIcon(self._mdi_icon_or_fallback('mdi.format-color-marker-cancel', UiIcons().delete))
+        remove_unused_action = self._toolbar.addAction(
+            translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
+        remove_unused_action.setIcon(UiIcons().remove_formatting)
         remove_unused_action.setToolTip(translate('OpenLP.SpellTextEdit', 'Remove invalid formatting tags'))
-        remove_unused_button = self._toolbar.widgetForAction(remove_unused_action)
-        if remove_unused_button:
-            remove_unused_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly)
         remove_unused_action.triggered.connect(self.remove_unused_tags)
 
-        self._toolbar.addSeparator()
-        self._mode_button = QtWidgets.QToolButton(self._toolbar)
-        self._mode_button.setCheckable(True)
-        self._mode_button.toggled.connect(lambda checked: self.set_rich_text_mode(not checked))
-        self._toolbar.addWidget(self._mode_button)
-        self._update_mode_button_text()
+        edit_tags_action = self._toolbar.addAction(translate('OpenLP.SpellTextEdit', 'Edit formatting styles'))
+        edit_tags_action.setIcon(UiIcons().palette)
+        edit_tags_action.triggered.connect(self._edit_formatting_tags)
+        self._edit_tags_action = edit_tags_action
 
-        toolbar_height = self._toolbar.sizeHint().height()
-        self.setViewportMargins(0, toolbar_height + 2, 0, 0)
+        # Keep every action in one native CommandBar. Custom inputs sit alongside it.
+        self._formatting_command_bar = self._toolbar.findChild(fluentqt.CommandBar)
+        self._formatting_command_bar.setBackgroundVisible(True)
+        self._formatting_command_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                   QtWidgets.QSizePolicy.Policy.Fixed)
+        self._toolbar.layout().setStretch(self._toolbar.layout().indexOf(self._formatting_command_bar), 1)
+
+        self._custom_formatting_combo = FormattingStyleComboBox(self._toolbar)
+        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setToolTip(translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setAccessibleName(translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setMaxVisibleItems(10)
+        self._custom_formatting_combo.setFixedWidth(190)
+        self._color_model = QtGui.QStandardItemModel(self._custom_formatting_combo)
+        self._custom_formatting_combo.setModel(self._color_model)
+        self._custom_formatting_combo.popupOpened.connect(self._install_formatting_preview_delegate)
+        self._populate_color_menu()
+        self._custom_formatting_combo.activated.connect(self._on_custom_formatting_changed)
+        self._toolbar.addWidget(self._custom_formatting_combo)
+
+        self._mode_switch = fluentqt.ToggleSwitch(self._toolbar)
+        self._mode_switch.setObjectName('source_switch')
+        self._mode_switch.toggled.connect(lambda checked: self.set_rich_text_mode(not checked))
+        source_container = QtWidgets.QWidget(self._toolbar)
+        source_layout = QtWidgets.QHBoxLayout(source_container)
+        source_layout.setContentsMargins(12, 0, 0, 0)
+        source_layout.addWidget(self._mode_switch)
+        source_container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        self._toolbar.addWidget(source_container)
+        self._toolbar.layout().setStretch(self._toolbar.layout().count() - 1, 0)
+        self._update_mode_switch()
+
+        self._position_formatting_toolbar()
         self.cursorPositionChanged.connect(self._update_toolbar_state)
 
-    @staticmethod
-    def _mdi_icon_or_fallback(mdi_name, fallback_icon):
+    def _update_mode_switch(self):
         """
-        Return an MDI icon when available, otherwise use a supplied fallback icon.
+        Synchronise the Source switch with the current editing mode.
         """
-        try:
-            return qta.icon(mdi_name)
-        except Exception:
-            return fallback_icon
-
-    def _update_mode_button_text(self):
-        """
-        Update mode button text for the current mode.
-        """
-        if not self._mode_button:
+        if not self._mode_switch:
             return
-        self._mode_button.setText('')
-        self._mode_button.setIcon(self._mdi_icon_or_fallback('mdi.code-tags', UiIcons().shortcuts))
-        self._mode_button.blockSignals(True)
-        self._mode_button.setChecked(not self.rich_text_mode)
-        self._mode_button.blockSignals(False)
-        self._mode_button.setToolTip(translate('OpenLP.SpellTextEdit', 'Source mode'))
+        caption = translate('OpenLP.SpellTextEdit', 'Source')
+        self._mode_switch.setOnContent(caption)
+        self._mode_switch.setOffContent(caption)
+        self._mode_switch.setAccessibleName(caption)
+        blocker = QtCore.QSignalBlocker(self._mode_switch)
+        self._mode_switch.setIsOn(not self.rich_text_mode)
+        del blocker
+        self._mode_switch.setToolTip(translate('OpenLP.SpellTextEdit', 'Show formatting tags in the source text'))
 
     def _populate_color_menu(self):
-        """
-        Populate the toolbar's color dropdown from available formatting tags.
-
-        Each entry is a QWidgetAction whose widget is a QLabel rendered with
-        the tag's actual HTML styling, mirroring the Preview column in the
-        formatting-tag dialog.  Actions are checkable for word-processor UX.
-        """
-        self._color_menu.clear()
-        self._color_actions.clear()
+        """Populate named style previews; tag tokens remain internal model data."""
+        blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
+        self._color_model.clear()
+        self._color_tags.clear()
         self._color_action_ends.clear()
+        self._color_model.appendRow(QtGui.QStandardItem(translate('OpenLP.SpellTextEdit', 'None')))
         try:
             html_tags = FormattingTags.get_html_tags()
         except Exception:
@@ -696,50 +928,126 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             start_tag = html.get('start tag')
             end_tag = html.get('end tag')
             start_html = html.get('start html', '')
-            end_html = html.get('end html', '')
             if not start_tag or not end_tag:
                 continue
-            if not re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE):
+            has_colour = re.search(r'(?:-webkit-text-fill-color|color)\s*:', start_html, flags=re.IGNORECASE)
+            if not has_colour and html.get('protected', True):
                 continue
             desc = html.get('desc', start_tag)
-            widget_action = QtWidgets.QWidgetAction(self._color_menu)
-            widget_action.setCheckable(True)
-            label = self._build_color_menu_label(start_html, end_html, desc, start_tag)
-            widget_action.setDefaultWidget(label)
-            self._color_menu.addAction(widget_action)
-            self._color_actions[start_tag] = widget_action
+            item = QtGui.QStandardItem(desc)
+            item.setData(start_tag, QtCore.Qt.ItemDataRole.UserRole)
+            item.setToolTip(desc)
+            preview_format = self.highlighter._format_from_start_html(start_html)
+            item.setFont(preview_format.font().resolve(self.font()))
+            if preview_format.foreground().style() != QtCore.Qt.BrushStyle.NoBrush:
+                item.setForeground(preview_format.foreground())
+            self._color_model.appendRow(item)
+            self._color_tags.append(start_tag)
             self._color_action_ends[start_tag] = end_tag
-            widget_action.triggered.connect(
-                lambda checked=False, st=start_tag, et=end_tag: self._toggle_color_tag(st, et))
+        del blocker
 
-    def _build_color_menu_label(self, start_html, end_html, desc, start_tag):
-        """
-        Build a two-column widget with a styled description and the opening tag token.
-        """
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(4, 2, 4, 2)
-        layout.setSpacing(12)
+    def _install_formatting_preview_delegate(self):
+        for view in self.window().findChildren(QtWidgets.QAbstractItemView, 'ComboBoxPopupListView'):
+            if view.model() is self._color_model:
+                if not isinstance(view.itemDelegate(), FormattingStyleDelegate):
+                    view.setItemDelegate(FormattingStyleDelegate(self._custom_formatting_combo, view))
+                view.viewport().update()
+                break
 
-        label = QtWidgets.QLabel(container)
-        label.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        label.setContentsMargins(0, 0, 12, 0)
-        # Normalize -webkit-text-fill-color → color so QLabel renders it correctly.
-        normalized = start_html.replace('-webkit-text-fill-color', 'color')
-        label.setText('{start}{text}{end}'.format(start=normalized, text=desc, end=end_html))
-        layout.addWidget(label, 1)
+    def _on_custom_formatting_changed(self, row):
+        """Replace the selected text's named style in one undoable action."""
+        if self._updating_custom_formatting:
+            return
+        start_tag = self._color_tags[row - 1] if row > 0 else None
+        self._updating_custom_formatting = True
+        cursor = self.textCursor()
+        selected = cursor.hasSelection()
+        original_position = cursor.position()
+        if not selected:
+            cursor.select(QtGui.QTextCursor.SelectionType.WordUnderCursor)
+            self.setTextCursor(cursor)
+        offset = original_position - cursor.selectionStart()
+        cursor.beginEditBlock()
+        try:
+            self._replace_custom_style(start_tag)
+            self._balance_formatting_tags()
+        finally:
+            cursor.endEditBlock()
+            self._updating_custom_formatting = False
+        if not selected and self.textCursor().hasSelection():
+            result = self.textCursor()
+            result.setPosition(min(result.selectionEnd(), result.selectionStart() + max(0, offset)))
+            self.setTextCursor(result)
+        self._update_toolbar_state()
+        self.setFocus()
 
-        tag_label = QtWidgets.QLabel(start_tag, container)
-        tag_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        tag_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        tag_palette = tag_label.palette()
-        tag_color = tag_palette.color(QtGui.QPalette.ColorRole.WindowText)
-        tag_color.setAlphaF(0.65)
-        tag_palette.setColor(QtGui.QPalette.ColorRole.WindowText, tag_color)
-        tag_label.setPalette(tag_palette)
-        layout.addWidget(tag_label, 0)
-        return container
+    def _balance_formatting_tags(self):
+        """Keep emphasis spanning a style boundary valid when converted to HTML."""
+        pairs = {tag['start tag']: tag['end tag'] for tag in FormattingTags.get_html_tags()
+                 if tag.get('start tag') and tag.get('end tag')}
+        if not pairs:
+            return
+        ends = {end: start for start, end in pairs.items()}
+        tokens = sorted(set(pairs) | set(ends), key=len, reverse=True)
+        pattern = re.compile('|'.join(re.escape(token) for token in tokens))
+        stack, changes = [], []
+        for match in pattern.finditer(self.toPlainText()):
+            token = match.group()
+            if token in pairs:
+                stack.append(token)
+            elif ends[token] in stack:
+                position = len(stack) - 1 - stack[::-1].index(ends[token])
+                nested = stack[position + 1:]
+                if nested:
+                    replacement = ''.join(pairs[start] for start in reversed(nested)) + token + ''.join(nested)
+                    changes.append((match.start(), match.end(), replacement))
+                del stack[position]
+        cursor = self.textCursor()
+        start, end = cursor.selectionStart(), cursor.selectionEnd()
+        for left, right, replacement in reversed(changes):
+            delta = len(replacement) - (right - left)
+            if start >= right:
+                start += delta
+            if end >= right:
+                end += delta
+            edit = QtGui.QTextCursor(self.document())
+            edit.setPosition(left)
+            edit.setPosition(right, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit.insertText(replacement)
+        cursor.setPosition(start)
+        cursor.setPosition(end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(cursor)
+
+    def _replace_custom_style(self, start_tag):
+        """Keep named styles exclusive without formatting section markers."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            start, end = cursor.selectionStart(), cursor.selectionEnd()
+            ranges = self._selection_section_ranges(self.toPlainText(), start, end)
+            if not ranges:
+                return
+            if ranges != [(start, end)]:
+                delta = 0
+                selections = []
+                for section_start, section_end in ranges:
+                    section_cursor = QtGui.QTextCursor(self.document())
+                    section_cursor.setPosition(section_start + delta)
+                    section_cursor.setPosition(section_end + delta, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    self.setTextCursor(section_cursor)
+                    previous_length = len(self.toPlainText())
+                    self._replace_custom_style(start_tag)
+                    delta += len(self.toPlainText()) - previous_length
+                    result = self.textCursor()
+                    selections.append((result.selectionStart(), result.selectionEnd()))
+                cursor = self.textCursor()
+                cursor.setPosition(selections[0][0])
+                cursor.setPosition(selections[-1][1], QtGui.QTextCursor.MoveMode.KeepAnchor)
+                self.setTextCursor(cursor)
+                return
+        for previous in self._color_tags:
+            self._remove_specific_tag_at_cursor(previous, self._color_action_ends[previous])
+        if start_tag:
+            self._apply_formatting_tokens(start_tag, self._color_action_ends[start_tag])
 
     def _edit_formatting_tags(self):
         """
@@ -757,8 +1065,31 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         Keep the formatting toolbar positioned above the editable viewport.
         """
         super().resizeEvent(event)
+        self._position_formatting_toolbar()
+
+    def _position_formatting_toolbar(self):
+        """Reserve the full header row while keeping the scrollbar below it."""
+        toolbar_height = self._toolbar.sizeHint().height() + 2 if self._toolbar else 0
+        rect = self.contentsRect()
         if self._toolbar:
-            self._toolbar.setGeometry(0, 0, self.viewport().width(), self._toolbar.sizeHint().height())
+            self._toolbar.setGeometry(rect.x(), rect.y(), rect.width(), toolbar_height - 2)
+            self._toolbar.raise_()
+        height = max(1, rect.height() - toolbar_height)
+        self._input.setMinimumHeight(0)
+        self._input.setMaximumHeight(16777215)
+        self._input.setGeometry(rect.x(), rect.y() + toolbar_height, rect.width(), height)
+        self._layout_text_input()
+
+    def _layout_text_input(self):
+        """Keep text and section backgrounds inside the Fluent border with bottom breathing room."""
+        border = self.frameWidth()
+        self._editor.setGeometry(self._input.rect().adjusted(
+            border, border, -border, -border - self.BOTTOM_PADDING))
+        scrollbar = self._input.verticalScrollBar()
+        width = scrollbar.sizeHint().width()
+        scrollbar.setGeometry(self._input.width() - width - border, border,
+                              width, max(1, self._input.height() - 2 * border))
+        self._sync_vertical_scrollbar()
 
     def set_rich_text_mode(self, enabled):
         """
@@ -766,9 +1097,11 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         """
         self.rich_text_mode = bool(enabled)
         self.highlighter.set_rich_text_mode(self.rich_text_mode)
-        self._update_mode_button_text()
+        self._update_mode_switch()
+        self._update_toolbar_state()
         self.viewport().update()
         self.highlighter.rehighlight()
+        self._refresh_block_formats()
 
     def set_visual_line_overrides(self, overrides):
         """
@@ -777,8 +1110,9 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         :param overrides: Dict[int, str] where key is the document block number.
         """
         self._visual_line_overrides = overrides if isinstance(overrides, dict) else {}
+        self._refresh_block_formats()
         self.viewport().update()
-    
+
     def reset_undo_redo_history(self):
         """
         Clear the document's undo/redo history after loading content programmatically.
@@ -937,6 +1271,9 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         the tag is applied around the selection or word.
         """
         start_tag, end_tag = self._tag_token_pair(start_tag_token)
+        if start_tag in self._color_tags:
+            self._on_custom_formatting_changed(self._color_tags.index(start_tag) + 1)
+            return
         cursor = self.textCursor()
         if cursor.hasSelection():
             text = self.toPlainText()
@@ -1006,34 +1343,37 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                                 region['end_token_start'] + region['end_token_length'] > sel_start]
             if not matching_regions:
                 return
-            edit_start = min(region['start_token_start'] for region in matching_regions)
-            edit_end = max(region['end_token_start'] + region['end_token_length'] for region in matching_regions)
-            content_start = edit_start + len(start_tag)
-            content_end = edit_end - len(end_tag)
-            if sel_end <= content_start or sel_start >= content_end:
-                return
-            left = text[content_start:min(sel_start, content_end)]
-            middle = text[max(sel_start, content_start):min(sel_end, content_end)]
-            right = text[min(sel_end, content_end):content_end]
-            replacement = ''
-            if left:
-                replacement += start_tag + left + end_tag
-            replacement += middle.replace(start_tag, '').replace(end_tag, '')
-            if right:
-                replacement += start_tag + right + end_tag
             edit_cursor = QtGui.QTextCursor(self.document())
-            edit_cursor.setPosition(edit_start)
-            edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
             edit_cursor.beginEditBlock()
-            edit_cursor.removeSelectedText()
-            edit_cursor.insertText(replacement)
+            new_start, new_end = sel_start, sel_end
+            for region in reversed(matching_regions):
+                edit_start = region['start_token_start']
+                edit_end = region['end_token_start'] + region['end_token_length']
+                content_start = edit_start + len(start_tag)
+                content_end = edit_end - len(end_tag)
+                if sel_end <= content_start or sel_start >= content_end:
+                    continue
+                left = text[content_start:min(sel_start, content_end)]
+                middle = text[max(sel_start, content_start):min(sel_end, content_end)]
+                right = text[max(sel_end, content_start):content_end]
+                # Keep the unselected text styled, including independently styled regions.
+                left = start_tag + left + end_tag if re.sub(r'\{/?\w+\}', '', left) else left
+                right = start_tag + right + end_tag if re.sub(r'\{/?\w+\}', '', right) else right
+                middle = middle.replace(start_tag, '').replace(end_tag, '')
+                replacement = left + middle + right
+                delta = len(replacement) - (edit_end - edit_start)
+                if new_start >= edit_start:
+                    new_start = edit_start + len(left)
+                if new_end >= edit_end:
+                    new_end += delta
+                else:
+                    new_end = edit_start + len(left) + len(middle)
+                edit_cursor.setPosition(edit_start)
+                edit_cursor.setPosition(edit_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+                edit_cursor.insertText(replacement)
             edit_cursor.endEditBlock()
-            selection_start = edit_start
-            if left:
-                selection_start += len(start_tag) + len(left) + len(end_tag)
-            selection_end = selection_start + len(middle.replace(start_tag, '').replace(end_tag, ''))
-            edit_cursor.setPosition(selection_start)
-            edit_cursor.setPosition(selection_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
+            edit_cursor.setPosition(new_start)
+            edit_cursor.setPosition(new_end, QtGui.QTextCursor.MoveMode.KeepAnchor)
             self.setTextCursor(edit_cursor)
             return
 
@@ -1085,6 +1425,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                 action.blockSignals(True)
                 action.setChecked(False)
                 action.blockSignals(False)
+            self._sync_custom_formatting()
             return
         text = self.toPlainText()
         cursor = self.textCursor()
@@ -1101,19 +1442,40 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
             action.blockSignals(True)
             action.setChecked(active)
             action.blockSignals(False)
-        for start_tag, action in self._color_actions.items():
-            end_tag = self._color_action_ends.get(start_tag, '')
-            active = False
-            if end_tag:
-                for region in self._iter_matching_tag_regions(text, start_tag, end_tag):
-                    r_start = region['start_token_start']
-                    r_end = region['end_token_start'] + region['end_token_length']
-                    if r_start <= pos < r_end:
-                        active = True
-                        break
-            action.blockSignals(True)
-            action.setChecked(active)
-            action.blockSignals(False)
+        self._sync_custom_formatting()
+
+    def _sync_custom_formatting(self):
+        """Reflect cursor formatting without modifying the document."""
+        if self._updating_custom_formatting:
+            return
+        text, cursor = self.toPlainText(), self.textCursor()
+        regions = []
+        for row, start_tag in enumerate(self._color_tags, 1):
+            for region in self._iter_matching_tag_regions(text, start_tag, self._color_action_ends[start_tag]):
+                regions.append((region['start_token_start'],
+                                region['end_token_start'] + region['end_token_length'], row))
+        start, end = cursor.selectionStart(), cursor.selectionEnd()
+        boundaries = {start, end}
+        boundaries.update(position for left, right, _ in regions for position in (left, right)
+                          if start < position < end)
+        states = set()
+        points = sorted(boundaries)
+        segments = list(zip(points, points[1:])) if cursor.hasSelection() else [(start, start + 1)]
+        token_pattern = re.compile(r'\{/?\w+\}')
+        for left, right in segments:
+            if cursor.hasSelection():
+                content = token_pattern.sub('', text[left:right]).strip()
+                if not content or self._is_section_boundary_line(content):
+                    continue
+            active = [(region_start, row) for region_start, region_end, row in regions
+                      if region_start <= left < region_end]
+            states.add(max(active)[1] if active and self.rich_text_mode else 0)
+        mixed = len(states) > 1
+        blocker = QtCore.QSignalBlocker(self._custom_formatting_combo)
+        self._custom_formatting_combo.setPlaceholderText(translate('OpenLP.SpellTextEdit', 'Mixed') if mixed else
+                                                         translate('OpenLP.SpellTextEdit', 'Styles'))
+        self._custom_formatting_combo.setCurrentIndex(-1 if mixed else next(iter(states), 0))
+        del blocker
 
     def _apply_formatting_tokens(self, start_tag, end_tag):
         """
@@ -1425,25 +1787,23 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         if cleaned_text != text:
             self.setPlainText(cleaned_text)
 
-    def paintEvent(self, event):
+    def _paint_visual_markers(self, event):
         """
         Draw visual split lines for split markers while keeping raw marker text in the document.
         """
-        super().paintEvent(event)
         if not self.rich_text_mode:
             return
         painter = QtGui.QPainter(self.viewport())
         pen_color = self.palette().color(QtGui.QPalette.ColorRole.Text)
-        block = self.firstVisibleBlock()
-        offset = self.contentOffset()
+        block = self.document().begin()
+        offset = QtCore.QPointF(-self.horizontalScrollBar().value(), -self.verticalScrollBar().value())
         cursor = self.textCursor()
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
-        full_text = self.toPlainText()
         while block.isValid():
-            geometry = self.blockBoundingGeometry(block).translated(offset)
+            geometry = self.document().documentLayout().blockBoundingRect(block).translated(offset)
             top = geometry.top()
-            bottom = top + self.blockBoundingRect(block).height()
+            bottom = geometry.bottom()
             if top > event.rect().bottom():
                 break
             if bottom >= event.rect().top():
@@ -1474,16 +1834,18 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                         override_color = None
                     if not isinstance(override_color, QtGui.QColor) or not override_color.isValid():
                         override_color = self.palette().color(QtGui.QPalette.ColorRole.Base)
-                    row_rect = QtCore.QRectF(0, top, self.viewport().width(), self.blockBoundingRect(block).height())
+                    height = max(geometry.height(), block.blockFormat().lineHeight())
+                    painter.fillRect(QtCore.QRectF(0, top, self.viewport().width(), height),
+                                     self.palette().brush(QtGui.QPalette.ColorRole.Base))
+                    row_rect = QtCore.QRectF(0, top, self.viewport().width(), height)
                     painter.fillRect(row_rect, QtGui.QBrush(override_color))
                     font = QtGui.QFont(self.font())
                     font.setBold(True)
                     painter.setFont(font)
                     painter.setPen(QtGui.QPen(pen_color))
-                    text_rect = QtCore.QRectF(10, top, self.viewport().width() - 20,
-                                              self.blockBoundingRect(block).height())
-                    painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft,
-                                     override_text)
+                    text_rect = row_rect.adjusted(self.TEXT_INSET, 0, -self.TEXT_INSET, 0)
+                    alignment = QtCore.Qt.AlignmentFlag.AlignVCenter | QtCore.Qt.AlignmentFlag.AlignLeft
+                    painter.drawText(text_rect, alignment, override_text)
             block = block.next()
 
     def mousePressEvent(self, event):
@@ -1497,7 +1859,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                                       QtCore.Qt.MouseButton.LeftButton,
                                       QtCore.Qt.MouseButton.LeftButton,
                                       QtCore.Qt.KeyboardModifier.NoModifier)
-        QtWidgets.QPlainTextEdit.mousePressEvent(self, event)
+        QtWidgets.QTextEdit.mousePressEvent(self._editor, event)
 
     def contextMenuEvent(self, event):
         """
@@ -1531,7 +1893,7 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
                 # Only add the spelling suggests to the menu if there are suggestions.
                 if spell_menu.actions():
                     popup_menu.insertMenu(popup_menu.actions()[0], spell_menu)
-        tag_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Formatting Tags'))
+        tag_menu = QtWidgets.QMenu(translate('OpenLP.SpellTextEdit', 'Formatting styles'))
         if self.formatting_tags_allowed:
             for html in FormattingTags.get_html_tags():
                 action = SpellAction(html['desc'], tag_menu)
@@ -1569,6 +1931,9 @@ class SpellTextEdit(QtWidgets.QPlainTextEdit):
         tag = tag.replace('&', '')
         for html in FormattingTags.get_html_tags():
             if tag == html['desc']:
+                if html['start tag'] in self._color_tags:
+                    self._on_custom_formatting_changed(self._color_tags.index(html['start tag']) + 1)
+                    return
                 cursor = self.textCursor()
                 if self.textCursor().hasSelection():
                     text = cursor.selectedText()
@@ -1846,6 +2211,11 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         """
         if not self.rich_text_mode:
             self.setCurrentBlockState(0)
+            return
+
+        if not text:
+            previous = self.previousBlockState()
+            self.setCurrentBlockState(previous if previous > 0 else 0)
             return
 
         split_style = SpellTextEdit.split_marker_style_for_text(text)

@@ -23,11 +23,13 @@ The actual plugin view form
 """
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.state import State
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
+from openlp.core.common.restart import show_restart_message
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.ui.plugindialog import Ui_PluginViewDialog
 
@@ -161,3 +163,7 @@ class PluginForm(QtWidgets.QDialog, Ui_PluginViewDialog, RegistryProperties):
             status_text = translate('OpenLP.PluginForm', '{name} (Disabled)')
         self.plugin_list_widget.currentItem().setText(
             status_text.format(name=self.active_plugin.name_strings['singular']))
+        if getattr(self.active_plugin, 'requires_restart', False) is True:
+            show_restart_message(
+                self, translate('OpenLP.PluginForm', 'Restart Required'),
+                translate('OpenLP.PluginForm', 'Restart OpenLP+ to apply this plugin change.'))

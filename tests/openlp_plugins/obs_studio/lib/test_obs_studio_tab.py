@@ -21,7 +21,8 @@ Package to test the openlp.plugins.obs_studio.lib.obs_studio_tab package.
 """
 from unittest.mock import MagicMock, patch
 import pytest
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
@@ -64,7 +65,8 @@ def test_incorrect_port(mocked_warning: MagicMock, tab: ObsStudioTab):
     """
     # GIVEN: A ObsStudioTab Class with an incorrect port
     # WHEN: The test button is clicked
-    QtTest.QTest.mouseClick(tab.test_button, QtCore.Qt.LeftButton)
+    with patch('openlp.plugins.obs_studio.lib.obs_studio_tab.ObsStudioAPI', side_effect=ConnectionError('Refused')):
+        QtTest.QTest.mouseClick(tab.test_button, QtCore.Qt.LeftButton)
 
     # THEN: The warning messagebox should be called
     mocked_warning.assert_called_once()

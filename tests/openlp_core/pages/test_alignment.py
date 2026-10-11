@@ -61,7 +61,7 @@ def test_on_transition_enabled_changed(settings):
 
 def test_transition_reverse_checkbox_label(settings):
     """
-    Test the transition reverse checkbox uses the RTL support wording.
+    Test the transition reverse checkbox describes the transition direction.
     """
     # GIVEN: An instance of AlignmentTransitionsPage
     page = AlignmentTransitionsPage()
@@ -69,8 +69,8 @@ def test_transition_reverse_checkbox_label(settings):
     # WHEN: Reading the checkbox label
     result = page.transition_reverse_check_box.text()
 
-    # THEN: The user-facing label should describe Reveal's rtl behavior
-    assert result == 'Right-to-left language support'
+    # THEN: The user-facing label should describe the animation setting
+    assert result == 'Reverse transition direction'
 
 
 def test_transition_direction_hidden_for_fade(settings):

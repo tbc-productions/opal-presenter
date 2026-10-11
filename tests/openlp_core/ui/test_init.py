@@ -28,7 +28,7 @@ from PySide6.QtCore import Qt
 from openlp.core.ui import SingleColumnTableWidget
 
 
-def test_single_col_widget_create():
+def test_single_col_widget_create(qapp):
     """
     Test creating the SingleColumnTableWidget object
     """
@@ -52,7 +52,6 @@ def test_single_col_widget_resize_event(MockQTableWidget, mock_settings):
     # GIVEN: An instance of a SingleColumnTableWidget and a mocked event
     widget = SingleColumnTableWidget(None)
     mocked_event = MagicMock()
-    mocked_event.size.return_value.width.return_value = 10
 
     # WHEN: resizeEvent() is called
     with patch.object(widget, 'columnCount') as mocked_column_count, \
@@ -64,5 +63,5 @@ def test_single_col_widget_resize_event(MockQTableWidget, mock_settings):
     # THEN: The correct calls should have been made
     MockQTableWidget.resizeEvent.assert_called_once_with(widget, mocked_event)
     mocked_column_count.assert_called_once_with()
-    mocked_set_column_width.assert_called_once_with(0, 10)
+    mocked_set_column_width.assert_called_once_with(0, widget.viewport().width())
     mocked_resize_rows_to_contents.assert_called_once_with()

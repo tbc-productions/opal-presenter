@@ -22,7 +22,8 @@
 """
 Provide a custom widget based on QPushButton for the selection of colors
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 
@@ -55,7 +56,12 @@ class ColorButton(QtWidgets.QPushButton):
         :param color:  String representation of a hexadecimal color
         """
         self._color = color
-        self.setStyleSheet('background-color: %s' % color)
+        swatch = QtGui.QPixmap(24, 20)
+        swatch.fill(QtGui.QColor(color))
+        self.setIcon(QtGui.QIcon(swatch))
+        self.setIconSize(QtCore.QSize(24, 20))
+        self.setText(color)
+        self.setAccessibleName(color)
 
     @property
     def color(self):

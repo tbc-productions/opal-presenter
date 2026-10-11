@@ -28,20 +28,23 @@ from pathlib import Path
 from tempfile import mkdtemp
 from unittest.mock import ANY, Mock, MagicMock, patch, call, sentinel
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.lib.theme import Theme
 from openlp.core.ui.thememanager import ThemeManager
+from openlp.core.widgets.themeviews import ThemeViews
 from tests.utils.constants import RESOURCE_PATH
 
 
 @pytest.fixture()
-def theme_manager(registry: Registry, settings: Settings) -> ThemeManager:
+def theme_manager(registry: Registry, settings: Settings, tmp_path) -> ThemeManager:
     registry.register('main_window', None)
     thm = ThemeManager()
-    return thm
+    with patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'designer'):
+        yield thm
 
 
 @patch('openlp.core.ui.thememanager.zipfile.ZipFile.__init__')
@@ -465,11 +468,37 @@ def test_update_preview_images(theme_manager: ThemeManager):
 
     # THEN: The worker should be started and connected correctly
     mocked_worker.assert_called_once_with(['Default', 'Test'])
-    worker.thumbnail_requested.connect.assert_called_once_with(theme_manager._refresh_thumbnail_for_theme)
-    worker.status_changed.connect.assert_called_once_with(theme_manager._set_thumbnail_status)
-    assert worker.finished.connect.call_args_list == [call(theme_manager._thumbnail_refresh_finished),
-                                                      call(worker.quit.emit)]
-    mocked_run_thread.assert_called_once_with(worker, 'theme_thumbnail_refresh')
+    worker.finished.connect.assert_called_once_with(worker.quit.emit)
+    mocked_run_thread.assert_called_once_with(worker, 'theme_thumbnail_refresh', queued_connections=[
+        (worker.thumbnail_requested, theme_manager._refresh_thumbnail_for_theme),
+        (worker.status_changed, theme_manager._set_thumbnail_status)
+    ], on_finished=theme_manager._thumbnail_refresh_finished)
+
+
+def test_thumbnail_refresh_waits_for_thread_cleanup(theme_manager, qtbot):
+    """A screen change during thumbnail rendering queues a refresh after the old thread is removed."""
+    from PySide6 import QtCore
+
+    theme_manager._theme_list = {'Default': MagicMock()}
+    theme_manager.get_theme_names = MagicMock(return_value=['Default'])
+    theme_manager.load_themes = MagicMock()
+    render_threads = []
+
+    def render(_theme, _force):
+        render_threads.append(QtCore.QThread.currentThread())
+        if len(render_threads) == 1:
+            theme_manager.update_preview_images()
+            theme_manager.update_preview_images()
+
+    theme_manager._get_theme_data = MagicMock()
+    theme_manager.generate_image = render
+    theme_manager.update_preview_images()
+    qtbot.waitUntil(lambda: theme_manager._thumbnail_refresh_worker is None, timeout=5000)
+
+    assert len(render_threads) == 2
+    assert all(thread == theme_manager.thread() for thread in render_threads)
+    assert 'theme_thumbnail_refresh' not in Registry().get('application').worker_threads
+    theme_manager.load_themes.assert_called_once_with()
 
 
 def test_theme_manager_initialise(theme_manager):
@@ -525,6 +554,23 @@ def test_click_on_new_theme(theme_manager):
     assert mocked_event.call_count == 1, 'The on_add_theme method should have been called once'
 
 
+@pytest.mark.parametrize('action', ['on_add_theme', 'on_edit_theme'])
+def test_theme_edit_request_focuses_existing_draft(theme_manager, action):
+    form = MagicMock()
+    form.isVisible.return_value = True
+    form.windowState.return_value = QtCore.Qt.WindowState.WindowMinimized
+    theme_manager.theme_form = form
+    draft = form.theme
+    with patch('openlp.core.ui.thememanager.Theme') as new_theme:
+        getattr(theme_manager, action)()
+    assert form.theme is draft
+    form.setWindowState.assert_called_once_with(QtCore.Qt.WindowState.WindowNoState)
+    form.raise_.assert_called_once()
+    form.activateWindow.assert_called_once()
+    form.exec.assert_not_called()
+    new_theme.assert_not_called()
+
+
 @patch('openlp.core.ui.themeform.ThemeForm._setup')
 @patch('openlp.core.ui.filerenameform.FileRenameForm._setup')
 def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
@@ -534,6 +580,9 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     # GIVEN:
     theme_manager.toolbar = MagicMock()
     theme_manager.theme_path = MagicMock()
+    theme_manager.view_buttons = MagicMock()
+    theme_manager.thumbnail_slider = MagicMock()
+    theme_manager.set_thumbnail_size = MagicMock()
     theme_manager.load_themes = MagicMock()
     theme_manager.upgrade_themes = MagicMock()
     theme_manager._get_screen_dimensions = MagicMock(return_value='screen-size')
@@ -577,6 +626,83 @@ def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, them
                                                                                           'background.jpg'))
     theme_manager.update_preview_images.assert_called_once_with(['New Theme'])
     theme_manager.load_themes.assert_called_once_with()
+
+
+@pytest.mark.parametrize('view_mode', [QtWidgets.QListView.ViewMode.ListMode, QtWidgets.QListView.ViewMode.IconMode])
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_copy_theme_during_thumbnail_refresh_has_no_duplicates(mock_defaults, theme_manager, tmp_path, view_mode):
+    """Finishing a thumbnail refresh during copying must not overlap theme-list reloads."""
+    from PySide6 import QtCore, QtGui
+
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path / 'thumbnails'
+    theme_manager.global_theme = 'Original'
+    theme_manager.theme_list_widget = ThemeViews(theme_manager)
+    theme_manager.theme_list_widget.setViewMode(view_mode)
+    theme_manager.update_preview_images = MagicMock()
+    theme_manager.save_preview = MagicMock()
+    theme_manager._push_themes = MagicMock()
+    theme_manager.file_rename_form = MagicMock()
+    theme_manager.file_rename_form.file_name_edit.text.return_value = 'Copy of Original'
+    theme = Theme()
+    theme.theme_name = 'Original'
+    theme_manager.save_theme(theme)
+    refresh_finished = True
+
+    def generate_preview(*args):
+        nonlocal refresh_finished
+        refresh_finished = True
+        # Preview rendering processes UI events, including worker completion.
+        theme_manager._thumbnail_refresh_finished()
+        return QtGui.QPixmap(10, 10)
+
+    def find_theme_files(*args):
+        return [path.relative_to(tmp_path) for path in tmp_path.glob('*/*.json')]
+
+    theme_manager.generate_image = MagicMock(side_effect=generate_preview)
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+               side_effect=find_theme_files) as get_files, \
+            patch('openlp.core.ui.thememanager.validate_thumb', side_effect=lambda *args: refresh_finished), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        theme_manager.load_themes()
+        theme_manager.theme_list_widget.setCurrentRow(0)
+        refresh_finished = False
+
+        theme_manager.on_copy_theme()
+
+    # The worker's reload request is handled after the active reload finishes.
+    assert get_files.call_count == 3
+    view = theme_manager.theme_list_widget
+    assert [view.item(row).data(QtCore.Qt.ItemDataRole.UserRole) for row in range(view.count())] == [
+        'Copy of Original', 'Original'
+    ]
+    assert view.list_view.model().rowCount() == view.grid_view.model().rowCount() == 2
+    assert theme_manager.get_theme_names() == ['Copy of Original', 'Original']
+    assert (tmp_path / 'Original' / 'Original.json').exists()
+    assert (tmp_path / 'Copy of Original' / 'Copy of Original.json').exists()
+
+
+def test_load_themes_can_retry_after_error(theme_manager, tmp_path):
+    """A failed theme load must not prevent later refreshes."""
+    from PySide6 import QtGui
+
+    (tmp_path / 'Original.json').write_text('{}')
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path
+    theme_manager.global_theme = 'Original'
+    theme_manager.theme_list_widget = ThemeViews(theme_manager)
+    theme_manager._get_theme_data = MagicMock(side_effect=[ValueError('Invalid theme'), sentinel.original_theme])
+    theme_manager._push_themes = MagicMock()
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[Path('Original.json')]), \
+            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        with pytest.raises(ValueError, match='Invalid theme'):
+            theme_manager.load_themes()
+        theme_manager.load_themes()
+
+    assert theme_manager.theme_list_widget.count() == 1
+    assert theme_manager.get_theme_names() == ['Original']
+    theme_manager._push_themes.assert_called_once_with()
 
 
 @patch('openlp.core.ui.thememanager.State')
@@ -633,3 +759,99 @@ def test_on_delete_theme_blocks_default_theme(mocked_critical: MagicMock, theme_
     mocked_critical.assert_called_once_with(message='You are unable to delete the default theme.')
     theme_manager.delete_theme.assert_not_called()
     theme_manager._push_themes.assert_not_called()
+
+
+def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
+    """Theme progress advances after loading, excludes missing files and then resets."""
+    from PySide6 import QtGui
+
+    for name in ('a.json', 'b.json'):
+        (tmp_path / name).write_text('{}')
+    theme_manager.theme_path = tmp_path
+    theme_manager.thumb_path = tmp_path
+    theme_manager.global_theme = 'a'
+    theme_manager.theme_list_widget = MagicMock()
+    theme_manager._get_theme_data = MagicMock()
+    theme_manager._push_themes = MagicMock()
+    updates = []
+
+    def report(*args, **kwargs):
+        assert kwargs == ({'progress_range': (75, 90)} if len(args) > 1 else {})
+        updates.append((args, list(theme_manager._theme_list)))
+
+    Registry().register_function('startup_progress', report)
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+               return_value=[Path('b.json'), Path('missing.json'), Path('a.json')]), \
+            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+        theme_manager.load_themes()
+
+    assert updates == [
+        (('Loading themes', 0, 2), []),
+        (('Loading themes', 1, 2), ['a']),
+        (('Loading themes', 2, 2), ['a', 'b']),
+        (('Loading library and themes',), ['a', 'b'])
+    ]
+    theme_manager._push_themes.assert_called_once_with()
+
+
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_install_builtin_themes(mock_defaults, theme_manager, tmp_path):
+    """
+    Test that every bundled theme is installed and loads with a cross-platform font and no background image.
+    """
+    # GIVEN: An empty theme directory
+    theme_manager.theme_path = tmp_path
+
+    # WHEN: The built-in themes are installed
+    installed = theme_manager.install_builtin_themes()
+
+    # THEN: All six themes are saved, including the default, and round-trip through the theme loader
+    assert sorted(installed) == ['Bold Sans Dark', 'Bold Sans Light', 'Classic Serif Dark', 'Classic Serif Light',
+                                 'Modern Sans Dark', 'Modern Sans Light']
+    for name in installed:
+        theme = Theme()
+        theme.load_theme((tmp_path / name / f'{name}.json').read_text())
+        assert theme.theme_name == name
+        assert theme.background_type in ('solid', 'gradient')
+        assert theme.background_filename is None
+        assert theme.font_main_name in ('Trebuchet MS', 'Georgia', 'Arial')
+        assert theme.font_main_letter_adjustment == 0
+        assert theme.font_footer_name == theme.font_main_name
+
+
+@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+def test_install_builtin_themes_keeps_existing(mock_defaults, theme_manager, tmp_path):
+    """
+    Test that installing the built-in themes does not overwrite a theme the user has already edited.
+    """
+    # GIVEN: An edited copy of Modern Sans Dark
+    theme_dir = tmp_path / 'Modern Sans Dark'
+    theme_dir.mkdir()
+    (theme_dir / 'Modern Sans Dark.json').write_text('edited')
+    theme_manager.theme_path = tmp_path
+
+    # WHEN: The built-in themes are installed
+    installed = theme_manager.install_builtin_themes()
+
+    # THEN: The edited theme is left alone
+    assert 'Modern Sans Dark' not in installed
+    assert (theme_dir / 'Modern Sans Dark.json').read_text() == 'edited'
+
+
+def test_load_first_time_themes_defaults_to_bold_sans_dark(theme_manager):
+    """
+    Test that, with no downloaded themes, the first run installs the built-in themes and selects Bold Sans Dark.
+    """
+    # GIVEN: No downloaded theme archives
+    theme_manager.install_builtin_themes = MagicMock(return_value=['Bold Sans Dark'])
+    theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
+
+    # WHEN: The first time themes are loaded
+    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[]):
+        theme_manager.load_first_time_themes()
+
+    # THEN: Bold Sans Dark becomes the global theme
+    assert theme_manager.settings.value('themes/global theme') == 'Bold Sans Dark'
+    theme_manager._regenerate_previews_with_progress_dialog.assert_called_once_with(
+        ['Bold Sans Dark'], reason='first_time_import')

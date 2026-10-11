@@ -88,3 +88,31 @@ def test_check_boxes_when_controllers_unavailable(settings):
     assert form.settings.value('presentations/powerpoint slide click advance') == QtCore.Qt.CheckState.Unchecked
     assert form.settings.value('presentations/powerpoint control window') == QtCore.Qt.CheckState.Unchecked
     assert form.settings.value('presentations/impress use display setting') == QtCore.Qt.CheckState.Unchecked
+
+
+def test_mac_powerpoint_auto_display_enabled_by_default_and_persists(settings):
+    Registry().register('settings_form', MagicMock())
+    controllers = Mocked_Controllers(False, False)
+    mac_controller = MagicMock()
+    mac_controller.name = 'PowerPointMac'
+    mac_controller.display_name = 'PowerPoint (macOS)'
+    mac_controller.is_available.return_value = True
+    controllers['PowerPointMac'] = mac_controller
+    form = PresentationTab(None, 'Presentations', None, controllers, None)
+
+    assert form.ppt_auto_display_check_box.isChecked()
+    assert form.ppt_auto_display_check_box.isEnabled()
+    assert not form.ppt_auto_display_check_box.isHidden()
+    assert form.ppt_window_check_box.isHidden()
+
+    form.activated = True
+    form.ppt_auto_display_check_box.setChecked(False)
+    form.save()
+    assert settings.value('presentations/powerpoint auto select display') == QtCore.Qt.CheckState.Unchecked
+    form.load()
+    assert not form.ppt_auto_display_check_box.isChecked()
+    mac_controller.start_process.assert_not_called()
+
+    form.ppt_auto_display_check_box.setChecked(True)
+    form.save()
+    assert settings.value('presentations/powerpoint auto select display') == QtCore.Qt.CheckState.Checked

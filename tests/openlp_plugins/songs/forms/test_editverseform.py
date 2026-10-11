@@ -24,7 +24,8 @@ This module contains tests for the editverseform of the Songs plugin.
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from PySide6 import QtCore, QtTest, QtGui, QtWidgets
+from PySide6 import QtCore, QtTest, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
@@ -180,6 +181,10 @@ def test_insert_chorus(edit_verse_form: EditVerseForm):
     """
     # GIVEN: An instance of the EditVerseForm
     # WHEN: The verse type combo box and then the Insert button are clicked
+    edit_verse_form.show()
+    edit_verse_form.activateWindow()
+    edit_verse_form.verse_type_combo_box.setFocus()
+    QtWidgets.QApplication.processEvents()
     QtTest.QTest.keyClick(edit_verse_form.verse_type_combo_box, QtCore.Qt.Key.Key_Down)
     QtTest.QTest.mouseClick(edit_verse_form.insert_button, QtCore.Qt.MouseButton.LeftButton)
 
@@ -301,8 +306,9 @@ def test_on_transpose_up_button_clicked_with_keyerror(mocked_critical_error: Mag
     edit_verse_form.on_transpose_up_button_clicked()
 
     # THEN An error message should have been shown
-    mocked_critical_error.assert_called_once_with(title='Transposing failed', message='Transposing failed because of '
-                                                  'invalid chord:\n\'"A" not found in "chords"\'')
+    mocked_critical_error.assert_called_once_with(
+        parent=edit_verse_form, title='Transposing failed',
+        message='Transposing failed because of invalid chord:\n\'"A" not found in "chords"\'')
 
 
 @patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
@@ -354,8 +360,9 @@ def test_on_transpose_down_button_clicked_keyerror(mocked_critical_error: MagicM
     edit_verse_form.on_transpose_down_button_clicked()
 
     # THEN An error message should have been shown
-    mocked_critical_error.assert_called_once_with(title='Transposing failed', message='Transposing failed because of '
-                                                  'invalid chord:\n\'"A" not found in "chords"\'')
+    mocked_critical_error.assert_called_once_with(
+        parent=edit_verse_form, title='Transposing failed',
+        message='Transposing failed because of invalid chord:\n\'"A" not found in "chords"\'')
 
 
 def test_set_verse_single(settings: Settings, edit_verse_form: EditVerseForm):
@@ -553,6 +560,53 @@ def test_update_section_tag_highlighting_sets_visual_label(edit_verse_form: Edit
         assert list(overrides.values())[0]['text'] == 'Verse 3'
 
 
+@pytest.mark.parametrize('prefix', ['', 'Introductory lyrics\n'])
+def test_section_label_spacing_preserves_source_and_undo(edit_verse_form, prefix):
+    """Only a label on the first line omits the gap; presentation adds no source edits."""
+    editor = edit_verse_form.verse_text_edit
+    text = prefix + '---[Verse:1]---\nFirst lyrics\n---[Chorus:1]---\nChorus lyrics'
+    edit_verse_form.show()
+    editor.setPlainText(text)
+    QtWidgets.QApplication.processEvents()
+    document = editor.document()
+    first_label = document.findBlockByNumber(1 if prefix else 0)
+    next_label = first_label.next().next()
+    first_height = editor.blockBoundingRect(first_label).height()
+    next_height = editor.blockBoundingRect(next_label).height()
+    inset = document.documentMargin() if not prefix else 0
+    assert next_height - first_height == (0 if prefix else 8 + inset)
+
+    editor.set_rich_text_mode(False)
+    QtWidgets.QApplication.processEvents()
+    assert editor.blockBoundingRect(first_label).height() == first_height
+    assert editor.blockBoundingRect(next_label).height() == next_height
+    assert editor.toPlainText() == text
+    assert not document.isUndoAvailable()
+
+    editor.set_rich_text_mode(True)
+    QtWidgets.QApplication.processEvents()
+    assert editor.blockBoundingRect(first_label).height() == first_height
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.insertPlainText(' added')
+    editor.undo()
+    assert editor.toPlainText() == text
+
+
+def test_first_section_label_band_starts_at_viewport_top(edit_verse_form):
+    """The document's horizontal inset must not leave a blank strip above the first band."""
+    editor = edit_verse_form.verse_text_edit
+    editor.setPlainText('---[Chorus:1]---\nLyrics')
+    edit_verse_form.show()
+    QtWidgets.QApplication.processEvents()
+    pixels = editor.viewport().grab().toImage()
+    assert editor.viewport().mapTo(editor._input, QtCore.QPoint()).y() == editor.frameWidth()
+    x = pixels.width() // 2
+    assert pixels.pixelColor(x, 0) == pixels.pixelColor(x, 5)
+    assert pixels.pixelColor(x, 0) != editor.palette().color(QtGui.QPalette.ColorRole.Base)
+    cursor = QtGui.QTextCursor(editor.document().findBlockByNumber(1))
+    assert editor.cursorRect(cursor).left() == editor.TEXT_INSET
+
+
 def test_update_section_tag_highlighting_uses_verse_opacity_step(edit_verse_form: EditVerseForm):
     """Verse number should drive opacity (Verse 3 -> 25%)."""
     # GIVEN: A section tag line for verse number 3
@@ -583,6 +637,22 @@ def test_paste_converts_headings_immediately(edit_verse_form: EditVerseForm):
     assert edit_verse_form.verse_text_edit.toPlainText() == '---[Verse:1]---\n'
 
 
+@pytest.mark.parametrize('method', ['keyboard', 'context_menu'])
+def test_fluent_editor_paste_converts_headings(edit_verse_form, method):
+    """Pasting through the native input uses the same song-heading parser."""
+    edit_verse_form.set_verse('')
+    editor = edit_verse_form.verse_text_edit
+    QtWidgets.QApplication.clipboard().setText('Chorus 1\nPasted lyrics')
+    if method == 'keyboard':
+        QtTest.QTest.keySequence(editor._editor, QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Paste))
+    else:
+        menu = editor.createStandardContextMenu()
+        next(action for action in menu.actions() if action.objectName() == 'edit-paste').trigger()
+    assert editor.toPlainText() == '---[Chorus:1]---\nPasted lyrics'
+    editor.undo()
+    assert editor.toPlainText() == '---[Verse:1]---\n'
+
+
 def test_single_verse_paste_keeps_plain_headings(edit_verse_form: EditVerseForm):
     """The single section editor leaves pasted text under its selected verse tag."""
     edit_verse_form.set_verse('', single=True)
@@ -592,3 +662,33 @@ def test_single_verse_paste_keeps_plain_headings(edit_verse_form: EditVerseForm)
     edit_verse_form.verse_text_edit.insertFromMimeData(clipboard)
 
     assert edit_verse_form.verse_text_edit.toPlainText() == 'Verse 1\nFirst line'
+
+
+def test_lyric_dialog_fits_content_with_parent_padding(registry, settings, qtbot):
+    """Long lyrics grow the resizable dialog only as far as the host's padded bounds."""
+    parent = QtWidgets.QMainWindow()
+    parent.resize(1200, 900)
+    parent.show()
+    form = EditVerseForm(parent)
+    form.setAnimationEnabled(False)
+    form.verse_text_edit.setPlainText('\n'.join(f'Line {row}' for row in range(60)))
+    form.show()
+    qtbot.wait(50)
+    try:
+        text_edit = form.verse_text_edit
+        text_edit._input.onThemeUpdated()
+        qtbot.waitUntil(lambda: text_edit._input.geometry().bottom() == text_edit.contentsRect().bottom())
+        assert text_edit.height() > form.height() // 2
+        assert form.isSizeGripEnabled()
+        assert form.width() >= 1000
+        assert form.height() == parent.height() - 48
+        assert form.y() >= 24
+        assert form.geometry().bottom() < parent.height() - 24
+        parent.resize(1200, 650)
+        qtbot.wait(50)
+        assert text_edit._input.geometry().bottom() == text_edit.contentsRect().bottom()
+        assert form.height() <= parent.height() - 48
+        assert form.geometry().bottom() < parent.height() - 24
+    finally:
+        form.close()
+        parent.close()

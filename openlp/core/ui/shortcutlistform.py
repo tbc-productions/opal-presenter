@@ -24,7 +24,9 @@ The :mod:`~openlp.core.ui.shortcutlistform` module contains the form class
 import logging
 import re
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from fluentqt import Window as FluentWindow
+from openlp.core.widgets import fluent as QtWidgets
 from shiboken6 import isValid as qobject_cpp_is_valid
 
 from openlp.core.common.actions import ActionList
@@ -53,322 +55,268 @@ def _qobject_is_alive(obj):
         return False
 
 
-class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryProperties):
-    """
-    The shortcut list dialog
-    """
+class ShortcutListForm(FluentWindow, Ui_ShortcutListDialog, RegistryProperties):
+    """Edit a shortcut draft in a native Fluent window; Save applies it to actions."""
+    accepted = QtCore.Signal()
+    rejected = QtCore.Signal()
+    finished = QtCore.Signal(int)
 
     def __init__(self, parent=None):
-        """
-        Constructor
-        """
-        super(ShortcutListForm, self).__init__(parent,
-                                               QtCore.Qt.WindowType.WindowSystemMenuHint |
-                                               QtCore.Qt.WindowType.WindowTitleHint |
-                                               QtCore.Qt.WindowType.WindowCloseButtonHint)
+        super().__init__(parent)
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        self._event_loop = None
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
         self.setup_ui(self)
         self.changed_actions = {}
         self.action_list = ActionList.get_instance()
-        self.dialog_was_shown = False
         self.primary_push_button.toggled.connect(self.on_primary_push_button_clicked)
         self.alternate_push_button.toggled.connect(self.on_alternate_push_button_clicked)
-        self.tree_widget.currentItemChanged.connect(self.on_current_item_changed)
-        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
-        self.clear_primary_button.clicked.connect(self.on_clear_primary_button_clicked)
-        self.clear_alternate_button.clicked.connect(self.on_clear_alternate_button_clicked)
-        self.button_box.clicked.connect(self.on_restore_defaults_clicked)
-        self.default_radio_button.clicked.connect(self.on_default_radio_button_clicked)
-        self.custom_radio_button.clicked.connect(self.on_custom_radio_button_clicked)
+        self.shortcut_grid.currentItemChanged.connect(self.on_current_item_changed)
+        self.shortcut_grid.itemDoubleClicked.connect(lambda item: self.on_item_double_clicked(item, item.column()))
+        self.search_edit.textChanged.connect(self._filter_shortcuts)
+        self.clear_primary_button.clicked.connect(lambda: self._clear_shortcut(0))
+        self.clear_alternate_button.clicked.connect(lambda: self._clear_shortcut(1))
+        self.restore_action.triggered.connect(self.on_restore_action_clicked)
+        self.restore_all_action.triggered.connect(self.on_restore_defaults_clicked)
+        self.on_current_item_changed()
+
+    def exec(self):
+        self.changed_actions = {}
+        self.search_edit.clear()
+        self.reload_shortcut_list()
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
+        loop = QtCore.QEventLoop(self)
+        self._event_loop = loop
+        try:
+            self.ensurePolished()
+            self.layout().activate()
+            self.resize(1100, 760)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            loop.exec()
+        finally:
+            self._event_loop = None
+            loop.deleteLater()
+        return self._result
+
+    def result(self):
+        return self._result
+
+    def done(self, result):
+        self._result = result
+        self._stop_capture()
+        self.hide()
+        if self._event_loop is not None:
+            self._event_loop.quit()
+        if result == QtWidgets.QDialog.DialogCode.Accepted:
+            self.accepted.emit()
+        else:
+            self.rejected.emit()
+        self.finished.emit(result)
+
+    def accept(self):
+        self.done(QtWidgets.QDialog.DialogCode.Accepted)
+
+    def reject(self):
+        self.changed_actions = {}
+        self.done(QtWidgets.QDialog.DialogCode.Rejected)
+
+    def closeEvent(self, event):
+        self.reject()
+        event.accept()
+
+    def _is_capturing(self):
+        return self.primary_push_button.isChecked() or self.alternate_push_button.isChecked()
+
+    def event(self, event):
+        # Reserve application shortcuts such as Ctrl+S while recording their keys.
+        if (event.type() == QtCore.QEvent.Type.ShortcutOverride and hasattr(self, 'primary_push_button')
+                and self._is_capturing()):
+            event.accept()
+            return True
+        return super().event(event)
 
     def keyPressEvent(self, event):
-        """
-        Respond to certain key presses
-        """
-        if event.key() == QtCore.Qt.Key.Key_Space:
-            self.keyReleaseEvent(event)
-        elif self.primary_push_button.isChecked() or self.alternate_push_button.isChecked():
-            self.keyReleaseEvent(event)
+        if event.key() == QtCore.Qt.Key.Key_Space or self._is_capturing():
+            self._capture_key(event)
         elif event.key() == QtCore.Qt.Key.Key_Escape:
             event.accept()
             self.close()
+        else:
+            super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
-        """
-        Respond to certain key presses
-        """
-        if not self.primary_push_button.isChecked() and not self.alternate_push_button.isChecked():
-            return
-        # Do not continue, as the event is for the dialog (close it).
-        if self.dialog_was_shown and event.key() in (QtCore.Qt.Key.Key_Escape, QtCore.Qt.Key.Key_Enter,
-                                                     QtCore.Qt.Key.Key_Return):
-            self.dialog_was_shown = False
-            return
-        key = event.key()
-        if key in (QtCore.Qt.Key.Key_Shift, QtCore.Qt.Key.Key_Control, QtCore.Qt.Key.Key_Meta, QtCore.Qt.Key.Key_Alt):
-            return
-        key_string = QtGui.QKeySequence(key).toString()
-        if event.modifiers() & QtCore.Qt.KeyboardModifier.ControlModifier == QtCore.Qt.KeyboardModifier.ControlModifier:
-            key_string = 'Ctrl+' + key_string
-        if event.modifiers() & QtCore.Qt.KeyboardModifier.AltModifier == QtCore.Qt.KeyboardModifier.AltModifier:
-            key_string = 'Alt+' + key_string
-        if event.modifiers() & QtCore.Qt.KeyboardModifier.ShiftModifier == QtCore.Qt.KeyboardModifier.ShiftModifier:
-            key_string = 'Shift+' + key_string
-        if event.modifiers() & QtCore.Qt.KeyboardModifier.MetaModifier == QtCore.Qt.KeyboardModifier.MetaModifier:
-            key_string = 'Meta+' + key_string
-        key_sequence = QtGui.QKeySequence(key_string)
-        if not key_sequence:
-            return
-        changing = self._current_item_action()
-        if changing is None:
-            return
-        if self._validiate_shortcut(changing, key_sequence):
-            if self.primary_push_button.isChecked():
-                self._adjust_button(self.primary_push_button, False,
-                                    text=self.get_shortcut_string(key_sequence, for_display=True))
-            elif self.alternate_push_button.isChecked():
-                self._adjust_button(self.alternate_push_button, False,
-                                    text=self.get_shortcut_string(key_sequence, for_display=True))
+        if self._is_capturing():
+            event.accept()
+        else:
+            super().keyReleaseEvent(event)
 
-    def exec(self):
-        """
-        Execute the dialog
-        """
-        self.changed_actions = {}
-        self._prune_stale_changed_actions()
-        self.reload_shortcut_list()
-        self._adjust_button(self.primary_push_button, False, False, '')
-        self._adjust_button(self.alternate_push_button, False, False, '')
-        return QtWidgets.QDialog.exec(self)
+    def _capture_key(self, event):
+        if not self._is_capturing():
+            return
+        event.accept()
+        if event.isAutoRepeat():
+            return
+        if event.key() in (QtCore.Qt.Key.Key_Shift, QtCore.Qt.Key.Key_Control,
+                           QtCore.Qt.Key.Key_Meta, QtCore.Qt.Key.Key_Alt):
+            return
+        action = self._current_item_action()
+        if action is None:
+            return
+        key_sequence = QtGui.QKeySequence(event.keyCombination())
+        if not self._validiate_shortcut(action, key_sequence):
+            return
+        shortcuts = self._action_shortcuts(action)
+        if self.primary_push_button.isChecked():
+            new_shortcuts = [key_sequence] + shortcuts[1:2]
+        else:
+            new_shortcuts = shortcuts[:1] + [key_sequence]
+        self.changed_actions[action] = new_shortcuts
+        self._stop_capture()
+        self.refresh_shortcut_list()
+        event.accept()
+
+    def _stop_capture(self):
+        for button in (self.primary_push_button, self.alternate_push_button):
+            blocked = button.blockSignals(True)
+            button.setChecked(False)
+            button.blockSignals(blocked)
+
+    def _toggle_capture(self, button, other, toggled):
+        if toggled:
+            blocked = other.blockSignals(True)
+            other.setChecked(False)
+            other.blockSignals(blocked)
+            self.on_current_item_changed()
+            button.setFocus()
+        else:
+            self.on_current_item_changed()
+
+    def on_primary_push_button_clicked(self, toggled):
+        self._toggle_capture(self.primary_push_button, self.alternate_push_button, toggled)
+
+    def on_alternate_push_button_clicked(self, toggled):
+        self._toggle_capture(self.alternate_push_button, self.primary_push_button, toggled)
+
+    def on_item_double_clicked(self, item, column):
+        if self._current_item_action(item) is not None:
+            button = self.alternate_push_button if column == 2 else self.primary_push_button
+            button.setChecked(True)
+            button.setFocus()
 
     def reload_shortcut_list(self):
-        """
-        Reload the ``tree_widget`` list to add new and remove old actions.
-        """
-        self.tree_widget.clear()
+        self._stop_capture()
+        self.shortcut_grid.setRowCount(0)
         for category in self.action_list.categories:
-            # Check if the category is for internal use only.
             if category.name is None:
                 continue
-            item = QtWidgets.QTreeWidgetItem([category.name])
             for action in category.actions:
                 if not _qobject_is_alive(action):
-                    log.debug('Skipping destroyed QAction in shortcut list (category %r)', category.name)
                     continue
+                row = self.shortcut_grid.rowCount()
+                self.shortcut_grid.insertRow(row)
                 action_text = REMOVE_AMPERSAND.sub('', action.text())
-                action_item = QtWidgets.QTreeWidgetItem([action_text])
-                action_item.setIcon(0, action.icon())
-                action_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, action)
-                tool_tip_text = action.toolTip()
-                # Only display tool tips if they are helpful.
-                if tool_tip_text != action_text:
-                    # Display the tool tip in all three colums.
-                    action_item.setToolTip(0, tool_tip_text)
-                    action_item.setToolTip(1, tool_tip_text)
-                    action_item.setToolTip(2, tool_tip_text)
-                item.addChild(action_item)
-            self.tree_widget.addTopLevelItem(item)
-            item.setExpanded(True)
+                for column, text in enumerate((action_text, '', '', category.name)):
+                    self.shortcut_grid.setItem(row, column, QtWidgets.QTableWidgetItem(text))
+                item = self.shortcut_grid.item(row, 0)
+                item.setIcon(action.icon())
+                item.setData(QtCore.Qt.ItemDataRole.UserRole, action)
+                if action.toolTip() != action_text:
+                    for column in range(4):
+                        self.shortcut_grid.item(row, column).setToolTip(action.toolTip())
+        self.shortcut_grid.resizeRowsToContents()
         self.refresh_shortcut_list()
 
     def refresh_shortcut_list(self):
-        """
-        This refreshes the item's shortcuts shown in the list. Note, this neither adds new actions nor removes old
-        actions.
-        """
-        iterator = QtWidgets.QTreeWidgetItemIterator(self.tree_widget)
-        while iterator.value():
-            item = iterator.value()
-            iterator += 1
-            action = self._current_item_action(item)
+        for row in range(self.shortcut_grid.rowCount()):
+            action = self._current_item_action(self.shortcut_grid.item(row, 0))
             if action is None:
                 continue
             shortcuts = self._action_shortcuts(action)
-            if not shortcuts:
-                item.setText(1, '')
-                item.setText(2, '')
-            elif len(shortcuts) == 1:
-                item.setText(1, self.get_shortcut_string(shortcuts[0], for_display=True))
-                item.setText(2, '')
-            else:
-                item.setText(1, self.get_shortcut_string(shortcuts[0], for_display=True))
-                item.setText(2, self.get_shortcut_string(shortcuts[1], for_display=True))
+            for index in range(2):
+                self.shortcut_grid.item(row, index + 1).setText(
+                    self.get_shortcut_string(shortcuts[index], for_display=True) if index < len(shortcuts) else '')
+        self._filter_shortcuts()
+
+    def _filter_shortcuts(self):
+        query = self.search_edit.text().strip().casefold()
+        first_match = None
+        for row in range(self.shortcut_grid.rowCount()):
+            action = self._current_item_action(self.shortcut_grid.item(row, 0))
+            texts = [self.shortcut_grid.item(row, column).text() for column in range(4)]
+            texts.extend(self.get_shortcut_string(sequence) for sequence in self._action_shortcuts(action))
+            matches = any(query in text.casefold() for text in texts)
+            self.shortcut_grid.setRowHidden(row, not matches)
+            if matches and first_match is None:
+                first_match = row
+        current = self.shortcut_grid.currentRow()
+        if current < 0 or self.shortcut_grid.isRowHidden(current):
+            self._stop_capture()
+            self.shortcut_grid.clearSelection()
+            self.shortcut_grid.setCurrentIndex(QtCore.QModelIndex())
+            if first_match is not None:
+                self.shortcut_grid.selectRow(first_match)
         self.on_current_item_changed()
 
-    def on_primary_push_button_clicked(self, toggled):
-        """
-        Save the new primary shortcut.
-        """
-        self.custom_radio_button.setChecked(True)
-        if toggled:
-            self.alternate_push_button.setChecked(False)
-            self.primary_push_button.setText('')
-            return
-        action = self._current_item_action()
-        if action is None:
-            return
-        shortcuts = self._action_shortcuts(action)
-        new_shortcuts = [QtGui.QKeySequence(self.primary_push_button.text())]
-        if len(shortcuts) == 2:
-            new_shortcuts.append(shortcuts[1])
-        self.changed_actions[action] = new_shortcuts
-        self.refresh_shortcut_list()
-
-    def on_alternate_push_button_clicked(self, toggled):
-        """
-        Save the new alternate shortcut.
-        """
-        self.custom_radio_button.setChecked(True)
-        if toggled:
-            self.primary_push_button.setChecked(False)
-            self.alternate_push_button.setText('')
-            return
-        action = self._current_item_action()
-        if action is None:
-            return
-        shortcuts = self._action_shortcuts(action)
-        new_shortcuts = []
-        if shortcuts:
-            new_shortcuts.append(shortcuts[0])
-        new_shortcuts.append(QtGui.QKeySequence(self.alternate_push_button.text()))
-        self.changed_actions[action] = new_shortcuts
-        if not self.primary_push_button.text():
-            # When we do not have a primary shortcut, the just entered alternate shortcut will automatically become the
-            # primary shortcut. That is why we have to adjust the primary button's text.
-            self.primary_push_button.setText(self.alternate_push_button.text())
-            self.alternate_push_button.setText('')
-        self.refresh_shortcut_list()
-
-    def on_item_double_clicked(self, item, column):
-        """
-        A item has been double clicked. The ``primaryPushButton`` will be checked and the item's shortcut will be
-        displayed.
-        """
-        action = self._current_item_action(item)
-        if action is None:
-            return
-        self.primary_push_button.setChecked(column in [0, 1])
-        self.alternate_push_button.setChecked(column not in [0, 1])
-        if column in [0, 1]:
-            self.primary_push_button.setText('')
-            self.primary_push_button.setFocus()
-        else:
-            self.alternate_push_button.setText('')
-            self.alternate_push_button.setFocus()
-
     def on_current_item_changed(self, item=None, previousItem=None):
-        """
-        A item has been pressed. We adjust the button's text to the action's shortcut which is encapsulate in the item.
-        """
+        if item is not None:
+            self._stop_capture()
         action = self._current_item_action(item)
+        if action is None:
+            self._stop_capture()
+        self.editor_controls.setVisible(action is not None)
+        self.restore_action.setEnabled(action is not None)
         self.primary_push_button.setEnabled(action is not None)
         self.alternate_push_button.setEnabled(action is not None)
-        primary_text = ''
-        alternate_text = ''
-        primary_label_text = ''
-        alternate_label_text = ''
-        if action is None:
-            self.primary_push_button.setChecked(False)
-            self.alternate_push_button.setChecked(False)
-        else:
-            if action.default_shortcuts:
-                primary_label_text = self.get_shortcut_string(action.default_shortcuts[0], for_display=True)
-                if len(action.default_shortcuts) == 2:
-                    alternate_label_text = self.get_shortcut_string(action.default_shortcuts[1], for_display=True)
-            shortcuts = self._action_shortcuts(action)
-            # We do not want to loose pending changes, that is why we have to keep the text when, this function has not
-            # been triggered by a signal.
-            if item is None:
-                primary_text = self.primary_push_button.text()
-                alternate_text = self.alternate_push_button.text()
-            elif len(shortcuts) == 1:
-                primary_text = self.get_shortcut_string(shortcuts[0], for_display=True)
-            elif len(shortcuts) == 2:
-                primary_text = self.get_shortcut_string(shortcuts[0], for_display=True)
-                alternate_text = self.get_shortcut_string(shortcuts[1], for_display=True)
-        # When we are capturing a new shortcut, we do not want, the buttons to display the current shortcut.
-        if self.primary_push_button.isChecked():
-            primary_text = ''
-        if self.alternate_push_button.isChecked():
-            alternate_text = ''
-        self.primary_push_button.setText(primary_text)
-        self.alternate_push_button.setText(alternate_text)
-        self.primary_label.setText(primary_label_text)
-        self.alternate_label.setText(alternate_label_text)
-        # We do not want to toggle and radio button, as the function has not been triggered by a signal.
-        if item is None:
-            return
-        if primary_label_text == primary_text and alternate_label_text == alternate_text:
-            self.default_radio_button.toggle()
-        else:
-            self.custom_radio_button.toggle()
+        self.action_label.setText(REMOVE_AMPERSAND.sub('', action.text()) if action is not None
+                                  else translate('OpenLP.ShortcutListDialog', 'No action selected'))
+        shortcuts = self._action_shortcuts(action)
+        for index, (button, clear) in enumerate(((self.primary_push_button, self.clear_primary_button),
+                                                (self.alternate_push_button, self.clear_alternate_button))):
+            button.setText(self.get_shortcut_string(shortcuts[index], for_display=True)
+                           if index < len(shortcuts) else '')
+            clear.setEnabled(index < len(shortcuts))
 
-    def on_restore_defaults_clicked(self, button):
-        """
-        Restores all default shortcuts.
-        """
-        if self.button_box.buttonRole(button) != QtWidgets.QDialogButtonBox.ButtonRole.ResetRole:
+    def _clear_shortcut(self, index):
+        action = self._current_item_action()
+        if action is None:
             return
-        if QtWidgets.QMessageBox.question(self, translate('OpenLP.ShortcutListDialog', 'Restore Default Shortcuts'),
-                                          translate('OpenLP.ShortcutListDialog', 'Do you want to restore all '
-                                                    'shortcuts to their defaults?')
-                                          ) == QtWidgets.QMessageBox.StandardButton.No:
+        self._stop_capture()
+        shortcuts = self._action_shortcuts(action)
+        self.changed_actions[action] = shortcuts[:index] + shortcuts[index + 1:]
+        self.refresh_shortcut_list()
+
+    def on_restore_action_clicked(self):
+        action = self._current_item_action()
+        if action is None:
             return
-        self._adjust_button(self.primary_push_button, False, text='')
-        self._adjust_button(self.alternate_push_button, False, text='')
+        self._stop_capture()
+        # Check defaults against pending edits of other actions before restoring.
+        previous = self.changed_actions.get(action)
+        self.changed_actions[action] = []
+        if all(self._validiate_shortcut(action, sequence) for sequence in action.default_shortcuts):
+            self.changed_actions[action] = list(action.default_shortcuts)
+        elif previous is None:
+            del self.changed_actions[action]
+        else:
+            self.changed_actions[action] = previous
+        self.refresh_shortcut_list()
+
+    def on_restore_defaults_clicked(self):
+        if QtWidgets.QMessageBox.question(
+                self, translate('OpenLP.ShortcutListDialog', 'Restore all defaults'),
+                translate('OpenLP.ShortcutListDialog', 'Restore all shortcuts to their defaults?')) != \
+                QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        self._stop_capture()
         for category in self.action_list.categories:
+            if category.name is None:
+                continue
             for action in category.actions:
-                if not _qobject_is_alive(action):
-                    continue
-                self.changed_actions[action] = action.default_shortcuts
+                if _qobject_is_alive(action):
+                    self.changed_actions[action] = list(action.default_shortcuts)
         self.refresh_shortcut_list()
-
-    def on_default_radio_button_clicked(self, toggled):
-        """
-        The default radio button has been clicked, which means we have to make sure, that we use the default shortcuts
-        for the action.
-        """
-        if not toggled:
-            return
-        action = self._current_item_action()
-        if action is None:
-            return
-        temp_shortcuts = self._action_shortcuts(action)
-        self.changed_actions[action] = action.default_shortcuts
-        self.refresh_shortcut_list()
-        primary_button_text = ''
-        alternate_button_text = ''
-        if temp_shortcuts:
-            primary_button_text = self.get_shortcut_string(temp_shortcuts[0], for_display=True)
-        if len(temp_shortcuts) == 2:
-            alternate_button_text = self.get_shortcut_string(temp_shortcuts[1], for_display=True)
-        self.primary_push_button.setText(primary_button_text)
-        self.alternate_push_button.setText(alternate_button_text)
-
-    def on_custom_radio_button_clicked(self, toggled):
-        """
-        The custom shortcut radio button was clicked, thus we have to restore the custom shortcuts by calling those
-        functions triggered by button clicks.
-        """
-        if not toggled:
-            return
-        action = self._current_item_action()
-        if action is None:
-            QtWidgets.QMessageBox.information(self, translate('OpenLP.ShortcutListForm', 'Select an Action'),
-                                              translate('OpenLP.ShortcutListForm', 'Select an action and click one '
-                                                        'of the buttons below to start '
-                                                        'capturing a new primary or alternate shortcut, respectively.'))
-
-        else:
-            shortcuts = self._action_shortcuts(action)
-            self.refresh_shortcut_list()
-            primary_button_text = ''
-            alternate_button_text = ''
-            if shortcuts:
-                primary_button_text = self.get_shortcut_string(shortcuts[0], for_display=True)
-            if len(shortcuts) == 2:
-                alternate_button_text = self.get_shortcut_string(shortcuts[1], for_display=True)
-            self.primary_push_button.setText(primary_button_text)
-            self.alternate_push_button.setText(alternate_button_text)
 
     def save(self):
         """
@@ -394,53 +342,6 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
                     self.settings.setValue('shortcuts/' + action.objectName(), action.shortcuts())
                 except RuntimeError:
                     log.warning('Could not save shortcuts for a QAction that was destroyed.')
-
-    def on_clear_primary_button_clicked(self, toggled):
-        """
-        Restore the defaults of this action.
-        """
-        self.primary_push_button.setChecked(False)
-        action = self._current_item_action()
-        if action is None:
-            return
-        shortcuts = self._action_shortcuts(action)
-        new_shortcuts = []
-        if action.default_shortcuts:
-            new_shortcuts.append(action.default_shortcuts[0])
-            # We have to check if the primary default shortcut is available. But  we only have to check, if the action
-            # has a default primary shortcut (an "empty" shortcut is always valid and if the action does not have a
-            # default primary shortcut, then the alternative shortcut (not the default one) will become primary
-            # shortcut, thus the check will assume that an action were going to have the same shortcut twice.
-            prev_primary = shortcuts[0] if len(shortcuts) > 0 else None
-            if not self._validiate_shortcut(action, new_shortcuts[0]):
-                if prev_primary is None or new_shortcuts[0] != prev_primary:
-                    return
-        if len(shortcuts) == 2:
-            new_shortcuts.append(shortcuts[1])
-        self.changed_actions[action] = new_shortcuts
-        self.refresh_shortcut_list()
-        self.on_current_item_changed(self.tree_widget.currentItem())
-
-    def on_clear_alternate_button_clicked(self, toggled):
-        """
-        Restore the defaults of this action.
-        """
-        self.alternate_push_button.setChecked(False)
-        action = self._current_item_action()
-        if action is None:
-            return
-        shortcuts = self._action_shortcuts(action)
-        new_shortcuts = []
-        if shortcuts:
-            new_shortcuts.append(shortcuts[0])
-        if len(action.default_shortcuts) == 2:
-            new_shortcuts.append(action.default_shortcuts[1])
-        if len(new_shortcuts) == 2:
-            if not self._validiate_shortcut(action, new_shortcuts[1]):
-                return
-        self.changed_actions[action] = new_shortcuts
-        self.refresh_shortcut_list()
-        self.on_current_item_changed(self.tree_widget.currentItem())
 
     def _validiate_shortcut(self, changing_action, key_sequence):
         """
@@ -486,16 +387,14 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
                                       QtCore.Qt.ShortcutContext.ApplicationShortcut]:
                     is_valid = False
                 if changing_context in [QtCore.Qt.ShortcutContext.WindowShortcut,
-                                          QtCore.Qt.ShortcutContext.ApplicationShortcut]:
+                                        QtCore.Qt.ShortcutContext.ApplicationShortcut]:
                     is_valid = False
         if not is_valid:
             text = translate('OpenLP.ShortcutListDialog',
                              'The shortcut "{key}" is already assigned to another action. '
                              'Please use a different shortcut.'
                              ).format(key=self.get_shortcut_string(key_sequence))
-            self.main_window.warning_message(translate('OpenLP.ShortcutListDialog', 'Duplicate Shortcut'),
-                                             text)
-            self.dialog_was_shown = True
+            QtWidgets.QMessageBox.warning(self, translate('OpenLP.ShortcutListDialog', 'Duplicate shortcut'), text)
         return is_valid
 
     def _action_shortcuts(self, action):
@@ -521,17 +420,18 @@ class ShortcutListForm(QtWidgets.QDialog, Ui_ShortcutListDialog, RegistryPropert
     def _current_item_action(self, item=None):
         """
         Returns the action of the given ``item``. If no item is given, we return the action of the current item of
-        the ``tree_widget``.
+        the shortcut grid.
         """
         if item is None:
-            item = self.tree_widget.currentItem()
+            item = self.shortcut_grid.currentItem()
             if item is None:
                 return None
-        action = item.data(0, QtCore.Qt.ItemDataRole.UserRole)
+        item = self.shortcut_grid.item(item.row(), 0)
+        action = item.data(QtCore.Qt.ItemDataRole.UserRole)
         if action is None:
             return None
         if not _qobject_is_alive(action):
-            item.setData(0, QtCore.Qt.ItemDataRole.UserRole, None)
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, None)
             return None
         return action
 

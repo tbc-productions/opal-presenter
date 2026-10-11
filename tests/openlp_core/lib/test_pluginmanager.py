@@ -74,6 +74,25 @@ def test_bootstrap_initialise(mocked_subclasses, settings, state):
     mocked_initialise_plugins.assert_called_with()
 
 
+def test_bootstrap_initialise_progress_counts_processed_plugins(registry, settings):
+    """Plugin loading advances its startup share, including handled constructor failures."""
+    manager = PluginManager()
+    failed = MagicMock(side_effect=TypeError('Cannot construct plugin'))
+    loaded = MagicMock()
+    loaded.return_value.name_strings = {'plural': 'Songs'}
+    updates = []
+    registry.register_function('startup_progress', lambda *args, **kwargs: updates.append((args, kwargs)))
+
+    with patch('openlp.core.lib.pluginmanager.extension_loader'), \
+            patch('openlp.core.lib.pluginmanager.Plugin.__subclasses__', return_value=[failed, loaded]):
+        manager.bootstrap_initialise()
+
+    assert updates == [
+        (('Loading plugins', 1, 2), {'progress_range': (25, 55)}),
+        (('Loading Songs', 2, 2), {'progress_range': (25, 55)})
+    ]
+
+
 def test_hook_media_manager_with_disabled_plugin(registry, state):
     """
     Test running the hook_media_manager() method with a disabled plugin
@@ -539,3 +558,49 @@ def test_new_service_created_with_active_plugin(registry, state):
     # THEN: The is_active() and finalise() methods should have been called
     mocked_plugin.is_active.assert_called_with()
     mocked_plugin.new_service_created.assert_called_with()
+
+
+@pytest.mark.parametrize('fails', [False, True])
+def test_initialise_plugins_progress_counts_processed_active_plugins(registry, fails):
+    """Inactive plugins are excluded; handled failures still complete a processing item."""
+    manager = PluginManager()
+    first = MagicMock(name='first')
+    first.name = 'first'
+    first.name_strings = {'plural': 'First plugin'}
+    second = MagicMock(name='second')
+    second.name = 'second'
+    second.name_strings = {'plural': 'Second plugin'}
+    inactive = MagicMock()
+    inactive.is_active.return_value = False
+    updates = []
+    def report(*args, **kwargs):
+        assert kwargs == ({'progress_range': (55, 75)} if len(args) > 1 else {})
+        updates.append(args)
+
+    registry.register_function('startup_progress', report)
+
+    def initialise_first():
+        assert updates == [('Initialising First plugin', 0, 2)]
+        if fails:
+            raise RuntimeError('Plugin failed')
+
+    first.initialise.side_effect = initialise_first
+
+    def initialise_second():
+        assert updates[-1] == ('Initialising Second plugin', 1, 2)
+
+    second.initialise.side_effect = initialise_second
+    with patch('openlp.core.lib.pluginmanager.State') as state_class:
+        state_class.return_value.list_plugins.return_value = [first, inactive, None, second]
+        state_class.return_value.get_text.return_value = ''
+        manager.initialise_plugins()
+
+    inactive.initialise.assert_not_called()
+    second.initialise.assert_called_once_with()
+    assert updates == [
+        ('Initialising First plugin', 0, 2),
+        ('Initialising First plugin', 1, 2),
+        ('Initialising Second plugin', 1, 2),
+        ('Initialising Second plugin', 2, 2),
+        ('Loading library and themes',)
+    ]

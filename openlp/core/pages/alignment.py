@@ -21,7 +21,7 @@
 """
 The :mod:`~openlp.core.pages.alignment` module contains the alignment page used in the theme wizard
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.theme import HorizontalType, VerticalType, TransitionType, TransitionSpeed, TransitionDirection
@@ -127,11 +127,11 @@ class AlignmentTransitionsPage(GridLayoutPage):
         self.transition_speed_combo_box.setItemText(TransitionSpeed.Slow, translate('OpenLP.ThemeWizard', 'Slow'))
         self.transition_direction_label.setText(translate('OpenLP.ThemeWizard', 'Direction:'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Horizontal,
-                                translate('OpenLP.ThemeWizard', 'Horizontal'))
+                                                        translate('OpenLP.ThemeWizard', 'Horizontal'))
         self.transition_direction_combo_box.setItemText(TransitionDirection.Vertical,
-                                translate('OpenLP.ThemeWizard', 'Vertical'))
+                                                        translate('OpenLP.ThemeWizard', 'Vertical'))
         self.transition_reverse_check_box.setText(
-            translate('OpenLP.ThemeWizard', 'Right-to-left language support'))
+            translate('OpenLP.ThemeWizard', 'Reverse transition direction'))
 
     def _on_transition_enabled_changed(self, value):
         """
@@ -149,7 +149,8 @@ class AlignmentTransitionsPage(GridLayoutPage):
         """
         Hide the direction controls for effects where direction has no meaning.
         """
-        show_direction = self.transition_effect_combo_box.currentIndex() not in (TransitionType.Fade, TransitionType.Zoom)
+        show_direction = self.transition_effect_combo_box.currentIndex() not in (
+            TransitionType.Fade, TransitionType.Zoom)
         self.transition_direction_label.setVisible(show_direction)
         self.transition_direction_combo_box.setVisible(show_direction)
 
@@ -313,7 +314,7 @@ class AlignmentPage(GridLayoutPage):
         self.main_alignment_group_box.setTitle(translate('OpenLP.ThemeWizard', '&Main Area'))
         self.footer_alignment_group_box.setTitle(translate('OpenLP.ThemeWizard', '&Footer Area'))
         self.transition_reverse_check_box.setText(
-            translate('OpenLP.ThemeWizard', 'Right-to-left language support'))
+            translate('OpenLP.ThemeWizard', 'Reverse transition direction'))
 
     @property
     def horizontal_align(self):
@@ -455,7 +456,8 @@ class TransitionsPage(GridLayoutPage):
         """
         Hide the direction controls for effects where direction has no meaning.
         """
-        show_direction = self.transition_effect_combo_box.currentIndex() not in (TransitionType.Fade, TransitionType.Zoom)
+        show_direction = self.transition_effect_combo_box.currentIndex() not in (
+            TransitionType.Fade, TransitionType.Zoom)
         self.transition_direction_label.setVisible(show_direction)
         self.transition_direction_combo_box.setVisible(show_direction)
 

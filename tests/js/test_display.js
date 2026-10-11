@@ -1,3 +1,16 @@
+// Reveal 4+ exposes the full API on a deck instance. Unit tests spy on
+// these methods without starting a real deck; rendering tests use iframes.
+Object.assign(Reveal, new Reveal(document.createElement("div")));
+
+beforeEach(function () {
+  spyOn(Reveal, "sync");
+  spyOn(Reveal, "slide");
+  Display._itemTransitionType = 'balanced';
+  spyOn(Reveal, "initialize");
+  spyOn(Reveal, "configure");
+  spyOn(Reveal, "addEventListener");
+});
+
 function _createDiv(attrs, inElement) {
     var div = document.createElement("div");
     for (key in attrs) {
@@ -163,6 +176,7 @@ describe("The Display object", function () {
       transition: "none",
       backgroundTransition: "none",
       viewDistance: 9999,
+      scrollActivationWidth: null,
       width: "100%",
       height: "100%"
     });
@@ -173,16 +187,12 @@ describe("The Display object", function () {
   });
 
   it("should initialise Reveal when init is called", function () {
-    spyOn(Reveal, "initialize");
-    spyOn(Reveal, "addEventListener");
     document.body.innerHTML = "";
     Display.init();
     expect(Reveal.initialize).toHaveBeenCalled();
   });
 
   it("should not initialise Reveal twice on repeated init for same display DOM", function () {
-    spyOn(Reveal, "initialize");
-    spyOn(Reveal, "addEventListener");
     document.body.innerHTML = "";
     _createDiv({"class": "slides"});
     _createDiv({"class": "footer"});
@@ -197,8 +207,6 @@ describe("The Display object", function () {
   });
 
   it("should have checkerboard class when init is called when not display", function () {
-    spyOn(Reveal, "initialize");
-    spyOn(Reveal, "addEventListener");
     document.body.innerHTML = "";
     document.body.classList = "";
     Display.init({isDisplay: false});
@@ -206,11 +214,16 @@ describe("The Display object", function () {
   });
 
   it("should not have checkerboard class when init is called when is a display", function () {
-    spyOn(Reveal, "initialize");
-    spyOn(Reveal, "addEventListener");
     document.body.innerHTML = "";
     document.body.classList = "";
     Display.init({isDisplay: true});
+    expect(document.body.classList.contains('checkerboard')).toEqual(false);
+  });
+
+  it("keeps controller monitors opaque when transparency indication is disabled", function () {
+    document.body.innerHTML = "";
+    document.body.classList = "checkerboard";
+    Display.init({isDisplay: false, showTransparency: false});
     expect(document.body.classList.contains('checkerboard')).toEqual(false);
   });
 
@@ -219,8 +232,6 @@ describe("The Display object", function () {
   });
 
   it("should sync Reveal and set to first slide when reinit is called", function () {
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
     Display.reinit();
     expect(Reveal.sync).toHaveBeenCalled();
     expect(Reveal.slide).toHaveBeenCalledWith(0);
@@ -231,15 +242,12 @@ describe("The Display object", function () {
   });
 
   it("should register _onSlideChanged event for slide change", function () {
-    spyOn(Reveal, "initialize");
-    spyOn(Reveal, "addEventListener");
     document.body.innerHTML = "";
     Display.init();
     expect(Reveal.addEventListener).toHaveBeenCalledWith('slidechanged', Display._onSlideChanged);
   });
 
   it("should disable item transitions when passed string false values", function () {
-    spyOn(Reveal, "configure");
     document.body.innerHTML = "";
     _createDiv({"class": "slides"});
     _createDiv({"class": "footer"});
@@ -287,7 +295,6 @@ describe("The Display object", function () {
   });
 
   it("should have a correct goToSlide() method", function () {
-    spyOn(Reveal, "slide");
     spyOn(Display, "_slides");
     Display._slides["v1"] = 0;
 
@@ -296,7 +303,6 @@ describe("The Display object", function () {
   });
 
   it("should navigate horizontal text slides using Reveal's horizontal axis", function () {
-    spyOn(Reveal, "slide");
     spyOn(Display, "_slides");
     Display._textSlideDirection = TransitionDirection.Horizontal;
     Display._slides["v1"] = {h: 1, v: 0};
@@ -342,15 +348,14 @@ describe("Transitions", function () {
   });
 
   it("should have a correctly functioning setItemTransition() method", function () {
-    spyOn(Reveal, "configure");
     Display.setItemTransition(true);
-    expect(Reveal.configure).toHaveBeenCalledWith({"backgroundTransition": "fade", "transitionSpeed": "default"});
+    expect(Reveal.configure).not.toHaveBeenCalled();
+    expect(document.body.classList.contains("transition")).toBe(true);
   });
 
   it("should apply custom transition speed when setItemTransition() is called", function () {
-    spyOn(Reveal, "configure");
     Display.setItemTransition(true, 2.0);
-    expect(Reveal.configure).toHaveBeenCalledWith({"backgroundTransition": "fade", "transitionSpeed": "slow"});
+    expect(Reveal.configure).not.toHaveBeenCalled();
     expect(document.body.style.getPropertyValue('--item-transition-ms')).toEqual('2000ms');
     expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('cubic-bezier(0.4, 0, 0.2, 1)');
   });
@@ -369,7 +374,7 @@ describe("Transitions", function () {
 
     Display.applyTheme(Display._slidesContainer.children[0])
 
-    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("slide-horizontal");
+    expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition")).toEqual("slide");
     expect(Display._slidesContainer.children[0].children[0].getAttribute("data-transition-speed")).toEqual("fast");
   });
 
@@ -452,7 +457,6 @@ describe("Transitions", function () {
 
   it("should configure Reveal rtl for reversed horizontal theme transitions", function () {
     Display._doTransitions = true;
-    spyOn(Reveal, "configure");
     var theme = {
       "display_slide_transition": true,
       "display_slide_transition_type": TransitionType.Slide,
@@ -467,7 +471,7 @@ describe("Transitions", function () {
 
     Display.applyTheme(Display._slidesContainer.children[0], true)
 
-    expect(Reveal.configure).toHaveBeenCalledWith({"transition": "slide", "transitionSpeed": "fast", "rtl": true});
+    expect(Reveal.configure).toHaveBeenCalledWith({"transition": "slide", "transitionSpeed": "fast", "rtl": true, "backgroundTransition": "fade"});
   });
 
   it("should apply background fit attributes to an image background slide", function () {
@@ -491,30 +495,25 @@ describe("Transitions", function () {
     expect(Display._slidesContainer.children[0].getAttribute("data-background-position")).toEqual("0% 0%");
   });
 
-  it("should use item transition speed for item replacement transition timing", function () {
-    spyOn(Display, "reinit");
-    spyOn(Display, "applyTheme");
-    spyOn(Display, "_removeLastSection");
-    spyOn(window, "setTimeout");
-    spyOn(Reveal, "getIndices").and.returnValue({h: 0, v: 0});
-    spyOn(Reveal, "slide");
+  it("keeps item transition timing independent from slide configuration", function (done) {
+    spyOn(window, "setTimeout").and.callFake(function (callback) { callback(); });
+    var snapshot = document.createElement('div');
+    spyOn(snapshot, "animate").and.returnValue({cancel: function () {}});
+    Display._pendingItemSnapshot = snapshot;
+    Display._itemTransitionSpeedSeconds = 2;
+    Display._itemTransitionType = 'linear';
 
-    Display._doItemTransitions = true;
-    Display._itemTransitionSpeedSeconds = 2.0;
-    var slidesDiv = _createDiv({"class": "slides"});
-    slidesDiv.innerHTML = "<section><section><p></p></section></section>";
-    Display._slidesContainer = slidesDiv;
-    var newSlides = document.createElement("section");
-    newSlides.innerHTML = "<section><p></p></section>";
+    Display._playItemTransition();
 
-    Display.replaceSlides(newSlides);
-
-    expect(window.setTimeout).toHaveBeenCalledWith(Display._removeLastSection, 2100);
-    expect(newSlides.getAttribute("data-transition-speed")).toEqual("slow");
+    Promise.resolve().then(function () {
+      expect(snapshot.animate).toHaveBeenCalledWith([{opacity: 1}, {opacity: 0}],
+        {duration: 2000, easing: 'linear', fill: 'forwards'});
+      Display._cancelItemTransition();
+      done();
+    });
   });
 
   it("should apply selected transition type easing when setItemTransition() is called", function () {
-    spyOn(Reveal, "configure");
     Display.setItemTransition(true, 0.8, "linear");
     expect(document.body.style.getPropertyValue('--item-transition-easing')).toEqual('linear');
 
@@ -868,7 +867,7 @@ describe("Display.setTextSlide", function () {
 
     expect(Display._slides["test-slide"]).toEqual(0);
     expect($(".slides > section > section").length).toEqual(1);
-    expect($(".slides > section > section")[0].innerHTML).toEqual(_prepareText(text));
+    expect($(".slides .slide-text-content")[0].innerHTML).toEqual(_prepareText(text));
     expect(Display.reinit).toHaveBeenCalled();
   });
 
@@ -979,8 +978,6 @@ describe("Display.setTextSlides", function () {
   it("should add a list of slides", function () {
     var slides = textSlides;
     spyOn(Display, "clearSlides");
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTextSlides(slides);
 
@@ -991,6 +988,20 @@ describe("Display.setTextSlides", function () {
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
   });
 
+  it("should render numeric theme weights for main text and footer", function () {
+    Display.setTheme({font_main_weight: 500, font_footer_weight: 800, font_main_bold: true});
+    Display.setTextSlides([textSlides[0]]);
+    expect(document.querySelector('.slide-text-content').style.fontWeight).toEqual('500');
+    expect(document.querySelector('.footer').style.fontWeight).toEqual('800');
+  });
+
+  it("should preserve bold settings for legacy themes without weights", function () {
+    Display.setTheme({font_main_weight: 0, font_main_bold: true, font_footer_bold: false});
+    Display.setTextSlides([textSlides[0]]);
+    expect(document.querySelector('.slide-text-content').style.fontWeight).toEqual('bold');
+    expect(document.querySelector('.footer').style.fontWeight).toEqual('normal');
+  });
+
   it("should correctly set outline width", function () {
     const slides = [textSlides[0]];
     const theme = {
@@ -999,13 +1010,11 @@ describe("Display.setTextSlides", function () {
       'font_main_outline_size': 42,
       'font_main_outline_color': 'red'
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const mainSection = document.querySelector('.slides section.text-slide');
+    const mainSection = document.querySelector('.slides .slide-text-content');
     expect(mainSection.style['text-shadow']).toEqual(_buildTextOutline(42, 'red').join(', '));
   })
 
@@ -1019,13 +1028,11 @@ describe("Display.setTextSlides", function () {
       'display_horizontal_align_footer': 2,
       'display_vertical_align_footer': 0
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const mainSection = document.querySelector('.slides section.text-slide');
+    const mainSection = document.querySelector('.slides .slide-text-content');
     expect(mainSection.style['text-align']).toEqual('justify');
     expect(mainSection.style['justify-content']).toEqual('center');
     const footerDiv = $(".footer")[0];
@@ -1041,13 +1048,11 @@ describe("Display.setTextSlides", function () {
       'font_main_shadow_color': "#000",
       'font_main_shadow_size': 5
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const mainSection = document.querySelector('.slides section.text-slide');
+    const mainSection = document.querySelector('.slides .slide-text-content');
     expect(mainSection.style['text-shadow']).not.toEqual('');
   })
 
@@ -1059,14 +1064,51 @@ describe("Display.setTextSlides", function () {
       'font_main_shadow_color': "#000",
       'font_main_shadow_size': 5
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const mainSection = document.querySelector('.slides section.text-slide');
+    const mainSection = document.querySelector('.slides .slide-text-content');
     expect(mainSection.style['text-shadow']).toEqual('');
+  })
+
+  it("should draw a single shadow when the outline is disabled", function () {
+    const slides = [textSlides[0]];
+    const theme = {
+      'font_main_shadow': true,
+      'font_main_shadow_color': "#000",
+      'font_main_shadow_size': 2,
+      'font_main_shadow_blur': 8,
+      'font_main_outline': false,
+      'font_main_outline_size': 2
+    };
+
+    Display.setTheme(theme);
+    Display.setTextSlides(slides);
+
+    const mainSection = document.querySelector('.slides .slide-text-content');
+    expect(_buildTextShadow(2, 0, "#000", 8).length).toEqual(1);
+    // CSSOM serialises a hex colour as rgb(), irrespective of the test runner.
+    expect(mainSection.style['text-shadow']).toEqual('rgb(0, 0, 0) 2pt 2pt 8pt');
+  })
+
+  it("should widen the shadow to cover the outline when the outline is enabled", function () {
+    const slides = [textSlides[0]];
+    const theme = {
+      'font_main_shadow': true,
+      'font_main_shadow_color': "#000",
+      'font_main_shadow_size': 2,
+      'font_main_outline': true,
+      'font_main_outline_color': "red",
+      'font_main_outline_size': 2
+    };
+
+    Display.setTheme(theme);
+    Display.setTextSlides(slides);
+
+    const mainSection = document.querySelector('.slides .slide-text-content');
+    expect(mainSection.style['text-shadow']).toEqual(
+      _buildTextOutline(2, 'red').concat(_buildTextShadow(2, 2, "rgb(0, 0, 0)", 0)).join(', '));
   })
 
   it("should correctly set slide size position to theme size when adding a text slide", function () {
@@ -1078,17 +1120,15 @@ describe("Display.setTextSlides", function () {
       'font_main_width': 1230,
       'font_main_height': 4560
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
 
-    const mainSection = document.querySelector('.slides section.text-slide');
-    expect(mainSection.style.getPropertyValue('--theme-main-top')).toEqual('789px');
-    expect(mainSection.style.getPropertyValue('--theme-main-left')).toEqual('1000px');
-    expect(mainSection.style.getPropertyValue('--theme-main-width')).toEqual('1230px');
-    expect(mainSection.style.getPropertyValue('--theme-main-height')).toEqual('4560px');
+    const mainSection = document.querySelector('.slides .slide-text-content');
+    expect(mainSection.style.getPropertyValue('top')).toEqual('789px');
+    expect(mainSection.style.getPropertyValue('left')).toEqual('1000px');
+    expect(mainSection.style.getPropertyValue('width')).toEqual('1230px');
+    expect(mainSection.style.getPropertyValue('height')).toEqual('4560px');
     expect(window.getComputedStyle(mainSection).top).toEqual('789px');
     expect(window.getComputedStyle(mainSection).left).toEqual('1000px');
     expect(window.getComputedStyle(mainSection).width).toEqual('1230px');
@@ -1098,8 +1138,6 @@ describe("Display.setTextSlides", function () {
   it("should work correctly with different footer contents per slide", function () {
     var slides = textSlides;
     spyOn(Display, "clearSlides");
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTextSlides(slides);
 
@@ -1127,8 +1165,6 @@ describe("Display.setTextSlides", function () {
     var theme = {
       'display_slide_transition_direction': TransitionDirection.Horizontal
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setTheme(theme);
     Display.setTextSlides(slides);
@@ -1142,6 +1178,7 @@ describe("Display.setTextSlides", function () {
 
 describe("Display.setImageSlides", function () {
   beforeEach(function() {
+    Display._theme = null;
     document.body.innerHTML = "";
     var slides_container = _createDiv({"class": "slides"});
     var footer_container = _createDiv({"class": "footer"});
@@ -1150,10 +1187,74 @@ describe("Display.setImageSlides", function () {
     Display._slides = {};
   });
 
+  ["contain", "cover", "stretch", "invalid"].forEach(function (mode) {
+    [false, true].forEach(function (fade) {
+      it("should preserve " + mode + " fit and logo colour with fade=" + fade, function () {
+        Display._theme = {background_fit: "cover", display_slide_transition: fade,
+          display_slide_transition_type: TransitionType.Fade};
+        Display.setImageSlides([{path: "file:///image.png"}], mode, "#123456");
+        var section = $(".slides > section > section")[0];
+        var resolvedMode = mode === "invalid" ? "contain" : mode;
+        if (fade) {
+          expect(section.getAttribute("data-background-size"))
+            .toEqual(resolvedMode === "stretch" ? "100% 100%" : resolvedMode);
+          expect(section.getAttribute("data-background-color")).toEqual("#123456");
+        } else {
+          expect(section.querySelector("img").style.objectFit)
+            .toEqual(resolvedMode === "stretch" ? "fill" : resolvedMode);
+          expect(section.style.backgroundColor).toEqual("rgb(18, 52, 86)");
+        }
+      });
+    });
+  });
+
+  it("should keep image fit when the theme reapplies background sizing", function () {
+    var reveal = _createDiv({"class": "reveal"});
+    reveal.appendChild(Display._slidesContainer);
+    var section = document.createElement("section");
+    section.classList.add("use-background-image");
+    Display._slidesContainer.appendChild(section);
+    var background = _createDiv({"class": "slide-background"}, reveal);
+    var content = _createDiv({"class": "slide-background-content"}, background);
+    content.style.backgroundSize = "contain";
+    content.style.backgroundRepeat = "no-repeat";
+    content.style.backgroundPosition = "50% 50%";
+    section.slideBackgroundElement = background;
+
+    _applyBackgroundFitToRenderedSlides(_resolveBackgroundFit("cover"));
+
+    expect(content.style.backgroundSize).toEqual("contain");
+    expect(content.style.backgroundPosition).toEqual("50% 50%");
+  });
+
+  [TransitionType.Slide, TransitionType.Zoom, TransitionType.Fade].forEach(function (transition) {
+    [BackgroundType.Solid, BackgroundType.Image, BackgroundType.Transparent].forEach(function (backgroundType) {
+      it("should keep the logo colour behind transitioning images with transition=" + transition +
+        " and theme background=" + backgroundType, function () {
+        Display._theme = {
+          display_slide_transition: true,
+          display_slide_transition_type: transition,
+          background_type: backgroundType,
+          background_color: "#000000",
+          background_filename: "file:///theme.jpg"
+        };
+
+        Display.setImageSlides([{path: "file:///one.png"}, {path: "file:///two.png"}], "contain", "#123456");
+        var canvas = Display._slidesContainer.firstElementChild;
+
+        expect(canvas.getAttribute("data-background")).toEqual("#123456");
+        expect(canvas.getAttribute("data-background-color")).toEqual("#123456");
+        expect(canvas.hasAttribute("data-background-image")).toBe(false);
+        Display.applyTheme(canvas, false);
+        expect(canvas.getAttribute("data-background")).toEqual("#123456");
+        expect(canvas.getAttribute("data-background-color")).toEqual("#123456");
+        expect(canvas.hasAttribute("data-background-image")).toBe(false);
+      });
+    });
+  });
+
   it("should add a list of images", function () {
     var slides = [{"path": "openlp-library://local-file//openlp1.jpg"}, {"path": "openlp-library://local-file//openlp2.jpg"}];
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setImageSlides(slides);
 
@@ -1174,8 +1275,6 @@ describe("Display.setImageSlides", function () {
       "display_slide_transition": true,
       "display_slide_transition_type": TransitionType.Fade
     };
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setImageSlides(slides);
 
@@ -1198,13 +1297,11 @@ describe("Display.setImageSlides", function () {
       "pdf_transition_speed_seconds": 0.8,
       "pdf_transition_easing": "balanced"
     }];
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setImageSlides(slides);
 
     expect($(".slides > section > section > img").length).toEqual(0);
-    expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBeTrue();
+    expect($(".slides > section > section")[0].classList.contains("use-background-image")).toBe(true);
     expect($(".slides > section > section")[0].getAttribute("data-background-image"))
       .toEqual("openlp-library://local-file//openlp1.jpg");
     expect($(".slides > section > section")[0].getAttribute("data-background-size")).toEqual("cover");
@@ -1213,7 +1310,7 @@ describe("Display.setImageSlides", function () {
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
     expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toEqual("fade");
     expect($(".slides > section > section")[0].getAttribute("data-transition-speed")).toEqual("default");
-    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeTrue();
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBe(true);
     expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-ms")).toEqual("800ms");
     expect($("body")[0].style.getPropertyValue("--presentation-slide-transition-easing")).toEqual("cubic-bezier(0.4, 0, 0.2, 1)");
     expect(Reveal.sync).toHaveBeenCalledTimes(1);
@@ -1228,21 +1325,17 @@ describe("Display.setImageSlides", function () {
       "pdf_transition_speed_seconds": 1.2,
       "pdf_transition_easing": "ease-out"
     }];
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setImageSlides(slides);
 
     expect($(".slides > section > section")[0].getAttribute("data-transition")).toEqual("none");
     expect($(".slides > section > section")[0].getAttribute("data-background-transition")).toBeNull();
-    expect($("body")[0].classList.contains("presentation-slide-transition")).toBeFalse();
+    expect($("body")[0].classList.contains("presentation-slide-transition")).toBe(false);
   });
 
   it("should keep non-fade transitions on image slide content", function () {
     var slides = [{"path": "openlp-library://local-file//openlp1.jpg"}];
     Display._theme = {"display_slide_transition_type": TransitionType.Slide};
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setImageSlides(slides);
 
@@ -1274,8 +1367,6 @@ describe("Display.setFullscreenImage", function () {
   it("should set a fullscreen image", function () {
     var image = "file:///openlp1.jpg";
     let bg_color = "#000";
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setFullscreenImage(bg_color, image);
 
@@ -1302,8 +1393,6 @@ describe("Display.setFullscreenImage", function () {
     Display._slidesContainer.appendChild(section);
     Display._slides = {'0': 0};
 
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
     spyOn(Reveal, "syncSlide");
 
     Display.setFullscreenImage(bg_color, image);
@@ -1375,8 +1464,6 @@ describe("Display.setBackgroundImage and Display.resetTheme", function () {
   });
 
   it("should set the background image data and call sync once for set slides and again for set background", function () {
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setBackgroundImage("/file/path");
 
@@ -1394,8 +1481,6 @@ describe("Display.setBackgroundImage and Display.resetTheme", function () {
       'background_filename': '/another/path'
     };
     $(".slides > section")[0].setAttribute("data-background", "/file/path");
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.resetTheme();
 
@@ -1416,8 +1501,6 @@ describe("Display.setVideo", function () {
 
   it("should add a video to the page", function () {
     var video = {"path": "file:///video.mp4"};
-    spyOn(Reveal, "sync");
-    spyOn(Reveal, "slide");
 
     Display.setVideo(video);
 

@@ -21,7 +21,7 @@
 """
 The :mod:`~openlp.core.pages.areaposition` module contains the area position page used in the theme wizard
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.pages import GridLayoutPage

@@ -26,7 +26,9 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from fluentqt import Spacing
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.mixins import RegistryProperties
@@ -34,15 +36,10 @@ from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
 from openlp.core.ui.style import use_alternate_rows
+from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
 from openlp.core.widgets.layouts import AspectRatioLayout
+from openlp.core.widgets.dnd import ItemDragData, execute_drag
 
-
-SCROLL_HINT = {
-    0: QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible,
-    1: QtWidgets.QAbstractItemView.ScrollHint.PositionAtTop,
-    2: QtWidgets.QAbstractItemView.ScrollHint.PositionAtCenter,
-    3: QtWidgets.QAbstractItemView.ScrollHint.PositionAtBottom
-}
 
 SONG_SECTION_DEFAULT_COLORS = {
     'intro': '#4ADE80',
@@ -97,7 +94,99 @@ def remove_url_prefix(filename):
     return filename.replace('file://', '')
 
 
-class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
+SLIDE_ROW_MAX_LINES = 4
+SLIDE_TEXT_HTML_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
+
+
+class _SlideBackgroundModel(QtCore.QIdentityProxyModel):
+    """Let the Fluent delegate paint row chrome without its single-line text."""
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            return ''
+        return super().data(index, role)
+
+
+class SlidePreviewDelegate(QtWidgets.QStyledItemDelegate):
+    """Paint wrapped slide text inside Fluent rows, optionally limiting its length."""
+    def __init__(self, view, max_lines=SLIDE_ROW_MAX_LINES):
+        super().__init__(view)
+        self._view = view
+        self._max_lines = max_lines
+        self._native_delegate = view.itemDelegate()
+        self._background_model = _SlideBackgroundModel(self)
+        self._background_model.setSourceModel(view.model())
+
+    def _document(self, option, index):
+        document = QtGui.QTextDocument()
+        document.setDocumentMargin(0)
+        document.setDefaultFont(option.font)
+        text_option = document.defaultTextOption()
+        text_option.setWrapMode(QtGui.QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        document.setDefaultTextOption(text_option)
+        html = index.data(SLIDE_TEXT_HTML_ROLE)
+        if html:
+            document.setHtml(html)
+        else:
+            document.setPlainText(index.data(QtCore.Qt.ItemDataRole.DisplayRole) or '')
+        document.setTextWidth(max(1, self._view.columnWidth(index.column()) - 4 * Spacing.Small))
+        # Measure the wrapped layout before trimming so the limit follows the panel width.
+        document.size()
+        if self._max_lines is None:
+            return document
+        block = document.begin()
+        line_count = 0
+        while block.isValid():
+            layout = block.layout()
+            for line_index in range(layout.lineCount()):
+                line_count += 1
+                if line_count == self._max_lines:
+                    line = layout.lineAt(line_index)
+                    end = block.position() + line.textStart() + line.textLength()
+                    if end >= document.characterCount() - 1:
+                        return document
+                    cursor = QtGui.QTextCursor(document)
+                    cursor.setPosition(end)
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.End,
+                                        QtGui.QTextCursor.MoveMode.KeepAnchor)
+                    cursor.removeSelectedText()
+                    while cursor.position() and document.characterAt(cursor.position() - 1).isspace():
+                        cursor.deletePreviousChar()
+                    ellipsis_format = cursor.charFormat()
+                    ellipsis_format.setVerticalAlignment(QtGui.QTextCharFormat.VerticalAlignment.AlignNormal)
+                    cursor.insertText('…', ellipsis_format)
+                    cursor.movePosition(QtGui.QTextCursor.MoveOperation.PreviousCharacter)
+                    # Make room for the ellipsis without wrapping it onto a fifth line.
+                    document.size()
+                    while document.lineCount() > self._max_lines and cursor.position():
+                        cursor.deletePreviousChar()
+                        document.size()
+                    return document
+            block = block.next()
+        return document
+
+    def paint(self, painter, option, index):
+        if not self._view.service_item.is_text():
+            self._native_delegate.paint(painter, option, index)
+            return
+        self._native_delegate.paint(painter, option, self._background_model.mapFromSource(index))
+        document = self._document(option, index)
+        context = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        context.palette = option.palette
+        painter.save()
+        painter.setClipRect(option.rect)
+        painter.translate(option.rect.left() + 2 * Spacing.Small,
+                          option.rect.top() + (option.rect.height() - document.size().height()) / 2)
+        document.documentLayout().draw(painter, context)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        hint = self._native_delegate.sizeHint(option, index)
+        if self._view.service_item.is_text():
+            hint.setHeight(int(self._document(option, index).size().height() + 2 * Spacing.Small))
+        return hint
+
+
+class ListPreviewWidget(QtWidgets.DataGrid, RegistryProperties):
     """
     A special type of QTableWidget which lists the slides in the slide controller
 
@@ -107,7 +196,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
     resize_event = QtCore.Signal()
     keyboard_slide_changed = QtCore.Signal()
 
-    def __init__(self, parent, screen_ratio):
+    def __init__(self, parent, screen_ratio, max_lines=SLIDE_ROW_MAX_LINES):
         """
         Initializes the widget to default state.
 
@@ -115,9 +204,10 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         widget display something.
         """
         super().__init__(parent)
-        self._setup(screen_ratio)
+        self.slide_controller = parent
+        self._setup(screen_ratio, max_lines)
 
-    def _setup(self, screen_ratio):
+    def _setup(self, screen_ratio, max_lines):
         """
         Set up the widget
         """
@@ -134,14 +224,29 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setDragEnabled(True)
+        self.setWordWrap(True)
+        self.setTextElideMode(QtCore.Qt.TextElideMode.ElideNone)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        scrollbar = self.verticalFluentScrollBar()
+        # Fluent animates its overlay independently of Qt's scrollbar policy.
+        # Keep the native thumb visible so slide-list progress is always available.
+        for animation in scrollbar.findChildren(QtCore.QPropertyAnimation):
+            if animation.targetObject() == scrollbar and bytes(animation.propertyName()) == b'opacity':
+                animation.valueChanged.connect(lambda value, bar=scrollbar: bar.setOpacity(1.0))
+        scrollbar.setOpacity(1.0)
         self.setAlternatingRowColors(use_alternate_rows())
         # Initialize variables.
         self.service_item = ServiceItem()
+        self.setItemDelegate(SlidePreviewDelegate(self, max_lines))
         self.screen_ratio = screen_ratio
         self.auto_row_height = 100
         # Connect signals
         self.verticalHeader().sectionResized.connect(self.row_resized)
+
+    def startDrag(self, actions):
+        self.slide_controller.start_item_drag(self)
 
     def _resolve_song_section_color(self, verse_tag):
         section_key = SONG_SECTION_COLOR_KEYS.get(str(verse_tag).lower()[:1], 'other')
@@ -221,16 +326,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
             # Sort out image heights.
             else:
                 height = self.viewport().width() // self.screen_ratio
-                max_img_row_height = self.settings.value('advanced/slide max height')
-                # Adjust for row height cap if in use.
-                if isinstance(max_img_row_height, int):
-                    if 0 < max_img_row_height < height:
-                        height = max_img_row_height
-                    elif max_img_row_height < 0:
-                        # If auto setting, show that number of slides, or if the resulting slides too small, 100px.
-                        # E.g. If setting is -4, 4 slides will be visible, unless those slides are < 100px high.
-                        self.auto_row_height = max(self.viewport().height() / (-1 * max_img_row_height), 100)
-                        height = min(height, self.auto_row_height)
+                self.auto_row_height = max(self.viewport().height() / 4, 100)
+                height = min(height, self.auto_row_height)
                 # Apply new height to slides
                 for slide_index in range(len(self.service_item.slides)):
                     self.setRowHeight(slide_index, int(height))
@@ -239,9 +336,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         """
         Will scale non-image slides.
         """
-        # Only for non-text slides when row height cap in use
-        max_img_row_height = self.settings.value('advanced/slide max height')
-        if self.service_item.is_text() or not isinstance(max_img_row_height, int) or max_img_row_height == 0:
+        if self.service_item.is_text():
             return
         # Get and validate label widget containing slide & adjust max width
         try:
@@ -282,14 +377,19 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         text = []
         header_colors = []
         slides = self.service_item.display_slides if self.service_item.is_text() else self.service_item.slides
-        custom_page_counts = Counter(slide['verse'] for slide in slides) if self.service_item.name == 'custom' else {}
+        custom_page_counts = Counter(slide['verse'] for slide in slides) \
+            if self.service_item.name in ('custom', 'themes') else {}
         custom_page_positions = Counter()
         for slide_index, slide in enumerate(slides):
             self.setRowCount(self.slide_count() + 1)
             item = QtWidgets.QTableWidgetItem()
             slide_height = 0
             if self.service_item.is_text():
-                if self.service_item.name == 'custom':
+                collection = getattr(self.service_item, 'is_slide_set', False) is True
+                if collection:
+                    row = str(slide['verse'])
+                    header_colors.append(None)
+                elif self.service_item.name in ('custom', 'themes'):
                     # Split pages share a source slide tag, so append a letter only when needed.
                     verse = slide['verse']
                     row = str(verse)
@@ -313,7 +413,9 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 else:
                     row += 1
                     header_colors.append(None)
-                item.setText(slide['text'])
+                item.setText(slide['title'] if collection else slide['text'])
+                if not collection and isinstance(slide.get('text_html'), str):
+                    item.setData(SLIDE_TEXT_HTML_ROLE, slide['text_html'])
             else:
                 label = QtWidgets.QLabel()
                 label.setContentsMargins(4, 4, 4, 4)
@@ -341,15 +443,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 layout.addWidget(label)
                 container.setLayout(layout)
                 slide_height = width // self.screen_ratio
-                max_img_row_height = self.settings.value('advanced/slide max height')
-                if isinstance(max_img_row_height, int):
-                    if 0 < max_img_row_height < slide_height:
-                        slide_height = max_img_row_height
-                    elif max_img_row_height < 0:
-                        # If auto setting, show that number of slides, or if the resulting slides too small, 100px.
-                        # E.g. If setting is -4, 4 slides will be visible, unless those slides are < 100px high.
-                        self.auto_row_height = max(self.viewport().height() / (-1 * max_img_row_height), 100)
-                        slide_height = min(slide_height, self.auto_row_height)
+                self.auto_row_height = max(self.viewport().height() / 4, 100)
+                slide_height = min(slide_height, self.auto_row_height)
                 self.setCellWidget(slide_index, 0, container)
                 row += 1
                 header_colors.append(None)
@@ -372,34 +467,19 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
             header_item = self.verticalHeaderItem(row)
             if header_item:
                 header_item.setBackground(QtGui.QBrush(color))
+        self.setColumnWidth(0, self.viewport().width())
         if self.service_item.is_text():
             self.resizeRowsToContents()
-        self.setColumnWidth(0, self.viewport().width())
         self.change_slide(slide_number)
 
     def change_slide(self, slide):
         """
         Switches to the given row.
         """
-        # Retrieve setting
-        auto_scrolling = self.settings.value('advanced/autoscrolling')
-        # Check if auto-scroll disabled (None) and validate value as dict containing 'dist' and 'pos'
-        # 'dist' represents the slide to scroll to relative to the new slide (-1 = previous, 0 = current, 1 = next)
-        # 'pos' represents the vert position of of the slide (0 = in view, 1 = top, 2 = middle, 3 = bottom)
-        if not (isinstance(auto_scrolling, dict) and 'dist' in auto_scrolling and 'pos' in auto_scrolling and
-                isinstance(auto_scrolling['dist'], int) and isinstance(auto_scrolling['pos'], int)):
-            # Even when auto-scroll is disabled/misconfigured, we must still change the selected slide.
-            self.selectRow(slide)
-            return
-        # prevent scrolling past list bounds
-        scroll_to_slide = slide + auto_scrolling['dist']
-        if scroll_to_slide < 0:
-            scroll_to_slide = 0
-        if scroll_to_slide >= self.slide_count():
-            scroll_to_slide = self.slide_count() - 1
-        # Scroll to item if possible.
-        self.scrollToItem(self.item(scroll_to_slide, 0), SCROLL_HINT[auto_scrolling['pos']])
         self.selectRow(slide)
+        item = self.item(slide, 0)
+        if item is not None:
+            self.scrollToItem(item, QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible)
 
     def keyPressEvent(self, event):
         """
@@ -432,6 +512,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         Initialise the list widget
         """
         super().__init__(parent)
+        self.media_item = parent
         self.mime_data_text = name
         self.no_results_text = UiStrings().NoResults
         palette = self.palette()
@@ -451,6 +532,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self._drag_start_pos = None
+        self.setDragEnabled(True)
 
     def activateDnD(self):
         """
@@ -458,7 +540,7 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         """
         self.setAcceptDrops(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
-        Registry().register_function(('%s_dnd' % self.mime_data_text), self.parent().handle_mime_data)
+        Registry().register_function(('%s_dnd' % self.mime_data_text), self.media_item.handle_mime_data)
 
     def clear(self, search_while_typing=False):
         """
@@ -479,29 +561,18 @@ class ListWidgetWithDnD(QtWidgets.QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """
-        Drag and drop event does not care what data is selected as the recipient will use events to request the data
-        move just tell it what plugin to call
-        """
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
             return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
-            return
-        drag = QtGui.QDrag(self)
-        mime_data = QtCore.QMimeData()
-        drag.setMimeData(mime_data)
-        mime_data.setText(self.mime_data_text)
-        selected = self.selectedItems()
-        if selected:
-            mime_data.setData('application/x-openlp-item-title',
-                              selected[0].text().encode('utf-8'))
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+        super().mouseMoveEvent(event)
+
+    def startDrag(self, actions):
+        if self.selectedItems():
+            execute_drag(self, ItemDragData(library=self.media_item))
 
     def dragEnterEvent(self, event):
         """
@@ -579,130 +650,62 @@ class FileTreeWidgetItem(QtWidgets.QTreeWidgetItem):
         self.setData(column, FileTreeWidgetItem._SORT_ROLE, value)
 
     def __lt__(self, other):
-        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
+        tree = self.treeWidget()
+        folder = bool(self.data(0, LIBRARY_FOLDER_ROLE))
+        if tree and folder != bool(other.data(0, LIBRARY_FOLDER_ROLE)):
+            # Qt reverses comparisons for descending sorts; folders must still stay first.
+            ascending = tree.header().sortIndicatorOrder() == QtCore.Qt.SortOrder.AscendingOrder
+            return folder if ascending else not folder
+        col = tree.sortColumn() if tree else 0
         my_val = self.data(col, FileTreeWidgetItem._SORT_ROLE)
         other_val = other.data(col, FileTreeWidgetItem._SORT_ROLE)
         if my_val is not None and other_val is not None:
             return my_val < other_val
         # Fall back to plain string comparison — avoids PySide6 recursion via super().__lt__
-        return self.text(col) < other.text(col)
+        from openlp.core.common.i18n import get_natural_key
+        return get_natural_key(self.text(col)) < get_natural_key(other.text(col))
 
 
-class TreeDisclosureStyle(QtWidgets.QProxyStyle):
-    """
-    Proxy style that draws a small outlined chevron as the expand/collapse indicator,
-    plus faint 1px hairline guide lines under expanded parents to reinforce hierarchy.
-    """
-    ARROW_HALF = 4
-    ARROW_WEIGHT = 1.6
-    LINE_ALPHA = 46
-
-    def drawPrimitive(self, element, option, painter, widget=None):
-        if element != QtWidgets.QStyle.PrimitiveElement.PE_IndicatorBranch:
-            super().drawPrimitive(element, option, painter, widget)
-            return
-        rect = option.rect
-        cx = float(rect.center().x())
-        cy = float(rect.center().y())
-        top = float(rect.top())
-        bottom = float(rect.bottom())
-        state = option.state
-        has_item = bool(state & QtWidgets.QStyle.StateFlag.State_Item)
-        has_sibling = bool(state & QtWidgets.QStyle.StateFlag.State_Sibling)
-        has_children = bool(state & QtWidgets.QStyle.StateFlag.State_Children)
-        is_open = bool(state & QtWidgets.QStyle.StateFlag.State_Open)
-        painter.save()
-        line_colour = QtGui.QColor(option.palette.mid().color())
-        line_colour.setAlpha(self.LINE_ALPHA)
-        line_pen = QtGui.QPen(line_colour)
-        line_pen.setWidthF(1.0)
-        line_pen.setCosmetic(True)
-        painter.setPen(line_pen)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
-        if has_item:
-            # Current row's own column. Only draw a vertical rail for leaf rows;
-            # folder rows use the chevron as their anchor instead of a line.
-            if not has_children:
-                painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, cy))
-                if has_sibling:
-                    painter.drawLine(QtCore.QPointF(cx, cy), QtCore.QPointF(cx, bottom))
-        elif has_sibling:
-            # Ancestor column whose node has more siblings below: full-height rail.
-            painter.drawLine(QtCore.QPointF(cx, top), QtCore.QPointF(cx, bottom))
-        if has_children:
-            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
-            s = float(self.ARROW_HALF)
-            pen = QtGui.QPen(option.palette.mid().color())
-            pen.setWidthF(self.ARROW_WEIGHT)
-            pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
-            painter.setPen(pen)
-            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-            if is_open:
-                path = QtGui.QPainterPath(QtCore.QPointF(cx - s, cy - s * 0.4))
-                path.lineTo(cx, cy + s * 0.5)
-                path.lineTo(cx + s, cy - s * 0.4)
-            else:
-                path = QtGui.QPainterPath(QtCore.QPointF(cx - s * 0.4, cy - s))
-                path.lineTo(cx + s * 0.5, cy)
-                path.lineTo(cx - s * 0.4, cy + s)
-            painter.drawPath(path)
-        painter.restore()
-
-
-class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
+class TreeWidgetDnDMixin:
     """
     Provide a tree widget to store objects and handle drag and drop events
     """
-    first_column_min_ratio = 0.7
+    first_column_min_ratio = 0.3
 
     def __init__(self, parent=None, name=''):
         """
         Initialise the tree widget
         """
-        super(TreeWidgetWithDnD, self).__init__(parent)
+        super().__init__(parent)
+        self.media_item = parent
         self.mime_data_text = name
         self.allow_internal_dnd = False
         self._resizing_columns = False
+        self._manual_columns = set()
+        self._column_timer = QtCore.QTimer(self)
+        self._column_timer.setSingleShot(True)
+        self._column_timer.timeout.connect(self._fit_columns)
+        for signal in (self.model().rowsInserted, self.model().rowsRemoved, self.model().dataChanged,
+                       self.model().modelReset, self.model().headerDataChanged):
+            signal.connect(lambda *args: self._column_timer.start(0))
         self.header().close()
         self.header().sectionResized.connect(self._on_section_resized)
         self.default_indentation = self.indentation()
-        self.setIndentation(0)
-        self.setAnimated(True)
         self._drag_start_pos = None
-        self._disclosure_style = TreeDisclosureStyle()
-        self.setStyle(self._disclosure_style)
+        self.setDragEnabled(True)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacShowFocusRect, False)
-        self.setRootIsDecorated(True)
-        self.setAlternatingRowColors(True)
-        self.setAllColumnsShowFocus(True)
-        palette = self.palette()
-        base = palette.color(QtGui.QPalette.ColorRole.Base)
-        # Derive a gentle zebra tint from the base colour — lighter on dark themes, darker on light.
-        if base.lightnessF() < 0.5:
-            alternate = base.lighter(108)
-        else:
-            alternate = base.darker(103)
-        palette.setColor(QtGui.QPalette.ColorRole.AlternateBase, alternate)
-        self.setPalette(palette)
-        highlight = palette.color(QtGui.QPalette.ColorRole.Highlight).name()
-        highlighted_text = palette.color(QtGui.QPalette.ColorRole.HighlightedText).name()
-        inactive_highlight = QtGui.QColor(palette.color(QtGui.QPalette.ColorRole.Highlight))
-        inactive_highlight.setAlpha(110)
-        inactive_highlight_name = inactive_highlight.name(QtGui.QColor.NameFormat.HexArgb)
-        self.setStyleSheet(
-            'QTreeWidget { outline: 0; background: palette(base); '
-            'alternate-background-color: palette(alternate-base); }'
-            'QTreeWidget::item { padding: 6px 4px; border: 0; }'
-            f'QTreeWidget::item:selected:active {{ background: {highlight}; color: {highlighted_text}; }}'
-            f'QTreeWidget::item:selected:!active {{ background: {inactive_highlight_name}; '
-            'color: palette(text); }'
-        )
+        if name in ('presentations', 'images', 'media'):
+            self.setIndentation(40)
+            self.default_indentation = self.indentation()
+            from openlp.core.widgets.fluent_tree import FluentLibraryTreeDelegate
+            self._library_delegate = FluentLibraryTreeDelegate(self)
+            self.setItemDelegate(self._library_delegate)
+            self.setSelectionIndicatorVisible(True)
 
     def setup_columns(self, labels: list):
         """
         Enable a column header with the given labels. The first column stretches to fill available space;
-        remaining columns resize to their content. Also reduces the font slightly for a more compact display.
+        remaining columns resize to their content. Retain the standard Fluent body font.
 
         :param labels: List of column header strings, e.g. ['Name', 'Type', 'Size']
         """
@@ -712,28 +715,45 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         self.header().setStretchLastSection(False)
         for i in range(len(labels)):
             self.header().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Interactive)
-        for i in range(1, len(labels)):
-            self.header().resizeSection(i, 130)
-        self._ensure_first_column_width()
+        self._manual_columns.clear()
+        self._fit_columns()
         self.setSortingEnabled(True)
         self.sortByColumn(0, QtCore.Qt.SortOrder.AscendingOrder)
-        font = self.font()
-        font.setPointSize(max(font.pointSize() - 1, 8))
-        self.setFont(font)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._fit_columns()
+
+    def _fit_columns(self):
+        """Measure metadata with Qt's delegate and leave the remaining space for Name."""
+        if self.header().isHidden() or self.columnCount() < 2 or self._resizing_columns:
+            return
+        self._resizing_columns = True
+        try:
+            for column in range(1, self.columnCount()):
+                if column not in self._manual_columns:
+                    self.resizeColumnToContents(column)
+                    # Fluent cells paint with more horizontal padding than Qt's size hint.
+                    content_width = self.columnWidth(column) + 2 * Spacing.Medium
+                    width = max(self.header().sectionSizeHint(column),
+                                min(content_width, self.viewport().width() // 2))
+                    self.header().resizeSection(column, width)
+        finally:
+            self._resizing_columns = False
         self._ensure_first_column_width()
 
     def _on_section_resized(self, section, old_size, new_size):
         """Keep the first column readable if interactive resizing makes it too small."""
         if old_size == new_size or self._resizing_columns:
             return
-        self._ensure_first_column_width()
+        if section:
+            self._manual_columns.add(section)
+        else:
+            self._ensure_first_column_width()
 
     def _ensure_first_column_width(self):
         """Keep the first column visible and proportional to the viewport width."""
-        if self.columnCount() < 2 or self._resizing_columns:
+        if self.header().isHidden() or self.columnCount() < 2 or self._resizing_columns:
             return
         available_width = self.viewport().width()
         if available_width <= 0:
@@ -756,8 +776,8 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         """
         self.setAcceptDrops(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.DragDrop)
-        Registry().register_function(('%s_dnd' % self.mime_data_text), self.parent().handle_mime_data)
-        Registry().register_function(('%s_dnd_internal' % self.mime_data_text), self.parent().dnd_move_internal)
+        Registry().register_function(('%s_dnd' % self.mime_data_text), self.media_item.handle_mime_data)
+        Registry().register_function(('%s_dnd_internal' % self.mime_data_text), self.media_item.dnd_move_internal)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -765,31 +785,18 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """
-        Drag and drop event does not care what data is selected as the recipient will use events to request the data
-        move just tell it what plugin to call
+        if (self.dragEnabled() and event.buttons() & QtCore.Qt.MouseButton.LeftButton
+                and self._drag_start_pos is not None and self.indexAt(self._drag_start_pos).isValid()
+                and self.selectedItems() and (event.pos() - self._drag_start_pos).manhattanLength()
+                >= QtWidgets.QApplication.startDragDistance()):
+            self._drag_start_pos = None
+            self.startDrag(QtCore.Qt.DropAction.CopyAction)
+            return
+        super().mouseMoveEvent(event)
 
-        :param event: The event that occurred
-        """
-        if event.buttons() != QtCore.Qt.MouseButton.LeftButton:
-            event.ignore()
-            return
-        if not self.selectedItems():
-            event.ignore()
-            return
-        if self._drag_start_pos is None or \
-                (event.pos() - self._drag_start_pos).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-            event.ignore()
-            return
-        drag = QtGui.QDrag(self)
-        mime_data = QtCore.QMimeData()
-        drag.setMimeData(mime_data)
-        mime_data.setText(self.mime_data_text)
-        selected = self.selectedItems()
-        if selected:
-            mime_data.setData('application/x-openlp-item-title',
-                              selected[0].text(0).encode('utf-8'))
-        drag.exec(QtCore.Qt.DropAction.CopyAction)
+    def startDrag(self, actions):
+        if self.selectedItems():
+            execute_drag(self, ItemDragData(library=self.media_item))
 
     def dragEnterEvent(self, event):
         """
@@ -799,7 +806,8 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
         """
         if event.mimeData().hasUrls():
             event.accept()
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.accept()
         else:
             event.ignore()
@@ -810,11 +818,12 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
 
         :param event: The event that occurred
         """
-        QtWidgets.QTreeWidget.dragMoveEvent(self, event)
+        super().dragMoveEvent(event)
         if event.mimeData().hasUrls():
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
         else:
@@ -838,10 +847,13 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
             file_paths = handle_mime_data_urls(event.mimeData())
             Registry().execute('%s_dnd' % self.mime_data_text,
                                {'file_paths': file_paths, 'target': self.itemAt(event.pos())})
-        elif self.allow_internal_dnd:
+        elif (self.allow_internal_dnd and isinstance(event.mimeData(), ItemDragData)
+              and event.mimeData().library is self.media_item):
             event.setDropAction(QtCore.Qt.DropAction.CopyAction)
             event.accept()
-            Registry().execute('%s_dnd_internal' % self.mime_data_text, self.itemAt(event.pos()))
+            rows = [self.itemFromIndex(QtCore.QModelIndex(index)) for index in event.mimeData().indexes
+                    if index.isValid()]
+            self.media_item.dnd_move_internal(self.itemAt(event.pos()), items=rows)
         else:
             event.ignore()
 
@@ -854,3 +866,11 @@ class TreeWidgetWithDnD(QtWidgets.QTreeWidget):
 
     def item(self, index):
         return self.topLevelItem(index)
+
+
+class TreeWidgetWithDnD(TreeWidgetDnDMixin, QtWidgets.QTreeWidget):
+    """Folder hierarchy with the shared media drag-and-drop behaviour."""
+
+
+class DataGridWithDnD(TreeWidgetDnDMixin, QtWidgets.QTreeDataGrid):
+    """Flat media records with native Fluent DataGrid columns."""

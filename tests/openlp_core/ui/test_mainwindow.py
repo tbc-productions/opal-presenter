@@ -28,7 +28,8 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 import pytest
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
@@ -49,6 +50,96 @@ JSON_RECENT_FILES = ('[{"parts": ["/", "path", "to", "service-1.osz"], "json_met
 
 QT_QPA_PLATFORM = os.environ.get("QT_QPA_PLATFORM", "")
 _MAIN_WINDOWS = []
+
+
+@pytest.fixture(autouse=True)
+def reset_actions_for_existing_tests(monkeypatch):
+    from openlp.core.common.actions import ActionList
+    monkeypatch.setattr(ActionList, 'instance', None)
+    monkeypatch.setattr(ActionList, 'shortcut_map', {})
+
+
+@pytest.fixture
+def legacy_classic_appearance(settings):
+    settings.setValue('advanced/interface style', 'classic')
+
+
+@pytest.fixture
+def modern_appearance(settings):
+    settings.setValue('advanced/interface style', 'modern')
+    yield
+
+
+def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
+    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
+    assert not main_window.layout_preset_navigation.buttons[0].icon().isNull()
+    assert main_window.main_content_layout.contentsMargins().left() == 6
+
+
+def test_settings_dialog_has_main_window_as_smoke_host(main_window):
+    dialog = main_window.settings_form
+    assert dialog.parentWidget() is main_window
+    assert not dialog.isWindow()
+    assert dialog.isHidden()
+    assert dialog.isSmokeEnabled()
+
+
+def test_legacy_classic_setting_uses_modern_layout(legacy_classic_appearance, main_window, settings):
+    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
+    assert main_window.main_content_layout.contentsMargins().left() == 6
+    assert main_window.dock_manager is not None
+    assert settings.value('advanced/interface style') == 'modern'
+
+
+def test_window_menu_is_before_help(main_window):
+    menus = [action.menu() for action in main_window.menu_bar.actions()]
+    assert menus[-2:] == [main_window.window_menu, main_window.help_menu]
+    assert main_window.window_menu.title() == '&Window'
+    assert main_window.window_menu_controller.menu is main_window.window_menu
+
+
+def test_modern_presets_restore_autohide_without_touching_classic(modern_appearance, main_window, settings):
+    import PySide6QtAds as ads
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray(b'classic'))
+    main_window.media_manager_dock.setAutoHide(True, ads.SideBarLeft)
+    main_window._save_current_layout_to_preset('default')
+    main_window.media_manager_dock.setAutoHide(False)
+    main_window._restore_layout_from_preset('default')
+    assert main_window.media_manager_dock.isAutoHide()
+    assert settings.value('user interface/preset layout/default/main window state') == QtCore.QByteArray(b'classic')
+    # Deferred startup correction must leave a restored ADS layout alone.
+    settings.setValue('user interface/is preset layout', True)
+    settings.setValue('core/view mode', 'default')
+    main_window._deferred_apply_left_column_dock_layout()
+    assert main_window.media_manager_dock.isAutoHide()
+    settings.setValue('advanced/interface style', 'classic')
+    main_window._save_current_layout_to_preset('default')
+    assert settings.value('user interface/preset layout/default/main window state') == QtCore.QByteArray(b'classic')
+
+
+def test_modern_close_updates_menu_and_preserves_inactive_library(modern_appearance, main_window, settings):
+    main_window.theme_manager_dock.toggleView(False)
+    assert not settings.value('user interface/show themes')
+    assert not main_window.view_theme_manager_item.isChecked()
+    assert main_window.media_manager_dock.isDockOpen()
+
+
+def test_modern_factory_layout_has_usable_library_height(modern_appearance, main_window, settings):
+    main_window.resize(1200, 800)
+    settings.setValue('core/view mode', 'default')
+    main_window._deferred_apply_left_column_dock_layout()
+    service = main_window.service_manager_dock
+    library = main_window.media_manager_dock
+    assert service.dockAreaWidget() is not library.dockAreaWidget()
+    assert library.dockAreaWidget().currentDockWidget() is library
 
 
 class _DummyRenderer:
@@ -157,14 +248,18 @@ def _create_mock_action(parent, name, **kwargs):
 
 
 @pytest.fixture()
-def main_window(state, settings, qapp):
+def main_window(state, settings, qapp, request):
     QtWidgets.QApplication.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontUseNativeMenuBar, True)
     app = Registry().get('application')
     app.set_busy_cursor = lambda: None
     app.set_normal_cursor = lambda: None
     app.process_events = lambda: None
     app.args = []
-    Registry().set_flag('no_web_server', True)
+    feature_options = getattr(request, 'param', {})
+    for name in ('projector', 'remote_interface'):
+        if feature_options.get(name):
+            settings.setValue(f'{name}/status', PluginStatus.Active)
+    Registry().set_flag('no_web_server', feature_options.get('no_web_server', True))
     add_toolbar_action_patcher = patch('openlp.core.ui.mainwindow.create_action', new=_create_mock_action)
     add_toolbar_action_patcher.start()
     plugin_form_patcher = patch('openlp.core.ui.mainwindow.PluginForm', new=_DummyPluginForm)
@@ -196,35 +291,8 @@ def main_window(state, settings, qapp):
 
 
 @pytest.fixture()
-def main_window_reduced(settings, state, qapp):
-    """
-    Create the UI
-    """
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontUseNativeMenuBar, True)
-    Registry().set_flag('no_web_server', True)
-    mocked_plugin = MagicMock()
-    mocked_plugin.status = PluginStatus.Active
-    mocked_plugin.icon = QtGui.QIcon()
-    Registry().register('mock_plugin', mocked_plugin)
-    State().add_service("mock", 1, is_plugin=True, status=PluginStatus.Active)
-    # Mock classes and methods used by mainwindow.
-    with patch('openlp.core.ui.mainwindow.SettingsForm'), \
-            patch('openlp.core.ui.mainwindow.OpenLPDockWidget'), \
-            patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot'), \
-        patch('openlp.core.ui.mainwindow.QtWidgets.QToolBox'), \
-            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.addDockWidget'), \
-            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.splitDockWidget'), \
-            patch('openlp.core.ui.mainwindow.QtWidgets.QMainWindow.tabifyDockWidget'), \
-            patch('openlp.core.ui.mainwindow.QtGui.QActionGroup'), \
-            patch('openlp.core.ui.mainwindow.ServiceManager'), \
-            patch('openlp.core.ui.mainwindow.ThemeManager'), \
-            patch('openlp.core.ui.mainwindow.ProjectorManager'), \
-            patch('openlp.core.ui.mainwindow.HttpServer'), \
-            patch('openlp.core.ui.mainwindow.WebSocketServer'), \
-            patch('openlp.core.ui.mainwindow.PluginForm'), \
-            patch('openlp.core.ui.mainwindow.create_action'), \
-            patch('openlp.core.ui.mainwindow.add_actions'):
-        return MainWindow()
+def main_window_reduced(main_window):
+    return main_window
 
 
 def test_cmd_line_file(main_window):
@@ -422,7 +490,7 @@ def test_load_settings_position_valid(main_window, settings):
     # store the values in the settings
     settings.setValue('user interface/main window position', main_window.pos())
     settings.setValue('user interface/main window geometry', main_window.saveGeometry())
-    settings.setValue('user interface/main window state', main_window.saveState())
+    settings.setValue('user interface/modern window state', main_window.saveState())
     # change the position and size - then we can test if load_settings() sets it back correctly
     main_window.move(QtCore.QPoint(20, 20))
     main_window.resize(500, 300)
@@ -456,7 +524,7 @@ def test_load_settings_position_invalid(main_window, settings):
     # store the values in the settings
     settings.setValue('user interface/main window position', main_window.pos())
     settings.setValue('user interface/main window geometry', main_window.saveGeometry())
-    settings.setValue('user interface/main window state', main_window.saveState())
+    settings.setValue('user interface/modern window state', main_window.saveState())
     # change the position and size
     main_window.move(QtCore.QPoint(20, 20))
     main_window.resize(500, 300)
@@ -484,8 +552,7 @@ def test_mainwindow_configuration(main_window):
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
                              'authentication_token', 'web_socket_server'}
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
-                               'config_screen_changed', 'theme_change_global', 'media_dock_refresh_icons',
-                               'alternate_rows_changed']
+                               'config_screen_changed', 'theme_change_global']
     assert set(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \
@@ -648,6 +715,7 @@ def test_on_first_time_wizard_clicked_show_projectors_after(mocked_warning, Mock
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
     main_window.settings.setValue('projector/show after wizard', True)
+    Registry().set_flag('projector_disabled', False)
 
     with patch.object(main_window, 'projector_manager_dock') as mocked_dock, \
             patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents'):
@@ -774,8 +842,7 @@ def test_restore_current_media_manager_item(main_window_reduced):
     """
     Regression test for bug #1152509.
     """
-    # save current plugin: True; current media plugin: 2
-    main_window_reduced.settings.setValue('advanced/save current plugin', True)
+    # The last-used Library tab is always restored.
     main_window_reduced.settings.setValue('advanced/current media plugin', 2)
     main_window_reduced.media_tool_box.setCurrentIndex = MagicMock()
 
@@ -795,11 +862,12 @@ def test_set_lock_panel_locked(main_window_reduced):
     main_window_reduced.set_lock_panel(True)
 
     # THEN: Projector manager dock should have been called with disable UI features
-    no_dock_features = QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
-    main_window_reduced.theme_manager_dock.setFeatures.assert_called_with(no_dock_features)
-    main_window_reduced.service_manager_dock.setFeatures.assert_called_with(no_dock_features)
-    main_window_reduced.media_manager_dock.setFeatures.assert_called_with(no_dock_features)
-    main_window_reduced.projector_manager_dock.setFeatures.assert_called_with(no_dock_features)
+    from PySide6QtAds import ads
+    no_dock_features = ads.CDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+    assert main_window_reduced.theme_manager_dock.features() == no_dock_features
+    assert main_window_reduced.service_manager_dock.features() == no_dock_features
+    assert main_window_reduced.media_manager_dock.features() == no_dock_features
+    assert main_window_reduced.projector_manager_dock.features() == no_dock_features
 
 
 def test_set_lock_panel_unlocked(main_window_reduced):
@@ -811,13 +879,16 @@ def test_set_lock_panel_unlocked(main_window_reduced):
     main_window_reduced.set_lock_panel(False)
 
     # THEN: Projector manager dock should have been called with enable UI features
-    all_dock_features = (QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable |
-                         QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable)
-    main_window_reduced.theme_manager_dock.setFeatures.assert_called_with(all_dock_features)
-    main_window_reduced.service_manager_dock.setFeatures.assert_called_with(all_dock_features)
-    main_window_reduced.media_manager_dock.setFeatures.assert_called_with(all_dock_features)
-    main_window_reduced.projector_manager_dock.setFeatures.assert_called_with(all_dock_features)
+    from PySide6QtAds import ads
+    all_dock_features = (ads.CDockWidget.DockWidgetFeature.DockWidgetClosable |
+                        ads.CDockWidget.DockWidgetFeature.DockWidgetFloatable |
+                        ads.CDockWidget.DockWidgetFeature.DockWidgetMovable |
+                        ads.CDockWidget.DockWidgetFeature.DockWidgetPinnable |
+                        ads.CDockWidget.DockWidgetFeature.DockWidgetFocusable)
+    assert main_window_reduced.theme_manager_dock.features() == all_dock_features
+    assert main_window_reduced.service_manager_dock.features() == all_dock_features
+    assert main_window_reduced.media_manager_dock.features() == all_dock_features
+    assert main_window_reduced.projector_manager_dock.features() == all_dock_features
 
 
 @patch('openlp.core.ui.mainwindow.MainWindow.open_cmd_line_files')
@@ -1023,7 +1094,7 @@ def test_left_dock_visibility_named_live_preset_without_saved_uses_factory(main_
     """
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'live')
-    settings.setValue('user interface/preset layout/live/main window state', QtCore.QByteArray())
+    settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray())
     settings.setValue('user interface/show library', True)
     assert main_window._left_dock_visibility_from_settings() == (False, True, False)
 
@@ -1034,7 +1105,7 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
     """
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'live')
-    settings.setValue('user interface/preset layout/live/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray(b'1'))
     settings.setValue('user interface/show library', True)
     settings.setValue('user interface/show service', False)
     settings.setValue('user interface/show themes', True)
@@ -1042,11 +1113,59 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
 
 
 def test_layout_preset_tab_bar_has_expected_tabs(main_window):
-    """Main window should include a left vertical tab bar for layout presets."""
-    assert main_window.layout_preset_tab_bar.count() == 3
-    assert main_window.layout_preset_tab_bar.tabText(0) == 'Show all'
-    assert main_window.layout_preset_tab_bar.tabText(1) == 'Setup'
-    assert main_window.layout_preset_tab_bar.tabText(2) == 'Live'
+    """The sidebar and View menu use matching Workspace, Prepare and Live labels."""
+    assert len(main_window.layout_preset_navigation.buttons) == 4
+    assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
+    assert main_window.layout_preset_navigation.buttons[1].text() == 'Prepare'
+    assert main_window.layout_preset_navigation.buttons[2].text() == 'Live'
+    assert main_window.layout_preset_navigation.buttons[3].text() == 'Library Sync'
+    assert main_window.mode_default_item.text() == '&Workspace'
+    assert main_window.mode_setup_item.text() == '&Prepare'
+    assert main_window.mode_live_item.text() == '&Live'
+
+
+def _check_library_sync_preset(main_window, settings):
+    from openlp.plugins.librarysync.librarysyncplugin import LibrarySyncPlugin
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    plugin = LibrarySyncPlugin()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    assert plugin in State().list_plugins()
+    plugin.initialise()
+    assert main_window.cloud_library_dock.widget() is plugin.panel
+    main_window._activate_layout_preset('librarysync')
+    main_window._deferred_apply_left_column_dock_layout()
+    assert settings.value('core/view mode') == 'librarysync'
+    assert main_window._left_dock_visibility_from_settings() == (True, False, True)
+    assert not settings.value('user interface/preview panel')
+    assert not settings.value('user interface/live panel')
+    assert main_window.theme_manager_dock in main_window.tabifiedDockWidgets(main_window.media_manager_dock)
+    QtWidgets.QWidget.setVisible(main_window, True)
+    QtWidgets.QApplication.processEvents()
+    library_origin = main_window.media_manager_dock.mapTo(main_window, QtCore.QPoint())
+    cloud_origin = main_window.cloud_library_dock.mapTo(main_window, QtCore.QPoint())
+    assert cloud_origin.x() > library_origin.x()
+    assert main_window.media_manager_dock.dockAreaWidget().currentDockWidget() is main_window.media_manager_dock
+    assert main_window.layout_preset_navigation.currentIndex() == 3
+    assert main_window.mode_library_sync_item.isChecked()
+    main_window._activate_layout_preset('default')
+    assert settings.value(_preset_layout_storage_key('librarysync', 'main window state'))
+    assert not main_window.mode_library_sync_item.isChecked()
+    main_window._activate_layout_preset('librarysync')
+    assert main_window.mode_library_sync_item.isChecked()
+    plugin.finalise()
+    assert settings.value('core/view mode') == 'librarysync'
+    assert main_window.cloud_library_dock.isDockOpen()
+    plugin.initialise()
+    plugin.toggle_status(PluginStatus.Inactive)
+    assert settings.value('core/view mode') == 'default'
+    assert not main_window.mode_library_sync_item.isVisible()
+    QtWidgets.QWidget.setVisible(main_window, False)
+
+
+def test_library_sync_preset_modern(modern_appearance, main_window, settings):
+    _check_library_sync_preset(main_window, settings)
 
 
 def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):
@@ -1055,7 +1174,7 @@ def test_layout_preset_tab_syncs_with_current_mode(main_window, settings):
 
     main_window._sync_layout_preset_tab_from_settings()
 
-    assert main_window.layout_preset_tab_bar.currentIndex() == 1
+    assert main_window.layout_preset_navigation.currentIndex() == 1
 
 
 def test_layout_preset_tab_change_activates_mode(main_window):
@@ -1071,7 +1190,7 @@ def test_layout_preset_tabs_toggle_honours_enabled_setting(main_window, settings
     main_window.on_toggle_layout_preset_tabs(True)
 
     assert main_window.view_layout_preset_tabs_item.isChecked() is True
-    assert main_window.layout_preset_toolbar.isHidden() is False
+    assert main_window.layout_preset_navigation.isNavigationVisible() is True
 
 
 def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
@@ -1079,7 +1198,7 @@ def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
     main_window.on_toggle_layout_preset_tabs(False)
 
     assert settings.value('user interface/show layout preset tabs') is False
-    assert main_window.layout_preset_toolbar.isHidden() is True
+    assert main_window.layout_preset_navigation.isNavigationVisible() is False
     assert main_window.view_layout_preset_tabs_item.isChecked() is False
 
 
@@ -1091,7 +1210,7 @@ def test_activate_layout_preset_saved_state_without_snapshot_applies_canonical(m
     """
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'default')
-    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('user interface/modern preset layout/setup/main window state', QtCore.QByteArray(b'1'))
     settings.setValue(_preset_layout_storage_key('setup', _PRESET_VISIBILITY_SNAPSHOT_KEY), '')
     main_window.control_splitter = MagicMock()
     main_window.control_splitter.saveState.return_value = QtCore.QByteArray()
@@ -1113,7 +1232,7 @@ def test_activate_layout_preset_saved_state_with_snapshot_skips_canonical(mock_s
     """
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'default')
-    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('user interface/modern preset layout/setup/main window state', QtCore.QByteArray(b'1'))
     settings.setValue(
         _preset_layout_storage_key('setup', _PRESET_VISIBILITY_SNAPSHOT_KEY),
         '{"show_library": true, "show_service": true, "show_themes": true, '
@@ -1139,7 +1258,7 @@ def test_deferred_left_column_setup_preset_uses_setup_dock_geometry(mock_sizes, 
     """
     settings.setValue('core/view mode', 'setup')
     settings.setValue('user interface/is preset layout', True)
-    settings.setValue('user interface/preset layout/setup/main window state', QtCore.QByteArray())
+    settings.setValue('user interface/modern preset layout/setup/main window state', QtCore.QByteArray())
     with patch.object(main_window, '_reapply_left_column_dock_layout_setup') as mock_setup, \
             patch.object(main_window, '_reapply_left_column_dock_layout') as mock_default:
         main_window._deferred_apply_left_column_dock_layout()
@@ -1165,7 +1284,7 @@ def test_deferred_left_column_default_preset_uses_default_dock_geometry(mock_siz
     """Default mode without saved preset should use the standard left-column dock layout."""
     settings.setValue('core/view mode', 'default')
     settings.setValue('user interface/is preset layout', True)
-    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray())
+    settings.setValue('user interface/modern preset layout/default/main window state', QtCore.QByteArray())
     with patch.object(main_window, '_reapply_left_column_dock_layout_setup') as mock_setup, \
             patch.object(main_window, '_reapply_left_column_dock_layout') as mock_default:
         main_window._deferred_apply_left_column_dock_layout()
@@ -1185,7 +1304,7 @@ def test_show_skips_factory_set_view_mode_when_saved_preset_layout(mocked_view_m
     main_window.activateWindow = MagicMock()
     settings.setValue('core/view mode', 'default')
     settings.setValue('user interface/is preset layout', True)
-    settings.setValue('user interface/preset layout/default/main window state', QtCore.QByteArray(b'x'))
+    settings.setValue('user interface/modern preset layout/default/main window state', QtCore.QByteArray(b'x'))
 
     main_window.show()
 
@@ -1218,7 +1337,7 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.information')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_singleshot: MagicMock,
                               main_window: MainWindow):
     """
@@ -1237,7 +1356,7 @@ def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_single
 
 
 @patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.information')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal_sets_timestamp_after_blocking_on_modal(mocked_information: MagicMock,
                                                                      mocked_timer_singleshot: MagicMock,
                                                                      main_window: MainWindow):
@@ -1456,3 +1575,330 @@ def test_wait_for_threads_runtime_error(MockApp, main_window_reduced):
     assert mocked_http_thread.isRunning.call_count == 1, 'isRunning() should have been called once'
     mocked_http_thread.wait.assert_not_called()
     mocked_http_thread.terminate.assert_not_called()
+
+
+@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+def test_network_worker_can_unwind_after_default_shutdown_limit(MockApp, main_window_reduced):
+    """A bounded cloud request can clean up after the default five-second allowance."""
+    from openlp.plugins.librarysync.lib.worker import SyncWorker
+    worker = SyncWorker('job', {}, MagicMock())
+    thread = MagicMock()
+    thread.isRunning.side_effect = [True] * 55 + [False, False]
+    main_window_reduced.application.worker_threads = {'librarysync-job': {'thread': thread, 'worker': worker}}
+    main_window_reduced._wait_for_threads()
+    assert worker.cancel.is_set()
+    assert thread.wait.call_count > 50
+    thread.terminate.assert_not_called()
+
+
+def test_layout_navigation_compact_mode_keeps_workspace_and_selection(main_window):
+    """The pane toggle exposes Compact mode without changing the active workspace."""
+    navigation = main_window.layout_preset_navigation
+    host = navigation.contentHost()
+    workspace = host.pageWidget(0)
+    assert host.currentIndex() == 0
+    assert workspace == main_window.dock_manager
+    with patch.object(main_window, '_activate_layout_preset') as activate:
+        navigation.buttons[1].click()
+        activate.assert_called_once_with('setup')
+        assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+        assert not navigation.isPaneOpen()
+        assert navigation.currentIndex() == 1
+        assert navigation.buttons[1].isChecked()
+        assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconOnly
+                   for button in navigation.buttons)
+        assert host.pageWidget(0) == workspace
+        main_window.on_toggle_layout_preset_tabs(False)
+        main_window.on_toggle_layout_preset_tabs(True)
+        assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+        navigation.pane_toggle.click()
+        assert navigation.displayMode() == navigation.DisplayMode.Left
+        assert all(button.fluentLayout() == QtWidgets.fluentqt.Button.ButtonLayout.IconBefore
+                   for button in navigation.buttons)
+        for button in navigation.buttons:
+            content = button.contentPaintRect(QtCore.QRectF(0, 0, 172, 32))
+            assert content.left() == 0
+            assert content.width() == button.sizeHint().width()
+        activate.assert_called_once_with('setup')
+
+
+def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, main_window):
+    """Navigation sits to the left of the dock manager, including Library and Service."""
+    navigation = main_window.layout_preset_navigation
+    assert main_window.centralWidget() == navigation
+    assert navigation.contentHost().pageWidget(0) == main_window.dock_manager
+    assert navigation.contentHost().currentIndex() == 0
+    navigation.resize(1000, 600)
+    navigation.show()
+    QtWidgets.QApplication.processEvents()
+    assert navigation.paneGeometry().left() == 0
+    assert navigation.displayMode() == navigation.DisplayMode.LeftCompact
+    assert navigation.contentGeometry().left() == navigation.compactPaneWidth()
+    navigation.pane_toggle.click()
+    QtWidgets.QApplication.processEvents()
+    assert navigation.contentGeometry().left() == navigation.expandedPaneWidth()
+
+
+def test_slide_controller_action_buttons_use_native_commandbars(modern_appearance, main_window):
+    from PySide6 import QtGui
+    from openlp.core.widgets import fluent
+    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, window_title, embedded=False):
+        widget = QtWidgets.QWidget(parent)
+        widget.window_title = window_title
+        widget.show_display = MagicMock()
+        return widget
+
+    controllers = (PreviewController(main_window), LiveController(main_window))
+    for controller in controllers:
+        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        toolbar = controller.toolbar
+        for action in (controller.previous_item, controller.next_item):
+            wrapper, button, _ = toolbar._fluent_actions[action]
+            assert isinstance(button, fluent.fluentqt.Button)
+            assert button.defaultAction() is action
+            assert wrapper.defaultWidget() is button
+            assert wrapper in toolbar.actions()
+            assert action not in toolbar._command_actions
+        assert toolbar.maximumHeight() > toolbar._command_groups[0].sizeHint().height()
+    preview = controllers[0]
+    toolbar = preview.toolbar
+    button = preview.go_live_button
+    assert toolbar.widgetForAction(preview.go_live_action) is button
+    assert preview.top_label_horizontal.indexOf(button) == -1
+    assert button.text() == 'Go Live'
+    assert button.fluentLayout() == fluent.fluentqt.Button.ButtonLayout.IconBefore
+    assert preview.go_live_action not in toolbar._command_actions
+    parent = toolbar.parentWidget()
+    preview.controller_layout.removeWidget(toolbar)
+    toolbar.setParent(None)
+    try:
+        toolbar.set_widget_visible(['editSong', 'clear'], True)
+        toolbar.setVisible(True)
+        for width in (260, 800):
+            toolbar.resize(width, toolbar.sizeHint().height())
+            QtWidgets.QApplication.processEvents()
+            assert button.isVisible()
+            separator = toolbar.widgetForAction(preview.go_live_separator)
+            group = toolbar._command_groups[0]
+            assert separator.isVisible()
+            assert group.geometry().right() < separator.x() < button.x()
+            assert button.x() - separator.geometry().right() <= 8
+            if width == 800:
+                assert button.geometry().right() < toolbar.contentsRect().right() - 100
+            preview.go_live_action.setVisible(False)
+            assert separator.isHidden()
+            preview.go_live_action.setVisible(True)
+            assert separator.isVisible()
+            preview.go_live_action.setEnabled(True)
+            assert button.isEnabled()
+            preview.go_live_action.setEnabled(False)
+            assert not button.isEnabled()
+            if width == 260:
+                assert toolbar._command_groups[0].overflowedPrimaryActions()
+    finally:
+        toolbar.setParent(parent)
+        preview.controller_layout.insertWidget(1, toolbar)
+    controller = controllers[1]
+    for name in ('show_screen_button', 'theme_screen_button', 'logo_screen_button',
+                 'blank_screen_button', 'desktop_screen_button'):
+        action = controller.toolbar.actions_map[name]
+        assert isinstance(action, QtGui.QAction)
+        assert not isinstance(action, QtWidgets.QWidgetAction)
+        wrapper, button, _ = controller.toolbar._fluent_actions[action]
+        assert wrapper in controller.toolbar.actions()
+        assert button.defaultAction() is action
+        assert action not in controller.toolbar._command_actions
+    toolbar = controller.toolbar
+    action = controller.song_menu_action
+    assert action not in toolbar._command_actions
+    wrapper, button, _ = toolbar._fluent_actions[action]
+    assert button.defaultAction() is action
+    next_button = toolbar.widgetForAction(controller.next_item)
+    assert toolbar.layout().indexOf(button) == toolbar.layout().indexOf(next_button) + 1
+    assert action.menu() is None
+    assert controller.song_menu is not None
+    parent = toolbar.parentWidget()
+    controller.controller_layout.removeWidget(toolbar)
+    toolbar.setParent(None)
+    try:
+        toolbar.set_widget_visible('song_menu', True)
+        toolbar.resize(700, toolbar.sizeHint().height())
+        toolbar.setVisible(True)
+        QtWidgets.QApplication.processEvents()
+        assert button.isVisible()
+        assert button.x() > next_button.geometry().right()
+        assert not any(widget.isVisible() for widget in toolbar.findChildren(QtWidgets.QWidget)
+                       if widget.objectName() == 'FluentCommandBar.MoreButton')
+        controller.song_menu.addAction('Verse 1')
+        button.click()
+        QtWidgets.QApplication.processEvents()
+        assert controller.song_menu.isVisible()
+        controller.song_menu.close()
+    finally:
+        toolbar.setParent(parent)
+        controller.controller_layout.insertWidget(1, toolbar)
+
+
+def test_preview_renderers_are_embedded_below_dialogs(main_window):
+    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, window_title, embedded=False):
+        widget = QtWidgets.QWidget(parent, QtCore.Qt.WindowType.Widget if embedded else QtCore.Qt.WindowType.Tool)
+        widget.window_title = window_title
+        widget.show_display = MagicMock()
+        return widget
+
+    for controller_class in (PreviewController, LiveController):
+        controller = controller_class(main_window)
+        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        main_window.dock_slide_controller(controller)
+        assert not controller.preview_display.isWindow()
+        assert controller.preview_display.window() is main_window
+
+def test_shutdown_wait_dialog_has_room_for_text_and_progress(qapp):
+    parent = QtWidgets.QWidget()
+    parent.resize(900, 600)
+    parent.show()
+    with MainWindow._show_wait_dialog(parent, 'Please Wait', 'Waiting for some things to finish...'):
+        dialog = parent.findChild(QtWidgets.QProgressDialog)
+        assert dialog is not None
+        assert dialog.width() >= 360
+        assert dialog.height() > 70
+        assert dialog._label.height() >= dialog._label.heightForWidth(dialog._label.width())
+        assert dialog.layout().contentsMargins().left() >= 24
+        assert parent.rect().contains(dialog.geometry())
+    parent.close()
+
+
+def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
+    """The current theme name links directly to the translated Themes settings section."""
+    settings.setValue('themes/global theme', 'Sunday worship')
+    main_window.default_theme_changed()
+    button = main_window.default_theme_button
+    assert isinstance(button, QtWidgets.fluentqt.HyperlinkButton)
+    assert button.text() == 'Sunday worship'
+    assert main_window.default_theme_label.text() == 'Default Theme:'
+    with patch.object(main_window.settings_form, 'exec') as open_settings:
+        button.click()
+    open_settings.assert_called_once_with(UiStrings().Themes)
+    settings.setValue('themes/global theme', 'Evening worship')
+    main_window.default_theme_changed()
+    assert button.text() == 'Evening worship'
+
+
+def test_footer_has_large_padding_around_progress_and_theme(modern_appearance, main_window):
+    from fluentqt.design import Spacing
+    footer = main_window.status_bar
+    main_window.show_status_message('Loading Sunday service')
+    assert footer.contentsMargins().left() == Spacing.Large
+    assert footer.contentsMargins().right() == Spacing.Large
+    assert footer.message_label.text() == 'Loading Sunday service'
+    assert footer.left_content.layout().indexOf(footer.message_label) == 0
+    assert footer.left_content.layout().indexOf(main_window.load_progress_bar) == 1
+    assert footer.right_content.layout().indexOf(main_window.default_theme_container) == 0
+
+
+@pytest.mark.parametrize('name', ['preview', 'live'])
+def test_modern_controller_close_and_view_toggle_sync(modern_appearance, main_window, settings, name):
+    dock = getattr(main_window, f'{name}_controller_dock')
+    action = getattr(main_window, f'view_{name}_panel')
+    dock.toggleView(False)
+    assert not settings.value(f'user interface/{name} panel')
+    assert not action.isChecked()
+    getattr(main_window, f'set_{name}_panel_visibility')(True)
+    assert dock.isDockOpen()
+    assert settings.value(f'user interface/{name} panel')
+    assert action.isChecked()
+
+
+def test_modern_controller_lock_and_preset_visibility(modern_appearance, main_window, settings):
+    import json
+    import PySide6QtAds as ads
+    main_window.set_lock_panel(True)
+    for dock in (main_window.preview_controller_dock, main_window.live_controller_dock):
+        assert dock.features() == ads.CDockWidget.DockWidgetFeature.NoDockWidgetFeatures
+    main_window.set_lock_panel(False)
+    assert main_window.live_controller_dock.features() & ads.CDockWidget.DockWidgetFeature.DockWidgetPinnable
+    settings.setValue('user interface/is preset layout', True)
+    assert main_window._apply_preset_visibility_snapshot(json.dumps({'preview_panel': False, 'live_panel': True}))
+    assert main_window.preview_controller_dock.isClosed()
+    assert main_window.live_controller_dock.isDockOpen()
+    assert settings.value('user interface/is preset layout')
+
+
+@pytest.mark.parametrize('main_window', [{'no_web_server': False}], indirect=True)
+def test_unused_features_disabled_on_startup(main_window):
+    """Unused optional features hide controls and disable network services."""
+    assert Registry().get_flag('projector_disabled') is True
+    assert Registry().get_flag('no_web_server') is True
+    assert main_window.view_projector_manager_item.isVisible() is False
+    assert main_window.import_projector_item.isVisible() is False
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_not_called()
+        websocket_thread.assert_not_called()
+    with patch.object(main_window, 'set_preview_panel_visibility'), \
+            patch.object(main_window, 'set_live_panel_visibility'):
+        main_window.set_view_mode(projector=True)
+    assert main_window.projector_manager_dock.isVisible() is False
+
+
+@pytest.mark.parametrize('main_window', [
+    {'projector': True, 'remote_interface': True, 'no_web_server': False},
+], indirect=True)
+def test_enabled_features_start_on_next_session(main_window):
+    """Saved activation restores projector controls and starts both remote servers."""
+    assert Registry().get_flag('projector_disabled') is False
+    assert Registry().get_flag('no_web_server') is False
+    assert main_window.view_projector_manager_item.isVisible() is True
+    assert main_window.import_projector_item.isVisible() is True
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_called_once()
+        websocket_thread.assert_called_once()
+    main_window.ws_server.close()
+
+
+@pytest.mark.parametrize('main_window', [
+    {'remote_interface': True, 'no_web_server': True},
+], indirect=True)
+def test_command_line_disable_overrides_enabled_remote(main_window):
+    """The existing command-line override still prevents both remote servers."""
+    assert Registry().get_flag('no_web_server') is True
+    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
+            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+        main_window.http_server.bootstrap_post_set_up()
+        main_window.ws_server.bootstrap_post_set_up()
+        http_thread.assert_not_called()
+        websocket_thread.assert_not_called()
+    main_window.ws_server.close()
+
+
+@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=True)
+def test_screen_changed_configure_action_follows_display_refresh(message, timer, main_window):
+    main_window._live_controller = MagicMock()
+    main_window._preview_controller = MagicMock()
+    main_window._renderer = MagicMock()
+
+    def request_configuration():
+        assert not main_window.screen_updating_lock.locked()
+        main_window.live_controller.setup_displays.assert_called_once()
+        main_window.renderer.resize.assert_called_once()
+
+    with patch('openlp.core.ui.mainwindow.request_screen_configuration',
+               side_effect=request_configuration) as configure:
+        main_window.screen_changed()
+    configure.assert_called_once()

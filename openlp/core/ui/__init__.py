@@ -21,7 +21,7 @@
 """
 The :mod:`ui` module provides the core user interface for OpenLP
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtCore import Qt
 
 
@@ -82,7 +82,7 @@ class SingleColumnTableWidget(QtWidgets.QTableWidget):
         """
         QtWidgets.QTableWidget.resizeEvent(self, event)
         if self.columnCount():
-            self.setColumnWidth(0, event.size().width())
+            self.setColumnWidth(0, self.viewport().width())
             self.resizeRowsToContents()
 
 

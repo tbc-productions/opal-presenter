@@ -53,12 +53,15 @@ def controller(registry: Registry, settings: Settings):
     with patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server'):
         _controller = MacLOController(MagicMock(settings_section='presentations'))
     _controller._client = MagicMock()
+    _controller.server_process = MagicMock()
     return _controller
 
 
 @pytest.fixture
 def document(controller: MacLOController):
-    return MacLODocument(controller, TEST_FILE)
+    document = MacLODocument(controller, TEST_FILE)
+    document._client = controller._client
+    return document
 
 
 @patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
@@ -77,7 +80,7 @@ def test_constructor(mocked_start_server: MagicMock, registry: Registry, setting
         'The name of the presentation controller should be correct'
     assert controller.display_name == 'Impress on macOS', \
         'The display name of the presentation controller should be correct'
-    mocked_start_server.assert_called_once_with()
+    mocked_start_server.assert_not_called()
 
 
 @patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
@@ -98,7 +101,7 @@ def test_client(MockedProxy: MagicMock, mocked_start_server: MagicMock, registry
     # THEN: a client is created
     assert client == mocked_client
     MockedProxy.assert_called_once_with('PYRO:openlp.libreofficeserver@localhost:4310')
-    mocked_client._pyroReconnect.assert_called_once_with()
+    mocked_client._pyroReconnect.assert_called_once_with(tries=10)
 
 
 @patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
@@ -135,14 +138,17 @@ def test_kill(mocked_start_server: MagicMock, controller: MacLOController):
     Test the kill() method
     """
     # GIVEN: A controller and a client
-    controller.server_process = MagicMock()
+    controller.server_process = server_process = MagicMock()
+    client = controller._client
 
-    # WHEN: start_process() is called
+    # WHEN: kill() is called
     controller.kill()
 
     # THEN: The client's start_process() should have been called
-    controller._client.shutdown.assert_called_once_with()
-    controller.server_process.kill.assert_called_once_with()
+    client.shutdown.assert_called_once_with()
+    server_process.kill.assert_called_once_with()
+    assert controller.server_process is None
+    assert controller._client is None
 
 
 @patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
@@ -152,14 +158,17 @@ def test_kill_client_already_closed(mocked_start_server: MagicMock, controller: 
     """
     # GIVEN: A controller and a client
     controller._client.shutdown.side_effect = Exception
-    controller.server_process = MagicMock()
+    controller.server_process = server_process = MagicMock()
+    client = controller._client
 
-    # WHEN: start_process() is called
+    # WHEN: kill() is called
     controller.kill()
 
     # THEN: The client's start_process() should have been called
-    controller._client.shutdown.assert_called_once_with()
-    controller.server_process.kill.assert_called_once_with()
+    client.shutdown.assert_called_once_with()
+    server_process.kill.assert_called_once_with()
+    assert controller.server_process is None
+    assert controller._client is None
 
 
 @patch('openlp.plugins.presentations.lib.maclocontroller.ScreenList')

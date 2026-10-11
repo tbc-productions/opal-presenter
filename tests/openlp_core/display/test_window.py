@@ -21,8 +21,8 @@
 """
 Package to test the openlp.core.display.window package.
 """
-import sys
 import time
+import json
 import pytest
 from pathlib import Path
 
@@ -38,9 +38,6 @@ from openlp.core.display.window import TRANSITION_END_EVENT_NAME, DisplayWindow,
 from openlp.core.lib.theme import Theme
 from openlp.core.ui import HideMode
 
-# Mock QtWebEngineCore
-sys.modules['PySide6.QtWebEngineCore'] = MagicMock()
-
 
 @pytest.fixture
 def mock_geometry():
@@ -52,6 +49,20 @@ def mock_geometry():
     screenlist_patcher.start()
     yield
     screenlist_patcher.stop()
+
+
+def test_load_images_passes_fit_and_logo_colour(display_window_env, mock_settings):
+    mock_settings.value.side_effect = lambda key: {
+        'images/fit': 'stretch', 'core/logo background color': '#123456'
+    }.get(key, False)
+    window = DisplayWindow()
+    window.run_in_display = MagicMock()
+    images = [{'path': Path('/tmp/image.png')}]
+    window.load_images(images)
+    window.run_in_display.assert_called_once_with(
+        'setImageSlides', [{'path': 'file:///tmp/image.png', 'thumbnail': 'file:///tmp/image.png'}],
+        'stretch', '#123456')
+    assert images == [{'path': Path('/tmp/image.png')}]
 
 
 @pytest.fixture
@@ -491,6 +502,7 @@ def test_after_loaded(display_window_env, mock_settings, registry):
 
     # THEN: The following functions should have been called
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': True,
+                                                                   'showTransparency': True,
                                                                    'allowThemeTransitions': False,
                                                                    'doItemTransitions': True,
                                                                    'itemTransitionSpeed': 0.8,
@@ -507,8 +519,10 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
     Test the mouse is showing even if the `hide mouse` setting is set while is_display=false
     """
     # GIVEN: An initialised display window and settings for item transitions and hide mouse returns true
-    display_window = DisplayWindow()
+    display_window = DisplayWindow(embedded=True)
     display_window.is_display = False
+    display_window.allow_theme_transitions = True
+    display_window.allow_item_transitions = False
     mock_settings.value.return_value = True
     display_window.scale = 2
     display_window._is_initialised = True
@@ -519,10 +533,11 @@ def test_after_loaded_hide_mouse_not_display(display_window_env, mock_settings):
     # WHEN: after_loaded is run
     display_window.after_loaded()
 
-    # THEN: Display.init should be called where is_display=false, do_item_transitions=true, show_mouse=false
+    # THEN: Preview retains slide transitions while service item transitions stay disabled.
     display_window.run_in_display.assert_called_once_with('init', {'isDisplay': False,
-                                                                   'allowThemeTransitions': False,
-                                                                   'doItemTransitions': True,
+                                                                   'showTransparency': False,
+                                                                   'allowThemeTransitions': True,
+                                                                   'doItemTransitions': False,
                                                                    'itemTransitionSpeed': 0.8,
                                                                    'itemTransitionType': 'balanced',
                                                                    'slideNumbersInFooter': True,
@@ -549,6 +564,20 @@ def test_after_loaded_callback(display_window_env, mock_settings, registry):
 
     # THEN: The after_loaded_callback should be called
     mocked_after_loaded_callback.assert_called_once()
+
+
+@patch('openlp.core.display.window.wait_for')
+def test_preview_frame_logs_do_not_flood_debug_output(mocked_wait_for, display_window_env, mock_settings):
+    """Routine capture payloads stay quiet while display control actions remain logged."""
+    window = DisplayWindow(embedded=True)
+    window.webview = MagicMock()
+    with patch('openlp.core.display.window.log.debug') as debug:
+        for _ in range(3):
+            window.set_single_image_data('#000', 'jpeg data')
+        debug.assert_not_called()
+        window.run_in_display('show')
+        debug.assert_called_once_with("requestAction('show')")
+    assert window.webview.page().runJavaScript.call_count == 4
 
 
 @patch('openlp.core.display.window.wait_for')
@@ -663,13 +692,13 @@ def test_set_theme_is_display_video(display_window_env, mock_settings, mock_geom
     theme = Theme()
     theme.background_type = 'video'
     result_theme = Theme()
-    result_theme.background_type = 'transparent'
+    result_theme.background_type = 'video'
     result_theme = result_theme.export_theme(is_js=True)
 
     # WHEN: The set theme function is called
     display_window.set_theme(theme, is_sync=False, service_item_type=ServiceItemType.Text)
 
-    # THEN: The final theme should be transparent
+    # THEN: Reveal receives the video theme, so its HTML5 background stays behind lyrics.
     display_window.run_in_display.assert_called_once_with('setTheme', raw_parameters=result_theme, is_sync=False)
 
 
@@ -685,20 +714,33 @@ def test_set_theme_not_display_video(display_window_env, mock_settings, mock_geo
     theme.background_type = 'video'
     theme.background_border_color = 'border_colour'
     result_theme = Theme()
-    result_theme.background_type = 'solid'
+    result_theme.background_type = 'video'
     result_theme.background_border_color = 'border_colour'
-    result_theme.background_start_color = 'border_colour'
-    result_theme.background_end_color = 'border_colour'
-    result_theme.background_main_color = 'border_colour'
-    result_theme.background_footer_color = 'border_colour'
-    result_theme.background_color = 'border_colour'
     result_theme = result_theme.export_theme(is_js=True)
 
     # WHEN: The set theme function is called
     display_window.set_theme(theme, is_sync=False, service_item_type=False)
 
-    # THEN: The final theme should use 'border_colour' for it's colour values
+    # THEN: Preview uses the same HTML5 video background as live output.
     display_window.run_in_display.assert_called_once_with('setTheme', raw_parameters=result_theme, is_sync=False)
+
+
+@pytest.mark.parametrize('is_display', [False, True])
+def test_video_background_uses_browser_playback_copy_and_retains_saved_original(
+        display_window_env, mock_settings, mock_geometry, is_display):
+    window = DisplayWindow()
+    window.is_display = is_display
+    window.run_in_display = MagicMock()
+    theme = Theme()
+    theme.background_type = 'video'
+    original = theme.background_filename = Path('/tmp/original.mp4')
+    playback = Path('/tmp/playback.webm')
+    with patch('openlp.core.lib.videoplayback.video_playback_path', return_value=playback):
+        window.set_theme(theme, service_item_type=ServiceItemType.Text)
+    rendered = json.loads(window.run_in_display.call_args.kwargs['raw_parameters'])
+    assert rendered['background_type'] == 'video'
+    assert rendered['background_filename'] == playback.as_uri()
+    assert theme.background_filename == original
 
 
 def test_set_theme_not_display_live(display_window_env, mock_settings, mock_geometry):
@@ -844,7 +886,7 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     display_window.setVisible = MagicMock()
@@ -854,15 +896,18 @@ def test_hide_display_to_screen(display_window_env, mock_settings):
     display_window.hide_display()
 
     # THEN: Should hide the display with the js transparency function (not setVisible)
-    display_window.setVisible.call_count == 0
-    display_window.run_in_display.assert_called_once_with('toTransparent', True)
+    display_window.setVisible.assert_not_called()
+    display_window.display_watcher.dispatchEvent(TRANSITION_END_EVENT_NAME, {})
+    display_window.setVisible.assert_called_once_with(False)
+    display_window.run_in_display.assert_called_once_with(
+        'toTransparent', True, return_event_name=TRANSITION_END_EVENT_NAME)
 
 
 def test_hide_display_to_blank(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     mock_settings.value.return_value = False
@@ -894,7 +939,7 @@ def test_hide_display_to_theme(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     mock_settings.value.return_value = False
@@ -937,7 +982,6 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
             'core/logo file': logo_path,
             'core/logo fit': 'repeat',
             'themes/item transitions': False,
-            'advanced/disable transparent display': False
         }
         return values.get(key, False)
 
@@ -956,11 +1000,34 @@ def test_hide_display_to_logo(display_window_env, mock_settings):
     )
 
 
+@pytest.mark.parametrize('transitions', [False, True])
+@pytest.mark.parametrize('is_display', [False, True])
+def test_logo_cover_raises_live_output_before_fading(display_window_env, mock_settings, transitions, is_display):
+    """Keep the transparent live cover above native windows throughout its logo fade."""
+    display_window = DisplayWindow()
+    display_window.is_display = is_display
+    display_window.isHidden = MagicMock(return_value=True)
+    display_window._get_logo_settings = MagicMock(return_value=('#123456', None, 'contain'))
+    mock_settings.value.return_value = transitions
+    calls = MagicMock()
+    display_window.setVisible = calls.visible
+    display_window.raise_ = calls.raise_window
+    display_window.run_in_display = calls.render
+    with patch('openlp.core.display.window.ScreenList') as screens:
+        screens.return_value.__len__.return_value = 2
+        display_window.hide_display(HideMode.Logo)
+
+    assert [entry[0] for entry in calls.mock_calls] == (
+        ['visible', 'raise_window', 'render'] if is_display else ['render'])
+    arguments = ('toLogo', '#123456', None, 'contain')
+    calls.render.assert_called_once_with(*(arguments if transitions else arguments + (True,)))
+
+
 def test_hide_display_to_transparent(display_window_env, mock_settings):
     """
     Test hide to screen in the hide_display function
     """
-    # GIVEN: Display window and setting advanced/disable transparent display = False
+    # GIVEN: Display window with transitions disabled
     display_window = DisplayWindow()
     display_window.run_in_display = MagicMock()
     display_window.setVisible = MagicMock()
@@ -970,7 +1037,8 @@ def test_hide_display_to_transparent(display_window_env, mock_settings):
     display_window.hide_display(HideMode.Screen)
 
     # THEN: Should run the correct javascript on the display and not set the visiblity
-    display_window.run_in_display.assert_called_once_with('toTransparent', True)
+    display_window.run_in_display.assert_called_once_with(
+        'toTransparent', True, return_event_name=TRANSITION_END_EVENT_NAME)
     assert display_window.setVisible.call_count == 0
 
 
@@ -1103,10 +1171,9 @@ def test_display_watcher_generates_event_names(display_window_env, mock_settings
 
 def test_hide_transparent_to_screen(display_window_env, mock_settings):
     """
-    Test that when going transparent, and the disable transparent setting is enabled,
-    the screen mode should be used.
+    Showing the desktop hides the output window after the transition completes.
     """
-    # GIVEN: Display window, setting advanced/disable transparent display = True and mocked run_in_display
+    # GIVEN: A display window and mocked transition completion
     display_window = DisplayWindow()
     display_window.setVisible = MagicMock()
     has_ran_event = False
@@ -1290,3 +1357,30 @@ def test_run_in_display_dumps_json(display_window_env, mock_settings):
     # THEN: The parameters should be correctly converted to JSON
     display_window._run_javascript.assert_called_once_with('requestAction(\'test_event\', 1.23, "a \\"string\", '
                                                            '[1, 2, "test"], {"test1": "test2"})', False)
+
+
+@patch('openlp.core.display.window.is_macosx', return_value=True)
+def test_embedded_preview_has_no_native_tool_or_transparency_flags(mocked_is_macosx, display_window_env, mock_settings):
+    """Embed before WebEngine starts, rather than converting an existing native tool window."""
+    from PySide6 import QtWidgets
+    mock_settings.value.return_value = True
+    parent = QtWidgets.QWidget()
+    display = DisplayWindow(parent, window_title='Preview', embedded=True)
+    assert not display.isWindow()
+    assert display.parentWidget() is parent
+    assert not display.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow)
+    assert not display.testAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert not display.windowFlags() & QtCore.Qt.WindowType.X11BypassWindowManagerHint
+    display.webview.setAttribute.assert_called_with(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, False)
+
+
+@pytest.mark.parametrize('embedded, show_transparency, background', [
+    (True, None, QtCore.Qt.GlobalColor.black), (False, None, QtCore.Qt.GlobalColor.transparent),
+    (True, True, QtCore.Qt.GlobalColor.black),
+])
+def test_preview_background_allows_dialog_stacking(
+        display_window_env, mock_settings, embedded, show_transparency, background):
+    """Opaque embedded WebEngine views avoid Qt's forced topmost composition."""
+    display = DisplayWindow(embedded=embedded, show_transparency=show_transparency)
+    display.webview.page().setBackgroundColor.assert_called_once_with(background)
+    assert display.show_transparency is (not embedded if show_transparency is None else show_transparency)

@@ -24,13 +24,15 @@ Package to test the openlp.plugins.songs.forms.editsongform package.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtWidgets, QtTest, QtCore, QtGui
+from PySide6 import QtTest, QtCore
+import fluentqt
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.songs.lib.db import Author
+from openlp.plugins.songs.lib.db import Author, AuthorType
 from openlp.plugins.songs.lib.ui import SongStrings
 
 
@@ -49,10 +51,91 @@ def test_ui_defaults(form: EditSongForm):
     """
     Test that the EditSongForm defaults are correct
     """
-    assert form.verse_edit_button.isEnabled() is False, 'The verse edit button should not be enabled'
-    assert form.verse_delete_button.isEnabled() is False, 'The verse delete button should not be enabled'
-    assert form.author_remove_button.isEnabled() is False, 'The author remove button should not be enabled'
-    assert form.topic_remove_button.isEnabled() is False, 'The topic remove button should not be enabled'
+    assert form.verse_edit_action.isEnabled() is False, 'The verse edit button should not be enabled'
+    assert form.verse_delete_action.isEnabled() is False, 'The verse delete button should not be enabled'
+    assert form.author_remove_action.isEnabled() is False, 'The author remove button should not be enabled'
+    assert form.topic_remove_action.isEnabled() is False, 'The topic remove button should not be enabled'
+    # Fluent rejects actions without captions at registration time.
+    for command_bar, count in ((form.lyrics_command_bar, 4), (form.author_command_bar, 2),
+                               (form.topic_command_bar, 1), (form.songbook_command_bar, 1),
+                               (form.audio_command_bar, 6)):
+        assert command_bar.isBackgroundVisible()
+        actions = command_bar.primaryActions()
+        assert len(actions) == count
+        assert all(action.text() and not action.icon().isNull() for action in actions)
+
+
+def test_song_editor_exec_opens_and_closes(form: EditSongForm):
+    """With Slide Designer disabled, retain the original Fluent dialog lifecycle."""
+    from openlp.core.common.enum import PluginStatus
+    form.settings.setValue('slide_designer/status', PluginStatus.Inactive)
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    observed = []
+
+    def dismiss():
+        observed.append(form.isVisible() and form.isOpen())
+        form.reject()
+
+    QtCore.QTimer.singleShot(0, dismiss)
+    try:
+        assert form.exec() == QtWidgets.QDialog.DialogCode.Rejected
+        assert observed == [True]
+    finally:
+        parent.close()
+
+
+@pytest.mark.parametrize('accept', [True, False])
+@pytest.mark.parametrize('relocated', [True, False])
+def test_edit_author_type_content_dialog(form: EditSongForm, qtbot, accept, relocated):
+    """The custom combo saves on OK and preserves the author on Cancel."""
+    author = Author(id=7, display_name='Test Author')
+    form.manager.get_object.return_value = author
+    form._add_author_to_list(author, AuthorType.Words)
+    form.authors_list_view.setCurrentRow(0)
+    form.on_authors_list_view_clicked()
+    item = form.authors_list_view.currentItem()
+    original_text = item.text()
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    form.show()
+    if relocated:
+        form.hide()
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        parent.resize(1200, 900)
+        parent.show()
+        form._fluent_dialog_host = parent
+    observed = []
+
+    def choose_type():
+        dialog = parent.findChild(fluentqt.ContentDialog, 'author_type_dialog')
+        observed.append(isinstance(dialog, fluentqt.ContentDialog) and dialog.isOpen())
+        QtCore.QTimer.singleShot(1000, dialog, dialog.reject)
+        dialog.setAnimationEnabled(False)
+        combo = dialog.content().findChild(QtWidgets.QComboBox, 'edit_author_type_combo_box')
+        observed.append(combo.currentData() == AuthorType.Words)
+        combo.setCurrentIndex(AuthorType.SortedTypes.index(AuthorType.Music))
+        caption = dialog.primaryButtonText() if accept else dialog.closeButtonText()
+        button = next(button for button in dialog.findChildren(fluentqt.Button) if button.text() == caption)
+        button.click()
+
+    QtCore.QTimer.singleShot(0, choose_type)
+    try:
+        form.author_edit_action.trigger()
+        assert observed == [True, True]
+        assert item.data(QtCore.Qt.ItemDataRole.UserRole) == (7, AuthorType.Music if accept else AuthorType.Words)
+        assert item.text() == (author.get_display_name(AuthorType.Music) if accept else original_text)
+        assert form.author_edit_action.isEnabled()
+    finally:
+        if relocated:
+            del form._fluent_dialog_host
+        form.close()
+        parent.close()
 
 
 def test_verse_order_no_warning(form: EditSongForm):
@@ -133,26 +216,36 @@ def test_bug_1404967(form: EditSongForm):
         'CCLI label text should be "{}"'.format(UiStrings().CCLISongNumberLabel)
 
 
-def test_copyright_edit_is_fixed_three_lines_with_scrollbar(form: EditSongForm):
-    """The copyright editor should be a fixed 3-line height with a scrollbar as needed."""
-    line_spacing = QtGui.QFontMetrics(form.copyright_edit.font()).lineSpacing()
-    margins = form.copyright_edit.contentsMargins()
-    chrome = form.copyright_edit.frameWidth() * 2 + margins.top() + margins.bottom()
-    expected_height = line_spacing * 3 + chrome
+def test_copyright_edit_shows_four_lines(form: EditSongForm):
+    """The native Fluent copyright editor reserves four lines and supports wrapping."""
+    assert isinstance(form.copyright_edit, fluentqt.TextEdit)
+    assert form.copyright_edit.minVisibleLines() == 4
+    assert form.copyright_edit.minimumHeight() >= form.copyright_edit.lineHeight() * 4
+    assert form.copyright_text_edit.acceptRichText() is False
+    assert form.copyright_text_edit.lineWrapMode() == QtWidgets.QTextEdit.LineWrapMode.WidgetWidth
+    assert form.copyright_text_edit.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
 
-    assert isinstance(form.copyright_edit, QtWidgets.QTextEdit)
-    assert form.copyright_edit.acceptRichText() is False
-    assert form.copyright_edit.lineWrapMode() == QtWidgets.QTextEdit.LineWrapMode.WidgetWidth
-    assert form.copyright_edit.height() == expected_height
-    assert form.copyright_edit.verticalScrollBarPolicy() == QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+
+def test_copyright_edit_uses_normal_line_spacing(form: EditSongForm):
+    """Wrapped copyright text uses the font's line spacing rather than Fluent's large default."""
+    editor = form.copyright_text_edit
+    form.copyright_edit.setPlainText('Copyright publisher ' * 40)
+    editor.document().setTextWidth(250)
+    editor.document().documentLayout().documentSize()
+    layout = editor.document().firstBlock().layout()
+
+    assert form.copyright_edit.lineHeight() == editor.fontMetrics().lineSpacing()
+    assert layout.lineCount() > 1
+    assert layout.lineAt(1).y() - layout.lineAt(0).y() == editor.fontMetrics().lineSpacing()
 
 
 def test_on_copyright_insert_button_triggered_inserts_symbol_at_cursor(form: EditSongForm):
     """The copyright insert button should insert the symbol at the current cursor position."""
+    assert not form.copyright_insert_button.icon().isNull()
     form.copyright_edit.setPlainText('Hello World')
-    cursor = form.copyright_edit.textCursor()
+    cursor = form.copyright_text_edit.textCursor()
     cursor.setPosition(len('Hello '))
-    form.copyright_edit.setTextCursor(cursor)
+    form.copyright_text_edit.setTextCursor(cursor)
 
     form.on_copyright_insert_button_triggered()
 
@@ -171,7 +264,7 @@ def test_copyright_edit_ignores_return_key(form: EditSongForm):
     form.copyright_edit.setFocus()
     form.copyright_edit.setPlainText('Copyright')
 
-    QtTest.QTest.keyClick(form.copyright_edit, QtCore.Qt.Key.Key_Return)
+    QtTest.QTest.keyClick(form.copyright_text_edit, QtCore.Qt.Key.Key_Return)
 
     assert form.copyright_edit.toPlainText() == 'Copyright'
 

@@ -53,36 +53,42 @@ class VerseReferenceList(object):
                 return
         self.version_list.append({'version': version, 'copyright': copyright, 'permission': permission})
 
-    def format_verses(self):
+    def format_verses(self, consolidate_chapters=False):
+        """Format references, optionally joining consecutive chapters into one range."""
         verse_sep = get_reference_separator('sep_v_display')
         range_sep = get_reference_separator('sep_r_display')
         list_sep = get_reference_separator('sep_l_display')
+        verse_list = []
+        for verse in self.verse_list:
+            previous = verse_list[-1] if verse_list else None
+            if (consolidate_chapters and previous and previous['book'] == verse['book']
+                    and previous['version'] == verse['version']
+                    and int(previous['end_chapter']) + 1 == int(verse['chapter'])
+                    and int(verse['start']) == 1):
+                previous['end_chapter'] = verse['chapter']
+                previous['end'] = verse['end']
+            else:
+                verse_list.append(dict(verse, end_chapter=verse['chapter']))
         result = ''
-        for index, verse in enumerate(self.verse_list):
-            if index == 0:
-                result = '{book} {chapter}{sep}{verse}'.format(book=verse['book'],
-                                                               chapter=verse['chapter'],
-                                                               sep=verse_sep,
-                                                               verse=verse['start'])
-                if verse['start'] != verse['end']:
-                    result = '{result}{sep}{end}'.format(result=result, sep=range_sep, end=verse['end'])
-                continue
-            prev = index - 1
-            if self.verse_list[prev]['version'] != verse['version']:
-                result = '{result} ({version})'.format(result=result, version=self.verse_list[prev]['version'])
-            result += '{sep} '.format(sep=list_sep)
-            if self.verse_list[prev]['book'] != verse['book']:
-                result = '{result}{book} {chapter}{sep}'.format(result=result,
-                                                                book=verse['book'],
-                                                                chapter=verse['chapter'],
-                                                                sep=verse_sep)
-            elif self.verse_list[prev]['chapter'] != verse['chapter']:
-                result = '{result}{chapter}{sep}'.format(result=result, chapter=verse['chapter'], sep=verse_sep)
+        for index, verse in enumerate(verse_list):
+            previous = verse_list[index - 1] if index else None
+            if previous:
+                if previous['version'] != verse['version']:
+                    result += ' ({version})'.format(version=previous['version'])
+                result += '{sep} '.format(sep=list_sep)
+            if not previous or previous['book'] != verse['book']:
+                result += '{book} {chapter}{sep}'.format(
+                    book=verse['book'], chapter=verse['chapter'], sep=verse_sep)
+            elif previous['end_chapter'] != verse['chapter']:
+                result += '{chapter}{sep}'.format(chapter=verse['chapter'], sep=verse_sep)
             result += str(verse['start'])
-            if verse['start'] != verse['end']:
-                result = '{result}{sep}{end}'.format(result=result, sep=range_sep, end=verse['end'])
-        if len(self.version_list) > 1:
-            result = '{result} ({version})'.format(result=result, version=verse['version'])
+            if verse['chapter'] != verse['end_chapter']:
+                result += '{range}{chapter}{sep}{end}'.format(
+                    range=range_sep, chapter=verse['end_chapter'], sep=verse_sep, end=verse['end'])
+            elif verse['start'] != verse['end']:
+                result += '{sep}{end}'.format(sep=range_sep, end=verse['end'])
+        if verse_list and len(self.version_list) > 1:
+            result += ' ({version})'.format(version=verse['version'])
         return result
 
     def format_versions(self, copyright=True, permission=True):

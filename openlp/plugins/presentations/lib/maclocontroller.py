@@ -71,8 +71,8 @@ class MacLOController(PresentationController, LogMixin):
         self.also_supports = ['ppt', 'pps', 'pptx', 'ppsx', 'pptm']
         self.server_process = None
         self._client = None
+        self._process_started = False
         self.supports_slide_images = True
-        self._start_server()
 
     def _start_server(self):
         """
@@ -89,10 +89,12 @@ class MacLOController(PresentationController, LogMixin):
         """
         Set up a Pyro5 client so that we can talk to the LibreOfficeServer
         """
+        if self.server_process is None:
+            self._start_server()
         if not self._client:
             self._client = Proxy('PYRO:openlp.libreofficeserver@localhost:4310')
         if not self._client._pyroConnection:
-            self._client._pyroReconnect()
+            self._client._pyroReconnect(tries=10)
         return self._client
 
     def check_available(self):
@@ -107,14 +109,17 @@ class MacLOController(PresentationController, LogMixin):
         Loads a running version of LibreOffice in the background. It is not displayed to the user but is available to
         the UNO interface when required.
         """
-        log.debug('Started automatically by the Pyro server')
-        self.client.start_process()
+        if not self._process_started:
+            self.client.start_process()
+            self._process_started = True
 
     def kill(self):
         """
         Called at system exit to clean up any running presentations.
         """
         log.debug('Kill LibreOffice')
+        if self.server_process is None:
+            return
         try:
             # Some people like to close LibreOffice themselves, let's just catch any errors so that OpenLP fails
             # silently
@@ -122,6 +127,9 @@ class MacLOController(PresentationController, LogMixin):
         except Exception:
             pass
         self.server_process.kill()
+        self.server_process = None
+        self._client = None
+        self._process_started = False
 
 
 class MacLODocument(PresentationDocument):
@@ -135,14 +143,27 @@ class MacLODocument(PresentationDocument):
         """
         log.debug('Init Presentation LibreOffice')
         super(MacLODocument, self).__init__(controller, presentation)
-        self.client = controller.client
+        self._client = None
+
+    @property
+    def client(self):
+        """Start LibreOffice only when a document operation needs its service."""
+        if self._client is None:
+            self.controller.start_process()
+            self._client = self.controller.client
+        return self._client
 
     def load_presentation(self):
         """
         Tell the LibreOfficeServer to start the presentation.
         """
         log.debug('Load Presentation LibreOffice')
-        if not self.client.load_presentation(str(self.file_path), ScreenList().current.number + 1):
+        try:
+            loaded = self.client.load_presentation(str(self.file_path), ScreenList().current.number + 1)
+        except Exception:
+            log.exception('Could not start LibreOffice or load the presentation')
+            return False
+        if not loaded:
             return False
         self.create_thumbnails()
         self.create_titles_and_notes()
@@ -184,7 +205,8 @@ class MacLODocument(PresentationDocument):
         shutdown.
         """
         log.debug('close Presentation LibreOffice')
-        self.client.close_presentation()
+        if self._client is not None:
+            self._client.close_presentation()
         self.controller.remove_doc(self)
 
     def is_loaded(self):

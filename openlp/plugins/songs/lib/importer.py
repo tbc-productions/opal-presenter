@@ -209,7 +209,7 @@ class SongFormat(object):
             'class': OpenLyricsImport,
             'name': 'OpenLyrics',
             'prefix': 'openLyrics',
-            'filter': '{text} (*.xml)'.format(text=translate('SongsPlugin.ImportWizardForm', 'OpenLyrics Files')),
+            'filter': '{text} (*.xml *.osz)'.format(text=translate('SongsPlugin.ImportWizardForm', 'OpenLyrics Files')),
             'comboBoxText': translate('SongsPlugin.ImportWizardForm', 'OpenLyrics or OpenLP 2 Exported Song')
         },
         OpenLP2: {

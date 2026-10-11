@@ -19,9 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 import logging
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import and_, func, or_
 
 from openlp.core.common.enum import CustomSearch
@@ -71,6 +74,10 @@ class CustomMediaItem(MediaManagerItem):
         if edit_action_name in self.toolbar.actions_map:
             self.toolbar.actions_map[edit_action_name].setEnabled(False)
 
+    def required_icons(self):
+        super().required_icons()
+        self.add_to_service_item = True
+
     def on_selection_change(self):
         """
         Update common toolbar action states and enable Edit only when an item is selected.
@@ -105,9 +112,13 @@ class CustomMediaItem(MediaManagerItem):
         for label, suffix in formats:
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
+        image_action = self.export_presentation_menu.addAction(
+            translate('CustomPlugin.MediaItem', 'Save to Image library…'))
+        image_action.setIcon(UiIcons().image_plus)
+        image_action.triggered.connect(self.on_save_to_image_library)
         self.list_view.addAction(self.export_presentation_menu.menuAction())
         create_widget_action(
-            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone'), icon=UiIcons().clone,
+            self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
     def on_export_presentation(self, suffix):
@@ -130,10 +141,62 @@ class CustomMediaItem(MediaManagerItem):
             service_item = self.build_service_item(item=item)
             if not service_item:
                 continue
+            custom = self.plugin.manager.get_object(CustomSlide, item.data(QtCore.Qt.ItemDataRole.UserRole))
+            xml = CustomXML(custom.text)
+            xml.add_title_and_credit(custom.title, custom.credits)
+            from openlp.core.lib.slidedesign import package_design
+            xml.set_design(package_design(service_item.slide_design, service_item.get_theme_data(include_design=False)))
+            exported_xml = xml.extract_xml(keep_title_and_credit=True)
             default_path = suggested_item_export_path(self.service_manager, service_item.title, '.osz')
             export_item_dialog(
                 self, default_path, '.osz', translate('CustomPlugin.MediaItem', 'OpenLP+ Service (*.osz)'),
-                lambda path, service_item=service_item: write_item_service(path, service_item))
+                lambda path, service_item=service_item, xml=exported_xml:
+                write_item_service(path, service_item, xml, 'custom-slides.xml'))
+
+    def on_save_to_image_library(self):
+        """Render selected custom slides into the Image library, optionally inside a folder."""
+        from openlp.core.lib.pluginmanager import PluginManager
+        from openlp.core.lib.slideimageexport import render_slide_images
+        from openlp.core.ui.folders import ChooseFolderForm
+        from openlp.core.ui.presentationexportdialog import ExportProgressDialog
+        from openlp.plugins.images.lib.db import Folder
+
+        title = translate('CustomPlugin.MediaItem', 'Save to Image library')
+        selected = self.list_view.selectedItems()
+        if not selected:
+            return
+        plugin = PluginManager.get_plugin_by_name('images')
+        if not plugin or not plugin.is_active():
+            QtWidgets.QMessageBox.information(
+                self, title, translate('CustomPlugin.MediaItem', 'Enable the Images plugin to save slides as images.'))
+            return
+        library = plugin.media_item
+        chooser = ChooseFolderForm(self, library.manager, Folder)
+        chooser.setWindowTitle(title)
+        chooser.folder_button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        try:
+            if chooser.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+                return
+            folder = chooser.folder
+        finally:
+            chooser.deleteLater()
+        progress = ExportProgressDialog(self)
+        progress.setWindowTitle(title)
+        progress.show()
+        error_message = None
+        try:
+            items = [self.build_service_item(item=item) for item in selected]
+            items = [item for item in items if item]
+            with TemporaryDirectory(prefix='openlp-slide-images-') as temporary:
+                images = render_slide_images(items, Path(temporary), progress.update_progress)
+                library.add_generated_images(images, folder)
+        except Exception as error:
+            log.exception('Could not save custom slides to the Image library')
+            error_message = str(error)
+        finally:
+            progress.finish()
+        if error_message:
+            QtWidgets.QMessageBox.critical(self, title, error_message)
 
     def config_update(self):
         """
@@ -189,6 +252,7 @@ class CustomMediaItem(MediaManagerItem):
         """
         Handle the New item event
         """
+        self.ensure_available_editor()
         self.edit_custom_form.load_custom(0)
         self.edit_custom_form.exec()
         self.on_clear_text_button_click()
@@ -205,6 +269,7 @@ class CustomMediaItem(MediaManagerItem):
         custom_id = int(custom_id)
         valid = self.plugin.db_manager.get_object(CustomSlide, custom_id)
         if valid:
+            self.ensure_available_editor()
             self.edit_custom_form.load_custom(custom_id, preview)
             if self.edit_custom_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 self.remote_triggered = True
@@ -227,12 +292,17 @@ class CustomMediaItem(MediaManagerItem):
         Edit a custom item
         """
         if check_item_selected(self.list_view, UiStrings().SelectEdit):
+            self.ensure_available_editor()
             item = self.list_view.currentItem()
             item_id = item.data(QtCore.Qt.ItemDataRole.UserRole)
             self.edit_custom_form.load_custom(item_id, False)
             self.edit_custom_form.exec()
             self.auto_select_id = -1
             self.on_search_text_button_clicked()
+
+    def ensure_available_editor(self):
+        if getattr(self.edit_custom_form, '_designer_open', False) is True:
+            self.edit_custom_form = EditCustomForm(self, self.main_window, self.plugin.db_manager)
 
     def on_delete_click(self):
         """
@@ -276,6 +346,7 @@ class CustomMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.CanSoftBreak)
         service_item.add_capability(ItemCapabilities.OnLoadUpdate)
         service_item.add_capability(ItemCapabilities.CanWordSplit)
+        service_item.add_capability(ItemCapabilities.CanAppend)
         custom_slide = self.plugin.db_manager.get_object(CustomSlide, item_id)
         title = custom_slide.title
         credit = custom_slide.credits
@@ -284,6 +355,7 @@ class CustomMediaItem(MediaManagerItem):
         if theme:
             service_item.theme = theme
         custom_xml = CustomXML(custom_slide.text)
+        service_item.slide_design = custom_xml.get_design()
         verse_list = custom_xml.get_verses()
         raw_slides = [verse[1] for verse in verse_list]
         service_item.title = title
@@ -379,6 +451,7 @@ class CustomMediaItem(MediaManagerItem):
         """
         # Create the text
         custom_xml = CustomXML()
+        custom_xml.set_design(item.slide_design)
         for (idx, slide) in enumerate(item.slides):
             custom_xml.add_verse_to_lyrics('custom', str(idx + 1), slide['text'])
         # Create the credits from the footer

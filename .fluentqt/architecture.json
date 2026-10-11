@@ -1,0 +1,62 @@
+{
+  "application": "OpenLP+",
+  "language": "pyside6",
+  "profile": "full",
+  "integration": "direct-library",
+  "source_root": "openlp",
+  "tests_root": "tests",
+  "layers": {
+    "app": [
+      "__main__.py",
+      "core/app.py"
+    ],
+    "domain": [
+      "core/lib/serviceitem.py",
+      "core/lib/theme.py"
+    ],
+    "application": [
+      "core/common/registry.py",
+      "core/state.py"
+    ],
+    "infrastructure": [
+      "core/common/settings.py",
+      "core/api",
+      "plugins"
+    ],
+    "ui": [
+      "core/ui",
+      "core/widgets",
+      "core/lib/ui.py"
+    ]
+  },
+  "shell_files": [
+    "core/ui/mainwindow.py"
+  ],
+  "ownership": {
+    "event_loop": "core/app.py",
+    "operator_controls": "core/widgets/fluent.py",
+    "theme": "core/ui/style.py",
+    "docking": "core/ui/advanceddocking.py",
+    "presentation": "core/display"
+  },
+  "migration": {
+    "preserve": [
+      "service format",
+      "projection output",
+      "plugin contracts",
+      "Python 3.14"
+    ],
+    "qt_bridges": [
+      "ADS window/dock host and docking chrome",
+      "Layout containers for Fluent inputs beside CommandBar groups; CommandBar rejects QWidgetAction",
+      "Qt layout and item-model infrastructure",
+      "Qt rich-text/document/spell-check engines",
+      "wizard and message-dialog lifecycle",
+      "platform file and print dialogs",
+      "QIcon drawing inside native SplitButton",
+      "macOS native application menu bar and submenus"
+    ],
+    "remaining": []
+  },
+  "schema_version": 1
+}

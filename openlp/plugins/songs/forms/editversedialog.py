@@ -21,7 +21,8 @@
 
 import re
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings
 from openlp.core.lib.ui import create_button_box
@@ -79,7 +80,8 @@ class Ui_EditVerseDialog(object):
     def setup_ui(self, edit_verse_dialog):
         edit_verse_dialog.setObjectName('edit_verse_dialog')
         edit_verse_dialog.setWindowIcon(UiIcons().main_icon)
-        edit_verse_dialog.resize(550, 550)
+        edit_verse_dialog.resize(1000, 680)
+        edit_verse_dialog.setSizeGripEnabled(True)
         edit_verse_dialog.setModal(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(edit_verse_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
@@ -93,9 +95,11 @@ class Ui_EditVerseDialog(object):
         self.forced_split_button.setObjectName('forced_split_button')
         self.verse_type_layout.addWidget(self.forced_split_button)
         self.overflow_split_button = QtWidgets.QPushButton(edit_verse_dialog)
-        self.overflow_split_button.setIcon(UiIcons().add)
+        self.overflow_split_button.setIcon(UiIcons().add_starburst)
         self.overflow_split_button.setObjectName('overflow_split_button')
         self.verse_type_layout.addWidget(self.overflow_split_button)
+        self.verse_type_layout.addSpacing(20)
+        self.verse_type_layout.addStretch(1)
         self.verse_type_label = QtWidgets.QLabel(edit_verse_dialog)
         self.verse_type_label.setObjectName('verse_type_label')
         self.verse_type_layout.addWidget(self.verse_type_label)
@@ -106,13 +110,13 @@ class Ui_EditVerseDialog(object):
         self.verse_type_layout.addWidget(self.verse_type_combo_box)
         self.verse_number_box = QtWidgets.QSpinBox(edit_verse_dialog)
         self.verse_number_box.setMinimum(1)
+        self.verse_number_box.setCompactWidth(2)
         self.verse_number_box.setObjectName('verse_number_box')
         self.verse_type_layout.addWidget(self.verse_number_box)
         self.insert_button = QtWidgets.QPushButton(edit_verse_dialog)
         self.insert_button.setIcon(UiIcons().add)
         self.insert_button.setObjectName('insert_button')
         self.verse_type_layout.addWidget(self.insert_button)
-        self.verse_type_layout.addStretch()
         self.dialog_layout.addLayout(self.verse_type_layout)
         self.transpose_widget = QtWidgets.QWidget()
         self.transpose_layout = QtWidgets.QHBoxLayout(self.transpose_widget)

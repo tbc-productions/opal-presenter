@@ -41,3 +41,22 @@ def test_row_label_round_brackets():
 
 def test_row_label_returns_none_without_sup_tags():
     assert row_label_from_raw_page_text('Plain text') is None
+
+
+def test_row_label_spans_chapters():
+    page = '{su}30{/su}A {su}31{/su}B {su}2:1{/su}C {su}5{/su}D'
+    assert row_label_from_raw_page_text(page, default_chapter=1) == '1:30-2:5'
+
+
+def test_bible_preview_preserves_superscripts_and_spacing():
+    from openlp.plugins.bibles.lib.slidelabel import bible_preview_html
+
+    assert bible_preview_html('{su}30&nbsp;{/su}A &amp; B\n{su}31&nbsp;{/su}C') == (
+        '<sup>30 </sup>A &amp; B<br><sup>31 </sup>C')
+
+
+def test_bible_row_strips_custom_tags_around_superscripts():
+    from openlp.plugins.bibles.lib.slidelabel import bible_preview_html
+
+    assert bible_preview_html('{cg}{su}1&nbsp;{/su}In the beginning{/cg}') == (
+        '<sup>1 </sup>In the beginning')

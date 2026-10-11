@@ -24,7 +24,8 @@ Module to test the EditCustomForm.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.settings import Settings
 from openlp.plugins.custom.forms.editcustomform import EditCustomForm
@@ -72,9 +73,10 @@ def test_on_add_button_clicked(form: EditCustomForm):
     Test the on_add_button_clicked_test method / add_button button.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'), \
+            patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', return_value=1):
         # WHEN: Add a new slide.
-        QtTest.QTest.mouseClick(form.add_button, QtCore.Qt.MouseButton.LeftButton)
+        form.add_action.trigger()
 
         # THEN: One slide should be added.
         assert form.slide_list_view.count() == 1, 'There should be one slide added.'
@@ -97,7 +99,7 @@ def test_validate_not_valid_part1(form: EditCustomForm):
         # THEN: The validate method should have returned False.
         assert not result, 'The _validate() method should have retured False'
         mocked_setFocus.assert_called_with()
-        mocked_critical_error_message_box.assert_called_with(message='You need to type in a title.')
+        mocked_critical_error_message_box.assert_called_with(parent=form, message='You need to type in a title.')
 
 
 def test_validate_not_valid_part2(form: EditCustomForm):
@@ -115,7 +117,7 @@ def test_validate_not_valid_part2(form: EditCustomForm):
 
         # THEN: The validate method should have returned False.
         assert not result, 'The _validate() method should have retured False'
-        mocked_critical_error_message_box.assert_called_with(message='You need to add at least one slide.')
+        mocked_critical_error_message_box.assert_called_with(parent=form, message='You need to add at least one slide.')
 
 
 def test_update_slide_list(form: EditCustomForm):
@@ -150,3 +152,47 @@ def test_help(settings: Settings):
 
     # THEN: The Help function should be called
     mocked_help.assert_called_once()
+
+
+def test_custom_slide_command_bar_actions(form):
+    """The commands retain list selection, reordering and deletion behaviour."""
+    assert len(form.slide_command_bar.primaryActions()) == 6
+    assert form.slide_command_bar.isBackgroundVisible()
+    assert all(not action.icon().isNull() for action in form.slide_command_bar.primaryActions())
+    form.slide_list_view.addItems(['First', 'Second', 'Third'])
+    form.slide_list_view.setCurrentRow(1)
+    form.up_action.trigger()
+    assert [form.slide_list_view.item(row).text() for row in range(3)] == ['Second', 'First', 'Third']
+    assert form.up_action.isEnabled() is False
+    form.down_action.trigger()
+    assert [form.slide_list_view.item(row).text() for row in range(3)] == ['First', 'Second', 'Third']
+    form.delete_action.trigger()
+    assert [form.slide_list_view.item(row).text() for row in range(2)] == ['First', 'Third']
+
+
+def test_custom_slide_rows_include_optional_splits(form, qtbot):
+    """Each numbered selection covers a whole slide, and optional splits stay in that row."""
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    first_slide = 'First line\nSecond line\nThird line\n[---]\nFourth line\nFifth line'
+    form.slide_list_view.addItems([first_slide, 'Next slide'])
+    form.show()
+    qtbot.wait(50)
+    view = form.slide_list_view
+    try:
+        assert view.horizontalHeader().isHidden()
+        assert view.verticalHeader().isVisible()
+        assert view.model().headerData(0, QtCore.Qt.Orientation.Vertical) == 1
+        assert view.model().headerData(1, QtCore.Qt.Orientation.Vertical) == 2
+        first_rect = view.visualItemRect(view.item(0))
+        assert first_rect.height() >= view.fontMetrics().height() * 6
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=QtCore.QPoint(first_rect.center().x(), first_rect.bottom() - 8))
+        assert view.currentRow() == 0
+        assert [item.text() for item in view.selectedItems()] == [first_slide]
+        assert view.visualItemRect(view.item(1)).top() > first_rect.bottom()
+    finally:
+        form.close()
+        parent.close()

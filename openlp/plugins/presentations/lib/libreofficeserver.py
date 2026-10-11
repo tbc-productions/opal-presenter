@@ -154,12 +154,14 @@ class LibreOfficeServer(object):
         context = uno.getComponentContext()
         resolver = context.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', context)
         loop = 0
-        while uno_instance is None and loop < 3:
+        # Allow a cold launch to finish before giving up on the UNO pipe.
+        while uno_instance is None and loop < 30:
             try:
                 uno_instance = resolver.resolve('uno:pipe,name=openlp_maclo;urp;StarOffice.ComponentContext')
             except Exception:
-                log.exception('Unable to find running instance, retrying...')
                 loop += 1
+                if loop < 30:
+                    time.sleep(0.5)
         try:
             self._manager = uno_instance.ServiceManager
             log.debug('get UNO Desktop Openoffice - createInstanceWithContext - Desktop')

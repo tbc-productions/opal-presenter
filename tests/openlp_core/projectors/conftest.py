@@ -141,3 +141,9 @@ def pjlink():
     pj_link = PJLink(Projector(**TEST1_DATA), no_poll=True)
     yield pj_link
     del pj_link
+
+
+@pytest.fixture(autouse=True)
+def enable_projector_feature(registry):
+    """Projector unit tests exercise the enabled plugin."""
+    registry.set_flag('projector_disabled', False)

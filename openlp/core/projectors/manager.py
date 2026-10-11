@@ -26,7 +26,8 @@ Provides the functions for the display/control of Projectors.
 import logging
 from typing import Optional
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
@@ -318,6 +319,8 @@ class ProjectorManager(QtWidgets.QWidget, RegistryBase, UiProjectorManager, LogM
         Pre-initialize setups.
         """
         self.setup_ui(self)
+        if Registry().get_flag('projector_disabled'):
+            return
         if self.projectordb is None:
             # Work around for testing creating a ~/.openlp.data.projector.projector.sql file
             log.debug('Creating new ProjectorDB() instance')
@@ -330,6 +333,8 @@ class ProjectorManager(QtWidgets.QWidget, RegistryBase, UiProjectorManager, LogM
         """
         Post-initialize setups.
         """
+        if Registry().get_flag('projector_disabled'):
+            return
         # Set 1.5 second delay before loading all projectors
         if self.autostart:
             log.debug('Delaying 1.5 seconds before loading all projectors')

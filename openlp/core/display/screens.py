@@ -26,11 +26,12 @@ import logging
 import copy
 from functools import cmp_to_key
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
 
 from openlp.core.common import Singleton
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
+from openlp.core.common.screen_settings import request_screen_configuration, show_screen_setup_message
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +82,16 @@ class Screen(object):
         Return a string representation of the object
         """
         return '<{screen}>'.format(screen=self)
+
+    @property
+    def name(self):
+        """The monitor model reported by the OS, falling back to its display/connector name."""
+        if self.raw_screen is not None:
+            for attribute in ('model', 'name'):
+                value = getattr(self.raw_screen, attribute)()
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return ''
 
     @property
     def display_geometry(self):
@@ -293,15 +304,15 @@ class ScreenList(metaclass=Singleton):
                     if screen_dict['is_display']:
                         need_new_display_screen = True
             if need_new_display_screen:
-                QtWidgets.QMessageBox.warning(None, translate('OpenLP.Screen',
-                                                              'Screen settings and screen setup is not the same'),
-                                              translate('OpenLP.Screen',
-                                                        'There is a mismatch between screens and screen settings. '
-                                                        'OpenLP+ will try to automatically select a display screen, but '
-                                                        'you should consider updating the screen settings.'),
-                                              QtWidgets.QMessageBox.StandardButton(
-                                                  QtWidgets.QMessageBox.StandardButton.Ok))
+                configure_screens = show_screen_setup_message(
+                    None, translate('OpenLP.Screen', 'Screen settings and screen setup is not the same'),
+                    translate('OpenLP.Screen',
+                              'There is a mismatch between screens and screen settings. '
+                              'OpenLP+ will try to automatically select a display screen, but '
+                              'you should consider updating the screen settings.'))
                 self.find_new_display_screen()
+                if configure_screens:
+                    request_screen_configuration()
         else:
             # if no settings we need to set a display
             self.find_new_display_screen()
@@ -400,8 +411,9 @@ class ScreenList(metaclass=Singleton):
             self.screens.append(
                 Screen(number, screen.geometry(), is_primary=self.application.primaryScreen() == screen,
                        device_pixel_ratio=device_pixel_ratio, raw_screen=screen))
-            screen.geometryChanged.connect(lambda geometry: self.screens[-1]
-                                           .on_geometry_changed(geometry, screen.devicePixelRatio()))
+            screen.geometryChanged.connect(
+                lambda geometry, target=self.screens[-1], raw_screen=screen:
+                target.on_geometry_changed(geometry, raw_screen.devicePixelRatio()))
 
     def on_screen_added(self, changed_screen):
         """
@@ -421,8 +433,9 @@ class ScreenList(metaclass=Singleton):
                                    is_primary=self.application.primaryScreen() == changed_screen,
                                    device_pixel_ratio=device_pixel_ratio, raw_screen=changed_screen))
         self.find_new_display_screen()
-        changed_screen.geometryChanged.connect(lambda geometry: self.screens[-1]
-                                               .on_geometry_changed(geometry, changed_screen.devicePixelRatio()))
+        changed_screen.geometryChanged.connect(
+            lambda geometry, target=self.screens[-1], raw_screen=changed_screen:
+            target.on_geometry_changed(geometry, raw_screen.devicePixelRatio()))
         ConfigScreenChangedEmitter().emit()
 
     def on_screen_removed(self, removed_screen):

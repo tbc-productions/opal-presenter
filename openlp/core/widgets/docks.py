@@ -22,9 +22,9 @@
 The :mod:`~openlp.core.widgets.docks` module contains a customised base dock widget and dock widgets
 """
 import logging
-import math
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib import build_icon
@@ -35,276 +35,167 @@ from openlp.core.ui.style import get_dock_panel_header_stylesheet
 log = logging.getLogger(__name__)
 
 
-class LibraryTabBar(QtWidgets.QTabBar):
-    """
-    QTabBar with support for zero-width placeholder tabs.
-    """
-
+class FluentLibrarySelectorBar(QtWidgets.fluentqt.SelectorBar):
+    """Native SelectorBar with the Library's existing coloured QIcons."""
     def __init__(self, parent=None):
-        self._placeholder_indices = set()
-        super(LibraryTabBar, self).__init__(parent)
+        super().__init__(parent)
+        self._icons = []
+        self.setOverflowBehavior(self.OverflowBehavior.MoreButton)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.setMinimumWidth(0)
 
-    def set_placeholder(self, index, enabled=True):
-        if enabled:
-            self._placeholder_indices.add(index)
-        else:
-            self._placeholder_indices.discard(index)
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QtGui.QPainter(self)
+        for index in self.visibleItemIndexes():
+            if index >= len(self._icons) or self._icons[index].isNull():
+                continue
+            rect = self.itemGeometry(index)
+            # SelectorBar's standard icon slot: 16 px inset, 16 px glyph.
+            size = QtWidgets.fluentqt.Typography.IconSize.Standard
+            if self.layoutDirection() == QtCore.Qt.LayoutDirection.RightToLeft:
+                left = rect.right() - 16 - size + 1
+            else:
+                left = rect.left() + 16
+            target = QtCore.QRect(left, rect.center().y() - size // 2 + 1, size, size)
+            enabled = self.isEnabled() and self.itemAt(index).enabled
+            mode = QtGui.QIcon.Mode.Normal if enabled else QtGui.QIcon.Mode.Disabled
+            self._icons[index].paint(painter, target, QtCore.Qt.AlignmentFlag.AlignCenter, mode)
+        painter.end()
 
-    def clear_placeholders(self):
-        self._placeholder_indices.clear()
 
-    def tabSizeHint(self, index):
-        size = super(LibraryTabBar, self).tabSizeHint(index)
-        if index in self._placeholder_indices:
-            return QtCore.QSize(0, size.height())
-        return size
+class FluentLibraryOverflowMenu(QtWidgets.QMenu):
+    """Activate leaf commands on a matching click without waiting for hover."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pressed_action = None
+
+    def mousePressEvent(self, event):
+        self._pressed_action = None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            action = self.actionAt(event.position().toPoint())
+            if action and action.isEnabled() and not action.isSeparator() and not action.menu():
+                self._pressed_action = action
+                self.setActiveAction(action)
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        action = self._pressed_action
+        self._pressed_action = None
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and action:
+            if self.actionAt(event.position().toPoint()) == action and action.isEnabled():
+                self.close()
+                action.trigger()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
 
 class MediaToolBox(QtWidgets.QWidget):
-    """
-    Two-row tab-based media container backed by a QStackedWidget.
-    """
-
+    """Single-row Library SelectorBar backed by the existing page stack."""
     currentChanged = QtCore.Signal(int)
 
     def __init__(self, parent=None):
-        super(MediaToolBox, self).__init__(parent)
+        super().__init__(parent)
         self._items = []
         self._current_index = -1
-        self._syncing = False
-        self._top_count = 0
-
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-
-        self._top_tab_bar = LibraryTabBar(self)
-        self._top_tab_bar.setDocumentMode(True)
-        self._top_tab_bar.setExpanding(False)
-        self._top_tab_bar.setDrawBase(False)
-        self._top_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
-        self._top_tab_bar.setUsesScrollButtons(False)
-        self._top_tab_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored,
-                        QtWidgets.QSizePolicy.Policy.Fixed)
-        self._top_tab_bar.setMinimumWidth(0)
-        self._top_tab_bar.currentChanged.connect(self._on_top_tab_changed)
-        layout.addWidget(self._top_tab_bar)
-
-        self._bottom_tab_bar = LibraryTabBar(self)
-        self._bottom_tab_bar.setDocumentMode(True)
-        self._bottom_tab_bar.setExpanding(False)
-        self._bottom_tab_bar.setDrawBase(False)
-        self._bottom_tab_bar.setElideMode(QtCore.Qt.TextElideMode.ElideNone)
-        self._bottom_tab_bar.setUsesScrollButtons(False)
-        self._bottom_tab_bar.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored,
-                           QtWidgets.QSizePolicy.Policy.Fixed)
-        self._bottom_tab_bar.setMinimumWidth(0)
-        self._bottom_tab_bar.currentChanged.connect(self._on_bottom_tab_changed)
-        layout.addWidget(self._bottom_tab_bar)
-
+        self._selector = FluentLibrarySelectorBar(self)
+        self._selector.setAccessibleName('Library')
+        self._selector.currentChanged.connect(self._selected)
+        self._selector.overflowActivated.connect(self._show_overflow)
+        layout.addWidget(self._selector)
         self._stack = QtWidgets.QStackedWidget(self)
-        layout.addWidget(self._stack)
+        layout.addWidget(self._stack, 1)
+        self._overflow_menu = FluentLibraryOverflowMenu(self)
 
     def minimumSizeHint(self):
-        hint = super(MediaToolBox, self).minimumSizeHint()
-        return QtCore.QSize(0, hint.height())
+        return QtCore.QSize(0, super().minimumSizeHint().height())
 
     @staticmethod
-    def _clear_tab_bar(tab_bar):
-        while tab_bar.count() > 0:
-            tab_bar.removeTab(0)
+    def _as_icon(icon):
+        return icon if isinstance(icon, QtGui.QIcon) else build_icon(icon)
 
-    @staticmethod
-    def _add_placeholder_tab(tab_bar):
-        placeholder_index = tab_bar.addTab('')
-        tab_bar.setTabData(placeholder_index, None)
-        tab_bar.setTabEnabled(placeholder_index, False)
-        if isinstance(tab_bar, LibraryTabBar):
-            tab_bar.set_placeholder(placeholder_index, True)
+    def _rebuild_selector(self):
+        blocker = QtCore.QSignalBlocker(self._selector)
+        self._selector.clearItems()
+        self._selector._icons = [item['icon'] for item in self._items]
+        for item in self._items:
+            # A blank glyph reserves the native icon slot; paintEvent supplies
+            # the original QIcon without changing native selection or layout.
+            glyph = ' ' if not item['icon'].isNull() else ''
+            self._selector.addItem(QtWidgets.fluentqt.SelectorBarItem(
+                item['label'], glyph, item['enabled']))
+        self._selector.setSelectedIndex(max(0, self._current_index) if self._items else -1)
+        selected = self._selector.selectedIndex()
+        del blocker
+        self._selected(selected)
+        self._selector.update()
 
-    def _split_index(self):
-        item_count = len(self._items)
-        if item_count <= 1:
-            return item_count
+    def _selected(self, index):
+        changed = self._current_index != index
+        self._current_index = index
+        if index >= 0:
+            self._stack.setCurrentIndex(index)
+        if changed:
+            self.currentChanged.emit(index)
 
-        available_width = self._available_width()
-        tab_widths = [self._tab_width(item) for item in self._items]
-        return self._split_index_for_widths(tab_widths, available_width)
+    def _show_overflow(self, indexes):
+        self._overflow_menu.close()
+        self._overflow_menu.deleteLater()
+        self._overflow_menu = FluentLibraryOverflowMenu(self)
+        for index in indexes:
+            item = self._items[index]
+            action = self._overflow_menu.addAction(item['icon'], item['label'])
+            action.setData(index)
+            action.setEnabled(item['enabled'])
+            action.triggered.connect(lambda checked=False, index=index: self._select_overflow_item(index))
+        rect = self._selector.overflowGeometry()
+        self._overflow_menu.popup(self._selector.mapToGlobal(rect.bottomLeft()))
 
-    def _available_width(self):
-        return max(self.contentsRect().width(), self.width(), 1)
-
-    @staticmethod
-    def _split_index_for_widths(tab_widths, available_width):
-        item_count = len(tab_widths)
-        if item_count <= 1:
-            return item_count
-
-        total_width = sum(tab_widths)
-        if total_width <= available_width:
-            return len(tab_widths)
-
-        running_width = 0
-        for split_index, tab_width in enumerate(tab_widths, start=1):
-            running_width += tab_width
-            bottom_width = total_width - running_width
-            if running_width <= available_width and bottom_width <= available_width:
-                return split_index
-
-        best_split = int(math.ceil(len(tab_widths) / 2.0))
-        best_overflow = None
-        running_width = 0
-        for split_index, tab_width in enumerate(tab_widths, start=1):
-            running_width += tab_width
-            bottom_width = total_width - running_width
-            overflow = max(0, running_width - available_width) + max(0, bottom_width - available_width)
-            if best_overflow is None or overflow < best_overflow:
-                best_overflow = overflow
-                best_split = split_index
-        return best_split
-
-    def _tab_width(self, item):
-        option = QtWidgets.QStyleOptionTab()
-        option.initFrom(self._top_tab_bar)
-        option.shape = self._top_tab_bar.shape()
-        option.text = item['label']
-        option.icon = item['icon']
-        option.iconSize = self._top_tab_bar.iconSize()
-        tab_size = self._top_tab_bar.style().sizeFromContents(
-            QtWidgets.QStyle.ContentsType.CT_TabBarTab,
-            option,
-            QtCore.QSize(),
-            self._top_tab_bar
-        )
-        return tab_size.width()
-
-    def _as_icon(self, icon):
-        if isinstance(icon, QtGui.QIcon):
-            return icon
-        return build_icon(icon)
-
-    def _update_tab_row_heights(self):
-        base_height = max(self.fontMetrics().height() + 12, 24)
-        top_height = self._top_tab_bar.sizeHint().height() if self._top_tab_bar.count() > 1 else 0
-        bottom_height = self._bottom_tab_bar.sizeHint().height() if self._bottom_tab_bar.count() > 1 else 0
-        self._top_tab_bar.setFixedHeight(max(top_height, base_height) if self._top_tab_bar.count() else 0)
-        self._bottom_tab_bar.setFixedHeight(max(bottom_height, base_height)
-                                            if self._bottom_tab_bar.count() > 1 else 0)
-
-    def _sync_tab_selection(self):
-        self._syncing = True
-        top_count = self._top_count
-        if 0 <= self._current_index < len(self._items):
-            if self._current_index < top_count:
-                self._top_tab_bar.setCurrentIndex(self._current_index + 1)
-                self._bottom_tab_bar.setCurrentIndex(0)
-            else:
-                self._top_tab_bar.setCurrentIndex(0)
-                self._bottom_tab_bar.setCurrentIndex((self._current_index - top_count) + 1)
-        else:
-            self._top_tab_bar.setCurrentIndex(0)
-            self._bottom_tab_bar.setCurrentIndex(0)
-        self._syncing = False
-
-    def _rebuild_tab_bars(self, top_count=None):
-        top_blocker = QtCore.QSignalBlocker(self._top_tab_bar)
-        bottom_blocker = QtCore.QSignalBlocker(self._bottom_tab_bar)
-        if top_count is None:
-            top_count = self._split_index()
-        self._top_count = top_count
-        self._top_tab_bar.clear_placeholders()
-        self._bottom_tab_bar.clear_placeholders()
-        self._clear_tab_bar(self._top_tab_bar)
-        self._clear_tab_bar(self._bottom_tab_bar)
-
-        self._add_placeholder_tab(self._top_tab_bar)
-        self._add_placeholder_tab(self._bottom_tab_bar)
-
-        for index, item in enumerate(self._items):
-            tab_bar = self._top_tab_bar if index < top_count else self._bottom_tab_bar
-            row_index = tab_bar.addTab(item['icon'], item['label'])
-            tab_bar.setTabData(row_index, index)
-            tab_bar.setTabEnabled(row_index, item['enabled'])
-
-        # If one-row mode was chosen but the rendered tab widths still overflow,
-        # recalculate with actual tabSizeHint widths and rebuild once.
-        if top_count == len(self._items) and len(self._items) > 1:
-            actual_widths = [self._top_tab_bar.tabSizeHint(i).width() for i in range(1, self._top_tab_bar.count())]
-            actual_top_count = self._split_index_for_widths(actual_widths, self._available_width())
-            if actual_top_count < len(self._items):
-                self._rebuild_tab_bars(top_count=actual_top_count)
-                return
-
-        self._bottom_tab_bar.setVisible(len(self._items) > top_count)
-        self._update_tab_row_heights()
-        del top_blocker
-        del bottom_blocker
-        self._sync_tab_selection()
-
-    def _on_top_tab_changed(self, tab_index):
-        if self._syncing or tab_index <= 0:
-            return
-        index = self._top_tab_bar.tabData(tab_index)
-        if isinstance(index, int):
-            self.setCurrentIndex(index)
-
-    def _on_bottom_tab_changed(self, tab_index):
-        if self._syncing or tab_index <= 0:
-            return
-        index = self._bottom_tab_bar.tabData(tab_index)
-        if isinstance(index, int):
-            self.setCurrentIndex(index)
+    def _select_overflow_item(self, index):
+        # Finish closing the popup before changing the page and native geometry.
+        self._overflow_menu.close()
+        QtCore.QTimer.singleShot(0, lambda: self.setCurrentIndex(index))
 
     def addItem(self, widget, icon, label):
-        tab_icon = self._as_icon(icon)
-        self._items.append({'widget': widget, 'icon': tab_icon, 'label': label, 'enabled': True})
+        self._items.append(dict(widget=widget, icon=self._as_icon(icon), label=label, enabled=True))
         self._stack.addWidget(widget)
-        self._rebuild_tab_bars()
-        new_index = len(self._items) - 1
-        if self._current_index == -1:
-            self.setCurrentIndex(0)
-        return new_index
+        self._rebuild_selector()
+        return len(self._items) - 1
 
     def removeItem(self, index):
-        if index < 0 or index >= len(self._items):
+        if not 0 <= index < self.count():
             return
-        widget = self._items[index]['widget']
-        self._stack.removeWidget(widget)
-        del self._items[index]
+        self._stack.removeWidget(self._items.pop(index)['widget'])
         if index < self._current_index:
             self._current_index -= 1
-        elif index == self._current_index and self._current_index >= len(self._items):
-            self._current_index = len(self._items) - 1
-        if not self._items:
-            self._current_index = -1
-            self._rebuild_tab_bars()
-            self.currentChanged.emit(-1)
-            return
-        self._rebuild_tab_bars()
-        self.setCurrentIndex(self._current_index)
+        elif self._current_index >= self.count():
+            self._current_index = self.count() - 1
+        self._rebuild_selector()
 
     def itemText(self, index):
         return self._items[index]['label']
 
     def setItemEnabled(self, index, enabled):
-        if index < 0 or index >= len(self._items):
-            return
-        self._items[index]['enabled'] = enabled
-        self._rebuild_tab_bars()
+        if 0 <= index < self.count():
+            self._items[index]['enabled'] = enabled
+            self._selector.setItemEnabled(index, enabled)
 
     def setItemIcon(self, index, icon):
-        if index < 0 or index >= len(self._items):
-            return
-        self._items[index]['icon'] = self._as_icon(icon)
-        self._rebuild_tab_bars()
+        if 0 <= index < self.count():
+            self._items[index]['icon'] = self._as_icon(icon)
+            self._rebuild_selector()
 
     def count(self):
         return len(self._items)
 
     def widget(self, index):
-        if index < 0 or index >= len(self._items):
-            return None
-        return self._items[index]['widget']
+        return self._items[index]['widget'] if 0 <= index < self.count() else None
 
     def currentWidget(self):
         return self.widget(self._current_index)
@@ -313,25 +204,7 @@ class MediaToolBox(QtWidgets.QWidget):
         return self._current_index
 
     def setCurrentIndex(self, index):
-        if index < 0 or index >= len(self._items):
-            return
-        if self._current_index == index and self._stack.currentIndex() == index:
-            self._sync_tab_selection()
-            return
-        self._current_index = index
-        self._stack.setCurrentIndex(index)
-        self._sync_tab_selection()
-        self.currentChanged.emit(index)
-
-    def resizeEvent(self, event):
-        super(MediaToolBox, self).resizeEvent(event)
-        if event.oldSize().width() != event.size().width() and self._items:
-            self._rebuild_tab_bars()
-
-    def showEvent(self, event):
-        super(MediaToolBox, self).showEvent(event)
-        if self._items:
-            self._rebuild_tab_bars()
+        self._selector.setSelectedIndex(index)
 
 
 class OpenLPDockWidget(QtWidgets.QDockWidget):

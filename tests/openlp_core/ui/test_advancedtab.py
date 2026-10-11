@@ -24,7 +24,7 @@ Package to test the openlp.core.ui.advancedtab package.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.advancedtab import AdvancedTab
 from openlp.core.ui.settingsform import SettingsForm

@@ -13,20 +13,15 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "karma start --single-run",
-    "lint": "eslint openlp/core/display/html/display*.js"
-  },
-  "dependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.2.0",
-    "jasmine-core": "~2.99.0",
-    "karma": "^6.4.4",
-    "karma-coverage": "^2.2.1",
-    "karma-junit-reporter": "^2.0.1",
-    "karma-log-reporter": "0.0.4"
+    "test": "jasmine-browser-runner runSpecs --config=jasmine-browser.mjs",
+    "lint": "eslint openlp/core/display/html/display*.js",
+    "test:serve": "jasmine-browser-runner serve --config=jasmine-browser.mjs"
   },
   "devDependencies": {
-    "karma-chrome-launcher": "^3.1.0",
-    "karma-jasmine": "^1.1.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "jasmine-browser-runner": "^5.0.0",
+    "jasmine-core": "^7.0.2",
+    "serve-static": "^2.2.1"
   }
 }

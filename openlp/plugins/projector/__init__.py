@@ -1,0 +1,1 @@
+"""Optional projector control plugin."""

@@ -24,7 +24,8 @@ This module contains tests for the lib submodule of the Presentations plugin.
 import pytest
 from unittest.mock import MagicMock, call, patch
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.enum import LayoutStyle
 from openlp.core.common.registry import Registry
@@ -61,12 +62,14 @@ mocked_bible_2.name = 'Bible 2'
 
 @pytest.fixture()
 def mocked_timer():
-    return patch('openlp.plugins.bibles.lib.mediaitem.QtCore.QTimer').start()
+    with patch('openlp.plugins.bibles.lib.mediaitem.QtCore.QTimer') as timer:
+        yield timer
 
 
 @pytest.fixture()
 def mocked_log():
-    return patch('openlp.plugins.bibles.lib.mediaitem.log').start()
+    with patch('openlp.plugins.bibles.lib.mediaitem.log') as log:
+        yield log
 
 
 def test_valid_text_search():
@@ -253,8 +256,8 @@ def test_add_middle_header_bar(media_item: BibleMediaItem):
     assert media_item.search_button_widget is not None
     assert media_item.results_view_tab is not None
     assert media_item.page_layout.addWidget.call_args_list[0] == call(media_item.search_tab_bar)
-    assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.search_button_widget)
-    assert media_item.page_layout.addWidget.call_count == 3
+    assert media_item.page_layout.addWidget.call_args_list[1] == call(media_item.results_view_tab_container)
+    assert media_item.page_layout.addWidget.call_count == 2
 
 
 def test_on_focus_search_tab_visible(media_item: BibleMediaItem):
@@ -1846,3 +1849,23 @@ def test_generate_slide_data_whole_verse_continuous_can_word_split(media_item: B
 
     service_item.add_capability.assert_any_call(ItemCapabilities.NoLineBreaks)
     service_item.add_capability.assert_any_call(ItemCapabilities.CanWordSplit)
+
+
+def test_bible_service_item_title_consolidates_chapters(media_item):
+    service_item = MagicMock()
+    media_item.format_verse = MagicMock(return_value='')
+    media_item.settings_tab = MagicMock(layout_style=LayoutStyle.Continuous, bible_theme='')
+    rows = [dict(book='Genesis', chapter=chapter, verse=verse, version='NIV', copyright='',
+                 permissions='', second_bible='', text='Verse text')
+            for chapter, count in enumerate([31, 25, 24, 26, 3], start=1)
+            for verse in range(1, count + 1)]
+
+    separators = {'sep_v_display': ':', 'sep_r_display': '-', 'sep_l_display': ','}
+    with patch('openlp.plugins.bibles.lib.versereferencelist.get_reference_separator',
+               side_effect=separators.__getitem__), \
+            patch('openlp.plugins.bibles.lib.mediaitem.get_reference_separators',
+                  return_value={'verse': ':', 'range': '-', 'list': ','}), \
+            patch.object(media_item, '_render_bible_reference', return_value=''):
+        media_item.populate_bible_service_item(service_item, rows)
+
+    assert service_item.title == 'Genesis 1:1-5:3 (NIV)'

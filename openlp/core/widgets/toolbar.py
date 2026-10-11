@@ -23,12 +23,15 @@ Provide common toolbar handling for OpenLP
 """
 import logging
 
-from PySide6 import QtCore, QtGui, QtWidgets
-from openlp.core.common.i18n import translate
-from openlp.core.common.registry import Registry
+from PySide6 import QtCore, QtGui
 
-from openlp.core.lib.ui import create_widget_action
+from openlp.core.ui.fluenticons import fluent_icon
+from openlp.core.widgets import fluent as QtWidgets
+from openlp.core.common.i18n import translate
+
+from openlp.core.lib.ui import create_action
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.media import format_play_time
 
 
 log = logging.getLogger(__name__)
@@ -64,24 +67,94 @@ class OpenLPToolbar(QtWidgets.QToolBar):
     Lots of toolbars around the place, so it makes sense to have a common way to manage them. This is the base toolbar
     class.
     """
-    def __init__(self, parent):
+    def __init__(self, parent, *, single_command_bar=True):
         """
         Initialise the toolbar.
         """
-        super().__init__(parent)
+        super().__init__(parent, single_command_bar=single_command_bar)
         # useful to be able to reuse button icons...
         self.setIconSize(QtCore.QSize(20, 20))
         self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.actions_map: dict[str, QtGui.QAction] = {}
+        self._fluent_actions = {}
         log.debug('Init done for %s' % parent.__class__.__name__)
 
-    def add_toolbar_action(self, name, **kwargs):
+    def _add_action_widget(self, action, button):
+        button.setDefaultAction(action)
+        button.setIconSize(self.iconSize())
+        button.setAutoRaise(True)
+        button.setToolButtonStyle(self.toolButtonStyle())
+        self.iconSizeChanged.connect(button.setIconSize)
+        self.toolButtonStyleChanged.connect(button.setToolButtonStyle)
+        wrapper = QtWidgets.QWidgetAction(self)
+        wrapper.setDefaultWidget(button)
+        button.addAction(action)
+
+        def sync():
+            wrapper.setVisible(action.isVisible())
+            wrapper.setEnabled(action.isEnabled())
+        action.changed.connect(sync)
+        self._fluent_actions[action] = (wrapper, button, sync)
+        sync()
+        super().addAction(wrapper)
+
+    def addAction(self, action, *args):
+        """Use native Fluent controls for QAction-backed toolbar commands."""
+        if not isinstance(action, QtGui.QAction):
+            if isinstance(action, QtGui.QIcon):
+                action = QtGui.QAction(action, args[0], self)
+                args = args[1:]
+            else:
+                action = QtGui.QAction(action, self)
+            if args:
+                action.triggered.connect(args[0])
+        if isinstance(action, QtWidgets.QWidgetAction) or action.isSeparator():
+            return super().addAction(action)
+        return super().addAction(action)
+
+    def widgetForAction(self, action):
+        if action in self._fluent_actions:
+            return self._fluent_actions[action][1]
+        return super().widgetForAction(action)
+
+    def removeAction(self, action):
+        if action in self._fluent_actions:
+            wrapper, button, sync = self._fluent_actions.pop(action)
+            action.changed.disconnect(sync)
+            action.changed.disconnect(button._sync_action)
+            super().removeAction(wrapper)
+            wrapper.deleteLater()
+        else:
+            super().removeAction(action)
+
+    def clear(self):
+        for action in list(self._fluent_actions):
+            self.removeAction(action)
+        super().clear()
+        self.actions_map.clear()
+
+    def add_split_action(self, name, **kwargs):
+        """A native FluentQt split button with independent primary/menu actions."""
+        action = create_action(self, name, **kwargs)
+        self._add_action_widget(action, QtWidgets.QSplitButton(self))
+        self.actions_map[name] = action
+        return action
+
+    def add_pinned_action(self, action):
+        """Keep an essential command visible outside CommandBar overflow."""
+        self._add_action_widget(action, QtWidgets.QToolButton(self))
+
+    def add_toolbar_action(self, name, *, pinned=False, **kwargs):
         """
         A method to help developers easily add a button to the toolbar. A new QAction is created by calling
         ``create_action()``. The action is added to the toolbar and the toolbar is set as parent. For more details
         please look at openlp.core.lib.ui.create_action()
         """
-        action = create_widget_action(self, name, **kwargs)
+        action = create_action(self, name, **kwargs)
+        if pinned:
+            self.add_pinned_action(action)
+        else:
+            self.addAction(action)
         self.actions_map[name] = action
         return action
 
@@ -162,12 +235,8 @@ class OpenLPToolbar(QtWidgets.QToolBar):
             log.warning(f'No handle {name} in actions list.')
 
     def add_spacer(self):
-        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                            QtWidgets.QSizePolicy.Policy.Preferred)
-        separator = QtWidgets.QWidget()
-        separator.setSizePolicy(size_policy)
-        self.addWidget(separator)
-        pass
+        """Right-align the following commands within the shared CommandBar."""
+        super().add_spacer()
 
 
 class MediaToolbar(QtWidgets.QWidget):
@@ -276,7 +345,7 @@ class MediaToolbar(QtWidgets.QWidget):
             self.position_label.setObjectName(self.action_prefixes + 'position_label')
             self._seek_toolbar.add_toolbar_widget(self.position_label)
 
-            self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal)
+            self.seek_slider = ClickableSlider(QtCore.Qt.Orientation.Horizontal, value_formatter=format_play_time)
             self.seek_slider.setMaximum(1000)
             self.seek_slider.setTracking(True)
             self.seek_slider.setMouseTracking(True)
@@ -342,9 +411,6 @@ class MediaToolbar(QtWidgets.QWidget):
         else:
             icon = UiIcons().volume_high
         if not isinstance(icon, QtGui.QIcon):
-            style = QtWidgets.QApplication.style() or self.style()
-            if value == 0:
-                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolumeMuted)
-            else:
-                icon = style.standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaVolume)
+            name = 'speaker_off' if value == 0 else 'speaker_2'
+            icon = fluent_icon(f'ic_fluent_{name}_24_regular')
         self.volume_button.setIcon(icon)

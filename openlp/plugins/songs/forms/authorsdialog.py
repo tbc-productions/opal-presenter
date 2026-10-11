@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import create_button_box
@@ -37,7 +37,6 @@ class Ui_AuthorsDialog(object):
         """
         authors_dialog.setObjectName('authors_dialog')
         authors_dialog.setWindowIcon(UiIcons().main_icon)
-        authors_dialog.resize(300, 10)
         authors_dialog.setModal(True)
         self.dialog_layout = QtWidgets.QVBoxLayout(authors_dialog)
         self.dialog_layout.setObjectName('dialog_layout')
@@ -65,7 +64,6 @@ class Ui_AuthorsDialog(object):
         self.button_box = create_button_box(authors_dialog, 'button_box', ['cancel', 'save'])
         self.dialog_layout.addWidget(self.button_box)
         self.retranslate_ui(authors_dialog)
-        authors_dialog.setMaximumHeight(authors_dialog.sizeHint().height())
 
     def retranslate_ui(self, authors_dialog):
         """

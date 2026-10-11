@@ -21,7 +21,8 @@ the matching PySide6 wheel, not from another Qt installation.
 
 Windows smoke test, from the repository root::
 
-    python -m pip install pyinstaller "PySide6==6.10.3"
+    python -m pip install pyinstaller "PySide6==6.11.1"
+    # Build and install the pinned FluentQt wheel first (see fluentqt.rst).
     python -m pip install -e .
     python -m unittest discover -s tests/packaging -v
     $python = (Get-Command python).Source

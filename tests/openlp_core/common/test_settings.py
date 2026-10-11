@@ -72,7 +72,7 @@ def test_save_new_value(settings):
     assert Settings().value('core/has run wizard') is True, 'The saved value should have been returned'
 
 
-def test_set_up_default_values():
+def test_set_up_default_values(qapp):
     """Test that the default values are updated"""
     # GIVEN: A Settings object with defaults
     # WHEN: set_up_default_values() is called
@@ -80,6 +80,38 @@ def test_set_up_default_values():
 
     # THEN: The default values should have been added to the dictionary
     assert 'advanced/default service name' in Settings.__default_settings__
+
+
+@pytest.mark.parametrize(('macos', 'families', 'expected'), [
+    (True, ['Arial', 'Helvetica Neue', 'Segoe UI'], 'Helvetica Neue'),
+    (False, ['Arial', 'Roboto', 'Segoe UI'], 'Segoe UI'),
+    (False, ['Arial', 'Roboto'], 'Roboto'),
+    (False, ['Noto Sans', 'DejaVu Sans'], 'Noto Sans'),
+    (False, ['arial'], 'arial'),
+])
+def test_default_alert_font_uses_installed_family(macos, families, expected):
+    """The default uses the first available sans-serif font, preserving its installed name."""
+    with patch.object(modsettings, 'is_macosx', return_value=macos), \
+            patch.object(modsettings.QtGui.QFontDatabase, 'families', return_value=families):
+        assert modsettings.get_default_alert_font() == expected
+
+
+def test_default_alert_font_falls_back_to_resolved_sans_serif(qapp):
+    """An installation without the preferred fonts still gets a concrete font family."""
+    with patch.object(modsettings.QtGui.QFontDatabase, 'families', return_value=[]):
+        family = modsettings.get_default_alert_font()
+    assert family
+    assert family in modsettings.QtGui.QFontDatabase.families()
+
+
+def test_default_alert_font_preserves_saved_choice(settings):
+    """Refreshing startup defaults does not overwrite the user's saved font."""
+    settings.setValue('alerts/font face', 'Custom Font')
+    with patch.dict(Settings.__default_settings__), \
+            patch.object(modsettings, 'get_default_alert_font', return_value='Roboto'):
+        Settings.set_up_default_values()
+        assert settings.get_default_value('alerts/font face') == 'Roboto'
+        assert settings.value('alerts/font face') == 'Custom Font'
 
 
 def test_get_default_value():
@@ -401,15 +433,17 @@ def test_settings_pyqt5_pyside6_migration_ini_missing():
     assert settings == ret_settings
 
 
-def test_settings_zip_export_import(settings):
+def test_settings_zip_export_import(settings, monkeypatch):
     """Test exporting and importing settings using ZIP format"""
     from openlp.core.common import settings as modsettings
+    from openlp.core.common.applocation import AppLocation
     original_version = modsettings.__version__
     modsettings.__version__ = 4
     try:
         # GIVEN: A Settings object with custom values
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir_path = Path(tmp_dir)
+            monkeypatch.setattr(AppLocation, 'get_data_path', lambda: tmp_dir_path / 'data')
             zip_path = tmp_dir_path / 'backup.zip'
             logo_path = tmp_dir_path / 'my_logo.png'
             # Create a dummy logo file
@@ -459,3 +493,81 @@ def test_convert_value_with_enum(settings):
     # THEN: It should convert correctly to the enum's integer value (1)
     assert val == 1
 
+
+@pytest.mark.parametrize('plugin', ['Bibles', 'Custom', 'Images', 'Media', 'Presentations', 'Songs'])
+def test_upgrade_saved_live_shortcuts(settings, monkeypatch, plugin):
+    """Existing broken defaults are repaired when settings are upgraded."""
+    from PySide6 import QtGui
+    monkeypatch.setattr(modsettings, '__version__', 5)
+    key = f'shortcuts/listView{plugin}LiveItem'
+    old = [QtGui.QKeySequence(int(QtCore.Qt.Key.Key_Shift) + int(value))
+           for value in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    settings.setValue('settings/version', 4)
+    settings.setValue(key, old)
+    settings.upgrade_settings()
+    assert settings.value(key) == [QtGui.QKeySequence('Shift+Return'), QtGui.QKeySequence('Shift+Enter')]
+
+
+def test_upgrade_preserves_custom_live_shortcut(settings, monkeypatch):
+    """Changing defaults does not replace a user's chosen shortcut."""
+    from PySide6 import QtGui
+    monkeypatch.setattr(modsettings, '__version__', 5)
+    custom = [QtGui.QKeySequence('Ctrl+L')]
+    settings.setValue('settings/version', 4)
+    settings.setValue('shortcuts/listViewImagesLiveItem', custom)
+    settings.upgrade_settings()
+    assert settings.value('shortcuts/listViewImagesLiveItem') == custom
+
+
+def test_retired_settings_upgrade(settings, monkeypatch):
+    """Cleanup removes retired keys while retaining the recent-file preference."""
+    monkeypatch.setattr(modsettings, '__version__', 6)
+    settings.setValue('settings/version', 5)
+    for key, _, _ in Settings.__setting_upgrade_6__:
+        settings.setValue(key, True)
+    settings.setValue('advanced/recent file count', 7)
+    settings.setValue('core/update check', False)
+    settings.setValue('api/update check', True)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 6
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_6__)
+    assert settings.value('advanced/recent file count') == 7
+    assert settings.value('core/update check') is False
+    assert settings.value('api/update check') is True
+
+
+def test_presentation_and_display_override_upgrade(settings, monkeypatch):
+    """Retired overrides are removed without changing enabled controllers or output settings."""
+    monkeypatch.setattr(modsettings, '__version__', 7)
+    settings.setValue('settings/version', 6)
+    for key, _, _ in Settings.__setting_upgrade_7__:
+        settings.setValue(key, True)
+    settings.setValue('presentations/Powerpoint', QtCore.Qt.CheckState.Checked)
+    settings.setValue('advanced/x11 bypass wm', False)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 7
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_7__)
+    assert settings.value('presentations/Powerpoint') == QtCore.Qt.CheckState.Checked
+    assert settings.value('advanced/x11 bypass wm') is False
+
+
+def test_service_colours_upgrade(settings, monkeypatch):
+    """Remove all retired colour overrides while preserving service settings."""
+    monkeypatch.setattr(modsettings, '__version__', 8)
+    settings.setValue('settings/version', 7)
+    for key, _, _ in Settings.__setting_upgrade_8__:
+        settings.setValue(key, '#123456')
+    settings.setValue('servicemanager/service theme', 'Sunday')
+    settings.setValue('advanced/delete service item confirmation', False)
+
+    settings.upgrade_settings()
+
+    assert settings.value('settings/version') == 8
+    assert all(not settings.contains(key) for key, _, _ in Settings.__setting_upgrade_8__)
+    assert all(key not in Settings.__default_settings__ for key, _, _ in Settings.__setting_upgrade_8__)
+    assert settings.value('servicemanager/service theme') == 'Sunday'
+    assert settings.value('advanced/delete service item confirmation') is False

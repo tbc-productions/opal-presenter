@@ -25,7 +25,8 @@ Provides the dialog window for selecting video source for projector.
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.platform import is_macosx
@@ -219,7 +220,7 @@ class FingerTabWidget(QtWidgets.QTabWidget):
         Initialize FingerTabWidget instance
         """
         super().__init__(parent)
-        self.setTabBar(FingerTabBarWidget(self))
+        self.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
 
 
 class SourceSelectTabs(QtWidgets.QDialog):
@@ -248,21 +249,20 @@ class SourceSelectTabs(QtWidgets.QDialog):
         self.setObjectName('source_select_tabs')
         self.setWindowIcon(build_icon(':/icon/openlp-log.svg'))
         self.setModal(True)
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setObjectName('source_select_tabs_layout')
+        self.dialog_layout = QtWidgets.QVBoxLayout()
+        self.dialog_layout.setObjectName('source_select_tabs_layout')
         if is_macosx():
             self.tabwidget = QtWidgets.QTabWidget(self)
             self.tabwidget.setDocumentMode(True)
         else:
             self.tabwidget = FingerTabWidget(self)
         self.tabwidget.setObjectName('source_select_tabs_tabwidget')
-        self.tabwidget.setUsesScrollButtons(False)
         if is_macosx():
             self.tabwidget.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         else:
             self.tabwidget.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
-        self.layout.addWidget(self.tabwidget)
-        self.setLayout(self.layout)
+        self.dialog_layout.addWidget(self.tabwidget)
+        self.setLayout(self.dialog_layout)
 
     def exec(self, projector):
         """
@@ -305,7 +305,7 @@ class SourceSelectTabs(QtWidgets.QDialog):
             self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
                                                          QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         self.button_box.clicked.connect(self.button_clicked)
-        self.layout.addWidget(self.button_box)
+        self.dialog_layout.addWidget(self.button_box)
         set_button_tooltip(self.button_box)
         selected = super(SourceSelectTabs, self).exec()
         return selected
@@ -412,10 +412,10 @@ class SourceSelectSingle(QtWidgets.QDialog):
         :param projector: Projector instance to build source list from
         """
         self.projector = projector
-        self.layout = QtWidgets.QFormLayout() if self.edit else QtWidgets.QVBoxLayout()
-        self.layout.setObjectName('source_select_tabs_layout')
-        self.layout.setSpacing(10)
-        self.setLayout(self.layout)
+        self.dialog_layout = QtWidgets.QFormLayout() if self.edit else QtWidgets.QVBoxLayout()
+        self.dialog_layout.setObjectName('source_select_tabs_layout')
+        self.dialog_layout.setSpacing(10)
+        self.setLayout(self.dialog_layout)
         self.setMinimumWidth(350)
         self.button_group = [] if self.edit else QtWidgets.QButtonGroup()
         self.source_text = self.projectordb.get_source_list(projector=projector)
@@ -433,7 +433,7 @@ class SourceSelectSingle(QtWidgets.QDialog):
                 else:
                     item.old_text = item.text()
                     item.setText(source_item.text)
-                self.layout.addRow(PJLINK_DEFAULT_CODES[key], item)
+                self.dialog_layout.addRow(PJLINK_DEFAULT_CODES[key], item)
                 self.button_group.append(item)
             self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Reset |
                                                          QtWidgets.QDialogButtonBox.StandardButton.Discard |
@@ -445,13 +445,13 @@ class SourceSelectSingle(QtWidgets.QDialog):
                 text = self.source_text[key] if source_text is None else source_text.text
                 button = QtWidgets.QRadioButton(text)
                 button.setChecked(True if key == projector.source else False)
-                self.layout.addWidget(button)
+                self.dialog_layout.addWidget(button)
                 self.button_group.addButton(button, int(key))
                 button_list.append(key)
             self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
                                                          QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         self.button_box.clicked.connect(self.button_clicked)
-        self.layout.addWidget(self.button_box)
+        self.dialog_layout.addWidget(self.button_box)
         self.setMinimumHeight(key_count * 25)
         set_button_tooltip(self.button_box)
         selected = super(SourceSelectSingle, self).exec()

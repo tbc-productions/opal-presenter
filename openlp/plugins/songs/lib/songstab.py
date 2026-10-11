@@ -19,12 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.enum import SongFirstSlideMode
 from openlp.core.common.platform import is_macosx
 from openlp.core.lib.settingstab import SettingsTab
+from openlp.core.widgets.buttons import ColorButton
 from openlp.plugins.songs.lib.db import AuthorType
 from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS, SECTION_KEYS_ORDERED, normalize_rgb_hex
 
@@ -44,9 +46,6 @@ class SongsTab(SettingsTab):
         self.mode_group_box.setObjectName('mode_group_box')
         self.mode_layout = QtWidgets.QVBoxLayout(self.mode_group_box)
         self.mode_layout.setObjectName('mode_layout')
-        self.tool_bar_active_check_box = QtWidgets.QCheckBox(self.mode_group_box)
-        self.tool_bar_active_check_box.setObjectName('tool_bar_active_check_box')
-        self.mode_layout.addWidget(self.tool_bar_active_check_box)
         self.update_on_edit_check_box = QtWidgets.QCheckBox(self.mode_group_box)
         self.update_on_edit_check_box.setObjectName('update_on_edit_check_box')
         self.mode_layout.addWidget(self.update_on_edit_check_box)
@@ -139,7 +138,6 @@ class SongsTab(SettingsTab):
         self.section_colors_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft |
                                  QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.section_color_labels = {}
-        self.section_color_edits = {}
         self.section_color_buttons = {}
         self.section_color_intro_label = QtWidgets.QLabel(self.section_colors_group_box)
         self._add_section_color_row('intro', self.section_color_intro_label)
@@ -259,7 +257,6 @@ class SongsTab(SettingsTab):
         self.right_layout.addStretch()
 
         # Connect all the signals!
-        self.tool_bar_active_check_box.stateChanged.connect(self.on_tool_bar_active_check_box_changed)
         self.update_on_edit_check_box.stateChanged.connect(self.on_update_on_edit_check_box_changed)
         self.add_from_service_check_box.stateChanged.connect(self.on_add_from_service_check_box_changed)
         self.first_slide_mode_combobox.currentIndexChanged.connect(self.on_first_slide_mode_combo_box_changed)
@@ -289,33 +286,16 @@ class SongsTab(SettingsTab):
             self._on_opacity_minimum_changed)
 
     def _add_section_color_row(self, section_key, label):
-        """
-        Add a section color row consisting of a hex text box and color picker button.
-        """
-        edit = QtWidgets.QLineEdit(self.section_colors_group_box)
-        edit.setObjectName('section_color_{key}_edit'.format(key=section_key))
-        edit.setPlaceholderText('#RRGGBB')
-        edit.setMaxLength(7)
-        edit.setValidator(QtGui.QRegularExpressionValidator(QtCore.QRegularExpression('#[0-9A-Fa-f]{6}'), edit))
-        picker_button = QtWidgets.QToolButton(self.section_colors_group_box)
-        picker_button.setObjectName('section_color_{key}_button'.format(key=section_key))
-        picker_button.setText('...')
-        row_widget = QtWidgets.QWidget(self.section_colors_group_box)
-        row_layout = QtWidgets.QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.addWidget(edit)
-        row_layout.addWidget(picker_button)
-        self.section_colors_layout.addRow(label, row_widget)
+        """Add the shared colour-picker button for a song section."""
+        button = ColorButton(self.section_colors_group_box)
+        button.setObjectName('section_color_{key}_button'.format(key=section_key))
+        self.section_colors_layout.addRow(label, button)
         self.section_color_labels[section_key] = label
-        self.section_color_edits[section_key] = edit
-        self.section_color_buttons[section_key] = picker_button
-        picker_button.clicked.connect(lambda checked=False, key=section_key: self.on_section_color_pick_clicked(key))
-        edit.editingFinished.connect(lambda key=section_key: self.on_section_color_edit_finished(key))
+        self.section_color_buttons[section_key] = button
+        button.colorChanged.connect(lambda color, key=section_key: self.on_section_color_changed(key, color))
 
     def retranslate_ui(self):
         self.mode_group_box.setTitle(translate('SongsPlugin.SongsTab', 'Song related settings'))
-        self.tool_bar_active_check_box.setText(translate('SongsPlugin.SongsTab',
-                                                         'Enable "Go to verse" button in Live panel'))
         self.update_on_edit_check_box.setText(translate('SongsPlugin.SongsTab', 'Update service from song edit'))
         self.add_from_service_check_box.setText(translate('SongsPlugin.SongsTab',
                                                           'Import missing songs from Service files'))
@@ -416,8 +396,6 @@ class SongsTab(SettingsTab):
     def on_search_as_type_check_box_changed(self, check_state):
         self.song_search = (check_state == QtCore.Qt.CheckState.Checked)
 
-    def on_tool_bar_active_check_box_changed(self, check_state):
-        self.tool_bar = (check_state == QtCore.Qt.CheckState.Checked)
 
     def on_update_on_edit_check_box_changed(self, check_state):
         self.update_edit = (check_state == QtCore.Qt.CheckState.Checked)
@@ -476,40 +454,15 @@ class SongsTab(SettingsTab):
     def on_preview_other_check_box_changed(self, check_state):
         self.preview_other = (check_state == QtCore.Qt.CheckState.Checked)
 
-    def _normalize_section_color_edits(self):
-        for section_key in SECTION_KEYS_ORDERED:
-            color_text = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
-            self.section_colors[section_key] = color_text
-            self.section_color_edits[section_key].setText(color_text)
-            self._update_section_color_picker_preview(section_key)
-
-    def _update_section_color_picker_preview(self, section_key):
-        color_text = self.section_colors.get(section_key, DEFAULT_SECTION_COLORS[section_key])
-        button = self.section_color_buttons[section_key]
-        button.setStyleSheet('background-color: {color};'.format(color=color_text))
-
-    def on_section_color_edit_finished(self, section_key):
-        color_text = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
+    def on_section_color_changed(self, section_key, color):
+        """Keep the chosen colour and the shared button's swatch in sync."""
+        color_text = normalize_rgb_hex(color, self.section_colors[section_key])
         self.section_colors[section_key] = color_text
-        self.section_color_edits[section_key].setText(color_text)
-        self._update_section_color_picker_preview(section_key)
-
-    def on_section_color_pick_clicked(self, section_key):
-        current_color = normalize_rgb_hex(self.section_color_edits[section_key].text(), self.section_colors[section_key])
-        picked_color = QtWidgets.QColorDialog.getColor(QtGui.QColor(current_color), self)
-        if not picked_color.isValid():
-            return
-        color_text = normalize_rgb_hex(picked_color.name().upper(), self.section_colors[section_key])
-        self.section_colors[section_key] = color_text
-        self.section_color_edits[section_key].setText(color_text)
-        self._update_section_color_picker_preview(section_key)
+        self.section_color_buttons[section_key].color = color_text
 
     def on_section_color_defaults_button_clicked(self):
         for section_key in SECTION_KEYS_ORDERED:
-            default_color = DEFAULT_SECTION_COLORS[section_key]
-            self.section_colors[section_key] = default_color
-            self.section_color_edits[section_key].setText(default_color)
-            self._update_section_color_picker_preview(section_key)
+            self.on_section_color_changed(section_key, DEFAULT_SECTION_COLORS[section_key])
 
     def _on_opacity_maximum_changed(self):
         """Ensure maximum opacity is >= minimum opacity."""
@@ -533,7 +486,6 @@ class SongsTab(SettingsTab):
         """
         Load the songs settings
         """
-        self.tool_bar = self.settings.value('songs/display songbar')
         self.update_edit = self.settings.value('songs/update service on edit')
         self.update_load = self.settings.value('songs/add song from service')
         self.first_slide_mode = self.settings.value('songs/first slide mode')
@@ -543,7 +495,6 @@ class SongsTab(SettingsTab):
         self.chord_notation = self.settings.value('songs/chord notation')
         self.disable_chords_import = self.settings.value('songs/disable chords import')
         self.song_key_warning = self.settings.value('songs/warn about missing song key')
-        self.tool_bar_active_check_box.setChecked(self.tool_bar)
         self.update_on_edit_check_box.setChecked(self.update_edit)
         self.add_from_service_check_box.setChecked(self.update_load)
         self.auto_play_check_box.setChecked(self.auto_play)
@@ -593,8 +544,7 @@ class SongsTab(SettingsTab):
             color_setting_key = 'songs/section color {key}'.format(key=section_key)
             color_value = self.settings.value(color_setting_key)
             self.section_colors[section_key] = normalize_rgb_hex(color_value, DEFAULT_SECTION_COLORS[section_key])
-            self.section_color_edits[section_key].setText(self.section_colors[section_key])
-            self._update_section_color_picker_preview(section_key)
+            self.section_color_buttons[section_key].color = self.section_colors[section_key]
 
         # Load section background opacity settings
         opacity_minimum = int(self.settings.value('songs/section background opacity minimum'))
@@ -610,7 +560,6 @@ class SongsTab(SettingsTab):
         """
         Save the song settings
         """
-        self.settings.setValue('songs/display songbar', self.tool_bar)
         self.settings.setValue('songs/update service on edit', self.update_edit)
         self.settings.setValue('songs/add song from service', self.update_load)
         self.settings.setValue('songs/auto play audio', self.auto_play)
@@ -633,7 +582,6 @@ class SongsTab(SettingsTab):
         self.settings.setValue('songs/preview_ending', self.preview_ending)
         self.settings.setValue('songs/preview_other', self.preview_other)
 
-        self._normalize_section_color_edits()
         for section_key in SECTION_KEYS_ORDERED:
             self.settings.setValue('songs/section color {key}'.format(key=section_key), self.section_colors[section_key])
 

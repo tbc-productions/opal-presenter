@@ -21,6 +21,8 @@
 """
 The :mod:`~openlp.core.ui.media.mediabase` module contains the MediaBase class.
 """
+from PySide6 import QtCore
+
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.display.screens import ScreenList
 
@@ -111,7 +113,11 @@ class MediaBase(RegistryProperties):
         Reset the player
 
         """
-        self.media_player.stop()
+        # PySide's direct stop() binding holds the GIL while FFmpeg waits for
+        # its audio thread. That thread can need the GIL in QAudioOutput's
+        # disconnectNotify, deadlocking the GUI. invokeMethod releases the
+        # GIL and still completes synchronously on the player's GUI thread.
+        QtCore.QMetaObject.invokeMethod(self.media_player, 'stop', QtCore.Qt.ConnectionType.DirectConnection)
 
     def set_visible(self, status: bool) -> None:
         """

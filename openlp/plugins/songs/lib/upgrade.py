@@ -29,7 +29,7 @@ from pathlib import Path
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import Session
-from sqlalchemy.types import Boolean, DateTime, Integer, Unicode
+from sqlalchemy.types import Boolean, DateTime, Integer, Unicode, UnicodeText
 from sqlalchemy.sql.expression import false, func, null, text, select, update
 
 from openlp.core.common import sha256_file_hash
@@ -40,7 +40,7 @@ from openlp.core.db.upgrades import get_upgrade_op
 
 
 log = logging.getLogger(__name__)
-__version__ = 9
+__version__ = 10
 
 
 # TODO: When removing an upgrade path the ftw-data needs updating to the minimum supported version
@@ -234,3 +234,11 @@ def upgrade_9(session: Session, metadata: MetaData):
         op = get_upgrade_op(session)
         op.add_column('songs', Column('is_favourite', Boolean, default=False))
         songs_table.append_column(Column('is_favourite', Boolean, default=False))
+
+
+def upgrade_10(session: Session, metadata: MetaData):
+    """Version 10: optional, portable song slide designs. Existing songs inherit their theme."""
+    metadata.clear()
+    songs_table = Table('songs', metadata, autoload_with=metadata.bind)
+    if 'slide_design' not in songs_table.c:
+        get_upgrade_op(session).add_column('songs', Column('slide_design', UnicodeText))

@@ -23,12 +23,15 @@ Package to test the openlp.core.ui.settingsform package.
 """
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.settingsform import SettingsForm
+from openlp.core.ui.fluenticons import service_icon
+from openlp.core.ui.icons import UiIcons
 
 
 class MockTab(QtWidgets.QWidget):
@@ -66,24 +69,18 @@ def test_insert_tab_visible(registry: Registry, mock_settings: MagicMock):
         assert 1 == mocked_add_item.call_count, 'addItem should have been called'
 
 
-def test_build_settings_tab_icon_uses_service_theme_color_for_song_tabs(registry: Registry, settings: Settings):
-    """
-    Test that the songs settings icon uses the configured service theme color.
-    """
+def test_build_settings_tab_icon_uses_fluent_colour_for_song_tabs(registry: Registry, settings: Settings):
+    """A legacy custom colour cannot override the Fluent Settings icon."""
     settings_form = SettingsForm(None)
     settings.setValue('servicemanager/theme color song', '#123456')
     song_tab = MagicMock()
     song_tab.tab_title = 'songs'
     song_tab.icon_path = ':/icon/openlp-logo.svg'
-    expected_icon = QtGui.QIcon(QtGui.QPixmap(16, 16))
 
-    with patch('openlp.core.ui.settingsform.UiIcons') as mocked_ui_icons:
-        mocked_ui_icons.return_value.get_icon_variant.return_value = expected_icon
+    icon = settings_form._build_settings_tab_icon(song_tab)
 
-        icon = settings_form._build_settings_tab_icon(song_tab)
-
-    mocked_ui_icons.return_value.get_icon_variant.assert_called_once_with('music', color='#123456')
-    assert icon.cacheKey() == expected_icon.cacheKey()
+    expected_icon = service_icon(UiIcons().music, 'songs')
+    assert icon.pixmap(32, 32).toImage() == expected_icon.pixmap(32, 32).toImage()
 
 
 def test_insert_tab_not_visible(registry: Registry, mock_settings: MagicMock):
@@ -221,7 +218,12 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     inactive_plugin.is_active.return_value = False
 
     with patch('openlp.core.ui.settingsform.State') as mocked_state:
-        mocked_state.return_value.list_plugins.return_value = [inactive_plugin, active_plugin]
+        projector_plugin = MagicMock(settings_tab=settings_form.projector_tab)
+        projector_plugin.is_active.return_value = False
+        remote_plugin = MagicMock(settings_tab=settings_form.api_tab)
+        remote_plugin.is_active.return_value = True
+        mocked_state.return_value.list_plugins.return_value = [
+            inactive_plugin, active_plugin, projector_plugin, remote_plugin]
 
         # WHEN: Getting ordered tabs
         ordered_tabs = settings_form._get_ordered_tabs()
@@ -233,3 +235,7 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     ]
     assert ordered_tabs[0][1] is True
     assert ordered_tabs[-1][1] is True
+
+    visibility = {tab.tab_title_visible: visible for tab, visible in ordered_tabs}
+    assert visibility['Projectors'] is False
+    assert visibility['API'] is True

@@ -73,7 +73,7 @@ def test_time_display(form: StartTimeForm):
 
     # WHEN displaying the UI and pressing enter
     form.item = {'service_item': mocked_serviceitem}
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Ok)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -86,7 +86,7 @@ def test_time_display(form: StartTimeForm):
 
     # WHEN displaying the UI, changing the time to 2min 3secs and pressing enter
     form.item = {'service_item': mocked_serviceitem}
-    with patch('PySide6.QtWidgets.QDialog.exec'):
+    with patch('openlp.core.widgets.fluent.QDialog.exec'):
         form.exec()
     form.minute_spin_box.setValue(2)
     form.second_spin_box.setValue(3)

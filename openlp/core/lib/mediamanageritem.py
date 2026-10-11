@@ -24,7 +24,8 @@ Provides the generic functions for interfacing plugins with the Media Manager.
 import fnmatch
 import re
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.mixins import LogMixin, RegistryProperties
@@ -34,10 +35,12 @@ from openlp.core.lib.plugin import StringContent
 from openlp.core.lib.serviceitem import ServiceItem
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
+from openlp.core.ui.fluenticons import service_icon
 from openlp.core.widgets.dialogs import FileDialog
 from openlp.core.widgets.edits import SearchEdit
 from openlp.core.widgets.toolbar import OpenLPToolbar
 from openlp.core.widgets.views import ListWidgetWithDnD
+from openlp.core.widgets.libraryfooter import LibraryFooter
 
 
 class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
@@ -73,15 +76,6 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         that is performed automatically by OpenLP when necessary. If this method is not defined, a default will be used
         (treat the filename as an image).
     """
-
-    LIBRARY_ICON_THEME_SETTINGS = {
-        'songs': 'servicemanager/theme color song',
-        'bibles': 'servicemanager/theme color bible',
-        'presentations': 'servicemanager/theme color presentation',
-        'images': 'servicemanager/theme color image',
-        'media': 'servicemanager/theme color media',
-        'custom': 'servicemanager/theme color custom slide'
-    }
     def __init__(self, parent=None, plugin=None):
         """
         Constructor to create the media manager item.
@@ -125,56 +119,25 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.page_layout.addWidget(self.panel_widget)
         self.required_icons()
         self.setup_ui()
+        self.list_view.setFont(QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Body))
+        if self.plugin.name in ('songs', 'custom'):
+            self.library_footer = LibraryFooter(self)
+            self.page_layout.addWidget(self.library_footer)
+            model = self.list_view.model()
+            for signal in (model.rowsInserted, model.rowsRemoved, model.modelReset):
+                signal.connect(self.update_item_count)
+            self.update_item_count()
         self.library_tab_icon = self.get_library_tab_icon()
         self.retranslate_ui()
         self.auto_select_id = -1
 
-    @staticmethod
-    def _normalise_theme_color(color_text, default):
-        """
-        Normalize a color to #RRGGBB and use default when invalid.
-        """
-        color = QtGui.QColor(str(color_text).strip())
-        if not color.isValid():
-            color = QtGui.QColor(default)
-        return color
-
-    def _resolve_library_icon_color(self):
-        """
-        Resolve the configured icon tint color for this plugin's library icon.
-        """
-        setting_key = self.LIBRARY_ICON_THEME_SETTINGS.get(self.plugin.name)
-        if not setting_key:
-            return None
-        default_color = self.settings.get_default_value(setting_key)
-        color_text = self.settings.value(setting_key)
-        return self._normalise_theme_color(color_text, default_color)
-
-    def _tint_icon(self, icon):
-        """
-        Tint a base icon using plugin theme settings while preserving alpha and DPR.
-        """
-        color = self._resolve_library_icon_color()
-        if color is None:
-            return icon
-        base_pixmap = icon.pixmap(80, 80)
-        if base_pixmap.isNull():
-            return icon
-        tinted_pixmap = QtGui.QPixmap(base_pixmap.size())
-        tinted_pixmap.setDevicePixelRatio(base_pixmap.devicePixelRatio())
-        tinted_pixmap.fill(QtCore.Qt.GlobalColor.transparent)
-        painter = QtGui.QPainter(tinted_pixmap)
-        painter.drawPixmap(0, 0, base_pixmap)
-        painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(tinted_pixmap.rect(), color)
-        painter.end()
-        return QtGui.QIcon(tinted_pixmap)
+    def update_item_count(self):
+        """Count the current search results in the Songs and Custom Slides lists."""
+        self.library_footer.set_count(self.list_view.model().rowCount())
 
     def get_library_tab_icon(self):
-        """
-        Return the plugin library tab icon with optional theme tint.
-        """
-        return self._tint_icon(self.plugin.icon)
+        """Return the plugin Library tab icon in its Fluent service colour."""
+        return service_icon(self.plugin.icon, self.plugin.name)
 
     def setup_item(self):
         """
@@ -283,7 +246,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
             toolbar_actions.append(['Live', StringContent.Live, UiIcons().live, self.on_live_click])
         # Add to service Button
         if self.can_add_to_service:
-            toolbar_actions.append(['Service', StringContent.Service, UiIcons().add, self.on_add_click])
+            toolbar_actions.append(['Service', StringContent.Service, UiIcons().plus, self.on_add_click])
         added_actions = self.add_actionlist_to_toolbar(toolbar_actions)
         action_index = 0
         if self.can_preview:
@@ -342,6 +305,9 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         # Add the List widget
         self.list_view = ListWidgetWithDnD(self, self.plugin.name)
         self.list_view.setObjectName('{name}ListView'.format(name=self.plugin.name))
+        self.list_view.setHeaderLabel(translate('OpenLP.MediaManagerItem', 'Reference')
+                                      if self.plugin.name == 'bibles'
+                                      else translate('OpenLP.MediaManagerItem', 'Title'))
         # Add to page_layout
         self.page_layout.addWidget(self.list_view)
         if self.has_edit_icon:
@@ -372,7 +338,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                                                                         service=StringContent.Service.title()),
                                  can_shortcuts=True,
                                  text=self.plugin.get_string(StringContent.Service)['title'],
-                                 icon=UiIcons().add,
+                                 icon=UiIcons().plus,
                                  triggers=self.on_add_click)
         if self.has_delete_icon:
             create_widget_action(self.list_view, separator=True)
@@ -389,12 +355,13 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
             self.add_to_service_context_action = create_widget_action(
                 self.list_view,
                 text=translate('OpenLP.MediaManagerItem', '&Add to selected Service Item'),
-                icon=UiIcons().add,
+                icon=UiIcons().plus,
                 triggers=self.on_add_edit_click)
         self.add_custom_context_actions()
         # Create the context menu and add all actions from the list_view.
         self.menu = QtWidgets.QMenu()
         self.menu.addActions(self.list_view.actions())
+        self.menu.setMinimumWidth(round(self.menu.sizeHint().width() * 1.2))
         self.list_view.doubleClicked.connect(self.on_double_clicked)
         self.list_view.itemSelectionChanged.connect(self.on_selection_change)
         self.list_view.customContextMenuRequested.connect(self.context_menu)
@@ -562,7 +529,7 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
         file_name = file_path.name
         return any(re.match(fnmatch.translate(pattern), file_name, re.IGNORECASE) for pattern in patterns)
 
-    def dnd_move_internal(self, target):
+    def dnd_move_internal(self, target, items=None):
         """
         Handle internal moving of media manager items
 
@@ -837,9 +804,26 @@ class MediaManagerItem(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 QtWidgets.QMessageBox.information(self, UiStrings().NISs,
                                                   translate('OpenLP.MediaManagerItem',
                                                             'You must select an existing service item to add to.'))
+            elif self.plugin.name in ('images', 'custom') and service_item.can_append_plugin(self.plugin.name):
+                if self.plugin.name == 'images' and service_item.is_image():
+                    if self.generate_slide_data(service_item):
+                        self.service_manager.add_service_item(service_item, replace=item)
+                else:
+                    selected = self.list_view.selectedItems() if self.plugin.name == 'custom' else [None]
+                    additions = [self.build_service_item(selected_item, context=ServiceItemContext.Service)
+                                 for selected_item in selected]
+                    additions = [addition for addition in additions if addition is not None]
+                    if additions:
+                        try:
+                            service_item.append_to_set(additions)
+                        except (OSError, ValueError) as error:
+                            critical_error_message_box(translate('OpenLP.MediaManagerItem', 'Unable to Add Slides'),
+                                                       str(error))
+                            return
+                        self.service_manager.add_service_item(service_item, replace=item)
             elif self.plugin.name == service_item.name:
-                self.generate_slide_data(service_item)
-                self.service_manager.add_service_item(service_item, replace=item)
+                if self.generate_slide_data(service_item):
+                    self.service_manager.add_service_item(service_item, replace=item)
             else:
                 # Turn off the remote edit update message indicator
                 QtWidgets.QMessageBox.information(self, translate('OpenLP.MediaManagerItem', 'Invalid Service Item'),

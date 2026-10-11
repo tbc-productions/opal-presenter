@@ -21,7 +21,8 @@
 """
 The Themes configuration tab
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import ThemeLevel
 from openlp.core.common.i18n import UiStrings, translate
@@ -89,7 +90,7 @@ class ThemesTab(SettingsTab):
         self.theme_hot_reload.setObjectName('theme_hot_reload')
         self.universal_group_box_layout.addWidget(self.theme_hot_reload)
         self.left_layout.addWidget(self.universal_group_box)
-        self.level_group_box = QtWidgets.QGroupBox(self.right_column)
+        self.level_group_box = QtWidgets.QGroupBox(self.left_column)
         self.level_group_box.setObjectName('level_group_box')
         self.level_layout = QtWidgets.QFormLayout(self.level_group_box)
         self.level_layout.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop)
@@ -117,7 +118,7 @@ class ThemesTab(SettingsTab):
             rect.setTop(rect.top() + label_top_margin)
             label.setFrameRect(rect)
             label.setWordWrap(True)
-        self.right_layout.addWidget(self.level_group_box)
+        self.left_layout.insertWidget(1, self.level_group_box)
         self.left_layout.addStretch()
         self.right_layout.addStretch()
         self.song_level_radio_button.clicked.connect(self.on_song_level_button_clicked)

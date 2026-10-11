@@ -14,6 +14,8 @@ on:
 jobs:
   windows-qt-packaging:
     runs-on: windows
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,12 +26,19 @@ jobs:
         with:
           python-version: '3.14'
 
+      - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install packaging test dependencies
         shell: powershell
         run: |
           python -m venv .venv
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          .venv/Scripts/python.exe -m pip install pyinstaller "PySide6==6.10.3"
+          # Qt 6.11 Windows repositories are split by compiler; PyPI 3.3.0 uses the old layout.
+          .venv/Scripts/python.exe -m pip install pyinstaller cmake ninja "aqtinstall @ git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7" "PySide6==6.11.1" "shiboken6_generator==6.11.1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe -m aqt install-qt windows desktop 6.11.1 win64_msvc2022_64 --archives qtbase -O .cache/qt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .venv/Scripts/python.exe scripts/build_fluentqt.py --qt-prefix .cache/qt/6.11.1/msvc2022_64 --install
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe -m pip install -e .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -74,6 +83,9 @@ jobs:
           export PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           "$PY" -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install cmake ninja aqtinstall "PySide6==6.11.1" "shiboken6_generator==6.11.1"
+          .venv/bin/python -m aqt install-qt mac desktop 6.11.1 clang_64 --archives qtbase -O .cache/qt
+          .venv/bin/python scripts/build_fluentqt.py --qt-prefix .cache/qt/6.11.1/macos --install
           .venv/bin/python -m pip install -e '.[darkstyle,mysql,odbc,postgresql,spellcheck,sword-bibles,test]'
 
       - name: Generate resources

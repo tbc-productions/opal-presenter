@@ -75,7 +75,7 @@ class PresentationPlugin(Plugin):
 
     def initialise(self):
         """
-        Initialise the plugin. Determine which controllers are enabled are start their processes.
+        Initialise the plugin. Presentation applications start when a document needs them.
         """
         log.info('Presentations Initialising')
         # Migrate each file
@@ -92,13 +92,6 @@ class PresentationPlugin(Plugin):
             self.manager.save_object(item)
         self.settings.remove('presentations/presentations files')
         super().initialise()
-        for controller in self.controllers:
-            if self.controllers[controller].enabled():
-                try:
-                    self.controllers[controller].start_process()
-                except Exception:
-                    log.exception('Failed to start controller process')
-                    self.controllers[controller].available = False
         self.media_item.build_file_mask_string()
 
     def finalise(self):

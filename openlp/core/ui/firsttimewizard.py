@@ -21,7 +21,8 @@
 """
 The UI widgets for the first time wizard.
 """
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import clean_button_text
 from openlp.core.common.i18n import translate
@@ -84,10 +85,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         self.browse_button.setObjectName('browse_button')
         self.file_layout.addWidget(self.browse_button)
         
-        self.clear_button = QtWidgets.QPushButton(self)
-        self.clear_button.setObjectName('clear_button')
-        self.file_layout.addWidget(self.clear_button)
-        
         self.file_label = QtWidgets.QLabel(self)
         self.file_label.setObjectName('file_label')
         self.group_layout.addRow(self.file_label, self.file_layout)
@@ -95,7 +92,7 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         
         # Connect signals
         self.browse_button.clicked.connect(self.on_browse_clicked)
-        self.clear_button.clicked.connect(self.on_clear_clicked)
+        self.file_edit.textChanged.connect(lambda _text: self.completeChanged.emit())
         
         # Set initial states
         self.file_edit.setEnabled(True)
@@ -110,7 +107,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
                       'This will restore your configuration, including plugins, theme selections, and other preferences. '
                       'Alternatively, you can leave this blank to configure OpenLP+ manually.'))
         self.browse_button.setText(translate('OpenLP.FirstTimeWizard', 'Browse...'))
-        self.clear_button.setText(translate('OpenLP.FirstTimeWizard', 'Clear'))
         self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File:'))
         
     def on_browse_clicked(self):
@@ -122,11 +118,6 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
             translate('OpenLP.FirstTimeWizard', 'OpenLP+ Settings (*.conf *.zip)'))
         if file_path:
             self.file_edit.setText(str(file_path))
-            self.completeChanged.emit()
-
-    def on_clear_clicked(self):
-        self.file_edit.clear()
-        self.completeChanged.emit()
 
     def isComplete(self):
         # Optional, so always complete
@@ -335,17 +326,25 @@ class UiFirstTimeWizard(object):
         self.media_check_box.setObjectName('media_check_box')
         self.plugin_layout.addWidget(self.media_check_box)
         self.song_usage_check_box = QtWidgets.QCheckBox(self.plugin_page)
-        self.song_usage_check_box.setChecked(True)
+        self.song_usage_check_box.setChecked(False)
         self.song_usage_check_box.setObjectName('song_usage_check_box')
         self.plugin_layout.addWidget(self.song_usage_check_box)
         self.alert_check_box = QtWidgets.QCheckBox(self.plugin_page)
-        self.alert_check_box.setChecked(True)
+        self.alert_check_box.setChecked(False)
         self.alert_check_box.setObjectName('alert_check_box')
         self.plugin_layout.addWidget(self.alert_check_box)
         self.obs_studio_check_box = QtWidgets.QCheckBox(self.plugin_page)
         self.obs_studio_check_box.setChecked(False)
         self.obs_studio_check_box.setObjectName('obs_studio_check_box')
         self.plugin_layout.addWidget(self.obs_studio_check_box)
+        self.projector_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.projector_check_box.setChecked(False)
+        self.projector_check_box.setObjectName('projector_check_box')
+        self.plugin_layout.addWidget(self.projector_check_box)
+        self.remote_interface_check_box = QtWidgets.QCheckBox(self.plugin_page)
+        self.remote_interface_check_box.setChecked(False)
+        self.remote_interface_check_box.setObjectName('remote_interface_check_box')
+        self.plugin_layout.addWidget(self.remote_interface_check_box)
         first_time_wizard.setPage(FirstTimePage.Plugins, self.plugin_page)
         # Web Remote page
         self.remote_page = RemotePage(self)
@@ -465,6 +464,13 @@ class UiFirstTimeWizard(object):
         self.obs_studio_check_box.setText(
             translate('OpenLP.FirstTimeWizard', 'OBS Studio - Control scenes directly from OpenLP+')
         )
+        self.projector_check_box.setText(
+            translate('OpenLP.FirstTimeWizard', 'Projector – Control network projectors using PJLink'))
+        self.remote_interface_check_box.setText(
+            translate('OpenLP.FirstTimeWizard', 'Remote Interface – Remote control, stage, live and chords views'))
+        for check_box in (self.projector_check_box, self.remote_interface_check_box):
+            check_box.setToolTip(translate('OpenLP.FirstTimeWizard',
+                                          'Changes made when re-running setup take effect after restarting OpenLP+.'))
         self.resource_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Resource Data'))
         self.resource_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Can OpenLP+ download some resource data?'))
         self.resource_label.setText(

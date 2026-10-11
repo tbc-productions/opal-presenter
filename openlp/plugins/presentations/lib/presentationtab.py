@@ -19,9 +19,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings, translate
+from openlp.core.common.i18n import translate
 from openlp.core.lib.settingstab import SettingsTab
 
 
@@ -55,18 +56,6 @@ class PresentationTab(SettingsTab):
             self.presenter_check_boxes[controller.name] = checkbox
             self.controllers_layout.addWidget(checkbox)
         self.left_layout.addWidget(self.controllers_group_box)
-        # Advanced
-        self.advanced_group_box = QtWidgets.QGroupBox(self.left_column)
-        self.advanced_group_box.setObjectName('advanced_group_box')
-        self.advanced_layout = QtWidgets.QVBoxLayout(self.advanced_group_box)
-        self.advanced_layout.setObjectName('advanced_layout')
-        self.override_app_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
-        self.override_app_check_box.setObjectName('override_app_check_box')
-        self.advanced_layout.addWidget(self.override_app_check_box)
-        self.render_slide_images_check_box = QtWidgets.QCheckBox(self.advanced_group_box)
-        self.render_slide_images_check_box.setObjectName('render_slide_images_check_box')
-        self.advanced_layout.addWidget(self.render_slide_images_check_box)
-        self.left_layout.addWidget(self.advanced_group_box)
         # PowerPoint
         self.powerpoint_group_box = QtWidgets.QGroupBox(self.left_column)
         self.powerpoint_group_box.setObjectName('powerpoint_group_box')
@@ -78,6 +67,9 @@ class PresentationTab(SettingsTab):
         self.ppt_window_check_box = QtWidgets.QCheckBox(self.powerpoint_group_box)
         self.ppt_window_check_box.setObjectName('ppt_window_check_box')
         self.powerpoint_layout.addWidget(self.ppt_window_check_box)
+        self.ppt_auto_display_check_box = QtWidgets.QCheckBox(self.powerpoint_group_box)
+        self.ppt_auto_display_check_box.setObjectName('ppt_auto_display_check_box')
+        self.powerpoint_layout.addWidget(self.ppt_auto_display_check_box)
         self.left_layout.addWidget(self.powerpoint_group_box)
         # Impress
         self.impress_group_box = QtWidgets.QGroupBox(self.left_column)
@@ -102,20 +94,20 @@ class PresentationTab(SettingsTab):
             controller = self.controllers[key]
             checkbox = self.presenter_check_boxes[controller.name]
             self.set_controller_text(checkbox, controller)
-        self.advanced_group_box.setTitle(UiStrings().Advanced)
         self.powerpoint_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'PowerPoint options'))
-        self.override_app_check_box.setText(
-            translate('PresentationPlugin.PresentationTab', 'Allow presentation application to be overridden'))
-        self.render_slide_images_check_box.setText(
-            translate('PresentationPlugin.PresentationTab',
-                      'Show presentation slides in OpenLP+ (animations and videos will not play)'))
         self.ppt_slide_click_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
                       'Clicking on the current slide advances to the next effect'))
         self.ppt_window_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
-                      'Let PowerPoint control the size and monitor of the presentations\n'
-                      '(This may fix PowerPoint scaling issues in Windows 8 and 10)'))
+                      'Let PowerPoint control the size and monitor of the presentations'))
+        self.ppt_auto_display_check_box.setText(
+            translate('PresentationPlugin.PresentationTab', 'Automatically select the output display'))
+        self.ppt_auto_display_check_box.setToolTip(translate(
+            'PresentationPlugin.PresentationTab',
+            'Use OpenLP+’s selected output screen for fullscreen PowerPoint presentations. '
+            'Supports the primary display or a single secondary display. Turn off to choose a monitor '
+            'in PowerPoint’s Set Up Show dialog. Requires macOS Accessibility access.'))
         self.impress_group_box.setTitle(translate('PresentationPlugin.PresentationTab', 'Impress options'))
         self.odp_display_check_box.setText(
             translate('PresentationPlugin.PresentationTab',
@@ -145,10 +137,6 @@ class PresentationTab(SettingsTab):
                 powerpoint_mac_available = True
             if controller.name == 'Impress' and controller.is_available():
                 impress_available = True
-        self.override_app_check_box.setChecked(
-            self.settings.value('presentations/override app') == QtCore.Qt.CheckState.Checked)
-        self.render_slide_images_check_box.setChecked(
-            self.settings.value('presentations/render slide images') == QtCore.Qt.CheckState.Checked)
         # Load PowerPoint settings
         self.ppt_slide_click_check_box.setChecked(
             self.settings.value('presentations/powerpoint slide click advance') == QtCore.Qt.CheckState.Checked)
@@ -156,6 +144,11 @@ class PresentationTab(SettingsTab):
         self.ppt_window_check_box.setChecked(
             self.settings.value('presentations/powerpoint control window') == QtCore.Qt.CheckState.Checked)
         self.ppt_window_check_box.setEnabled(powerpoint_available)
+        self.ppt_window_check_box.setVisible(not powerpoint_mac_available)
+        self.ppt_auto_display_check_box.setChecked(
+            self.settings.value('presentations/powerpoint auto select display') == QtCore.Qt.CheckState.Checked)
+        self.ppt_auto_display_check_box.setEnabled(powerpoint_mac_available)
+        self.ppt_auto_display_check_box.setVisible(powerpoint_mac_available)
         # Load Impress settings
         self.odp_display_check_box.setChecked(
             self.settings.value('presentations/impress use display setting') == QtCore.Qt.CheckState.Checked)
@@ -177,18 +170,8 @@ class PresentationTab(SettingsTab):
                 if self.settings.value(setting_key) != checkbox.checkState():
                     changed = True
                     self.settings.setValue(setting_key, checkbox.checkState())
-                    if checkbox.isChecked():
-                        controller.start_process()
-                    else:
+                    if not checkbox.isChecked():
                         controller.kill()
-        setting_key = 'presentations/override app'
-        if self.settings.value(setting_key) != self.override_app_check_box.checkState():
-            self.settings.setValue(setting_key, self.override_app_check_box.checkState())
-            changed = True
-        setting_key = 'presentations/render slide images'
-        if self.settings.value(setting_key) != self.render_slide_images_check_box.checkState():
-            self.settings.setValue(setting_key, self.render_slide_images_check_box.checkState())
-            changed = True
         # Save powerpoint settings
         setting_key = 'presentations/powerpoint slide click advance'
         if self.settings.value(setting_key) != self.ppt_slide_click_check_box.checkState():
@@ -198,7 +181,12 @@ class PresentationTab(SettingsTab):
         if self.settings.value(setting_key) != self.ppt_window_check_box.checkState():
             self.settings.setValue(setting_key, self.ppt_window_check_box.checkState())
             changed = True
-        # Save impress setting
+        # Save macOS PowerPoint monitor selection
+        setting_key = 'presentations/powerpoint auto select display'
+        if self.settings.value(setting_key) != self.ppt_auto_display_check_box.checkState():
+            self.settings.setValue(setting_key, self.ppt_auto_display_check_box.checkState())
+            changed = True
+        # Save Impress setting
         setting_key = 'presentations/impress use display setting'
         if self.settings.value(setting_key) != self.odp_display_check_box.checkState():
             self.settings.setValue(setting_key, self.odp_display_check_box.checkState())

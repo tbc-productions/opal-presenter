@@ -21,7 +21,7 @@
 """
 The theme regeneration progress dialog
 """
-from PySide6 import QtWidgets
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.mixins import RegistryProperties, LogMixin
 from openlp.core.common.utils import wait_for

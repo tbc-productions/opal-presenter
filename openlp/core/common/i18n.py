@@ -303,7 +303,8 @@ class LanguageManager(object):
         Registry().get('settings').setValue('core/language', language)
         log.info("Language file: '{language}' written to conf file".format(language=language))
         if message:
-            QtWidgets.QMessageBox.information(None,
+            from openlp.core.common.restart import show_restart_message
+            show_restart_message(None,
                                               translate('OpenLP.LanguageManager', 'Language'),
                                               translate('OpenLP.LanguageManager',
                                                         'Please restart OpenLP+ to use your new language setting.'))
@@ -408,11 +409,8 @@ class UiStrings(metaclass=Singleton):
         self.LayoutStyle = translate('OpenLP.Ui', 'Layout style:')
         self.Left = translate('OpenLP.ThemeWizard', 'Left')
         self.Live = translate('OpenLP.Ui', 'Live')
-        self.LivePreviewShowsBlankScreen = translate('OpenLP.ServiceTab', 'Live preview shows blank screen')
         self.LivePreviewShowsPresentationScreen = translate('OpenLP.ServiceTab',
                                                             'Live preview always shows presentation screen')
-        self.LivePreviewShowsSlideTransitions = translate('OpenLP.ServiceTab',
-                                                          'Live preview shows slide transitions')
         self.LiveStream = translate('OpenLP.Ui', 'Live Stream')
         self.LiveBGError = translate('OpenLP.Ui', 'Live Background Error')
         self.LiveToolbar = translate('OpenLP.Ui', 'Live Toolbar')
@@ -436,7 +434,7 @@ class UiStrings(metaclass=Singleton):
         self.OpenLP = translate('OpenLP.Ui', 'OpenLP+')
         self.OpenLPv2AndUp = translate('OpenLP.Ui', 'OpenLP+ Song Database')
         self.OpenLPStart = translate('OpenLP.Ui', 'OpenLP+ is already running on this machine. \nClosing this instance')
-        self.OpenService = translate('OpenLP.Ui', 'Open service.')
+        self.OpenService = translate('OpenLP.Ui', 'Open service')
         self.OptionalShowInFooter = translate('OpenLP.Ui', 'Optional, this will be displayed in footer.')
         self.OptionalHideInFooter = translate('OpenLP.Ui', 'Optional, this won\'t be displayed in footer.')
         self.Other = translate('SongsPlugin.VerseType', 'Other')

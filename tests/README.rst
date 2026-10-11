@@ -23,3 +23,21 @@ To run the tests, navigate to the root directory of the OpenLP project, and then
 
     pytest -v tests
 
+JavaScript Tests
+----------------
+
+The display tests use Jasmine 7 with jasmine-browser-runner. Install Node.js
+22 or 24, pnpm and Google Chrome, then run from the project root::
+
+    pnpm install --frozen-lockfile
+    pnpm test
+
+The runner starts a local server and runs the specs in headless Chrome.
+Selenium manages the matching ChromeDriver. For interactive debugging, run::
+
+    pnpm test:serve
+
+Open the URL printed by the runner in a browser. The configuration in
+``jasmine-browser.mjs`` also serves the image and stylesheet fixtures used by
+the iframe rendering tests. Specs retain their existing execution order because
+the legacy unit tests share one Display singleton.

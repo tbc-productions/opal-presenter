@@ -24,7 +24,8 @@ Package to test the OpenLP default toolbars.
 from unittest.mock import MagicMock, patch
 import pytest
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.widgets.toolbar import MediaToolbar, ClickableSlider, OpenLPToolbar
 

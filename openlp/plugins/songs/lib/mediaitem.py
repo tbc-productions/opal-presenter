@@ -26,7 +26,8 @@ from pathlib import Path
 from shutil import copyfile
 from typing import Any
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from sqlalchemy.sql import or_
 
 from openlp.core.state import State
@@ -44,12 +45,13 @@ from openlp.core.lib.serviceitem import ItemCapabilities
 from openlp.core.lib.ui import create_widget_action, critical_error_message_box
 from openlp.core.ui.icons import UiIcons
 from openlp.core.ui.confirmationform import ConfirmationForm
-from openlp.core.widgets.views import TreeWidgetWithDnD
+from openlp.core.widgets.views import DataGridWithDnD
 from openlp.plugins.songs.forms.editsongform import EditSongForm
 from openlp.plugins.songs.forms.songexportform import SongExportForm
 from openlp.plugins.songs.forms.songimportform import SongImportForm
 from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
 from openlp.plugins.songs.lib import VerseType, clean_string, delete_song
+from openlp.core.lib.slidedesign import normalise_design
 from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, MediaFile, Song, SongBookEntry, Topic
 from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML
 from openlp.plugins.songs.lib.ui import SongStrings
@@ -78,10 +80,10 @@ class SongListWidgetItem(QtWidgets.QTreeWidgetItem):
     def __lt__(self, other):
         """Case-insensitive alphabetic sort for clickable column headers."""
         col = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        return self.text(col).casefold() < other.text(col).casefold()
+        return get_natural_key(self.text(col)) < get_natural_key(other.text(col))
 
 
-class SongListWidget(TreeWidgetWithDnD):
+class SongListWidget(DataGridWithDnD):
     """
     A two-column, sortable song list widget.
 
@@ -94,40 +96,13 @@ class SongListWidget(TreeWidgetWithDnD):
 
     def __init__(self, parent=None, name=''):
         super().__init__(parent, name)
-        self._initial_columns_set = False
         self.setup_columns([
             translate('SongsPlugin.MediaItem', 'Title'),
             translate('SongsPlugin.MediaItem', 'Author'),
         ])
-        # Keep the secondary column filling any remaining width.
-        self.header().setStretchLastSection(True)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAlternatingRowColors(use_alternate_rows())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-
-    def showEvent(self, event):
-        """Set a 65/35 column split on first show."""
-        super().showEvent(event)
-        if not self._initial_columns_set:
-            self._initial_columns_set = True
-            available = self.viewport().width()
-            if available > 0:
-                first_column = int(available * 0.65)
-                self.header().resizeSection(0, first_column)
-
-    def _ensure_first_column_width(self):
-        """When narrow (<300px), enforce a 65% minimum width for column 0."""
-        if self.columnCount() < 2 or self._resizing_columns:
-            return
-        available_width = self.viewport().width()
-        minimum_width = int(available_width * 0.65) if available_width < 300 else 0
-        if self.columnWidth(0) >= minimum_width:
-            return
-        self._resizing_columns = True
-        try:
-            self.header().resizeSection(0, minimum_width)
-        finally:
-            self._resizing_columns = False
 
     def set_secondary_header(self, label: str):
         """Update the secondary column header label for the current search mode."""
@@ -204,7 +179,7 @@ class SongMediaItem(MediaManagerItem):
 
     def add_custom_context_actions(self):
         create_widget_action(self.list_view, separator=True)
-        create_widget_action(
+        self.clone_context_action = create_widget_action(
             self.list_view, text=translate('OpenLP.MediaManagerItem', '&Clone (Copy)'), icon=UiIcons().clone,
             triggers=self.on_clone_click)
 
@@ -228,10 +203,15 @@ class SongMediaItem(MediaManagerItem):
             song = self.plugin.manager.get_object(Song, item.data(QtCore.Qt.ItemDataRole.UserRole))
             if not song:
                 continue
-            default_path = suggested_item_export_path(self.service_manager, song.title, '.xml')
+            from openlp.core.lib.designmedia import media_references
+            from openlp.core.lib.itemexport import write_xml_package, xml_design
+            xml = self.open_lyrics.song_to_xml(song)
+            suffix = '.osz' if media_references(xml_design(xml)) else '.xml'
+            service_item = self.build_service_item(item=item) if suffix == '.osz' else None
+            default_path = suggested_item_export_path(self.service_manager, song.title, suffix)
             export_item_dialog(
-                self, default_path, '.xml', translate('SongsPlugin.MediaItem', 'OpenLyrics Song (*.xml)'),
-                lambda path, song=song: path.write_bytes(self.open_lyrics.song_to_xml(song).encode('utf-8')))
+                self, default_path, suffix, translate('SongsPlugin.MediaItem', 'OpenLyrics Song') + f' (*{suffix})',
+                lambda path, xml=xml, service_item=service_item: write_xml_package(path, xml, service_item))
 
     def add_list_view_to_toolbar(self):
         """
@@ -243,7 +223,10 @@ class SongMediaItem(MediaManagerItem):
         self.list_view = SongListWidget(self, self.plugin.name)
         self.list_view.setObjectName('{name}ListView'.format(name=self.plugin.name))
         # Move context-menu actions to the new widget
-        for action in list(old_list.actions()):
+        # Retain wrappers while reparenting: otherwise PySide can destroy
+        # actions (including separators) as the temporary wrappers are collected.
+        self._song_context_actions = list(old_list.actions())
+        for action in self._song_context_actions:
             old_list.removeAction(action)
             action.setParent(self.list_view)
             self.list_view.addAction(action)
@@ -259,7 +242,8 @@ class SongMediaItem(MediaManagerItem):
         old_list.deleteLater()
         # Re-populate the context menu from the new widget's actions
         self.menu.clear()
-        self.menu.addActions(self.list_view.actions())
+        self.menu.addActions([action for action in self._song_context_actions
+                              if action is not self.clone_context_action])
         self.export_presentation_menu = QtWidgets.QMenu(
             translate('OpenLP.PresentationExport', 'Export'), self)
         self.export_presentation_menu.setIcon(UiIcons().upload)
@@ -271,6 +255,7 @@ class SongMediaItem(MediaManagerItem):
             action = self.export_presentation_menu.addAction(label)
             action.triggered.connect(lambda checked=False, extension=suffix: self.on_export_presentation(extension))
         self.menu.addMenu(self.export_presentation_menu)
+        self.menu.addAction(self.clone_context_action)
 
     def create_item_from_id(self, item_id):
         """Return a SongListWidgetItem pre-loaded with *item_id* as UserRole data."""
@@ -458,10 +443,10 @@ class SongMediaItem(MediaManagerItem):
 
         log.debug('display results Song')
         self.save_auto_select_id()
+        search_results.sort(key=get_song_key)
         self.list_view.set_secondary_header(translate('SongsPlugin.MediaItem', 'Author'))
         self.list_view.setSortingEnabled(False)
         self.list_view.clear()
-        search_results.sort(key=get_song_key)
         for song in search_results:
             # Do not display temporary songs
             if song.temporary:
@@ -675,6 +660,7 @@ class SongMediaItem(MediaManagerItem):
 
     def on_new_click(self):
         log.debug('on_new_click')
+        self.ensure_available_editor()
         self.edit_song_form.new_song()
         self.edit_song_form.exec()
         self.on_clear_text_button_click()
@@ -695,6 +681,7 @@ class SongMediaItem(MediaManagerItem):
         song_id = int(song_id)
         valid = self.plugin.manager.get_object(Song, song_id)
         if valid:
+            self.ensure_available_editor()
             self.edit_song_form.load_song(song_id, preview)
             if self.edit_song_form.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 self.auto_select_id = -1
@@ -717,6 +704,7 @@ class SongMediaItem(MediaManagerItem):
         """
         log.debug('on_edit_click')
         if check_item_selected(self.list_view, UiStrings().SelectEdit):
+            self.ensure_available_editor()
             self.edit_item = self.list_view.currentItem()
             item_id = self.edit_item.data(QtCore.Qt.ItemDataRole.UserRole)
             self.edit_song_form.load_song(item_id, False)
@@ -724,6 +712,10 @@ class SongMediaItem(MediaManagerItem):
             self.auto_select_id = -1
             self.on_song_list_load()
         self.edit_item = None
+
+    def ensure_available_editor(self):
+        if getattr(self.edit_song_form, '_designer_open', False) is True:
+            self.edit_song_form = EditSongForm(self, self.main_window, self.plugin.manager)
 
     def on_delete_click(self):
         """
@@ -824,6 +816,7 @@ class SongMediaItem(MediaManagerItem):
         service_item.add_capability(ItemCapabilities.HasMetaData)
         song = self.plugin.manager.get_object(Song, item_id)
         service_item.theme = song.theme_name
+        service_item.slide_design = normalise_design(song.slide_design)
         service_item.edit_id = item_id
         verse_list = SongXML().get_verses(song.lyrics)
         authors = self._get_music_authors(song)
@@ -850,10 +843,12 @@ class SongMediaItem(MediaManagerItem):
                 verse_tag = VerseType.translated_tags[verse_index].upper()
                 verse_def = '{tag}{label}'.format(tag=verse_tag, label=verse[0]['label'])
                 force_verse = verse[1].split('[--}{--]\n')
-                for split_verse in force_verse:
+                for split_index, split_verse in enumerate(force_verse):
                     if uppercase:
                         split_verse = "{uc}" + split_verse + "{/uc}"
-                    service_item.add_from_text(split_verse, verse_def)
+                    service_item.add_from_text(split_verse, verse_def, metadata={
+                        'design_section': VerseType.tags[verse_index] + verse[0]['label'],
+                        'design_split': split_index})
         else:
             # Loop through the verse list and expand the song accordingly.
             order_list = song.verse_order.lower().split()
@@ -934,7 +929,9 @@ class SongMediaItem(MediaManagerItem):
                             if uppercase:
                                 split_verse = "{uc}" + split_verse + "{/uc}"
 
-                            service_item.add_from_text(split_verse, verse_def)
+                            service_item.add_from_text(split_verse, verse_def, metadata={
+                                'design_section': VerseType.tags[verse_index] + verse[0]['label'],
+                                'design_split': i})
 
         service_item.data_string = {
             'title': song.search_title,

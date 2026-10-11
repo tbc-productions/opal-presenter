@@ -12,6 +12,7 @@
 """
 Derive Slide Controller row labels for Bible display slides from raw page text.
 """
+from html import escape, unescape
 import re
 
 from openlp.plugins.bibles.lib import get_reference_match, get_reference_separator
@@ -63,17 +64,12 @@ def _parse_sup_inner_to_cv(inner, current_chapter):
 def _format_ref_span(refs):
     vsep = get_reference_separator('sep_v_display')
     rsep = get_reference_separator('sep_r_display')
-    lsep = get_reference_separator('sep_l_display')
-    chapters = {c for c, _ in refs}
-    if len(chapters) == 1:
-        ch = refs[0][0]
-        verses = sorted(v for _, v in refs)
-        lo, hi = verses[0], verses[-1]
-        if lo == hi:
-            return '{ch}{v}{vs}'.format(ch=ch, v=vsep, vs=lo)
-        return '{ch}{v}{lo}{r}{hi}'.format(ch=ch, v=vsep, lo=lo, r=rsep, hi=hi)
-    parts = ['{ch}{v}{vs}'.format(ch=c, v=vsep, vs=v) for c, v in refs]
-    return lsep.join(parts)
+    first, last = refs[0], refs[-1]
+    start = f'{first[0]}{vsep}{first[1]}'
+    if first == last:
+        return start
+    end = str(last[1]) if first[0] == last[0] else f'{last[0]}{vsep}{last[1]}'
+    return f'{start}{rsep}{end}'
 
 
 def row_label_from_raw_page_text(page, default_chapter=None):
@@ -86,11 +82,17 @@ def row_label_from_raw_page_text(page, default_chapter=None):
         :func:`bible_chapter_hint_from_row_tag` on the raw slide's row tag).
     :return: Label string, or ``None`` if no markers could be parsed.
     """
+    refs = page_verse_references(page, default_chapter)
+    return _format_ref_span(refs) if refs else None
+
+
+def page_verse_references(page, default_chapter=None):
+    """Parse page markers in order, carrying the chapter through verse-only markers."""
     if not page or '{su}' not in page:
-        return None
+        return []
     matches = _SUP_BLOCKS.findall(page)
     if not matches:
-        return None
+        return []
     current_chapter = default_chapter
     refs = []
     for inner in matches:
@@ -99,6 +101,21 @@ def row_label_from_raw_page_text(page, default_chapter=None):
             continue
         current_chapter = cv[0]
         refs.append(cv)
-    if not refs:
-        return None
-    return _format_ref_span(refs)
+    return refs
+
+
+def bible_preview_html(page):
+    """Keep only superscript formatting in escaped slide-list text."""
+    from openlp.core.display.render import RE_HTML_STRIP, remove_tags, remove_unknown_tags
+
+    def plain(text):
+        return escape(unescape(RE_HTML_STRIP.sub('', remove_tags(text, can_remove_chords=True)))).replace('\n', '<br>')
+
+    parts = []
+    offset = 0
+    for match in _SUP_BLOCKS.finditer(page):
+        parts.append(plain(page[offset:match.start()]))
+        parts.append('<sup>' + plain(match.group(1)) + '</sup>')
+        offset = match.end()
+    parts.append(plain(page[offset:]))
+    return remove_unknown_tags(''.join(parts))

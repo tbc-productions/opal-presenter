@@ -24,7 +24,8 @@ Package to test the openlp.core.lib.settingsform package.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.ui.settingsform import SettingsForm
 
@@ -47,7 +48,7 @@ def test_basic_cancel(form):
     # GIVEN: An initial form
 
     # WHEN displaying the UI and pressing cancel
-    with patch('PySide6.QtWidgets.QDialog.reject') as mocked_reject:
+    with patch('openlp.core.widgets.fluent.QDialog.reject') as mocked_reject:
         cancel_widget = form.button_box.button(form.button_box.StandardButton.Cancel)
         QtTest.QTest.mouseClick(cancel_widget, QtCore.Qt.MouseButton.LeftButton)
 
@@ -62,7 +63,7 @@ def test_basic_accept(form):
     # GIVEN: An initial form
 
     # WHEN displaying the UI and pressing Ok
-    with patch('PySide6.QtWidgets.QDialog.accept') as mocked_accept:
+    with patch('openlp.core.widgets.fluent.QDialog.accept') as mocked_accept:
         ok_widget = form.button_box.button(form.button_box.StandardButton.Ok)
         QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
 
@@ -78,7 +79,7 @@ def test_basic_register(form):
     form.register_post_process('function1')
 
     # WHEN displaying the UI and pressing Ok
-    with patch('PySide6.QtWidgets.QDialog.accept'):
+    with patch('openlp.core.widgets.fluent.QDialog.accept'):
         ok_widget = form.button_box.button(form.button_box.StandardButton.Ok)
         QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
 
@@ -118,3 +119,48 @@ def test_settings_sidebar_uses_larger_icon_and_font(form):
     """
     assert form.setting_list_widget.iconSize() == QtCore.QSize(22, 22)
     assert form.setting_list_widget.alternatingRowColors() is True
+
+
+def test_reopening_preferences_resets_scroll_position(form, qtbot):
+    """A previous visit's scroll offset must not carry into reopened Preferences."""
+    qtbot.addWidget(form)
+    page = QtWidgets.QWidget()
+    page.setMinimumHeight(2000)
+    form.content_tabs_layout.addWidget(page)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    scrollbar = form.scroll_area.verticalScrollBar()
+    assert scrollbar.maximum() > 0
+    scrollbar.setValue(scrollbar.maximum())
+    assert scrollbar.value() > 0
+    form.hide()
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    assert scrollbar.value() == 0
+
+
+def test_switching_settings_pages_resets_scroll_position(form, qtbot):
+    """Reset when moving between two tall pages, including returning to a page."""
+    from openlp.core.lib.settingstab import SettingsTab
+
+    qtbot.addWidget(form)
+    for title, height in (('First', 2000), ('Second', 2600)):
+        with patch.object(SettingsTab, '_setup'):
+            page = SettingsTab(form.content_widget, title, title)
+        page.setMinimumHeight(height)
+        page.hide()
+        form._settings_tabs_ordered.append(page)
+        item = QtWidgets.QListWidgetItem(title)
+        item.setData(QtCore.Qt.ItemDataRole.UserRole, title)
+        form.setting_list_widget.addItem(item)
+    form.setting_list_widget.setCurrentRow(0)
+    form.show()
+    QtWidgets.QApplication.processEvents()
+    scrollbar = form.scroll_area.verticalScrollBar()
+    for destination in (1, 0):
+        assert scrollbar.maximum() > 0
+        scrollbar.setValue(scrollbar.maximum())
+        assert scrollbar.value() > 0
+        form.setting_list_widget.setCurrentRow(destination)
+        QtWidgets.QApplication.processEvents()
+        assert scrollbar.value() == 0

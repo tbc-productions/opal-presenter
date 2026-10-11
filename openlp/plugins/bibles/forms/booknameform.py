@@ -26,7 +26,7 @@ import logging
 import re
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QDialog
+from openlp.core.widgets.fluent import QDialog
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.ui import critical_error_message_box

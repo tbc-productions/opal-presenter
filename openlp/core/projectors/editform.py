@@ -24,7 +24,8 @@ database.
 """
 import logging
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import verify_ip_address, Singleton
 from openlp.core.common.i18n import translate
@@ -226,7 +227,6 @@ class ProjectorEditForm(QtWidgets.QDialog, Ui_ProjectorEditForm):
     updateProjectors = QtCore.Signal()
 
     def __init__(self, parent=None, projectordb=None):
-        self.parent = parent
         self.projectordb = projectordb
         self.new_projector = False
         super(ProjectorEditForm, self).__init__(parent,

@@ -28,7 +28,8 @@ import base64
 from enum import IntEnum
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import UiStrings, translate
 
@@ -266,13 +267,11 @@ def image_to_byte(image: QtGui.QPixmap, base_64: bool = True, quality: int = -1)
         To preserve original intention, this defaults to True
     :param quality: JPEG quality (0-100, -1 = default ~75).
     """
-    log.debug('image_to_byte - start')
     byte_array = QtCore.QByteArray()
     # use buffer to store pixmap into byteArray
     buffer = QtCore.QBuffer(byte_array)
     buffer.open(QtCore.QIODevice.WriteOnly)
     image.save(buffer, "JPEG", quality)
-    log.debug('image_to_byte - end')
     if not base_64:
         return byte_array
     # convert to base64 encoding so does not get missed!

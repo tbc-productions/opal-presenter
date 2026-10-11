@@ -24,14 +24,15 @@ The general tab of the configuration dialog.
 import logging
 from pathlib import Path
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import get_images_filter
 from openlp.core.common.i18n import UiStrings, translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib.settingstab import SettingsTab
 from openlp.core.ui import HideMode
-from openlp.core.ui.style import UiThemes, has_ui_theme
+from openlp.core.ui.style import UiThemes
 from openlp.core.widgets.buttons import ColorButton
 from openlp.core.widgets.edits import PathEdit
 
@@ -49,10 +50,6 @@ class GeneralTab(SettingsTab):
         """
         self.logo_background_color = '#ffffff'
         self.icon_path = ':/icon/openlp-logo.svg'
-        self.autoscroll_map = [None, {'dist': -1, 'pos': 0}, {'dist': -1, 'pos': 1}, {'dist': -1, 'pos': 2},
-                               {'dist': 0, 'pos': 0}, {'dist': 0, 'pos': 1}, {'dist': 0, 'pos': 2},
-                               {'dist': 0, 'pos': 3}, {'dist': 1, 'pos': 0}, {'dist': 1, 'pos': 1},
-                               {'dist': 1, 'pos': 2}, {'dist': 1, 'pos': 3}]
         general_translated = translate('OpenLP.GeneralTab', 'General')
         super(GeneralTab, self).__init__(parent, 'Core', general_translated)
 
@@ -62,21 +59,14 @@ class GeneralTab(SettingsTab):
         """
         self.setObjectName('GeneralTab')
         super(GeneralTab, self).setup_ui()
-        self.tab_layout.setStretch(1, 1)
         # Application Startup
         self.startup_group_box = QtWidgets.QGroupBox(self.left_column)
         self.startup_group_box.setObjectName('startup_group_box')
         self.startup_layout = QtWidgets.QVBoxLayout(self.startup_group_box)
         self.startup_layout.setObjectName('startup_layout')
-        self.warning_check_box = QtWidgets.QCheckBox(self.startup_group_box)
-        self.warning_check_box.setObjectName('warning_check_box')
-        self.startup_layout.addWidget(self.warning_check_box)
         self.auto_open_check_box = QtWidgets.QCheckBox(self.startup_group_box)
         self.auto_open_check_box.setObjectName('auto_open_check_box')
         self.startup_layout.addWidget(self.auto_open_check_box)
-        self.show_splash_check_box = QtWidgets.QCheckBox(self.startup_group_box)
-        self.show_splash_check_box.setObjectName('show_splash_check_box')
-        self.startup_layout.addWidget(self.show_splash_check_box)
         self.check_for_updates_check_box = QtWidgets.QCheckBox(self.startup_group_box)
         self.check_for_updates_check_box.setObjectName('check_for_updates_check_box')
         self.startup_layout.addWidget(self.check_for_updates_check_box)
@@ -137,9 +127,6 @@ class GeneralTab(SettingsTab):
         self.recent_spin_box.setObjectName('recent_spin_box')
         self.recent_spin_box.setMinimum(0)
         self.ui_layout.addRow(self.recent_label, self.recent_spin_box)
-        self.media_plugin_check_box = QtWidgets.QCheckBox(self.ui_group_box)
-        self.media_plugin_check_box.setObjectName('media_plugin_check_box')
-        self.ui_layout.addRow(self.media_plugin_check_box)
         self.hide_mouse_check_box = QtWidgets.QCheckBox(self.ui_group_box)
         self.hide_mouse_check_box.setObjectName('hide_mouse_check_box')
         self.ui_layout.addRow(self.hide_mouse_check_box)
@@ -155,36 +142,7 @@ class GeneralTab(SettingsTab):
         self.expand_service_item_check_box = QtWidgets.QCheckBox(self.ui_group_box)
         self.expand_service_item_check_box.setObjectName('expand_service_item_check_box')
         self.ui_layout.addRow(self.expand_service_item_check_box)
-        self.slide_max_height_label = QtWidgets.QLabel(self.ui_group_box)
-        self.slide_max_height_label.setObjectName('slide_max_height_label')
-        self.slide_max_height_label.setWordWrap(True)
-        self.slide_max_height_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        self.slide_max_height_combo_box.addItem('', userData=0)
-        self.slide_max_height_combo_box.addItem('', userData=-4)
         # Generate numeric values for combo box dynamically
-        for px in range(60, 801, 5):
-            self.slide_max_height_combo_box.addItem(str(px) + 'px', userData=px)
-        self.slide_max_height_combo_box.setObjectName('slide_max_height_combo_box')
-        self.slide_max_height_combo_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
-                                                      QtWidgets.QSizePolicy.Policy.Fixed)
-        self.slide_max_height_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self.ui_layout.addRow(self.slide_max_height_label)
-        self.slide_max_height_row_widget = QtWidgets.QWidget(self.ui_group_box)
-        self.slide_max_height_row_widget.setObjectName('slide_max_height_row_widget')
-        self.slide_max_height_row_layout = QtWidgets.QHBoxLayout(self.slide_max_height_row_widget)
-        self.slide_max_height_row_layout.setContentsMargins(0, 0, 0, 0)
-        self.slide_max_height_row_layout.setSpacing(0)
-        self.slide_max_height_row_layout.addWidget(self.slide_max_height_combo_box)
-        self.slide_max_height_row_layout.addStretch()
-        self.ui_layout.addRow(self.slide_max_height_row_widget)
-        self.autoscroll_label = QtWidgets.QLabel(self.ui_group_box)
-        self.autoscroll_label.setObjectName('autoscroll_label')
-        self.autoscroll_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        self.autoscroll_combo_box.addItems(['', '', '', '', '', '', '', '', '', '', '', ''])
-        self.autoscroll_combo_box.setObjectName('autoscroll_combo_box')
-        self.ui_layout.addRow(self.autoscroll_label)
-        self.ui_layout.addRow(self.autoscroll_combo_box)
         self.slide_no_in_footer_checkbox = QtWidgets.QCheckBox(self.ui_group_box)
         self.slide_no_in_footer_checkbox.setObjectName('SlideNumbersInFooter_check_box')
         self.ui_layout.addRow(self.slide_no_in_footer_checkbox)
@@ -194,16 +152,10 @@ class GeneralTab(SettingsTab):
         self.enable_auto_close_check_box = QtWidgets.QCheckBox(self.ui_group_box)
         self.enable_auto_close_check_box.setObjectName('enable_auto_close_check_box')
         self.ui_layout.addRow(self.enable_auto_close_check_box)
-        self.new_service_message_check_box = QtWidgets.QCheckBox(self.ui_group_box)
-        self.new_service_message_check_box.setObjectName('new_service_message_check_box')
-        self.ui_layout.addRow(self.new_service_message_check_box)
         self.ui_theme_style_label = QtWidgets.QLabel(self.ui_group_box)
         self.ui_theme_style_label.setObjectName('theme_style_label')
         self.ui_theme_style_combo_box = QtWidgets.QComboBox(self.ui_group_box)
-        if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.addItems(['', '', '', ''])
-        else:
-            self.ui_theme_style_combo_box.addItems(['', '', ''])
+        self.ui_theme_style_combo_box.addItems([''] * 3)
         self.ui_theme_style_combo_box.setObjectName('theme_style_combo_box')
         self.ui_layout.addRow(self.ui_theme_style_label)
         self.ui_layout.addRow(self.ui_theme_style_combo_box)
@@ -221,9 +173,7 @@ class GeneralTab(SettingsTab):
         self.tab_title_visible = translate('OpenLP.GeneralTab', 'General')
         # Application Startup
         self.startup_group_box.setTitle(translate('OpenLP.GeneralTab', 'Application Startup'))
-        self.warning_check_box.setText(translate('OpenLP.GeneralTab', 'Show blank screen warning'))
         self.auto_open_check_box.setText(translate('OpenLP.GeneralTab', 'Automatically open the previous service file'))
-        self.show_splash_check_box.setText(translate('OpenLP.GeneralTab', 'Show the splash screen'))
         # Logo
         self.logo_group_box.setTitle(translate('OpenLP.GeneralTab', 'Logo'))
         self.logo_color_label.setText(UiStrings().BackgroundColorColon)
@@ -247,8 +197,6 @@ class GeneralTab(SettingsTab):
         # UI Settings
         self.ui_group_box.setTitle(translate('OpenLP.AdvancedTab', 'UI Settings'))
         self.recent_label.setText(translate('OpenLP.AdvancedTab', 'Number of recent service files to display:'))
-        self.media_plugin_check_box.setText(translate('OpenLP.AdvancedTab',
-                                                      'Open the last used Library tab on startup'))
         self.double_click_live_check_box.setText(translate('OpenLP.AdvancedTab',
                                                            'Double-click to send items straight to Live'))
         self.single_click_preview_check_box.setText(translate('OpenLP.AdvancedTab',
@@ -257,46 +205,17 @@ class GeneralTab(SettingsTab):
                                                                       'Preview items when clicked in Service'))
         self.expand_service_item_check_box.setText(translate('OpenLP.AdvancedTab',
                                                              'Expand new service items on creation'))
-        self.slide_max_height_label.setText(translate('OpenLP.AdvancedTab',
-                                                      'Max height for non-text slides in slide controller:'))
-        self.slide_max_height_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Disabled'))
-        self.slide_max_height_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Automatic'))
-        self.autoscroll_label.setText(translate('OpenLP.AdvancedTab', 'When changing slides:'))
-        self.autoscroll_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Do not auto-scroll'))
-        self.autoscroll_combo_box.setItemText(1, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the previous slide into view'))
-        self.autoscroll_combo_box.setItemText(2, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the previous slide to top'))
-        self.autoscroll_combo_box.setItemText(3, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the previous slide to middle'))
-        self.autoscroll_combo_box.setItemText(4, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the current slide into view'))
-        self.autoscroll_combo_box.setItemText(5, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the current slide to top'))
-        self.autoscroll_combo_box.setItemText(6, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the current slide to middle'))
-        self.autoscroll_combo_box.setItemText(7, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the current slide to bottom'))
-        self.autoscroll_combo_box.setItemText(8, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the next slide into view'))
-        self.autoscroll_combo_box.setItemText(9, translate('OpenLP.AdvancedTab',
-                                                           'Auto-scroll the next slide to top'))
-        self.autoscroll_combo_box.setItemText(10, translate('OpenLP.AdvancedTab',
-                                                            'Auto-scroll the next slide to middle'))
-        self.autoscroll_combo_box.setItemText(11, translate('OpenLP.AdvancedTab',
-                                                            'Auto-scroll the next slide to bottom'))
         self.enable_auto_close_check_box.setText(translate('OpenLP.AdvancedTab',
                                                            'Enable application exit confirmation'))
         self.slide_no_in_footer_checkbox.setText(translate('SongsPlugin.GeneralTab', 'Include slide number in footer'))
-        self.new_service_message_check_box.setText(translate('OpenLP.AdvancedTab',
-                                                             'Alert if New clicked on blank service'))
         self.search_as_type_check_box.setText(translate('SongsPlugin.GeneralTab', 'Enable search as you type'))
         self.ui_theme_style_label.setText(translate('OpenLP.AdvancedTab', 'Interface Theme (needs restart):'))
-        self.ui_theme_style_combo_box.setItemText(0, translate('OpenLP.AdvancedTab', 'Use system theme'))
-        self.ui_theme_style_combo_box.setItemText(1, translate('OpenLP.AdvancedTab', 'Default Light'))
-        self.ui_theme_style_combo_box.setItemText(2, translate('OpenLP.AdvancedTab', 'Default Dark'))
-        if has_ui_theme(UiThemes.QDarkStyle):
-            self.ui_theme_style_combo_box.setItemText(3, translate('OpenLP.AdvancedTab', 'QDarkStyle'))
+        theme_labels = (
+            translate('OpenLP.GeneralTab', 'Auto'),
+            translate('OpenLP.GeneralTab', 'Dark'),
+            translate('OpenLP.GeneralTab', 'Light'))
+        for index, label in enumerate(theme_labels):
+            self.ui_theme_style_combo_box.setItemText(index, label)
         self.hide_mouse_check_box.setText(translate('OpenLP.AdvancedTab', 'Hide mouse cursor when over display window'))
 
     def load(self):
@@ -304,9 +223,7 @@ class GeneralTab(SettingsTab):
         Load the settings to populate the form
         """
         self.number_edit.setText(self.settings.value('core/ccli number'))
-        self.warning_check_box.setChecked(self.settings.value('core/blank warning'))
         self.auto_open_check_box.setChecked(self.settings.value('core/auto open'))
-        self.show_splash_check_box.setChecked(self.settings.value('core/show splash'))
         self.logo_background_color = self.settings.value('core/logo background color')
         self.logo_file_path_edit.path = self.settings.value('core/logo file')
         self.logo_hide_on_startup_check_box.setChecked(self.settings.value('core/logo hide on startup'))
@@ -325,76 +242,40 @@ class GeneralTab(SettingsTab):
         # 20 will always be used.
         self.recent_spin_box.setMaximum(self.settings.value('advanced/max recent files'))
         self.recent_spin_box.setValue(self.settings.value('advanced/recent file count'))
-        self.media_plugin_check_box.setChecked(self.settings.value('advanced/save current plugin'))
         self.double_click_live_check_box.setChecked(self.settings.value('advanced/double click live'))
         self.single_click_preview_check_box.setChecked(self.settings.value('advanced/single click preview'))
         self.single_click_service_preview_check_box.setChecked(
             self.settings.value('advanced/single click service preview'))
         self.expand_service_item_check_box.setChecked(self.settings.value('advanced/expand service item'))
-        slide_max_height_value = self.settings.value('advanced/slide max height')
-        for i in range(0, self.slide_max_height_combo_box.count()):
-            if self.slide_max_height_combo_box.itemData(i) == slide_max_height_value:
-                self.slide_max_height_combo_box.setCurrentIndex(i)
-        autoscroll_value = self.settings.value('advanced/autoscrolling')
-        for i in range(0, len(self.autoscroll_map)):
-            if self.autoscroll_map[i] == autoscroll_value and i < self.autoscroll_combo_box.count():
-                self.autoscroll_combo_box.setCurrentIndex(i)
         self.enable_auto_close_check_box.setChecked(self.settings.value('advanced/enable exit confirmation'))
         ui_theme_index = GeneralTab.get_ui_theme_index(self.settings.value('advanced/ui_theme_name'))
         self.ui_theme_style_combo_box.setCurrentIndex(ui_theme_index)
         self.slide_no_in_footer_checkbox.setChecked(self.settings.value('advanced/slide numbers in footer'))
-        self.new_service_message_check_box.setChecked(self.settings.value('advanced/new service message'))
         self.hide_mouse_check_box.setChecked(self.settings.value('advanced/hide mouse'))
         self.is_search_as_you_type_enabled = self.settings.value('advanced/search as type')
         self.search_as_type_check_box.setChecked(self.is_search_as_you_type_enabled)
 
     @staticmethod
     def get_ui_theme_index(ui_theme):
-        """
-        Converts :class:`~openlp.core.ui.dark.UiThemes` item to Interface Theme ComboBox
-
-        :param ui_theme UIThemes enum item
-        :return ComboBox index
-        """
-        if ui_theme == UiThemes.Automatic:
-            return 0
-        if ui_theme == UiThemes.DefaultLight:
+        """Map stored colour settings to Auto, Dark or Light."""
+        if ui_theme in (UiThemes.DefaultDark, UiThemes.QDarkStyle):
             return 1
-        if ui_theme == UiThemes.DefaultDark:
+        if ui_theme == UiThemes.DefaultLight:
             return 2
-        if ui_theme == UiThemes.Native:
-            return 0
-        if ui_theme == UiThemes.QDarkStyle:
-            return 3 if has_ui_theme(UiThemes.QDarkStyle) else 0
-
         return 0
 
     @staticmethod
     def get_ui_theme_name(index):
-        """
-        Converts "Interface Theme" ComboBox index to :class:`~openlp.core.ui.dark.UiThemes` item
-
-        :param index "Interface Theme" ComboBox current index
-        :return UiThemes enum item
-        """
-        if index == 0:
+        """Return the colour scheme of a combined theme selection."""
+        if index not in range(3):
             return UiThemes.Automatic
-        if index == 1:
-            return UiThemes.DefaultLight
-        if index == 2:
-            return UiThemes.DefaultDark
-        if index == 3:
-            return UiThemes.QDarkStyle if has_ui_theme(UiThemes.QDarkStyle) else UiThemes.Automatic
-
-        return UiThemes.Automatic
+        return (UiThemes.Automatic, UiThemes.DefaultDark, UiThemes.DefaultLight)[index % 3]
 
     def save(self):
         """
         Save the settings from the form
         """
-        self.settings.setValue('core/blank warning', self.warning_check_box.isChecked())
         self.settings.setValue('core/auto open', self.auto_open_check_box.isChecked())
-        self.settings.setValue('core/show splash', self.show_splash_check_box.isChecked())
         self.settings.setValue('core/logo background color', self.logo_background_color)
         self.settings.setValue('core/logo file', self.logo_file_path_edit.path)
         self.settings.setValue('core/logo hide on startup', self.logo_hide_on_startup_check_box.isChecked())
@@ -404,23 +285,18 @@ class GeneralTab(SettingsTab):
         self.settings.setValue('core/ccli number', self.number_edit.displayText())
         # UI Settings
         self.settings.setValue('advanced/recent file count', self.recent_spin_box.value())
-        self.settings.setValue('advanced/save current plugin', self.media_plugin_check_box.isChecked())
         self.settings.setValue('advanced/double click live', self.double_click_live_check_box.isChecked())
         self.settings.setValue('advanced/single click preview', self.single_click_preview_check_box.isChecked())
         self.settings.setValue('advanced/single click service preview',
                                self.single_click_service_preview_check_box.isChecked())
         self.settings.setValue('advanced/expand service item', self.expand_service_item_check_box.isChecked())
-        slide_max_height_index = self.slide_max_height_combo_box.currentIndex()
-        slide_max_height_value = self.slide_max_height_combo_box.itemData(slide_max_height_index)
-        self.settings.setValue('advanced/slide max height', slide_max_height_value)
-        self.settings.setValue('advanced/autoscrolling', self.autoscroll_map[self.autoscroll_combo_box.currentIndex()])
         self.settings.setValue('advanced/slide numbers in footer', self.slide_no_in_footer_checkbox.isChecked())
         self.settings.setValue('advanced/enable exit confirmation', self.enable_auto_close_check_box.isChecked())
-        self.settings.setValue('advanced/new service message', self.new_service_message_check_box.isChecked())
         self.settings.setValue('advanced/hide mouse', self.hide_mouse_check_box.isChecked())
         self.settings.setValue('advanced/search as type', self.is_search_as_you_type_enabled)
         theme_name = GeneralTab.get_ui_theme_name(self.ui_theme_style_combo_box.currentIndex())
         self.settings.setValue('advanced/ui_theme_name', theme_name)
+        self.settings.setValue('advanced/interface style', 'modern')
         self.settings.sync()
         self.post_set_up()
 

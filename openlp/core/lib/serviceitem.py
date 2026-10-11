@@ -22,6 +22,7 @@ The :mod:`serviceitem` provides the service item functionality including the
 type and capability of an item.
 """
 import datetime
+import json
 import logging
 import ntpath
 import os
@@ -39,8 +40,13 @@ from openlp.core.common.i18n import translate
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.common.utils import wait_for
-from openlp.core.display.render import remove_html_and_strip, remove_tags, render_tags, render_chords_for_printing
+from openlp.core.display.render import (
+    remove_html_and_strip, remove_tags, remove_unknown_tags, render_tags
+)
 from openlp.core.lib import create_thumb, image_to_data_uri, ItemCapabilities
+from openlp.core.lib.serviceprint import render_print_text
+from openlp.core.lib.slidedesign import apply_design, normalise_design, design_theme, package_design
+from openlp.core.lib.slidelayouts import master_design
 from openlp.core.lib.theme import BackgroundType, TransitionSpeed, TransitionType
 from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
@@ -70,6 +76,8 @@ class ServiceItem(RegistryProperties):
         self._rendered_slides = None
         self._display_slides = None
         self._print_slides = None
+
+        self._set_thumbnails = {}
         self._creating_slides = False
         self.title = ''
         self.slides = []
@@ -100,6 +108,8 @@ class ServiceItem(RegistryProperties):
         self.media_length = 0
         self.from_service = False
         self.background_audio = []
+        self.slide_design = {}
+        self.is_slide_set = False
         self.theme_overwritten = False
         self.temporary_edit = False
         self.auto_play_slides_once = False
@@ -117,12 +127,13 @@ class ServiceItem(RegistryProperties):
         self._new_item()
         self.metadata = []
 
-    def get_theme_data(self, theme_level=None):
+    def get_theme_data(self, theme_level=None, include_design=True):
         """
         Get the theme appropriate for this item
 
         :param theme_level: The theme_level to use,
                             the value in Settings is used when this value is missinig
+        :param include_design: Apply item customisations; disable when packaging the base theme.
         """
         if theme_level is None:
             theme_level = self.settings.value('themes/theme level')
@@ -138,6 +149,9 @@ class ServiceItem(RegistryProperties):
         if self.is_capable(ItemCapabilities.ProvidesOwnTheme) or theme_level == ThemeLevel.Song and self.theme:
             theme = self.theme
         theme = theme_manager.get_theme_data(theme)
+        if not include_design:
+            return theme
+        theme = design_theme(theme, self.slide_design)
         # Clean up capabilities and reload from the theme.
         if self.is_text():
             # Cleanup capabilities
@@ -154,7 +168,7 @@ class ServiceItem(RegistryProperties):
             if theme.background_type == BackgroundType.to_string(BackgroundType.Video):
                 self.video_file_name = theme.background_filename
                 self.add_capability(ItemCapabilities.HasBackgroundVideo)
-        return theme
+        return apply_design(theme, master_design(self.slide_design, self.slide_design.get('default_layout', 'default')))
 
     def _new_item(self):
         """
@@ -162,6 +176,10 @@ class ServiceItem(RegistryProperties):
         """
         self.unique_identifier = str(uuid.uuid1())
         self.validate_item()
+
+    def get_slide_theme(self, page):
+        from openlp.core.lib.slidelayouts import slide_design
+        return apply_design(self.get_theme_data(include_design=False), slide_design(self.slide_design, page))
 
     def add_capability(self, capability):
         """
@@ -220,6 +238,13 @@ class ServiceItem(RegistryProperties):
         self._creating_slides = True
         self._rendered_slides = []
         self._display_slides = []
+        if self.is_slide_set:
+            from openlp.core.lib.slideset import render_set
+            try:
+                self._rendered_slides, self._display_slides = render_set(self)
+            finally:
+                self._creating_slides = False
+            return
 
         # Save rendered pages to this dict. In the case that a slide is used twice we can use the pages saved to
         # the dict instead of rendering them again.
@@ -230,12 +255,14 @@ class ServiceItem(RegistryProperties):
         if self.name == 'bibles':
             from openlp.plugins.bibles.lib.slidelabel import (
                 bible_chapter_hint_from_row_tag,
+                bible_preview_html,
+                page_verse_references,
                 row_label_from_raw_page_text,
             )
         else:
             bible_chapter_hint_from_row_tag = None
             row_label_from_raw_page_text = None
-        for raw_slide in self.slides:
+        for raw_index, raw_slide in enumerate(self.slides):
             verse_tag = raw_slide.get('verse', str(index + 1))
             if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                 pages = previous_pages[verse_tag][1]
@@ -247,13 +274,18 @@ class ServiceItem(RegistryProperties):
                 if self.name == 'bibles' and bible_chapter_hint_from_row_tag
                 else None
             )
-            for page in pages:
+            for page_index, page in enumerate(pages):
                 footer_html = None
                 has_footer_html = 'footer_html' in raw_slide
                 if has_footer_html:
                     footer_html = raw_slide['footer_html']
                 else:
                     footer_html = self.footer_html
+                metadata = raw_slide.get('metadata', {})
+                section = metadata.get('design_section', f'custom-{raw_index + 1}')
+                split = metadata.get('design_split', 0)
+                if f'{section}:{split}:{page_index}' in self.slide_design.get('hidden_footers', []):
+                    footer_html = ''
                 rendered_slide = {
                     'title': raw_slide['title'],
                     'text': render_tags(page),
@@ -261,17 +293,25 @@ class ServiceItem(RegistryProperties):
                     'verse': index,
                     'footer': footer_html
                 }
+                if any(self.slide_design.get(key) for key in ('masters', 'assignments', 'overrides')):
+                    rendered_slide['design_key'] = f'{section}:{split}:{page_index}'
+                    rendered_slide['theme'] = json.loads(
+                        self.get_slide_theme(rendered_slide['design_key']).export_theme(is_js=True))
                 self._rendered_slides.append(rendered_slide)
                 display_verse = verse_tag
                 if self.name == 'bibles' and row_label_from_raw_page_text:
                     computed = row_label_from_raw_page_text(page, default_chapter=chapter_hint)
-                    if computed:
-                        display_verse = computed
+                    display_verse = computed or verse_tag
+                    refs = page_verse_references(page, chapter_hint)
+                    if refs:
+                        chapter_hint = refs[-1][0]
                 display_slide = {
                     'title': raw_slide['title'],
-                    'text': remove_html_and_strip(remove_tags(page, can_remove_chords=True)),
+                    'text': remove_html_and_strip(remove_unknown_tags(remove_tags(page, can_remove_chords=True))),
                     'verse': display_verse,
                 }
+                if self.name == 'bibles':
+                    display_slide['text_html'] = bible_preview_html(page)
                 self._display_slides.append(display_slide)
                 index += 1
         self._creating_slides = False
@@ -282,6 +322,8 @@ class ServiceItem(RegistryProperties):
         """
         self._display_slides = None
         self._rendered_slides = None
+        self._print_slides = None
+        self._set_thumbnails = {}
 
     @property
     def rendered_slides(self):
@@ -311,10 +353,17 @@ class ServiceItem(RegistryProperties):
         """
         if not self._print_slides:
             self._print_slides = []
+            if self.is_slide_set:
+                for index, slide in enumerate(self.rendered_slides):
+                    self._print_slides.append({
+                        'title': slide['title'], 'text': render_print_text(slide['text'] or slide['title']),
+                        'verse': str(index + 1), 'footer': slide['footer']
+                    })
+                return self._print_slides
             previous_pages = {}
-            index = 0
-            for raw_slide in self.slides:
-                verse_tag = raw_slide.get('verse', str(index + 1))
+            for index, raw_slide in enumerate(self.slides):
+                default_verse = f'v{index + 1}' if self.name == 'songs' else str(index + 1)
+                verse_tag = raw_slide.get('verse') or default_verse
                 if verse_tag in previous_pages and previous_pages[verse_tag][0] == raw_slide:
                     pages = previous_pages[verse_tag][1]
                 else:
@@ -323,8 +372,8 @@ class ServiceItem(RegistryProperties):
                 for page in pages:
                     slide = {
                         'title': raw_slide['title'],
-                        'text': render_chords_for_printing(remove_tags(page), '\n'),
-                        'verse': index,
+                        'text': render_print_text(page.replace('\n', '{br}'), render_chords=True),
+                        'verse': verse_tag,
                         'footer': self.raw_footer,
                     }
                     self._print_slides.append(slide)
@@ -448,6 +497,8 @@ class ServiceItem(RegistryProperties):
             'name': self.name,
             'plugin': self.name,
             'theme': self.theme,
+            'slide_design': package_design(self.slide_design, self.get_theme_data(include_design=False))
+            if self.slide_design else {},
             'title': self.title,
             'footer': self.raw_footer,
             'type': self.service_item_type,
@@ -473,6 +524,8 @@ class ServiceItem(RegistryProperties):
             'stored_filename': stored_filename,
             'slide_transition_settings': self.slide_transition_settings
         }
+        if self.is_slide_set:
+            service_header['is_slide_set'] = True
         for file_path, file_hash in self.background_audio:
             if lite_save:
                 path_str = str(file_path)
@@ -536,6 +589,7 @@ class ServiceItem(RegistryProperties):
         """
         self._display_slides = []
         self._rendered_slides = []
+        self._set_thumbnails = {}
 
     def _resolve_extracted_file(self, extract_path, file_hash, title):
         """
@@ -627,12 +681,19 @@ class ServiceItem(RegistryProperties):
                     break
         self.service_item_type = ServiceItemType.parse(header['type'])
         self.theme = header['theme']
+        self.slide_design = normalise_design(header.get('slide_design'))
+        if path and self.slide_design:
+            from openlp.core.lib.designmedia import restore_media
+            restore_media(self.slide_design, directory=path)
+        self.is_slide_set = header.get('is_slide_set', False)
         self.add_icon()
         self.raw_footer = header['footer']
         self.audit = header['audit']
         self.notes = header['notes']
         self.from_plugin = header['from_plugin']
         self.capabilities = header['capabilities']
+        if self.is_slide_set and not self.is_capable(ItemCapabilities.HasDisplayTitle):
+            self.add_capability(ItemCapabilities.HasDisplayTitle)
         # Added later so may not be present in older services.
         self.search_string = header.get('search', '')
         self.data_string = header.get('data', '')
@@ -675,6 +736,8 @@ class ServiceItem(RegistryProperties):
                 footer_html = slide['footer_html'] if 'footer_html' in slide else None
                 metadata = slide['metadata'] if 'metadata' in slide and isinstance(slide['metadata'], dict) else None
                 self.add_from_text(slide['raw_slide'], slide['verseTag'], footer_html, metadata)
+                if self.is_slide_set:
+                    self.slides[-1]['title'] = slide['title']
             self._create_slides()
         elif self.service_item_type == ServiceItemType.Image:
             if path:
@@ -884,6 +947,17 @@ class ServiceItem(RegistryProperties):
         """
         return self.service_item_type == ServiceItemType.Text
 
+    def can_append_plugin(self, plugin):
+        """Whether a library plugin can add slides to this item."""
+        if plugin in ('images', 'custom') and self.name in ('images', 'custom'):
+            return self.is_slide_set or self.is_image() or self.is_text()
+        return plugin == self.name and self.is_capable(ItemCapabilities.CanAppend)
+
+    def append_to_set(self, items):
+        """Append detached image/custom items, retaining the set's title and order."""
+        from openlp.core.lib.slideset import append_to_set
+        append_to_set(self, items)
+
     def set_media_length(self, length):
         """
         Stores the media length of the item
@@ -982,9 +1056,12 @@ class ServiceItem(RegistryProperties):
 
         :param theme: The new theme to be replaced in the service item
         """
+        self.slide_design.pop('theme', None)
         self.theme_overwritten = (theme is None)
         self.theme = theme
         if self.is_text():
+            if theme is None:
+                self.remove_capability(ItemCapabilities.ProvidesOwnTheme)
             self._clear_slides_cache()
         self._new_item()
 
@@ -998,8 +1075,8 @@ class ServiceItem(RegistryProperties):
                     self.remove_frame(frame)
 
     def requires_media(self):
+        # File video backgrounds are HTML5 media in Reveal's background layer.
         return self.is_capable(ItemCapabilities.HasBackgroundAudio) or \
-            self.is_capable(ItemCapabilities.HasBackgroundVideo) or \
             self.is_capable(ItemCapabilities.HasBackgroundStream)
 
     def missing_frames(self):

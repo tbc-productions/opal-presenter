@@ -24,6 +24,7 @@ Provide the theme XML and handling functions for OpenLP v2 themes.
 import json
 import logging
 import copy
+from pathlib import Path
 
 from lxml import etree, objectify
 
@@ -400,6 +401,12 @@ class Theme(object):
         else:
             jsn = json.loads(theme, cls=OpenLPJSONDecoder)
         self.expand_json(jsn)
+        from openlp.core.lib.designmedia import valid_media_source, materialise_media
+        if valid_media_source(self.background_filename):
+            self.background_filename = materialise_media(self.background_filename)
+        if getattr(self, 'background_label', None) and self.background_filename:
+            from openlp.core.lib.designmedia import remember_media_label
+            remember_media_label(self.background_filename, self.background_label)
 
     def export_theme(self, theme_path=None, is_js=False):
         """
@@ -412,6 +419,17 @@ class Theme(object):
         theme_data = {}
         for attr, value in self.__dict__.items():
             theme_data["{attr}".format(attr=attr)] = value
+        if not is_js and self.background_type in ('image', 'video'):
+            from openlp.core.lib.designmedia import media_to_source, media_label
+            source = self.background_filename
+            if not isinstance(source, Path) or not source.is_file():
+                source = self.background_source
+            from openlp.core.lib.designmedia import MIME_TYPES
+            if (isinstance(source, Path) and source.is_file()
+                    and source.suffix.lower().lstrip('.') in MIME_TYPES):
+                theme_data['background_filename'], _ = media_to_source(source)
+                theme_data['background_label'] = getattr(self, 'background_label', None) or media_label(source)
+                theme_data['background_source'] = None
         return json.dumps(theme_data, cls=OpenLPJSONEncoder, base_path=theme_path, is_js=is_js)
 
     def export_theme_self_contained(self, is_js=True):

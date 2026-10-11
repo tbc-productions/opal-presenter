@@ -24,7 +24,8 @@ This module contains tests for the lib submodule of the Songs plugin.
 import logging
 import pytest
 from unittest.mock import MagicMock, patch
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.registry import Registry
 from openlp.core.common.settings import Settings
@@ -108,15 +109,14 @@ def test_load_objects(mocked_set_case_insensitive_completer, edit_song_form, set
     mocked_combo.setCurrentText.assert_called_once_with('')
 
 
-def test_add_multiple_audio_from_file(edit_song_form_with_ui: EditSongForm):
+@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+def test_add_multiple_audio_from_file(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that not more than one Linked Audio item can be added
     """
     # GIVEN: A Linked Audio list with 1 item and mocked error message handler
     item = QtWidgets.QListWidgetItem('Audio file')
     edit_song_form_with_ui.audio_list_widget.addItem(item)
-    mocked_error_message = MagicMock()
-    Registry().get('main_window').error_message = mocked_error_message
 
     # WHEN: Add File is clicked
     edit_song_form_with_ui.on_audio_add_from_file_button_clicked()
@@ -126,15 +126,14 @@ def test_add_multiple_audio_from_file(edit_song_form_with_ui: EditSongForm):
     assert edit_song_form_with_ui.audio_list_widget.count() == 1
 
 
-def test_add_multiple_audio_from_media(edit_song_form_with_ui: EditSongForm):
+@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+def test_add_multiple_audio_from_media(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that not more than one Linked Audio item can be added
     """
     # GIVEN: A Linked Audio list with 1 item and mocked error message handler
     item = QtWidgets.QListWidgetItem('Audio file')
     edit_song_form_with_ui.audio_list_widget.addItem(item)
-    mocked_error_message = MagicMock()
-    Registry().get('main_window').error_message = mocked_error_message
 
     # WHEN: Add Media is clicked
     edit_song_form_with_ui.on_audio_add_from_media_button_clicked()
@@ -144,7 +143,8 @@ def test_add_multiple_audio_from_media(edit_song_form_with_ui: EditSongForm):
     assert edit_song_form_with_ui.audio_list_widget.count() == 1
 
 
-def test_validate_song_multiple_audio(edit_song_form_with_ui: EditSongForm):
+@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+def test_validate_song_multiple_audio(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that a form with multiple Linked Audio items does not pass validation
     """
@@ -164,8 +164,6 @@ def test_validate_song_multiple_audio(edit_song_form_with_ui: EditSongForm):
     author = Author(first_name='', last_name='', display_name='Author')
     author_type = edit_song_form_with_ui.author_types_combo_box.itemData(0)
     edit_song_form_with_ui._add_author_to_list(author, author_type)
-    mocked_error_message = MagicMock()
-    Registry().get('main_window').error_message = mocked_error_message
 
     # WHEN: Song is validated
     song_valid = edit_song_form_with_ui._validate_song()
@@ -174,7 +172,8 @@ def test_validate_song_multiple_audio(edit_song_form_with_ui: EditSongForm):
     assert song_valid is False
 
 
-def test_validate_song_one_audio(edit_song_form_with_ui: EditSongForm):
+@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+def test_validate_song_one_audio(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that a form with one Linked Audio item passes validation
     """
@@ -194,15 +193,13 @@ def test_validate_song_one_audio(edit_song_form_with_ui: EditSongForm):
     edit_song_form_with_ui._add_author_to_list(author, author_type)
     # If the validation does fail for some reason it will likely try to display an error message,
     # so make sure error_message exists to avoid an error
-    mocked_error_message = MagicMock()
-    Registry().get('main_window').error_message = mocked_error_message
 
     # WHEN: Song is validated
     song_valid = edit_song_form_with_ui._validate_song()
 
     # Log the error message to help determine the cause in the case validation failed
     if mocked_error_message.called:
-        _title, message = mocked_error_message.call_args.args
+        message = mocked_error_message.call_args.kwargs['message']
         logging.error('Validation error message: {message}'.format(message=message))
 
     # THEN: It should be valid

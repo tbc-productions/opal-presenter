@@ -39,7 +39,6 @@ from PySide6 import QtCore, QtGui, QtWebEngineCore, QtWidgets  # noqa
 
 from openlp.core.api.deploy import check_for_remote_update
 from openlp.core.common.applocation import AppLocation
-from openlp.core.common.enum import HiDPIMode
 from openlp.core.common.i18n import LanguageManager, UiStrings, translate
 from openlp.core.common.mixins import LogMixin
 from openlp.core.common.path import create_paths, resolve
@@ -57,7 +56,9 @@ from openlp.core.ui.exceptionform import ExceptionForm
 from openlp.core.ui.firsttimeform import FirstTimeForm
 from openlp.core.ui.firsttimelanguageform import FirstTimeLanguageForm
 from openlp.core.ui.mainwindow import MainWindow
-from openlp.core.ui.splashscreen import SplashScreen
+from openlp.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
+from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
+from openlp.core.ui.modernstyle import apply_mica, refine_modern_layout
 from openlp.core.ui.style import (get_application_stylesheet,  # noqa: F401
                                    set_default_theme, is_ui_theme, is_ui_theme_dark, UiThemes)
 from openlp.core.version import check_for_update, get_version
@@ -69,6 +70,16 @@ __all__ = ['OpenLP', 'main']
 log = logging.getLogger()
 
 
+class OpenLPApplication(QtWidgets.QApplication):
+    """Handle application Quit without globally filtering WebEngine's internal objects."""
+    def event(self, event):
+        if event.type() == QtCore.QEvent.Type.Quit:
+            if any(blocker() for blocker in tuple(getattr(self, 'exit_guards', ()))):
+                event.ignore()
+                return True
+        return super().event(event)
+
+
 class OpenLP(QtCore.QObject, LogMixin):
     """
     The core worker class. This class that holds the whole system together.
@@ -77,6 +88,39 @@ class OpenLP(QtCore.QObject, LogMixin):
     worker_threads = {}
     settings = None
     busy_cursor_count = 0
+    restart_requested = False
+
+    def request_restart(self):
+        """Restart only if the main window's normal save/close confirmation succeeds."""
+        main_window = Registry().get('main_window')
+        if main_window is None or self.restart_requested:
+            return
+        self.restart_requested = True
+        if main_window.close():
+            QtCore.QCoreApplication.quit()
+        else:
+            self.restart_requested = False
+
+    def _restart_process(self):
+        """Relaunch the packaged executable or original Python invocation after releasing locks."""
+        if getattr(sys, 'frozen', False):
+            arguments = sys.argv[1:]
+        else:
+            arguments = getattr(sys, 'orig_argv', [sys.executable, *sys.argv])[1:]
+        process = QtCore.QProcess()
+        process.setProgram(sys.executable)
+        process.setArguments(arguments)
+        process.setWorkingDirectory(os.getcwd())
+        environment = QtCore.QProcessEnvironment.systemEnvironment()
+        if getattr(sys, 'frozen', False):
+            # PyInstaller must treat the relaunch as an independent application instance.
+            environment.insert('PYINSTALLER_RESET_ENVIRONMENT', '1')
+        process.setProcessEnvironment(environment)
+        started = process.startDetached()
+        if not started:
+            QtWidgets.QMessageBox.critical(
+                None, translate('OpenLP.Restart', 'Restart failed'),
+                translate('OpenLP.Restart', 'OpenLP+ could not restart automatically. Please start it again.'))
 
     def exec(self):
         """
@@ -88,6 +132,8 @@ class OpenLP(QtCore.QObject, LogMixin):
             self.data_dir_lock.release()
         if hasattr(self, 'server'):
             self.server.close_server()
+        if self.restart_requested:
+            self._restart_process()
         return result
 
     def run(self, args, app):
@@ -105,6 +151,8 @@ class OpenLP(QtCore.QObject, LogMixin):
         self.args.extend(args)
         # set desktop file name, which is used to display the proper window icon on Wayland
         QtGui.QGuiApplication.setDesktopFileName("openlp")
+        # Initialise Fluent before startup dialogs, icons and plugin UI are constructed.
+        set_default_theme(app)
         # Decide how many screens we have and their size
         screens = ScreenList.create(app)
         # First time checks in settings
@@ -117,34 +165,62 @@ class OpenLP(QtCore.QObject, LogMixin):
             else:
                 QtCore.QCoreApplication.exit()
                 sys.exit()
-        can_show_splash = self.settings.value('core/show splash')
+        can_show_splash = True
         if can_show_splash:
-            self.splash = SplashScreen()
+            try:
+                self.splash = SplashScreenProcess()
+            except (OSError, EOFError):
+                # A splash helper failure must not prevent the application from opening.
+                log.exception('Could not launch the splash helper; using the local splash screen')
+                self.splash = SplashScreen()
+            Registry().register_function('startup_progress', self.splash.set_stage_progress)
             self.splash.show()
         # make sure Qt really display the splash screen
         QtWidgets.QApplication.processEvents()
         # Check if OpenLP has been upgrade and if a backup of data should be created
+        # Give startup phases fixed shares of progress; their durations vary with user data.
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Checking data'), 0)
         self.backup_on_upgrade(has_run_wizard, can_show_splash)
         # start the main app window
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading components'), 5)
         Registry().toggle_suppressing()
         loader()
         Registry().toggle_suppressing()
         # Set the darkmode based on theme
         set_default_theme(app)
+        layout_recovered = begin_layout_startup(self.settings, screens)
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Preparing the main window'), 15)
         self.main_window = MainWindow()
         self.main_window.installEventFilter(self.main_window)
         # Correct stylesheet bugs
         application_stylesheet = get_application_stylesheet()
         app.setStyleSheet(application_stylesheet or '')
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading plugins'), 25)
         Registry().execute('bootstrap_initialise')
         State().flush_preconditions()
-        Registry().execute('bootstrap_post_set_up')
-        self.main_window.show()
         if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Loading library and themes'), 55)
+        Registry().execute('bootstrap_post_set_up')
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Opening the main window'), 95)
+        activate_main_window = self.splash.is_foreground()
+        self.main_window.show()
+        refine_modern_layout(self.main_window)
+        apply_mica(self.main_window)
+        if can_show_splash:
+            self.splash.set_status(translate('OpenLP.SplashScreen', 'Ready'), 100)
             # now kill the splashscreen
+            Registry().remove_function('startup_progress', self.splash.set_stage_progress)
             log.debug('Splashscreen closing')
             self.splash.close()
             log.debug('Splashscreen closed')
+        if activate_main_window and is_macosx():
+            import AppKit
+            AppKit.NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         # make sure Qt really display the splash screen
         QtWidgets.QApplication.processEvents()
         self.main_window.repaint()
@@ -157,10 +233,18 @@ class OpenLP(QtCore.QObject, LogMixin):
             request_presentation_permissions(self.main_window)
         if self.settings.value('core/update check'):
             check_for_update(self.main_window)
-        if self.settings.value('api/update check'):
+        if self.settings.value('api/update check') and not Registry().get_flag('no_web_server'):
             check_for_remote_update(self.main_window)
-        self.main_window.is_display_blank()
         Registry().execute('bootstrap_completion')
+        if activate_main_window and self.splash.is_foreground():
+            self.main_window.raise_()
+            self.main_window.activateWindow()
+        if layout_recovered:
+            self.main_window.show_status_message(
+                translate('OpenLP', 'The saved window layout was reset to allow OpenLP+ to start.'), 15000)
+        # Queue this after the deferred dock rebuild. Clearing it before processEvents/show
+        # would miss the native layout crash that this marker is intended to recover from.
+        QtCore.QTimer.singleShot(0, lambda: complete_layout_startup(self.settings, screens))
         return self.exec()
 
     @staticmethod
@@ -435,35 +519,6 @@ def backup_if_version_changed(settings):
     return True
 
 
-def apply_dpi_adjustments_stage_qt(hidpi_mode, qt_args):
-    if hidpi_mode == HiDPIMode.Windows_Unaware:
-        os.environ['QT_SCALE_FACTOR'] = '1'
-        os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
-        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'
-        if is_win():
-            try:
-                platform_index = qt_args.index('-platform')
-                qt_args[platform_index + 1] += ' windows:dpiawareness=0'
-            except ValueError:
-                qt_args.extend(['-platform', 'windows:dpiawareness=0'])
-
-
-def apply_dpi_adjustments_stage_application(hidpi_mode: HiDPIMode, application: QtWidgets.QApplication):
-    """
-    Apply OpenLP DPI adjustments to bypass Windows and QT bugs (unless disabled on settings)
-
-    :param args: OpenLP startup arguments
-    :param settings: The settings object
-    :param stage: The stage of app
-    """
-    if hidpi_mode == HiDPIMode.Default and is_win() and application.devicePixelRatio() > 1.0:
-        # Increasing font size to match pixel ratio (Windows only)
-        # TODO: Review on Qt6 migration
-        font = application.font()
-        font.setPointSizeF(font.pointSizeF() * application.devicePixelRatio())
-        application.setFont(font)
-
-
 def setup_portable_settings(portable_path: Path | str | None) -> Settings:
     """Set up the portable settings"""
     Settings.setDefaultFormat(Settings.IniFormat)
@@ -538,15 +593,14 @@ def main():
             qt_args.extend(['-platform', 'windows:darkmode=0'])
         else:
             qt_args.extend(['-platform', 'windows:darkmode=2'])
-    # Doing HiDPI adjustments that need to be done before QCoreApplication instantiation.
-    hidpi_mode = settings.value('advanced/hidpi mode')
-    apply_dpi_adjustments_stage_qt(hidpi_mode, qt_args)
     # Instantiating QCoreApplication
     init_webview_custom_schemes()
-    application = QtWidgets.QApplication([sys.argv[0]] + qt_args)
+    import fluentqt
+    fluentqt.prepare_high_dpi_application()
+    application = OpenLPApplication([sys.argv[0]] + qt_args)
+    fluentqt.initialize_resources()
     application.setAttribute(QtCore.Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
-    # Doing HiDPI adjustments that need to be done after QCoreApplication instantiation.
-    apply_dpi_adjustments_stage_application(hidpi_mode, application)
+    # Qt 6 scales fonts per monitor. Keep their logical sizes unchanged to avoid double scaling.
     verbose = getattr(args, 'verbose', False)
     cache_path = portable_path / 'Other' if args.portable else AppLocation.get_directory(AppLocation.CacheDir)
     set_up_logging(cache_path, verbose)

@@ -21,13 +21,13 @@
 """
 Package to test the openlp.core.ui.generaltab package.
 """
-from unittest.mock import patch
+import pytest
 
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtTest
 
 
 def test_creation(settings):
@@ -42,23 +42,6 @@ def test_creation(settings):
 
     # THEN:
     assert "Core" == general_tab.tab_title, 'The tab title should be Core'
-
-
-def test_slide_max_height_combo_is_left_aligned(settings):
-    """
-    Test that max height combo does not expand and remains left-aligned in form layout.
-    """
-    # GIVEN: A new General Tab
-    settings_form = SettingsForm(None)
-    general_tab = GeneralTab(settings_form)
-
-    # WHEN/THEN: The combo should use a fixed horizontal size policy
-    assert general_tab.slide_max_height_combo_box.sizePolicy().horizontalPolicy() == QtWidgets.QSizePolicy.Policy.Fixed
-    assert general_tab.slide_max_height_combo_box.parent() == general_tab.slide_max_height_row_widget
-    assert general_tab.slide_max_height_row_layout.count() == 2
-    assert general_tab.slide_max_height_row_layout.itemAt(1).spacerItem() is not None
-    assert general_tab.slide_max_height_label.wordWrap() is True
-    assert '\n' not in general_tab.slide_max_height_label.text()
 
 
 def test_change_search_as_type(settings):
@@ -96,24 +79,6 @@ def test_slide_numbers_in_footer(settings):
     assert settings.value('advanced/slide numbers in footer') is True
 
 
-def test_new_service_message(settings):
-    """
-    Test that when the new service message option is changed then the settings are updated
-    """
-    # GIVEN: Settings, a settings form and a general tab
-    settings.setValue('advanced/new service message', True)
-    settings_form = SettingsForm(None)
-    general_tab = GeneralTab(settings_form)
-    settings_form.insert_tab(general_tab, is_visible=True)
-
-    # WHEN: I click the checkbox and then save
-    QtTest.QTest.mouseClick(general_tab.new_service_message_check_box, QtCore.Qt.MouseButton.LeftButton)
-    settings_form.accept()
-
-    # THEN: the settings should be updated
-    assert settings.value('advanced/new service message') is False
-
-
 def test_logo_fit_setting_is_saved(settings):
     """
     Test that changing the logo fit option updates the setting value.
@@ -132,15 +97,31 @@ def test_logo_fit_setting_is_saved(settings):
     assert settings.value('core/logo fit') == 'cover'
 
 
-@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
-def test_get_ui_theme_index_maps_native_to_system_theme(_mock_has_ui_theme):
-    """Test that legacy Native theme maps to the Use system theme combo index."""
-    assert GeneralTab.get_ui_theme_index(UiThemes.Native) == 0
+@pytest.mark.parametrize('scheme, offset', [(UiThemes.Native, 0), (UiThemes.QDarkStyle, 1)])
+def test_legacy_theme_selection(scheme, offset):
+    """Legacy colour schemes map to Modern Auto or Dark."""
+    assert GeneralTab.get_ui_theme_index(scheme) == offset
 
 
-@patch('openlp.core.ui.generaltab.has_ui_theme', return_value=False)
-def test_get_ui_theme_name_index_3_falls_back_to_automatic_without_qdarkstyle(_mock_has_ui_theme):
-    """Test that index 3 maps to Automatic when QDarkStyle is unavailable."""
-    assert GeneralTab.get_ui_theme_name(3) == UiThemes.Automatic
+def test_default_theme_is_modern_auto(settings):
+    form = SettingsForm(None)
+    tab = GeneralTab(form)
+    form.insert_tab(tab, is_visible=True)
+    assert tab.ui_theme_style_combo_box.currentIndex() == 0
+    assert [tab.ui_theme_style_combo_box.itemText(i) for i in range(3)] == ['Auto', 'Dark', 'Light']
 
 
+@pytest.mark.parametrize('index, style, scheme', [
+    (0, 'modern', UiThemes.Automatic), (1, 'modern', UiThemes.DefaultDark),
+    (2, 'modern', UiThemes.DefaultLight)])
+def test_combined_theme_round_trip(settings, index, style, scheme):
+    form = SettingsForm(None)
+    tab = GeneralTab(form)
+    form.insert_tab(tab, is_visible=True)
+    tab.ui_theme_style_combo_box.setCurrentIndex(index)
+    tab.save()
+    assert settings.value('advanced/interface style') == style
+    assert settings.value('advanced/ui_theme_name') == scheme
+    tab.ui_theme_style_combo_box.setCurrentIndex((index + 1) % 3)
+    tab.load()
+    assert tab.ui_theme_style_combo_box.currentIndex() == index

@@ -36,7 +36,7 @@ from tempfile import gettempdir
 from PySide6 import QtCore, QtGui
 
 from openlp.core.common import SlideLimits, ThemeLevel
-from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, HiDPIMode, ImageThemeMode, LayoutStyle, \
+from openlp.core.common.enum import AlertLocation, BibleSearch, CustomSearch, ImageThemeMode, LayoutStyle, \
     DisplayStyle, LanguageSelection, SongFirstSlideMode, SongSearch, PluginStatus
 from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder, is_serializable
 from openlp.core.common.path import files_to_paths, str_to_path
@@ -49,7 +49,7 @@ if is_win():
 
 log = logging.getLogger(__name__)
 
-__version__ = 4
+__version__ = 8
 
 
 class ProxyMode(IntEnum):
@@ -68,6 +68,20 @@ if is_linux():                                                                  
     # Default to False on Xfce.
     if os.environ.get('DESKTOP_SESSION') == 'xfce':
         X11_BYPASS_DEFAULT = False
+
+
+def get_default_alert_font():
+    """Choose an installed sans-serif family for both the Qt preview and web display."""
+    families = {family.casefold(): family for family in QtGui.QFontDatabase.families()}
+    preferred = ['Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Noto Sans', 'DejaVu Sans', 'Liberation Sans']
+    if is_macosx():
+        preferred.insert(0, 'Helvetica Neue')
+    for family in preferred:
+        if family.casefold() in families:
+            return families[family.casefold()]
+    font = QtGui.QFont('sans-serif')
+    font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
+    return QtGui.QFontInfo(font).family()
 
 
 def media_players_conv(string):
@@ -111,6 +125,16 @@ def upgrade_screens(number, x_position, y_position, height, width, can_override,
             'is_primary': can_override
         }
     }
+
+
+def upgrade_live_shortcuts(shortcuts):
+    """Repair the old Live defaults while retaining customised shortcuts."""
+    old_defaults = [QtGui.QKeySequence(int(QtCore.Qt.Key.Key_Shift) + int(key))
+                    for key in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    if [QtGui.QKeySequence(shortcut) for shortcut in shortcuts] == old_defaults:
+        return [QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | key)
+                for key in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter)]
+    return shortcuts
 
 
 def upgrade_dark_theme_to_ui_theme(value):
@@ -300,10 +324,9 @@ class Settings(QtCore.QSettings):
     __default_settings__ = {
         'settings/version': 0,
         'advanced/add page break': False,
-        'advanced/disable transparent display': True,
-        'advanced/alternate rows': True,
-        'advanced/autoscrolling': {'dist': 1, 'pos': 0},
         'advanced/current media plugin': -1,
+        'advanced/library view': 'list',
+        'advanced/library thumbnail size': 100,
         'advanced/data path': None,
         # 7 stands for now, 0 to 6 is Monday to Sunday.
         'advanced/default service day': 7,
@@ -316,12 +339,11 @@ class Settings(QtCore.QSettings):
         'advanced/enable exit confirmation': True,
         'advanced/expand service item': False,
         'advanced/hide mouse': True,
-        'advanced/ignore aspect ratio': False,
         'advanced/is portable': False,
         'advanced/max recent files': 20,
-        'advanced/new service message': True,
         'advanced/print file meta data': False,
         'advanced/print notes': False,
+        'advanced/print icons': True,
         'advanced/print slide text': False,
         'advanced/protect data directory': False,
         'advanced/copy library files to data folder': True,
@@ -331,18 +353,15 @@ class Settings(QtCore.QSettings):
         'advanced/proxy username': '',
         'advanced/proxy password': '',
         'advanced/recent file count': 4,
-        'advanced/save current plugin': False,
         'advanced/slide limits': SlideLimits.End,
-        'advanced/slide max height': -4,
         'advanced/slide numbers in footer': False,
         'advanced/single click preview': True,
         'advanced/single click service preview': True,
         'advanced/x11 bypass wm': X11_BYPASS_DEFAULT,
-        'advanced/prefer windowed screen capture': False,
         'advanced/search as type': True,
         'advanced/ui_theme_name': UiThemes.Automatic,
+        'advanced/interface style': 'modern',
         'advanced/delete service item confirmation': False,
-        'advanced/hidpi mode': HiDPIMode.Default,
         'alerts/font face': QtGui.QFont().family(),
         'alerts/font size': 40,
         'alerts/db type': 'sqlite',
@@ -358,6 +377,7 @@ class Settings(QtCore.QSettings):
         'alerts/repeat': 1,
         'alerts/scroll': True,
         'api/twelve hour': True,
+        'remote_interface/status': PluginStatus.Inactive,
         'api/port': 4316,
         'api/websocket port': 4317,
         'api/user id': 'openlp',
@@ -390,7 +410,6 @@ class Settings(QtCore.QSettings):
         'bibles/list separator': '',
         'bibles/end separator': '',
         'bibles/last directory import': None,
-        'bibles/hide combined quick error': False,
         'bibles/is search while typing enabled': True,
         'crashreport/last directory': None,
         'custom/db type': 'sqlite',
@@ -407,19 +426,16 @@ class Settings(QtCore.QSettings):
         'core/auto preview': False,
         'core/auto unblank': False,
         'core/click live slide to unblank': False,
-        'core/blank warning': False,
         'core/ccli number': '',
         'core/has run wizard': False,
         'core/language': '[en]',
         'core/last version test': '',
-        'core/live preview shows blank screen': True,
         'core/live preview shows presentation screen': False,
-        'core/live preview shows slide transitions': False,
         'core/loop delay': 5,
         'core/recent files': [],
         'core/screens': '{}',
+        'core/layout startup pending': False,
         'core/screen blank': False,
-        'core/show splash': True,
         'core/logo background color': '#ffffff',
         'core/logo file': Path(':/graphics/openlp-logo-background.svg'),
         'core/logo fit': 'contain',
@@ -437,6 +453,7 @@ class Settings(QtCore.QSettings):
         'core/application version': '0.0',
         'images/background mode': ImageThemeMode.Black,
         'images/theme': None,
+        'images/fit': 'contain',
         'images/db type': 'sqlite',
         'images/db username': '',
         'images/db password': '',
@@ -444,7 +461,9 @@ class Settings(QtCore.QSettings):
         'images/db database': '',
         'images/last directory': None,
         'images/status': PluginStatus.Inactive,
+        'images/library view': 'list',
         'media/status': PluginStatus.Inactive,
+        'media/library view': 'list',
         'media/media files': [],
         'media/last directory': None,
         'media/media auto start': QtCore.Qt.CheckState.Unchecked,
@@ -470,11 +489,12 @@ class Settings(QtCore.QSettings):
         'planningcenter/status': PluginStatus.Inactive,
         'planningcenter/application_id': '',
         'planningcenter/secret': '',
+        'librarysync/status': PluginStatus.Active,
+        'librarysync/profile': '',
         'planningcenter/default_service_type_name': '-- none --',
         'planningcenter/default_service_type_id': '',
         'presentations/status': PluginStatus.Inactive,
-        'presentations/override app': QtCore.Qt.CheckState.Unchecked,
-        'presentations/render slide images': QtCore.Qt.CheckState.Unchecked,
+        'presentations/library view': 'list',
         'presentations/maclo': QtCore.Qt.CheckState.Checked,
         'presentations/Impress': QtCore.Qt.CheckState.Checked,
         'presentations/Powerpoint': QtCore.Qt.CheckState.Checked,
@@ -484,6 +504,7 @@ class Settings(QtCore.QSettings):
         'presentations/presentations files': [],
         'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint control window': QtCore.Qt.CheckState.Unchecked,
+        'presentations/powerpoint auto select display': QtCore.Qt.CheckState.Checked,
         'presentations/powerpoint use slide timings': QtCore.Qt.CheckState.Unchecked,
         'presentations/powerpoint slide timings by file': {},
         'presentations/impress use display setting': QtCore.Qt.CheckState.Unchecked,
@@ -496,16 +517,11 @@ class Settings(QtCore.QSettings):
         'servicemanager/last directory': None,
         'servicemanager/last file': None,
         'servicemanager/service theme': None,
-        'servicemanager/theme color song': '#FBBF24',
-        'servicemanager/theme color bible': '#4ADE80',
-        'servicemanager/theme color presentation': '#C084FC',
-        'servicemanager/theme color image': '#60A5FA',
-        'servicemanager/theme color media': '#F87171',
-        'servicemanager/theme color custom slide': '#14B8A6',
         'SettingsImport/file_date_created': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         'SettingsImport/Make_Changes': 'At_Own_RISK',
         'SettingsImport/type': 'OpenLP_settings_export',
         'SettingsImport/version': '',
+        'slide_designer/status': PluginStatus.Active,
         'songs/status': PluginStatus.Inactive,
         'songs/db type': 'sqlite',
         'songs/db username': '',
@@ -518,7 +534,6 @@ class Settings(QtCore.QSettings):
         'songs/add song from service': True,
         'songs/favourites_toggled': False,
         'songs/first slide mode': SongFirstSlideMode.Default,
-        'songs/display songbar': True,
         'songs/last directory import': None,
         'songs/last directory export': None,
         'songs/songselect username': '',
@@ -565,6 +580,15 @@ class Settings(QtCore.QSettings):
         'user interface/main window position': QtCore.QPoint(0, 0),
         'user interface/main window splitter geometry': QtCore.QByteArray(),
         'user interface/main window state': QtCore.QByteArray(),
+        'user interface/modern window state': QtCore.QByteArray(),
+        **{'user interface/modern preset layout/{}/{}'.format(mode, fragment): default
+           for mode in ('default', 'setup', 'live', 'librarysync')
+           for fragment, default in (
+               ('main window state', QtCore.QByteArray()),
+               ('main window splitter geometry', QtCore.QByteArray()),
+               ('live splitter geometry', QtCore.QByteArray()),
+               ('preview splitter geometry', QtCore.QByteArray()),
+               ('visibility snapshot', ''))},
         'user interface/show layout preset tabs': True,
         # Per layout-preset window geometry (Show all / Setup / Live); empty until user customises.
         'user interface/preset layout/default/main window state': QtCore.QByteArray(),
@@ -585,6 +609,7 @@ class Settings(QtCore.QSettings):
         'user interface/preview panel': True,
         'user interface/preview splitter geometry': QtCore.QByteArray(),
         'user interface/theme manager view mode': 0,
+        'user interface/theme thumbnail size': 100,
         'user interface/show library': True,
         'user interface/show projectors': False,
         'user interface/show service': True,
@@ -596,6 +621,7 @@ class Settings(QtCore.QSettings):
         'projector/db hostname': '',
         'projector/db database': '',
         'projector/enable': True,
+        'projector/status': PluginStatus.Inactive,
         'projector/connect on start': False,
         'projector/connect when LKUP received': True,  # PJLink v2: Projector sends LKUP command after it powers up
         'projector/last directory import': None,
@@ -690,6 +716,45 @@ class Settings(QtCore.QSettings):
         ('presentations/thumbnail_scheme', '', [])
     ]
 
+    # Repair defaults previously built by adding two key codes.
+    __setting_upgrade_5__ = [
+        (f'shortcuts/listView{plugin}LiveItem', f'shortcuts/listView{plugin}LiveItem',
+         [(upgrade_live_shortcuts, [[]])])
+        for plugin in ('Bibles', 'Custom', 'Images', 'Media', 'Presentations', 'Songs')
+    ]
+
+    # Retire redundant settings and preferences replaced by automatic behaviour.
+    __setting_upgrade_6__ = [
+        ('core/live preview shows slide transitions', '', []),
+        ('advanced/new service message', '', []),
+        ('advanced/ignore aspect ratio', '', []),
+        ('bibles/hide combined quick error', '', []),
+        ('core/live preview shows blank screen', '', []),
+        ('core/show splash', '', []),
+        ('advanced/save current plugin', '', []),
+        ('advanced/alternate rows', '', []),
+        ('songs/display songbar', '', []),
+        ('presentations/override app', '', []),
+        ('core/blank warning', '', []),
+        ('advanced/autoscrolling', '', []),
+        ('advanced/slide max height', '', []),
+    ]
+
+    __setting_upgrade_7__ = [
+        ('presentations/render slide images', '', []),
+        ('advanced/disable transparent display', '', []),
+        ('advanced/prefer windowed screen capture', '', [])
+    ]
+
+    __setting_upgrade_8__ = [
+        ('servicemanager/theme color song', '', []),
+        ('servicemanager/theme color bible', '', []),
+        ('servicemanager/theme color presentation', '', []),
+        ('servicemanager/theme color image', '', []),
+        ('servicemanager/theme color media', '', []),
+        ('servicemanager/theme color custom slide', '', [])
+    ]
+
     @staticmethod
     def extend_default_settings(default_values):
         """
@@ -720,6 +785,8 @@ class Settings(QtCore.QSettings):
         # function was not set up as this stage).
         from openlp.core.common.i18n import UiStrings
         Settings.__default_settings__['advanced/default service name'] = UiStrings().DefaultServiceName
+        # Font discovery requires the QApplication created before this startup hook.
+        Settings.__default_settings__['alerts/font face'] = get_default_alert_font()
 
     def __init__(self, *args):
         """
@@ -772,45 +839,49 @@ class Settings(QtCore.QSettings):
             'shortcuts/listViewBiblesDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewBiblesPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewBiblesLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewBiblesLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewBiblesServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewCustomDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewCustomPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewCustomLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewCustomLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewCustomServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewImagesDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewImagesPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewImagesLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                 QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewImagesLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewImagesServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                     QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewMediaDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewMediaPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewMediaLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewMediaLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewMediaServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewPresentationsDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewPresentationsPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                            QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewPresentationsLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift +
-                                                                           QtCore.Qt.Key.Key_Return),
-                                                        QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift +
-                                                                           QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewPresentationsLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewPresentationsServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                            QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/listViewSongsDeleteItem': [QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Delete)],
             'shortcuts/listViewSongsPreviewItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Return),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Enter)],
-            'shortcuts/listViewSongsLiveItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Return),
-                                                QtGui.QKeySequence(QtCore.Qt.Key.Key_Shift + QtCore.Qt.Key.Key_Enter)],
+            'shortcuts/listViewSongsLiveItem': [
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Return),
+                QtGui.QKeySequence(QtCore.Qt.KeyboardModifier.ShiftModifier | QtCore.Qt.Key.Key_Enter)],
             'shortcuts/listViewSongsServiceItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Plus),
                                                    QtGui.QKeySequence(QtCore.Qt.Key.Key_Equal)],
             'shortcuts/lockPanel': [],
@@ -970,14 +1041,16 @@ class Settings(QtCore.QSettings):
         :return: The value stored by the setting.
         """
         # if group() is not empty the group has not been specified together with the key.
-        if self.group():
-            default_value = Settings.__default_settings__[self.group() + '/' + key]
-        else:
-            default_value = Settings.__default_settings__[key]
+        full_key = self.group() + '/' + key if self.group() else key
+        default_value = Settings.__default_settings__[full_key]
         try:
             setting = super().value(key, default_value)
         except TypeError:
             setting = default_value
+        # Older installs could save an empty family from QFont() before QApplication existed.
+        # Resolve it here so the settings dropdown and projected alerts use the same font.
+        if full_key == 'alerts/font face' and (not setting or not str(setting).strip()):
+            setting = get_default_alert_font()
         return self._convert_value(setting, default_value)
 
     def setValue(self, key, value):

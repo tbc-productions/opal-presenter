@@ -18,21 +18,21 @@
 # You should have received a copy of the GNU General Public License      #
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
-"""
-The :mod:`formattingtagform` provides an Tag Edit facility. The Base set are protected and included each time loaded.
-Custom tags can be defined and saved. The Custom Tag arrays are saved in a json string so QSettings works on them.
-Base Tags cannot be changed.
-"""
+"""Browse built-in formatting styles and edit custom styles stored as JSON in settings."""
+import html
 import json
 import re
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
+from fluentqt import Window as FluentWindow
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.ui.formattingtagcontroller import FormattingTagController
 from openlp.core.ui.formattingtagdialog import Ui_FormattingTagDialog
+from openlp.core.ui.icons import UiIcons
 from openlp.core.widgets.dialogs import FileDialog
 
 
@@ -48,19 +48,28 @@ class EditColumn(object):
     Hidden = 5
 
 
-class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTagController):
-    """
-    The :class:`FormattingTagForm` manages the settings tab .
-    """
+class FormattingTagForm(FluentWindow, Ui_FormattingTagDialog, FormattingTagController):
+    """Manage a draft of custom styles while keeping built-in styles read-only."""
+    accepted = QtCore.Signal()
+    rejected = QtCore.Signal()
+    finished = QtCore.Signal(int)
+
+    BuiltInTab = 0
+    CustomTab = 1
+
     def __init__(self, parent):
         """
         Constructor
         """
-        super(FormattingTagForm, self).__init__(parent,
-                                                QtCore.Qt.WindowType.WindowSystemMenuHint |
-                                                QtCore.Qt.WindowType.WindowTitleHint |
-                                                QtCore.Qt.WindowType.WindowCloseButtonHint)
+        super().__init__(parent)
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        self._event_loop = None
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
+        self.reloading = False
+        self._loading_editor = False
         self.setup_ui(self)
+        self.escape_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key.Key_Escape), self)
+        self.escape_shortcut.activated.connect(self.reject)
         self._setup()
 
     def _setup(self):
@@ -69,60 +78,241 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         """
         self.services = FormattingTagController()
         self.tag_table_widget.itemSelectionChanged.connect(self.on_row_selected)
-        self.new_button.clicked.connect(self.on_new_clicked)
-        self.delete_button.clicked.connect(self.on_delete_clicked)
-        self.import_button.clicked.connect(self.on_import_clicked)
-        self.export_button.clicked.connect(self.on_export_clicked)
-        self.tag_table_widget.itemChanged.connect(self.on_table_item_changed)
-        self.button_box.rejected.connect(self.close)
+        self.tag_table_widget_read.itemSelectionChanged.connect(self.on_row_selected)
+        self.style_tabs.currentChanged.connect(self.on_row_selected)
+        self.search_edit.textChanged.connect(self._filter_styles)
+        self.copy_button.triggered.connect(self.on_copy_clicked)
+        self.name_edit.textEdited.connect(lambda text: self._on_editor_changed(EditColumn.Description, text))
+        self.tag_edit.textEdited.connect(lambda text: self._on_editor_changed(EditColumn.Tag, text))
+        self.start_html_edit.textChanged.connect(
+            lambda: self._on_editor_changed(EditColumn.StartHtml, self.start_html_edit.toPlainText()))
+        self.end_html_edit.textChanged.connect(
+            lambda: self._on_editor_changed(EditColumn.EndHtml, self.end_html_edit.toPlainText()))
+        self.hidden_checkbox.toggled.connect(self._on_hidden_changed)
+        self.new_button.triggered.connect(self.on_new_clicked)
+        self.delete_button.triggered.connect(self.on_delete_clicked)
+        self.import_button.triggered.connect(self.on_import_clicked)
+        self.export_button.triggered.connect(self.on_export_clicked)
         # Forces reloading of tags from openlp configuration.
         FormattingTags.load_tags()
-        self.is_deleting = False
-        self.reloading = False
+        self.on_row_selected()
 
     def exec(self):
-        """
-        Load Display and set field state.
-        """
-        # Create initial copy from master
+        """Open the Fluent window with the existing modal save/cancel contract."""
+        self.style_tabs.setCurrentIndex(self.BuiltInTab)
         self._reloadTable()
-        return QtWidgets.QDialog.exec(self)
+        self._result = QtWidgets.QDialog.DialogCode.Rejected
+        loop = QtCore.QEventLoop(self)
+        self._event_loop = loop
+        try:
+            # Apply the opening geometry after content and native window setup.
+            self.ensurePolished()
+            self.layout().activate()
+            self.resize(1160, 780)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            loop.exec()
+        finally:
+            self._event_loop = None
+            loop.deleteLater()
+        return self._result
+
+    def result(self):
+        return self._result
+
+    def done(self, result):
+        """Close the native window and release callers waiting for a result."""
+        self._result = result
+        self.hide()
+        if self._event_loop is not None:
+            self._event_loop.quit()
+        if result == QtWidgets.QDialog.DialogCode.Accepted:
+            self.accepted.emit()
+        else:
+            self.rejected.emit()
+        self.finished.emit(result)
+
+    def reject(self):
+        self.done(QtWidgets.QDialog.DialogCode.Rejected)
+
+    def closeEvent(self, event):
+        self.reject()
+        event.accept()
+
+    def _active_table(self):
+        return self.tag_table_widget if self.style_tabs.currentIndex() == self.CustomTab else self.tag_table_widget_read
 
     def on_row_selected(self):
-        """
-        Table Row selected so display items and set field state.
-        """
-        self.delete_button.setEnabled(True)
+        """Show the selected style in the detail editor, including read-only built-ins."""
+        if self.reloading:
+            return
+        table = self._active_table()
+        row = table.currentRow()
+        selected = row >= 0 and not table.isRowHidden(row)
+        custom = table is self.tag_table_widget
+        self.delete_button.setEnabled(selected and custom)
+        self.copy_button.setEnabled(selected)
+        self.editor_fields.setEnabled(selected)
+        self.editor_fields.setVisible(selected)
+        self.preview_card.setVisible(selected)
+        self.preview_heading.setVisible(selected)
+        self.read_only_icon.setVisible(selected and not custom)
+        self._loading_editor = True
+        try:
+            values = [table.item(row, column).text() if selected else '' for column in range(4)]
+            self.name_edit.setText(values[0])
+            self.tag_edit.setText(values[1])
+            self.start_html_edit.setPlainText(values[2])
+            self.end_html_edit.setPlainText(values[3])
+            for edit in (self.name_edit, self.tag_edit, self.start_html_edit, self.end_html_edit):
+                edit.setReadOnly(not custom)
+            hidden = table.cellWidget(row, EditColumn.Hidden) if selected and custom else None
+            self.hidden_checkbox.setChecked(hidden.isChecked() if hidden else False)
+            self.hidden_checkbox.setEnabled(custom)
+            self._auto_end_html = not values[3] or values[3] == self.services.start_html_to_end_html(values[2])
+        finally:
+            self._loading_editor = False
+        if not selected:
+            self.editor_heading.setText(translate('OpenLP.FormattingTagForm', 'No style selected'))
+        else:
+            self.editor_heading.setText(translate('OpenLP.FormattingTagForm', 'Style'))
+            self._update_detail_preview()
+        self._update_style_counts()
+
+    def _update_style_counts(self):
+        tables = (self.tag_table_widget_read, self.tag_table_widget)
+        counts = [sum(not table.isRowHidden(row) for row in range(table.rowCount())) for table in tables]
+        self.style_tabs.set_match_counts(counts, bool(self.search_edit.text().strip()))
+
+    def _filter_styles(self):
+        """Filter both lists without losing edits stored in hidden rows."""
+        query = self.search_edit.text().strip().casefold()
+        for table in (self.tag_table_widget, self.tag_table_widget_read):
+            previous_state = table.blockSignals(True)
+            try:
+                for row in range(table.rowCount()):
+                    matches = any(query in table.item(row, column).text().casefold() for column in (0, 1))
+                    table.setRowHidden(row, not matches)
+                if table.currentRow() < 0 or table.isRowHidden(table.currentRow()):
+                    table.clearSelection()
+                    table.setCurrentIndex(QtCore.QModelIndex())
+                    for row in range(table.rowCount()):
+                        if not table.isRowHidden(row):
+                            table.selectRow(row)
+                            break
+            finally:
+                table.blockSignals(previous_state)
+        self.on_row_selected()
+
+    def _on_editor_changed(self, column, text):
+        """Store edits immediately so changing the selection never discards text."""
+        if self._loading_editor or self.reloading or self.style_tabs.currentIndex() != self.CustomTab:
+            return
+        row = self.tag_table_widget.currentRow()
+        if row < 0:
+            return
+        previous_state = self.tag_table_widget.blockSignals(True)
+        try:
+            self.tag_table_widget.item(row, column).setText(text)
+            if column == EditColumn.EndHtml:
+                self._auto_end_html = not text
+            if column == EditColumn.StartHtml and self._auto_end_html:
+                end = self.services.start_html_to_end_html(text)
+                if end is not None:
+                    self.tag_table_widget.item(row, EditColumn.EndHtml).setText(end)
+                    self._loading_editor = True
+                    try:
+                        self.end_html_edit.setPlainText(end)
+                    finally:
+                        self._loading_editor = False
+        finally:
+            self.tag_table_widget.blockSignals(previous_state)
+        if column in (EditColumn.StartHtml, EditColumn.EndHtml):
+            self._update_preview_cell(row)
+        self._update_detail_preview()
+
+    def _on_hidden_changed(self, checked):
+        if self._loading_editor or self.style_tabs.currentIndex() != self.CustomTab:
+            return
+        row = self.tag_table_widget.currentRow()
+        if row >= 0:
+            self.tag_table_widget.cellWidget(row, EditColumn.Hidden).setChecked(checked)
+
+    def _update_detail_preview(self):
+        start = self._normalize_preview_html(self.start_html_edit.toPlainText(), self.preview_label)
+        sample = translate('OpenLP.FormattingTagForm', 'Amazing grace, how sweet the sound')
+        self.preview_label.setText('{start}{sample}{end}'.format(
+            start=start, sample=html.escape(sample), end=self.end_html_edit.toPlainText()))
+
+    def _append_style(self, desc, tag, start_html, end_html, hidden=False):
+        table = self.tag_table_widget
+        previous_state = table.blockSignals(True)
+        try:
+            row = table.rowCount()
+            table.insertRow(row)
+            for column, value in enumerate((desc, tag, start_html, end_html)):
+                table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
+            table.setCellWidget(row, EditColumn.Preview, self._build_preview_widget(start_html, end_html))
+            checkbox = QtWidgets.QCheckBox(table)
+            checkbox.setChecked(hidden)
+            table.setCellWidget(row, EditColumn.Hidden, checkbox)
+        finally:
+            table.blockSignals(previous_state)
+        table.resizeRowsToContents()
+        return row
+
+    def _unique_new_style(self):
+        """Allocate a name and tag that do not collide with any existing style."""
+        names, tags = set(), set()
+        for table in (self.tag_table_widget, self.tag_table_widget_read):
+            for row in range(table.rowCount()):
+                names.add(table.item(row, EditColumn.Description).text().casefold())
+                tags.add(table.item(row, EditColumn.Tag).text().casefold())
+        number = 1
+        while True:
+            name = translate('OpenLP.FormattingTagForm', 'New style {number}').format(number=number)
+            tag = 'style{number}'.format(number=number)
+            if name.casefold() not in names and tag.casefold() not in tags:
+                return name, tag
+            number += 1
+
+    def _select_new_style(self, row):
+        self.search_edit.clear()
+        self.style_tabs.setCurrentIndex(self.CustomTab)
+        self.tag_table_widget.selectRow(row)
+        self.tag_table_widget.scrollToItem(self.tag_table_widget.item(row, 0))
+        self.on_row_selected()
+        self.name_edit.setFocus()
+        self.name_edit.selectAll()
 
     def on_new_clicked(self):
-        """
-        Add a new tag to edit list and select it for editing.
-        """
-        previous_state = self.tag_table_widget.blockSignals(True)
-        new_row = self.tag_table_widget.rowCount()
-        self.tag_table_widget.insertRow(new_row)
-        self.tag_table_widget.setItem(new_row, 0,
-                                      QtWidgets.QTableWidgetItem(translate('OpenLP.FormattingTagForm',
-                                                                           'New Tag {row:d}').format(row=new_row)))
-        self.tag_table_widget.setItem(new_row, 1, QtWidgets.QTableWidgetItem('n{row:d}'.format(row=new_row)))
-        self.tag_table_widget.setItem(new_row, 2,
-                                      QtWidgets.QTableWidgetItem(translate('OpenLP.FormattingTagForm', '<HTML here>')))
-        self.tag_table_widget.setItem(new_row, 3, QtWidgets.QTableWidgetItem(''))
-        self.tag_table_widget.setCellWidget(new_row, EditColumn.Preview,
-                                            self._build_preview_widget('', ''))
-        hiddenwidget = QtWidgets.QWidget()
-        hiddencheckbox = QtWidgets.QCheckBox()
-        hiddenlayout = QtWidgets.QHBoxLayout()
-        hiddenlayout.addWidget(hiddencheckbox)
-        hiddenlayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        hiddenlayout.setContentsMargins(0, 0, 0, 0)
-        hiddenwidget.setLayout(hiddenlayout)
-        hiddencheckbox.setCheckState(QtCore.Qt.CheckState.Unchecked)
-        self.tag_table_widget.setCellWidget(new_row, EditColumn.Hidden, hiddenwidget)
-        self.tag_table_widget.blockSignals(previous_state)
-        self.tag_table_widget.resizeRowsToContents()
-        self.tag_table_widget.scrollToBottom()
-        self.tag_table_widget.selectRow(new_row)
+        """Create a usable style with valid HTML, ready to name and customise."""
+        name, tag = self._unique_new_style()
+        self._select_new_style(self._append_style(name, tag, '<span>', '</span>'))
+
+    def on_copy_clicked(self):
+        """Copy either a built-in or custom style into an editable custom style."""
+        table = self._active_table()
+        row = table.currentRow()
+        if row < 0 or table.isRowHidden(row):
+            return
+        original_name = table.item(row, EditColumn.Description).text()
+        names = {grid.item(index, EditColumn.Description).text().casefold()
+                 for grid in (self.tag_table_widget, self.tag_table_widget_read) for index in range(grid.rowCount())}
+        number = 1
+        while True:
+            name = translate('OpenLP.FormattingTagForm', '{name} (copy {number})').format(
+                name=original_name, number=number)
+            if name.casefold() not in names:
+                break
+            number += 1
+        _, tag = self._unique_new_style()
+        hidden = table.cellWidget(row, EditColumn.Hidden) if table is self.tag_table_widget else None
+        new_row = self._append_style(
+            name, tag, table.item(row, EditColumn.StartHtml).text(),
+            table.item(row, EditColumn.EndHtml).text(), hidden.isChecked() if hidden else False)
+        self._select_new_style(new_row)
 
     def _build_preview_widget(self, start_html, end_html):
         """
@@ -133,9 +323,10 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         preview_widget.setTextFormat(QtCore.Qt.TextFormat.RichText)
         preview_widget.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
         normalized_start_html = self._normalize_preview_html(start_html or '', preview_widget)
-        preview_widget.setText('{start}{text}{end}'.format(start=normalized_start_html,
-                                   text=translate('OpenLP.FormattingTagForm', 'Preview text'),
-                                   end=end_html or ''))
+        preview_widget.setText('{start}{text}{end}'.format(
+            start=normalized_start_html,
+            text=html.escape(translate('OpenLP.FormattingTagForm', 'Preview text')),
+            end=end_html or ''))
         return preview_widget
 
     def _normalize_preview_html(self, start_html, preview_widget):
@@ -199,13 +390,13 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         self.tag_table_widget.resizeRowsToContents()
 
     def on_delete_clicked(self):
-        """
-        Delete selected custom row.
-        """
+        """Delete the selected custom style; built-in styles remain protected."""
+        if self.style_tabs.currentIndex() != self.CustomTab:
+            return
         selected = self.tag_table_widget.currentRow()
         if selected != -1:
-            self.is_deleting = True
             self.tag_table_widget.removeRow(selected)
+            self._filter_styles()
 
     def accept(self):
         """
@@ -214,33 +405,38 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         if not self._validate_tags_for_save():
             return
         self.services.save_tags()
-        QtWidgets.QDialog.accept(self)
+        self.done(QtWidgets.QDialog.DialogCode.Accepted)
 
     def _validate_tags_for_save(self):
         """
         Validate the current custom tags in the table and build ``self.services.custom_tags``.
         """
-        count = 0
         self.services.pre_save()
-        while count < self.tag_table_widget.rowCount():
-            error = self.services.validate_for_save(self.tag_table_widget.item(count, 0).text(),
-                                                    self.tag_table_widget.item(count, 1).text(),
-                                                    self.tag_table_widget.item(count, 2).text(),
-                                                    self.tag_table_widget.item(count, 3).text(),
-                                                    self.tag_table_widget.cellWidget(count, EditColumn.Hidden).
-                                                    children()[1].isChecked()
-                                                    )
+        for count in range(self.tag_table_widget.rowCount()):
+            desc, tag, start, end = [self.tag_table_widget.item(count, column).text() for column in range(4)]
+            if not desc.strip():
+                error = translate('OpenLP.FormattingTagForm', 'Enter a name for this style.')
+            elif not tag or re.search(r'[{}\s/]', tag):
+                error = translate('OpenLP.FormattingTagForm',
+                                  'Enter a tag without spaces, braces or slashes, such as emphasis.')
+            else:
+                error = self.services.validate_for_save(
+                    desc, tag, start, end, self.tag_table_widget.cellWidget(count, EditColumn.Hidden).isChecked())
             if error:
                 QtWidgets.QMessageBox.warning(self, translate('OpenLP.FormattingTagForm', 'Validation Error'), error)
+                self.search_edit.clear()
+                self.style_tabs.setCurrentIndex(self.CustomTab)
                 self.tag_table_widget.selectRow(count)
+                self.on_row_selected()
                 return False
-            count += 1
         return True
 
     def on_export_clicked(self):
         """
         Export custom formatting tags to a JSON file.
         """
+        if not self.isVisible():
+            self._reloadTable()
         if not self._validate_tags_for_save():
             return
         settings = Registry().get('settings')
@@ -250,9 +446,9 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
             last_export_directory = None
         export_file_path, filter_used = FileDialog.getSaveFileName(
             self,
-            translate('OpenLP.FormattingTagForm', 'Export Formatting Tags'),
+            translate('OpenLP.FormattingTagForm', 'Export formatting styles'),
             last_export_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Tags (*.json)'))
+            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Styles (*.json)'))
         if not export_file_path:
             return
         export_file_path = export_file_path.with_suffix('.json')
@@ -262,9 +458,9 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         except OSError as ose:
             QtWidgets.QMessageBox.critical(
                 self,
-                translate('OpenLP.FormattingTagForm', 'Formatting Tag Export Error'),
+                translate('OpenLP.FormattingTagForm', 'Formatting style export error'),
                 translate('OpenLP.FormattingTagForm',
-                          'An error occurred while exporting formatting tags: {err}').format(err=ose.strerror))
+                          'An error occurred while exporting formatting styles: {err}').format(err=ose.strerror))
             return
         settings.setValue('formattingTags/last directory export', export_file_path.parent)
 
@@ -279,9 +475,9 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
             last_import_directory = None
         import_file_path, filter_used = FileDialog.getOpenFileName(
             self,
-            translate('OpenLP.FormattingTagForm', 'Import Formatting Tags'),
+            translate('OpenLP.FormattingTagForm', 'Import formatting styles'),
             last_import_directory,
-            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Tags (*.json)'))
+            translate('OpenLP.FormattingTagForm', 'OpenLP+ Formatting Styles (*.json)'))
         if import_file_path is None:
             return
         try:
@@ -290,27 +486,35 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
         except (OSError, ValueError, TypeError):
             QtWidgets.QMessageBox.critical(
                 self,
-                translate('OpenLP.FormattingTagForm', 'Formatting Tag Import Error'),
+                translate('OpenLP.FormattingTagForm', 'Formatting style import error'),
                 translate('OpenLP.FormattingTagForm',
-                          'The selected formatting tag file is invalid and could not be imported.'))
+                          'The selected formatting style file is invalid and could not be imported.'))
             return
         if not isinstance(imported_tags, list):
             QtWidgets.QMessageBox.critical(
                 self,
-                translate('OpenLP.FormattingTagForm', 'Formatting Tag Import Error'),
+                translate('OpenLP.FormattingTagForm', 'Formatting style import error'),
                 translate('OpenLP.FormattingTagForm',
-                          'The selected formatting tag file is invalid and could not be imported.'))
+                          'The selected formatting style file is invalid and could not be imported.'))
             return
-        existing_custom_tags = [tag.copy() for tag in FormattingTags.get_html_tags() if not tag.get('protected')]
+        # Within the editor, imports join the current draft and respect Save/Cancel.
+        # The main-window Import action keeps its existing immediate-save behaviour.
+        editing = self.isVisible()
+        if editing:
+            if not self._validate_tags_for_save():
+                return
+            existing_custom_tags = [tag.copy() for tag in self.services.custom_tags]
+        else:
+            existing_custom_tags = [tag.copy() for tag in FormattingTags.get_html_tags() if not tag.get('protected')]
         self.services.pre_save()
         self.services.custom_tags = existing_custom_tags
         for tag in imported_tags:
             if not isinstance(tag, dict):
                 QtWidgets.QMessageBox.critical(
                     self,
-                    translate('OpenLP.FormattingTagForm', 'Formatting Tag Import Error'),
+                    translate('OpenLP.FormattingTagForm', 'Formatting style import error'),
                     translate('OpenLP.FormattingTagForm',
-                              'The selected formatting tag file is invalid and could not be imported.'))
+                              'The selected formatting style file is invalid and could not be imported.'))
                 return
             if tag.get('protected'):
                 continue
@@ -324,10 +528,10 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
             if existing_tag_index != -1:
                 answer = QtWidgets.QMessageBox.question(
                     self,
-                    translate('OpenLP.FormattingTagForm', 'Formatting Tag Exists'),
+                    translate('OpenLP.FormattingTagForm', 'Formatting style exists'),
                     translate('OpenLP.FormattingTagForm',
-                              'Do you want to overwrite the existing {tag} tag?'
-                              '\n\nChoose No to skip importing this tag.').format(tag=tag_name),
+                              'Do you want to overwrite the existing {tag} style?'
+                              '\n\nChoose No to skip importing this style.').format(tag=tag_name),
                     QtWidgets.QMessageBox.StandardButton(
                         QtWidgets.QMessageBox.StandardButton.Yes |
                         QtWidgets.QMessageBox.StandardButton.No),
@@ -345,97 +549,39 @@ class FormattingTagForm(QtWidgets.QDialog, Ui_FormattingTagDialog, FormattingTag
                                               translate('OpenLP.FormattingTagForm', 'Validation Error'),
                                               error)
                 return
-        self.services.save_tags()
-        self._reloadTable()
+        if editing:
+            protected = [tag for tag in FormattingTags.get_html_tags() if tag.get('protected')]
+            self._reloadTable(protected + self.services.custom_tags)
+        else:
+            self.services.save_tags()
+            self._reloadTable()
         settings.setValue('formattingTags/last directory import', import_file_path.parent)
 
-    def _reloadTable(self):
-        """
-        Reset List for loading.
-        """
+    def _reloadTable(self, tags=None):
+        """Load the style lists and restore a useful initial selection."""
         self.reloading = True
-        self.tag_table_widget_read.clearContents()
-        self.tag_table_widget_read.setRowCount(0)
-        self.tag_table_widget.clearContents()
-        self.tag_table_widget.setRowCount(0)
-        self.new_button.setEnabled(True)
-        self.delete_button.setEnabled(False)
-        for line_number, html in enumerate(FormattingTags.get_html_tags()):
-            if html['protected']:
-                line = self.tag_table_widget_read.rowCount()
-                self.tag_table_widget_read.setRowCount(line + 1)
-                self.tag_table_widget_read.setItem(line, 0, QtWidgets.QTableWidgetItem(html['desc']))
-                self.tag_table_widget_read.setItem(line, 1, QtWidgets.QTableWidgetItem(self._strip(html['start tag'])))
-                self.tag_table_widget_read.setItem(line, 2, QtWidgets.QTableWidgetItem(html['start html']))
-                self.tag_table_widget_read.setItem(line, 3, QtWidgets.QTableWidgetItem(html['end html']))
-                self.tag_table_widget_read.setCellWidget(line, EditColumn.Preview,
-                                                         self._build_preview_widget(html['start html'],
-                                                                                    html['end html']))
-                self.tag_table_widget_read.resizeRowsToContents()
-            else:
-                line = self.tag_table_widget.rowCount()
-                self.tag_table_widget.setRowCount(line + 1)
-                self.tag_table_widget.setItem(line, 0, QtWidgets.QTableWidgetItem(html['desc']))
-                self.tag_table_widget.setItem(line, 1, QtWidgets.QTableWidgetItem(self._strip(html['start tag'])))
-                self.tag_table_widget.setItem(line, 2, QtWidgets.QTableWidgetItem(html['start html']))
-                self.tag_table_widget.setItem(line, 3, QtWidgets.QTableWidgetItem(html['end html']))
-                self.tag_table_widget.setCellWidget(line, EditColumn.Preview,
-                                                    self._build_preview_widget(html['start html'], html['end html']))
-                hiddenwidget = QtWidgets.QWidget()
-                hiddencheckbox = QtWidgets.QCheckBox()
-                hiddenlayout = QtWidgets.QHBoxLayout()
-                hiddenlayout.addWidget(hiddencheckbox)
-                hiddenlayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-                hiddenlayout.setContentsMargins(0, 0, 0, 0)
-                hiddenwidget.setLayout(hiddenlayout)
-                hiddencheckbox.setCheckState(QtCore.Qt.CheckState.Checked if html['hidden']
-                                             else QtCore.Qt.CheckState.Unchecked)
-                self.tag_table_widget.setCellWidget(line, EditColumn.Hidden, hiddenwidget)
-                self.tag_table_widget.resizeRowsToContents()
-                # Permanent (persistent) tags do not have this key
-                html['temporary'] = False
-        self.reloading = False
-
-    def on_table_item_changed(self, item):
-        """
-        Process table edits immediately when item content changes.
-        """
-        if self.reloading:
-            return
-        if not item:
-            return
-        row = item.row()
-        col = item.column()
-        if not self.tag_table_widget.item(row, EditColumn.Description):
-            return
-        if col not in (EditColumn.Description, EditColumn.Tag, EditColumn.StartHtml, EditColumn.EndHtml):
-            return
-        text = item.text()
-        errors = None
-        if col is EditColumn.Description:
-            if not text:
-                errors = translate('OpenLP.FormattingTagForm', 'Description is missing')
-        elif col is EditColumn.Tag:
-            if not text:
-                errors = translate('OpenLP.FormattingTagForm', 'Tag is missing')
-        elif col is EditColumn.StartHtml:
-            end_item = self.tag_table_widget.item(row, EditColumn.EndHtml)
-            end_html = end_item.text() if end_item else ''
-            errors, tag = self.services.start_tag_changed(text, end_html)
-            if tag:
-                previous_state = self.tag_table_widget.blockSignals(True)
-                self.tag_table_widget.setItem(row, EditColumn.EndHtml, QtWidgets.QTableWidgetItem(tag))
-                self.tag_table_widget.blockSignals(previous_state)
-        elif col is EditColumn.EndHtml:
-            start_item = self.tag_table_widget.item(row, EditColumn.StartHtml)
-            start_html = start_item.text() if start_item else ''
-            errors, tag = self.services.end_tag_changed(start_html, text)
-            if tag:
-                previous_state = self.tag_table_widget.blockSignals(True)
-                self.tag_table_widget.setItem(row, EditColumn.EndHtml, QtWidgets.QTableWidgetItem(tag))
-                self.tag_table_widget.blockSignals(previous_state)
-        if col is EditColumn.StartHtml or col is EditColumn.EndHtml:
-            self._update_preview_cell(row)
-        if errors:
-            QtWidgets.QMessageBox.warning(self, translate('OpenLP.FormattingTagForm', 'Validation Error'), errors)
-        self.tag_table_widget.resizeRowsToContents()
+        try:
+            self.tag_table_widget_read.clearContents()
+            self.tag_table_widget_read.setRowCount(0)
+            self.tag_table_widget.clearContents()
+            self.tag_table_widget.setRowCount(0)
+            for tag in FormattingTags.get_html_tags() if tags is None else tags:
+                if tag['protected']:
+                    table = self.tag_table_widget_read
+                    row = table.rowCount()
+                    table.insertRow(row)
+                    for column, value in enumerate((tag['desc'], self._strip(tag['start tag']),
+                                                    tag['start html'], tag['end html'])):
+                        table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
+                    name_item = table.item(row, EditColumn.Description)
+                    name_item.setIcon(UiIcons().lock)
+                    name_item.setToolTip(translate('OpenLP.FormattingTagDialog', 'Read-only'))
+                    table.setCellWidget(row, EditColumn.Preview,
+                                        self._build_preview_widget(tag['start html'], tag['end html']))
+                else:
+                    self._append_style(tag['desc'], self._strip(tag['start tag']), tag['start html'], tag['end html'],
+                                       tag.get('hidden', False))
+            self.tag_table_widget_read.resizeRowsToContents()
+        finally:
+            self.reloading = False
+        self._filter_styles()

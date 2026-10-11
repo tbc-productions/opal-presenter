@@ -27,7 +27,8 @@ import re
 import time
 from pathlib import Path
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 from PySide6.QtMultimedia import QAudioInput, QAudioOutput, QCamera, QMediaDevices, QMediaCaptureSession, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtCore import QUrl
@@ -384,8 +385,25 @@ class MediaPlayer(MediaBase, LogMixin):
             if self.device_audio_input:
                 self.device_audio_input.setMuted(True)
         else:
-            self.media_player.stop()
+            super().reset()
         self._active_playback = False
+
+    def reset(self) -> None:
+        """Detach the old video surface before stopping a retired media item.
+
+        In particular, a paused QVideoWidget may already be hidden after Show
+        Desktop. Do not stop its decoder while that hidden surface is still
+        attached, or let stop-time signals re-enter the old item's UI handlers.
+        load()/load_stream() attach the outputs again for the next item.
+        """
+        self._active_playback = False
+        signals_blocked = self.media_player.blockSignals(True)
+        try:
+            self.media_player.setVideoOutput(None)
+            self.media_capture_session.setVideoOutput(None)
+            self.stop()
+        finally:
+            self.media_player.blockSignals(signals_blocked)
 
     def duration(self) -> int:
         """

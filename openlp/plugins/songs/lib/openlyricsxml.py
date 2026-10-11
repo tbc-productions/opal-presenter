@@ -55,6 +55,7 @@ The XML of an `OpenLyrics <http://openlyrics.info/>`_  song looks like this::
     </song>
 """
 import html
+import json
 import logging
 import re
 
@@ -62,6 +63,7 @@ from lxml import etree, objectify
 
 from openlp.core.common.i18n import translate
 from openlp.core.common.registry import Registry
+from openlp.core.lib.slidedesign import normalise_design, package_design
 from openlp.core.lib.formattingtags import FormattingTags
 from openlp.core.version import get_version
 from openlp.plugins.songs.lib import VerseType, clean_song
@@ -71,6 +73,7 @@ from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, Song, Topi
 log = logging.getLogger(__name__)
 
 NAMESPACE = 'http://openlyrics.info/namespace/2009/song'
+DESIGN_NAMESPACE = 'https://openlp.org/ns/slide-design/1'
 NSMAP = '{{' + NAMESPACE + '}}{tag}'
 NEWPAGETAG = '<p style="page-break-after: always;"/>'
 
@@ -243,6 +246,16 @@ class OpenLyrics(object):
         song_xml.set('modifiedIn', application_name)
         # "Convert" 2012-08-27 11:49:15 to 2012-08-27T11:49:15.
         song_xml.set('modifiedDate', str(song.last_modified).replace(' ', 'T'))
+        design = normalise_design(song.slide_design)
+        if design:
+            from openlp.core.lib.serviceitem import ServiceItem
+            item = ServiceItem()
+            item.theme = song.theme_name
+            design = package_design(design, item.get_theme_data())
+        if design:
+            element = etree.Element('{' + DESIGN_NAMESPACE + '}design', nsmap={'olp': DESIGN_NAMESPACE})
+            element.text = json.dumps(design)
+            song_xml.append(element)
         properties = etree.SubElement(song_xml, 'properties')
         titles = etree.SubElement(properties, 'titles')
         self._add_text_to_element('title', titles, song.title)
@@ -403,13 +416,20 @@ class OpenLyrics(object):
             self._process_formatting_tags(song_xml, parse_and_temporary_save)
         if update_song_id:
             song = self.manager.get_object(Song, update_song_id)
+            song.authors_songs = []
+            song.songbook_entries = []
+            song.topics = []
         else:
             song = Song()
+        design_element = song_xml.find('{' + DESIGN_NAMESPACE + '}design')
+        design = normalise_design(design_element.text if design_element is not None else None)
+        song.slide_design = json.dumps(design) if design else None
         # Values will be set when cleaning the song.
         song.search_lyrics = ''
         song.verse_order = ''
         song.search_title = ''
         song.temporary = parse_and_temporary_save
+        song.theme_name = song_xml.findtext('{https://openlp.org/ns/library-sync/1}theme') or ''
         self._process_copyright(properties, song)
         self._process_cclinumber(properties, song)
         self._process_titles(properties, song)
@@ -420,7 +440,9 @@ class OpenLyrics(object):
         self._process_songbooks(properties, song)
         self._process_topics(properties, song)
         clean_song(self.manager, song)
-        self.manager.save_object(song)
+        if self.manager.save_object(song):
+            # New objects stay in SQLAlchemy's identity map, so its load reconstructor does not run.
+            song.init_on_load(force_song_detail_recalculation=True)
         return song
 
     def _add_text_to_element(self, tag, parent, text=None, label=None):

@@ -41,6 +41,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.display.screens import ScreenList
 from openlp.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument, \
     TextType
+from openlp.plugins.presentations.lib.applicationdiscovery import is_com_registered
 
 # Declare the XSlideShowListener class so we can inherit from it below, won't really use in on windows.
 if is_win():
@@ -104,7 +105,7 @@ class ImpressController(PresentationController):
         """
         log.debug('check_available')
         if is_win():
-            return self.get_com_servicemanager() is not None
+            return is_com_registered('com.sun.star.ServiceManager')
         return uno_available
 
     def start_process(self):
@@ -134,13 +135,16 @@ class ImpressController(PresentationController):
         context = uno.getComponentContext()
         log.debug('get UNO Desktop Openoffice - createInstaneWithContext - UnoUrlResolver')
         resolver = context.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', context)
-        while uno_instance is None and loop < 3:
+        # A cold launch can take several seconds before the UNO pipe is ready.
+        while uno_instance is None and loop < 30:
             try:
                 uno_instance = get_uno_instance(resolver)
             except Exception:
-                log.warning('Unable to find running instance ')
-                self.start_process()
+                if loop == 0:
+                    self.start_process()
                 loop += 1
+                if loop < 30:
+                    time.sleep(0.5)
         try:
             self.manager = uno_instance.ServiceManager
             log.debug('get UNO Desktop Openoffice - createInstanceWithContext - Desktop')
@@ -182,6 +186,8 @@ class ImpressController(PresentationController):
         Called at system exit to clean up any running presentations.
         """
         log.debug('Kill OpenOffice')
+        if self.process is None and self.manager is None:
+            return
         if self.presenter_screen_disabled_by_openlp:
             self.toggle_presentation_screen(True)
         while self.docs:

@@ -26,13 +26,16 @@ from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch, call
 from typing import Any
 
-from PySide6 import QtCore, QtGui, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtTest
+import fluentqt
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common.path import path_to_str
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.edits import PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter
+from openlp.core.widgets.edits import (
+    PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter, FormattingTagDelegate)
 from openlp.core.widgets.enums import PathEditType
 
 
@@ -420,31 +423,54 @@ def test_clear_button_visibility(search_edit: SearchEdit):
     """
     Test if the clear button is hidden/shown correctly.
     """
-    # GIVEN: Everything is left to its defaults (hidden).
-    assert search_edit.clear_button.isHidden(), "Pre condition not met. Button should be hidden."
+    # GIVEN: A visible search field with no text.
+    Registry().get('main_window').show()
+    search_edit.show()
+    QtWidgets.QApplication.processEvents()
+    clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    assert search_edit.isClearButtonEnabled()
+    assert clear_button.isHidden(), "Pre condition not met. Button should be hidden."
 
     # WHEN: Type something in the search edit.
     QtTest.QTest.keyPress(search_edit, QtCore.Qt.Key.Key_A)
     QtTest.QTest.keyRelease(search_edit, QtCore.Qt.Key.Key_A)
 
     # THEN: The clear button should not be hidden any more.
-    assert not search_edit.clear_button.isHidden(), "The clear button should be visible."
+    assert not clear_button.isHidden(), "The clear button should be visible."
 
 
 def test_press_clear_button(search_edit: SearchEdit):
     """
     Check if the search edit behaves correctly when pressing the clear button.
     """
-    # GIVEN: A search edit with text.
+    # GIVEN: A visible search edit with text.
+    Registry().get('main_window').show()
+    search_edit.show()
+    QtWidgets.QApplication.processEvents()
     QtTest.QTest.keyPress(search_edit, QtCore.Qt.Key.Key_A)
     QtTest.QTest.keyRelease(search_edit, QtCore.Qt.Key.Key_A)
 
     # WHEN: Press the clear button.
-    QtTest.QTest.mouseClick(search_edit.clear_button, QtCore.Qt.MouseButton.LeftButton)
+    clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+    QtTest.QTest.mouseClick(clear_button, QtCore.Qt.MouseButton.LeftButton)
 
     # THEN: The search edit text should be cleared and the button be hidden.
     assert not search_edit.text(), "The search edit should not have any text."
-    assert search_edit.clear_button.isHidden(), "The clear button should be hidden."
+    assert clear_button.isHidden(), "The clear button should be hidden."
+
+
+def test_search_selector_does_not_overlap_native_clear_button(search_edit: SearchEdit):
+    """Resizing keeps the selector, input text and native clear control apart."""
+    Registry().get('main_window').show()
+    search_edit.show()
+    search_edit.setText('Search text')
+    for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+        search_edit.setLayoutDirection(direction)
+        search_edit.resize(320, 40)
+        QtWidgets.QApplication.processEvents()
+        clear_button = search_edit.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
+        assert not search_edit.menu_button.geometry().intersects(clear_button.geometry())
+        assert search_edit.contentMargins().left() > search_edit.menu_button.geometry().right()
 
 
 def test_history_combo_get_items(history_combo: HistoryComboBox):
@@ -498,6 +524,22 @@ def test_highlighter_format_from_start_html_maps_css(mock_settings):
     assert text_format.fontPointSize() > 0
     assert text_format.foreground().color().isValid() is True
     assert text_format.foreground().color().alphaF() == pytest.approx(0.5, rel=0.05)
+
+
+@pytest.mark.parametrize('text, expected', [
+    ("{tt}The Lord's Prayer{/tt}", "The Lord's Prayer"),
+    ('{tt}{st}Title & <lyrics>{/st}{/tt}', 'Title & <lyrics>'),
+    ('{tt}Unclosed tag', 'Unclosed tag'),
+    ('Closing tag{/tt}', 'Closing tag'),
+])
+def test_read_only_formatting_preview_hides_unregistered_tags(settings, text, expected):
+    """Read-only previews hide unknown markers while retaining text and known styles."""
+    document = FormattingTagDelegate._build_text_document(QtGui.QFont(), text, 500)
+    assert document.toPlainText() == expected
+    if '{st}' in text:
+        cursor = QtGui.QTextCursor(document)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.NextCharacter)
+        assert cursor.charFormat().fontWeight() == QtGui.QFont.Weight.Bold
 
 
 def test_highlighter_unknown_tag_opacity(mock_settings):
@@ -818,15 +860,16 @@ def test_spell_text_edit_source_button_mapping(mock_settings):
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
     assert editor.rich_text_mode is True
-    assert editor._mode_button.isChecked() is False
-    assert editor._mode_button.text() == ''
-    assert editor._mode_button.toolTip() == 'Source mode'
+    assert editor._mode_switch.isOn() is False
+    assert isinstance(editor._mode_switch, fluentqt.ToggleSwitch)
+    assert editor._mode_switch.onContent() == 'Source'
+    assert editor._mode_switch.offContent() == 'Source'
 
-    editor._mode_button.setChecked(True)
+    editor._mode_switch.setIsOn(True)
     assert editor.rich_text_mode is False
     assert editor.highlighter.rich_text_mode is False
 
-    editor._mode_button.setChecked(False)
+    editor._mode_switch.setIsOn(False)
     assert editor.rich_text_mode is True
     assert editor.highlighter.rich_text_mode is True
 
@@ -843,9 +886,9 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
     # Only the color tag should appear in the dropdown.
-    assert list(editor._color_actions.keys()) == ['{r}']
-    assert editor._color_button.text() == 'Custom formatting'
-    assert editor._color_button.toolTip() == 'Custom formatting'
+    assert editor._color_tags == ['{r}']
+    assert isinstance(editor._custom_formatting_combo, QtWidgets.QComboBox)
+    assert editor._custom_formatting_combo.placeholderText() == 'Styles'
 
 
 @patch('openlp.core.widgets.edits.FormattingTagForm')
@@ -868,51 +911,78 @@ def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_h
 
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
 
-    assert list(editor._color_actions.keys()) == ['{r}']
+    assert editor._color_tags == ['{r}']
 
-    editor._edit_color_button.click()
+    editor._edit_tags_action.trigger()
 
     mock_formatting_tag_form.assert_called_once()
     mock_formatting_tag_form.return_value.exec.assert_called_once_with()
-    assert list(editor._color_actions.keys()) == ['{bl}']
+    assert editor._color_tags == ['{bl}']
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
-def test_spell_text_edit_color_menu_actions_are_checkable(mock_get_html_tags: MagicMock, mock_settings):
-    """Color menu actions should be checkable so the word-processor toggle UX works."""
+def test_spell_text_edit_custom_formatting_replaces_previous_style(mock_get_html_tags, mock_settings):
+    """Choosing a style replaces the previous one while preserving bold and undo."""
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
+         'start html': '<span style="color:red">'},
+        {'desc': 'Blue', 'start tag': '{bl}', 'end tag': '{/bl}',
+         'start html': '<span style="color:blue">'}
+    ]
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('{st}Hello world{/st}')
+    cursor = editor.textCursor()
+    cursor.setPosition(4)
+    cursor.setPosition(15, QtGui.QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+    combo = editor._custom_formatting_combo
+    combo.activated.emit(1)
+    assert editor.toPlainText() == '{st}{r}Hello world{/r}{/st}'
+    assert combo.currentIndex() == 1
+    combo.activated.emit(2)
+    assert editor.toPlainText() == '{st}{bl}Hello world{/bl}{/st}'
+    assert combo.currentIndex() == 2
+    editor.undo()
+    assert editor.toPlainText() == '{st}{r}Hello world{/r}{/st}'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_custom_formatting_preserves_slide_markers(mock_get_html_tags, mock_settings):
+    mock_get_html_tags.return_value = [
+        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}', 'start html': '<span style="color:red">'}
+    ]
+    editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    editor.setPlainText('First slide\n[---]\nSecond slide')
+    editor.selectAll()
+    editor._custom_formatting_combo.activated.emit(1)
+    assert editor.toPlainText() == '{r}First slide{/r}\n[---]\n{r}Second slide{/r}'
+    editor._custom_formatting_combo.activated.emit(0)
+    assert editor.toPlainText() == 'First slide\n[---]\nSecond slide'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock_settings):
+    """Native combo rows carry readable names, colour and tag metadata."""
     mock_get_html_tags.return_value = [
         {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
          'start html': '<span style="-webkit-text-fill-color:red">'}
     ]
-
     editor = SpellTextEdit(None, formatting_tags_allowed=True)
+    item = editor._color_model.item(1)
+    assert item.text() == 'Red'
+    assert item.data(QtCore.Qt.ItemDataRole.UserRole) == '{r}'
+    assert item.foreground().color() == QtGui.QColor('red')
 
-    for action in editor._color_actions.values():
-        assert action.isCheckable()
 
-
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
-def test_spell_text_edit_color_menu_label_contains_styled_text(mock_get_html_tags: MagicMock, mock_settings):
-    """Color menu items should render styled name and tag token in separate columns."""
-    mock_get_html_tags.return_value = [
-        {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}',
-         'start html': '<span style="-webkit-text-fill-color:red">'}
-    ]
-
-    editor = SpellTextEdit(None, formatting_tags_allowed=True)
-
-    # The QWidgetAction's default widget should be a two-column widget.
-    action = editor._color_actions['{r}']
-    widget = action.defaultWidget()
-    assert isinstance(widget, QtWidgets.QWidget)
-    labels = widget.findChildren(QtWidgets.QLabel, options=QtCore.Qt.FindChildOption.FindDirectChildrenOnly)
-    assert len(labels) == 2
-    assert 'Red' in labels[0].text()
-    assert '{r}' == labels[1].text()
-    assert labels[0].contentsMargins().right() == 12
-    assert '{/r}' not in labels[0].text()
-    assert 'color' in labels[0].text().lower() or 'red' in labels[0].text().lower()
-    assert labels[1].palette().color(QtGui.QPalette.ColorRole.WindowText).alphaF() == pytest.approx(0.65, rel=0.05)
+@pytest.mark.parametrize('foreground, background', [
+    ('#ffffff', '#ffffff'), ('#ffff00', '#ffffff'), ('#000000', '#202020'), ('#ff0000', '#ffffff')])
+def test_style_preview_adds_a_contrasting_background(foreground, background):
+    from openlp.core.widgets.edits import FormattingStyleDelegate
+    foreground, background = QtGui.QColor(foreground), QtGui.QColor(background)
+    patch = FormattingStyleDelegate.preview_background(foreground, background)
+    assert patch is not None
+    assert FormattingStyleDelegate.contrast_ratio(foreground, patch) >= 4
+    assert FormattingStyleDelegate.preview_background(foreground, patch) is None
 
 
 @patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
@@ -960,7 +1030,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
 
     editor._update_toolbar_state()
 
-    assert editor._color_actions['{r}'].isChecked() is True
+    assert editor._custom_formatting_combo.currentIndex() == 1
 
     # Move outside: should uncheck.
     cursor = editor.textCursor()
@@ -968,7 +1038,7 @@ def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_
     editor.setTextCursor(cursor)
     editor._update_toolbar_state()
 
-    assert editor._color_actions['{r}'].isChecked() is False
+    assert editor._custom_formatting_combo.currentIndex() == 0
 
 
 def test_spell_text_edit_apply_formatting_wrap_selection(mock_settings):
@@ -1092,6 +1162,102 @@ def test_spell_text_edit_undo_action_reverts_text(mock_settings):
     editor._undo_action.trigger()
     QtWidgets.QApplication.processEvents()
     assert editor.toPlainText() == ''
+
+
+def test_fluent_editor_keyboard_formatting_uses_saved_tags(settings, qtbot):
+    """Native rich-text shortcuts must produce OpenLP tags that survive saving."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    assert isinstance(editor._input, fluentqt.TextEdit)
+    assert isinstance(editor._editor, QtWidgets.QTextEdit)
+    editor.setPlainText('Hello')
+    editor.selectAll()
+    QtTest.QTest.keySequence(editor._editor, QtGui.QKeySequence(QtGui.QKeySequence.StandardKey.Bold))
+    assert editor.toPlainText() == '{st}Hello{/st}'
+    editor.undo()
+    assert editor.toPlainText() == 'Hello'
+    editor.redo()
+    assert editor.toPlainText() == '{st}Hello{/st}'
+
+
+def test_fluent_editor_source_toggle_preserves_redo(settings, qtbot):
+    """Switching the presentation must not discard edits waiting to be redone."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    source = '---[Verse:1]---\n{st}Lyrics{/st}'
+    editor.setPlainText(source)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.insertPlainText(' added')
+    editor.undo()
+    editor.set_rich_text_mode(False)
+    assert editor.document().isRedoAvailable()
+    editor.redo()
+    assert editor.toPlainText() == source + ' added'
+    editor.set_rich_text_mode(True)
+    editor.undo()
+    assert editor.toPlainText() == source
+
+
+def test_fluent_editor_resize_fills_field_without_changing_undo(settings, qtbot):
+    """Dialog resizing must fill the input area without becoming a source edit."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(650, 350)
+    editor.show()
+    source = '---[Verse:1]---\nLyrics'
+    editor.setPlainText(source)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.insertPlainText(' added')
+    editor.resize(850, 500)
+    QtWidgets.QApplication.processEvents()
+    assert editor._input.geometry().bottom() == editor.contentsRect().bottom()
+    editor.undo()
+    assert editor.toPlainText() == source
+    editor.resize(700, 380)
+    QtWidgets.QApplication.processEvents()
+    assert editor.document().isRedoAvailable()
+    editor.redo()
+    assert editor.toPlainText() == source + ' added'
+
+
+@pytest.mark.parametrize('visual_mode_only', [False, True])
+def test_fluent_editor_theme_refresh_fills_container(settings, qtbot, visual_mode_only):
+    """Fluent theme refreshes must not clamp song/custom editors to their line-count height."""
+    editor = SpellTextEdit(visual_mode_only=visual_mode_only)
+    qtbot.addWidget(editor)
+    editor.resize(900, 650)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    editor.show()
+    QtWidgets.QApplication.processEvents()
+
+    editor._input.onThemeUpdated()
+
+    qtbot.waitUntil(lambda: editor._input.geometry().bottom() == editor.contentsRect().bottom())
+    assert editor._editor.geometry() == editor._input.rect().adjusted(
+        1, 1, -1, -1 - editor.BOTTOM_PADDING)
+    assert editor._input.maximumHeight() >= editor.height()
+    assert editor.verticalScrollBar().height() == editor._input.height() - 2
+
+
+def test_fluent_editor_section_background_preserves_border_and_bottom_padding(settings, qtbot):
+    """Section bands leave the border visible and scrolling the last line retains bottom padding."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(700, 400)
+    editor.setPlainText('---[Verse:1]---\n' + '\n'.join(f'Lyrics {row}' for row in range(100)))
+    editor.set_visual_line_overrides({0: {'text': 'Verse 1', 'background': QtGui.QColor('#c6e6ff')}})
+    editor.show()
+    QtWidgets.QApplication.processEvents()
+    pixels = editor._input.grab().toImage()
+
+    assert pixels.pixelColor(0, 10) != pixels.pixelColor(2, 10)
+    assert pixels.pixelColor(0, 10) == pixels.pixelColor(0, 40)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.ensureCursorVisible()
+    QtWidgets.QApplication.processEvents()
+    cursor_bottom = editor.viewport().mapTo(editor._input, editor.cursorRect().bottomLeft()).y()
+    assert editor._input.rect().bottom() - cursor_bottom >= editor.BOTTOM_PADDING
+    assert editor.verticalScrollBar().value() == editor.verticalScrollBar().maximum()
 
 
 def test_spell_text_edit_toggle_off_formatting_preserves_content(mock_settings):
@@ -1294,3 +1460,103 @@ def test_spell_text_edit_apply_formatting_by_tag_applies_when_not_active(mock_se
     editor._apply_formatting_by_tag('st')
 
     assert editor.toPlainText() == '{st}Hello{/st}'
+
+
+@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, qtbot):
+    """Custom styles are previewed and remain selectable beside a single overflow menu."""
+    mock_tags.return_value = [
+        {'desc': 'Emphasis', 'start tag': '{em}', 'end tag': '{/em}',
+         'start html': '<strong><em><span style="color:blue">', 'protected': False}]
+    window = QtWidgets.QMainWindow()
+    editor = SpellTextEdit(window)
+    window.setCentralWidget(editor)
+    window.resize(1000, 600)
+    editor.setPlainText('Lyrics to format')
+    window.show()
+    editor._custom_formatting_combo.showPopup()
+    qtbot.waitUntil(lambda: any(
+        view.itemDelegate().metaObject().className() == 'FormattingStyleDelegate'
+        for view in window.findChildren(QtWidgets.QAbstractItemView)))
+    try:
+        assert len(editor._toolbar.findChildren(fluentqt.CommandBar)) == 1
+        item = editor._color_model.item(1)
+        assert item.text() == 'Emphasis'
+        assert item.font().bold() and item.font().italic()
+        assert item.foreground().color() == QtGui.QColor('blue')
+        view = window.findChild(QtWidgets.QAbstractItemView, 'ComboBoxPopupListView')
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=view.visualRect(view.model().index(1, 0)).center())
+        assert editor._custom_formatting_combo.currentIndex() == 1
+        assert '{em}' in editor.toPlainText()
+        # Focus and selection must preserve the blue style preview.
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = QtCore.QRect(0, 0, 300, 40)
+        option.widget = view
+        option.palette = view.palette()
+        option.state = (QtWidgets.QStyle.StateFlag.State_Enabled | QtWidgets.QStyle.StateFlag.State_Selected |
+                        QtWidgets.QStyle.StateFlag.State_HasFocus)
+        preview = QtGui.QPixmap(300, 40)
+        preview.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(preview)
+        view.itemDelegate().paint(painter, option, view.model().index(1, 0))
+        painter.end()
+        image = preview.toImage()
+        assert any(image.pixelColor(x, y).blue() > 220 and image.pixelColor(x, y).red() < 60
+                   for x in range(44, 200) for y in range(40))
+        editor._mode_switch.setIsOn(True)
+        assert editor.rich_text_mode is False
+        assert '{em}' in editor.toPlainText()
+        editor._custom_formatting_combo.hidePopup()
+        editor._mode_switch.setIsOn(False)
+    finally:
+        window.close()
+
+
+@pytest.mark.parametrize('width', [650, 1000])
+def test_formatting_header_spans_row_above_scrollbar(mock_settings, qtbot, width):
+    """The full header has a continuous surface, trailing padding and no scrollbar beside it."""
+    window = QtWidgets.QMainWindow()
+    editor = SpellTextEdit(window)
+    window.setCentralWidget(editor)
+    window.resize(width, 500)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    window.show()
+    qtbot.waitUntil(lambda: editor.verticalScrollBar().isVisible())
+    try:
+        header = editor._toolbar
+        scrollbar_top = editor.verticalScrollBar().mapTo(editor, QtCore.QPoint()).y()
+        assert header.geometry().right() == editor.contentsRect().right()
+        assert scrollbar_top > header.geometry().bottom()
+        switch_left = editor._mode_switch.mapTo(header, QtCore.QPoint()).x()
+        switch_right = switch_left + editor._mode_switch.width()
+        assert switch_right <= header.width() - 12
+        assert switch_left - editor._custom_formatting_combo.geometry().right() >= 12
+        window.resize(width - 100, 400)
+        QtWidgets.QApplication.processEvents()
+        assert header.geometry().right() == editor.contentsRect().right()
+        assert editor.verticalScrollBar().mapTo(editor, QtCore.QPoint()).y() > header.geometry().bottom()
+    finally:
+        window.close()
+
+
+def test_fluent_scrollbar_stays_visible_with_overflow(mock_settings, qtbot):
+    """Leaving an overflowing editor and waiting must not fade its Fluent rail."""
+    editor = SpellTextEdit()
+    qtbot.addWidget(editor)
+    editor.resize(650, 320)
+    editor.setPlainText('\n'.join(f'Line {row}' for row in range(100)))
+    editor.show()
+    scrollbar = editor.verticalScrollBar()
+    qtbot.waitUntil(lambda: scrollbar.isVisible())
+    scrollbar.setValue(scrollbar.maximum())
+    QtWidgets.QApplication.sendEvent(editor._input, QtCore.QEvent(QtCore.QEvent.Type.Leave))
+    QtWidgets.QApplication.sendEvent(scrollbar, QtCore.QEvent(QtCore.QEvent.Type.Leave))
+    qtbot.wait(1800)
+
+    assert scrollbar.isVisible()
+    assert scrollbar.opacity() == 1.0
+    assert editor._editor.verticalScrollBar().value() == scrollbar.maximum()
+
+    editor.setPlainText('One line')
+    qtbot.waitUntil(lambda: not scrollbar.isVisible())

@@ -141,7 +141,7 @@ def test_address_revert_button_clicked(api_tab, settings):
     assert api_tab.address_edit.text() == settings.get_default_value('api/ip address')
 
 
-@patch('openlp.core.api.tab.QtWidgets.QMessageBox.information')
+@patch('openlp.core.api.tab.show_restart_message')
 def test_save(mocked_information, api_tab, registry, settings):
     """
     Test the save method works correctly

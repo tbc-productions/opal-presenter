@@ -1,8 +1,73 @@
 """Contextual help for settings whose labels need more explanation."""
-from PySide6 import QtCore, QtWidgets
+import fluentqt
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
+from openlp.core.common import is_win
 from openlp.core.common.i18n import translate
 from openlp.core.ui.icons import UiIcons
+
+
+class SettingsHelpButton(QtWidgets.QToolButton):
+    """Open persistent, dismissible setting guidance in an anchored TeachingTip."""
+
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        self.help_text = text
+        self.teaching_tip = None
+        self.setObjectName('settings_help_icon')
+        self.setIcon(UiIcons().help)
+        self.setIconSize(QtCore.QSize(16, 16))
+        self.setFixedSize(20, 20)
+        self.setAutoRaise(True)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName(translate('OpenLP.SettingsTooltips', 'Setting help'))
+        self.setAccessibleDescription(text)
+        self.clicked.connect(self.show_help)
+
+    def show_help(self):
+        if self.teaching_tip is not None and self.teaching_tip.isOpen():
+            self.teaching_tip.close()
+            return
+        for tip in self.window().findChildren(fluentqt.TeachingTip, 'settings_teaching_tip'):
+            tip.close()
+        if self.teaching_tip is None:
+            self.teaching_tip = fluentqt.TeachingTip(self.window())
+            self.teaching_tip.setObjectName('settings_teaching_tip')
+            self.teaching_tip.setLightDismissEnabled(True)
+            self.teaching_tip.setClosePolicy(fluentqt.Popup.CloseFlag.CloseOnPressOutside |
+                                             fluentqt.Popup.CloseFlag.CloseOnEscape)
+            host = self.teaching_tip.contentHost()
+            layout = QtWidgets.QVBoxLayout(host)
+            layout.setContentsMargins(16, 12, 16, 16)
+            content = QtWidgets.QHBoxLayout()
+            content.setSpacing(8)
+            self.help_label = QtWidgets.QLabel(self.help_text, host)
+            self.help_label.setWordWrap(True)
+            self.help_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
+            content.addWidget(self.help_label)
+            close_button = QtWidgets.QPushButton(host)
+            close_button.setObjectName('settings_teaching_tip_close')
+            close_button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
+            close_button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+            close_button.setIcon(UiIcons().backspace)
+            close_button.setIconSize(QtCore.QSize(16, 16))
+            close_button.setFixedSize(30, 30)
+            close_button.setAccessibleName(translate('OpenLP.SettingsTooltips', 'Close help'))
+            close_button.clicked.connect(lambda: self.teaching_tip.closeWithReason(
+                fluentqt.TeachingTip.CloseReason.CloseButton))
+            content.addWidget(close_button, alignment=QtCore.Qt.AlignmentFlag.AlignTop)
+            layout.addLayout(content)
+        width = min(420, max(240, self.window().width() - 32))
+        self.help_label.setFixedWidth(width - 32 - 30 - 8)
+        self.teaching_tip.setCardSize(QtCore.QSize(width, self.teaching_tip.contentHost().layout().sizeHint().height()))
+        self.teaching_tip.showAt(self)
+
+    def hideEvent(self, event):
+        if self.teaching_tip is not None:
+            self.teaching_tip.close()
+        super().hideEvent(event)
 
 
 def _add_help_icon(control, label, tip):
@@ -23,17 +88,7 @@ def _add_help_icon(control, label, tip):
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(5)
     row.addWidget(label)
-    help_icon = QtWidgets.QToolButton(wrapper)
-    help_icon.setObjectName('settings_help_icon')
-    help_icon.setIcon(UiIcons().help)
-    help_icon.setIconSize(QtCore.QSize(16, 16))
-    help_icon.setFixedSize(20, 20)
-    help_icon.setAutoRaise(True)
-    help_icon.setFocusPolicy(QtCore.Qt.FocusPolicy.TabFocus)
-    help_icon.setCursor(QtCore.Qt.CursorShape.WhatsThisCursor)
-    help_icon.setToolTip(tip)
-    help_icon.setAccessibleName(translate('OpenLP.SettingsTooltips', 'Setting help'))
-    help_icon.setAccessibleDescription(tip)
+    help_icon = SettingsHelpButton(tip, wrapper)
     row.addWidget(help_icon)
     row.addStretch()
     label.setProperty('settings_help_icon_added', True)
@@ -47,11 +102,6 @@ def apply_settings_tooltips(tab):
         'OpenLP.SettingsTooltips',
         'Separate alternative markers with |. Leave the field empty to use the default marker.')
     hints = {
-        'GeneralTab': [
-            ('autoscroll_combo_box', 'autoscroll_label', translate(
-                'OpenLP.SettingsTooltips',
-                'Choose how the slide controller scrolls as slides change.')),
-        ],
         'ServiceTab': [
             ('service_name_edit', 'service_name_label', translate(
                 'OpenLP.SettingsTooltips',
@@ -108,6 +158,10 @@ def apply_settings_tooltips(tab):
                 'Choose whether songbook details appear on the first song slide.')),
         ],
         'BiblesTab': [
+            ('bible_search_while_typing_check_box', None, translate(
+                'BiblesPlugin.BiblesTab',
+                'Text searches require at least {count} characters and a space for performance reasons.').format(
+                    count='8')),
             ('layout_style_combo_box', 'layout_style_label', translate(
                 'OpenLP.SettingsTooltips',
                 '<b>Verse Per Slide:</b> Show one verse on each slide.<br/>'
@@ -134,10 +188,10 @@ def apply_settings_tooltips(tab):
                 'Credits still appear in the footer when they are present.')),
         ],
         'PresentationTab': [
-            ('override_app_check_box', None, translate(
-                'OpenLP.SettingsTooltips',
-                'Choose a presentation application from the Library toolbar.')),
-        ],
+            ('ppt_window_check_box', None, translate(
+                'PresentationPlugin.PresentationTab',
+                'This may fix PowerPoint scaling issues in Windows 8 and 10.')),
+        ] if is_win() else [],
     }.get(type(tab).__name__, ())
     for control_name, label_name, tip in hints:
         control = getattr(tab, control_name, None)

@@ -168,7 +168,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
     This is a window to show the output
     """
     def __init__(self, parent=None, screen=None, can_show_startup_screen=True, start_hidden=False,
-                 after_loaded_callback=None, window_title=None):
+                 after_loaded_callback=None, window_title=None, embedded=False, show_transparency=None):
         """
         Create the display window
         """
@@ -176,34 +176,42 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         self.screen_number = None
         self.after_loaded_callback = after_loaded_callback
         # The live output is an independent window so the main window can cover it when topmost is disabled.
-        # Embedded preview renderers still use a tool window.
+        # Controller previews must be ordinary widgets from construction: changing
+        # flags after WebEngine creates its native surface leaves floating views on macOS.
         is_live_display = bool(screen and screen.is_display)
-        window_type = QtCore.Qt.WindowType.Window if is_live_display else QtCore.Qt.WindowType.Tool
+        window_type = (QtCore.Qt.WindowType.Widget if embedded else
+                       QtCore.Qt.WindowType.Window if is_live_display else QtCore.Qt.WindowType.Tool)
         flags = QtCore.Qt.WindowType.FramelessWindowHint | window_type
         if is_live_display and self.settings.value('core/always on top'):
             flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
-        if self.settings.value('advanced/x11 bypass wm'):
+        if not embedded and self.settings.value('advanced/x11 bypass wm'):
             flags |= QtCore.Qt.WindowType.X11BypassWindowManagerHint
-        elif not is_live_display:
+        elif not embedded and not is_live_display:
             # This helps the window not being hidden by KDE's "Hide utility windows for inactive applications" option
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_X11NetWmWindowTypeDialog)
-        if is_macosx() and not is_live_display:
+        if is_macosx() and not embedded and not is_live_display:
             self.setAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
         self._is_initialised = False
         self._is_manual_close = False
         self._can_show_startup_screen = can_show_startup_screen
         self._fbo = None
         self.window_title = window_title
+        # Designers can indicate transparency in HTML while retaining an opaque native surface.
+        self.show_transparency = not embedded if show_transparency is None else show_transparency
         self.setWindowTitle(translate('OpenLP.DisplayWindow', 'Display Window'))
         self.setWindowFlags(flags)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
         self.setAutoFillBackground(True)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = self.init_webengine()
-        self.webview.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.webview.page().setBackgroundColor(QtCore.Qt.GlobalColor.transparent)
+        self.webview.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, not embedded)
+        # Qt marks transparent WebEngine renderers WA_AlwaysStackOnTop, which
+        # paints controller previews over same-window dialogs and their Smoke.
+        # Only independent output windows need desktop transparency.
+        background = QtCore.Qt.GlobalColor.black if embedded else QtCore.Qt.GlobalColor.transparent
+        self.webview.page().setBackgroundColor(background)
         self.webview.display_clicked = self.disable_display
         self.layout.addWidget(self.webview)
         self.webview.loadFinished.connect(self.after_loaded)
@@ -402,7 +410,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         """
         Add stuff after page initialisation
         """
-        item_transitions = self.settings.value('themes/item transitions')
+        item_transitions = self.settings.value('themes/item transitions') and \
+            getattr(self, 'allow_item_transitions', True)
         item_transition_speed = TransitionSpeed.to_seconds(self.settings.value('themes/item transition speed'))
         valid_item_transition_types = {'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'balanced'}
         item_transition_type = self.settings.value('themes/item transition type')
@@ -412,6 +421,7 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         slide_numbers_in_footer = self.settings.value('advanced/slide numbers in footer')
         self.run_in_display('init', {
                             'isDisplay': self.is_display,
+                            'showTransparency': self.show_transparency,
                             'allowThemeTransitions': getattr(self, 'allow_theme_transitions', False),
                             'doItemTransitions': item_transitions,
                             'itemTransitionSpeed': item_transition_speed,
@@ -471,7 +481,10 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         :param script: The script to run, a string
         :param is_sync: Run the script synchronously. Defaults to False
         """
-        log.debug((script[:80] + '..') if len(script) > 80 else script)
+        # Desktop/media preview frames arrive continuously; log control actions,
+        # not every JPEG sent to the embedded monitor.
+        if not script.startswith("requestAction('setFullscreenImageFromData',"):
+            log.debug((script[:80] + '..') if len(script) > 80 else script)
         if not hasattr(self, 'webview'):
             return None
         # Wait for previous scripts to finish
@@ -527,7 +540,8 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
                 image['thumbnail'] = image['thumbnail'].as_uri()
             else:
                 image['thumbnail'] = image['path']
-        self.run_in_display('setImageSlides', imagesr)
+        self.run_in_display('setImageSlides', imagesr, self.settings.value('images/fit'),
+                            self.settings.value('core/logo background color'))
 
     def save_screenshot(self, fname=None):
         """
@@ -545,13 +559,16 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
         Set the theme of the display
         """
         theme_copy = copy.deepcopy(theme)
+        if theme.background_type == 'video' and theme.background_filename:
+            from openlp.core.lib.videoplayback import video_playback_path
+            theme_copy.background_filename = video_playback_path(theme.background_filename)
         if self.is_display:
             if service_item_type == ServiceItemType.Text:
-                if theme.background_type == 'video' or theme.background_type == 'stream':
+                if theme.background_type == 'stream':
                     theme_copy.background_type = 'transparent'
         else:
-            # If preview Display with media background we just show the background color, no media
-            if theme.background_type == 'stream' or theme.background_type == 'video':
+            # Streams keep their native player; file video backgrounds use Reveal in every view.
+            if theme.background_type == 'stream':
                 theme_copy.background_type = 'solid'
                 theme_copy.background_start_color = theme.background_border_color
                 theme_copy.background_end_color = theme.background_border_color
@@ -652,17 +669,16 @@ class DisplayWindow(QtWidgets.QWidget, RegistryProperties, LogMixin):
             # Forcing visibility can trigger a Qt abort, so only force-show the live display.
             if self.is_display and self.isHidden():
                 self.setVisible(True)
+            if self.is_display:
+                # Cover native presentation windows while the transparent output fades in.
+                # The presentation must stay visible underneath until the cover is opaque.
+                self.raise_()
         if mode == HideMode.Screen:
-            if self.settings.value('advanced/disable transparent display'):
-                # Hide window only after all webview CSS ransitions are done
-                self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,
-                                                             lambda _: self.setVisible(False))
-                self.run_in_display('toTransparent', return_event_name=TRANSITION_END_EVENT_NAME)
-            else:
-                if self._disable_hide_transition():
-                    self.run_in_display('toTransparent', True)
-                else:
-                    self.run_in_display('toTransparent')
+            # Show the desktop by hiding the output window after its fade completes.
+            self.display_watcher.register_event_listener(TRANSITION_END_EVENT_NAME,
+                                                         lambda _: self.setVisible(False))
+            self.run_in_display('toTransparent', self._disable_hide_transition(),
+                                return_event_name=TRANSITION_END_EVENT_NAME)
         elif mode == HideMode.Blank:
             if self._disable_hide_transition():
                 self.run_in_display('toBlack', True)

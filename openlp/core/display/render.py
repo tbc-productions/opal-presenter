@@ -28,7 +28,7 @@ import math
 import os
 import re
 
-from PySide6 import QtWidgets, QtGui
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from openlp.core.common import ThemeLevel
 from openlp.core.common.enum import ServiceItemType
@@ -194,6 +194,15 @@ def remove_tags(text, can_remove_chords=False):
     # Remove ChordPro tags
     if can_remove_chords:
         text = remove_chords(text)
+    return text
+
+
+def remove_unknown_tags(text):
+    """Strip remaining paired OpenLP formatting markers, preserving their content."""
+    previous = None
+    while text != previous:
+        previous = text
+        text = UNKNOWN_TAG_PAIR_PATTERN.sub(lambda match: match.group('content'), text)
     return text
 
 
@@ -700,6 +709,35 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             if generate_screenshot:
                 self.run_in_display('setAllowThemeTransitions', previous_allow_theme_transitions, is_sync=True)
             self.allow_theme_transitions = previous_allow_theme_transitions
+
+    def generate_slide_preview(self, slide):
+        """Capture an already rendered page, including its design, images and footer."""
+        ready = []
+        event = 'slideThumbnailReady'
+        geometry = self.geometry()
+        visible = self.isVisible()
+        without_activation = self.testAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.display_watcher.register_event_listener(event, lambda value: ready.append(True))
+        try:
+            # Chromium suspends animation frames while hidden. Paint offscreen until
+            # fonts, images and Reveal's layout have settled, without stealing focus.
+            self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+            self.move(-geometry.width() - 10000, -geometry.height() - 10000)
+            self.show()
+            self.run_in_display('setAllowThemeTransitions', False, is_sync=True)
+            self.run_in_display('setTheme', slide['theme'], is_sync=True)
+            self.load_verses([slide], is_sync=True)
+            self.run_in_display('goToSlide', slide['verse'], is_sync=True)
+            self.run_in_display('waitForDesignPreview', 0, return_event_name=event)
+            if not wait_for(lambda: bool(ready)):
+                return QtGui.QPixmap()
+            return self.webview.grab()
+        finally:
+            self.display_watcher.unregister_event_listener(event)
+            self.run_in_display('setAllowThemeTransitions', self.allow_theme_transitions, is_sync=True)
+            self.setVisible(visible)
+            self.setGeometry(geometry)
+            self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating, without_activation)
 
     def format_slide(self, text, item):
         """

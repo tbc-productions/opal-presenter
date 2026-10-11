@@ -6,7 +6,8 @@ from unittest.mock import MagicMock
 from zipfile import ZipFile
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from openlp.core.widgets import fluent as QtWidgets
 
 from openlp.core.common import sha256_file_hash
 from openlp.core.common.applocation import AppLocation
@@ -50,6 +51,8 @@ def test_presentation_paths_survive_service_save_and_reload(tmp_path, monkeypatc
     document.get_titles_and_notes.return_value = (['First', 'Second'], ['Notes', ''])
     controller = MagicMock()
     controller.add_document.return_value = document
+    controller.supports = ['pptx']
+    controller.also_supports = []
     media_item = SimpleNamespace(
         display_type_combo_box=MagicMock(currentText=lambda: 'Powerpoint', itemData=lambda index: 'Powerpoint'),
         controllers={'Powerpoint': controller},
