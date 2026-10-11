@@ -151,10 +151,10 @@ class CloudLibrary(QtWidgets.QWidget):
         info_policy = self.import_info.sizePolicy()
         info_policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Expanding)
         self.import_info.setSizePolicy(info_policy)
-        self.import_info.setMessage(tr('Import your organisation’s connection file.'))
+        self.import_info.setMessage(tr('Choose a synced folder.'))
         self.import_info.setIsClosable(False)
-        self.import_button = QtWidgets.fluentqt.HyperlinkButton(tr('Import connection'), self.import_info)
-        self.import_button.clicked.connect(self.import_connection)
+        self.import_button = QtWidgets.fluentqt.HyperlinkButton(tr('Set up connection'), self.import_info)
+        self.import_button.clicked.connect(self.setup_connection)
         self.import_info.setActionWidget(self.import_button)
         layout.addWidget(self.import_info)
         self.roots = QtWidgets.QComboBox(self)
@@ -334,11 +334,11 @@ class CloudLibrary(QtWidgets.QWidget):
         menu.addSeparator()
         menu.addAction(UiIcons().arrow_import, tr('Import connection…'), self.import_connection)
         export = menu.addAction(UiIcons().arrow_export, tr('Export connection…'), self.export_connection)
-        export.setEnabled(bool(self.profile) and self.connected)
+        export.setEnabled(bool(self.profile) and self.connected and self.profile['provider'] != 'local-cloud')
         menu.addSeparator()
         menu.addAction(UiIcons().plus, tr('Set up connection…'), self.setup_connection)
         disconnect = menu.addAction(UiIcons().plug_disconnected, tr('Disconnect…'), self.disconnect)
-        disconnect.setEnabled(bool(self.profile) and self.connected)
+        disconnect.setEnabled(bool(self.profile) and self.connected and self.profile['provider'] != 'local-cloud')
         menu.exec(QtGui.QCursor.pos())
 
     def open_storage(self):
@@ -352,11 +352,13 @@ class CloudLibrary(QtWidgets.QWidget):
     def import_connection(self, checked=False, path=None):
         if path is None:
             path, _ = FileDialog.getOpenFileName(
-                self, tr('Import Library Sync connection'), filter=tr('Library Sync connection (*.opal-connection *.json)'))
+                self, tr('Import Library Sync connection'),
+                filter=tr('Library Sync connection (*.opal-connection *.json)'))
         if path:
             try:
                 self.set_profile(read_profile(path))
                 self.set_status(tr('Connection imported'))
+                self.browse()
             except (OSError, SyncError) as error:
                 self.set_status(str(error), error=True)
 
@@ -365,9 +367,10 @@ class CloudLibrary(QtWidgets.QWidget):
         if wizard.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.set_profile(wizard.profile)
             self.set_status(tr('Connection saved'))
+            self.browse()
 
     def export_connection(self):
-        if not self.profile or not self.connected:
+        if not self.profile or not self.connected or self.profile['provider'] == 'local-cloud':
             return
         path, _ = FileDialog.getSaveFileName(
             self, tr('Export Library Sync connection'),
@@ -380,6 +383,8 @@ class CloudLibrary(QtWidgets.QWidget):
                 self.set_status(str(error), error=True)
 
     def connect_drive(self):
+        if self.profile and self.profile['provider'] == 'local-cloud':
+            return
         if not self.profile:
             self.import_connection()
             if not self.profile:
@@ -397,7 +402,7 @@ class CloudLibrary(QtWidgets.QWidget):
             window.reject()
         for tree in self.trees.values():
             tree.clear()
-        self.set_status(tr('Sign in in your browser…'))
+        self.set_status(tr('Opening storage…'))
         self.start_job('connect', lambda provider, cancel, progress, browser, publish:
                        provider.sign_in(cancel, browser))
 
@@ -728,8 +733,9 @@ class CloudLibrary(QtWidgets.QWidget):
         selected = self.selected_items() if hasattr(self, 'tree') else []
         self.import_info.setVisible(not self.profile)
         self.navigation.setVisible(bool(self.profile))
-        self.connect_action.setEnabled(bool(self.profile) and not self.jobs)
-        self.connect_action.setText(tr('Reconnect') if self.connected else tr('Connect'))
+        local = bool(self.profile) and self.profile['provider'] == 'local-cloud'
+        self.connect_action.setEnabled(bool(self.profile) and not local and not self.jobs)
+        self.connect_action.setText(tr('Reconnect') if self.connected and not local else tr('Connect'))
         self.connect_action.setIcon(UiIcons().library_sync if self.connected else UiIcons().cloud_arrow_right)
         self.connect_action.setToolTip(self.connect_action.text())
         self.settings_action.setEnabled(not self.jobs)

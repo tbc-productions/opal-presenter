@@ -27,7 +27,7 @@ def test_local_profile_roundtrip_has_no_credentials(storage):
     assert profile['folders'] == [{'id': '.', 'name': 'Campus Library', 'resource_key': ''}]
     assert 'access_token' not in profile and 'installed' not in profile
     assert deserialize_profile(serialize_profile(profile)) == profile
-    assert PROVIDERS['local-cloud'] is LocalStorageProvider
+    assert PROVIDERS == {'local-cloud': LocalStorageProvider}
 
 
 @pytest.mark.parametrize('path', ['', '.', '../storage', None, [], 'bad\x00path'])

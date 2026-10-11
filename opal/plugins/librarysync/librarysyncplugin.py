@@ -57,4 +57,5 @@ class LibrarySyncPlugin(Plugin):
     @staticmethod
     def about():
         return translate('LibrarySync', 'Browse, preview and copy Library items between this computer and shared '
-                         'cloud folders. Google Drive uses each person’s own account and folder permissions.')
+                         'cloud folders. Your desktop storage app handles syncing and sharing; '
+                         'no API credentials are required.')

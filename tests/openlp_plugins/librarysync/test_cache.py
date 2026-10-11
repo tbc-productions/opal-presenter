@@ -12,7 +12,7 @@ from opal.plugins.librarysync.lib.provider import CloudItem
 
 @pytest.fixture
 def profile():
-    return {'provider': 'google-drive', 'folders': [{'id': 'shared', 'name': 'Organisation'}]}
+    return {'provider': 'local-cloud', 'folders': [{'id': 'shared', 'name': 'Organisation'}]}
 
 
 @pytest.fixture

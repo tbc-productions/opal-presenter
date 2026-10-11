@@ -1,16 +1,15 @@
-"""Run provider operations through OpenLP's tracked worker lifecycle."""
+"""Run provider operations through Opal's tracked worker lifecycle."""
 from threading import Event
 
 from PySide6 import QtCore
 
 from opal.core.threading import ThreadWorker
-from opal.plugins.librarysync.lib.google import google_drive, storage_url as google_storage_url
 from opal.plugins.librarysync.lib.local import LocalStorageProvider, storage_url as local_storage_url
 from opal.plugins.librarysync.lib.provider import SyncError
 
 
-PROVIDERS = {'google-drive': google_drive, 'local-cloud': LocalStorageProvider}
-STORAGE_URLS = {'google-drive': google_storage_url, 'local-cloud': local_storage_url}
+PROVIDERS = {'local-cloud': LocalStorageProvider}
+STORAGE_URLS = {'local-cloud': local_storage_url}
 
 
 class SyncWorker(ThreadWorker):

@@ -22,13 +22,12 @@ from opal.plugins.librarysync.lib.worker import SyncWorker
 
 
 @pytest.fixture
-def panel(settings, qtbot):
+def panel(settings, qtbot, tmp_path):
     plugin = SimpleNamespace(settings=settings, main_window=SimpleNamespace(media_tool_box=MagicMock()))
     widget = CloudLibrary(plugin, None)
     qtbot.addWidget(widget)
-    widget.set_profile({'version': 1, 'provider': 'google-drive',
-                        'installed': {'client_id': 'church.apps.googleusercontent.com', 'client_secret': 'client'},
-                        'folders': [{'id': 'church', 'name': 'Church Library'}]})
+    widget.set_profile({'version': 1, 'provider': 'local-cloud',
+                        'name': 'Church Library', 'path': str(tmp_path)})
     yield widget
     widget.shutdown()
 
@@ -41,7 +40,7 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
     assert panel.cancel_button.isHidden()
     assert panel.tree.topLevelItemCount() == 0
     assert panel.import_info.isHidden()
-    assert panel.connect_action.isEnabled()
+    assert not panel.connect_action.isEnabled()
     assert all(not tree.isEnabled() for tree in panel.trees.values())
     assert not panel.search.isEnabled()
     assert panel.status.parentWidget() is panel.footer
@@ -182,9 +181,9 @@ def test_uploaded_status_uses_correct_item_count(panel, count, text):
     panel.jobs.clear()
 
 
-def test_no_connections_shows_import_infobar_and_disables_connect(panel, qtbot, monkeypatch):
-    imported = MagicMock()
-    monkeypatch.setattr(CloudLibrary, 'import_connection', imported)
+def test_no_connections_shows_setup_infobar_and_disables_connect(panel, qtbot, monkeypatch):
+    setup = MagicMock()
+    monkeypatch.setattr(CloudLibrary, 'setup_connection', setup)
     empty = CloudLibrary(panel.plugin, None)
     qtbot.addWidget(empty)
     assert isinstance(empty.import_info, QtWidgets.fluentqt.InfoBar)
@@ -195,13 +194,13 @@ def test_no_connections_shows_import_infobar_and_disables_connect(panel, qtbot, 
     assert all(not tree.isEnabled() for tree in empty.trees.values())
     assert not empty.search.isEnabled()
     assert empty.navigation.isHidden()
-    assert 'organisation' in empty.import_info.message()
+    assert 'synced folder' in empty.import_info.message()
     empty.resize(850, 600)
     empty.show()
     QtWidgets.QApplication.processEvents()
     assert empty.import_info.width() == empty.width() - empty.layout().contentsMargins().left() * 2
     empty.import_button.click()
-    imported.assert_called_once()
+    setup.assert_called_once()
     empty.shutdown()
 
 
@@ -210,7 +209,7 @@ def test_cached_listing_and_permissions_are_visible(panel):
                      preview_url='https://drive.google.com/file/d/image/view')
     panel.category = 'images'
     panel.jobs['listing'] = {'kind': 'browse', 'generation': panel.generation, 'context': False}
-    panel.job_ready('listing', (CloudItem('church', 'Church', folder=True), [item], 'next'))
+    panel.job_ready('listing', (CloudItem('.', 'Church', folder=True), [item], 'next'))
     panel.jobs.clear()
     panel.tree.topLevelItem(0).setSelected(True)
     panel.update_actions()
@@ -245,9 +244,9 @@ def test_upload_drop_is_disabled_for_readers(panel):
     library = SimpleNamespace(plugin=SimpleNamespace(name='songs'), list_view=view,
                               get_library_tab_icon=lambda: QtGui.QIcon())
     mime = ItemDragData(library=library)
-    panel.folder = CloudItem('church', 'Church', folder=True, can_upload=False)
+    panel.folder = CloudItem('.', 'Church', folder=True, can_upload=False)
     assert not panel.can_upload(mime)
-    panel.folder = CloudItem('church', 'Church', folder=True, can_upload=True)
+    panel.folder = CloudItem('.', 'Church', folder=True, can_upload=True)
     assert panel.can_upload(mime)
     mime.indexes = ()
     assert not panel.can_upload(mime)
@@ -601,41 +600,32 @@ def test_provider_runs_in_worker_and_delivers_on_gui_thread(panel, qtbot, monkey
     provider = MagicMock()
     provider.type_folder.return_value = None
     monkeypatch.setitem(__import__('opal.plugins.librarysync.lib.worker', fromlist=['PROVIDERS']).PROVIDERS,
-                        'google-drive', lambda profile, cancel: provider)
+                        'local-cloud', lambda profile, cancel: provider)
     app = QtWidgets.QApplication.instance()
     if not hasattr(app, 'worker_threads'):
         app.worker_threads = {}
 
     def operation(*args):
         thread_ids.append(QtCore.QThread.currentThread())
-        return (CloudItem('church', 'Church', folder=True), [], '')
+        return (CloudItem('.', 'Church', folder=True), [], '')
 
     panel.start_job('browse', operation, False)
     qtbot.waitUntil(lambda: not panel.jobs, timeout=5000)
     qtbot.waitUntil(lambda: not app.worker_threads, timeout=5000)
     assert thread_ids and thread_ids[0] is not app.thread()
-    assert panel.folder.id == 'church'
+    assert panel.folder.id == '.'
     provider.close.assert_called_once()
 
 
-def test_restart_restores_saved_connection_and_account_without_prompt(panel, qtbot, monkeypatch):
+def test_restart_restores_saved_folder_without_prompt(panel, qtbot, monkeypatch):
     from opal.core.common.settings import Settings
-    from opal.plugins.librarysync.lib.auth import GoogleAuth
     from opal.plugins.librarysync.lib.worker import PROVIDERS
     from opal.plugins.librarysync.lib.profile import validate_profile
-    store = MagicMock()
-    store.load.return_value = {'access_token': 'saved-test-token', 'expires_at': time.time() + 3600,
-                               'refresh_token': 'saved-test-refresh'}
     provider = MagicMock()
-    auth = GoogleAuth(panel.profile['installed'], store=store)
-
-    def folder(*args):
-        assert auth.access_token() == 'saved-test-token'
-        return CloudItem('church', 'Church Library', folder=True)
-    provider.folder.side_effect = folder
+    provider.folder.return_value = CloudItem('.', 'Church Library', folder=True)
     provider.type_folder.return_value = None
     provider.list_folder.return_value = ([], '')
-    monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: provider)
+    monkeypatch.setitem(PROVIDERS, 'local-cloud', lambda profile, cancel: provider)
     imported, opened = MagicMock(), MagicMock()
     monkeypatch.setattr(CloudLibrary, 'import_connection', imported)
     monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
@@ -649,7 +639,8 @@ def test_restart_restores_saved_connection_and_account_without_prompt(panel, qtb
     assert restored.profile == validate_profile(panel.profile)
     assert restored.connected
     assert restored.import_info.isHidden()
-    assert restored.connect_action.text() == 'Reconnect'
+    assert restored.connect_action.text() == 'Connect'
+    assert not restored.connect_action.isEnabled()
     imported.assert_not_called()
     opened.assert_not_called()
     provider.sign_in.assert_not_called()
@@ -703,8 +694,8 @@ def test_remote_filename_cannot_escape_storage():
 
 def test_worker_error_never_exposes_credentials(qapp, monkeypatch):
     from opal.plugins.librarysync.lib.worker import PROVIDERS
-    monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: MagicMock())
-    worker = SyncWorker('job', {'provider': 'google-drive'}, MagicMock(side_effect=RuntimeError('private-token')))
+    monkeypatch.setitem(PROVIDERS, 'local-cloud', lambda profile, cancel: MagicMock())
+    worker = SyncWorker('job', {'provider': 'local-cloud'}, MagicMock(side_effect=RuntimeError('private-token')))
     errors = []
     worker.failed.connect(lambda job, message: errors.append(message))
     worker.start()
@@ -714,8 +705,8 @@ def test_worker_error_never_exposes_credentials(qapp, monkeypatch):
 def test_worker_stop_finishes_without_publishing(qapp, monkeypatch):
     from opal.plugins.librarysync.lib.worker import PROVIDERS
     provider = MagicMock()
-    monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: provider)
-    worker = SyncWorker('job', {'provider': 'google-drive'}, lambda *args: 'result')
+    monkeypatch.setitem(PROVIDERS, 'local-cloud', lambda profile, cancel: provider)
+    worker = SyncWorker('job', {'provider': 'local-cloud'}, lambda *args: 'result')
     ready, completed = [], []
     worker.ready.connect(lambda *args: ready.append(args))
     worker.completed.connect(completed.append)
@@ -911,21 +902,12 @@ def test_connection_menu_order_icons_and_separator(panel, monkeypatch):
     panel.configure()
 
 
-@pytest.mark.parametrize('provider', ['google-drive', 'local-cloud'])
-def test_open_storage_menu_uses_selected_root_and_system_launcher(panel, monkeypatch, tmp_path, provider):
+def test_open_storage_menu_uses_selected_folder_and_system_launcher(panel, monkeypatch, tmp_path):
     opened = MagicMock(return_value=True)
     monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
-    if provider == 'local-cloud':
-        path = tmp_path / 'Church Library #1'
-        panel.set_profile({'version': 1, 'provider': provider, 'name': 'Local storage', 'path': str(path)})
-        expected = QtCore.QUrl.fromLocalFile(str(path))
-    else:
-        profile = dict(panel.profile, folders=[{'id': 'first', 'name': 'First'},
-                                               {'id': 'second', 'name': 'Second', 'resource_key': 'link-key'}])
-        panel.set_profile(profile)
-        with QtCore.QSignalBlocker(panel.roots):
-            panel.roots.setCurrentIndex(1)
-        expected = QtCore.QUrl('https://drive.google.com/drive/folders/second?resourcekey=link-key')
+    path = tmp_path / 'Church Library #1'
+    panel.set_profile({'version': 1, 'provider': 'local-cloud', 'name': 'Local storage', 'path': str(path)})
+    expected = QtCore.QUrl.fromLocalFile(str(path))
 
     def inspect(menu, position):
         storage = menu.actions()[0]
@@ -938,11 +920,11 @@ def test_open_storage_menu_uses_selected_root_and_system_launcher(panel, monkeyp
     opened.assert_called_once_with(expected)
 
 
-def test_open_storage_without_resource_key_and_launcher_failure(panel, monkeypatch):
+def test_open_storage_launcher_failure(panel, monkeypatch):
     opened = MagicMock(return_value=False)
     monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
     panel.open_storage()
-    opened.assert_called_once_with(QtCore.QUrl('https://drive.google.com/drive/folders/church'))
+    opened.assert_called_once_with(QtCore.QUrl.fromLocalFile(panel.profile['path']))
     assert panel.status.text() == 'Couldn’t open storage'
     assert panel._status_theme.theme_tokens().colors.systemCritical.name() in panel.status.styleSheet()
 
@@ -1234,7 +1216,7 @@ def persistent_cache(panel, tmp_path, monkeypatch):
     cache = CloudCache(panel.profile, 'account')
     folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True, drive_id='library-drive')
     item = CloudItem('song', 'Welcome.xml', category='songs', version='1', can_edit=True, can_delete=True)
-    cache.save_listing('songs', 'church', (folder, [item], ''), 'baseline')
+    cache.save_listing('songs', '.', (folder, [item], ''), 'baseline')
     cache.save_listing('songs', 'songs', (folder, [item], ''), 'baseline')
     return cache, folder, item
 
@@ -1244,7 +1226,7 @@ def test_persistent_listing_is_shown_after_restart_without_reloading_drive(panel
     cache, folder, item = persistent_cache
     provider = MagicMock()
     provider.cache_account.return_value = 'account'
-    monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: provider)
+    monkeypatch.setitem(PROVIDERS, 'local-cloud', lambda profile, cancel: provider)
     monkeypatch.setattr(panel, 'install_drop_targets', MagicMock())
     panel.startup()
     qtbot.waitUntil(lambda: not panel.jobs, timeout=5000)
@@ -1264,7 +1246,7 @@ def test_refresh_bypasses_cache_and_captures_change_baseline_before_listing(pane
     provider = MagicMock()
     provider.cache_account.return_value = 'account'
     provider.change_token.return_value = 'before-listing'
-    provider.folder.return_value = CloudItem('church', 'Organisation', folder=True)
+    provider.folder.return_value = CloudItem('.', 'Organisation', folder=True)
     provider.type_folder.return_value = folder
     provider.list_folder.return_value = ([item], '')
     panel.start_job = MagicMock()
@@ -1275,12 +1257,12 @@ def test_refresh_bypasses_cache_and_captures_change_baseline_before_listing(pane
     assert result[4] == ('before-listing', False)
     calls = [call[0] for call in provider.mock_calls]
     assert calls.index('change_token') < calls.index('list_folder')
-    assert cache.listing('songs', 'church')[-2:] == ('before-listing', False)
+    assert cache.listing('songs', '.')[-2:] == ('before-listing', False)
 
 
 @pytest.mark.parametrize('change,expected', [
     (('unrelated', ('elsewhere',), False), False), (('song', (), False), True),
-    (('new-song', ('songs',), False), True), (('church', (), False), True), (('', (), True), True),
+    (('new-song', ('songs',), False), True), (('.', (), False), True), (('', (), True), True),
     (('', (), True, 'other-drive'), False), (('', (), True, 'library-drive'), True)])
 def test_visible_poll_marks_relevant_changes_out_of_date_and_persists_cursor(
         panel, persistent_cache, qtbot, change, expected):
@@ -1313,7 +1295,7 @@ def test_visible_poll_marks_relevant_changes_out_of_date_and_persists_cursor(
     assert panel.preview_action.isEnabled()
     assert ('Out of date' in panel.status.text()) == expected
     assert bool(panel.status.styleSheet()) == expected
-    assert cache.listing('songs', 'church')[-2:] == ('next-cursor', expected)
+    assert cache.listing('songs', '.')[-2:] == ('next-cursor', expected)
     if expected:
         panel.set_status('Viewing Welcome')
         assert 'Out of date' in panel.status.text()
@@ -1357,12 +1339,12 @@ def test_mutation_invalidates_disk_listing_even_after_partial_failure(panel, per
 
     def partial_operation(*args):
         raise SyncError('One of the items changed')
-    panel.cache[('songs', 'church')] = (time.monotonic(), (folder, [item], ''))
+    panel.cache[('songs', '.')] = (time.monotonic(), (folder, [item], ''))
     panel.start_job('delete', partial_operation)
     worker = next(iter(panel.jobs.values()))['worker']
     with pytest.raises(SyncError):
         worker.operation(provider)
-    assert cache.listing('songs', 'church') is None
+    assert cache.listing('songs', '.') is None
     job_id = next(iter(panel.jobs))
     panel.jobs[job_id]['failed'] = True
     panel.job_completed(job_id)
@@ -1379,7 +1361,7 @@ def test_disconnect_clears_only_signed_in_accounts_cache(panel, persistent_cache
     provider.cache_account.return_value = 'account'
     panel.start_job.call_args.args[1](provider)
     provider.disconnect.assert_called_once()
-    assert cache.listing('songs', 'church') is None
+    assert cache.listing('songs', '.') is None
 
 
 def test_loading_more_preserves_cursor_so_changes_to_earlier_pages_are_not_lost(panel, persistent_cache):
@@ -1430,6 +1412,44 @@ def test_setup_connection_checks_existing_name_before_saving(panel, monkeypatch)
     assert panel.profile['name'] == 'Church Library'
 
 
+@pytest.mark.parametrize('source', ['setup', 'import'])
+def test_local_folder_opens_automatically_after_configuration(panel, tmp_path, qtbot, monkeypatch, source):
+    from opal.plugins.librarysync.lib.profile import write_profile
+    root = tmp_path / 'Shared Library'
+    songs = root / 'Songs'
+    songs.mkdir(parents=True)
+    (songs / 'Welcome.xml').write_text('<song/>')
+    profile = {'version': 1, 'provider': 'local-cloud', 'name': 'Shared Library', 'path': str(root)}
+    browser = MagicMock()
+    monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', browser)
+    if source == 'setup':
+        wizard = MagicMock(profile=profile)
+        wizard.exec.return_value = QtWidgets.QDialog.DialogCode.Accepted
+        monkeypatch.setattr('opal.plugins.librarysync.lib.panel.ConnectionWizard', lambda *args, **kwargs: wizard)
+        panel.setup_connection()
+    else:
+        path = tmp_path / 'local.opal-connection'
+        write_profile(path, profile)
+        panel.import_connection(path=path)
+    qtbot.waitUntil(lambda: not panel.jobs, timeout=5000)
+    assert panel.connected
+    assert panel.tree.topLevelItemCount() == 1
+    assert panel.tree.topLevelItem(0).text(0) == 'Welcome'
+    assert not panel.connect_action.isEnabled()
+    browser.assert_not_called()
+
+
+def test_local_storage_connect_and_export_handlers_do_nothing(panel, monkeypatch):
+    panel.connected = True
+    panel.start_job = MagicMock()
+    save = MagicMock()
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.FileDialog.getSaveFileName', save)
+    panel.connect_drive()
+    panel.export_connection()
+    panel.start_job.assert_not_called()
+    save.assert_not_called()
+
+
 @pytest.mark.parametrize('accepted', [False, True])
 def test_disconnect_confirms_with_content_dialog_before_starting(panel, monkeypatch, accepted):
     panel.connected = True
@@ -1455,12 +1475,12 @@ def test_disconnect_confirms_with_content_dialog_before_starting(panel, monkeypa
         assert panel.connected
 
 
-def test_connection_menu_actions_disable_after_disconnect_and_reenable_after_reconnect(panel, monkeypatch):
+def test_local_connection_menu_keeps_session_and_export_actions_disabled(panel, monkeypatch):
     def inspect(menu, position):
         actions = menu.actions()
         assert actions[0].isEnabled()
-        assert actions[3].isEnabled() == panel.connected
-        assert actions[6].isEnabled() == panel.connected
+        assert not actions[3].isEnabled()
+        assert not actions[6].isEnabled()
 
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.connected = True
@@ -1476,7 +1496,7 @@ def test_connection_menu_actions_disable_after_disconnect_and_reenable_after_rec
     assert panel.profile
     panel.configure()
     panel.jobs['browse'] = {'kind': 'browse', 'generation': panel.generation, 'context': None}
-    panel.job_ready('browse', (CloudItem('church', 'Church Library', folder=True), [], ''))
+    panel.job_ready('browse', (CloudItem('.', 'Church Library', folder=True), [], ''))
     panel.job_completed('browse')
     assert panel.connected
     assert all(tree.isEnabled() for tree in panel.trees.values())

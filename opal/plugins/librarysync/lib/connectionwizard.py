@@ -1,5 +1,4 @@
 """Provider-specific setup with Fluent controls and a portable, token-free export."""
-import json
 import os
 from pathlib import Path
 
@@ -9,8 +8,7 @@ from opal.core.common.i18n import translate
 from opal.core.widgets import fluent as QtWidgets
 from opal.core.widgets.dialogs import FileDialog
 from opal.core.widgets.wizard import WIZARD_FIXED_WIDTH
-from opal.plugins.librarysync.lib.profile import (
-    MAX_PROFILE, PROFILE_VALIDATORS, folder_reference, validate_profile, write_profile)
+from opal.plugins.librarysync.lib.profile import PROFILE_VALIDATORS, validate_profile, write_profile
 from opal.plugins.librarysync.lib.provider import SyncError
 from opal.plugins.librarysync.lib.worker import PROVIDERS
 
@@ -43,93 +41,6 @@ class ConnectionPage(QtWidgets.QWizardPage):
         return wizard.provider_combo.currentData() in wizard.provider_pages and not wizard.name_error()
 
 
-class GoogleDrivePage(QtWidgets.QWizardPage):
-    display_name = 'Google Drive'
-    description = 'Enter your app credentials and shared folder.'
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(16)
-        actions = QtWidgets.QHBoxLayout()
-        load = QtWidgets.QPushButton(tr('Load client JSON…'), self)
-        load.clicked.connect(self.load_google_client)
-        actions.addWidget(load)
-        instructions = QtWidgets.fluentqt.HyperlinkButton(
-            tr('Setup instructions'),
-            QtCore.QUrl('https://developers.google.com/identity/protocols/oauth2/native-app'), self)
-        actions.addWidget(instructions)
-        actions.addStretch()
-        layout.addLayout(actions)
-        form = QtWidgets.QFormLayout()
-        form.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        form.setHorizontalSpacing(16)
-        form.setVerticalSpacing(16)
-        self.client_id = QtWidgets.QLineEdit(self)
-        self.client_id.setMaxLength(250)
-        self.client_secret = QtWidgets.QLineEdit(self)
-        self.client_secret.setMaxLength(250)
-        self.client_secret.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.folder_link = QtWidgets.QLineEdit(self)
-        self.folder_link.setMaxLength(2048)
-        add_field(form, tr('Client ID'), self.client_id)
-        add_field(form, tr('Client secret'), self.client_secret)
-        add_field(form, tr('Shared folder'), self.folder_link)
-        layout.addLayout(form)
-        layout.addWidget(label(tr('Each person signs in with their own account. '
-                                  'Folder permissions control access.'), self, secondary=True))
-        self.error = ConnectionWizard.add_error(self, layout)
-        layout.addStretch()
-        for field in (self.client_id, self.folder_link):
-            field.textChanged.connect(self.completeChanged)
-        for field in (self.client_id, self.client_secret, self.folder_link):
-            field.textChanged.connect(self.error.hide)
-
-    def isComplete(self):
-        return bool(self.client_id.text().strip() and self.folder_link.text().strip())
-
-    def connection_profile(self, name):
-        folder_id, key = folder_reference(self.folder_link.text())
-        return validate_profile({'version': 1, 'provider': 'google-drive',
-                                 'installed': {'client_id': self.client_id.text().strip(),
-                                               'client_secret': self.client_secret.text().strip()},
-                                 'name': name, 'folders': [{'id': folder_id, 'name': name, 'resource_key': key}]})
-
-    def validatePage(self):
-        self.error.hide()
-        try:
-            self.connection_profile(self.wizard().connection_name.text().strip())
-            return True
-        except SyncError as error:
-            self.error.setMessage(str(error))
-            self.error.show()
-            return False
-
-    def load_google_client(self):
-        path, _ = FileDialog.getOpenFileName(
-            self, tr('Choose Google Desktop app OAuth client JSON'), filter=tr('Google client configuration (*.json)'))
-        if not path:
-            return
-        try:
-            if path.stat().st_size > MAX_PROFILE:
-                raise SyncError('The Google configuration file is too large.')
-            value = json.loads(path.read_text(encoding='utf-8'))
-            client = value.get('installed') if isinstance(value, dict) else None
-            if not client:
-                raise SyncError('Choose a Desktop app OAuth client, rather than a web client or service account.')
-            clean = validate_profile({'version': 1, 'provider': 'google-drive', 'installed': client,
-                                      'folders': [{'id': 'pending', 'name': 'Pending'}]})['installed']
-            self.client_id.setText(clean['client_id'])
-            self.client_secret.setText(clean['client_secret'])
-            self.error.hide()
-        except (OSError, ValueError, UnicodeError, SyncError) as error:
-            message = (str(error) if isinstance(error, SyncError) else
-                       tr('Could not read the Google client file. Choose a valid Desktop client.'))
-            self.error.setMessage(message)
-            self.error.show()
-
-
 class LocalStoragePage(QtWidgets.QWizardPage):
     display_name = 'Local Cloud Storage'
     description = 'Choose a local or synced folder.'
@@ -151,8 +62,7 @@ class LocalStoragePage(QtWidgets.QWizardPage):
         browse.clicked.connect(self.choose_folder)
         row.addWidget(browse)
         layout.addLayout(row)
-        layout.addWidget(label(tr('No API keys or sign-in required. '
-                                  'Your storage app handles syncing and sharing.'), self, secondary=True))
+        layout.addWidget(label(tr('Your storage app handles syncing and sharing.'), self, secondary=True))
         self.error = ConnectionWizard.add_error(self, layout)
         layout.addStretch()
         self.folder_path.textChanged.connect(self.completeChanged)
@@ -186,7 +96,7 @@ class LocalStoragePage(QtWidgets.QWizardPage):
             return False
 
 
-PROVIDER_PAGES = {'google-drive': GoogleDrivePage, 'local-cloud': LocalStoragePage}
+PROVIDER_PAGES = {'local-cloud': LocalStoragePage}
 
 
 class ConnectionWizard(QtWidgets.QWizard):
@@ -240,15 +150,14 @@ class ConnectionWizard(QtWidgets.QWizard):
 
         share = QtWidgets.QWizardPage(self)
         layout = self.add_page(share, tr('Review and save'), tr(
-            'Save your connection, then choose Connect in Cloud Library to open it.'), 3)
+            'Save to open this folder in Cloud Library.'), 3)
         self.summary = label('', share, QtWidgets.fluentqt.FontRole.BodyStrong)
         layout.addWidget(self.summary)
         self.export_check = QtWidgets.QCheckBox(tr('Export a connection file for the team'), share)
-        self.export_check.setChecked(True)
+        self.export_check.setChecked(False)
         layout.addWidget(self.export_check)
         self.share_hint = label(tr(
-            'Connection files conceal app credentials; they are not encrypted. '
-            'Personal sign-in tokens and passwords are excluded.'), share, secondary=True)
+            'Each computer selects its own folder.'), share, secondary=True)
         layout.addWidget(self.share_hint)
         self.share_error = self.add_error(share, layout)
         layout.addStretch()
@@ -292,7 +201,9 @@ class ConnectionWizard(QtWidgets.QWizard):
 
     def connection_changed(self):
         if self.sender() is self.provider_combo:
-            self.export_check.setChecked(self.provider_combo.currentData() != 'local-cloud')
+            exportable = bool(self.provider_combo.currentData()) and self.provider_combo.currentData() != 'local-cloud'
+            self.export_check.setEnabled(exportable)
+            self.export_check.setChecked(exportable)
         error = self.name_error()
         self.connection_error.setMessage(error)
         self.connection_error.setVisible(bool(self.connection_name.text() and error))
@@ -313,10 +224,9 @@ class ConnectionWizard(QtWidgets.QWizard):
             self.summary.setText('\n'.join(part for part in (
                 self.connection_name.text().strip(), self.provider_combo.currentText(), location) if part))
             if location:
-                self.share_hint.setText(tr('Exported connections use this same folder path on other computers.'))
+                self.share_hint.setText(tr('Each computer selects its own folder.'))
             else:
-                self.share_hint.setText(tr('Connection files conceal app credentials; they are not encrypted. '
-                                           'Personal sign-in tokens and passwords are excluded.'))
+                self.share_hint.setText(tr('Connection files contain provider settings.'))
 
     def connection_profile(self):
         page = self.provider_pages[self.provider_combo.currentData()]
@@ -335,7 +245,7 @@ class ConnectionWizard(QtWidgets.QWizard):
         self.share_error.hide()
         try:
             profile = self.connection_profile()
-            if self.export_check.isChecked():
+            if self.export_check.isEnabled() and self.export_check.isChecked():
                 path, _ = FileDialog.getSaveFileName(
                     self, tr('Export Library Sync connection'), Path('organisation-library.opal-connection'),
                     tr('Connection file (*.opal-connection)'))
