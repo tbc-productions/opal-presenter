@@ -26,12 +26,12 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib.theme import BackgroundType, HorizontalType
-from openlp.core.pages.alignment import AlignmentPage, AlignmentTransitionsPage
-from openlp.core.ui.themeform import ThemeForm
+from opal.core.common.registry import Registry
+from opal.core.lib.theme import BackgroundType, HorizontalType
+from opal.core.pages.alignment import AlignmentPage, AlignmentTransitionsPage
+from opal.core.ui.themeform import ThemeForm
 
 
 def _make_path(s):
@@ -65,7 +65,7 @@ THEME_BACKGROUNDS = {
 }
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_create_theme_wizard(mocked_setup, settings):
     """
     Test creating a ThemeForm instance
@@ -81,7 +81,7 @@ def test_setup(settings):
     Test the _setup method
     """
     # GIVEN: A ThemeForm instance
-    with patch('openlp.core.ui.themeform.ThemeForm._setup'):
+    with patch('opal.core.ui.themeform.ThemeForm._setup'):
         theme_form = ThemeForm(None)
     theme_form.setup_ui = MagicMock()
     theme_form.play_transition_button = MagicMock()
@@ -125,7 +125,7 @@ def test_setup(settings):
     theme_form._connect_live_preview_signals.assert_called_once_with()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_set_play_transition_button_visible(mocked_setup, settings):
     """
     Test the helper that shows or hides the play transition button.
@@ -143,7 +143,7 @@ def test_set_play_transition_button_visible(mocked_setup, settings):
     theme_form.play_transition_button.setVisible.assert_called_once_with(True)
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_set_defaults(mocked_setup, settings):
     """
     Test that the right methods are called by the set_defaults() method
@@ -171,9 +171,9 @@ def test_set_defaults(mocked_setup, settings):
     theme_form.set_preview_page_values.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._exec_window')
-@patch('openlp.core.ui.themeform.ScreenList')
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._exec_window')
+@patch('opal.core.ui.themeform.ScreenList')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, mocked_dialog_exec, settings):
     """
     Test that opening the edit dialog syncs the preview widget to the current screen.
@@ -203,7 +203,7 @@ def test_exec_syncs_preview_to_current_screen(mocked_setup, mocked_screen_list, 
     theme_form.refresh_preview.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_calculate_lines(mocked_setup, settings):
     """
     Test the calculate_lines() method
@@ -226,7 +226,7 @@ def test_calculate_lines(mocked_setup, settings):
     theme_form.refresh_preview.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_update_lines_text(mocked_setup, settings):
     """
     Test the update_lines_text() method
@@ -242,9 +242,9 @@ def test_update_lines_text(mocked_setup, settings):
     theme_form.main_line_count_label.setText.assert_called_once_with('(approximately 10 lines per slide)')
 
 
-@patch('openlp.core.ui.themeform.FluentWindow.resizeEvent')
-@patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.FluentWindow.resizeEvent')
+@patch('opal.core.ui.themeform.QtGui.QResizeEvent')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
     """
     Test that the resizeEvent method handles resizing correctly
@@ -267,9 +267,9 @@ def test_resize_event(mocked_setup, MockResizeEvent, mocked_resizeEvent, setting
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.FluentWindow.resizeEvent')
-@patch('openlp.core.ui.themeform.QtGui.QResizeEvent')
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.FluentWindow.resizeEvent')
+@patch('opal.core.ui.themeform.QtGui.QResizeEvent')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, settings):
     """
     Test that the resizeEvent method handles a divide by zero exception correctly
@@ -292,9 +292,9 @@ def test_resize_event_dbze(mocked_setup, MockResizeEvent, mocked_resizeEvent, se
     theme_form.preview_box.set_scale.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._exec_window', return_value=0)
-@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._exec_window', return_value=0)
+@patch('opal.core.ui.themeform.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_shot, mocked_dialog_exec, settings):
     """
     Test that opening the dialog schedules a refresh after the dialog is shown.
@@ -315,7 +315,7 @@ def test_exec_schedules_deferred_preview_refresh(mocked_setup, mocked_single_sho
     mocked_single_shot.assert_called_once_with(0, theme_form._refresh_preview_when_ready)
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_calculate_lines_is_suppressed_while_populating_page(mocked_setup, settings):
     """
     Test that calculate_lines() does not refresh the preview while page values are being populated.
@@ -338,15 +338,15 @@ def test_calculate_lines_is_suppressed_while_populating_page(mocked_setup, setti
     theme_form.refresh_preview.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.QtCore.QTimer.singleShot')
 def test_refresh_preview_disables_theme_transitions(mocked_single_shot, mocked_setup, settings):
     """
     Test that normal preview refresh keeps theme transitions disabled.
     """
     # GIVEN: A ThemeForm with a preview box
     theme_form = ThemeForm(None)
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.preview_box = MagicMock()
     theme_form.update_area_overlay = MagicMock()
 
@@ -357,8 +357,8 @@ def test_refresh_preview_disables_theme_transitions(mocked_single_shot, mocked_s
     assert theme_form.preview_box.allow_theme_transitions is False
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.QtCore.QTimer.singleShot')
 def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked_setup, settings):
     """
     Test that the Play action enables theme transitions for the transition demo.
@@ -367,7 +367,7 @@ def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
     theme_form._updating_page_values = False
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.preview_box = MagicMock()
     mocked_theme_manager = MagicMock()
     Registry().register('theme_manager', mocked_theme_manager)
@@ -381,9 +381,9 @@ def test_preview_transition_enables_theme_transitions(mocked_single_shot, mocked
     assert theme_form.preview_box.allow_theme_transitions is True
 
 
-@patch('openlp.core.ui.themeform.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.themeform.is_not_image_file')
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.themeform.is_not_image_file')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_validate_current_page_with_image(mocked_setup, mocked_is_not_image_file, mocked_critical, settings):
     """
     Test the validateCurrentPage() method
@@ -404,7 +404,7 @@ def test_validate_current_page_with_image(mocked_setup, mocked_is_not_image_file
     assert result is False
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_validate_current_page(mocked_setup, settings):
     """
     Test the validateCurrentPage() method
@@ -420,7 +420,7 @@ def test_validate_current_page(mocked_setup, settings):
     assert result is True
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_on_outline_toggled(mocked_setup, settings):
     """
     Test the on_outline_toggled() method
@@ -428,7 +428,7 @@ def test_on_outline_toggled(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.calculate_lines = MagicMock()
 
     # WHEN: on_outline_toggled is called
@@ -439,7 +439,7 @@ def test_on_outline_toggled(mocked_setup, settings):
     theme_form.calculate_lines.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_on_shadow_toggled(mocked_setup, settings):
     """
     Test the on_shadow_toggled() method
@@ -447,7 +447,7 @@ def test_on_shadow_toggled(mocked_setup, settings):
     # GIVEN: An instance of ThemeForm with some mocks
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.calculate_lines = MagicMock()
 
     # WHEN: on_shadow_toggled is called
@@ -458,7 +458,7 @@ def test_on_shadow_toggled(mocked_setup, settings):
     theme_form.calculate_lines.assert_called_once()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_update_theme_static(mocked_setup, settings):
     """
     Test that the update_theme() method correctly sets all the "static" theme variables
@@ -466,7 +466,7 @@ def test_update_theme_static(mocked_setup, settings):
     # GIVEN: An instance of a ThemeForm with some mocked out pages which return certain values
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock(font_name='Montserrat', font_color='#f00', font_size=50, line_spacing=12,
                                           is_outline_enabled=True, outline_color='#00f', outline_size=3,
@@ -534,7 +534,7 @@ def test_update_theme_static(mocked_setup, settings):
     assert theme_form.theme.display_slide_transition_reverse is False
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_transition_settings_widget_prefers_standalone_transitions_page(mocked_setup, settings):
     """
     When both exist, the dedicated Transitions page owns transition settings.
@@ -545,7 +545,7 @@ def test_transition_settings_widget_prefers_standalone_transitions_page(mocked_s
     assert theme_form._transition_settings_widget() is theme_form.transitions_page
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_transition_settings_widget_none_for_alignment_page_only(mocked_setup, settings):
     """
     Split wizard: AlignmentPage must not be used as the transition settings widget
@@ -557,7 +557,7 @@ def test_transition_settings_widget_none_for_alignment_page_only(mocked_setup, s
     assert theme_form._transition_settings_widget() is None
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_transition_settings_widget_combined_alignment_transitions_page(mocked_setup, settings):
     """
     Legacy combined page embeds transition controls on the alignment widget.
@@ -568,7 +568,7 @@ def test_transition_settings_widget_combined_alignment_transitions_page(mocked_s
     assert theme_form._transition_settings_widget() is theme_form.alignment_page
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_set_transition_page_values_without_transition_widget(mocked_setup, settings):
     """
     Opening a form with only AlignmentPage (no transition UI) must not touch missing properties.
@@ -584,14 +584,15 @@ def test_set_transition_page_values_without_transition_widget(mocked_setup, sett
     theme_form._set_play_transition_button_visible.assert_called_once_with(False)
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_set_transition_page_values_updates_play_button_visibility(mocked_setup, settings):
     """
     Test that the play transition button visibility follows the transition enabled state.
     """
     # GIVEN: A ThemeForm with a theme that has transitions enabled
     theme_form = ThemeForm(None)
-    theme_form.theme = MagicMock(display_horizontal_align='left', display_vertical_align='top',
+    theme_form.theme = MagicMock(display_size_height=1080,
+                                 display_horizontal_align='left', display_vertical_align='top',
                                  display_horizontal_align_footer='left', display_vertical_align_footer='top',
                                  display_slide_transition=True, display_slide_transition_type='slide',
                                  display_slide_transition_speed='normal',
@@ -610,7 +611,7 @@ def test_set_transition_page_values_updates_play_button_visibility(mocked_setup,
     theme_form._set_play_transition_button_visible.assert_called_once_with(True)
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_update_theme_overridden_areas(mocked_setup, settings):
     """
     Test that the update_theme() method correctly sets all the positioning information for a custom position
@@ -618,7 +619,7 @@ def test_update_theme_overridden_areas(mocked_setup, settings):
     # GIVEN: An instance of a ThemeForm with some mocked out pages which return certain values
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock()
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
@@ -644,7 +645,7 @@ def test_update_theme_overridden_areas(mocked_setup, settings):
 
 
 @pytest.mark.parametrize('background_type', THEME_BACKGROUNDS.keys())
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_update_theme_background(mocked_setup, background_type, settings):
     """
     Test that the update_theme() method correctly sets all the theme background variables for each background type
@@ -653,7 +654,7 @@ def test_update_theme_background(mocked_setup, background_type, settings):
     page_props = {page_prop: value for page_prop, _, value in THEME_BACKGROUNDS[background_type]}
     theme_form = ThemeForm(None)
     theme_form.can_update_theme = True
-    theme_form.theme = MagicMock()
+    theme_form.theme = MagicMock(display_size_width=1920, display_size_height=1080)
     theme_form.background_page = MagicMock(background_type=background_type, **page_props)
     theme_form.main_area_page = MagicMock()
     theme_form.footer_area_page = MagicMock()
@@ -670,7 +671,7 @@ def test_update_theme_background(mocked_setup, background_type, settings):
 
 @pytest.mark.skip('Being a bit problematic right now')
 @pytest.mark.parametrize('background_type', THEME_BACKGROUNDS.keys())
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_set_background_page_values(mocked_setup, background_type, settings):
     """
     Test that the set_background_page_values() method sets the background page values correctly
@@ -695,7 +696,7 @@ def test_set_background_page_values(mocked_setup, background_type, settings):
         )
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
 def test_update_theme_cannot_update(mocked_setup, settings):
     """
     Test that the update_theme() method skips out early when the theme cannot be updated
@@ -715,7 +716,7 @@ def test_update_theme_cannot_update(mocked_setup, settings):
 def interactive_theme_form(settings):
     """Exercise real property widgets and native chrome without starting WebEngine."""
     from PySide6 import QtWidgets
-    from openlp.core.lib.theme import Theme
+    from opal.core.lib.theme import Theme
 
     renderer = MagicMock()
     renderer.width.return_value = 1920
@@ -725,11 +726,11 @@ def interactive_theme_form(settings):
     display = QtWidgets.QWidget()
     for name in ('run_in_display', 'set_theme', 'set_scale', 'generate_preview', 'clear_slides', 'save_screenshot'):
         setattr(display, name, MagicMock())
-    with patch('openlp.core.ui.themewizard.ThemeDesignerPreview', return_value=display) as preview_constructor:
+    with patch('opal.core.ui.themewizard.ThemeDesignerPreview', return_value=display) as preview_constructor:
         form = ThemeForm(None)
     preview_constructor.assert_called_once_with(form, window_title='Theme Designer Preview',
                                                 embedded=True, can_show_startup_screen=False, show_transparency=True)
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         form.theme = Theme()
     form.theme.theme_name = 'Sunday'
@@ -860,7 +861,7 @@ def test_theme_dirty_state_ignores_preview_and_detects_reverted_edits(interactiv
 def test_clean_theme_closes_for_exit_without_a_prompt(interactive_theme_form):
     form = interactive_theme_form
     form.mark_saved()
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as dialog:
+    with patch('opal.core.ui.themeform.QtWidgets.ContentDialog') as dialog:
         assert form.request_close_for_exit()
     dialog.assert_not_called()
     assert form.result() == QtWidgets.QDialog.DialogCode.Rejected
@@ -877,7 +878,7 @@ def test_theme_exit_save_discard_cancel(interactive_theme_form, choice, closes, 
               'discard': fluentqt.ContentDialog.ResultSecondary,
               'cancel': fluentqt.ContentDialog.ResultNone}[choice]
     primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor:
+    with patch('opal.core.ui.themeform.QtWidgets.ContentDialog') as constructor:
         dialog = constructor.return_value
         dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary
         dialog.exec.return_value = result
@@ -893,8 +894,8 @@ def test_failed_theme_save_keeps_app_exit_cancelled(interactive_theme_form):
     form.mark_saved()
     form.theme_name_edit.setText('')
     primary, secondary = fluentqt.ContentDialog.ResultPrimary, fluentqt.ContentDialog.ResultSecondary
-    with patch('openlp.core.ui.themeform.fluentqt.ContentDialog') as constructor, \
-            patch('openlp.core.ui.themeform.critical_error_message_box') as error:
+    with patch('opal.core.ui.themeform.QtWidgets.ContentDialog') as constructor, \
+            patch('opal.core.ui.themeform.critical_error_message_box') as error:
         dialog = constructor.return_value
         dialog.ResultPrimary, dialog.ResultSecondary = primary, secondary
         dialog.exec.return_value = primary
@@ -914,7 +915,7 @@ def test_theme_exit_guard_unwinds_window_before_service_prompt(interactive_theme
     def service_prompt():
         observed.append((form.isVisible(), form._event_loop,
                          main._closing_designers_for_exit))
-        return False  # A cancelled service save must keep OpenLP+ running.
+        return False  # A cancelled service save must keep Opal Presenter running.
 
     with patch.object(main, 'close', side_effect=service_prompt):
         # Sending a close event still exercises the guard installed by _exec_window().
@@ -926,7 +927,7 @@ def test_theme_exit_guard_unwinds_window_before_service_prompt(interactive_theme
 
 
 def test_embedded_theme_preview_capture_excludes_handles():
-    from openlp.core.ui.themewizard import ThemeDesignerPreview
+    from opal.core.ui.themewizard import ThemeDesignerPreview
     preview = MagicMock()
     screenshot = ThemeDesignerPreview.save_screenshot(preview)
     assert screenshot is preview.webview.grab.return_value
@@ -935,8 +936,8 @@ def test_embedded_theme_preview_capture_excludes_handles():
     preview.hide.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-@patch('openlp.core.ui.themeform.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.themeform.QtCore.QTimer.singleShot')
 def test_initial_theme_refresh_waits_for_webengine(mocked_timer, mocked_setup, settings):
     form = ThemeForm(None)
     form._initial_preview_refresh_pending = True
@@ -1029,7 +1030,7 @@ def test_saving_alternate_preview_uses_output_thumbnail(interactive_theme_form):
 
 
 def test_selected_font_weight_survives_save_and_reload(interactive_theme_form):
-    from openlp.core.lib.theme import Theme
+    from opal.core.lib.theme import Theme
     form = interactive_theme_form
     page = form.footer_area_page
     with patch.object(page, 'supported_weights', return_value=[300, 400, 500, 600, 700]):
@@ -1040,7 +1041,7 @@ def test_selected_font_weight_survives_save_and_reload(interactive_theme_form):
     assert form.theme.font_main_weight == 400
     assert form.preview_box.generate_preview.call_args.args[0].font_footer_weight == 600
     form.accept()
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         restored = Theme()
         restored.load_theme(form.theme.export_theme())
@@ -1116,3 +1117,30 @@ def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_t
     form.background_section.setExpanded(True)
     QtTest.QTest.qWait(300)
     assert form.background_section.height() == heights['gradient']
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (3840, 2160)])
+def test_theme_properties_use_percentages_and_reference_points(interactive_theme_form, width, height):
+    form = interactive_theme_form
+    form.can_update_theme = False
+    form.theme.font_main_size = 64.25
+    form.theme.font_main_letter_adjustment = 1.25
+    form.theme.font_footer_size = 24.5
+    form.theme.scale_to_size(QtCore.QSize(width, height))
+    form.set_main_area_page_values()
+    form.set_footer_area_page_values()
+    form.set_position_page_values()
+    assert form.main_area_page.font_size == pytest.approx(64.25)
+    assert form.main_area_page.letter_spacing == pytest.approx(1.25)
+    assert form.footer_area_page.font_size == pytest.approx(24.5)
+    assert form.area_position_page.main_x_spin_box.value() == pytest.approx(100 / 1920 * 100)
+    assert form.area_position_page.footer_y_spin_box.value() == pytest.approx(900 / 1080 * 100)
+    form.main_area_page.font_size = 48.75
+    form.area_position_page.main_x_spin_box.setValue(12.5)
+    form.can_update_theme = True
+    form.update_theme()
+    preview = form._preview_theme()
+    assert form.theme.font_main_size == pytest.approx(48.75 * height / 1080)
+    assert form.theme.font_main_x == pytest.approx(width * .125)
+    assert preview.font_main_size == pytest.approx(48.75)
+    assert preview.font_main_x == pytest.approx(1920 * .125)

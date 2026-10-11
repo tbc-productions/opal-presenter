@@ -26,16 +26,16 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from openlp.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument, \
+from opal.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument, \
     PresentationList
 
 
-FOLDER_TO_PATCH = 'openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument.get_thumbnail_folder'
+FOLDER_TO_PATCH = 'opal.plugins.presentations.lib.presentationcontroller.PresentationDocument.get_thumbnail_folder'
 
 
 @pytest.fixture()
 def get_thumbnail_folder(settings):
-    gtf = patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument.get_thumbnail_folder',
+    gtf = patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument.get_thumbnail_folder',
                 return_value=Path())
     yield gtf.start()
     gtf.stop()
@@ -43,14 +43,14 @@ def get_thumbnail_folder(settings):
 
 @pytest.fixture()
 def create_paths(settings):
-    c_paths = patch('openlp.plugins.presentations.lib.presentationcontroller.create_paths')
+    c_paths = patch('opal.plugins.presentations.lib.presentationcontroller.create_paths')
     yield c_paths.start()
     c_paths.stop()
 
 
 @pytest.fixture()
 def setup(settings):
-    s_up = patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup')
+    s_up = patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup')
     yield s_up.start()
     s_up.stop()
 
@@ -85,7 +85,7 @@ def test_save_titles_and_notes(document):
     Test PresentationDocument.save_titles_and_notes method with two valid lists
     """
     # GIVEN: two lists of length==2 and a mocked open and get_thumbnail_folder
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.write_text') as mocked_write_text, \
+    with patch('opal.plugins.presentations.lib.presentationcontroller.Path.write_text') as mocked_write_text, \
             patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder:
         titles = ['uno', 'dos']
         notes = ['one', 'two']
@@ -123,10 +123,10 @@ def test_get_titles_and_notes(document):
     """
     # GIVEN: A mocked open, get_thumbnail_folder and exists
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.read_text',
+    with patch('opal.plugins.presentations.lib.presentationcontroller.Path.read_text',
                return_value='uno\ndos\n') as mocked_read_text, \
             patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder, \
-            patch('openlp.plugins.presentations.lib.presentationcontroller.Path.exists') as mocked_exists:
+            patch('opal.plugins.presentations.lib.presentationcontroller.Path.exists') as mocked_exists:
         mocked_get_thumbnail_folder.return_value = Path('test')
         mocked_exists.return_value = True
 
@@ -146,7 +146,7 @@ def test_get_titles_and_notes_with_file_not_found(document):
     Test PresentationDocument.get_titles_and_notes method with file not found
     """
     # GIVEN: A mocked open, get_thumbnail_folder and exists
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
+    with patch('opal.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
             patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder:
         mocked_read_text.side_effect = FileNotFoundError()
         mocked_get_thumbnail_folder.return_value = Path('test')
@@ -166,9 +166,9 @@ def test_get_titles_and_notes_with_missing_notes_files(document):
     Test PresentationDocument.get_titles_and_notes method when note files are missing.
     """
     # GIVEN: Titles exist, but individual slide notes files do not
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
+    with patch('opal.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
             patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder, \
-            patch('openlp.plugins.presentations.lib.presentationcontroller.log.exception') as mocked_log_exception:
+            patch('opal.plugins.presentations.lib.presentationcontroller.log.exception') as mocked_log_exception:
         mocked_read_text.side_effect = ['uno\ndos\n', FileNotFoundError(), FileNotFoundError()]
         mocked_get_thumbnail_folder.return_value = Path('test')
 
@@ -186,7 +186,7 @@ def test_get_titles_and_notes_with_file_error(document):
     Test PresentationDocument.get_titles_and_notes method with file errors
     """
     # GIVEN: A mocked open, get_thumbnail_folder and exists
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
+    with patch('opal.plugins.presentations.lib.presentationcontroller.Path.read_text') as mocked_read_text, \
             patch(FOLDER_TO_PATCH) as mocked_get_thumbnail_folder:
         mocked_read_text.side_effect = OSError()
         mocked_get_thumbnail_folder.return_value = Path('test')

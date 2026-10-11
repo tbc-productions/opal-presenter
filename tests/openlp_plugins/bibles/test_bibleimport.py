@@ -29,11 +29,11 @@ from unittest.mock import MagicMock, patch
 from lxml import etree, objectify
 from PySide6.QtWidgets import QDialog
 
-from openlp.core.common.i18n import Language
-from openlp.core.common.registry import Registry
-from openlp.core.lib.exceptions import ValidationError
-from openlp.plugins.bibles.lib.bibleimport import BibleImport
-from openlp.plugins.bibles.lib.db import BibleDB
+from opal.core.common.i18n import Language
+from opal.core.common.registry import Registry
+from opal.core.lib.exceptions import ValidationError
+from opal.plugins.bibles.lib.bibleimport import BibleImport
+from opal.plugins.bibles.lib.db import BibleDB
 
 
 @pytest.fixture()
@@ -50,7 +50,7 @@ def test_file():
 @pytest.fixture()
 def error_message_box(settings):
     Registry().register('main_window', MagicMock())
-    m_box = patch('openlp.plugins.bibles.lib.bibleimport.critical_error_message_box')
+    m_box = patch('opal.plugins.bibles.lib.bibleimport.critical_error_message_box')
     yield m_box.start()
     m_box.stop()
 
@@ -64,7 +64,7 @@ def mocked_open():
 
 @pytest.fixture()
 def mocked_setup():
-    s_up = patch('openlp.plugins.bibles.lib.db.BibleDB._setup')
+    s_up = patch('opal.plugins.bibles.lib.db.BibleDB._setup')
     yield s_up.start()
     s_up.stop()
 
@@ -96,7 +96,7 @@ def test_init_kwargs_set(mocked_setup, registry):
     assert isinstance(instance, BibleDB)
 
 
-@patch('openlp.plugins.bibles.forms.LanguageForm')
+@patch('opal.plugins.bibles.forms.LanguageForm')
 def test_get_language_canceled(MockedLanguageForm, mocked_setup, registry):
     """
     Test the BibleImport.get_language method when the user rejects the dialog box
@@ -118,7 +118,7 @@ def test_get_language_canceled(MockedLanguageForm, mocked_setup, registry):
 
 
 @patch.object(BibleDB, 'save_meta')
-@patch('openlp.plugins.bibles.forms.LanguageForm')
+@patch('opal.plugins.bibles.forms.LanguageForm')
 def test_get_language_accepted(MockedLanguageForm, mocked_save_meta, mocked_setup, registry):
     """
     Test the BibleImport.get_language method when the user accepts the dialog box
@@ -142,7 +142,7 @@ def test_get_language_accepted(MockedLanguageForm, mocked_save_meta, mocked_setu
         'they accept the dialog box'
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.get_language')
+@patch('opal.plugins.bibles.lib.bibleimport.get_language')
 @patch.object(BibleImport, 'get_language')
 def test_get_language_id_language_found(mocked_db_get_language, mocked_get_language, mocked_setup, registry):
     """
@@ -163,7 +163,7 @@ def test_get_language_id_language_found(mocked_db_get_language, mocked_get_langu
     assert result == 30, 'Result should be 30, was {}'.format(result)
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.get_language', return_value=None)
+@patch('opal.plugins.bibles.lib.bibleimport.get_language', return_value=None)
 @patch.object(BibleImport, 'get_language', return_value=20)
 def test_get_language_id_language_not_found(mocked_db_get_language, mocked_languages_get_language,
                                             mocked_setup, registry):
@@ -184,7 +184,7 @@ def test_get_language_id_language_not_found(mocked_db_get_language, mocked_langu
     assert result == 20
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.get_language', return_value=None)
+@patch('opal.plugins.bibles.lib.bibleimport.get_language', return_value=None)
 @patch.object(BibleImport, 'get_language', return_value=40)
 @patch.object(BibleImport, 'log_error')
 def test_get_language_id_user_choice(mocked_log_error, mocked_db_get_language, mocked_languages_get_language,
@@ -208,7 +208,7 @@ def test_get_language_id_user_choice(mocked_log_error, mocked_db_get_language, m
     assert result == 40
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.get_language', return_value=None)
+@patch('opal.plugins.bibles.lib.bibleimport.get_language', return_value=None)
 @patch.object(BibleImport, 'get_language', return_value=None)
 @patch.object(BibleImport, 'log_error')
 def test_get_language_id_user_choice_rejected(mocked_log_error, mocked_db_get_language,
@@ -234,7 +234,7 @@ def test_get_language_id_user_choice_rejected(mocked_log_error, mocked_db_get_la
 
 
 @patch.object(BibleImport, 'log_debug')
-@patch('openlp.plugins.bibles.lib.bibleimport.BiblesResourcesDB', **{'get_book.return_value': {'id': 20}})
+@patch('opal.plugins.bibles.lib.bibleimport.BiblesResourcesDB', **{'get_book.return_value': {'id': 20}})
 def test_get_book_ref_id_by_name_get_book(MockBibleResourcesDB, mocked_log_debug, mocked_setup, registry):
     """
     Test get_book_ref_id_by_name when the book is found as a book in BiblesResourcesDB
@@ -251,7 +251,7 @@ def test_get_book_ref_id_by_name_get_book(MockBibleResourcesDB, mocked_log_debug
 
 
 @patch.object(BibleImport, 'log_debug')
-@patch('openlp.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
        **{'get_book.return_value': None, 'get_alternative_book_name.return_value': 30})
 def test_get_book_ref_id_by_name_get_alternative_book_name(MockBibleResourcesDB, mocked_log_debug,
                                                            mocked_setup, registry):
@@ -270,9 +270,9 @@ def test_get_book_ref_id_by_name_get_alternative_book_name(MockBibleResourcesDB,
 
 
 @patch.object(BibleImport, 'log_debug')
-@patch('openlp.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
        **{'get_book.return_value': None, 'get_alternative_book_name.return_value': None})
-@patch('openlp.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB', **{'get_book_reference_id.return_value': 40})
+@patch('opal.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB', **{'get_book_reference_id.return_value': 40})
 def test_get_book_ref_id_by_name_get_book_reference_id(MockAlterativeBookNamesDB, MockBibleResourcesDB,
                                                        mocked_log_debug, mocked_setup, registry):
     """
@@ -291,11 +291,11 @@ def test_get_book_ref_id_by_name_get_book_reference_id(MockAlterativeBookNamesDB
 
 @patch.object(BibleImport, 'log_debug')
 @patch.object(BibleImport, 'get_books')
-@patch('openlp.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
        **{'get_book.return_value': None, 'get_alternative_book_name.return_value': None})
-@patch('openlp.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB',
        **{'get_book_reference_id.return_value': None})
-@patch('openlp.plugins.bibles.forms.BookNameForm',
+@patch('opal.plugins.bibles.forms.BookNameForm',
        return_value=MagicMock(**{'exec.return_value': QDialog.DialogCode.Rejected}))
 def test_get_book_ref_id_by_name_book_name_form_rejected(MockBookNameForm, MockAlterativeBookNamesDB,
                                                          MockBibleResourcesDB, mocked_get_books, mocked_log_debug,
@@ -315,11 +315,11 @@ def test_get_book_ref_id_by_name_book_name_form_rejected(MockBookNameForm, MockA
 
 @patch.object(BibleImport, 'log_debug')
 @patch.object(BibleImport, 'get_books')
-@patch('openlp.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.BiblesResourcesDB',
        **{'get_book.return_value': None, 'get_alternative_book_name.return_value': None})
-@patch('openlp.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB',
+@patch('opal.plugins.bibles.lib.bibleimport.AlternativeBookNamesDB',
        **{'get_book_reference_id.return_value': None})
-@patch('openlp.plugins.bibles.forms.BookNameForm',
+@patch('opal.plugins.bibles.forms.BookNameForm',
        return_value=MagicMock(**{'exec.return_value': QDialog.DialogCode.Accepted, 'book_id': 50}))
 def test_get_book_ref_id_by_name_book_name_form_accepted(MockBookNameForm, MockAlterativeBookNamesDB,
                                                          MockBibleResourcesDB, mocked_get_books, mocked_log_debug,
@@ -338,7 +338,7 @@ def test_get_book_ref_id_by_name_book_name_form_accepted(MockBookNameForm, MockA
     assert result == 50
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.is_zipfile', return_value=True)
+@patch('opal.plugins.bibles.lib.bibleimport.is_zipfile', return_value=True)
 def test_is_compressed_compressed(mocked_is_zipfile, mocked_open, mocked_setup, error_message_box):
     """
     Test is_compressed when the 'file' being tested is compressed
@@ -356,7 +356,7 @@ def test_is_compressed_compressed(mocked_is_zipfile, mocked_open, mocked_setup, 
     assert result is True
 
 
-@patch('openlp.plugins.bibles.lib.bibleimport.is_zipfile', return_value=False)
+@patch('opal.plugins.bibles.lib.bibleimport.is_zipfile', return_value=False)
 def test_is_compressed_not_compressed(mocked_is_zipfile, mocked_open, mocked_setup, error_message_box):
     """
     Test is_compressed when the 'file' being tested is not compressed
@@ -472,7 +472,7 @@ def test_parse_xml_file_file_not_found_exception(mocked_log_exception, mocked_op
     exception.filename = 'file.tst'
     exception.strerror = 'No such file or directory'
     mocked_open.side_effect = exception
-    with patch('openlp.plugins.bibles.lib.bibleimport.BibleDB._setup'):
+    with patch('opal.plugins.bibles.lib.bibleimport.BibleDB._setup'):
         importer = BibleImport(MagicMock(), path='.', name='.', file_path=None)
 
     # WHEN: Calling parse_xml
@@ -496,7 +496,7 @@ def test_parse_xml_file_permission_error_exception(mocked_log_exception, mocked_
     exception.filename = 'file.tst'
     exception.strerror = 'Permission denied'
     mocked_open.side_effect = exception
-    with patch('openlp.plugins.bibles.lib.bibleimport.BibleDB._setup'):
+    with patch('opal.plugins.bibles.lib.bibleimport.BibleDB._setup'):
         importer = BibleImport(MagicMock(), path='.', name='.', file_path=None)
 
     # WHEN: Calling parse_xml

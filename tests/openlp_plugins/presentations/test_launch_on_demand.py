@@ -5,22 +5,22 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.presentations.lib.applicationdiscovery import is_com_registered
-from openlp.plugins.presentations.lib.impresscontroller import ImpressController, ImpressDocument
-from openlp.plugins.presentations.lib.keynotecontroller import KeynoteController
-from openlp.plugins.presentations.lib.maclocontroller import MacLOController, MacLODocument
-from openlp.plugins.presentations.lib.powerpointcontroller import PowerpointController
-from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacController
-from openlp.plugins.presentations.lib.presentationtab import PresentationTab
-from openlp.plugins.presentations.presentationplugin import PresentationPlugin
+from opal.core.common.registry import Registry
+from opal.plugins.presentations.lib.applicationdiscovery import is_com_registered
+from opal.plugins.presentations.lib.impresscontroller import ImpressController, ImpressDocument
+from opal.plugins.presentations.lib.keynotecontroller import KeynoteController
+from opal.plugins.presentations.lib.maclocontroller import MacLOController, MacLODocument
+from opal.plugins.presentations.lib.powerpointcontroller import PowerpointController
+from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacController
+from opal.plugins.presentations.lib.presentationtab import PresentationTab
+from opal.plugins.presentations.presentationplugin import PresentationPlugin
 
 
 def test_plugin_initialisation_does_not_launch_controllers(settings):
     plugin = object.__new__(PresentationPlugin)
     plugin.media_item = MagicMock()
     plugin.controllers = {'Keynote': MagicMock(), 'Powerpoint': MagicMock(), 'Impress': MagicMock()}
-    with patch('openlp.plugins.presentations.presentationplugin.Plugin.initialise'):
+    with patch('opal.plugins.presentations.presentationplugin.Plugin.initialise'):
         plugin.initialise()
     for controller in plugin.controllers.values():
         controller.start_process.assert_not_called()
@@ -50,7 +50,7 @@ def test_keynote_availability_reads_bundle_without_apple_events(tmp_path, versio
     controller = object.__new__(KeynoteController)
     controller.keynote_app = app
     controller.applescript = MagicMock()
-    with patch('openlp.plugins.presentations.lib.keynotecontroller.APPLESCRIPT_AVAILABLE', True):
+    with patch('opal.plugins.presentations.lib.keynotecontroller.APPLESCRIPT_AVAILABLE', True):
         assert controller.check_available() is available
     controller.applescript.call.assert_not_called()
 
@@ -63,19 +63,19 @@ def test_powerpoint_mac_availability_reads_bundle_without_apple_events(tmp_path,
     info.write_bytes(plistlib.dumps({'CFBundleShortVersionString': version}))
     controller = object.__new__(PowerPointMacController)
     controller.applescript = MagicMock()
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.APPLESCRIPT_AVAILABLE', True), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.is_macosx', return_value=True), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.find_macos_application', return_value=app):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.APPLESCRIPT_AVAILABLE', True), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.is_macosx', return_value=True), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.find_macos_application', return_value=app):
         assert controller.check_available() is available
     controller.applescript.call.assert_not_called()
 
 
 def test_windows_powerpoint_discovery_does_not_create_com_instance(settings):
     controller = PowerpointController(MagicMock())
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.is_win', return_value=True), \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.is_com_registered',
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.is_win', return_value=True), \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.is_com_registered',
                   side_effect=[False, True]), \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.Dispatch', create=True) as dispatch:
+            patch('opal.plugins.presentations.lib.powerpointcontroller.Dispatch', create=True) as dispatch:
         assert controller.check_available()
     assert controller.com_obj_name == 'PowerPoint.Application.16'
     dispatch.assert_not_called()
@@ -103,7 +103,7 @@ def test_unused_impress_shutdown_does_not_start_application(settings):
 def test_impress_first_load_starts_application_on_windows(settings, tmp_path):
     controller = ImpressController(MagicMock())
     document = ImpressDocument(controller, tmp_path / 'slides.odp')
-    with patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
+    with patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
             patch.object(controller, 'get_com_desktop', return_value=None) as desktop, \
             patch.object(controller, 'start_process') as start:
         assert not document.load_presentation()
@@ -116,10 +116,10 @@ def test_impress_waits_for_cold_launch(settings, becomes_ready):
     controller = ImpressController(MagicMock())
     instance = MagicMock()
     attempts = [ConnectionError] * 4 + [instance] if becomes_ready else ConnectionError
-    with patch('openlp.plugins.presentations.lib.impresscontroller.uno', create=True), \
-            patch('openlp.plugins.presentations.lib.impresscontroller.get_uno_instance',
+    with patch('opal.plugins.presentations.lib.impresscontroller.uno', create=True), \
+            patch('opal.plugins.presentations.lib.impresscontroller.get_uno_instance',
                   side_effect=attempts) as resolve, \
-            patch('openlp.plugins.presentations.lib.impresscontroller.time.sleep') as sleep, \
+            patch('opal.plugins.presentations.lib.impresscontroller.time.sleep') as sleep, \
             patch.object(controller, 'start_process') as start, \
             patch.object(controller, 'toggle_presentation_screen'):
         desktop = controller.get_uno_desktop()
@@ -160,8 +160,8 @@ def test_maclo_first_load_launches_once_and_can_restart_after_shutdown(settings,
         controller.server_process = MagicMock()
 
     with patch.object(controller, '_start_server', side_effect=start_server) as start, \
-            patch('openlp.plugins.presentations.lib.maclocontroller.Proxy', return_value=client, create=True), \
-            patch('openlp.plugins.presentations.lib.maclocontroller.ScreenList'):
+            patch('opal.plugins.presentations.lib.maclocontroller.Proxy', return_value=client, create=True), \
+            patch('opal.plugins.presentations.lib.maclocontroller.ScreenList'):
         for _ in range(2):
             document = MacLODocument(controller, tmp_path / 'slides.odp')
             assert not document.load_presentation()

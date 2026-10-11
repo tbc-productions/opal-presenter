@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.topicsform package.
+Package to test the opal.plugins.songs.forms.topicsform package.
 """
 import pytest
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.forms.topicsform import TopicsForm
+from opal.core.common.registry import Registry
+from opal.plugins.songs.forms.topicsform import TopicsForm
 
 
 @pytest.fixture()
@@ -72,3 +72,22 @@ def test_set_name_property(form):
 
     # THEN: The name_edit should have the correct value
     assert form.name_edit.text() == topic_name, 'The topic name should be set correctly'
+
+
+def test_native_primary_and_enter_keep_validation(form, monkeypatch):
+    from PySide6 import QtCore, QtTest
+    errors = []
+    monkeypatch.setattr('opal.plugins.songs.forms.topicsform.critical_error_message_box',
+                        lambda **kwargs: errors.append(kwargs))
+    form.setAnimationEnabled(False)
+    form.open()
+    form._native_commands['primary'].click()
+    assert errors and form.isOpen()
+    QtTest.QTest.keyClick(form.name_edit, QtCore.Qt.Key.Key_Return)
+    QtWidgets.QApplication.processEvents()
+    assert len(errors) == 2 and form.isOpen()
+    form.name_edit.setText('Salvation')
+    QtTest.QTest.keyClick(form.name_edit, QtCore.Qt.Key.Key_Return)
+    QtWidgets.QApplication.processEvents()
+    assert not form.isOpen()
+    assert form.result() == form.DialogCode.Accepted

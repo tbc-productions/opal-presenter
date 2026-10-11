@@ -4,12 +4,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common import sha256_file_hash
-from openlp.core.common.registry import Registry
-from openlp.core.lib import ServiceItemContext
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.plugins.media.lib.db import Item
-from openlp.plugins.media.lib.mediaitem import MediaMediaItem
+from opal.core.common import sha256_file_hash
+from opal.core.common.registry import Registry
+from opal.core.lib import ServiceItemContext
+from opal.core.lib.serviceitem import ServiceItem
+from opal.plugins.media.lib.db import Item
+from opal.plugins.media.lib.mediaitem import MediaMediaItem
 
 
 @pytest.fixture
@@ -17,8 +17,8 @@ def media_item(settings):
     Registry().register('service_list', MagicMock())
     Registry().register('main_window', MagicMock())
     Registry().register('live_controller', MagicMock())
-    with patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem._setup'), \
-            patch('openlp.plugins.media.lib.mediaitem.MediaMediaItem.setup_item'):
+    with patch('opal.plugins.media.lib.mediaitem.FolderLibraryItem._setup'), \
+            patch('opal.plugins.media.lib.mediaitem.MediaMediaItem.setup_item'):
         item = MediaMediaItem(None, MagicMock())
         item.manager = MagicMock()
     controller = MagicMock()
@@ -33,7 +33,7 @@ def _generate_service_item(media_item, db_item, library_root):
     plugin = MagicMock()
     plugin.name = 'media'
     service_item = ServiceItem(plugin)
-    with patch('openlp.plugins.media.lib.mediaitem.AppLocation.get_section_data_path',
+    with patch('opal.plugins.media.lib.mediaitem.AppLocation.get_section_data_path',
                return_value=library_root):
         result = media_item.generate_slide_data(service_item, item=tree_item,
                                                 context=ServiceItemContext.Preview)

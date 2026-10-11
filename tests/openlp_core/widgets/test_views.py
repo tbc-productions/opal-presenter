@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.widgets.views package.
+Package to test the opal.core.widgets.views package.
 """
 import os
 import pytest
@@ -27,14 +27,14 @@ from types import GeneratorType
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings
-from openlp.core.common.registry import Registry
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.widgets.views import (
+from opal.core.common.i18n import UiStrings
+from opal.core.common.registry import Registry
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.widgets.views import (
     DataGridWithDnD, FileTreeWidgetItem, ListPreviewWidget, ListWidgetWithDnD, TreeWidgetWithDnD, handle_mime_data_urls)
-from openlp.core.ui.icons import UiIcons
+from opal.core.ui.icons import UiIcons
 from tests.utils.osdinteraction import read_service_from_file
 
 
@@ -46,12 +46,12 @@ def clapperboard(mock_settings):
 @pytest.fixture
 def preview_widget_env():
     """Local test setup"""
-    parent_patcher = patch('openlp.core.widgets.views.ListPreviewWidget.parent')
+    parent_patcher = patch('opal.core.widgets.views.ListPreviewWidget.parent')
     mocked_parent = parent_patcher.start()
     mocked_parent.width.return_value = 100
 
     # Mock self.viewport().width()
-    viewport_patcher = patch('openlp.core.widgets.views.ListPreviewWidget.viewport')
+    viewport_patcher = patch('opal.core.widgets.views.ListPreviewWidget.viewport')
     mocked_viewport = viewport_patcher.start()
     mocked_viewport_obj = MagicMock()
     mocked_viewport_obj.return_value.width.return_value = 200
@@ -86,7 +86,7 @@ def test_files():
     # GIVEN: Some mocked objects that return True when is_file is called, and some mocked mime data
     mocked_path_instance_1 = MagicMock(**{'is_file.return_value': True})
     mocked_path_instance_2 = MagicMock(**{'is_file.return_value': True})
-    with patch('openlp.core.widgets.views.Path',
+    with patch('opal.core.widgets.views.Path',
                side_effect=[mocked_path_instance_1, mocked_path_instance_2]) as mocked_path:
         mocked_q_url_1 = MagicMock(**{'toLocalFile.return_value': os.path.join('file', 'test', 'path', '1.ext')})
         mocked_q_url_2 = MagicMock(**{'toLocalFile.return_value': os.path.join('file', 'test', 'path', '2.ext')})
@@ -113,7 +113,7 @@ def test_directory():
                                           'iterdir.return_value': [mocked_path_instance_1, mocked_path_instance_2]})
     mocked_path_instance_5 = MagicMock(**{'is_file.return_value': False, 'is_directory.return_value': True,
                                           'iterdir.return_value': [mocked_path_instance_3]})
-    with patch('openlp.core.widgets.views.Path',
+    with patch('opal.core.widgets.views.Path',
                side_effect=[mocked_path_instance_4, mocked_path_instance_5]) as mocked_path:
         mocked_q_url_1 = MagicMock(**{'toLocalFile.return_value': os.path.join('file', 'test', 'path')})
         mocked_q_url_2 = MagicMock(**{'toLocalFile.return_value': os.path.join('file', 'test', 'path')})
@@ -541,7 +541,7 @@ def test_paint_event():
     # GIVEN: An instance of ListWidgetWithDnD with a mocked out count methode which returns 1
     #       (i.e the list has an item)
     widget = ListWidgetWithDnD()
-    with patch('openlp.core.widgets.views.QtWidgets.QListWidget.paintEvent') as mocked_paint_event, \
+    with patch('opal.core.widgets.views.QtWidgets.QListWidget.paintEvent') as mocked_paint_event, \
             patch.object(widget, 'count', return_value=1), \
             patch.object(widget, 'viewport') as mocked_viewport:
         mocked_event = MagicMock()
@@ -563,12 +563,12 @@ def test_paint_event_no_items():
     widget = ListWidgetWithDnD()
     mocked_painter_instance = MagicMock()
     mocked_qrect = MagicMock()
-    with patch('openlp.core.widgets.views.QtWidgets.QListWidget.paintEvent') as mocked_paint_event, \
+    with patch('opal.core.widgets.views.QtWidgets.QListWidget.paintEvent') as mocked_paint_event, \
             patch.object(widget, 'count', return_value=0), \
             patch.object(widget, 'viewport'), \
-            patch('openlp.core.widgets.views.QtGui.QPainter',
+            patch('opal.core.widgets.views.QtGui.QPainter',
                   return_value=mocked_painter_instance) as mocked_qpainter, \
-            patch('openlp.core.widgets.views.QtCore.QRect', return_value=mocked_qrect):
+            patch('opal.core.widgets.views.QtCore.QRect', return_value=mocked_qrect):
         mocked_event = MagicMock()
 
         # WHEN: Calling paintEvent
@@ -675,7 +675,7 @@ def test_replace_service_item(preview_widget, state_media):
     # GIVEN: A ServiceItem with two frames.
     service_item = ServiceItem(None)
     service = read_service_from_file('serviceitem_image_3.osj')
-    with patch('os.path.exists') and patch('openlp.core.lib.serviceitem.sha256_file_hash', new=lambda x: "MockedHash"):
+    with patch('os.path.exists') and patch('opal.core.lib.serviceitem.sha256_file_hash', new=lambda x: "MockedHash"):
         service_item.set_from_service(service[0])
     # WHEN: Added to the preview widget.
     preview_widget.replace_service_item(service_item, 1, 1)
@@ -691,7 +691,7 @@ def test_change_slide(preview_widget, state_media):
     # GIVEN: A ServiceItem with two frames content.
     service_item = ServiceItem(None)
     service = read_service_from_file('serviceitem_image_3.osj')
-    with patch('os.path.exists') and patch('openlp.core.lib.serviceitem.sha256_file_hash', new=lambda x: "MockedHash"):
+    with patch('os.path.exists') and patch('opal.core.lib.serviceitem.sha256_file_hash', new=lambda x: "MockedHash"):
         service_item.set_from_service(service[0])
     # WHEN: Added to the preview widget and switched to the second frame.
     preview_widget.replace_service_item(service_item, 1, 0)
@@ -727,7 +727,7 @@ def test_text_slide_rows_have_small_vertical_padding(settings, qapp):
 
 
 def test_bible_slide_rows_wrap_and_reflow(settings, qapp):
-    from openlp.core.widgets.views import SLIDE_TEXT_HTML_ROLE
+    from opal.core.widgets.views import SLIDE_TEXT_HTML_ROLE
 
     parent = QtWidgets.QWidget()
     view = ListPreviewWidget(parent, 1)
@@ -763,7 +763,7 @@ def test_bible_slide_rows_wrap_and_reflow(settings, qapp):
 
 @pytest.mark.parametrize('rich_text', [False, True])
 def test_slide_row_shows_only_first_four_lines(settings, qapp, rich_text):
-    from openlp.core.widgets.views import SLIDE_TEXT_HTML_ROLE
+    from opal.core.widgets.views import SLIDE_TEXT_HTML_ROLE
 
     parent = QtWidgets.QWidget()
     view = ListPreviewWidget(parent, 1)
@@ -871,7 +871,7 @@ def test_library_columns_fit_metadata_and_preserve_manual_widths(qapp, qtbot, tr
 @pytest.mark.parametrize('column', [0, 1, 2])
 @pytest.mark.parametrize('order', [QtCore.Qt.SortOrder.AscendingOrder, QtCore.Qt.SortOrder.DescendingOrder])
 def test_file_lists_keep_folders_first_in_both_sort_directions(qapp, qtbot, tree_type, column, order):
-    from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
+    from opal.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
     tree = tree_type(name='Test')
     qtbot.addWidget(tree)
     tree.setup_columns(['Name', 'Size', 'Updated'])

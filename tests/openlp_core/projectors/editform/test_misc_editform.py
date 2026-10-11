@@ -23,18 +23,19 @@ Test ProjectorEditForm methods that don't have many paths/options
 """
 
 import logging
-import openlp.core.projectors.editform
-import openlp.core.projectors.db
+from opal.core.widgets import fluent as QtWidgets
+import opal.core.projectors.editform
+import opal.core.projectors.db
 
 from unittest.mock import patch
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA
 
-_test_module = openlp.core.projectors.editform.__name__
-_test_module_db = openlp.core.projectors.db.__name__
+_test_module = opal.core.projectors.editform.__name__
+_test_module_db = opal.core.projectors.db.__name__
 
-Message = openlp.core.projectors.editform.Message
-Projector = openlp.core.projectors.db.Projector
-ProjectorEditForm = openlp.core.projectors.editform.ProjectorEditForm
+Message = opal.core.projectors.editform.Message
+Projector = opal.core.projectors.db.Projector
+ProjectorEditForm = opal.core.projectors.editform.ProjectorEditForm
 
 
 def test_exec_projector_bad(projector_editform, caplog):
@@ -131,16 +132,5 @@ def test_cancel_me(projector_editform_mtdb, caplog):
         mock_close.assert_called_once()
 
 
-def test_help_me(projector_editform_mtdb, caplog):
-    """
-    TODO: Expand method, then expand test
-    """
-    # GIVEN: Test setup
-    caplog.set_level(logging.DEBUG)
-    logs = [(_test_module, logging.DEBUG, 'help_me() signal received')]
-
-    # WHEN: Called
-    projector_editform_mtdb.help_me()
-
-    # THEN: Appropriate log entries made
-    assert caplog.record_tuples == logs, 'Invalid log entries'
+def test_no_help_button(projector_editform_mtdb):
+    assert projector_editform_mtdb.button_box_edit.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None

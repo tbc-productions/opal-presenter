@@ -19,10 +19,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.constants module.
+Package to test the opal.core.projectors.constants module.
 """
-from openlp.core.projectors import constants
-from openlp.core.projectors.constants import STATUS_CODE, STATUS_MSG
+from opal.core.projectors import constants
+from opal.core.projectors.constants import STATUS_CODE, STATUS_MSG
 
 
 def test_defined_codes_in_status_code():
@@ -73,7 +73,7 @@ def test_build_pjlink_video_label():
     from tests.resources.projector.data import TEST_VIDEO_CODES
 
     # WHEN: Import projector PJLINK_DEFAULT_CODES
-    from openlp.core.projectors.constants import PJLINK_DEFAULT_CODES
+    from opal.core.projectors.constants import PJLINK_DEFAULT_CODES
 
     # THEN: Verify dictionary was build correctly
     assert PJLINK_DEFAULT_CODES == TEST_VIDEO_CODES, 'PJLink video strings should match'

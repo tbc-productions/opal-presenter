@@ -19,17 +19,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages package.
+Package to test the opal.core.pages package.
 """
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from openlp.core.pages import GridLayoutPage
+from opal.core.pages import GridLayoutPage
 
 
-@patch('openlp.core.pages.GridLayoutPage.setup_ui')
-@patch('openlp.core.pages.GridLayoutPage.retranslate_ui')
+@patch('opal.core.pages.GridLayoutPage.setup_ui')
+@patch('opal.core.pages.GridLayoutPage.retranslate_ui')
 def test_resize_event(mocked_retranslate_ui, mocked_setup_ui, settings):
     """
     Test that the `resizeEvent()` method called the `resize_columns()` method.
@@ -53,7 +53,7 @@ def test_unimplemented_setup_ui(settings):
         GridLayoutPage()
 
 
-@patch('openlp.core.pages.GridLayoutPage.setup_ui')
+@patch('opal.core.pages.GridLayoutPage.setup_ui')
 def test_unimplemented_retranslate_ui(mocked_setup_ui, settings):
     """
     Test that retranslate_ui() throws a NotImplementedError
@@ -62,8 +62,8 @@ def test_unimplemented_retranslate_ui(mocked_setup_ui, settings):
         GridLayoutPage()
 
 
-@patch('openlp.core.pages.GridLayoutPage.setup_ui')
-@patch('openlp.core.pages.GridLayoutPage.retranslate_ui')
+@patch('opal.core.pages.GridLayoutPage.setup_ui')
+@patch('opal.core.pages.GridLayoutPage.retranslate_ui')
 def test_resize_columns(mocked_retranslate_ui, mocked_setup_ui, settings):
     """
     Test the `resize_columns()` method with an implemented page

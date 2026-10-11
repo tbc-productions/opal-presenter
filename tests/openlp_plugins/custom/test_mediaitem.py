@@ -24,10 +24,10 @@ This module contains tests for the lib submodule of the Custom plugin.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
+from opal.core.common.registry import Registry
+from opal.core.lib.plugin import PluginStatus
+from opal.core.lib.serviceitem import ServiceItem
+from opal.plugins.custom.lib.mediaitem import CustomMediaItem
 
 
 FOOTER = ['Arky Arky (Unknown)', 'Public Domain', 'CCLI 123456']
@@ -37,10 +37,10 @@ FOOTER = ['Arky Arky (Unknown)', 'Public Domain', 'CCLI 123456']
 def media_item(mock_settings):
     Registry().register('main_window', MagicMock())
 
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
-            patch('openlp.core.lib.mediamanageritem.MediaManagerItem.setup_item'), \
-            patch('openlp.plugins.custom.forms.editcustomform.EditCustomForm.__init__'), \
-            patch('openlp.plugins.custom.lib.mediaitem.CustomMediaItem.setup_item'):
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+            patch('opal.core.lib.mediamanageritem.MediaManagerItem.setup_item'), \
+            patch('opal.plugins.custom.forms.editcustomform.EditCustomForm.__init__'), \
+            patch('opal.plugins.custom.lib.mediaitem.CustomMediaItem.setup_item'):
         m_item = CustomMediaItem(None, MagicMock())
     media_item.plugin = MagicMock()
     m_item.settings_section = 'bibles'
@@ -75,7 +75,7 @@ def test_service_load_basic_custom_false(media_item):
     media_item.plugin.db_manager.get_object_filtered = MagicMock()
     media_item.plugin.db_manager.get_object_filtered.return_value = None
 
-    with patch('openlp.plugins.custom.lib.mediaitem.CustomSlide'):
+    with patch('opal.plugins.custom.lib.mediaitem.CustomSlide'):
         # WHEN: I search for the custom in the database
         media_item.add_custom_from_service = False
         media_item.create_from_service_item = MagicMock()
@@ -99,7 +99,7 @@ def test_service_load_basic_custom_true(media_item):
     media_item.plugin.db_manager.get_object_filtered = MagicMock()
     media_item.plugin.db_manager.get_object_filtered.return_value = None
 
-    with patch('openlp.plugins.custom.lib.mediaitem.CustomSlide'):
+    with patch('opal.plugins.custom.lib.mediaitem.CustomSlide'):
         # WHEN: I search for the custom in the database
         media_item.add_custom_from_service = True
         media_item.create_from_service_item = MagicMock()
@@ -115,9 +115,9 @@ def test_on_selection_change_toggles_edit_action(mock_settings):
     Test that the Edit selected item action is disabled without selection and enabled with selection.
     """
     # GIVEN: A custom media item with a mocked list and toolbar action map
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
-            patch('openlp.plugins.custom.forms.editcustomform.EditCustomForm.__init__'), \
-            patch('openlp.plugins.custom.lib.mediaitem.CustomMediaItem.setup_item'):
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+            patch('opal.plugins.custom.forms.editcustomform.EditCustomForm.__init__'), \
+            patch('opal.plugins.custom.lib.mediaitem.CustomMediaItem.setup_item'):
         m_item = CustomMediaItem(None, MagicMock(name='plugin'))
     m_item.plugin = MagicMock()
     m_item.plugin.name = 'custom'

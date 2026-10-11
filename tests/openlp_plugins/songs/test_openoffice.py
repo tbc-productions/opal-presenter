@@ -25,12 +25,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
 try:
-    from openlp.plugins.songs.lib.importers.openoffice import OpenOfficeImport
+    from opal.plugins.songs.lib.importers.openoffice import OpenOfficeImport
 except ImportError:
     OpenOfficeImport = None
 
@@ -39,7 +39,7 @@ pytestmark = pytest.mark.skipif(OpenOfficeImport is None,
                                 reason='Could not import OpenOfficeImport probably due to unavailability of uno')
 
 
-@patch('openlp.plugins.songs.lib.importers.openoffice.SongImport')
+@patch('opal.plugins.songs.lib.importers.openoffice.SongImport')
 def test_create_importer(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test creating an instance of the OpenOfficeImport file importer
@@ -54,7 +54,7 @@ def test_create_importer(mocked_songimport: MagicMock, registry: Registry, setti
     assert importer is not None, 'Import should not be none'
 
 
-@patch('openlp.plugins.songs.lib.importers.openoffice.SongImport')
+@patch('opal.plugins.songs.lib.importers.openoffice.SongImport')
 def test_close_ooo_file(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test that close_ooo_file catches raised exceptions

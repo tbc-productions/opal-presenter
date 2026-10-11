@@ -6,14 +6,14 @@ from unittest.mock import patch
 import imageio_ffmpeg
 import pytest
 
-from openlp.core.lib.designmedia import media_to_source, materialise_media
-from openlp.core.lib.videoplayback import video_playback_path
+from opal.core.lib.designmedia import media_to_source, materialise_media
+from opal.core.lib.videoplayback import video_playback_path
 
 
 @pytest.fixture
 def assets(tmp_path):
-    with patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'), \
-            patch('openlp.core.lib.videoplayback.asset_root', return_value=tmp_path / 'managed'):
+    with patch('opal.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'), \
+            patch('opal.core.lib.videoplayback.asset_root', return_value=tmp_path / 'managed'):
         yield tmp_path
 
 
@@ -37,8 +37,8 @@ def test_mp4_proxy_is_decodable_cached_and_keeps_original(assets):
     subprocess.run([ffmpeg, '-nostdin', '-loglevel', 'error', '-i', str(playback),
                     '-f', 'null', '-'], check=True, capture_output=True)
     assert materialise_media(source).read_bytes() == original_bytes
-    with patch('openlp.core.lib.videoplayback.QtCore.QProcess') as process, \
-            patch('openlp.core.lib.videoplayback.cache_media') as cache:
+    with patch('opal.core.lib.videoplayback.QtCore.QProcess') as process, \
+            patch('opal.core.lib.videoplayback.cache_media') as cache:
         assert video_playback_path(source) == playback
     process.assert_not_called()
     cache.assert_not_called()
@@ -76,6 +76,6 @@ def test_failed_conversion_removes_partial_playback_and_retains_original(assets)
 def test_browser_video_format_does_not_require_conversion(assets):
     original = assets / 'clip.webm'
     original.write_bytes(b'webm original')
-    with patch('openlp.core.lib.videoplayback.QtCore.QProcess') as process:
+    with patch('opal.core.lib.videoplayback.QtCore.QProcess') as process:
         assert video_playback_path(original) == original
     process.assert_not_called()

@@ -4,13 +4,13 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 from PySide6.QtCore import QThread, QTimer
 from PySide6.QtGui import QImage
 
-from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.plugins.presentations.lib.db import Item
-from openlp.plugins.presentations.lib.presentationcontroller import PresentationDocument
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.plugins.presentations.lib.db import Item
+from opal.plugins.presentations.lib.presentationcontroller import PresentationDocument
 
 
 def test_native_presentations_use_controller_playback(media_item):
@@ -24,7 +24,7 @@ def test_native_presentations_use_controller_playback(media_item):
 
 def test_powerpoint_snapshot_captures_only_the_named_window(settings):
     import importlib.util
-    import openlp.plugins.presentations.lib as presentation_lib
+    import opal.plugins.presentations.lib as presentation_lib
 
     source = Path(presentation_lib.__file__).parent / 'powerpointmaccontroller.py'
     spec = importlib.util.spec_from_file_location('_openlp_powerpoint_window_capture_test', source)
@@ -64,7 +64,7 @@ def test_slide_image_cache_requires_complete_set_and_matching_screen(settings, t
     controller.temp_folder = tmp_path / 'rendered'
     controller.thumbnail_prefix = 'slide'
     document = PresentationDocument(controller, source_file)
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.ScreenList') as screens:
+    with patch('opal.plugins.presentations.lib.presentationcontroller.ScreenList') as screens:
         size = screens.return_value.current.display_geometry.size.return_value
         size.width.return_value = 1920
         size.height.return_value = 1080
@@ -79,9 +79,9 @@ def test_slide_image_cache_requires_complete_set_and_matching_screen(settings, t
 
 
 def test_powerpoint_exports_visible_slides_at_screen_resolution(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointcontroller import PowerpointDocument
+    from opal.plugins.presentations.lib.powerpointcontroller import PowerpointDocument
 
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument._setup'):
         document = PowerpointDocument(MagicMock(), tmp_path / 'slides.pptx')
     document.index_map = {1: 2, 2: 4}
     document.presentation = MagicMock()
@@ -90,7 +90,7 @@ def test_powerpoint_exports_visible_slides_at_screen_resolution(settings, tmp_pa
     document.get_temp_folder = MagicMock(return_value=tmp_path)
     document.invalidate_slide_images = MagicMock()
     document.save_slide_image_manifest = MagicMock()
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList') as screens:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList') as screens:
         size = screens.return_value.current.display_geometry.size.return_value
         size.width.return_value = 1920
         size.height.return_value = 1080
@@ -105,14 +105,14 @@ def test_powerpoint_exports_visible_slides_at_screen_resolution(settings, tmp_pa
 
 
 def test_keynote_cached_exports_restore_slide_count(settings, tmp_path):
-    from openlp.plugins.presentations.lib.keynotecontroller import KeynoteDocument
+    from opal.plugins.presentations.lib.keynotecontroller import KeynoteDocument
 
     (tmp_path / 'slide1.png').write_bytes(b'first')
     (tmp_path / 'slide2.png').write_bytes(b'second')
     controller = MagicMock()
-    with patch('openlp.plugins.presentations.lib.keynotecontroller.AppleScriptBaseDocument.load_presentation',
+    with patch('opal.plugins.presentations.lib.keynotecontroller.AppleScriptBaseDocument.load_presentation',
                return_value=True), patch(
-                   'openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+                   'opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(controller, tmp_path / 'slides.key')
         document.get_thumbnail_folder = MagicMock(return_value=tmp_path)
         assert document.load_presentation()
@@ -120,7 +120,7 @@ def test_keynote_cached_exports_restore_slide_count(settings, tmp_path):
 
 
 def test_applescript_export_does_not_close_unrelated_front_document(settings, tmp_path):
-    from openlp.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseDocument
+    from opal.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseDocument
 
     source = tmp_path / 'slides.key'
     source.write_bytes(b'presentation')
@@ -137,7 +137,7 @@ def test_applescript_export_does_not_close_unrelated_front_document(settings, tm
 
 
 def test_failed_image_export_keeps_native_service_item(media_item, tmp_path):
-    from openlp.plugins.presentations.lib.messagelistener import MessageListener
+    from opal.plugins.presentations.lib.messagelistener import MessageListener
 
     source = tmp_path / 'slides.pptx'
     source.write_bytes(b'presentation')
@@ -165,7 +165,7 @@ def test_failed_image_export_keeps_native_service_item(media_item, tmp_path):
 
 
 def test_saved_native_item_converts_to_images_on_startup(media_item, tmp_path):
-    from openlp.plugins.presentations.lib.messagelistener import MessageListener
+    from opal.plugins.presentations.lib.messagelistener import MessageListener
 
     source = tmp_path / 'slides.pptx'
     source.write_bytes(b'presentation')
@@ -228,7 +228,7 @@ def test_native_presentation_uses_real_file_path_when_library_name_is_custom(med
 
 
 def test_existing_presentation_item_recovers_source_from_content_hash(settings, tmp_path):
-    from openlp.core.common import sha256_file_hash
+    from opal.core.common import sha256_file_hash
 
     source = tmp_path / 'survivor-deck.pptx'
     source.write_bytes(b'presentation')
@@ -275,7 +275,7 @@ def test_large_native_presentation_validates_once(media_item, tmp_path):
 
 
 def test_powerpoint_mac_keeps_the_full_slide_range_available():
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import POWERPOINT_MAC_APPLESCRIPT
+    from opal.plugins.presentations.lib.powerpointmaccontroller import POWERPOINT_MAC_APPLESCRIPT
 
     handler = POWERPOINT_MAC_APPLESCRIPT.split('on start_presentation(', 1)[1].split(
         'end start_presentation', 1)[0]
@@ -287,11 +287,11 @@ def test_powerpoint_mac_keeps_the_full_slide_range_available():
 
 
 def test_powerpoint_mac_opens_through_launch_services(tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import (
+    from opal.plugins.presentations.lib.powerpointmaccontroller import (
         POWERPOINT_MAC_APPLESCRIPT, _open_powerpoint_document)
 
     path = tmp_path / 'slides.pptx'
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.subprocess.run') as run:
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.subprocess.run') as run:
         _open_powerpoint_document(path)
 
     run.assert_called_once_with(
@@ -301,9 +301,9 @@ def test_powerpoint_mac_opens_through_launch_services(tmp_path):
 
 
 def test_powerpoint_mac_captures_slideshow_window(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         controller = MagicMock()
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
@@ -311,16 +311,16 @@ def test_powerpoint_mac_captures_slideshow_window(settings, tmp_path):
     document._captured_image = image
     document._start_window_capture = MagicMock()
     pixmap = MagicMock()
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QPixmap.fromImage', return_value=pixmap):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.QPixmap.fromImage', return_value=pixmap):
         assert document.attempt_screenshot(0) == (True, pixmap)
     document._start_window_capture.assert_called_once_with()
     controller.applescript.call.assert_not_called()
 
 
 def test_powerpoint_mac_ignores_capture_frames_during_slide_jump(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     frame = MagicMock()
     frame.isValid.return_value = True
@@ -338,18 +338,18 @@ def test_powerpoint_mac_ignores_capture_frames_during_slide_jump(settings, tmp_p
 
 
 def test_powerpoint_mac_selects_matching_slideshow_window(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     other = MagicMock()
     other.description.return_value = 'PowerPoint Slide Show – [other]'
     matching = MagicMock()
     matching.description.return_value = 'PowerPoint Slide Show – [slides]'
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QWindowCapture') as capture_class, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QMediaCaptureSession'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QVideoSink'):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.QWindowCapture') as capture_class, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.QMediaCaptureSession'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.QVideoSink'):
         capture_class.capturableWindows.return_value = [other, matching]
         document._start_window_capture()
         capture_class.return_value.setWindow.assert_called_once_with(matching)
@@ -357,7 +357,7 @@ def test_powerpoint_mac_selects_matching_slideshow_window(settings, tmp_path):
 
 
 def test_powerpoint_mac_export_runs_with_gui_event_loop(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     class FinishedExport(QtCore.QThread):
         def __init__(self, source_path, source_name, thumbnail_folder):
@@ -367,20 +367,20 @@ def test_powerpoint_mac_export_runs_with_gui_event_loop(settings, tmp_path):
         def run(self):
             pass
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.get_thumbnail_folder = MagicMock(return_value=tmp_path)
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._PowerPointThumbnailExport', FinishedExport), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._PowerPointThumbnailExport', FinishedExport), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
         assert document._export_thumbnails()
 
 
 def test_powerpoint_mac_reexports_when_cache_has_no_slide(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     (tmp_path / 'titles.txt').write_text('Old export metadata')
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     document.get_thumbnail_folder = MagicMock(return_value=tmp_path)
     document.get_thumbnail_path = MagicMock(side_effect=lambda number, exists:
@@ -399,21 +399,21 @@ def test_powerpoint_mac_reexports_when_cache_has_no_slide(settings, tmp_path):
 
 
 def test_powerpoint_mac_starts_on_selected_slide(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.side_effect = lambda name, *args: (
         1 if name == 'start_presentation' else 'PowerPoint Slide Show – [slides]')
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 3
     document.use_slide_timings = True
     document.get_slide_number = MagicMock(side_effect=[1, 3, 3])
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') \
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') \
             as open_document, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                   return_value=True) as send_slide_number:
         screen = screens.return_value.current.display_geometry
         screen.top.return_value = 10
@@ -441,13 +441,13 @@ def test_powerpoint_mac_starts_on_selected_slide(settings, tmp_path):
     ((0, 0, 1920, 1080), None, False),
 ])
 def test_powerpoint_mac_routes_to_selected_output(settings, tmp_path, geometry, custom_geometry, restore_focus):
-    from openlp.core.common.registry import Registry
-    from openlp.core.display.screens import Screen
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.core.common.registry import Registry
+    from opal.core.display.screens import Screen
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.return_value = 1
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 1
@@ -456,9 +456,9 @@ def test_powerpoint_mac_routes_to_selected_output(settings, tmp_path, geometry, 
     Registry().register('main_window', main_window)
     output = Screen(1, QtCore.QRect(*geometry),
                     QtCore.QRect(*custom_geometry) if custom_geometry else None)
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
                   return_value=[]):
         screens.return_value.current = output
         document.start_presentation()
@@ -477,7 +477,7 @@ def test_powerpoint_mac_routes_to_selected_output(settings, tmp_path, geometry, 
 
 
 def test_powerpoint_mac_script_positions_only_windowed_shows():
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import POWERPOINT_MAC_APPLESCRIPT
+    from opal.plugins.presentations.lib.powerpointmaccontroller import POWERPOINT_MAC_APPLESCRIPT
 
     start_script = POWERPOINT_MAC_APPLESCRIPT.split('on start_presentation(', 1)[1].split('end start_presentation')[0]
     assert 'slide show type window' in start_script
@@ -490,20 +490,20 @@ def test_powerpoint_mac_script_positions_only_windowed_shows():
 
 
 def test_powerpoint_mac_keeps_running_if_initial_slide_jump_fails(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.side_effect = lambda name, *args: (
         1 if name == 'start_presentation' else 'PowerPoint Slide Show – [slides]')
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 3
     document.goto_slide = MagicMock(return_value=False)
     document.get_slide_number = MagicMock(return_value=1)
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
         document.start_presentation()
 
     document.goto_slide.assert_called_once_with(3)
@@ -512,12 +512,12 @@ def test_powerpoint_mac_keeps_running_if_initial_slide_jump_fails(settings, tmp_
 
 
 def test_powerpoint_escape_marks_live_output_hidden(settings, tmp_path):
-    from openlp.core.common.registry import Registry
-    from openlp.core.ui import HideMode
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.core.common.registry import Registry
+    from opal.core.ui import HideMode
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     source = tmp_path / 'slides.pptx'
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), source)
     document.file_path = source
     document._slideshow_started = True
@@ -535,14 +535,14 @@ def test_powerpoint_escape_marks_live_output_hidden(settings, tmp_path):
 
 
 def test_powerpoint_mac_logo_keeps_same_show_underneath_overlay(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import (
+    from opal.plugins.presentations.lib.powerpointmaccontroller import (
         POWERPOINT_MAC_APPLESCRIPT, PowerPointMacDocument)
 
     source = tmp_path / 'slides.pptx'
     native = MagicMock()
     native.applescript.call.side_effect = lambda name, *args: (
         'PowerPoint Slide Show – [slides]' if name == 'get_slide_show_window_title' else None)
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(native, source)
     document.file_path = source
     document._slideshow_started = True
@@ -565,17 +565,17 @@ def test_powerpoint_mac_logo_keeps_same_show_underneath_overlay(settings, tmp_pa
 
 
 def test_powerpoint_mac_can_disable_slide_timings(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     settings.setValue('presentations/powerpoint use slide timings', QtCore.Qt.CheckState.Unchecked)
     controller = MagicMock()
     controller.applescript.call.return_value = 1
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 1
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
         document.start_presentation()
 
     start_call = controller.applescript.call.call_args_list[0]
@@ -584,23 +584,23 @@ def test_powerpoint_mac_can_disable_slide_timings(settings, tmp_path):
 
 
 def test_powerpoint_mac_timed_deck_starts_with_manual_advance(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.side_effect = lambda name, *args: (
         1 if name == 'start_presentation' else 'PowerPoint Slide Show – [slides]')
     # Other tests may import this module while QtCore.QTimer is patched. Use the real timer here.
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.QTimer', QTimer):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.QTimer', QTimer):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.slide_count = 1
     document.ui_slidenumber = 1
     document.get_slide_number = MagicMock(return_value=1)
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
                return_value=[2000]), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'):
         screens.return_value.current.custom_geometry = None
         document.start_presentation()
 
@@ -611,17 +611,17 @@ def test_powerpoint_mac_timed_deck_starts_with_manual_advance(settings, tmp_path
 
 
 def test_powerpoint_mac_jumps_back_without_restarting(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document._starting_slide = 3
     document.get_slide_number = MagicMock(side_effect=[3, 2])
     controller.applescript.call.return_value = 'PowerPoint Slide Show – [slides]'
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                return_value=True) as send_slide_number:
         assert document.goto_slide(2)
 
@@ -631,17 +631,17 @@ def test_powerpoint_mac_jumps_back_without_restarting(settings, tmp_path):
 
 
 def test_powerpoint_mac_jumps_to_distant_slide_without_restarting(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.get_slide_number = MagicMock(side_effect=[1, 80])
     document.start_presentation = MagicMock()
     controller.applescript.call.return_value = 'PowerPoint Slide Show – [slides]'
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                return_value=True) as send_slide_number:
         assert document.goto_slide(80)
 
@@ -652,24 +652,24 @@ def test_powerpoint_mac_jumps_to_distant_slide_without_restarting(settings, tmp_
 
 
 def test_powerpoint_mac_does_not_walk_slides_when_number_shortcut_is_unavailable(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.return_value = 'PowerPoint Slide Show – [slides]'
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.get_slide_number = MagicMock(return_value=1)
     document.ui_slidenumber = 80
     document.slide_number = 80
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                return_value=False) as send_slide_number, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.has_post_event_access',
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.has_post_event_access',
                   return_value=False), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.accessibility_target_name',
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.accessibility_target_name',
                   return_value='Example IDE'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.Registry') as registry:
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.Registry') as registry:
         assert not document.goto_slide(80)
         registry.return_value.get.return_value.show_status_message.assert_called_once_with(
             'Could not select a PowerPoint slide. Allow Example IDE in macOS Accessibility settings.', 10000)
@@ -681,17 +681,17 @@ def test_powerpoint_mac_does_not_walk_slides_when_number_shortcut_is_unavailable
 
 
 def test_powerpoint_mac_does_not_type_into_inactive_slideshow(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
     controller.applescript.call.return_value = False
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.get_slide_number = MagicMock(return_value=1)
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint') as send, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.Registry'):
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint') as send, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.Registry'):
         assert not document.goto_slide(4)
 
     controller.applescript.call.assert_called_once_with('is_slide_show_window_active', 'slides.pptx')
@@ -699,16 +699,16 @@ def test_powerpoint_mac_does_not_type_into_inactive_slideshow(settings, tmp_path
 
 
 def test_powerpoint_mac_jumps_past_builds_without_restarting(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.get_slide_number = MagicMock(side_effect=[1, 2])
     controller.applescript.call.return_value = 'PowerPoint Slide Show – [slides]'
 
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._send_slide_number_to_powerpoint',
                return_value=True):
         assert document.goto_slide(2)
 
@@ -717,10 +717,10 @@ def test_powerpoint_mac_jumps_past_builds_without_restarting(settings, tmp_path)
 
 
 def test_powerpoint_mac_timing_toggle_does_not_restart_slideshow(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
     controller = MagicMock()
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document._use_openlp_timing = True
@@ -741,9 +741,9 @@ def test_powerpoint_mac_timing_toggle_does_not_restart_slideshow(settings, tmp_p
 
 
 def test_powerpoint_mac_auto_advance_selects_next_slide_without_restarting(settings, tmp_path):
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacDocument
 
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(MagicMock(), tmp_path / 'slides.pptx')
     document._use_openlp_timing = True
     document._slide_advance_times = [4000, 2000]
@@ -761,7 +761,7 @@ def test_powerpoint_mac_auto_advance_selects_next_slide_without_restarting(setti
 
 def test_powerpoint_mac_reads_slide_timings_in_presentation_order(tmp_path):
     from zipfile import ZipFile
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import _read_slide_advance_times
+    from opal.plugins.presentations.lib.powerpointmaccontroller import _read_slide_advance_times
 
     source = tmp_path / 'timed.pptx'
     with ZipFile(source, 'w') as package:

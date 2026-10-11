@@ -26,9 +26,9 @@ from unittest.mock import MagicMock, patch
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.liveworship import LiveWorshipImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.liveworship import LiveWorshipImport
 
 
 TEST_PATH = RESOURCE_PATH / 'songs' / 'liveworship'
@@ -43,7 +43,7 @@ def _get_item(data, key):
     return ''
 
 
-@patch('openlp.plugins.songs.lib.importers.liveworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.liveworship.SongImport')
 def test_create_importer(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test creating an instance of the LiveWorship file importer
@@ -58,7 +58,7 @@ def test_create_importer(mocked_songimport: MagicMock, registry: Registry, setti
     assert importer is not None, 'Import should not be none'
 
 
-@patch('openlp.plugins.songs.lib.importers.liveworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.liveworship.SongImport')
 def test_parse_xml_dump(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test importing a simple XML dump in LiveWorshipImport

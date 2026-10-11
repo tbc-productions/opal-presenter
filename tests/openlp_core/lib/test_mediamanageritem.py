@@ -19,24 +19,84 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.mediamanageritem package.
+Package to test the opal.core.lib.mediamanageritem package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib.mediamanageritem import MediaManagerItem
+from opal.core.common.registry import Registry
+from opal.core.lib.mediamanageritem import MediaManagerItem
+
+
+@pytest.mark.parametrize('name', ['images', 'media', 'presentations'])
+def test_empty_controls_panel_leaves_header_against_toolbar(qapp, settings, qtbot, name):
+    from PySide6 import QtCore
+    from opal.core.ui.icons import UiIcons
+
+    plugin = MagicMock(name=name)
+    plugin.name = name
+    plugin.icon = UiIcons().picture
+    plugin.get_string.return_value = {'title': name, 'tooltip': name}
+    with patch('opal.core.lib.ui.ActionList.get_instance'):
+        item = MediaManagerItem(None, plugin)
+    qtbot.addWidget(item)
+    item.resize(640, 500)
+    item.show()
+    qtbot.wait(20)
+    assert item.panel_widget.isHidden()
+    assert item.list_view.mapTo(item, QtCore.QPoint()).y() == item.toolbar.geometry().bottom() + 1
 
 
 @pytest.fixture
 def media_env(qapp):
-    setup_patcher = patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup')
+    setup_patcher = patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup')
     setup_patcher.start()
     yield
     setup_patcher.stop()
 
 
-@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.on_preview_click')
+def test_search_controls_align_and_submit_with_mouse_and_enter(media_env, settings, qtbot):
+    from PySide6 import QtCore
+    from opal.core.widgets import fluent
+
+    item = MediaManagerItem(None)
+    qtbot.addWidget(item)
+    item.settings_section = 'songs'
+    item.panel_layout = fluent.QVBoxLayout(item)
+    item.on_search_text_button_clicked = MagicMock()
+    item.on_search_text_edit_changed = MagicMock()
+    item.add_search_to_toolbar()
+    assert not hasattr(item, 'search_text_label')
+    item.search_text_edit.setPlaceholderText('Search Titles…')
+    item.show()
+    for width in (600, 300):
+        item.resize(width, 100)
+        fluent.QApplication.processEvents()
+        assert item.search_text_edit.height() == item.search_text_button.height()
+    qtbot.mouseClick(item.search_text_button, QtCore.Qt.MouseButton.LeftButton)
+    qtbot.keyClick(item.search_text_edit, QtCore.Qt.Key.Key_Return)
+    assert item.on_search_text_button_clicked.call_count == 2
+
+
+def test_custom_new_precedes_import_in_command_bar(qapp, settings, qtbot):
+    from opal.core.widgets.toolbar import OpenLPToolbar
+    from opal.plugins.custom.lib.mediaitem import CustomMediaItem
+
+    plugin = MagicMock()
+    plugin.name = 'custom'
+    plugin.get_string.return_value = {'title': 'Custom Slides', 'tooltip': 'Custom Slides'}
+    with patch.object(MediaManagerItem, '_setup'), patch.object(CustomMediaItem, 'setup_item'):
+        item = CustomMediaItem(None, plugin)
+    qtbot.addWidget(item)
+    item.toolbar = OpenLPToolbar(item)
+    item.required_icons()
+    item.add_start_header_bar()
+    item.add_common_header_bar()
+    assert [action.objectName() for action in item.toolbar.actions()] == [
+        'customNewAction', 'customImportAction', 'customEditAction', 'customDeleteAction']
+
+
+@patch('opal.core.lib.mediamanageritem.MediaManagerItem.on_preview_click')
 def test_on_double_clicked(mocked_on_preview_click, media_env, registry):
     """
     Test that when an item is double-clicked then the item is previewed
@@ -76,7 +136,7 @@ def test_required_icons(media_env):
     assert mmi.can_add_to_service is True, 'There should be a add to service icon by default'
 
 
-@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.on_live_click')
+@patch('opal.core.lib.mediamanageritem.MediaManagerItem.on_live_click')
 def test_on_double_clicked_go_live(mocked_on_live_click, media_env, registry):
     """
     Test that when "Double-click to go live" is enabled that the item goes live
@@ -97,8 +157,8 @@ def test_on_double_clicked_go_live(mocked_on_live_click, media_env, registry):
     mocked_on_live_click.assert_called_with()
 
 
-@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.on_live_click')
-@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.on_preview_click')
+@patch('opal.core.lib.mediamanageritem.MediaManagerItem.on_live_click')
+@patch('opal.core.lib.mediamanageritem.MediaManagerItem.on_preview_click')
 def test_on_double_clicked_single_click_preview(mocked_on_preview_click, mocked_on_live_click, media_env, registry):
     """
     Test that when "Single-click preview" is enabled then nothing happens on double-click

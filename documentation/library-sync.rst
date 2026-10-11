@@ -11,86 +11,59 @@ the application uses Modern docking for every workspace.
 Connecting an organisation
 --------------------------
 
-An administrator performs the Google setup once:
+Library Sync uses **Local Cloud Storage**. Opal reads and writes the selected
+folder on this computer; the desktop storage app handles syncing and sharing.
+No API credentials or cloud API setup are required.
 
-1. Create a Google Cloud project and enable the Google Drive API.
-2. Configure the OAuth consent screen and its audience. Create a **Desktop app**
-   OAuth client and download its JSON configuration. Do not use a service account
-   or a Web application client.
-3. In Cloud Library, choose **Connection → Set up connection**. Select a supported
-   cloud provider and enter a unique connection name. Names are compared without
-   case or leading/trailing spaces. Select **Google Drive** for the API connection.
-4. Choose **Next** to configure Google Drive. Enter the Client ID and Client secret,
-   or choose **Load client JSON**, then paste the shared folder link or folder ID.
-   The secret is masked on screen. Links with a resource key are supported. The
-   folder can be in My Drive or a Google Workspace shared drive.
-5. Leave **Export a connection file for the team** checked, then choose **Save connection**
-   and a file location. The chosen name is included in the file and the folder selector.
-6. Choose **Connect** and complete Google sign-in in the system browser to check access.
-   Share the exported file with the team. **Connection → Export connection file** can
-   export it again later.
+1. One team member creates a folder in their cloud storage app and shares it with
+   the team. Give contributors editing permission.
+2. Each team member syncs the shared folder to their computer using the desktop
+   storage app. Make it available offline when needed without an internet connection.
+3. In Cloud Library, choose **Set up connection**, or
+   **Connection → Set up connection**. Select **Local Cloud Storage** and enter
+   a unique library name.
+4. Choose **Next**, then **Browse…** and select the shared folder on this computer.
+   Each computer selects its own synced copy; the folder paths can differ.
+5. Review the location and choose **Save library**. Opal opens the folder
+   automatically and remembers it across restarts. Connect is disabled for local storage.
 
-For storage without API credentials, choose **Local Cloud Storage** on the first
-wizard page. Choose **Next**, then browse to an existing folder on this computer.
-A local or synced folder works. Review the location and choose **Save connection**,
-then **Connect**.
-Export is off by default because folder paths belong to the current computer.
-Each computer should create its own connection pointing to its synced copy.
+Choose **Connection → Edit library…** to rename the library or select another
+folder. Choose **Connection → Remove library…** to clear its setup from Opal.
+Removing a library keeps its files.
+Category navigation is disabled until a library is set up.
 
-Local Cloud Storage uses the same Songs, Presentations, Images, Media, Custom
-Slides and Themes folders as Cloud Library. Uploads and downloads publish complete
-files; an overwrite requires confirmation and refuses a stale item. Deleted items
-are retained under ``.librarysync-trash`` inside the chosen folder and can be
-restored manually. Hidden files and symbolic links are excluded. The desktop
-cloud storage app handles availability, syncing, sharing and conflicts between
-computers. Local writes are not confirmed as synced to the cloud.
+An ordinary local folder or a folder synced by another desktop storage app also
+works. Use the actual storage folder rather than a filesystem symbolic link.
+Opal excludes hidden files and symbolic links within the selected folder.
 
-For Google Drive, each team member chooses **Connection → Import connection file**,
-then **Connect**, and signs in with their own Google account. Existing Google folder permissions
-determine what that account can download and upload. Sharing the connection file
-does not grant access to the organisation folder.
-The connection and account are remembered across restarts. Starting the application
-uses the saved account and renews its token when necessary without opening a browser.
-Reconnecting is necessary if Google revokes or expires the account's authorisation.
-Disconnect asks for confirmation before closing previews and clearing the local
-cache. Export connection and Disconnect are unavailable while disconnected.
+Uploads and downloads publish complete files. An overwrite requires confirmation
+and refuses a stale item. Deleted items are retained under ``.librarysync-trash``
+inside the selected folder and can be restored manually.
+The desktop storage app handles cloud availability and conflicts between computers.
+A completed Opal upload confirms the local write; check the desktop storage app's
+sync status before expecting other computers to see it. Opal does not merge
+simultaneous changes made on different computers.
 
-With no connections configured, Cloud Library displays a Fluent InfoBar with an
-**Import connection** hyperlink. Connect and the folder selector are disabled
-until a connection is imported. The footer shows the item count on the left and
-current status on the right. During a transfer, progress, percentage and **Cancel**
-share the middle of this row. Preparation uses an indeterminate progress bar.
+Connection-file export is disabled for Local Cloud Storage because folder paths
+belong to the current computer. Each computer creates its own connection.
+Existing Local Cloud Storage files can still be imported when their path matches
+this computer; importing a file does not grant access to the shared folder.
+Older direct cloud API connections are no longer supported.
+
+Choose **Connection → Open storage** to open the configured folder in Finder or
+Explorer. This action is available while disconnected if a connection is configured.
+Connect and Disconnect are disabled for Local Cloud Storage; no sign-in session
+is needed.
+
+With no connection configured, Cloud Library displays a Fluent InfoBar with a
+**Set up connection** hyperlink. The folder selector is disabled until a
+connection is configured. The footer shows the item count on the left and current
+status on the right. During a transfer, progress, percentage and **Cancel** share
+the middle of this row. Preparation uses an indeterminate progress bar.
 The footer matches Library and Themes and keeps the same height during transfers.
-**Cancel** is a small, subtle Fluent button.
-Upload percentages update as bytes are sent and reach 100% when Drive confirms
-completion. Status messages are kept brief; hover for full text and error details.
-Errors and an out-of-date cache use Fluent's critical text colour.
-
-The portable file contains the Desktop OAuth application configuration and folder
-references. It never contains personal access tokens, refresh tokens, passwords,
-service-account keys or an API key. Exported files and stored connection settings
-use an obfuscated payload so Client ID and Client secret are not shown as plain
-text. This is reversible concealment, not confidentiality: any installation can
-decode the payload. Google Desktop clients are public clients. The connection
-name stays readable so people can identify a shared file.
-Each user's sign-in is held in the operating system's credential store: Keychain
-on macOS, Windows Credential Locker, or Secret Service/KWallet on Linux. Library
-Sync refuses plaintext credential backends. **Disconnect account** removes the
-local sign-in; access can also be revoked in the user's Google account.
-
-This first provider requests the ``drive`` OAuth scope to browse existing shared
-folders and copy their contents. Google classifies it as a restricted scope. The
-administrator must satisfy Google's applicable consent and verification policies;
-Workspace organisations can configure an internal audience where appropriate.
-External projects in Testing issue refresh tokens that expire after seven days.
-``drive.file`` is narrower, but requires granting the app access to existing files
-through a picker; importing a shared folder ID alone does not do that.
-
-Google's primary documentation:
-
-* `Desktop OAuth and PKCE <https://developers.google.com/identity/protocols/oauth2/native-app>`_
-* `Drive scopes <https://developers.google.com/workspace/drive/api/guides/api-specific-auth>`_
-* `Refresh token expiration <https://developers.google.com/identity/protocols/oauth2#expiration>`_
+**Cancel** is a small, subtle Fluent button. Status messages are kept brief; hover
+for full text and error details. Errors and an out-of-date cache use Fluent's
+critical text colour.
 
 Browsing and transferring
 -------------------------
@@ -132,7 +105,7 @@ Opening a View window restores the normal Cloud Library footer status.
 The context menu offers **View**, **Add to Library**, **Rename** and **Delete**
 for all item types, including Themes. The View window also provides Add to Library,
 Rename and Delete. Rename and Delete are disabled when unavailable. Delete moves
-items to the cloud bin. Rename refuses an existing name and file type in the same item type.
+items to the local ``.librarysync-trash`` folder. Rename refuses an existing name and file type in the same item type.
 
 Drag cloud items onto the matching local Library tab, in either list or grid view,
 or choose **Add to Library**. Drag local Library items into the currently open cloud
@@ -160,10 +133,10 @@ to overwrite it. Declining preserves the existing item. A confirmed overwrite
 updates the existing record rather than adding a confusing duplicate. Existing
 legacy duplicates must be renamed or removed before a replacement can proceed.
 
-Network operations, checksum work and package validation run in tracked background
+File transfers, version checks and package validation run in tracked background
 workers. Progress shows the current file and transfer percentage. **Cancel** stops
 remaining work; copies already completed are retained. Downloads become visible to
-the local importer only after size, version and available checksum checks succeed.
+the local importer only after size and version checks succeed.
 Partial files are removed. Downloading again follows the same overwrite checks.
 
 Cache and change checks
@@ -172,7 +145,7 @@ Cache and change checks
 Saved listings appear without downloading the folder again. While Cloud Library
 is visible, it checks the provider for changes every ten seconds and when
 returning to the panel. Unrelated changes do not reload the Library.
-Relevant additions, edits, moves, removals and shared-drive access changes show
+Changes to files and folders in the selected storage show
 **Out of date** in the footer's Fluent critical colour. This warning remains
 until the current folder refreshes automatically, at most once every ten seconds.
 A small **Refresh** button also allows a manual refresh. Transfers defer automatic
@@ -180,14 +153,13 @@ refresh until they finish. Rename, Delete and uploads are
 disabled while the listing is out of date or its cached permissions have not yet
 been checked. Writes always recheck live permissions and file versions.
 
-Read the `Drive changes API documentation
-<https://developers.google.com/workspace/drive/api/reference/rest/v3/changes/list>`_
-for the incremental cursor and shared-drive options used here.
+Change checks inspect local file metadata. Cloud changes become visible after the
+desktop storage app syncs them to this computer.
 
-The cache is separate for each connection and account sign-in and contains no
-OAuth credentials. It retains up to 512 MiB across connections and removes the
+The cache is separate for each connection and local storage path.
+It retains up to 512 MiB across connections and removes the
 least recently used files when necessary; files unused for 30 days expire.
-Disconnecting removes the current connection/account cache. Cached content can
+Disconnecting removes the current connection cache. Cached content can
 still be viewed if a change check fails, with that failure shown in the footer.
 Successful uploads also populate the preview cache. Media uses a cached upload
 when available and otherwise streams on demand.
@@ -213,13 +185,13 @@ Uploading at the shared root creates these item-type folders as needed::
         Presentations/
             Weekly notices.pptx
         Themes/
-            Organisation theme.otz
+            Organisation theme.opal-theme
 
 Songs use OpenLyrics. Custom Slides retain their title, credits and design in
-native XML. Text items with embedded design media use portable ``.osz`` packages.
+native Opal song and slide packages. Legacy XML and ``.osz`` packages remain readable.
 Images, media and presentations retain their original file format. Themes use native
 portable theme packages. Bible items are excluded. Friendly titles are retained in
-Drive metadata and local records; managed download directories keep internal IDs
+filenames and local records; managed download directories keep internal IDs
 outside the user-facing filenames.
 
 Existing files can be organised into these folders without using the application.
@@ -228,60 +200,45 @@ an item-type folder. Native song/custom XML should be placed in its correspondin
 folder. Supported nested folders inherit their item type. Upload directly into a type folder
 to avoid creating another category level.
 
-Uploads use resumable sessions. Confirmed replacements, renames, moves and deletion
-check the current file version and use an HTTP version precondition. A change made
-by another user causes the operation to stop and request a refresh; a missing
-version lock also prevents writes. Interrupted chunks resume within the same session.
-Refresh before retrying an upload whose final response was lost; it may have completed.
-Browsing and new uploads use Drive v3. Conditional mutations use Drive v2's file
-ETag and its update endpoints, since the v3 metadata response does not supply that
-lock. See Google's `file metadata <https://developers.google.com/workspace/drive/api/reference/rest/v2/files>`_
-and `content updates <https://developers.google.com/workspace/drive/api/reference/rest/v2/files/update>`_.
-
-New uploads check for duplicates before and after creation and retract their own
-later copy when a simultaneous creation is detected. Drive itself has no unique-name
-constraint, so strict uniqueness across simultaneous creators or changes outside
-OpenLP+ would require a shared index. This implementation has no background mirroring
-or automatic conflict merging.
+Transfers write temporary files before publishing complete copies. Confirmed
+replacements, renames, moves and deletion check the current local file version;
+a change observed on this computer stops the operation and requests a refresh.
+This protects local writes, but does not lock files on other computers while the
+desktop storage app syncs. Check its conflict reports after concurrent edits.
 
 Connection file format
 ----------------------
 
-The exported JSON has a versioned envelope containing the name and a compressed,
+Saved connection settings have a versioned envelope containing the name and a compressed,
 Base64-encoded payload. Imports bound both the file size and decoded payload to
 64 KiB and validate its contents before use. The payload is **not encrypted**.
-The decoded configuration can reference several shared folders; the folder
-selector switches between them. The wizard creates one named connection to one
-folder. This example shows the decoded configuration::
+The wizard creates one named connection to one local folder. This example shows
+the decoded configuration::
 
     {
       "version": 1,
-      "provider": "google-drive",
+      "provider": "local-cloud",
       "name": "Organisation Library",
-      "installed": {
-        "client_id": "YOUR_DESKTOP_CLIENT.apps.googleusercontent.com",
-        "client_secret": "YOUR_DESKTOP_CLIENT_CONFIGURATION"
-      },
-      "folders": [
-        {"id": "SHARED_FOLDER_ID", "name": "Organisation Library", "resource_key": ""}
-      ]
+      "path": "/path/to/synced/Organisation Library"
     }
 
-Older plain version-1 configuration files remain importable. Imported and stored
-profiles are normalised to the obfuscated format; personal tokens are always
-excluded. For advanced multi-folder configuration, use ``read_profile`` and
-``write_profile`` in ``lib/profile.py`` to edit and re-export the decoded profile.
+Plain version-1 Local Cloud Storage configuration files remain importable.
+Imported and stored profiles use the same encoded format. Unknown fields,
+including credentials, are excluded by validation.
 
 Adding a provider
 -----------------
 
-``CloudProvider`` in ``openlp/plugins/librarysync/lib/provider.py`` defines the
+``CloudProvider`` in ``opal/plugins/librarysync/lib/provider.py`` defines the
 account cache identity, change cursor/feed, folder, paged listing, name lookup,
 preview, streaming, download, upload, rename,
 move and deletion operations. Return ``CloudItem``
 records with the current user's capabilities. Register a provider factory in
 ``worker.PROVIDERS`` (the factory receives the profile and a cancellation event)
-and add its profile validation and connection flow. Providers
+and a ``storage_url(profile, folder)`` function in ``worker.STORAGE_URLS`` to
+return its browser URL or local folder URI without signing in or making API calls.
+Keep both implementations in the provider module, and add its profile validation
+and connection flow. Providers
 own authentication and their network sessions; the browser and native Library
 importers do not need provider-specific transfer logic. New providers must keep
 writes independent or atomic and must honour cancellation and permission checks.
@@ -294,7 +251,8 @@ Run the feature and integration checks with::
     python -m pytest tests/openlp_plugins/librarysync tests/openlp_core/ui/test_mainwindow.py \
         tests/openlp_core/ui/test_library.py tests/openlp_core/lib/test_pluginmanager.py
 
-For a release, test against real Google accounts with reader and writer permissions,
-including a shared drive, token renewal, a large video, cancellation and concurrent
-uploads. Automated tests use simulated Google responses and do not establish that
-a particular organisation's Google Cloud project or account policies are configured correctly.
+For a release, test the selected synced folder on supported operating systems,
+including the desktop storage app with two team accounts, read-only access,
+offline files, a large video, cancellation and concurrent uploads. Automated tests
+exercise local files and simulated provider responses; they do not establish that
+a desktop storage app has completed cloud synchronisation.

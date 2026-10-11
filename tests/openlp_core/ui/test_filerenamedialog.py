@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui package.
+Package to test the opal.core.ui package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtTest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.filerenameform import FileRenameForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.filerenameform import FileRenameForm
 
 
 @pytest.fixture()
@@ -42,26 +42,26 @@ def test_window_title(form: FileRenameForm):
     """
     Test the windowTitle of the FileRenameDialog
     """
-    # GIVEN: A mocked QDialog.exec() method
-    with patch('openlp.core.widgets.fluent.QDialog.exec'):
+    # GIVEN: A mocked FormDialog.exec() method
+    with patch('opal.core.widgets.fluent.FormDialog.exec'):
 
         # WHEN: The form is executed with no args
         form.exec()
 
         # THEN: the window title is set correctly
-        assert form.windowTitle() == 'File Rename', 'The window title should be "File Rename"'
+        assert form.windowTitle() == 'Rename File', 'The window title should be "Rename File"'
 
         # WHEN: The form is executed with False arg
         form.exec(False)
 
         # THEN: the window title is set correctly
-        assert form.windowTitle() == 'File Rename', 'The window title should be "File Rename"'
+        assert form.windowTitle() == 'Rename File', 'The window title should be "Rename File"'
 
         # WHEN: The form is executed with True arg
         form.exec(True)
 
         # THEN: the window title is set correctly
-        assert form.windowTitle() == 'File Copy', 'The window title should be "File Copy"'
+        assert form.windowTitle() == 'Copy File', 'The window title should be "Copy File"'
 
 
 def test_line_edit_focus(form: FileRenameForm):
@@ -69,8 +69,8 @@ def test_line_edit_focus(form: FileRenameForm):
     Regression test for bug1067251
     Test that the file_name_edit setFocus has called with True when executed
     """
-    # GIVEN: A mocked QDialog.exec() method and mocked file_name_edit.setFocus() method.
-    with patch('openlp.core.widgets.fluent.QDialog.exec'):
+    # GIVEN: A mocked FormDialog.exec() method and mocked file_name_edit.setFocus() method.
+    with patch('opal.core.widgets.fluent.FormDialog.exec'):
         mocked_set_focus = MagicMock()
         form.file_name_edit.setFocus = mocked_set_focus
 

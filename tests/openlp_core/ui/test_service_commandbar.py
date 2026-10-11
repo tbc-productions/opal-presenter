@@ -3,11 +3,11 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.servicemanager import ServiceManager
+from opal.core.ui.servicemanager import ServiceManager
 
 
 def test_service_commandbar_shares_overflow_across_sections(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
+    from opal.core.common.actions import ActionList
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})
     for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
@@ -50,8 +50,8 @@ def test_service_commandbar_shares_overflow_across_sections(registry, settings, 
 
 
 def test_top_service_commandbar_shares_overflow_and_opens_services(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
-    from openlp.core.widgets import fluent
+    from opal.core.common.actions import ActionList
+    from opal.core.widgets import fluent
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})
     for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
@@ -84,13 +84,12 @@ def test_top_service_commandbar_shares_overflow_and_opens_services(registry, set
     qtbot.mouseClick(toolbar.widgetForAction(manager.open_service_action), QtCore.Qt.MouseButton.LeftButton)
     load_service.assert_called_once_with()
     assert not group.isOverflowOpen()
-    assert not manager.recent_services_menu.isVisible()
-    assert group.secondaryActions() == [manager.recent_services_action]
+    assert group.secondaryActions() == []
 
     toolbar.setFixedWidth(1000)
     QtWidgets.QApplication.processEvents()
     assert not group.overflowedPrimaryActions()
-    assert not more[0].isHidden()
+    assert more[0].isHidden()
     qtbot.mouseClick(toolbar.widgetForAction(manager.open_service_action), QtCore.Qt.MouseButton.LeftButton)
     assert load_service.call_count == 2
     assert not menu.isVisible()
@@ -102,41 +101,10 @@ def test_top_service_commandbar_shares_overflow_and_opens_services(registry, set
     assert manager.theme_label.x() > toolbar.widgetForAction(manager.save_service_as_action).geometry().right()
 
 
-def test_recent_services_remain_a_separate_secondary_command(registry, settings, qtbot, monkeypatch):
-    from PySide6 import QtGui
-    from openlp.core.common.actions import ActionList
-    monkeypatch.setattr(ActionList, 'instance', None)
-    monkeypatch.setattr(ActionList, 'shortcut_map', {})
-    for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
-        registry.register(name, MagicMock())
-    manager = ServiceManager()
-    qtbot.addWidget(manager)
-    recent = QtGui.QAction('Sunday service', manager)
-    recent.setData('/tmp/sunday.osz')
-    manager.main_window.recent_files_menu.actions.return_value = [recent]
-    load_recent = MagicMock()
-    monkeypatch.setattr(manager, 'on_recent_service_clicked', load_recent)
-    manager.setup_ui(manager)
-    manager.show()
-    group = manager.toolbar._command_actions[manager.recent_services_action]
-    group.setOverflowOpen(True)
-    qtbot.mouseClick(manager.toolbar.widgetForAction(manager.recent_services_action),
-                     QtCore.Qt.MouseButton.LeftButton)
-    qtbot.waitUntil(manager.recent_services_menu.isVisible)
-    assert not group.isOverflowOpen()
-    menu = manager.recent_services_menu
-    assert menu.actions()[0].text() == 'Sunday service'
-    qtbot.mouseClick(menu, QtCore.Qt.MouseButton.LeftButton, pos=menu.actionGeometry(menu.actions()[0]).center())
-    assert not menu.isVisible()
-    load_recent.assert_called_once_with(False, '/tmp/sunday.osz')
-    assert manager.toolbar._command_actions[manager.recent_services_action].secondaryActions() == [
-        manager.recent_services_action]
-
-
 def test_service_context_menu_uses_standard_fluent_row_geometry(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
-    from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem, ServiceItemType
-    from openlp.core.widgets import fluent
+    from opal.core.common.actions import ActionList
+    from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem, ServiceItemType
+    from opal.core.widgets import fluent
 
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})

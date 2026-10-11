@@ -29,9 +29,9 @@ from unittest.mock import patch
 
 from sqlalchemy import create_engine, select, table, column
 
-from openlp.core.common.applocation import AppLocation
-from openlp.core.db.upgrades import upgrade_db
-from openlp.plugins.images.lib import upgrade
+from opal.core.common.applocation import AppLocation
+from opal.core.db.upgrades import upgrade_db
+from opal.plugins.images.lib import upgrade
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -58,7 +58,7 @@ def test_image_filenames_table(db_url, settings):
     """
     # GIVEN: An unversioned image database
     with patch.object(AppLocation, 'get_data_path', return_value=Path('/', 'test', 'dir')), \
-            patch('openlp.plugins.images.lib.upgrade.sha256_file_hash') as mocked_sha256_file_hash:
+            patch('opal.plugins.images.lib.upgrade.sha256_file_hash') as mocked_sha256_file_hash:
         mocked_sha256_file_hash.return_value = 'abcd'
         # WHEN: Initalising the database manager
 
@@ -67,4 +67,9 @@ def test_image_filenames_table(db_url, settings):
         engine = create_engine(db_url)
         conn = engine.connect()
         md = table('metadata', column('key'), column('value'))
-        assert conn.execute(select(md.c.value).where(md.c.key == 'version')).scalar() == '2'
+        assert conn.execute(select(md.c.value).where(md.c.key == 'version')).scalar() == str(upgrade.__version__)
+        opal_items = table('item', column('id'), column('file_path'))
+        assert conn.execute(select(opal_items.c.file_path).order_by(opal_items.c.id)).all() == [
+            ('/test/image1.jpg',), ('/test/dir/image2.jpg',), ('/test/dir/subdir/image3.jpg',)]
+        conn.close()
+        engine.dispose()

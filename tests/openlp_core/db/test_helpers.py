@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the :mod:`~openlp.core.db.helpers` package.
+Package to test the :mod:`~opal.core.db.helpers` package.
 """
 from pathlib import Path, PureWindowsPath
 from unittest.mock import MagicMock, patch
@@ -29,7 +29,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.pool import StaticPool
 
-from openlp.core.db.helpers import get_db_path, init_db, delete_database
+from opal.core.db.helpers import get_db_path, init_db, delete_database
 
 
 def test_init_db_calls_correct_functions():
@@ -37,10 +37,10 @@ def test_init_db_calls_correct_functions():
     Test that the init_db function makes the correct function calls
     """
     # GIVEN: Mocked out SQLAlchemy calls and return objects, and an in-memory SQLite database URL
-    with patch('openlp.core.db.helpers.create_engine') as mocked_create_engine, \
-            patch('openlp.core.db.helpers.MetaData') as MockedMetaData, \
-            patch('openlp.core.db.helpers.sessionmaker') as mocked_sessionmaker, \
-            patch('openlp.core.db.helpers.scoped_session') as mocked_scoped_session:
+    with patch('opal.core.db.helpers.create_engine') as mocked_create_engine, \
+            patch('opal.core.db.helpers.MetaData') as MockedMetaData, \
+            patch('opal.core.db.helpers.sessionmaker') as mocked_sessionmaker, \
+            patch('opal.core.db.helpers.scoped_session') as mocked_scoped_session:
         mocked_engine = MagicMock()
         mocked_metadata = MagicMock()
         mocked_sessionmaker_object = MagicMock()
@@ -87,8 +87,8 @@ def test_delete_database_without_db_file_name(registry):
     Test that the ``delete_database`` function removes a database file, without the file name parameter
     """
     # GIVEN: Mocked out AppLocation class and delete_file method, a test plugin name and a db location
-    with patch('openlp.core.db.helpers.AppLocation') as MockedAppLocation, \
-            patch('openlp.core.db.helpers.delete_file') as mocked_delete_file:
+    with patch('opal.core.db.helpers.AppLocation') as MockedAppLocation, \
+            patch('opal.core.db.helpers.delete_file') as mocked_delete_file:
         MockedAppLocation.get_section_data_path.return_value = Path('test-dir')
         mocked_delete_file.return_value = True
         test_plugin = 'test'
@@ -108,8 +108,8 @@ def test_delete_database_with_db_file_name():
     Test that the ``delete_database`` function removes a database file, with the file name supplied
     """
     # GIVEN: Mocked out AppLocation class and delete_file method, a test plugin name and a db location
-    with patch('openlp.core.db.helpers.AppLocation') as MockedAppLocation, \
-            patch('openlp.core.db.helpers.delete_file') as mocked_delete_file:
+    with patch('opal.core.db.helpers.AppLocation') as MockedAppLocation, \
+            patch('opal.core.db.helpers.delete_file') as mocked_delete_file:
         MockedAppLocation.get_section_data_path.return_value = Path('test-dir')
         mocked_delete_file.return_value = False
         test_plugin = 'test'
@@ -125,7 +125,7 @@ def test_delete_database_with_db_file_name():
         assert result is False, 'The result of delete_file should be False (was rigged that way)'
 
 
-@patch('openlp.core.db.helpers.AppLocation.get_section_data_path')
+@patch('opal.core.db.helpers.AppLocation.get_section_data_path')
 def test_get_db_path_uses_posix_form(mocked_get_section_data_path):
     """
     Test that SQLite URLs are always returned with forward slashes.

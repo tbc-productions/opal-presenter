@@ -1,17 +1,17 @@
 """The slide grid edits portable lyrics and shares the designer undo stack."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.slide_designer.forms.slidegrid import slide_rows
+from opal.core.common.registry import Registry
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.slide_designer.forms.slidegrid import slide_rows
 
 
 @pytest.fixture
 def form(settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -49,6 +49,45 @@ def test_cell_edit_updates_source_and_undo(form):
     assert grid.cell_editor.toPlainText() == 'Verse 1\nFirst line\nSecond line'
     form.slide_designer.undo_stack.redo()
     assert grid.cell_editor.toPlainText() == 'Verse 1\nFirst line\nSecond line!'
+
+
+def test_typing_keeps_heading_and_lyrics_horizontal_positions_stable(form, qtbot):
+    grid = form.slide_grid
+    grid.resize(360, 480)
+    grid.resize_rows()
+    editor = grid.cell_editor
+    heading = QtGui.QTextCursor(editor.document().firstBlock())
+    lyrics = QtGui.QTextCursor(editor.document().firstBlock().next())
+    origins = []
+
+    def record_origins(*args):
+        origins.append((editor.cursorRect(heading).x(), editor.cursorRect(lyrics).x()))
+
+    record_origins()
+    editor.document().contentsChanged.connect(record_origins)
+    editor.document().documentLayout().documentSizeChanged.connect(record_origins)
+    editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    qtbot.keyClicks(editor._editor, ' typing across wrapped lines' * 5)
+    qtbot.keyClick(editor._editor, QtCore.Qt.Key.Key_Return)
+    qtbot.keyClicks(editor._editor, 'New line')
+    qtbot.keyClick(editor._editor, QtCore.Qt.Key.Key_Backspace)
+    assert len(origins) > 1
+    assert set(origins) == {origins[0]}
+
+
+@pytest.mark.parametrize('text,has_heading', [('Verse 1\nLyrics', True), ('Ordinary lyrics', False)])
+def test_section_background_covers_cell_edges_and_vertical_padding(form, text, has_heading):
+    editor = form.slide_grid.paint_editor
+    editor.setPlainText(text)
+    editor.document().setTextWidth(360)
+    height = round(editor.document().firstBlock().blockFormat().lineHeight()) if has_heading else 25
+    image = QtGui.QImage(360, height, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtCore.Qt.GlobalColor.white)
+    painter = QtGui.QPainter(image)
+    editor.paint_heading_backgrounds(painter, image.width())
+    painter.end()
+    assert (image.pixelColor(0, 0) != QtGui.QColor('white')) == has_heading
+    assert image.pixelColor(0, 0) == image.pixelColor(image.width() - 1, height - 1)
 
 
 def test_split_creates_row_and_backspace_merges_with_undo(form, qtbot):
@@ -116,6 +155,8 @@ def test_formatting_command_bar_targets_active_cell(form):
     assert actions.index(styles) < next(i for i, action in enumerate(actions) if action.text() == 'Clear formatting')
     assert actions[-2:] == form.slide_designer.history_actions
     assert actions[-3].isSeparator()
+    assert actions[-4] is grid.source_action
+    assert actions[-5] is grid.cell_editor._edit_tags_action
     import fluentqt
     divider = grid.formatting_bar.widgetForAction(actions[-3])
     assert isinstance(divider, fluentqt.Divider)
@@ -125,6 +166,120 @@ def test_formatting_command_bar_targets_active_cell(form):
     assert grid.cell_editor._mode_switch is None
     assert grid.cell_editor._undo_action not in grid.formatting_bar.actions()
     assert grid.cell_editor._redo_action not in grid.formatting_bar.actions()
+
+
+def test_source_toggle_preserves_text_selection_and_history(form):
+    grid = form.slide_grid
+    source = '---[Verse:1]---\n{st}First 😀{/st}\n[---]\nOptional\n[--}{--]\nSecond\n---[Chorus:2]---\nChorus'
+    form.set_verse(source)
+    form.slide_designer.undo_stack.clear()
+    grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.StartOfBlock, QtGui.QTextCursor.MoveMode.KeepAnchor)
+    selection = grid.source.textCursor().selectedText()
+    grid.source_action.trigger()
+    assert form.text_editor_stack.currentWidget() is grid.source
+    assert not grid.source.rich_text_mode
+    assert grid.source._visual_line_overrides == {}
+    assert grid.source.textCursor().selectedText() == selection
+    assert form.get_all_verses() == source
+    assert form.slide_designer.undo_stack.count() == 0
+    assert not grid.cell_editor._tag_actions['st'].isEnabled()
+    assert not grid.cell_editor._custom_formatting_combo.isEnabled()
+    grid.source_action.trigger()
+    assert form.text_editor_stack.currentWidget() is grid
+    assert form.get_all_verses() == source
+    assert grid.cell_editor._tag_actions['st'].isEnabled()
+
+
+def test_song_source_edit_updates_grid_save_and_keyboard_history(form):
+    grid = form.slide_grid
+    original = form.get_all_verses()
+    grid.source_action.trigger()
+    grid.source.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    addition = '\n[--}{--]\n{it}More 😀{/it}\n---[Bridge:2]---\nBridge'
+    grid.source.insertPlainText(addition)
+    assert form.get_all_verses() == original + addition
+    assert [row.label for row in grid.rows] == ['V1', 'C1', 'C1', 'B2']
+    assert form.slide_designer.footer_key() == 'b2:0:0'
+    assert form.draft_state()['text'] == original + addition
+    for key, expected in ((QtGui.QKeySequence.StandardKey.Undo, original),
+                          (QtGui.QKeySequence.StandardKey.Redo, original + addition)):
+        sequence = QtGui.QKeySequence(key)[0]
+        event = QtGui.QKeyEvent(QtCore.QEvent.Type.KeyPress, sequence.key(), sequence.keyboardModifiers())
+        QtCore.QCoreApplication.sendEvent(grid.source._editor, event)
+        assert form.get_all_verses() == expected
+        assert form.text_editor_stack.currentWidget() is grid.source
+    grid.source_action.trigger()
+    assert grid.cell_editor.toPlainText() == 'Bridge 2\nBridge'
+
+
+def test_source_paste_keeps_literal_song_headings(form):
+    grid = form.slide_grid
+    grid.source_action.trigger()
+    grid.source.selectAll()
+    mime = QtCore.QMimeData()
+    mime.setText('---[Verse:3]---\nVerse 1\n{st}Lyrics{/st}\n[---]')
+    grid.source.insertFromMimeData(mime)
+    assert form.get_all_verses() == mime.text()
+    assert [row.label for row in grid.rows] == ['V3']
+
+
+def test_source_toggle_remains_available_with_grid_selection(form):
+    grid = form.slide_grid
+    grid.select_slide_rows({0, 1})
+    assert grid.source_action.isEnabled()
+    grid.source_action.trigger()
+    assert not grid.has_grid_selection()
+    assert form.text_editor_stack.currentWidget() is grid.source
+
+
+def test_source_context_menu_uses_shared_history(form):
+    grid = form.slide_grid
+    grid.source_action.trigger()
+    original = form.get_all_verses()
+    grid.source.insertPlainText('!')
+    menu = grid.source.createStandardContextMenu()
+    undo = next(action for action in menu.actions() if action.objectName() == 'edit-undo')
+    redo = next(action for action in menu.actions() if action.objectName() == 'edit-redo')
+    event = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Reason.Mouse, QtCore.QPoint(), QtCore.QPoint())
+    with patch.object(grid.source, 'createStandardContextMenu', return_value=menu), \
+            patch.object(menu, 'exec', side_effect=lambda position: undo.trigger()):
+        assert grid.eventFilter(grid.source._viewport, event)
+    assert form.get_all_verses() == original
+    assert not redo.isEnabled()
+    menu = grid.history_menu(grid.source.createStandardContextMenu())
+    redo = next(action for action in menu.actions() if action.objectName() == 'edit-redo')
+    assert redo.isEnabled()
+    redo.trigger()
+    assert form.get_all_verses() == original.replace('First line', '!First line')
+    menu.deleteLater()
+
+
+def test_custom_source_edits_splits_and_round_trips(form):
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
+    owner = EditCustomForm(MagicMock(), None, MagicMock())
+    editor = owner.edit_slide_form
+    try:
+        original = '{st}First{/st}\n[===]\nSecond'
+        editor.set_text(original)
+        grid = editor.slide_grid
+        grid.record_history = True
+        grid.source_action.trigger()
+        grid.source.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        grid.source.insertPlainText('\n[---]\nOptional\n[===]\nLast 😀')
+        expected = ['{st}First{/st}', 'Second\n[---]\nOptional', 'Last 😀']
+        assert editor.get_text() == expected
+        assert len(grid.rows) == 3
+        editor.slide_designer.undo_stack.undo()
+        assert editor.get_text() == original.split('\n[===]\n')
+        editor.slide_designer.undo_stack.redo()
+        grid.source_action.trigger()
+        assert editor.get_text() == expected
+        assert grid.cell_editor.toPlainText() == 'Last 😀'
+    finally:
+        editor.slide_designer.refresh_timer.stop()
+        editor.deleteLater()
+        owner.deleteLater()
 
 
 def test_text_and_design_undo_in_order(form):
@@ -172,7 +327,7 @@ def test_backspace_at_start_of_first_row_keeps_content(form, qtbot):
 
 
 def test_custom_slide_split_merge_and_design_undo(form, qtbot):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     editor = owner.edit_slide_form
     editor.set_text('First\nSecond\n[===]\nLast')
@@ -263,9 +418,11 @@ def test_row_text_geometry_stays_the_same_when_selected(form):
         heading = grid.cell_editor.document().firstBlock()
         rect = grid.cell_editor.document().documentLayout().blockBoundingRect(heading)
         assert rect.left() == 0
-        assert heading.blockFormat().rightMargin() == 0
+        assert heading.blockFormat().rightMargin() == grid.cell_editor.TEXT_INSET
         assert grid.cell_editor.geometry() == grid.visualRect(grid.model().index(row, 0))
-        assert heading.blockFormat().textIndent() == grid.cell_editor.TEXT_INSET
+        assert heading.blockFormat().textIndent() == 0
+        line_height = grid.cell_editor._editor.fontMetrics().lineSpacing() + 2 * grid.cell_editor.LABEL_PADDING
+        assert heading.blockFormat().lineHeight() == line_height
 
 
 def test_properties_is_the_only_sidebar_toggle_and_drawers_stay_present(form):
@@ -310,8 +467,8 @@ def test_deleting_first_slide_keeps_heading_on_its_continuation(form):
 
 
 def test_cross_slide_text_selection_cuts_partial_lines_and_undo(form):
-    from openlp.core.widgets import fluent as QtWidgets
-    from openlp.plugins.slide_designer.forms.slidegrid import qt_length
+    from opal.core.widgets import fluent as QtWidgets
+    from opal.plugins.slide_designer.forms.slidegrid import qt_length
     source = '---[Verse:1]---\nHello 🙏 world\n[--}{--]\nSecond line'
     form.set_verse(source)
     grid = form.slide_grid
@@ -372,7 +529,7 @@ def test_shift_click_and_drag_across_rows(form, qtbot):
 
 
 def test_custom_slide_cut_move_keeps_local_design_and_footer(form):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     editor = owner.edit_slide_form
     editor.set_text('First\n[===]\nSecond\n[===]\nThird')

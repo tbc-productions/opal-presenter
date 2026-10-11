@@ -19,8 +19,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.settings package.
+Package to test the opal.core.lib.settings package.
 """
+import pickle
 import pytest
 import shutil
 import tempfile
@@ -29,14 +30,24 @@ from unittest.mock import call, patch
 
 from PySide6 import QtCore
 
-from openlp.core.common import settings as modsettings
-from openlp.core.common.platform import is_macosx
-from openlp.core.common.settings import Settings, media_players_conv, upgrade_dark_theme_to_ui_theme, \
+from opal.core.common import settings as modsettings
+from opal.core.common.platform import is_macosx
+from opal.core.common.settings import Settings, media_players_conv, upgrade_dark_theme_to_ui_theme, \
     check_for_variant_migration
-from openlp.core.common.enum import PluginStatus
-from openlp.core.ui.style import UiThemes
+from opal.core.common.enum import PluginStatus
+from opal.core.ui.style import UiThemes
 
 from tests.utils.constants import RESOURCE_PATH
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def restore_schema_version():
+    original = modsettings.__version__
+    yield
+    modsettings.__version__ = original
 
 
 def test_media_players_conv():
@@ -215,10 +226,10 @@ def test_extend_default_settings():
                                                  'test/extended 1': 1, 'test/extended 2': 2}
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_single_setting(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings works correctly for single value upgrades"""
     # GIVEN: A settings object with an upgrade step to take (99, so that we don't interfere with real ones)
@@ -242,10 +253,10 @@ def test_upgrade_single_setting(mocked_remove, mocked_setValue, mocked_value, mo
     mocked_remove.assert_called_once_with('single/value')
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_setting_value(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings correctly uses the new value when it's not a function"""
     # GIVEN: A settings object with an upgrade step to take (99, so that we don't interfere with real ones)
@@ -269,10 +280,10 @@ def test_upgrade_setting_value(mocked_remove, mocked_setValue, mocked_value, moc
     mocked_remove.assert_called_once_with('values/old value')
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_multiple_one_invalid(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings works correctly for multiple values where one is invalid"""
     # GIVEN: A settings object with an upgrade step to take
@@ -388,6 +399,16 @@ def test_upgrade_dark_theme_to_ui_theme_false():
     assert result == UiThemes.Automatic
 
 
+@pytest.mark.parametrize('payload,expected', [
+    (b'copenlp.core.common.enum\nPluginStatus\n(I1\ntR.', PluginStatus.Active),
+    (b'copenlp.core.ui.style\nUiThemes\n(Vautomatic\ntR.', UiThemes.Automatic),
+    (b'copenlp.core.common.settings\nProxyMode\n(I1\ntR.', modsettings.ProxyMode.NO_PROXY),
+])
+def test_legacy_enum_settings_use_opal_classes(payload, expected):
+    """Stored enum names must resolve to the renamed classes without duplicate imports."""
+    assert pickle.loads(payload) is expected
+
+
 def test_settings_pyqt5_pyside6_migration_ini():
     """Test that an ini file created by PyQt5 can be read by PySide6"""
     # WHEN: The system is using ini configuration
@@ -435,8 +456,8 @@ def test_settings_pyqt5_pyside6_migration_ini_missing():
 
 def test_settings_zip_export_import(settings, monkeypatch):
     """Test exporting and importing settings using ZIP format"""
-    from openlp.core.common import settings as modsettings
-    from openlp.core.common.applocation import AppLocation
+    from opal.core.common import settings as modsettings
+    from opal.core.common.applocation import AppLocation
     original_version = modsettings.__version__
     modsettings.__version__ = 4
     try:
@@ -444,7 +465,7 @@ def test_settings_zip_export_import(settings, monkeypatch):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir_path = Path(tmp_dir)
             monkeypatch.setattr(AppLocation, 'get_data_path', lambda: tmp_dir_path / 'data')
-            zip_path = tmp_dir_path / 'backup.zip'
+            zip_path = tmp_dir_path / 'backup.opal-settings'
             logo_path = tmp_dir_path / 'my_logo.png'
             # Create a dummy logo file
             logo_path.write_text("dummy image content")
@@ -463,12 +484,13 @@ def test_settings_zip_export_import(settings, monkeypatch):
             import zipfile
             with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
                 namelist = zip_ref.namelist()
-                assert 'openlp.conf' in namelist
-                assert 'my_logo.png' in namelist
+                assert 'manifest.json' in namelist
+                assert 'settings.ini' in namelist
+                assert 'logo/my_logo.png' in namelist
 
             # GIVEN: Clear current settings and import from ZIP
             settings.setValue('core/ccli number', '0')
-            settings.setValue('core/logo file', Path(':/graphics/openlp-logo-background.svg'))
+            settings.setValue('core/logo file', Path(':/graphics/opal-presenter-background.png'))
             settings.sync()
 
             # WHEN: Importing settings from the ZIP
@@ -478,7 +500,8 @@ def test_settings_zip_export_import(settings, monkeypatch):
             assert success is True
             assert settings.value('core/ccli number') == '12345'
             restored_logo_path = settings.value('core/logo file')
-            assert restored_logo_path.name == 'my_logo.png'
+            assert restored_logo_path.suffix == '.png'
+            assert restored_logo_path.read_bytes() == logo_path.read_bytes()
             assert restored_logo_path.exists()
     finally:
         modsettings.__version__ = original_version
@@ -571,3 +594,28 @@ def test_service_colours_upgrade(settings, monkeypatch):
     assert all(key not in Settings.__default_settings__ for key, _, _ in Settings.__setting_upgrade_8__)
     assert settings.value('servicemanager/service theme') == 'Sunday'
     assert settings.value('advanced/delete service item confirmation') is False
+
+
+def test_legacy_settings_import_preserves_profile(settings, tmp_path):
+    source = tmp_path / 'legacy.conf'
+    source.write_text('[SettingsImport]\ntype=OpenLP_settings_export\n[settings]\nversion=8\n'
+                      '[advanced]\ndata%20path=/old/application/profile\n[core]\nccli%20number=12345\n')
+    original = source.read_bytes()
+    settings.setValue('advanced/data path', tmp_path / 'opal-profile')
+    assert settings.import_settings(source)
+    assert settings.value('advanced/data path') == tmp_path / 'opal-profile'
+    assert settings.value('core/ccli number') == '12345'
+    assert source.read_bytes() == original
+
+
+def test_invalid_native_settings_do_not_change_values(settings, tmp_path):
+    import zipfile
+    from opal.core.lib.nativefile import write_manifest
+    source = tmp_path / 'invalid.opal-settings'
+    settings.setValue('core/ccli number', 'before')
+    with zipfile.ZipFile(source, 'w') as archive:
+        write_manifest(archive, 'song', 'settings.ini')
+        archive.writestr('settings.ini', '[SettingsImport]\ntype=OpalPresenter_settings_export\n'
+                         '[settings]\nversion=8\n[core]\nccli%20number=after\n')
+    assert not settings.import_settings(source)
+    assert settings.value('core/ccli number') == 'before'

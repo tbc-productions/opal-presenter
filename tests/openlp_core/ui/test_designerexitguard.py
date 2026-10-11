@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtGui
 
-from openlp.core.ui.mainwindow import MainWindow
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.ui.mainwindow import MainWindow
+from opal.core.widgets import fluent as QtWidgets
 
 
 def test_clean_service_exits_immediately_after_designers_close():
@@ -16,7 +16,7 @@ def test_clean_service_exits_immediately_after_designers_close():
     main.settings.value.return_value = True  # Normally asks for exit confirmation.
     main._closing_designers_for_exit = True
     event = QtGui.QCloseEvent()
-    with patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox') as confirmation:
+    with patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox') as confirmation:
         MainWindow.closeEvent(main, event)
     assert event.isAccepted()
     confirmation.assert_not_called()

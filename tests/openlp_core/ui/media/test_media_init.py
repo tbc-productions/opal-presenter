@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.media package.
+Package to test the opal.core.ui.media package.
 """
 
 import pytest
 
 from unittest.mock import MagicMock, ANY
 
-from openlp.core.ui.media import get_volume, save_volume, toggle_looping_playback, saved_looping_playback
-from openlp.core.ui.media import format_milliseconds, get_supported_media_suffix
+from opal.core.ui.media import get_volume, save_volume, toggle_looping_playback, saved_looping_playback
+from opal.core.ui.media import format_milliseconds, get_supported_media_suffix
 
 
 def test_media_suffix():

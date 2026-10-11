@@ -23,9 +23,9 @@ Interface tests to test the themeManager class and related methods.
 """
 from unittest.mock import MagicMock
 
-from openlp.core.common import is_not_image_file
-from openlp.core.common.registry import Registry
-from openlp.core.common.utils import wait_for, is_uuid
+from opal.core.common import is_not_image_file
+from opal.core.common.registry import Registry
+from opal.core.common.utils import wait_for, is_uuid
 
 from tests.utils.constants import RESOURCE_PATH
 

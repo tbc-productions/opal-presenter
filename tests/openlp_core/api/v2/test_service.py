@@ -20,7 +20,7 @@
 ##########################################################################
 from unittest.mock import MagicMock
 
-from openlp.core.common.registry import Registry
+from opal.core.common.registry import Registry
 
 
 def test_retrieve_service_items(flask_client, settings):

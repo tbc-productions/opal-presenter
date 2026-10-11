@@ -24,10 +24,10 @@ Functional tests to test the Http Server Class.
 import pytest
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.api.websocketspoll import WebSocketPoller
-from openlp.core.api.websockets import WebSocketMessage, WebSocketWorker, WebSocketServer, websocket_send_message
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.api.websocketspoll import WebSocketPoller
+from opal.core.api.websockets import WebSocketMessage, WebSocketWorker, WebSocketServer, websocket_send_message
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
 @pytest.fixture
@@ -170,7 +170,7 @@ def test_websocket_send_message_fail(registry: Registry, settings: Settings):
     assert result is False
 
 
-@patch('openlp.core.api.websockets.asyncio')
+@patch('opal.core.api.websockets.asyncio')
 def test_websocket_worker_start(mocked_asyncio: MagicMock, worker: WebSocketWorker):
     """
     Test the start function of the worker
@@ -223,7 +223,7 @@ def test_websocket_worker_stop_exception(worker: WebSocketWorker, settings: Sett
     worker.server.close.side_effect = Exception
 
     # WHEN: stop is called
-    with patch('openlp.core.api.websockets.log') as mocked_log:
+    with patch('opal.core.api.websockets.log') as mocked_log:
         worker.stop()
 
     # THEN: No exception and the method should have been called
@@ -246,8 +246,8 @@ def test_websocket_server_bootstrap_post_set_up(settings: Settings):
     server.start.assert_called_once_with()
 
 
-@patch('openlp.core.api.websockets.WebSocketWorker')
-@patch('openlp.core.api.websockets.run_thread')
+@patch('opal.core.api.websockets.WebSocketWorker')
+@patch('opal.core.api.websockets.run_thread')
 def test_websocket_server_start(mocked_run_thread: MagicMock, MockWebSocketWorker: MagicMock, registry: Registry):
     """
     Test the starting of the WebSockets Server with the disabled flag set off
@@ -264,8 +264,8 @@ def test_websocket_server_start(mocked_run_thread: MagicMock, MockWebSocketWorke
     assert MockWebSocketWorker.call_count == 1, 'The http thread should have been called once'
 
 
-@patch('openlp.core.api.websockets.WebSocketWorker')
-@patch('openlp.core.api.websockets.run_thread')
+@patch('opal.core.api.websockets.WebSocketWorker')
+@patch('opal.core.api.websockets.run_thread')
 def test_websocket_server_start_not_required(mocked_run_thread, MockWebSocketWorker, registry: Registry):
     """
     Test the starting of the WebSockets Server with the disabled flag set on
@@ -282,8 +282,8 @@ def test_websocket_server_start_not_required(mocked_run_thread, MockWebSocketWor
     assert MockWebSocketWorker.call_count == 0, 'The http thread should not have been called'
 
 
-@patch('openlp.core.api.websockets.poller')
-@patch('openlp.core.api.websockets.run_thread')
+@patch('opal.core.api.websockets.poller')
+@patch('opal.core.api.websockets.run_thread')
 def test_websocket_server_connects_to_poller(mock_run_thread: MagicMock, mock_poller: MagicMock, settings: Settings):
     """
     Test if the websocket_server connects to WebSocketPoller
@@ -302,9 +302,9 @@ def test_websocket_server_connects_to_poller(mock_run_thread: MagicMock, mock_po
     mock_poller.poller_changed.connect.assert_called_once_with(server.handle_poller_signal)
 
 
-@patch('openlp.core.api.websockets.poller')
-@patch('openlp.core.api.websockets.WebSocketWorker.add_state_to_queues')
-@patch('openlp.core.api.websockets.run_thread')
+@patch('opal.core.api.websockets.poller')
+@patch('opal.core.api.websockets.WebSocketWorker.add_state_to_queues')
+@patch('opal.core.api.websockets.run_thread')
 def test_websocket_worker_register_connections(mock_run_thread: MagicMock, mock_add_state_to_queues: MagicMock,
                                                mock_poller: MagicMock, settings: Settings):
     """
@@ -324,8 +324,8 @@ def test_websocket_worker_register_connections(mock_run_thread: MagicMock, mock_
     mock_add_state_to_queues.assert_called_once_with(mock_state)
 
 
-@patch('openlp.core.api.websockets.poller')
-@patch('openlp.core.api.websockets.log')
+@patch('opal.core.api.websockets.poller')
+@patch('opal.core.api.websockets.log')
 def test_websocket_server_try_poller_hook_signals(mocked_log: MagicMock, mock_poller: MagicMock, settings: Settings):
     """
     Test if the websocket_server invokes poller.hook_signals
@@ -343,7 +343,7 @@ def test_websocket_server_try_poller_hook_signals(mocked_log: MagicMock, mock_po
     mocked_log.error.assert_called_once_with('Failed to hook poller signals!')
 
 
-@patch('openlp.core.api.websockets.poller')
+@patch('opal.core.api.websockets.poller')
 def test_websocket_server_close(mock_poller: MagicMock, settings: Settings):
     """
     Test that the websocket_server close method works correctly
@@ -366,7 +366,7 @@ def test_websocket_server_close(mock_poller: MagicMock, settings: Settings):
     mock_worker.stop.assert_called_once_with()
 
 
-@patch('openlp.core.api.websockets.poller')
+@patch('opal.core.api.websockets.poller')
 def test_websocket_server_close_when_disabled(mock_poller: MagicMock, registry: Registry, settings: Settings):
     """
     Test if the websocket_server close method correctly skips teardown when disabled

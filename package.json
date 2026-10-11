@@ -1,20 +1,21 @@
 {
-  "name": "openlp-plus",
-  "version": "4.0.0",
-  "description": "OpenLP+ is free church worship presentation software",
-  "homepage": "https://git.tbcproductions.net/tbcproductions/openlp-plus",
+  "name": "opal-presenter",
+  "version": "4.0.4",
+  "description": "Opal Presenter is free church worship presentation software",
+  "homepage": "https://git.tbcproductions.net/tbcproductions/opal-presenter",
   "license": "GPL-3.0-or-later",
-  "author": "OpenLP+ Developers and OpenLP contributors",
+  "author": "Opal Presenter Developers and OpenLP contributors",
   "repository": {
     "type": "git",
-    "url": "https://git.tbcproductions.net/tbcproductions/openlp-plus.git"
+    "url": "https://git.tbcproductions.net/tbcproductions/opal-presenter.git"
   },
   "directories": {
     "test": "tests"
   },
   "scripts": {
     "test": "jasmine-browser-runner runSpecs --config=jasmine-browser.mjs",
-    "lint": "eslint openlp/core/display/html/display*.js",
+    "test:stress": "jasmine-browser-runner runSpecs --config=jasmine-stress.mjs",
+    "lint": "eslint opal/core/display/html/display*.js",
     "test:serve": "jasmine-browser-runner serve --config=jasmine-browser.mjs"
   },
   "devDependencies": {

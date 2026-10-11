@@ -25,9 +25,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.widgets.toolbar import MediaToolbar, ClickableSlider, OpenLPToolbar
+from opal.core.widgets.toolbar import MediaToolbar, ClickableSlider, OpenLPToolbar
 
 
 HIDE_COMPONENTS = [
@@ -46,7 +46,7 @@ HAS_PREFIX_CHECKS = [
 
 
 @pytest.mark.parametrize('hide_component, check_missing', [tuple for tuple in HIDE_COMPONENTS])
-@patch('openlp.core.widgets.toolbar.UiIcons')
+@patch('opal.core.widgets.toolbar.UiIcons')
 def test_mediatoolbar_honors_hide_components(MockedUiIcons, hide_component, check_missing, settings):
     """
     Test if MediaToolbar's hide_components arguments is honoured
@@ -61,7 +61,7 @@ def test_mediatoolbar_honors_hide_components(MockedUiIcons, hide_component, chec
 
 
 @pytest.mark.parametrize('component, prefix_check', [tuple for tuple in HAS_PREFIX_CHECKS])
-@patch('openlp.core.widgets.toolbar.UiIcons')
+@patch('opal.core.widgets.toolbar.UiIcons')
 def test_mediatoolbar_honors_action_prefix(MockedUiIcons, component, prefix_check, settings):
     """
     Test if MediaToolbar's action_prefix argument is honoured
@@ -74,7 +74,7 @@ def test_mediatoolbar_honors_action_prefix(MockedUiIcons, component, prefix_chec
     assert prefix_check(toolbar, prefix) is True
 
 
-@patch('openlp.core.widgets.toolbar.UiIcons')
+@patch('opal.core.widgets.toolbar.UiIcons')
 @pytest.mark.parametrize('label_visibility, label_text', [
     (True, 'Test Mediabar'),
     (False, ''),
@@ -95,7 +95,7 @@ def test_mediatoolbar_set_label_works(MockedUiIcons, label_visibility, label_tex
     toolbar.identification_label.setText.assert_called_once_with(label_text if label_text else '')
 
 
-@patch('openlp.core.widgets.toolbar.UiIcons')
+@patch('opal.core.widgets.toolbar.UiIcons')
 def test_mediatoolbar_places_seek_controls_in_toolbar(MockedUiIcons, settings):
     """Seek controls should be in their own toolbar directly below the main toolbar."""
     toolbar = MediaToolbar(None)
@@ -106,7 +106,7 @@ def test_mediatoolbar_places_seek_controls_in_toolbar(MockedUiIcons, settings):
     assert toolbar.seek_slider.parent() is toolbar._seek_toolbar
 
 
-@patch('openlp.core.widgets.toolbar.UiIcons')
+@patch('opal.core.widgets.toolbar.UiIcons')
 def test_mediatoolbar_volume_label_width_is_fixed(MockedUiIcons, settings):
     """Changing volume text should not change volume label width."""
     toolbar = MediaToolbar(None)

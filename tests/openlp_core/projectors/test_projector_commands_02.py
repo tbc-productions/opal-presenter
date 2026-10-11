@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.pjlink commands package.
+Package to test the opal.core.projectors.pjlink commands package.
 """
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.projectors.pjlink import PJLink
-from openlp.core.projectors.pjlinkcommands import process_command
-from openlp.core.projectors.constants import PJLINK_POWR_STATUS, S_ON, S_STANDBY
+from opal.core.projectors.pjlink import PJLink
+from opal.core.projectors.pjlinkcommands import process_command
+from opal.core.projectors.constants import PJLINK_POWR_STATUS, S_ON, S_STANDBY
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inpt_good(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test input source status shows current input
@@ -50,7 +50,7 @@ def test_projector_inpt_good(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inpt_invalid(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test input source returned not valid according to standard
@@ -73,7 +73,7 @@ def test_projector_inpt_invalid(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inpt_not_in_list(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test input source not listed in available sources
@@ -97,7 +97,7 @@ def test_projector_inpt_not_in_list(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inst_class_1(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving video source available information
@@ -123,7 +123,7 @@ def test_projector_inst_class_1(mocked_log: MagicMock, pjlink: PJLink):
     assert pjlink.source_available == chk_test, "Sources should have been sorted and saved"
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_lamp_invalid_missing_data(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test process lamp with 1 lamp reply hours only and no on/off status
@@ -143,7 +143,7 @@ def test_projector_lamp_invalid_missing_data(mocked_log: MagicMock, pjlink: PJLi
     assert not pjlink.lamp, 'Projector lamp info should not have changed'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_lamp_invalid_nan(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test status multiple lamp on/off and hours
@@ -169,7 +169,7 @@ def test_projector_lamp_invalid_nan(mocked_log: MagicMock, pjlink: PJLink):
     assert 11111 == pjlink.lamp[1]['Hours'], 'Lamp 2 hours should not have changed'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_lamp_multiple(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test status multiple lamp on/off and hours
@@ -195,7 +195,7 @@ def test_projector_lamp_multiple(mocked_log: MagicMock, pjlink: PJLink):
     assert 33333 == pjlink.lamp[2]['Hours'], 'Lamp 3 hours should have been set to 33333'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_lamp_single(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test status lamp on/off and hours
@@ -217,7 +217,7 @@ def test_projector_lamp_single(mocked_log: MagicMock, pjlink: PJLink):
     assert 11111 == pjlink.lamp[0]['Hours'], 'Lamp 1 hours should have been set to 11111'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_name(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving NAME data from projector
@@ -238,7 +238,7 @@ def test_projector_name(mocked_log: MagicMock, pjlink: PJLink):
     assert pjlink.pjlink_name == chk_data, 'Name test data should have been saved'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_powr_invalid(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test process_powr invalid call
@@ -265,7 +265,7 @@ def test_projector_powr_invalid(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_not_called()
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_powr_off(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test status power to OFF
@@ -292,7 +292,7 @@ def test_projector_powr_off(mocked_log: MagicMock, pjlink: PJLink):
     mocked_change_status.assert_called_once_with(S_STANDBY)
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_powr_on(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test status power to ON
@@ -319,7 +319,7 @@ def test_projector_powr_on(mocked_log: MagicMock, pjlink: PJLink):
     mocked_change_status.assert_called_once_with(S_ON)
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_rfil_save(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving filter type
@@ -340,7 +340,7 @@ def test_projector_rfil_save(mocked_log: MagicMock, pjlink: PJLink):
     assert pjlink.model_filter == new_data, 'Filter model should have been saved'
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_rfil_nosave(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving filter type previously saved
@@ -366,7 +366,7 @@ def test_projector_rfil_nosave(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_rlmp_save(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving lamp type
@@ -387,7 +387,7 @@ def test_projector_rlmp_save(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_rlmp_nosave(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving lamp type previously saved
@@ -413,7 +413,7 @@ def test_projector_rlmp_nosave(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_snum_different(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test projector serial number different than saved serial number
@@ -440,7 +440,7 @@ def test_projector_snum_different(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_snum_set(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving serial number from projector

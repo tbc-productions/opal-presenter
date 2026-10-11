@@ -18,10 +18,10 @@
 ##########################################################################
 from flask.testing import FlaskClient
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.lib.plugin import PluginStatus, StringContent
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.lib.plugin import PluginStatus, StringContent
 
 
 def test_plugins_returns_list(flask_client: FlaskClient):

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtCore import QRect, QSize
 
-from openlp.core.lib.slidedesign import normalise_design, remap_custom_footers
-from openlp.core.lib.slidelayouts import slide_design, set_slide_design
+from opal.core.lib.slidedesign import normalise_design, remap_custom_footers
+from opal.core.lib.slidelayouts import slide_design, set_slide_design
 
 
 def document():
@@ -67,11 +67,11 @@ def test_master_validation_rejects_external_images_and_recursive_documents():
 
 
 def test_assigned_layouts_reach_live_frames_and_presentation_exports(settings, registry):
-    from openlp.core.lib.theme import Theme
-    from openlp.core.lib.serviceitem import ServiceItem
-    from openlp.core.lib.presentationexport import service_pages
+    from opal.core.lib.theme import Theme
+    from opal.core.lib.serviceitem import ServiceItem
+    from opal.core.lib.presentationexport import service_pages
 
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
         theme = Theme()
     manager = MagicMock()
@@ -87,7 +87,7 @@ def test_assigned_layouts_reach_live_frames_and_presentation_exports(settings, r
     item.slide_design = set_slide_design(item.slide_design, 'custom-1:0:0', local)
     item.add_from_text('First')
     item.add_from_text('Second')
-    with patch('openlp.core.lib.slidedesign.ScreenList') as screens:
+    with patch('opal.core.lib.slidedesign.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QSize(1920, 1080)
         item._create_slides()
         frames = item.rendered_slides
@@ -98,7 +98,7 @@ def test_assigned_layouts_reach_live_frames_and_presentation_exports(settings, r
 
 
 def test_custom_xml_retains_named_masters_assignments_and_local_images():
-    from openlp.plugins.custom.lib.customxmlhandler import CustomXML
+    from opal.plugins.custom.lib.customxmlhandler import CustomXML
 
     source = document()
     source['custom_layout_name'] = 'Opening slides'
@@ -116,7 +116,7 @@ def test_custom_xml_retains_named_masters_assignments_and_local_images():
 
 
 def test_default_layout_is_theme_without_discarding_saved_shared_designs():
-    from openlp.core.lib.slidelayouts import layout_for_slide
+    from opal.core.lib.slidelayouts import layout_for_slide
     assert layout_for_slide({}, 'v1:0:0') == 'theme'
     source = set_slide_design({}, 'v1:0:0', {'version': 1, 'lyrics': {'x': 20}})
     assert layout_for_slide(source, 'v1:0:0') == 'theme'
@@ -128,11 +128,11 @@ def test_default_layout_is_theme_without_discarding_saved_shared_designs():
 
 
 def test_reset_theme_is_used_for_service_pagination_and_every_frame(settings, registry):
-    from openlp.core.lib.theme import Theme
-    from openlp.core.lib.serviceitem import ServiceItem
-    from openlp.core.common.enum import ServiceItemType
+    from opal.core.lib.theme import Theme
+    from opal.core.lib.serviceitem import ServiceItem
+    from opal.core.common.enum import ServiceItemType
 
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
         theme = Theme()
     theme.font_main_size = 42

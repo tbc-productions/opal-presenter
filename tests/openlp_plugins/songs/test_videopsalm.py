@@ -21,7 +21,7 @@
 """
 This module contains tests for the VideoPsalm song importer.
 """
-from openlp.core.common.registry import Registry
+from opal.core.common.registry import Registry
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 

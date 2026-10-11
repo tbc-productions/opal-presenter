@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Test the openlp.core.ui package.
+Test the opal.core.ui package.
 """
 from unittest.mock import MagicMock, patch
 
 from PySide6.QtCore import Qt
 
-from openlp.core.ui import SingleColumnTableWidget
+from opal.core.ui import SingleColumnTableWidget
 
 
 def test_single_col_widget_create(qapp):
@@ -44,7 +44,7 @@ def test_single_col_widget_create(qapp):
         'The vertical header labels should be centred'
 
 
-@patch('openlp.core.ui.QtWidgets.QTableWidget')
+@patch('opal.core.ui.QtWidgets.QTableWidget')
 def test_single_col_widget_resize_event(MockQTableWidget, mock_settings):
     """
     Test that the resizeEvent method does the right thing

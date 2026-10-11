@@ -25,17 +25,17 @@ import pytest
 from unittest.mock import MagicMock, patch, call
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.enum import SongFirstSlideMode, SongSearch
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.state import State
-from openlp.core.ui.icons import UiIcons
-from openlp.plugins.songs.lib.db import AuthorType, Song
-from openlp.plugins.songs.lib.mediaitem import SongMediaItem
-from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics
+from opal.core.common.enum import SongFirstSlideMode, SongSearch
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.state import State
+from opal.core.ui.icons import UiIcons
+from opal.plugins.songs.lib.db import AuthorType, Song
+from opal.plugins.songs.lib.mediaitem import SongMediaItem
+from opal.plugins.songs.lib.openlyricsxml import OpenLyrics
 
 
 __default_settings__ = {
@@ -105,8 +105,8 @@ def media_item(registry: Registry, settings: Settings):
     registry.register('main_window', MagicMock())
     registry.register('media_controller', MagicMock())
     mocked_plugin = MagicMock()
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
-            patch('openlp.plugins.songs.forms.editsongform.EditSongForm.__init__'):
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+            patch('opal.plugins.songs.forms.editsongform.EditSongForm.__init__'):
         media_item = SongMediaItem(None, mocked_plugin)
         media_item.save_auto_select_id = MagicMock()
         media_item.list_view = MagicMock()
@@ -142,7 +142,7 @@ def test_add_middle_header_bar(media_item: SongMediaItem):
     media_item.search_button_layout.insertWidget.assert_called_once_with(1, media_item.favourite_toggle_button)
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.create_widget_action')
+@patch('opal.plugins.songs.lib.mediaitem.create_widget_action')
 def test_add_custom_context_actions(mocked_create_action: MagicMock, media_item: SongMediaItem):
     """Test that adding extra context menu items works"""
     # GIVEN: A pre-mocked media item
@@ -156,8 +156,8 @@ def test_add_custom_context_actions(mocked_create_action: MagicMock, media_item:
     ]
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongListWidget')
-@patch('openlp.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar')
+@patch('opal.plugins.songs.lib.mediaitem.SongListWidget')
+@patch('opal.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar')
 def test_add_list_view_to_toolbar_keeps_context_actions(mocked_base_add_list_view: MagicMock,
                                                         mocked_song_list_widget: MagicMock,
                                                         media_item: SongMediaItem):
@@ -231,7 +231,7 @@ def test_config_update(settings: Settings, media_item: SongMediaItem):
 def test_retranslate_ui(media_item: SongMediaItem):
     """Test that the labels are all set correctly when calling retranslate_ui()"""
     # GIVEN: A song media item with a number of mocked out attributes
-    media_item.search_text_label = MagicMock()
+    media_item.search_text_edit = MagicMock()
     media_item.search_text_button = MagicMock()
     media_item.maintenance_action = MagicMock()
     media_item.favourite_toggle_button = MagicMock()
@@ -240,7 +240,7 @@ def test_retranslate_ui(media_item: SongMediaItem):
     media_item.retranslate_ui()
 
     # THEN: The correct strings should be set
-    media_item.search_text_label.setText.assert_called_once_with('Search:')
+    media_item.search_text_edit.setAccessibleName.assert_called_once_with('Search')
     media_item.search_text_button.setText.assert_called_once_with('Search')
     media_item.maintenance_action.setText.assert_called_once_with('Song Maintenance')
     media_item.maintenance_action.setToolTip.assert_called_once_with(
@@ -263,7 +263,7 @@ def test_on_favourite_toggle_button_clicked(settings: Settings, media_item: Song
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_entire(MockSong: MagicMock, fav_filter: bool, media_item: SongMediaItem):
     """Test the search button handler"""
     # GIVEN: A media item with some mocked stuff
@@ -289,7 +289,7 @@ def test_on_search_text_button_clicked_entire(MockSong: MagicMock, fav_filter: b
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_titles(MockSong: MagicMock, fav_filter: bool, media_item: SongMediaItem):
     """Test the search button handler"""
     # GIVEN: A media item with some mocked stuff
@@ -316,7 +316,7 @@ def test_on_search_text_button_clicked_titles(MockSong: MagicMock, fav_filter: b
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_lyrics(MockSong: MagicMock, fav_filter: bool, media_item: SongMediaItem):
     """Test the search button handler"""
     # GIVEN: A media item with some mocked stuff
@@ -343,7 +343,7 @@ def test_on_search_text_button_clicked_lyrics(MockSong: MagicMock, fav_filter: b
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Author')
+@patch('opal.plugins.songs.lib.mediaitem.Author')
 def test_on_search_text_button_clicked_authors(MockAuthor: MagicMock, fav_filter: bool,
                                                media_item: SongMediaItem):
     """Test the search button handler"""
@@ -367,7 +367,7 @@ def test_on_search_text_button_clicked_authors(MockAuthor: MagicMock, fav_filter
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Topic')
+@patch('opal.plugins.songs.lib.mediaitem.Topic')
 def test_on_search_text_button_clicked_topics(MockTopic: MagicMock, fav_filter: bool,
                                               media_item: SongMediaItem):
     """Test the search button handler"""
@@ -391,9 +391,9 @@ def test_on_search_text_button_clicked_topics(MockTopic: MagicMock, fav_filter: 
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.SongBookEntry')
-@patch('openlp.plugins.songs.lib.mediaitem.SongBook')
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.SongBookEntry')
+@patch('opal.plugins.songs.lib.mediaitem.SongBook')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_songbooks(MockSong: MagicMock, MockSongBook: MagicMock,
                                                  MockSongBookEntry: MagicMock, fav_filter: bool,
                                                  media_item: SongMediaItem):
@@ -433,7 +433,7 @@ def test_on_search_text_button_clicked_songbooks(MockSong: MagicMock, MockSongBo
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_themes(MockSong: MagicMock, fav_filter: bool, media_item: SongMediaItem):
     """Test the search button handler"""
     # GIVEN: A media item with some mocked stuff
@@ -460,7 +460,7 @@ def test_on_search_text_button_clicked_themes(MockSong: MagicMock, fav_filter: b
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_copyright(MockSong: MagicMock, fav_filter: bool,
                                                  media_item: SongMediaItem):
     """Test the search button handler"""
@@ -489,7 +489,7 @@ def test_on_search_text_button_clicked_copyright(MockSong: MagicMock, fav_filter
 
 
 @pytest.mark.parametrize('fav_filter', (False, True))
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
 def test_on_search_text_button_clicked_cclinumber(MockSong: MagicMock, fav_filter: bool,
                                                   media_item: SongMediaItem):
     """Test the search button handler"""
@@ -522,7 +522,7 @@ def test_display_results_song(media_item):
     Test displaying song search results with basic song
     """
     # GIVEN: Search results
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
         mocked_song = MagicMock(id=1, sort_key='My Song', title='My Song', song_author_display='My Author',
                                 song_has_audio=False, temporary=False)
         mocked_song_temp = MagicMock(id=2, sort_key='My Temporary', title='My Temporary',
@@ -549,7 +549,7 @@ def test_display_results_author(is_fav: bool, media_item: SongMediaItem):
     Test displaying song search results grouped by author with basic song
     """
     # GIVEN: Search results grouped by author
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
         mocked_author = MagicMock(display_name='My Author')
         mocked_song_regular = MagicMock(id=1, title='My Song', sort_key='1',
                                         song_has_audio=False, temporary=False, is_favourite=False)
@@ -592,7 +592,7 @@ def test_display_results_book(media_item: SongMediaItem):
     Test displaying song search results grouped by book and entry with basic song
     """
     # GIVEN: Search results grouped by book and entry
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidgetItem') as MockedItem:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidgetItem') as MockedItem:
         mock_search_results = [('1', 'My Book', 'My Song', 1)]
         mock_item = MagicMock()
         MockedItem.return_value = mock_item
@@ -636,7 +636,7 @@ def test_display_results_topic(is_fav: bool, media_item: SongMediaItem):
     Test displaying song search results grouped by topic with basic song
     """
     # GIVEN: Search results grouped by topic
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
         mocked_song_regular = MagicMock(id=1, title='My Song', sort_key='1',
                                         song_has_audio=False, temporary=False, is_favourite=False)
         mocked_song_temp = MagicMock(id=2, title='My Song Temp', sort_key='2',
@@ -677,7 +677,7 @@ def test_display_results_themes(media_item: SongMediaItem):
     Test displaying song search results sorted by theme with basic song
     """
     # GIVEN: Search results sorted by theme
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
         mock_song = MagicMock(id=1, title='My Song', sort_key='My Song', theme_name='My Theme',
                               song_has_audio=False, temporary=False)
         mock_song_temp = MagicMock(id=2, title='My Temporary', sort_key='My Temporary',
@@ -699,7 +699,7 @@ def test_display_results_cclinumber(media_item: SongMediaItem):
     Test displaying song search results sorted by CCLI number with basic song
     """
     # GIVEN: Search results sorted by CCLI number
-    with patch('openlp.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
+    with patch('opal.plugins.songs.lib.mediaitem.SongListWidget.make_item') as mock_make_item:
         mock_song = MagicMock(id=1, title='My Song', sort_key='My Song', ccli_number='12345',
                               song_has_audio=False, temporary=False)
         mock_song_temp = MagicMock(id=2, title='My Temporary', sort_key='My Temporary',
@@ -940,10 +940,10 @@ def test_build_remote_search(media_item: SongMediaItem):
     assert search_results == [[123, 'My Song', 'My alternative']]
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongBook')
-@patch('openlp.plugins.songs.lib.mediaitem.SongBookEntry')
-@patch('openlp.plugins.songs.lib.mediaitem.Song')
-@patch('openlp.plugins.songs.lib.mediaitem.or_')
+@patch('opal.plugins.songs.lib.mediaitem.SongBook')
+@patch('opal.plugins.songs.lib.mediaitem.SongBookEntry')
+@patch('opal.plugins.songs.lib.mediaitem.Song')
+@patch('opal.plugins.songs.lib.mediaitem.or_')
 def test_entire_song_search(mocked_or: MagicMock, MockedSong: MagicMock, MockedSongBookEntry: MagicMock,
                             MockedBook: MagicMock, media_item: SongMediaItem):
     """
@@ -1018,7 +1018,7 @@ def test_build_song_footer_one_author_show_written_by(media_item: SongMediaItem)
 
 
 @patch.object(Registry, 'execute')
-@patch('openlp.plugins.songs.lib.mediaitem.check_item_selected')
+@patch('opal.plugins.songs.lib.mediaitem.check_item_selected')
 def test_on_clone_click_appends_copy_suffix(mocked_check_item_selected: MagicMock,
                                             mocked_execute: MagicMock,
                                             media_item: SongMediaItem):
@@ -1047,8 +1047,8 @@ def test_on_clone_click_appends_copy_suffix(mocked_check_item_selected: MagicMoc
     mocked_execute.assert_called_once_with('song_changed', new_song.id)
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
-@patch('openlp.plugins.songs.lib.mediaitem.SongXML.get_verses')
+@patch('opal.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
+@patch('opal.plugins.songs.lib.mediaitem.SongXML.get_verses')
 @pytest.mark.parametrize('first_slide_mode', SongFirstSlideMode)
 def test_song_first_slide_creation_works(mocked_get_verses: MagicMock,
                                          mocked__get_id_of_item_to_generate: MagicMock,
@@ -1111,8 +1111,8 @@ def test_song_first_slide_creation_works(mocked_get_verses: MagicMock,
         assert service_item.slides[0]['footer_html'] == ''
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
-@patch('openlp.plugins.songs.lib.mediaitem.SongXML.get_verses')
+@patch('opal.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
+@patch('opal.plugins.songs.lib.mediaitem.SongXML.get_verses')
 def test_generate_slide_data_adds_preview_for_next_verse(mocked_get_verses: MagicMock,
                                                          mocked__get_id_of_item_to_generate: MagicMock,
                                                          media_item: SongMediaItem,
@@ -1163,8 +1163,8 @@ def test_generate_slide_data_adds_preview_for_next_verse(mocked_get_verses: Magi
         f"Expected {expected_first_slide}, but got {slide_texts[0]}"
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
-@patch('openlp.plugins.songs.lib.mediaitem.SongXML.get_verses')
+@patch('opal.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
+@patch('opal.plugins.songs.lib.mediaitem.SongXML.get_verses')
 def test_generate_slide_data_forced_split_previews_next_split(mocked_get_verses: MagicMock,
                                                               mocked__get_id_of_item_to_generate: MagicMock,
                                                               media_item: SongMediaItem,
@@ -1215,8 +1215,8 @@ def test_generate_slide_data_forced_split_previews_next_split(mocked_get_verses:
         f"Expected {expected_slides}, but got {slide_texts[:2]}"
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
-@patch('openlp.plugins.songs.lib.mediaitem.SongXML.get_verses')
+@patch('opal.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
+@patch('opal.plugins.songs.lib.mediaitem.SongXML.get_verses')
 def test_generate_slide_data_adds_preview_for_selected_verses(mocked_get_verses: MagicMock,
                                                               mocked__get_id_of_item_to_generate: MagicMock,
                                                               media_item: SongMediaItem,
@@ -1294,9 +1294,9 @@ def test_generate_slide_data_adds_preview_for_selected_verses(mocked_get_verses:
         f"Expected {expected_slides}, but got {slide_texts[0]}"
 
 
-@patch('openlp.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
-@patch('openlp.plugins.songs.lib.mediaitem.SongXML.get_verses')
-@patch('openlp.plugins.songs.lib.mediaitem.Path')
+@patch('opal.plugins.songs.lib.mediaitem.SongMediaItem._get_id_of_item_to_generate')
+@patch('opal.plugins.songs.lib.mediaitem.SongXML.get_verses')
+@patch('opal.plugins.songs.lib.mediaitem.Path')
 def test_generate_slide_data_with_media_files_as_strings(MockPath: MagicMock, mocked_get_verses: MagicMock,
                                                          mocked__get_id_of_item_to_generate: MagicMock,
                                                          media_item: SongMediaItem, registry: Registry,
@@ -1347,7 +1347,7 @@ def test_song_menu_retains_separators_and_clone_after_export(media_item, qtbot):
     """Replacing the list keeps all actions and the requested command groups."""
     import gc
     from PySide6 import QtWidgets as NativeWidgets
-    from openlp.core.lib.ui import create_widget_action
+    from opal.core.lib.ui import create_widget_action
 
     media_item.on_clone_click = MagicMock()
     old_list = QtWidgets.QListWidget(media_item)
@@ -1366,7 +1366,7 @@ def test_song_menu_retains_separators_and_clone_after_export(media_item, qtbot):
         old_list.customContextMenuRequested.connect(media_item.context_menu)
         media_item.menu.addActions(old_list.actions())
 
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar', side_effect=setup_base):
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem.add_list_view_to_toolbar', side_effect=setup_base):
         media_item.add_list_view_to_toolbar()
     gc.collect()
     media_item.menu.popup(QtCore.QPoint(100, 100))

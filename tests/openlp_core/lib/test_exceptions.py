@@ -19,9 +19,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.exceptions package.
+Package to test the opal.core.lib.exceptions package.
 """
-from openlp.core.lib.exceptions import ValidationError
+from opal.core.lib.exceptions import ValidationError
 
 
 def test_validation_error():

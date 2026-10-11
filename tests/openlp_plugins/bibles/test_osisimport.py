@@ -25,10 +25,10 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.bibles.lib.db import BibleDB
-from openlp.plugins.bibles.lib.importers.osis import OSISBible
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.bibles.lib.db import BibleDB
+from opal.plugins.bibles.lib.importers.osis import OSISBible
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
@@ -41,11 +41,11 @@ def importer(registry: Registry, settings: Settings) -> OSISBible:
     yield OSISBible(MagicMock(), path='.', name='.', file_path=None)
 
 
-# @patch('openlp.plugins.bibles.lib.importers.osis.etree')
-# @patch('openlp.plugins.bibles.lib.db.BibleDB.create_verse')
+# @patch('opal.plugins.bibles.lib.importers.osis.etree')
+# @patch('opal.plugins.bibles.lib.db.BibleDB.create_verse')
 # @patch.object(BibleImport, 'find_and_create_book')
-# @patch('openlp.plugins.bibles.lib.bibleimport.Registry')
-# @patch('openlp.plugins.bibles.lib.db.DBManager')
+# @patch('opal.plugins.bibles.lib.bibleimport.Registry')
+# @patch('opal.plugins.bibles.lib.db.DBManager')
 
 
 def test_create_importer(importer: OSISBible):
@@ -74,7 +74,7 @@ def test_process_books_stop_import(importer):
     assert mocked_find_and_create_book.called is False
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.etree')
+@patch('opal.plugins.bibles.lib.importers.osis.etree')
 def test_process_books_completes(mocked_etree: MagicMock, importer: OSISBible):
     """
     Test process_books when it processes all books
@@ -101,8 +101,8 @@ def test_process_books_completes(mocked_etree: MagicMock, importer: OSISBible):
     assert importer.session.commit.call_count == 2
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=True)
-@patch('openlp.plugins.bibles.lib.importers.osis.text_in_verse', return_value=True)
+@patch('opal.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=True)
+@patch('opal.plugins.bibles.lib.importers.osis.text_in_verse', return_value=True)
 def test_process_chapters_verse_in_chapter_verse_text(mocked_verse_in_chapter: MagicMock,
                                                       mocked_text_in_verse: MagicMock, importer: OSISBible):
     """
@@ -128,8 +128,8 @@ def test_process_chapters_verse_in_chapter_verse_text(mocked_verse_in_chapter: M
     mocked_process_verse.assert_called_once_with(test_book, 2, test_verse)
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=True)
-@patch('openlp.plugins.bibles.lib.importers.osis.text_in_verse', return_value=False)
+@patch('opal.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=True)
+@patch('opal.plugins.bibles.lib.importers.osis.text_in_verse', return_value=False)
 def test_process_chapters_verse_in_chapter_verse_milestone(mocked_text_in_verse: MagicMock,
                                                            mocked_verse_in_chapter: MagicMock, importer: OSISBible):
     """
@@ -155,7 +155,7 @@ def test_process_chapters_verse_in_chapter_verse_milestone(mocked_text_in_verse:
     mocked_process_verse.assert_called_once_with(test_book, 2, test_verse, use_milestones=True)
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
+@patch('opal.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
 def test_process_chapters_milestones_chapter_no_sid(mocked_verse_in_chapter: MagicMock, importer: OSISBible):
     """
     Test process_chapters when supplied with an etree element with a chapter and verse element in the milestone
@@ -177,7 +177,7 @@ def test_process_chapters_milestones_chapter_no_sid(mocked_verse_in_chapter: Mag
     assert mocked_process_verse.called is False
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
+@patch('opal.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
 def test_process_chapters_milestones_chapter_sid(mocked_verse_in_chapter: MagicMock, importer: OSISBible):
     """
     Test process_chapters when supplied with an etree element with a chapter and verse element in the milestone
@@ -199,7 +199,7 @@ def test_process_chapters_milestones_chapter_sid(mocked_verse_in_chapter: MagicM
     assert mocked_process_verse.called is False
 
 
-@patch('openlp.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
+@patch('opal.plugins.bibles.lib.importers.osis.verse_in_chapter', return_value=False)
 def test_process_chapters_milestones_verse_tag(mocked_verse_in_chapter: MagicMock, importer: OSISBible):
     """
     Test process_chapters when supplied with an etree element with a chapter and verse element in the milestone

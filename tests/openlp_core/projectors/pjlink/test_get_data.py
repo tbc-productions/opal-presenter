@@ -23,16 +23,16 @@ Test PJLink.get_data 01
 """
 
 import logging
-import openlp.core.common
-import openlp.core.projectors.pjlink
+import opal.core.common
+import opal.core.projectors.pjlink
 
 from unittest.mock import DEFAULT, patch
-from openlp.core.projectors.constants import PJLINK_MAX_PACKET, PJLINK_PREFIX, \
+from opal.core.projectors.constants import PJLINK_MAX_PACKET, PJLINK_PREFIX, \
     E_AUTHENTICATION, S_AUTHENTICATE, S_CONNECT, S_CONNECTED, S_DATA_OK
 from tests.resources.projector.data import TEST_HASH, TEST_PIN, TEST_SALT
 
-test_module = openlp.core.projectors.pjlink.__name__
-test_qmd5 = openlp.core.common.__name__
+test_module = opal.core.projectors.pjlink.__name__
+test_qmd5 = opal.core.common.__name__
 
 
 def test_buff_short(pjlink, caplog):
@@ -47,7 +47,7 @@ def test_buff_short(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) Setting ignore_class to "False"')]
 
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -75,7 +75,7 @@ def test_buff_long(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) Setting ignore_class to "False"')]
 
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -103,7 +103,7 @@ def test_invalid_prefix(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) Setting ignore_class to "False"')]
 
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -131,7 +131,7 @@ def test_missing_equal(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) Setting ignore_class to "False"')]
 
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -169,7 +169,7 @@ def test_invalid_command(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) get_data() version="{t_ver}" cmd="{t_cmd}" data="{t_data}"')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -208,7 +208,7 @@ def test_mismatch_command_versions(pjlink, caplog):
              f'({pjlink.entry.name}) get_data() version="{t_ver}" cmd="{t_cmd}" data="{t_data}"')
             ]
 
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -249,7 +249,7 @@ def test_mismatch_class_versions(pjlink, caplog):
             (f'{test_module}', logging.WARNING,
              f'({pjlink.entry.name}) get_data(): Projector returned class reply higher than projector stated class')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -288,7 +288,7 @@ def test_ignore_class_versions(pjlink, caplog):
             (f'{test_module}', logging.WARNING,
              f'({pjlink.entry.name}) get_data(): pjlink_class={pjlink.pjlink_class} packet={t_ver}')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT) as mock_pjlink:
@@ -327,7 +327,7 @@ def test_s_data_ok(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) OK returned - resending command')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT,
@@ -368,7 +368,7 @@ def test_s_connect(pjlink, caplog):
             (f'{test_module}', logging.DEBUG,
              f'({pjlink.entry.name}) Connecting normal')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT,
@@ -436,7 +436,7 @@ def test_s_authenticate(pjlink, caplog):
             (f'{test_qmd5}.__init__', logging.DEBUG,
              f'qmd5_hash() returning "b\'{TEST_HASH}\'"')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT,
@@ -484,7 +484,7 @@ def test_e_authenticate(pjlink, caplog):
             (f'{test_module}', logging.WARNING,
              f'({pjlink.entry.name}) Failed authentication - disconnecting')
             ]
-    with patch.object(openlp.core.projectors.pjlink, "process_command") as mock_command, \
+    with patch.object(opal.core.projectors.pjlink, "process_command") as mock_command, \
          patch.multiple(pjlink,
                         _trash_buffer=DEFAULT,
                         receive_data_signal=DEFAULT,

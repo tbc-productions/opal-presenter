@@ -2,18 +2,18 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 
-from openlp.core.common.registry import Registry
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.custom.forms.editcustomform import EditCustomForm
-from openlp.plugins.slide_designer.forms.itemeditor import SongItemDesigner, CustomItemDesigner
+from opal.core.common.registry import Registry
+from opal.core.widgets import fluent as QtWidgets
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.custom.forms.editcustomform import EditCustomForm
+from opal.plugins.slide_designer.forms.itemeditor import SongItemDesigner, CustomItemDesigner
 
 
 @pytest.fixture(autouse=True)
 def section_settings(settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -51,7 +51,7 @@ def test_integrated_controls_and_metadata_navigation(integrated):
     assert editor.slide_designer.tools.layout().itemAt(0).widget() is owner.title_edit
     footer = editor.slide_designer.preview_footer
     assert editor.theme_combo_box.parentWidget() is footer.theme_group
-    assert editor.slide_designer.canvas_combo.parentWidget() is footer.preview_group
+    assert editor.slide_designer.preview_output.parentWidget() is footer.preview_group
     wide_height = footer.reflow(700)
     narrow_height = footer.reflow(300)
     assert narrow_height > wide_height
@@ -72,8 +72,125 @@ def test_integrated_controls_and_metadata_navigation(integrated):
         assert editor.metadata_pages[0][1].isAncestorOf(owner.authors_list_view)
     else:
         assert hasattr(editor, 'navigation')
+        assert not hasattr(editor, 'copyright_warning')
         assert editor.navigation.contentHost().currentIndex() == 0
         assert owner.credit_edit.parentWidget() is editor.editor_splitter.widget(0)
+
+
+def test_typing_only_measures_changed_row_and_defers_preview_and_draft_sync(integrated, qtbot):
+    owner, editor = integrated
+    grid = editor.slide_grid
+    designer = editor.slide_designer
+    body = '\n'.join(['Long lyrics with {st}formatting{/st} and 😀'] * 8)
+    source = ('\n'.join(f'---[Verse:{i + 1}]---\n{body}' for i in range(12))
+              if editor.design_kind == 'song' else '\n[===]\n'.join([body] * 12))
+    editor.design_text_editor.setPlainText(source)
+    grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    editor.designer_cursor_changed()
+    designer.refresh_timer.stop()
+    if editor.design_kind == 'song':
+        editor.sync_lyrics()
+    previews = []
+    designer.refresh_timer.timeout.disconnect(designer.refresh)
+    designer.refresh_timer.timeout.connect(lambda: previews.append(editor.designer_text()))
+    with patch.object(designer, 'populate_inspector') as inspector, \
+            patch.object(grid, 'resizeRowsToContents') as resize_all, \
+            patch.object(grid, 'resizeRowToContents', wraps=grid.resizeRowToContents) as resize_row, \
+            patch.object(owner, 'set_verse_text', create=True, wraps=getattr(owner, 'set_verse_text', None)) as sync:
+        qtbot.keyClicks(grid.cell_editor._editor, ' typing stays responsive')
+        assert grid.cell_editor.toPlainText().endswith(' typing stays responsive')
+        assert editor.design_text_editor.toPlainText() == source.replace(body, body + ' typing stays responsive', 1)
+        inspector.assert_not_called()
+        resize_all.assert_not_called()
+        assert resize_row.call_count == len(' typing stays responsive')
+        assert {call.args[0] for call in resize_row.call_args_list} == {grid.active_row}
+        sync.assert_not_called()
+        assert previews == []
+        qtbot.waitUntil(lambda: len(previews) == 1)
+        assert previews[0].endswith(' typing stays responsive')
+        if editor.design_kind == 'song':
+            qtbot.waitUntil(lambda: sync.call_count == 1)
+            assert owner.verse_list_widget.item(0, 0).text().endswith(' typing stays responsive')
+
+
+def test_metadata_navigation_flushes_pending_lyrics(integrated, qtbot):
+    owner, editor = integrated
+    if editor.design_kind != 'song':
+        return
+    editor.slide_grid.cell_editor.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+    qtbot.keyClicks(editor.slide_grid.cell_editor._editor, ' latest')
+    assert editor.lyrics_timer.isActive()
+    editor.select_page(1)
+    assert not editor.lyrics_timer.isActive()
+    assert owner.verse_list_widget.item(0, 0).text() == 'First latest\n[--}{--]\nSecond'
+
+
+@pytest.mark.parametrize('copyright', ['', ' \n\t ', '© 2026 Songwriter'])
+def test_copyright_warning_tracks_initial_and_edited_draft(settings, copyright):
+    import fluentqt
+
+    Registry().register('theme_manager', MagicMock())
+    owner = EditSongForm(MagicMock(), None, MagicMock())
+    owner.copyright_edit.setPlainText(copyright)
+    editor = SongItemDesigner(owner)
+    try:
+        warning = editor.copyright_warning
+        button = editor.navigation_buttons[2]
+        assert warning.isHidden() == bool(copyright.strip())
+        assert button.badge.isHidden() == warning.isHidden()
+        assert isinstance(button.badge, fluentqt.InfoBadge)
+        assert button.badge.status() == fluentqt.InfoBadge.InfoBadgeStatus.Critical
+        assert warning.severity() == fluentqt.InfoBar.InfoBarSeverity.Warning
+        assert warning.message() == ''
+        assert warning.title() == 'Missing copyright information'
+        assert warning.actionWidget() is None
+        assert not warning.isClosable()
+        layout = editor.editor_splitter.widget(0).layout()
+        assert layout.indexOf(warning) < layout.indexOf(editor.text_editor_stack)
+        for text in ('© 2026 Songwriter', '', '   ', 'Public domain'):
+            owner.copyright_edit.setPlainText(text)
+            assert warning.isHidden() == bool(text.strip())
+            assert button.badge.isHidden() == warning.isHidden()
+            assert bool(button.accessibleDescription()) == (not text.strip())
+    finally:
+        editor.restore_controls()
+        editor.slide_designer.refresh_timer.stop()
+        editor.deleteLater()
+        owner.deleteLater()
+
+
+@pytest.mark.parametrize('keyboard', [False, True])
+def test_copyright_badge_fits_navigation_and_preserves_activation(integrated, qtbot, keyboard):
+    from opal.plugins.slide_designer.forms.window import DesignerWindow
+
+    owner, editor = integrated
+    if editor.design_kind != 'song':
+        return
+    window = DesignerWindow(editor)
+    qtbot.addWidget(window)
+    try:
+        with patch.object(editor.slide_designer, 'refresh'):
+            if keyboard:
+                editor.navigation_buttons[2].setAccessibleName('Copyright, Flags & Comments ' * 3)
+                editor.toggle_navigation()
+            window.show()
+            window.activateWindow()
+            QtWidgets.QApplication.processEvents()
+            button = editor.navigation_buttons[2]
+            assert button.rect().contains(button.badge.geometry())
+            assert button.badge.testAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            if keyboard:
+                assert button.text().endswith('…')
+                assert button.contentPaintRect(button.rect()).right() < button.badge.x()
+                button.setFocus()
+                qtbot.keyClick(button, QtCore.Qt.Key.Key_Space)
+            else:
+                qtbot.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
+            assert editor.navigation.contentHost().currentIndex() == 2
+            assert owner.song_tab_widget.currentIndex() == 2
+            assert editor.navigation_buttons[2].isChecked()
+    finally:
+        editor.setLayout(window.host.layout())
 
 
 def test_save_flushes_inline_lyrics_before_syncing_owner(integrated):
@@ -99,10 +216,12 @@ def test_save_flushes_inline_lyrics_before_syncing_owner(integrated):
 
 def test_save_syncs_content_design_and_theme_before_existing_validation(integrated):
     owner, editor = integrated
+    editor.slide_grid.source_action.trigger()
     editor.theme_combo_box.addItem('Ocean', 'Ocean')
     editor.slide_designer.load_design(owner.slide_design)
     editor.title_field.setText('Edited title')
-    editor.design_text_editor.setPlainText('---[Verse:2]---\nEdited' if editor.design_kind == 'song' else 'Edited')
+    editor.design_text_editor.selectAll()
+    editor.design_text_editor.insertPlainText('---[Verse:2]---\nEdited' if editor.design_kind == 'song' else 'Edited')
     finished = MagicMock()
     editor.finished.connect(finished)
     with patch.object(owner, 'accept') as accept:
@@ -133,8 +252,9 @@ def test_dirty_state_compares_content_metadata_design_and_undo(integrated):
     assert editor.has_unsaved_changes()
     editor.slide_designer.undo_stack.undo()
     assert not editor.has_unsaved_changes()
-    editor.slide_designer.canvas_combo.setCurrentIndex(2)
-    assert not editor.has_unsaved_changes()  # Theme preview aspect ratio is view state.
+    output = editor.slide_designer.preview_output
+    output.combo.setCurrentIndex(output.index(('preset', 2560, 1080)))
+    assert not editor.has_unsaved_changes()  # Preview output is view state.
     if editor.design_kind == 'song':
         owner.comments_edit.setPlainText('Notes')
         assert editor.has_unsaved_changes()
@@ -153,7 +273,7 @@ def test_dirty_state_compares_content_metadata_design_and_undo(integrated):
     ('unchanged', True), ('cancel', True), ('discard', True), ('save', True), ('save', False)])
 def test_exit_prompt_respects_save_discard_cancel_and_validation(integrated, qtbot, choice, save_succeeds):
     import fluentqt
-    from openlp.plugins.slide_designer.forms.window import DesignerWindow
+    from opal.plugins.slide_designer.forms.window import DesignerWindow
     owner, editor = integrated
     window = DesignerWindow(editor)
     qtbot.addWidget(window)
@@ -208,7 +328,7 @@ def test_cancel_restores_original_editor_widgets_without_saving(settings, kind):
     parent = owner.title_edit.parentWidget()
     theme_parent = owner.theme_combo_box.parentWidget()
     layout = owner.authors_tab.layout() if kind == 'song' else None
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', return_value=0), \
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', return_value=0), \
             patch.object(owner, 'accept') as save:
         assert owner.exec() == 0
     save.assert_not_called()
@@ -266,7 +386,7 @@ def test_chord_validation_is_preserved_in_integrated_song_editor(integrated):
 
 def test_missing_title_message_is_visible_in_designer_window(integrated):
     """Real validation must present its ContentDialog over this draft, not the main window."""
-    from openlp.core.widgets.fluent_dialogs import FluentMessageBox
+    from opal.core.widgets.fluent_dialogs import FluentMessageBox
 
     owner, editor = integrated
     owner.title_edit.clear()

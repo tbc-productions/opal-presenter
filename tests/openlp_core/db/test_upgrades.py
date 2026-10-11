@@ -19,11 +19,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 from unittest.mock import MagicMock, patch
 
-from openlp.core.db.upgrades import get_upgrade_op, upgrade_db
+from opal.core.db.upgrades import get_upgrade_op, upgrade_db
 
 
 def test_get_upgrade_op():
@@ -31,8 +31,8 @@ def test_get_upgrade_op():
     Test that the ``get_upgrade_op`` function creates a MigrationContext and an Operations object
     """
     # GIVEN: Mocked out alembic classes and a mocked out SQLAlchemy session object
-    with patch('openlp.core.db.upgrades.MigrationContext') as MockedMigrationContext, \
-            patch('openlp.core.db.upgrades.Operations') as MockedOperations:
+    with patch('opal.core.db.upgrades.MigrationContext') as MockedMigrationContext, \
+            patch('opal.core.db.upgrades.Operations') as MockedOperations:
         mocked_context = MagicMock()
         mocked_op = MagicMock()
         mocked_connection = MagicMock()

@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.plugins.librarysync.lib.preview import (
+from opal.core.widgets import fluent as QtWidgets
+from opal.plugins.librarysync.lib.preview import (
     CloudMediaPreview, CloudPresentationPreview, CloudPreviewWindow, cloud_metadata, show_preview, text_service_item)
-from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError, friendly_name
-from openlp.plugins.librarysync.lib.transfer import safe_xml
+from opal.plugins.librarysync.lib.provider import CloudItem, SyncError, friendly_name
+from opal.plugins.librarysync.lib.transfer import safe_xml
 
 
 @pytest.mark.parametrize('name,expected', [
@@ -47,6 +47,24 @@ def test_custom_preview_preserves_title_credits_and_slide_list(settings):
     assert metadata == {'Credits': 'Organisation'}
 
 
+@pytest.mark.parametrize('order', ['', 'c1 v1 c1'])
+def test_song_preview_splits_forced_breaks_and_preserves_design_keys(settings, order):
+    lines = 'First half<br/><p page-break-after="always"/><br/>Second half'
+    xml = f'''<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8">
+      <properties><titles><title>Forced break</title></titles><verseOrder>{order}</verseOrder></properties>
+      <lyrics><verse name="v1"><lines>Verse</lines></verse>
+      <verse name="c1"><lines>{lines}</lines></verse></lyrics></song>'''.encode()
+    service, metadata = text_service_item(CloudItem('song', 'song.xml', category='songs'), safe_xml(xml))
+    expected = [('c1', 0, 'First half'), ('c1', 1, 'Second half'), ('v1', 0, 'Verse'),
+                ('c1', 0, 'First half'), ('c1', 1, 'Second half')] if order else [
+                        ('v1', 0, 'Verse'), ('c1', 0, 'First half'), ('c1', 1, 'Second half')]
+    assert [slide['text'].strip() for slide in service.slides] == [text for tag, split, text in expected]
+    assert [(slide['metadata']['design_section'], slide['metadata']['design_split'], slide['text'].strip())
+            for slide in service.slides] == expected
+    assert [slide['verse'] for slide in service.slides] == [tag.upper() for tag, split, text in expected]
+    assert metadata['Verse order'] == (order.upper() or 'V1 C1')
+
+
 def test_empty_or_mismatched_text_cannot_be_previewed(settings):
     with pytest.raises(SyncError, match='slides'):
         text_service_item(CloudItem('custom', 'item.xml', category='custom'), safe_xml(b'<song><lyrics/></song>'))
@@ -62,13 +80,14 @@ def test_cloud_image_uses_fluent_inspector_and_friendly_name(settings, qtbot, tm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     item = CloudItem('image', 'Sunday [123456abcdef].png', category='images', modified='2026-10-09T01:00:00Z',
-                     provider_name='Google Drive', size=path.stat().st_size)
+                     provider_name='Local Cloud Storage', size=path.stat().st_size)
     window = show_preview(parent, item, path)
     assert isinstance(window, CloudMediaPreview)
     assert isinstance(window, QtWidgets.fluentqt.Window)
     assert window.isWindow()
     assert window.windowTitle() == 'Sunday'
-    assert window.metadata['Source'].text() == 'Google Drive'
+    assert not any(label.text() == 'Sunday' for label in window.contentWidget().findChildren(QtWidgets.QLabel))
+    assert window.metadata['Source'].text() == 'Local Cloud Storage'
     assert window.metadata['Resolution'].text() == '200 × 100'
     assert window.metadata['Access'].text() == 'View'
     assert 'Modified' in window.metadata
@@ -134,7 +153,7 @@ def test_cloud_presentation_has_async_thumbnails_and_selectable_slides(settings,
     painter.end()
     del writer
     item = CloudItem('presentation', 'Welcome.pptx', category='presentations', size=2048,
-                     provider_name='Google Drive')
+                     provider_name='Local Cloud Storage')
     window = show_preview(None, item, tmp_path / item.name, path)
     qtbot.addWidget(window)
     window.show()
@@ -166,19 +185,19 @@ def test_cloud_presentation_has_async_thumbnails_and_selectable_slides(settings,
 
 
 def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings, qtbot, monkeypatch):
-    from openlp.core.widgets.metadataview import MetadataView
+    from opal.core.widgets.metadataview import MetadataView
     viewer = QtWidgets.QWidget()
     viewer.setUrl = MagicMock()
     viewer.stop = MagicMock()
     monkeypatch.setattr('PySide6.QtWebEngineWidgets.QWebEngineView', lambda *args: viewer)
     item = CloudItem('document', 'Welcome.pptx', category='presentations', can_download=False,
-                     preview_url='https://drive.google.com/file/d/document/view', provider_name='Google Drive')
+                     preview_url='https://storage.example.test/document/view', provider_name='Cloud storage')
     window = show_preview(None, item, None)
     qtbot.addWidget(window)
     assert isinstance(window, CloudPreviewWindow) and window.isWindow()
     details = window.findChild(MetadataView)
     assert details.fields is window.metadata
-    assert window.metadata['Source'].text() == 'Google Drive'
+    assert window.metadata['Source'].text() == 'Cloud storage'
     assert window.metadata['Access'].text() == 'View'
     viewer.setUrl.assert_called_once_with(QtCore.QUrl(item.preview_url))
     window.reject()
@@ -186,9 +205,9 @@ def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings,
 
 
 def test_cloud_slide_window_uses_preview_controller_and_embedded_display(settings, qtbot, monkeypatch):
-    from openlp.core.display.screens import ScreenList
-    from openlp.plugins.librarysync.lib.preview import CloudSlidePreview
-    from openlp.core.widgets.views import ListPreviewWidget
+    from opal.core.display.screens import ScreenList
+    from opal.plugins.librarysync.lib.preview import CloudSlidePreview
+    from opal.core.widgets.views import ListPreviewWidget
     ScreenList.create(QtWidgets.QApplication.instance())
     display = QtWidgets.QWidget()
     display.set_theme = MagicMock()
@@ -196,7 +215,7 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     display.load_verses = MagicMock()
     display.go_to_slide = MagicMock()
     display.deregister_display = MagicMock()
-    monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    monkeypatch.setattr('opal.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
     words = 'One\nTwo\nThree\nFour\nFive\nSix'
     root, xml = safe_xml(b'<song><title>Welcome</title><lyrics><verse>Hello everyone</verse></lyrics></song>')
     parent = QtWidgets.QWidget()
@@ -260,21 +279,21 @@ def test_cloud_metadata_uses_provider_permissions_and_places_audit_fields_last()
 
 
 def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings, qtbot, monkeypatch):
-    from openlp.core.common.registry import Registry
-    from openlp.core.display.screens import ScreenList
+    from opal.core.common.registry import Registry
+    from opal.core.display.screens import ScreenList
     from PySide6 import QtCore
     ScreenList.create(QtWidgets.QApplication.instance())
     Registry().register('theme_manager', SimpleNamespace(get_theme_names=lambda: []))
     display = QtWidgets.QWidget()
     display.set_scale = MagicMock()
     display.deregister_display = MagicMock()
-    monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    monkeypatch.setattr('opal.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
     prepared = safe_xml(b'<song xmlns:olp="https://openlp.org/ns/library-sync/1"><title>Welcome</title>'
                         b'<olp:theme>Organisation theme</olp:theme><lyrics>'
                         b'<verse>Welcome everyone</verse></lyrics></song>')
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
-    from openlp.plugins.librarysync.lib.preview import CloudSlidePreview
+    from opal.plugins.librarysync.lib.preview import CloudSlidePreview
     from pathlib import Path
     window = show_preview(parent, CloudItem('custom', 'Welcome.xml', category='custom'), Path('Welcome.xml'), prepared)
     assert isinstance(window, CloudSlidePreview)
@@ -293,7 +312,7 @@ def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings
 
 @pytest.mark.parametrize('zone_name, date, hour', [('Australia/Sydney', 9, 1), ('America/New_York', 8, 10)])
 def test_cloud_dates_use_system_timezone_with_daylight_saving(monkeypatch, zone_name, date, hour):
-    from openlp.plugins.librarysync.lib.preview import format_local_time
+    from opal.plugins.librarysync.lib.preview import format_local_time
     zone = QtCore.QTimeZone(zone_name.encode())
     monkeypatch.setattr(QtCore.QTimeZone, 'systemTimeZone', lambda: zone)
     local = QtCore.QDateTime(QtCore.QDate(2026, 10, date), QtCore.QTime(hour, 0), zone)

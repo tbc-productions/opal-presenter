@@ -23,10 +23,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.platform import is_win
-from openlp.core.ui.library import FolderLibraryItem
+from opal.core.common.platform import is_win
+from opal.core.ui.library import FolderLibraryItem
 
 
 class MockItem:
@@ -77,8 +77,8 @@ class MockTreeItem:
 def folder_library_item(registry, settings):
     registry.register('main_window', MagicMock())
     mocked_manager = MagicMock()
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
-            patch('openlp.core.lib.mediamanageritem.MediaManagerItem.setup_item'):
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+            patch('opal.core.lib.mediamanageritem.MediaManagerItem.setup_item'):
         library_item = FolderLibraryItem(None, MagicMock(manager=mocked_manager), MockFolder, MockItem)
         library_item.list_view = MagicMock(**{'selectedItems.return_value': []})
     return library_item
@@ -99,8 +99,8 @@ def test_folderlibrary_retranslate_ui(folder_library_item):
 
 def test_folderlibrary_add_custom_context_actions(folder_library_item):
     """Test that add_custom_context_actions adds show-in-folder action."""
-    with patch('openlp.core.ui.library.create_widget_action') as mocked_create_widget_action, \
-            patch('openlp.core.ui.library._add_library_context_menu_separator') as mocked_separator:
+    with patch('opal.core.ui.library.create_widget_action') as mocked_create_widget_action, \
+            patch('opal.core.ui.library._add_library_context_menu_separator') as mocked_separator:
         folder_library_item.add_custom_context_actions()
     assert mocked_create_widget_action.call_count == 1
     mocked_separator.assert_called_once_with(folder_library_item.list_view)
@@ -109,7 +109,7 @@ def test_folderlibrary_add_custom_context_actions(folder_library_item):
 @pytest.mark.parametrize('plugin', ['images', 'media', 'presentations'])
 def test_file_libraries_offer_inspect_for_one_file(folder_library_item, plugin):
     folder_library_item.plugin.name = plugin
-    with patch('openlp.core.ui.library.create_widget_action') as create_action:
+    with patch('opal.core.ui.library.create_widget_action') as create_action:
         folder_library_item.add_custom_context_actions()
     assert any(call.kwargs.get('text') == 'Inspect' for call in create_action.call_args_list)
     folder_library_item.list_view.selectedItems.return_value = [MockTreeItem(MockItem())]
@@ -147,7 +147,7 @@ def test_real_file_library_wraps_tree_with_footer_and_grid(settings, registry, q
     assert library.library_view.grid.count() == 1
     library.library_view.grid.setCurrentRow(0)
     assert library.inspect_action.isEnabled()
-    with patch('openlp.core.ui.library.MediaPreview.show_media') as preview:
+    with patch('opal.core.ui.library.MediaPreview.show_media') as preview:
         library.inspect_action.trigger()
     preview.assert_called_once_with(library, path, 'video.mp4', kind='image')
     with patch.object(library.menu, 'exec') as menu:
@@ -165,8 +165,8 @@ def test_real_file_library_wraps_tree_with_footer_and_grid(settings, registry, q
     assert library.current_folder.name == 'Backgrounds'
 
 
-@patch('openlp.core.ui.library.is_win', return_value=True)
-@patch('openlp.core.ui.library.QtCore.QProcess.startDetached')
+@patch('opal.core.ui.library.is_win', return_value=True)
+@patch('opal.core.ui.library.QtCore.QProcess.startDetached')
 def test_on_show_in_folder_click_windows(mocked_start_detached, mocked_is_win, folder_library_item, tmp_path):
     """Test that show in folder reveals selected file on Windows."""
     file_path = tmp_path / 'video.mp4'
@@ -365,9 +365,9 @@ def test_adding_image_to_new_folder_keeps_existing_rows(folder_library_item, tmp
     assert new_folder_row.childCount() == 1
 
 
-@patch('openlp.core.ui.library.copy2')
-@patch('openlp.core.ui.library.create_paths')
-@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('opal.core.ui.library.copy2')
+@patch('opal.core.ui.library.create_paths')
+@patch('opal.core.ui.library.AppLocation.get_section_data_path')
 def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path, mocked_create_paths,
                                                     mocked_copy2, folder_library_item, tmp_path):
     """
@@ -390,7 +390,7 @@ def test_prepare_library_file_copies_to_data_folder(mocked_get_section_data_path
     mocked_copy2.assert_called_once_with(source_file, expected_destination)
 
 
-@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('opal.core.ui.library.AppLocation.get_section_data_path')
 def test_cloud_download_already_in_managed_storage_is_not_copied(mocked_data_path, folder_library_item, tmp_path):
     source = tmp_path / 'library' / 'cloud-id' / 'clip.mp4'
     source.parent.mkdir(parents=True)
@@ -402,7 +402,7 @@ def test_cloud_download_already_in_managed_storage_is_not_copied(mocked_data_pat
     folder_library_item._copy_file_to_library_storage.assert_not_called()
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.sha256_file_hash')
 def test_cloud_import_reuses_worker_checksum(mocked_hash, folder_library_item, tmp_path):
     source = tmp_path / 'clip.mp4'
     source.write_bytes(b'media')
@@ -419,7 +419,7 @@ def test_cloud_import_reuses_worker_checksum(mocked_hash, folder_library_item, t
     assert folder_library_item.manager.save_object.call_args.args[0].name == 'Welcome video.mp4'
 
 
-@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('opal.core.ui.library.AppLocation.get_section_data_path')
 def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_path, folder_library_item, tmp_path):
     """Imported files with the same name keep distinct copies and library names."""
     sources = []
@@ -454,8 +454,8 @@ def test_validate_and_load_numbers_duplicate_filenames(mocked_get_section_data_p
         assert stored_path.read_bytes() == f'presentation {number}'.encode()
 
 
-@patch('openlp.core.ui.library.critical_error_message_box')
-@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('opal.core.ui.library.critical_error_message_box')
+@patch('opal.core.ui.library.AppLocation.get_section_data_path')
 def test_validate_and_load_rejects_reimport_of_managed_file(mocked_get_section_data_path, mocked_error,
                                                             folder_library_item, tmp_path):
     """Importing the same source again must not create another numbered library copy."""
@@ -486,7 +486,7 @@ def test_validate_and_load_rejects_reimport_of_managed_file(mocked_get_section_d
     assert not (managed_root / 'library' / 'slides (2).pptx').exists()
 
 
-@patch('openlp.core.ui.library.AppLocation.get_section_data_path')
+@patch('opal.core.ui.library.AppLocation.get_section_data_path')
 def test_delete_managed_library_file_only_inside_data_path(mocked_get_section_data_path, folder_library_item, tmp_path):
     """
     Test that managed file deletion only happens for files inside OpenLP data storage.
@@ -510,7 +510,7 @@ def test_delete_managed_library_file_only_inside_data_path(mocked_get_section_da
     assert external_file.exists()
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.sha256_file_hash')
 def test_recursively_delete_folder(mocked_sha256_file_hash, folder_library_item):
     """
     Test that recursively_delete_folder() works
@@ -540,7 +540,7 @@ def test_recursively_delete_folder(mocked_sha256_file_hash, folder_library_item)
     assert folder_library_item.delete_item.call_count == 5, 'delete_item() should have been called 5 times'
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.sha256_file_hash')
 def test_on_delete_click(mocked_sha256_file_hash, folder_library_item):
     """
     Test that on_delete_click() works
@@ -566,7 +566,7 @@ def test_on_delete_click(mocked_sha256_file_hash, folder_library_item):
     assert folder_library_item.delete_item.call_count == 1, 'delete_item() should have been called once'
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.sha256_file_hash')
 def test_on_delete_click_with_parent(mocked_sha256_file_hash, folder_library_item):
     """
     Test that on_delete_click() works
@@ -593,8 +593,8 @@ def test_on_delete_click_with_parent(mocked_sha256_file_hash, folder_library_ite
     assert folder_library_item.delete_item.call_count == 1, 'delete_item() should have been called once'
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
-@patch('openlp.core.ui.library.QtWidgets.QMessageBox.question')
+@patch('opal.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.QtWidgets.QMessageBox.question')
 def test_on_delete_click_as_folder(mocked_question, mocked_sha256_file_hash, folder_library_item):
     """
     Test that on_delete_click() works
@@ -618,8 +618,8 @@ def test_on_delete_click_as_folder(mocked_question, mocked_sha256_file_hash, fol
         'recursively_delete_folder() should have been called once'
 
 
-@patch('openlp.core.ui.library.sha256_file_hash')
-@patch('openlp.core.ui.library.QtWidgets.QMessageBox.question')
+@patch('opal.core.ui.library.sha256_file_hash')
+@patch('opal.core.ui.library.QtWidgets.QMessageBox.question')
 def test_on_delete_click_as_folder_with_parent(mocked_question, mocked_sha256_file_hash, folder_library_item):
     """
     Test that on_delete_click() works
@@ -666,7 +666,7 @@ def test_on_add_folder_click(folder_library_item):
     folder_library_item.expand_folder.assert_called_once_with(1)
 
 
-@patch('openlp.core.ui.library.critical_error_message_box')
+@patch('opal.core.ui.library.critical_error_message_box')
 def test_on_add_folder_click_fails(mocked_critical_error_message_box, folder_library_item):
     """Test that the on_add_folder_click adds a folder to the list"""
     # GIVEN: A folder library item and some mocks

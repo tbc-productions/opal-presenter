@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.languages package.
+Package to test the opal.core.lib.languages package.
 """
 from unittest.mock import MagicMock, patch
 import importlib.util
-from openlp.core.common.i18n import LANGUAGES, Language, UiStrings, get_language, get_locale_key, get_natural_key, \
+from opal.core.common.i18n import LANGUAGES, Language, UiStrings, get_language, get_locale_key, get_natural_key, \
     translate, LanguageManager
-from openlp.core.common.settings import Settings
+from opal.core.common.settings import Settings
 
 icu_spec = importlib.util.find_spec('icu')
 HAS_PYICU = icu_spec is not None
@@ -117,7 +117,7 @@ def test_get_locale_key():
     """
     Test the get_locale_key(string) function
     """
-    with patch('openlp.core.common.i18n.LanguageManager.get_language') as mocked_get_language:
+    with patch('opal.core.common.i18n.LanguageManager.get_language') as mocked_get_language:
         # GIVEN: The language is German
         # 0x00C3 (A with diaresis) should be sorted as "A". 0x00DF (sharp s) should be sorted as "ss".
         mocked_get_language.return_value = 'de'
@@ -138,7 +138,7 @@ def test_get_natural_key():
     """
     Test the get_natural_key(string) function
     """
-    with patch('openlp.core.common.i18n.LanguageManager.get_language') as mocked_get_language:
+    with patch('opal.core.common.i18n.LanguageManager.get_language') as mocked_get_language:
         # GIVEN: The language is English (a language, which sorts digits before letters)
         mocked_get_language.return_value = 'en'
         unsorted_list = ['item 10a', 'item 3b', '1st item']

@@ -28,14 +28,14 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 import fluentqt
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import get_file_type_glob
-from openlp.core.lib import ServiceItemContext
-from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.plugins.presentations.lib.db import Folder, Item
-from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
+from opal.core.common import get_file_type_glob
+from opal.core.lib import ServiceItemContext
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.core.lib.theme import TransitionSpeed, TransitionType
+from opal.plugins.presentations.lib.db import Folder, Item
+from opal.plugins.presentations.lib.mediaitem import PresentationMediaItem
 
 
 def test_inspect_presentation_uses_cached_slides_without_loading_controller(media_item, tmp_path):
@@ -49,7 +49,7 @@ def test_inspect_presentation_uses_cached_slides_without_loading_controller(medi
     doc.get_thumbnail_path.side_effect = slides + [None]
     media_item.controllers = {'Powerpoint': controller}
     with patch.object(media_item, 'find_controller_by_type', return_value='Powerpoint'), \
-            patch('openlp.plugins.presentations.lib.mediaitem.MediaPreview.show_media') as preview:
+            patch('opal.plugins.presentations.lib.mediaitem.MediaPreview.show_media') as preview:
         media_item.inspect_item(item)
     preview.assert_called_once_with(media_item, path, 'Sunday', kind='presentation', preview_paths=slides)
     doc.load_presentation.assert_not_called()
@@ -84,7 +84,7 @@ def test_build_file_mask_string(media_item):
     }
 
     # WHEN: Build the file mask.
-    with patch('openlp.plugins.presentations.lib.mediaitem.translate') as mocked_translate:
+    with patch('opal.plugins.presentations.lib.mediaitem.translate') as mocked_translate:
         mocked_translate.side_effect = lambda module, string_to_translate: string_to_translate
         media_item.build_file_mask_string()
 
@@ -111,12 +111,12 @@ def test_build_file_mask_string(media_item):
 
 def test_controller_display_names_keep_internal_keys(settings, mock_plugin):
     """Visible controller names may change without changing saved identifiers."""
-    from openlp.plugins.presentations.lib.pdfcontroller import PdfController
-    from openlp.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacController
+    from opal.plugins.presentations.lib.pdfcontroller import PdfController
+    from opal.plugins.presentations.lib.powerpointmaccontroller import PowerPointMacController
 
     pdf_controller = PdfController(mock_plugin)
-    with patch('openlp.plugins.presentations.lib.applescriptbasecontroller.APPLESCRIPT_AVAILABLE', False), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller.APPLESCRIPT_AVAILABLE', False):
+    with patch('opal.plugins.presentations.lib.applescriptbasecontroller.APPLESCRIPT_AVAILABLE', False), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller.APPLESCRIPT_AVAILABLE', False):
         mac_controller = PowerPointMacController(mock_plugin)
 
     assert (pdf_controller.name, pdf_controller.display_name) == ('Pdf', 'PDF')
@@ -137,10 +137,12 @@ def test_display_type_combo_uses_controller_keys(media_item):
     media_item.automatic = 'Automatic'
     media_item.display_type_combo_box = QtWidgets.QComboBox()
     media_item.presentation_widget = MagicMock()
+    media_item.panel_widget = MagicMock()
 
     media_item.populate_display_types()
 
     media_item.presentation_widget.setVisible.assert_called_once_with(True)
+    media_item.panel_widget.setVisible.assert_called_once_with(True)
     combo = media_item.display_type_combo_box
     assert [combo.itemText(index) for index in range(combo.count())] == \
         ['Automatic', 'PDF', 'PowerPoint (macOS)']
@@ -152,6 +154,7 @@ def test_display_type_combo_uses_controller_keys(media_item):
     media_item.controllers = {'Pdf': pdf_controller}
     media_item.populate_display_types()
     media_item.presentation_widget.setVisible.assert_called_with(False)
+    media_item.panel_widget.setVisible.assert_called_with(False)
 
 
 def test_validate_and_load_reports_only_unsupported_imports(media_item, tmp_path):
@@ -166,8 +169,8 @@ def test_validate_and_load_reports_only_unsupported_imports(media_item, tmp_path
     supported.write_bytes(b'presentation')
     unsupported.write_bytes(b'unsupported')
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.FolderLibraryItem.validate_and_load') as load, \
-            patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+    with patch('opal.plugins.presentations.lib.mediaitem.FolderLibraryItem.validate_and_load') as load, \
+            patch('opal.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
         media_item.validate_and_load([supported, unsupported])
 
     load.assert_called_once_with([supported], None)
@@ -182,7 +185,7 @@ def test_load_item_with_unsupported_type_does_not_show_import_error(media_item, 
     file_path.write_bytes(b'unsupported')
     media_item.controllers = {}
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+    with patch('opal.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
         result = media_item.load_item(Item(name=file_path.name, file_path=str(file_path)))
 
     assert result is not None
@@ -306,7 +309,7 @@ def test_generate_slide_data_with_file_path_from_item(media_item):
     list_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
 
     # WHEN: generate_slide_data is called
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog'):
+    with patch('opal.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog'):
         result = media_item.generate_slide_data(mocked_service_item, item=list_item)
 
     # THEN: The result should be false
@@ -336,7 +339,7 @@ def test_existing_library_presentation_without_controller_shows_dialog(
     media_item.display_type_combo_box.itemData.return_value = selected
     service_item = MagicMock()
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+    with patch('opal.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog') as dialog:
         result = media_item.generate_slide_data(service_item, item=tree_item, context=context)
 
     assert result is False
@@ -360,7 +363,7 @@ def test_unavailable_remote_presentation_does_not_open_modal_dialog(media_item, 
     media_item.display_type_combo_box = MagicMock()
     media_item.display_type_combo_box.itemData.return_value = ''
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.fluentqt.ContentDialog') as dialog:
+    with patch('opal.plugins.presentations.lib.mediaitem.QtWidgets.ContentDialog') as dialog:
         assert not media_item.generate_slide_data(MagicMock(), item=tree_item, remote=True)
     dialog.assert_not_called()
 
@@ -368,7 +371,7 @@ def test_unavailable_remote_presentation_does_not_open_modal_dialog(media_item, 
 @pytest.mark.parametrize('open_settings', [False, True])
 def test_unavailable_presentation_dialog_commands(media_item, open_settings):
     """OK dismisses the dialog; the secondary command opens the Presentations settings tab."""
-    from openlp.core.common.registry import Registry
+    from opal.core.common.registry import Registry
 
     parent = QtWidgets.QWidget()
     parent.resize(1000, 700)
@@ -469,7 +472,7 @@ def test_convert_pdf_adds_and_selects_copy_in_same_folder(media_item, tmp_path, 
                 patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
                 patch.object(media_item, '_prepare_library_file', return_value=output), \
                 patch.object(media_item, '_insert_saved_items', side_effect=insert), \
-                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', return_value=output):
+                patch('opal.plugins.presentations.lib.pdfexport.export_to_pdf', return_value=output):
             media_item.on_convert_to_pdf()
         added = media_item.manager.save_object.call_args.args[0]
         assert added.file_path == str(output)
@@ -493,8 +496,8 @@ def test_convert_pdf_failure_shows_error_without_adding_item(media_item, tmp_pat
     try:
         with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent), \
                 patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
-                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=RuntimeError('failed')), \
-                patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+                patch('opal.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=RuntimeError('failed')), \
+                patch('opal.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
             media_item.on_convert_to_pdf()
         media_item.manager.save_object.assert_not_called()
         error.assert_called_once_with('Conversion Failed', 'The presentation could not be converted to PDF.\n\nfailed')
@@ -519,7 +522,7 @@ def test_repair_converted_pdf_names_preserves_custom_labels(media_item, tmp_path
 
 @pytest.mark.parametrize('dismiss', ['button', 'escape', 'close'])
 def test_cancel_conversion_waits_and_discards_result(media_item, tmp_path, dismiss):
-    from openlp.plugins.presentations.lib.mediaitem import PdfConversionProgressDialog
+    from opal.plugins.presentations.lib.mediaitem import PdfConversionProgressDialog
 
     parent = QtWidgets.QWidget()
     parent.resize(1000, 700)
@@ -554,8 +557,8 @@ def test_cancel_conversion_waits_and_discards_result(media_item, tmp_path, dismi
     try:
         with patch.object(type(media_item), 'main_window', new_callable=PropertyMock, return_value=parent), \
                 patch.object(media_item, '_pdf_export_selection', return_value=(original, controller)), \
-                patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=export), \
-                patch('openlp.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
+                patch('opal.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=export), \
+                patch('opal.plugins.presentations.lib.mediaitem.critical_error_message_box') as error:
             media_item.on_convert_to_pdf()
         assert not output.exists()
         assert source.read_bytes() == b'original'
@@ -569,8 +572,8 @@ def test_cancel_conversion_waits_and_discards_result(media_item, tmp_path, dismi
     ('pptx', 'slide_text_person'), ('odp', 'slide_text'), ('key', 'slide_text_sparkle'), ('pdf', 'pdf')
 ])
 def test_presentation_file_type_icon_follows_name_for_missing_files(media_item, tmp_path, suffix, icon_name):
-    from openlp.core.ui.icons import UiIcons
-    from openlp.core.widgets.fluent_tree import LIBRARY_FILE_TYPE_ICON_ROLE, FluentLibraryTreeDelegate
+    from opal.core.ui.icons import UiIcons
+    from opal.core.widgets.fluent_tree import LIBRARY_FILE_TYPE_ICON_ROLE, FluentLibraryTreeDelegate
 
     media_item.list_view = QtWidgets.QTreeWidget()
     source = tmp_path / f'sermon.{suffix}'
@@ -653,6 +656,7 @@ def test_generate_slide_data_from_pdf_inherits_item_transition_settings(media_it
         )
 
     assert result is True
+    assert target_service_item.data_string == {'file_path': pdf_path}
     assert target_service_item.slide_transition_settings == {
         'enabled': True,
         'type': TransitionType.Slide,
@@ -905,7 +909,7 @@ def test_generate_slide_data_rebuilds_missing_first_thumbnail_cache(media_item):
     mocked_service_item.add_from_command.assert_called_once()
 
 
-@patch('openlp.core.lib.ui.Registry')
+@patch('opal.core.lib.ui.Registry')
 def test_generate_slide_data_with_nonexistent_path(MockRegistry, media_item):
     """
     Test that the generate slide data function shows the right error for non-existent paths.
@@ -933,7 +937,7 @@ def test_generate_slide_data_with_nonexistent_path(MockRegistry, media_item):
     assert success is False, 'The slide data could not be generated'
 
 
-@patch('openlp.core.lib.ui.Registry')
+@patch('opal.core.lib.ui.Registry')
 def test_generate_slide_data_with_inaccessible_path(MockRegistry, media_item):
     """
     Test that the generate slide data function shows the right error for inaccessible paths.
@@ -943,7 +947,7 @@ def test_generate_slide_data_with_inaccessible_path(MockRegistry, media_item):
     media_item.display_type_combo_box = MagicMock()
     mocked_service_item = MagicMock()
 
-    with patch('openlp.plugins.presentations.lib.mediaitem.Path') as mocked_path:
+    with patch('opal.plugins.presentations.lib.mediaitem.Path') as mocked_path:
         # GIVEN: A fake file which "exists" cannot be read - so it's inaccessible
         mocked_path.exists.return_value = True
         file_path = mocked_path('test.pdf')
@@ -967,8 +971,8 @@ def test_generate_slide_data_with_inaccessible_path(MockRegistry, media_item):
         assert success is False, 'The slide data could not be generated'
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup')
-@patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item')
+@patch('opal.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item')
 def test_search_found(mock_setup, mock_item, registry):
     """
     Test that the search method works correctly
@@ -985,8 +989,8 @@ def test_search_found(mock_setup, mock_item, registry):
     assert result == [['test.odp', 'test.odp']], 'The result file contain the file name'
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup')
-@patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item')
+@patch('opal.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item')
 def test_search_not_found(mock_setup, mock_item, registry):
     """
     Test that the search doesn't find anything
@@ -1022,9 +1026,9 @@ def test_load_item_metadata_columns(media_item):
     with patch.object(Path, 'exists', return_value=True), \
             patch('os.access', return_value=True), \
             patch.object(Path, 'stat', return_value=mocked_stat), \
-            patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.find_controller_by_type',
+            patch('opal.plugins.presentations.lib.mediaitem.PresentationMediaItem.find_controller_by_type',
                   return_value='pptx'), \
-            patch('openlp.plugins.presentations.lib.mediaitem.UiIcons') as mocked_icons:
+            patch('opal.plugins.presentations.lib.mediaitem.UiIcons') as mocked_icons:
         mocked_icons.return_value.document_question_mark = QtGui.QIcon()
 
         # WHEN: load_item() is called for initial load (skips generating thumbnails)

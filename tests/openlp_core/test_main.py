@@ -23,10 +23,10 @@ Test OpenLP's ``__main__`` module
 """
 from unittest.mock import MagicMock, call, patch
 
-from openlp.__main__ import start, set_up_fault_handling, tear_down_fault_handling
+from opal.__main__ import start, set_up_fault_handling, tear_down_fault_handling
 
 
-@patch('openlp.__main__.error_log_file')
+@patch('opal.__main__.error_log_file')
 def test_tear_down_fault_handling(mocked_error_log_file: MagicMock):
     """Test that the teardown function closes the file"""
     # GIVEN: A mocked error log file
@@ -37,10 +37,10 @@ def test_tear_down_fault_handling(mocked_error_log_file: MagicMock):
     mocked_error_log_file.close.assert_called_once()
 
 
-@patch('openlp.__main__.AppLocation.get_directory')
-@patch('openlp.__main__.create_paths')
-@patch('openlp.__main__.atexit.register')
-@patch('openlp.__main__.faulthandler.enable')
+@patch('opal.__main__.AppLocation.get_directory')
+@patch('opal.__main__.create_paths')
+@patch('opal.__main__.atexit.register')
+@patch('opal.__main__.faulthandler.enable')
 def test_set_up_fault_handling(mocked_enable: MagicMock, mocked_register: MagicMock, mocked_create_paths: MagicMock,
                                mocked_get_directory: MagicMock):
     """Test that the set_up_fault_handling() function does the correct things"""
@@ -54,9 +54,9 @@ def test_set_up_fault_handling(mocked_enable: MagicMock, mocked_register: MagicM
     mocked_enable.assert_called_once()
 
 
-@patch('openlp.__main__.create_paths')
-@patch('openlp.__main__.atexit.register')
-@patch('openlp.__main__.atexit.unregister')
+@patch('opal.__main__.create_paths')
+@patch('opal.__main__.atexit.register')
+@patch('opal.__main__.atexit.unregister')
 def test_set_up_fault_handling_exception(mocked_unregister: MagicMock, mocked_register: MagicMock,
                                          mocked_create_paths: MagicMock):
     """Test that the set_up_fault_handling() function tears itself down correctly if there is an issue"""
@@ -70,9 +70,9 @@ def test_set_up_fault_handling_exception(mocked_unregister: MagicMock, mocked_re
     mocked_unregister.assert_called_once_with(tear_down_fault_handling)
 
 
-@patch('openlp.__main__.multiprocessing.freeze_support')
-@patch('openlp.__main__.set_up_fault_handling')
-@patch('openlp.__main__.main')
+@patch('opal.__main__.multiprocessing.freeze_support')
+@patch('opal.__main__.set_up_fault_handling')
+@patch('opal.__main__.main')
 def test_start(mocked_main: MagicMock, mocked_fault_handling: MagicMock,
                mocked_freeze_support: MagicMock):
     """Test that the start method calls the correct functions"""

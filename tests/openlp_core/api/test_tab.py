@@ -28,16 +28,16 @@ from unittest.mock import MagicMock, patch
 
 from PySide6 import QtWidgets
 
-from openlp.core.api.tab import ApiTab
-from openlp.core.common import get_network_interfaces
-from openlp.core.common.registry import Registry
+from opal.core.api.tab import ApiTab
+from opal.core.common import get_network_interfaces
+from opal.core.common.registry import Registry
 
 ZERO_URL = '0.0.0.0'
 
 
 @pytest.fixture(scope="module")
 def mocked_get_installed_version():
-    setup_patcher = patch('openlp.core.api.tab.get_installed_version')
+    setup_patcher = patch('opal.core.api.tab.get_installed_version')
     mocked_setup_patcher = setup_patcher.start()
     mocked_setup_patcher.return_value = None
     yield mocked_setup_patcher
@@ -141,7 +141,7 @@ def test_address_revert_button_clicked(api_tab, settings):
     assert api_tab.address_edit.text() == settings.get_default_value('api/ip address')
 
 
-@patch('openlp.core.api.tab.show_restart_message')
+@patch('opal.core.api.tab.show_restart_message')
 def test_save(mocked_information, api_tab, registry, settings):
     """
     Test the save method works correctly
@@ -163,7 +163,7 @@ def test_save(mocked_information, api_tab, registry, settings):
 
     # THEN: The text should have been changed to the default value
     mocked_information.assert_called_once_with(api_tab, 'Restart Required',
-                                               'This change will only take effect once OpenLP+ has been restarted.')
+                                               'This change will only take effect once Opal Presenter has been restarted.')
     mocked_settings_form.register_post_process.assert_called_once_with('remotes_config_updated')
     assert settings.value('api/twelve hour') is True
     assert settings.value('api/thumbnails') is True
@@ -260,7 +260,7 @@ def test_validate_available_version(api_tab):
     assert api_tab.available_version_value.text() == '(unknown)'
 
 
-@patch('openlp.core.api.tab.is_thread_finished')
+@patch('opal.core.api.tab.is_thread_finished')
 def test_set_server_states_up(mock_is_thread_finished, registry, settings, api_tab):
     """Test getting the server states when the servers are up"""
     # GIVEN: An API tab and some mocks
@@ -274,7 +274,7 @@ def test_set_server_states_up(mock_is_thread_finished, registry, settings, api_t
     assert api_tab.server_websocket_state.text() == 'Active'
 
 
-@patch('openlp.core.api.tab.is_thread_finished')
+@patch('opal.core.api.tab.is_thread_finished')
 def test_set_server_states_disabled(mock_is_thread_finished, registry, settings, api_tab):
     """Test getting the server states when the servers are disabled"""
     # GIVEN: An API tab and some mocks
@@ -289,7 +289,7 @@ def test_set_server_states_disabled(mock_is_thread_finished, registry, settings,
     assert api_tab.server_websocket_state.text() == 'Disabled'
 
 
-@patch('openlp.core.api.tab.is_thread_finished')
+@patch('opal.core.api.tab.is_thread_finished')
 def test_set_server_states_down(mock_is_thread_finished, registry, settings, api_tab):
     """Test getting the server states when the servers are down"""
     # GIVEN: An API tab and some mocks
@@ -304,7 +304,7 @@ def test_set_server_states_down(mock_is_thread_finished, registry, settings, api
     assert api_tab.server_websocket_state.text() == 'Failed'
 
 
-@patch('openlp.core.api.tab.download_version_info')
+@patch('opal.core.api.tab.download_version_info')
 def test_on_check_for_updates_button_clicked(mocked_download_version_info, mocked_qapp, registry, settings, api_tab):
     """Test that the correct methods are called when the Check for Updates button is clicked"""
     # GIVEN: An API tab and a couple of mocks
@@ -331,7 +331,7 @@ def test_on_check_for_updates_button_clicked(mocked_download_version_info, mocke
     assert api_tab.available_version == '0.9.5'
 
 
-@patch('openlp.core.api.tab.download_version_info')
+@patch('opal.core.api.tab.download_version_info')
 def test_on_check_for_updates_error(mocked_download_version_info, mocked_qapp, registry, settings, api_tab):
     """Test that an error message is shown when the remote version cannot be downloaded"""
     # GIVEN: An API tab and a couple of mocks
@@ -359,9 +359,9 @@ def test_on_check_for_updates_error(mocked_download_version_info, mocked_qapp, r
     assert api_tab.available_version is None
 
 
-@patch('openlp.core.api.tab.DownloadProgressDialog')
-@patch('openlp.core.api.tab.download_and_install')
-@patch('openlp.core.api.tab.sleep')
+@patch('opal.core.api.tab.DownloadProgressDialog')
+@patch('opal.core.api.tab.download_and_install')
+@patch('opal.core.api.tab.sleep')
 def test_on_install_button_clicked(mocked_sleep, mocked_download_and_install, MockDownloadProgressDialog,
                                    mocked_qapp, registry, settings, api_tab):
     """Test that the correct methods are called when the Check for Updates button is clicked"""

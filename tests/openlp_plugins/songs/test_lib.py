@@ -25,10 +25,10 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.lib import VerseType, clean_string, clean_title, delete_song, strip_rtf, \
+from opal.core.common.registry import Registry
+from opal.plugins.songs.lib import VerseType, clean_string, clean_title, delete_song, strip_rtf, \
     transpose_chord, transpose_lyrics
-from openlp.plugins.songs.lib.songcompare import _op_length, _remove_typos, songs_probably_equal
+from opal.plugins.songs.lib.songcompare import _op_length, _remove_typos, songs_probably_equal
 
 full_lyrics = '''amazing grace how sweet the sound that saved a wretch like me i once was lost but now am
     found was blind but now i see  twas grace that taught my heart to fear and grace my fears relieved how
@@ -349,7 +349,7 @@ def test_transpose_chord_error():
         'KeyError exception should have been thrown for invalid chord'
 
 
-@patch('openlp.plugins.songs.lib.transpose_verse')
+@patch('opal.plugins.songs.lib.transpose_verse')
 def test_transpose_lyrics(mocked_transpose_verse: MagicMock, mock_settings: MagicMock):
     """
     Test that the transpose_lyrics() splits verses correctly
@@ -378,7 +378,7 @@ def test_translated_tag():
     Test that the translated_tag() method returns the correct tags
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_tag() method with a "verse"
@@ -399,7 +399,7 @@ def test_translated_invalid_tag():
     Test that the translated_tag() method returns the default tag when passed an invalid tag
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_tag() method with an invalid verse type
@@ -414,7 +414,7 @@ def test_translated_invalid_tag_with_specified_default():
     Test that the translated_tag() method returns the specified default tag when passed an invalid tag
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_tag() method with an invalid verse type and specify a default
@@ -429,7 +429,7 @@ def test_translated_invalid_tag_with_invalid_default():
     Test that the translated_tag() method returns a sane default tag when passed an invalid default
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_tag() method with an invalid verse type and an invalid default
@@ -444,7 +444,7 @@ def test_translated_name():
     Test that the translated_name() method returns the correct name
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_name() method with a "verse"
@@ -465,7 +465,7 @@ def test_translated_invalid_name():
     Test that the translated_name() method returns the default name when passed an invalid tag
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_name() method with an invalid verse type
@@ -480,7 +480,7 @@ def test_translated_invalid_name_with_specified_default():
     Test that the translated_name() method returns the specified default name when passed an invalid tag
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_name() method with an invalid verse type and specify a default
@@ -495,7 +495,7 @@ def test_translated_invalid_name_with_invalid_default():
     Test that the translated_name() method returns the specified default tag when passed an invalid tag
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the translated_name() method with an invalid verse type and specify an invalid default
@@ -510,7 +510,7 @@ def test_from_tag():
     Test that the from_tag() method returns the correct VerseType.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with a valid verse type, we get the name back
@@ -525,7 +525,7 @@ def test_from_tag_with_invalid_tag():
     Test that the from_tag() method returns the default VerseType when it is passed an invalid tag.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with a valid verse type, we get the name back
@@ -540,7 +540,7 @@ def test_from_tag_with_specified_default():
     Test that the from_tag() method returns the specified default when passed an invalid tag.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with an invalid verse type, we get the specified default back
@@ -555,7 +555,7 @@ def test_from_tag_with_invalid_intdefault():
     Test that the from_tag() method returns a sane default when passed an invalid tag and an invalid int default.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with an invalid verse type, we get the specified default back
@@ -570,7 +570,7 @@ def test_from_tag_with_invalid_default():
     Test that the from_tag() method returns a sane default when passed an invalid tag and an invalid default.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with an invalid verse type, we get the specified default back
@@ -585,7 +585,7 @@ def test_from_tag_with_none_default():
     Test that the from_tag() method returns a sane default when passed an invalid tag and None as default.
     """
     # GIVEN: A mocked out translate() function that just returns what it was given
-    with patch('openlp.plugins.songs.lib.translate') as mocked_translate:
+    with patch('opal.plugins.songs.lib.translate') as mocked_translate:
         mocked_translate.side_effect = lambda x, y: y
 
         # WHEN: We run the from_tag() method with an invalid verse type, we get the specified default back
@@ -595,7 +595,7 @@ def test_from_tag_with_none_default():
         assert result is None, 'The result should be None, but was "%s"' % result
 
 
-@patch('openlp.plugins.songs.lib.VerseType.translated_tags', new_callable=PropertyMock, return_value=['x'])
+@patch('opal.plugins.songs.lib.VerseType.translated_tags', new_callable=PropertyMock, return_value=['x'])
 def test_from_loose_input_with_invalid_input(mocked_translated_tags: MagicMock):
     """
     Test that the from_loose_input() method returns a sane default when passed an invalid tag and None as default.
@@ -608,7 +608,7 @@ def test_from_loose_input_with_invalid_input(mocked_translated_tags: MagicMock):
     assert result is None, 'The result should be None, but was "%s"' % result
 
 
-@patch('openlp.plugins.songs.lib.VerseType.translated_tags', new_callable=PropertyMock, return_value=['x'])
+@patch('opal.plugins.songs.lib.VerseType.translated_tags', new_callable=PropertyMock, return_value=['x'])
 def test_from_loose_input_with_valid_input(mocked_translated_tags: MagicMock):
     """
     Test that the from_loose_input() method returns valid output on valid input.
@@ -621,10 +621,10 @@ def test_from_loose_input_with_valid_input(mocked_translated_tags: MagicMock):
     assert result == VerseType.Verse, 'The result should be a verse, but was "%s"' % result
 
 
-@patch('openlp.plugins.songs.lib.AppLocation.get_section_data_path')
-@patch('openlp.plugins.songs.lib.MediaFile')
-@patch('openlp.plugins.songs.lib.Song')
-@patch('openlp.plugins.songs.lib.os.unlink')
+@patch('opal.plugins.songs.lib.AppLocation.get_section_data_path')
+@patch('opal.plugins.songs.lib.MediaFile')
+@patch('opal.plugins.songs.lib.Song')
+@patch('opal.plugins.songs.lib.os.unlink')
 def test_delete_song(mocked_unlink: MagicMock, MockSong: MagicMock, MockMediaFile: MagicMock,
                      mocked_get_section_data_path: MagicMock, registry: Registry):
     """Test deleting a song and all its media files"""

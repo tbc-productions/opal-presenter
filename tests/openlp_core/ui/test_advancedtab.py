@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.advancedtab package.
+Package to test the opal.core.ui.advancedtab package.
 """
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.advancedtab import AdvancedTab
-from openlp.core.ui.settingsform import SettingsForm
+from opal.core.ui.advancedtab import AdvancedTab
+from opal.core.ui.settingsform import SettingsForm
 
 
 def test_creation(settings):
@@ -44,13 +44,13 @@ def test_creation(settings):
     assert "Advanced" == advanced_tab.tab_title, 'The tab title should be Advanced'
 
 
-@patch('openlp.core.ui.advancedtab.QtWidgets.QProgressDialog')
-@patch('openlp.core.ui.advancedtab.QtWidgets.QMessageBox.information')
-@patch('openlp.core.ui.advancedtab.QtWidgets.QMessageBox.question')
-@patch('openlp.core.ui.advancedtab.copy2')
-@patch('openlp.core.ui.advancedtab.create_paths')
-@patch('openlp.core.ui.advancedtab.sha256_file_hash')
-@patch('openlp.core.ui.advancedtab.AppLocation.get_section_data_path')
+@patch('opal.core.ui.advancedtab.QtWidgets.QProgressDialog')
+@patch('opal.core.ui.advancedtab.QtWidgets.QMessageBox.information')
+@patch('opal.core.ui.advancedtab.QtWidgets.QMessageBox.question')
+@patch('opal.core.ui.advancedtab.copy2')
+@patch('opal.core.ui.advancedtab.create_paths')
+@patch('opal.core.ui.advancedtab.sha256_file_hash')
+@patch('opal.core.ui.advancedtab.AppLocation.get_section_data_path')
 def test_migrate_library_files_button_copies_files(mocked_get_section_data_path: MagicMock,
                                                    mocked_sha256_file_hash: MagicMock,
                                                    mocked_create_paths: MagicMock,

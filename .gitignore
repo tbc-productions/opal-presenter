@@ -52,9 +52,8 @@ openlp-test-projectordb.sqlite
 openlp.cfg
 OpenLP.egg-info
 openlp.pro
-openlp/core/resources.py
-openlp/core/resources.py.old
-openlp/plugins/presentations/lib/vendor/*
+opal/core/resources.py.old
+opal/plugins/presentations/lib/vendor/*
 output
 package-lock.json
 tags

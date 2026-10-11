@@ -23,15 +23,15 @@ Package to test the PJLink UDP functions
 """
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.common.settings import Settings
-from openlp.core.projectors.constants import PJLINK_PORT
-from openlp.core.projectors.pjlink import PJLinkUDP
-from openlp.core.projectors.tab import ProjectorTab
+from opal.core.common.settings import Settings
+from opal.core.projectors.constants import PJLINK_PORT
+from opal.core.projectors.pjlink import PJLinkUDP
+from opal.core.projectors.tab import ProjectorTab
 
 from tests.resources.projector.data import TEST1_DATA
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_get_datagram_data_negative_zero_length(mocked_log: MagicMock, settings: Settings):
     """
     Test get_datagram when pendingDatagramSize = 0
@@ -54,7 +54,7 @@ def test_get_datagram_data_negative_zero_length(mocked_log: MagicMock, settings:
         mocked_log.debug.assert_has_calls(log_debug_calls)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_get_datagram_data_no_data(mocked_log: MagicMock, settings: Settings):
     """
     Test get_datagram when data length = 0
@@ -77,7 +77,7 @@ def test_get_datagram_data_no_data(mocked_log: MagicMock, settings: Settings):
         mocked_log.debug.assert_has_calls(log_debug_calls)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_get_datagram_pending_zero_length(mocked_log: MagicMock, settings: Settings):
     """
     Test get_datagram when pendingDatagramSize = 0
@@ -98,7 +98,7 @@ def test_get_datagram_pending_zero_length(mocked_log: MagicMock, settings: Setti
         mocked_log.debug.assert_has_calls(log_debug_calls)
 
 
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_add_udp_listener(mocked_log: MagicMock, settings: Settings):
     """
     Test adding UDP listners to PJLink Settings tab
@@ -121,7 +121,7 @@ def test_pjlinksettings_add_udp_listener(mocked_log: MagicMock, settings: Settin
     mocked_log.warning.assert_has_calls(log_warning_calls)
 
 
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_add_udp_listener_multiple_same(mocked_log: MagicMock, settings: Settings):
     """
     Test adding second UDP listner with same port to PJLink Settings tab
@@ -144,7 +144,7 @@ def test_pjlinksettings_add_udp_listener_multiple_same(mocked_log: MagicMock, se
     mocked_log.warning.assert_has_calls(log_warning_calls)
 
 
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_add_udp_listener_multiple_different(mocked_log: MagicMock, settings: Settings):
     """
     Test adding second UDP listner with different port to PJLink Settings tab
@@ -170,7 +170,7 @@ def test_pjlinksettings_add_udp_listener_multiple_different(mocked_log: MagicMoc
     mocked_log.warning.assert_has_calls(log_warning_calls)
 
 
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_remove_udp_listener(mocked_log: MagicMock, settings: Settings):
     """
     Test removing UDP listners to PJLink Settings tab
@@ -194,7 +194,7 @@ def test_pjlinksettings_remove_udp_listener(mocked_log: MagicMock, settings: Set
     mocked_log.warning.assert_has_calls(log_warning_calls)
 
 
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_remove_udp_listener_multiple_different(mocked_log: MagicMock, settings: Settings):
     """
     Test adding second UDP listner with different port to PJLink Settings tab
@@ -221,9 +221,9 @@ def test_pjlinksettings_remove_udp_listener_multiple_different(mocked_log: Magic
     mocked_log.warning.assert_has_calls(log_warning_calls)
 
 
-@patch('openlp.core.projectors.pjlink.PJLinkUDP.check_settings')
-@patch('openlp.core.projectors.pjlink.log')
-@patch('openlp.core.projectors.tab.log')
+@patch('opal.core.projectors.pjlink.PJLinkUDP.check_settings')
+@patch('opal.core.projectors.pjlink.log')
+@patch('opal.core.projectors.tab.log')
 def test_pjlinksettings_call_udp_listener(mocked_tab_log: MagicMock, mocked_pjlink_log: MagicMock,
                                           mocked_check_settings: MagicMock, settings: Settings):
     """

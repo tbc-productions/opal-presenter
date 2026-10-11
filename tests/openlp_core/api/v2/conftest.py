@@ -1,6 +1,6 @@
 import pytest
 
-from openlp.core.api import app as flask_app
+from opal.core.api import app as flask_app
 
 
 @pytest.fixture(scope='module')

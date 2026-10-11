@@ -52,7 +52,7 @@ test-debian:
     - pipx ensurepath
     - source ~/.bashrc
     - sh scripts/generate_resources.sh
-    - xvfb-run -s '-screen 0 1024x768x24' pytest --color=no --disable-warnings --cov openlp --cov-report term --cov-report xml:coverage.xml
+    - xvfb-run -s '-screen 0 1024x768x24' pytest --color=no --disable-warnings --cov opal --cov-report term --cov-report xml:coverage.xml
     - mv .coverage linux.coverage
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
@@ -212,14 +212,14 @@ build-source:
   script: |
       mkdir -p dist
       if [ "$CI_COMMIT_TAG" != "" ]; then
-          echo -n "$CI_COMMIT_TAG" >! openlp/.version
-          git archive -o "dist/openlp-plus-${CI_COMMIT_TAG}.tar.gz" --add-file=openlp/.version "$CI_COMMIT_TAG" .
+          echo -n "$CI_COMMIT_TAG" >! opal/.version
+          git archive -o "dist/opal-presenter-${CI_COMMIT_TAG}.tar.gz" --add-file=opal/.version "$CI_COMMIT_TAG" .
       else
           pip install hatch
           git fetch --unshallow --tags
           VERSION=`hatch version`
-          echo -n "$VERSION" > openlp/.version
-          git archive -o "dist/openlp-plus-${VERSION}.tar.gz" --add-file=openlp/.version HEAD .
+          echo -n "$VERSION" > opal/.version
+          git archive -o "dist/opal-presenter-${VERSION}.tar.gz" --add-file=opal/.version HEAD .
       fi
   artifacts:
     name: $CI_COMMIT_REF_SLUG
@@ -245,7 +245,7 @@ build-flatpak:
           git fetch --unshallow --tags
           VERSION=`hatch version`
       fi
-      echo -n "$VERSION" > openlp/.version
+      echo -n "$VERSION" > opal/.version
       # Download packaging repo
       curl -SL "https://gitlab.com/${CI_PROJECT_NAMESPACE}/${PACKAGING_REPOSITORY_NAME}/-/archive/${PACKAGING_BRANCH_NAME}/${PACKAGING_ZIP_FILE_NAME}" -o "/tmp/${PACKAGING_ZIP_FILE_NAME}"
       unzip "/tmp/${PACKAGING_ZIP_FILE_NAME}"
@@ -284,7 +284,7 @@ build-windows:
     - Expand-Archive -Path "$env:Temp\$env:PACKAGING_ZIP_FILE_NAME" -DestinationPath .
     - Set-Location $env:PACKAGING_DIRECTORY_NAME
     - "# Creating Windows MSI and Portable"
-    - echo -n "$CI_COMMIT_TAG" >! openlp/.version
+    - echo -n "$CI_COMMIT_TAG" >! opal/.version
     - uv run python builders/windows-builder.py --release $env:CI_COMMIT_TAG --skip-update --config windows/config-gitlab.ini --branch $env:CI_PROJECT_DIR --portable
   artifacts:
     name: $CI_COMMIT_REF_SLUG
@@ -321,7 +321,7 @@ build-macos:
     - unzip "$TMPDIR/$PACKAGING_ZIP_FILE_NAME"
     - cd $PACKAGING_DIRECTORY_NAME
     - "# Creating macOS Installer"
-    - echo -n "$CI_COMMIT_TAG" >! openlp/.version
+    - echo -n "$CI_COMMIT_TAG" >! opal/.version
     - python builders/macos-builder.py --release $CI_COMMIT_TAG --skip-update --config macos/config-gitlab.ini --branch $CI_PROJECT_DIR
   artifacts:
     name: $CI_COMMIT_REF_SLUG

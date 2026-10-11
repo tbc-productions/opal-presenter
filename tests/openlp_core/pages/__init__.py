@@ -19,5 +19,5 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages package.
+Package to test the opal.core.pages package.
 """

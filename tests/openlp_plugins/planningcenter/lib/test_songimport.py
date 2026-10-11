@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.planningcenter.lib.songimport package.
+Package to test the opal.plugins.planningcenter.lib.songimport package.
 """
 import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.planningcenter.lib.songimport import PlanningCenterSongImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.planningcenter.lib.songimport import PlanningCenterSongImport
 
 
 @pytest.fixture
@@ -37,8 +37,8 @@ def song_import(registry: Registry, settings: Settings) -> PlanningCenterSongImp
     yield PlanningCenterSongImport()
 
 
-@patch('openlp.plugins.songs.lib.importers.songimport.Song')
-@patch('openlp.plugins.songs.lib.importers.songimport.Author')
+@patch('opal.plugins.songs.lib.importers.songimport.Song')
+@patch('opal.plugins.songs.lib.importers.songimport.Author')
 def test_add_song_without_lyrics(MockAuthor: MagicMock, MockSong: MagicMock, song_import: PlanningCenterSongImport):
     """
     Test that a song can be added with None lyrics
@@ -57,8 +57,8 @@ def test_add_song_without_lyrics(MockAuthor: MagicMock, MockSong: MagicMock, son
     assert MockSong.return_value.theme_name == theme_name, 'Mock Song Theme matches input theme'
 
 
-@patch('openlp.plugins.songs.lib.importers.songimport.Song')
-@patch('openlp.plugins.songs.lib.importers.songimport.Author')
+@patch('opal.plugins.songs.lib.importers.songimport.Song')
+@patch('opal.plugins.songs.lib.importers.songimport.Author')
 def test_add_song_with_lyrics(MockAuthor: MagicMock, MockSong: MagicMock, song_import: PlanningCenterSongImport):
     """
     Test that a song can be added with lyrics
@@ -81,8 +81,8 @@ def test_add_song_with_lyrics(MockAuthor: MagicMock, MockSong: MagicMock, song_i
     assert MockSong.return_value.theme_name == theme_name, 'Mock Song Theme matches input theme'
 
 
-@patch('openlp.plugins.songs.lib.importers.songimport.Song')
-@patch('openlp.plugins.songs.lib.importers.songimport.Author')
+@patch('opal.plugins.songs.lib.importers.songimport.Song')
+@patch('opal.plugins.songs.lib.importers.songimport.Author')
 def test_add_song_with_verse(MockAuthor: MagicMock, MockSong: MagicMock, song_import: PlanningCenterSongImport):
     """
     Test that a song can be added with lyrics that contain a verse header
@@ -106,8 +106,8 @@ def test_add_song_with_verse(MockAuthor: MagicMock, MockSong: MagicMock, song_im
     assert MockSong.return_value.theme_name == theme_name, 'Mock Song Theme matches input theme'
 
 
-@patch('openlp.plugins.songs.lib.importers.songimport.Song')
-@patch('openlp.plugins.songs.lib.importers.songimport.Author')
+@patch('opal.plugins.songs.lib.importers.songimport.Song')
+@patch('opal.plugins.songs.lib.importers.songimport.Author')
 def test_add_song_with_verse_order(MockAuthor: MagicMock, MockSong: MagicMock, song_import: PlanningCenterSongImport):
     """
     Test that a song can be added with verse order properly set
@@ -177,8 +177,8 @@ def test_parse_lyrics_with_single_spaced_verse_tags(song_import: PlanningCenterS
     assert len(output_verses) == 2, 'Two output verses are returned'
 
 
-@patch('openlp.plugins.songs.lib.importers.songimport.Song')
-@patch('openlp.plugins.songs.lib.importers.songimport.Author')
+@patch('opal.plugins.songs.lib.importers.songimport.Song')
+@patch('opal.plugins.songs.lib.importers.songimport.Author')
 def test_add_song_with_empty_verse_order(MockAuthor: MagicMock, MockSong: MagicMock,
                                          song_import: PlanningCenterSongImport):
     """

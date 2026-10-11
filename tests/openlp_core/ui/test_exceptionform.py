@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.exeptionform package.
+Package to test the opal.core.ui.exeptionform package.
 """
 from collections import OrderedDict
 from pathlib import Path
@@ -27,11 +27,11 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.settings import Settings
-from openlp.core.common.registry import Registry
-from openlp.core.ui import exceptionform
+from opal.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.ui import exceptionform
 
 
 exceptionform.MIGRATE_VERSION = 'Migrate Test'
@@ -40,7 +40,7 @@ exceptionform.ENCHANT_VERSION = 'Enchant Test'
 exceptionform.MAKO_VERSION = 'Mako Test'
 exceptionform.ICU_VERSION = 'ICU Test'
 
-MAIL_ITEM_TEXT = ('**OpenLP+ Bug Report**\nVersion: Trunk Test\n\n--- Details of the Exception. ---\n\n'
+MAIL_ITEM_TEXT = ('**Opal Presenter Bug Report**\nVersion: Trunk Test\n\n--- Details of the Exception. ---\n\n'
                   'Description Test\n\n --- Exception Traceback ---\nopenlp: Traceback Test\n'
                   '--- System information ---\nPlatform: Nose Test\n\n--- Library Versions ---\n'
                   'Python: Python Test\nQt6: Qt6 Test\nPySide6: PySide6 Test\n'
@@ -76,15 +76,15 @@ def qtapp(registry: Registry, settings: Settings):
     return app
 
 
-@patch('openlp.core.ui.exceptionform.QtGui.QDesktopServices.openUrl')
-@patch('openlp.core.ui.exceptionform.get_version')
-@patch('openlp.core.ui.exceptionform.get_library_versions')
-@patch('openlp.core.ui.exceptionform.is_linux')
-@patch('openlp.core.ui.exceptionform.platform.platform')
-@patch("openlp.core.ui.exceptionform.Ui_ExceptionDialog")
-@patch("openlp.core.ui.exceptionform.FileDialog")
-@patch("openlp.core.ui.exceptionform.QtCore.QUrl")
-@patch("openlp.core.ui.exceptionform.QtCore.QUrlQuery.addQueryItem")
+@patch('opal.core.ui.exceptionform.QtGui.QDesktopServices.openUrl')
+@patch('opal.core.ui.exceptionform.get_version')
+@patch('opal.core.ui.exceptionform.get_library_versions')
+@patch('opal.core.ui.exceptionform.is_linux')
+@patch('opal.core.ui.exceptionform.platform.platform')
+@patch("opal.core.ui.exceptionform.Ui_ExceptionDialog")
+@patch("opal.core.ui.exceptionform.FileDialog")
+@patch("opal.core.ui.exceptionform.QtCore.QUrl")
+@patch("opal.core.ui.exceptionform.QtCore.QUrlQuery.addQueryItem")
 def test_on_send_report_button_clicked(mocked_addQueryItem: MagicMock, MockQUrl: MagicMock,
                                        MockFileDialog: MagicMock, MockUiExceptionDialog: MagicMock,
                                        mocked_platform: MagicMock, mocked_is_linux: MagicMock,
@@ -116,12 +116,12 @@ def test_on_send_report_button_clicked(mocked_addQueryItem: MagicMock, MockQUrl:
     mocked_addQueryItem.assert_called_with('body', MAIL_ITEM_TEXT)
 
 
-@patch('openlp.core.ui.exceptionform.QtGui.QDesktopServices.openUrl')
-@patch('openlp.core.ui.exceptionform.get_version')
-@patch('openlp.core.ui.exceptionform.get_library_versions')
-@patch('openlp.core.ui.exceptionform.is_linux')
-@patch('openlp.core.ui.exceptionform.platform.platform')
-@patch("openlp.core.ui.exceptionform.FileDialog.getSaveFileName")
+@patch('opal.core.ui.exceptionform.QtGui.QDesktopServices.openUrl')
+@patch('opal.core.ui.exceptionform.get_version')
+@patch('opal.core.ui.exceptionform.get_library_versions')
+@patch('opal.core.ui.exceptionform.is_linux')
+@patch('opal.core.ui.exceptionform.platform.platform')
+@patch("opal.core.ui.exceptionform.FileDialog.getSaveFileName")
 def test_on_save_report_button_clicked(mocked_getSaveFilename: MagicMock, mocked_platform: MagicMock,
                                        mocked_is_linux: MagicMock, mocked_get_library_versions: MagicMock,
                                        mocked_get_version: MagicMock, mocked_openUrl: MagicMock,

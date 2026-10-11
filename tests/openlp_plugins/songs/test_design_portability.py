@@ -1,4 +1,5 @@
 """Round-trip designs through song XML and custom-slide XML, without source images."""
+import base64
 import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -6,12 +7,12 @@ from unittest.mock import MagicMock, patch
 from PySide6 import QtCore, QtGui
 from lxml import etree
 
-from openlp.core.display.screens import Screen, ScreenList
-from openlp.core.lib.slidedesign import apply_design, image_to_png_uri, normalise_design, package_design
-from openlp.core.lib.theme import Theme
-from openlp.plugins.custom.lib.customxmlhandler import CustomXML
-from openlp.plugins.songs.lib.db import Song
-from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML, DESIGN_NAMESPACE
+from opal.core.display.screens import Screen, ScreenList
+from opal.core.lib.slidedesign import apply_design, image_to_png_uri, normalise_design, package_design
+from opal.core.lib.theme import Theme
+from opal.plugins.custom.lib.customxmlhandler import CustomXML
+from opal.plugins.songs.lib.db import Song
+from opal.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML, DESIGN_NAMESPACE
 
 
 def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, tmp_path):
@@ -21,6 +22,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     image.fill(QtGui.QColor('#123456'))
     assert image.save(str(path))
     uri, _ = image_to_png_uri(path)
+    theme_uri = 'data:image/png;base64,' + base64.b64encode(path.read_bytes()).decode('ascii')
     theme = Theme()
     theme.background_type = 'image'
     theme.background_filename = path
@@ -45,11 +47,11 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     exported = handler.song_to_xml(song)
     root = etree.fromstring(exported.encode() if isinstance(exported, str) else exported)
     stored = json.loads(root.find('{' + DESIGN_NAMESPACE + '}design').text)
-    assert stored['theme']['background_filename'] == uri
+    assert stored['theme']['background_filename'] == theme_uri
     assert str(path) not in (exported if isinstance(exported, str) else exported.decode())
     assert 'theme' not in json.loads(song.slide_design), 'Export must not freeze the library theme'
     path.unlink()
-    with patch('openlp.plugins.songs.lib.openlyricsxml.clean_song'):
+    with patch('opal.plugins.songs.lib.openlyricsxml.clean_song'):
         imported = handler.xml_to_song(exported)
     restored = normalise_design(imported.slide_design)
     assert restored['elements'][0]['src'] == uri

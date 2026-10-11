@@ -22,7 +22,7 @@
 # store in in individual xml files ready to be combined
 
 count=0
-for f in $(find ../openlp/ -name '*.py'); do
+for f in $(find ../opal/ -name '*.py'); do
   echo $f
   (( count++))
   #echo $count

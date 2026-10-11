@@ -22,14 +22,15 @@ import pytest
 from pathlib import Path
 from typing import Generator
 from unittest.mock import MagicMock, patch
+from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.server import Server
+from opal.core.common.registry import Registry
+from opal.core.server import Server
 
 
 @pytest.fixture
 def server(registry: Registry) -> Generator:
-    with patch('openlp.core.server.QtNetwork.QLocalSocket'):
+    with patch('opal.core.server.QtNetwork.QLocalSocket'):
         server = Server()
     yield server
     server.close_server()
@@ -85,7 +86,7 @@ def test_on_ready_read(server: Server):
     service_manager.load_service.assert_called_once_with(Path(file_name))
 
 
-@patch('openlp.core.server.QtCore.QTimer')
+@patch('opal.core.server.QtCore.QTimer')
 def test_on_ready_read_no_service_manager(MockQTimer: MagicMock, server: Server):
     """
     Check that the _on_ready_read method calls a timer when the service_manager is not yet available
@@ -116,10 +117,10 @@ def test_on_ready_read_giving_up(server: Server):
         server._on_ready_read()
 
     # THEN: the service will be loaded
-    mocked_log_error.assert_called_once_with('OpenLP+ is taking too long to start up, abandoning file load')
+    mocked_log_error.assert_called_once_with('Opal Presenter is taking too long to start up, abandoning file load')
 
 
-@patch('openlp.core.server.QtCore.QTextStream')
+@patch('opal.core.server.QtCore.QTextStream')
 def test_post_to_server(MockStream: MagicMock, server: Server):
     """
     A Basic test with a post to the service
@@ -131,9 +132,10 @@ def test_post_to_server(MockStream: MagicMock, server: Server):
 
     # THEN: the file should be passed out to the socket
     server.out_socket.write.assert_called_once_with(b'llamas')
+    MockStream.return_value.setEncoding.assert_called_once_with(QtCore.QStringConverter.Encoding.Utf8)
 
 
-@patch('openlp.core.server.QtCore.QTextStream')
+@patch('opal.core.server.QtCore.QTextStream')
 def test_post_to_server_openlp(MockStream: MagicMock, server: Server):
     """
     A Basic test with a post to the service with OpenLP
@@ -141,13 +143,13 @@ def test_post_to_server_openlp(MockStream: MagicMock, server: Server):
     """
     # GIVEN: A server
     # WHEN: I post to a server
-    server.post_to_server(['l', 'l', 'a', 'm', 'a', 's', 'OpenLP'])
+    server.post_to_server(['l', 'l', 'a', 'm', 'a', 's', 'Opal Presenter'])
 
     # THEN: the file should be passed out to the socket
     server.out_socket.write.assert_called_once_with(b'llamas')
 
 
-@patch('openlp.core.server.QtCore.QTextStream')
+@patch('opal.core.server.QtCore.QTextStream')
 def test_post_to_server_openlp_exception(MockStream: MagicMock, server: Server):
     """Test that we raise an exception when there are no bytes written"""
     # GIVEN: A server and a mocked stream
@@ -161,7 +163,7 @@ def test_post_to_server_openlp_exception(MockStream: MagicMock, server: Server):
     assert 'Error writing to socket' in str(e)
 
 
-@patch('openlp.core.server.QtNetwork.QLocalServer')
+@patch('opal.core.server.QtNetwork.QLocalServer')
 def test_start_server(MockLocalServer: MagicMock, server: Server):
     """Test the start server method works correctly"""
     # GIVEN: A server
@@ -186,7 +188,7 @@ def test_start_server(MockLocalServer: MagicMock, server: Server):
     mocked_server.newConnection.connect.assert_called_once_with(server._on_new_connection)
 
 
-@patch('openlp.core.server.QtCore.QTextStream')
+@patch('opal.core.server.QtCore.QTextStream')
 def test_on_new_connection(MockTextStream: MagicMock, server: Server):
     """Test that the _on_new_connection slot works correctly"""
     # GIVEN: A server with some mocked properties
@@ -203,11 +205,11 @@ def test_on_new_connection(MockTextStream: MagicMock, server: Server):
     assert server.in_socket is mocked_next_socket
     assert server.in_stream is mocked_stream
     MockTextStream.assert_called_once_with(mocked_next_socket)
-    mocked_stream.setCodec.assert_called_once_with('UTF-8')
+    mocked_stream.setEncoding.assert_called_once_with(QtCore.QStringConverter.Encoding.Utf8)
     mocked_next_socket.readyRead.connect.assert_called_once_with(server._on_ready_read)
 
 
-@patch('openlp.core.server.QtCore.QTextStream')
+@patch('opal.core.server.QtCore.QTextStream')
 def test_on_new_connection_no_socket(MockTextStream: MagicMock, server: Server):
     """Test that the _on_new_connection slot works correctly"""
     # GIVEN: A server with some mocked properties
@@ -220,6 +222,20 @@ def test_on_new_connection_no_socket(MockTextStream: MagicMock, server: Server):
     # THEN: The correct methods and attributes should have been called/set up
     assert server.in_socket is None
     MockTextStream.assert_not_called()
+
+
+def test_new_connection_reads_utf8_with_native_qt_stream(server: Server):
+    file_name = '/services/Café worship.osz'
+    socket = QtCore.QBuffer()
+    socket.setData(file_name.encode('utf-8'))
+    assert socket.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+    server.in_socket = None
+    server.server = MagicMock(**{'nextPendingConnection.return_value': socket})
+    service_manager = MagicMock()
+    Registry().register('service_manager', service_manager)
+    server._on_new_connection()
+    server._on_ready_read()
+    service_manager.load_service.assert_called_once_with(Path(file_name))
 
 
 def test_close_server(server: Server):

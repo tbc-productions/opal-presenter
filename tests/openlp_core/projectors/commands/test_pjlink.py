@@ -23,15 +23,15 @@ Test process_pjlink method
 """
 
 import logging
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
-from openlp.core.projectors.pjlinkcommands import process_pjlink
-from openlp.core.projectors.constants import E_AUTHENTICATION, E_NO_AUTHENTICATION, \
+from opal.core.projectors.pjlinkcommands import process_pjlink
+from opal.core.projectors.constants import E_AUTHENTICATION, E_NO_AUTHENTICATION, \
     S_AUTHENTICATE, S_CONNECT
 
 from tests.resources.projector.data import TEST_PIN, TEST_SALT
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
+test_module = opal.core.projectors.pjlinkcommands.__name__
 
 
 def test_normal_no_authentication_type(fake_pjlink, caplog):

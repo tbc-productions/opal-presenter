@@ -3,9 +3,9 @@ from fluentqt import FontRole, Label, ScrollBar
 from PySide6 import QtCore, QtWidgets as Native
 import pytest
 
-from openlp.core.app import OpenLP
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.metadataview import MetadataView
+from opal.core.app import OpenLP
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.metadataview import MetadataView
 
 
 @pytest.fixture(scope='session')
@@ -19,7 +19,7 @@ def qapp(native_application):
 
 
 def test_metadata_groups_prioritise_content_and_preserve_values(qtbot):
-    values = {'Source': 'Google Drive', 'File size': '2 kB', 'Modified': 'Today',
+    values = {'Source': 'Local Cloud Storage', 'File size': '2 kB', 'Modified': 'Today',
               'Authors': 'Philip Percival, Simone Richardson', 'Copyright': '<b>Organisation</b>',
               'CCLI number': '7006994', 'Created': 'Yesterday', 'Modified by': 'Sam'}
     view = MetadataView(values)

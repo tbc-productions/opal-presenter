@@ -26,11 +26,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lxml import etree
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
-from openlp.plugins.songs.lib.importers.songimport import SongImport
-from openlp.plugins.songs.lib.ui import SongStrings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
+from opal.plugins.songs.lib.importers.songimport import SongImport
+from opal.plugins.songs.lib.ui import SongStrings
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -58,7 +58,7 @@ SONG_TEST_DATA = {
 
 @pytest.fixture
 def importer(registry: Registry, settings: Settings) -> OpenLyricsImport:
-    with patch('openlp.plugins.songs.lib.importers.openlyrics.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.openlyrics.SongImport'):
         yield OpenLyricsImport(MagicMock(), file_paths=[])
 
 
@@ -70,6 +70,19 @@ def test_create_importer(importer: OpenLyricsImport):
     # WHEN: An importer object is created
     # THEN: The importer should be an instance of SongImport
     assert isinstance(importer, SongImport)
+
+
+def test_failed_save_is_reported(importer: OpenLyricsImport):
+    importer.import_wizard = MagicMock()
+    importer.open_lyrics = MagicMock()
+    importer.open_lyrics.xml_to_song.side_effect = RuntimeError('The imported song could not be saved.')
+    importer.log_error = MagicMock()
+    source = TEST_PATH / next(iter(SONG_TEST_DATA))
+    importer.import_source = [source]
+
+    importer.do_import()
+
+    importer.log_error.assert_called_once_with(source, 'The imported song could not be saved.')
 
 
 def test_file_import(importer: OpenLyricsImport):
@@ -90,7 +103,7 @@ def test_file_import(importer: OpenLyricsImport):
         assert importer.open_lyrics.xml_to_song.called is True
 
 
-@patch('openlp.plugins.songs.lib.importers.openlyrics.log', autospec=True)
+@patch('opal.plugins.songs.lib.importers.openlyrics.log', autospec=True)
 def test_can_parse_file_having_a_processing_instruction(mocked_logger: MagicMock, importer: OpenLyricsImport):
     """
     Test files having a processing instruction can be parsed

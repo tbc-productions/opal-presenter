@@ -19,12 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.servicetab package.
+Package to test the opal.core.ui.servicetab package.
 """
 from PySide6 import QtWidgets
 
-from openlp.core.ui.servicetab import ServiceTab
-from openlp.core.ui.settingsform import SettingsForm
+from opal.core.ui.servicetab import ServiceTab
+from opal.core.ui.settingsform import SettingsForm
 
 
 def test_creation(settings):

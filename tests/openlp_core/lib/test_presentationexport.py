@@ -2,22 +2,25 @@
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from zipfile import ZipFile
 
 import pytest
 from PySide6 import QtGui
 
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.display import render as render_module
-from openlp.core.lib.formattingtags import FormattingTags
-from openlp.core.lib.presentationexport import PresentationPage, _styled_lines, _write_odp, _write_pptx, \
+from opal.core.common.enum import ServiceItemType
+from opal.core.display import render as render_module
+from opal.core.lib.formattingtags import FormattingTags
+from opal.core.lib.presentationexport import PresentationPage, _styled_lines, _write_odp, _write_pptx, \
     service_pages, _base_text_style
-from openlp.core.ui.servicemanager import ServiceManager
-from openlp.core.widgets.dialogs import FileDialog
-from tests.openlp_core.ui.test_mainwindow import main_window_reduced as _main_window_reduced
+from opal.core.ui.servicemanager import ServiceManager
+from opal.core.widgets.dialogs import FileDialog
+from tests.openlp_core.ui.test_mainwindow import (
+    main_window as _main_window, main_window_reduced as _main_window_reduced)
 from tests.utils.constants import RESOURCE_PATH
 
 
+main_window = _main_window
 presentation_main_window = _main_window_reduced
 
 
@@ -216,7 +219,7 @@ def test_native_pptx_slides_keep_editable_content_assets_and_internal_links(tmp_
     path = _source_pptx(tmp_path)
     original = Presentation(path)
     item = _file_item(path, 'presentations', 'Sermon')
-    monkeypatch.setattr('openlp.core.lib.presentationexport._background',
+    monkeypatch.setattr('opal.core.lib.presentationexport._background',
                         lambda *args: ('#000000', None))
     # A stale cache lists only one thumbnail, but both original slides must be exported.
     pages = service_pages([item, item], insert_logo=True, native_pptx=True)
@@ -288,7 +291,7 @@ def test_audio_media_is_packaged_as_audio(tmp_path):
 
 def test_video_poster_uses_decoded_frame_and_service_start_time(tmp_path, monkeypatch):
     from pptx import Presentation
-    from openlp.core.lib import mediaposter
+    from opal.core.lib import mediaposter
 
     decoded = QtGui.QImage(1920, 1080, QtGui.QImage.Format.Format_RGB32)
     decoded.fill(QtGui.QColor('#247b39'))
@@ -315,7 +318,7 @@ def test_video_poster_uses_decoded_frame_and_service_start_time(tmp_path, monkey
 
 
 def test_video_poster_preserves_aspect_ratio_and_has_high_resolution_fallback(monkeypatch):
-    from openlp.core.lib import mediaposter, presentationexport
+    from opal.core.lib import mediaposter, presentationexport
 
     page = PresentationPage(media=Path('video.mp4'))
     portrait = QtGui.QImage(600, 1200, QtGui.QImage.Format.Format_RGB32)
@@ -336,7 +339,7 @@ def test_export_mixed_service_keeps_native_slides_video_and_logo_order(tmp_path,
     from PySide6 import QtCore
     from pptx import Presentation
     from pptx.opc.constants import RELATIONSHIP_TYPE as RT
-    from openlp.core.lib import presentationexport
+    from opal.core.lib import presentationexport
 
     song = SimpleNamespace(service_item_type=ServiceItemType.Text, title='Song', get_theme_data=_theme,
                            rendered_slides=[{'text': 'Editable lyrics'}], display_slides=[{'text': 'Editable lyrics'}])
@@ -395,7 +398,7 @@ def test_service_sections_are_exported_to_pptx_and_odp(tmp_path, monkeypatch):
                                rendered_slides=[{'text': title, 'footer': ''}],
                                display_slides=[{'text': title}])
 
-    monkeypatch.setattr('openlp.core.lib.presentationexport._background',
+    monkeypatch.setattr('opal.core.lib.presentationexport._background',
                         lambda theme, width, height, logo, logo_settings=None: ('#000000', None))
     pages = service_pages([item('Pre-Service'), item('How Great Thou Art'),
                            item('How Great Thou Art')], insert_logo=True)
@@ -442,7 +445,7 @@ def test_logo_slide_is_packaged_in_both_formats(tmp_path, monkeypatch):
         'core/logo background color': '#000000',
         'core/logo file': logo,
         'core/logo fit': 'contain'}[key])
-    monkeypatch.setattr('openlp.core.lib.presentationexport.Registry',
+    monkeypatch.setattr('opal.core.lib.presentationexport.Registry',
                         lambda: SimpleNamespace(get=lambda key: settings))
     pages = [PresentationPage(theme=_theme(), text='First'), PresentationPage(logo=True),
              PresentationPage(theme=_theme(), text='Second')]
@@ -516,14 +519,14 @@ def test_presentation_metadata_identifies_openlp(tmp_path):
     _write_odp([page], odp, 1024, 768)
     properties = Presentation(str(pptx)).core_properties
     assert properties.title == 'Sunday'
-    assert properties.comments == 'Exported from OpenLP+'
-    assert properties.author == 'OpenLP+'
-    assert properties.last_modified_by == 'OpenLP+'
+    assert properties.comments == 'Exported from Opal Presenter'
+    assert properties.author == 'Opal Presenter'
+    assert properties.last_modified_by == 'Opal Presenter'
     with ZipFile(pptx) as package:
         assert b'generated using python-pptx' not in package.read('docProps/core.xml')
     with ZipFile(odp) as package:
         metadata = package.read('meta.xml')
-        assert b'Exported from OpenLP+' in metadata
+        assert b'Exported from Opal Presenter' in metadata
 
 
 def test_presentation_filename_matches_saved_service():
@@ -538,7 +541,7 @@ def test_presentation_filename_uses_service_name_pattern(monkeypatch, tmp_path):
         def now():
             return datetime(2026, 9, 23, 10, 0)
 
-    monkeypatch.setattr('openlp.core.ui.servicemanager.datetime', FixedDatetime)
+    monkeypatch.setattr('opal.core.ui.servicemanager.datetime', FixedDatetime)
     values = {'advanced/default service enabled': True,
               'advanced/default service day': 7,
               'advanced/default service name': 'Service %Y-%m-%d %H-%M',
@@ -559,7 +562,7 @@ def test_presentation_filename_without_default_name_uses_service_label(tmp_path)
 
 
 def test_export_dialog_uses_requested_format_and_suggested_path(monkeypatch, tmp_path):
-    from openlp.core.lib import presentationexport
+    from opal.core.lib import presentationexport
 
     saved = []
     dialogs = []
@@ -580,9 +583,10 @@ def test_export_dialog_uses_requested_format_and_suggested_path(monkeypatch, tmp
 
 @pytest.mark.parametrize('fails', [False, True])
 def test_export_progress_dialog_is_modal_and_closes_before_errors(tmp_path, monkeypatch, fails):
-    from PySide6 import QtCore, QtWidgets
-    from openlp.core.lib import presentationexport
-    from openlp.core.ui import presentationexportdialog
+    from PySide6 import QtCore
+    from opal.core.widgets import fluent as QtWidgets
+    from opal.core.lib import presentationexport
+    from opal.core.ui import presentationexportdialog
 
     dialogs = []
     errors = []
@@ -622,8 +626,8 @@ def test_export_progress_dialog_is_modal_and_closes_before_errors(tmp_path, monk
 
 
 def test_cancelled_save_dialog_does_not_start_progress(tmp_path, monkeypatch):
-    from openlp.core.lib import presentationexport
-    from openlp.core.ui import presentationexportdialog
+    from opal.core.lib import presentationexport
+    from opal.core.ui import presentationexportdialog
 
     def unexpected(*args):
         pytest.fail('Cancelling the file chooser must not start an export')
@@ -636,7 +640,7 @@ def test_cancelled_save_dialog_does_not_start_progress(tmp_path, monkeypatch):
 def test_export_worker_keeps_gui_responsive_and_returns_errors():
     import threading
     from PySide6 import QtCore
-    from openlp.core.ui.presentationexportdialog import write_with_progress
+    from opal.core.ui.presentationexportdialog import write_with_progress
 
     gui_thread = threading.get_ident()
     tick = threading.Event()
@@ -663,7 +667,7 @@ def test_export_worker_keeps_gui_responsive_and_returns_errors():
 def test_export_with_progress_writes_real_output_on_worker(tmp_path, monkeypatch, registry, suffix):
     import threading
     from PySide6 import QtCore
-    from openlp.core.lib import presentationexport
+    from opal.core.lib import presentationexport
 
     gui_thread = threading.get_ident()
     updates = []
@@ -696,24 +700,25 @@ def test_export_with_progress_writes_real_output_on_worker(tmp_path, monkeypatch
         assert len(Presentation(target).slides) == 5
 
 
-def test_export_menu_has_separate_presentation_formats(request):
+def test_export_menu_has_separate_presentation_formats(request, monkeypatch):
     main_window = request.getfixturevalue('presentation_main_window')
     menu = main_window.export_presentation_menu
     assert menu.title() == '&Presentation'
     assert [action.text() for action in menu.actions()] == ['PowerPoint (PPTX)', 'OpenDocument (ODP)']
     assert menu.menuAction() in main_window.file_export_menu.actions()
+    monkeypatch.setattr(main_window.service_manager_contents, 'on_export_presentation', MagicMock())
     main_window.export_powerpoint_item.trigger()
     main_window.export_opendocument_item.trigger()
     calls = main_window.service_manager_contents.on_export_presentation.call_args_list
     assert [call.args[0] for call in calls] == ['.pptx', '.odp']
 
 
-def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(tmp_path):
+def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(settings, tmp_path):
     import base64
     from pptx import Presentation
     from PySide6.QtCore import QSize
-    from openlp.core.lib.presentationexport import _image_bytes
-    from openlp.core.lib.slidedesign import apply_design
+    from opal.core.lib.presentationexport import _image_bytes
+    from opal.core.lib.slidedesign import apply_design
 
     picture = QtGui.QImage(80, 40, QtGui.QImage.Format.Format_ARGB32)
     picture.fill(QtGui.QColor('#ff0000'))
@@ -758,7 +763,7 @@ def test_exports_bake_background_and_image_filters_without_flattening_text(tmp_p
     from copy import deepcopy
     from lxml import etree
     from pptx import Presentation
-    from openlp.core.lib.presentationexport import _image_bytes
+    from opal.core.lib.presentationexport import _image_bytes
 
     image = QtGui.QImage(40, 40, QtGui.QImage.Format.Format_ARGB32)
     image.fill(QtGui.QColor('#ff0000'))
@@ -813,7 +818,7 @@ def test_exports_bake_background_and_image_filters_without_flattening_text(tmp_p
 
 
 def test_solid_background_filters_and_gradient_filters_are_exported():
-    from openlp.core.lib.presentationexport import _background
+    from opal.core.lib.presentationexport import _background
 
     theme = _theme()
     theme.background_color = '#ff0000'
@@ -836,7 +841,7 @@ def test_solid_background_filters_and_gradient_filters_are_exported():
 def test_odp_filtered_images_keep_flips_rotation_and_opacity(tmp_path, rotation):
     import base64
     from lxml import etree
-    from openlp.core.lib.presentationexport import _image_bytes
+    from opal.core.lib.presentationexport import _image_bytes
 
     image = QtGui.QImage(80, 40, QtGui.QImage.Format.Format_ARGB32)
     image.fill(QtGui.QColor('#ff0000'))

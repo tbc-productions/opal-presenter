@@ -19,22 +19,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.pjlink base package part 2.
+Package to test the opal.core.projectors.pjlink base package part 2.
 """
 from unittest.mock import call, patch
 
-import openlp.core.projectors.pjlink
-from openlp.core.projectors.constants import E_NETWORK, PJLINK_PREFIX, PJLINK_SUFFIX, QSOCKET_STATE, \
+import opal.core.projectors.pjlink
+from opal.core.projectors.constants import E_NETWORK, PJLINK_PREFIX, PJLINK_SUFFIX, QSOCKET_STATE, \
     S_CONNECTED, S_NOT_CONNECTED
 
 
 # ------------ Test PJLink._underscore_send_command ----------
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'change_status')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'write')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'disconnect_from_host')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'change_status')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'write')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'disconnect_from_host')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_network_error(mock_log, mock_reset, mock_state, mock_disconnect, mock_write,
                                           mock_change_status, pjlink):
     """
@@ -82,9 +82,9 @@ def test_local_send_command_network_error(mock_log, mock_reset, mock_state, mock
         assert pjlink.send_busy, 'send_busy should be True'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_no_data(mock_log, mock_reset, mock_state, pjlink):
     """
     Test _underscore_send_command with no data to send
@@ -112,11 +112,11 @@ def test_local_send_command_no_data(mock_log, mock_reset, mock_state, pjlink):
         assert not mock_reset.called, 'reset_information() should not have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'write')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'disconnect_from_host')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'write')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'disconnect_from_host')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_normal_send(mock_log, mock_reset, mock_state, mock_disconnect, mock_write, pjlink):
     """
     Test _underscore_send_command using normal queue
@@ -161,10 +161,10 @@ def test_local_send_command_normal_send(mock_log, mock_reset, mock_state, mock_d
         assert pjlink.send_busy, 'send_busy flag should be True'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'disconnect_from_host')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'disconnect_from_host')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_not_connected(mock_log, mock_reset, mock_state, mock_disconnect, pjlink):
     """
     Test _underscore_send_command when not connected
@@ -200,11 +200,11 @@ def test_local_send_command_not_connected(mock_log, mock_reset, mock_state, mock
         assert not pjlink.send_busy, 'send_busy flag should be False'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'write')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'disconnect_from_host')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'write')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'disconnect_from_host')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_priority_send(mock_log, mock_reset, mock_state, mock_disconnect, mock_write, pjlink):
     """
     Test _underscore_send_command with priority queue
@@ -251,11 +251,11 @@ def test_local_send_command_priority_send(mock_log, mock_reset, mock_state, mock
         assert pjlink.send_busy, 'send_busy flag should be True'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'write')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'disconnect_from_host')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'write')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'disconnect_from_host')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_priority_send_with_normal_queue(mock_log, mock_reset, mock_state,
                                                             mock_disconnect, mock_write, pjlink):
     """
@@ -304,9 +304,9 @@ def test_local_send_command_priority_send_with_normal_queue(mock_log, mock_reset
         assert pjlink.send_busy, 'send_busy flag should be True'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_send_busy_normal_queue(mock_log, mock_reset, mock_state, pjlink):
     """
     Test _underscore_send_command send_busy flag with normal queue
@@ -348,9 +348,9 @@ def test_local_send_command_send_busy_normal_queue(mock_log, mock_reset, mock_st
         assert pjlink.send_busy, 'send_busy flag should be True'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_local_send_command_send_busy_priority_queue(mock_log, mock_reset, mock_state, pjlink):
     """
     Test _underscore_send_command send_busy flag with priority queue
@@ -395,10 +395,10 @@ def test_local_send_command_send_busy_priority_queue(mock_log, mock_reset, mock_
 
 
 # ------------ Test PJLink.send_command ----------
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_add_normal_command(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test send_command adding normal queue item
@@ -430,10 +430,10 @@ def test_send_command_add_normal_command(mock_log, mock_send_command, mock_reset
         assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_add_priority_command(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test _send_command adding priority queue item
@@ -465,10 +465,10 @@ def test_send_command_add_priority_command(mock_log, mock_send_command, mock_res
         assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_duplicate_normal_command(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test send_command with duplicate item for normal queue
@@ -500,10 +500,10 @@ def test_send_command_duplicate_normal_command(mock_log, mock_send_command, mock
     assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_duplicate_priority_command(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test send_command with duplicate item for priority queue
@@ -535,10 +535,10 @@ def test_send_command_duplicate_priority_command(mock_log, mock_send_command, mo
     assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_invalid_command_empty_queues(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test send_command with invalid command
@@ -565,10 +565,10 @@ def test_send_command_invalid_command_empty_queues(mock_log, mock_send_command, 
     assert not mock_send_command.called, '_underscore_send_command() should not have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_invalid_command_normal_queue(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test _send_command with invalid command for normal queue
@@ -598,10 +598,10 @@ def test_send_command_invalid_command_normal_queue(mock_log, mock_send_command, 
     assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_invalid_command_priority_queue(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test _send_command with invalid command for priority queue
@@ -631,10 +631,10 @@ def test_send_command_invalid_command_priority_queue(mock_log, mock_send_command
     assert mock_send_command.called, '_underscore_send_command() should have been called'
 
 
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'state')
-@patch.object(openlp.core.projectors.pjlink.PJLink, 'reset_information')
-@patch.object(openlp.core.projectors.pjlink.PJLink, '_send_command')
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'state')
+@patch.object(opal.core.projectors.pjlink.PJLink, 'reset_information')
+@patch.object(opal.core.projectors.pjlink.PJLink, '_send_command')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_send_command_not_connected(mock_log, mock_send_command, mock_reset, mock_state, pjlink):
     """
     Test send_command when not connected

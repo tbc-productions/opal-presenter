@@ -25,8 +25,8 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore, QtTest
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.presentations.lib.presentationtab import PresentationTab
+from opal.core.common.registry import Registry
+from opal.plugins.presentations.lib.presentationtab import PresentationTab
 
 __default_settings__ = {
     'presentations/powerpoint slide click advance': QtCore.Qt.CheckState.Unchecked,

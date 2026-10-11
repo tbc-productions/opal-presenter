@@ -34,7 +34,7 @@ def test_sunday_plus(mock_settings):
 
     test_file_import = SongImportTestHelper('SundayPlusImport', 'sundayplus')
     test_file_import.setUp()
-    with patch('openlp.plugins.songs.lib.importers.sundayplus.retrieve_windows_encoding') as \
+    with patch('opal.plugins.songs.lib.importers.sundayplus.retrieve_windows_encoding') as \
             mocked_retrieve_windows_encoding:
         mocked_retrieve_windows_encoding.return_value = 'cp1252'
         test_file_import.file_import([TEST_PATH / 'Amazing Grace.ptf'],

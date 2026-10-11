@@ -1,0 +1,427 @@
+# -*- coding: utf-8 -*-
+
+##########################################################################
+# OpenLP - Open Source Lyrics Projection                                 #
+# ---------------------------------------------------------------------- #
+# Copyright (c) 2008 OpenLP Developers                                   #
+# ---------------------------------------------------------------------- #
+# This program is free software: you can redistribute it and/or modify   #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# This program is distributed in the hope that it will be useful,        #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with this program.  If not, see <https://www.gnu.org/licenses/>. #
+##########################################################################
+
+import logging
+from datetime import datetime
+from pathlib import Path
+from shutil import copy2, rmtree
+from tempfile import mkdtemp
+
+from PySide6 import QtCore
+from opal.core.widgets import fluent as QtWidgets
+
+from opal.core.common import delete_file, get_images_filter, sha256_file_hash
+from opal.core.common.applocation import AppLocation
+from opal.core.common.enum import ImageThemeMode
+from opal.core.common.i18n import UiStrings, translate
+from opal.core.common.path import create_paths
+from opal.core.common.registry import Registry
+from opal.core.lib import ServiceItemContext, build_icon, check_item_selected, create_thumb, validate_thumb
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.core.lib.theme import TransitionSpeed, TransitionType
+from opal.core.lib.ui import create_widget_action, critical_error_message_box
+from opal.core.ui.icons import UiIcons
+from opal.core.ui.library import FolderLibraryItem
+from opal.core.widgets.views import FileTreeWidgetItem
+
+from opal.plugins.images.lib.db import Folder, Item
+
+
+log = logging.getLogger(__name__)
+
+
+def _format_file_size(size: int) -> str:
+    """Return a human-readable file size string."""
+    for unit, threshold in (('GB', 1 << 30), ('MB', 1 << 20), ('KB', 1 << 10)):
+        if size >= threshold:
+            return f'{size / threshold:.1f} {unit}'
+    return f'{size} B'
+
+
+class ImageMediaItem(FolderLibraryItem):
+    """
+    This is the custom media manager item for images.
+    """
+    images_go_live = QtCore.Signal(list)
+    images_add_to_service = QtCore.Signal(list)
+    log.info('Image Media Item loaded')
+
+    def __init__(self, parent, plugin):
+        self.icon_path = 'images/image'
+        self.manager = None
+        super(ImageMediaItem, self).__init__(parent, plugin, Folder, Item)
+
+    def setup_item(self):
+        """
+        Do some additional setup.
+        """
+        self.images_go_live.connect(self.go_live_remote)
+        self.images_add_to_service.connect(self.add_to_service_remote)
+        self.quick_preview_allowed = True
+        self.has_search = True
+        self.list_view.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
+        Registry().register_function('live_theme_changed', self.on_display_changed)
+        Registry().register_function('slidecontroller_live_started', self.on_display_changed)
+        # Allow DnD from the desktop.
+        self.list_view.activateDnD()
+        self.list_view.setup_columns([translate('ImagePlugin.MediaItem', 'Name'),
+                                      translate('ImagePlugin.MediaItem', 'Date')])
+
+    def retranslate_ui(self):
+        super().retranslate_ui()
+        self.on_new_prompt = translate('ImagePlugin.MediaItem', 'Select Image(s)')
+        file_formats = get_images_filter()
+        self.on_new_file_masks = '{formats};;{files} (*)'.format(formats=file_formats, files=UiStrings().AllFiles)
+        self.replace_action.setText(UiStrings().ReplaceBG)
+        self.replace_action.setToolTip(UiStrings().ReplaceLiveBG)
+        self.replace_action_context.setText(UiStrings().ReplaceBG)
+        self.replace_action_context.setToolTip(UiStrings().ReplaceLiveBG)
+        self.reset_action.setText(UiStrings().ResetBG)
+        self.reset_action.setToolTip(UiStrings().ResetLiveBG)
+        self.reset_action_context.setText(UiStrings().ResetBG)
+        self.reset_action_context.setToolTip(UiStrings().ResetLiveBG)
+
+    def required_icons(self):
+        """
+        Set which icons the media manager tab should show.
+        """
+        super().required_icons()
+        self.has_file_icon = True
+        self.has_new_icon = False
+        self.has_edit_icon = False
+        self.add_to_service_item = True
+
+    def initialise(self):
+        log.debug('initialise')
+        self.list_view.clear()
+        self.list_view.setIconSize(QtCore.QSize(20, 20))
+        self.list_view.setIndentation(self.list_view.default_indentation)
+        self.list_view.allow_internal_dnd = True
+        self.service_path = AppLocation.get_section_data_path(self.settings_section) / 'thumbnails'
+        create_paths(self.service_path)
+        # Load images from the database
+        self.load_list(self.manager.get_all_objects(Item, order_by_ref=Item.file_path), is_initial_load=True)
+
+    def add_custom_context_actions(self):
+        """
+        Add custom actions to the context menu.
+        """
+        super().add_custom_context_actions()
+        self.replace_action_context = create_widget_action(self.list_view, text=UiStrings().ReplaceBG,
+                                                           icon=UiIcons().theme, triggers=self.on_replace_click)
+        self.reset_action_context = create_widget_action(self.list_view, text=UiStrings().ReplaceLiveBG,
+                                                         icon=UiIcons().close, visible=False,
+                                                         triggers=self.on_reset_click)
+
+    def add_end_header_bar(self):
+        """
+        Add custom buttons to the end of the toolbar
+        """
+        self.replace_action = self.toolbar.add_toolbar_action('replace_action',
+                                                              icon=UiIcons().theme,
+                                                              triggers=self.on_replace_click)
+        self.replace_action.setEnabled(False)
+        self.reset_action = self.toolbar.add_toolbar_action('reset_action',
+                                                            icon=UiIcons().close,
+                                                            visible=False, triggers=self.on_reset_click)
+
+    def on_selection_change(self):
+        """
+        Update shared library actions and image-specific replace background action.
+        """
+        super().on_selection_change()
+        has_image_selected = False
+        for selected_item in self.list_view.selectedItems():
+            if isinstance(selected_item.data(0, QtCore.Qt.ItemDataRole.UserRole), Item):
+                has_image_selected = True
+                break
+        self.replace_action.setEnabled(has_image_selected)
+
+    def generate_thumbnail_path(self, item: Item) -> Path:
+        """
+        Generate a path to the thumbnail
+
+        :param opal.plugins.images.lib.db.Item image: The image to generate the thumbnail path for.
+        :return: A path to the thumbnail
+        :rtype: Path
+        """
+        file_path = Path(item.file_path)
+        ext = file_path.suffix.lower()
+        return self.service_path / '{name:s}{ext}'.format(name=item.file_hash or file_path.stem, ext=ext)
+
+    def load_item(self, item: Item, is_initial_load: bool = False) -> FileTreeWidgetItem:
+        """Given an item object, return a FileTreeWidgetItem"""
+        tree_item = None
+        file_path = Path(item.file_path)
+        file_name = item.name or file_path.name
+        display_name = Path(file_name).stem
+        if not file_path.exists():
+            tree_item = FileTreeWidgetItem([display_name])
+            tree_item.setIcon(0, UiIcons().document_question_mark)
+            tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+            tree_item.setToolTip(0, str(file_path))
+        else:
+            log.debug('Loading image: {name}'.format(name=item.file_path))
+            thumbnail_path = self.generate_thumbnail_path(item)
+            if validate_thumb(file_path, thumbnail_path):
+                icon = build_icon(thumbnail_path)
+            else:
+                icon = create_thumb(file_path, thumbnail_path)
+            tree_item = FileTreeWidgetItem([display_name])
+            tree_item.setData(0, QtCore.Qt.ItemDataRole.UserRole, item)
+            tree_item.setIcon(0, icon)
+            file_type = file_path.suffix.lstrip('.').upper()
+            tree_item.setToolTip(0, str(file_path))
+            try:
+                stat = file_path.stat()
+                size_str = _format_file_size(stat.st_size)
+                mtime = stat.st_mtime
+                tree_item.setText(1, datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'))
+                tree_item.set_sort_data(1, mtime)
+                tree_item.setToolTip(0, f'{file_path}\n{file_type} · {size_str}')
+            except OSError:
+                pass
+        return tree_item
+
+    def delete_item(self, item: Item):
+        """
+        Remove an image item from the list.
+        """
+        file_path = Path(item.file_path)
+        if file_path.exists():
+            delete_file(self.service_path / file_path.name)
+            delete_file(self.generate_thumbnail_path(item))
+
+    def add_generated_images(self, images, folder=None):
+        """Store generated PNGs permanently, even when copying imported files is disabled."""
+        if not images:
+            return
+        library = AppLocation.get_section_data_path(self.settings_section) / 'library'
+        library.mkdir(parents=True, exist_ok=True)
+        destination = Path(mkdtemp(prefix='slides-', dir=library))
+        saved = []
+        try:
+            for index, (source, name) in enumerate(images):
+                # Separate storage allows identical slide titles and repeated exports without overwriting files.
+                target = destination / str(index) / source.name
+                target.parent.mkdir()
+                copy2(source, target)
+                saved.append(Item(name=name, file_path=str(target), file_hash=sha256_file_hash(target), folder=folder))
+            if not self.manager.save_objects(saved):
+                raise OSError('Could not save the images to the library.')
+        except Exception:
+            rmtree(destination)
+            raise
+        # Saving the items also saves a newly chosen folder through the relationship.
+        self._insert_saved_items(saved, folder)
+
+    def generate_slide_data(self, service_item, *, item=None, remote=False, context=ServiceItemContext.Service,
+                            **kwargs):
+        """
+        Generate the slide data. Needs to be implemented by the plugin.
+
+        :param service_item: The service item to be built on
+        :param item: The Song item to be used
+        :param remote: Triggered from remote
+        :param context: Why is it being generated
+        :param kwargs: Consume other unused args specified by the base implementation, but not use by this one.
+        """
+        if item:
+            if isinstance(item, QtCore.QModelIndex):
+                item = self.list_view.itemFromIndex(item)
+                if not item:
+                    return False
+            items = item if isinstance(item, list) else [item]
+        else:
+            items = self.list_view.selectedItems()
+            if not items:
+                return False
+        # Determine service item title. Preserve an existing service item title when adding to an existing service item.
+        preserve_title = bool(service_item.title)
+        image_item = items[0].data(0, QtCore.Qt.ItemDataRole.UserRole)
+        if not preserve_title:
+            if isinstance(image_item, Folder) or len(items) == 1:
+                service_item.title = items[0].text(0)
+                if not service_item.title:
+                    name = Path(image_item.file_path).name
+                    if name:
+                        service_item.title = name
+                if service_item.title:
+                    service_item.title = Path(service_item.title).stem
+            else:
+                service_item.title = str(self.plugin.name_strings['plural'])
+
+        service_item.add_capability(ItemCapabilities.CanMaintain)
+        service_item.add_capability(ItemCapabilities.CanPreview)
+        service_item.add_capability(ItemCapabilities.CanLoop)
+        service_item.add_capability(ItemCapabilities.CanAppend)
+        service_item.add_capability(ItemCapabilities.CanEditTitle)
+        service_item.add_capability(ItemCapabilities.HasThumbnails)
+        service_item.add_capability(ItemCapabilities.ProvidesOwnTheme)
+        if self.settings.value('images/background mode') == ImageThemeMode.CustomTheme:
+            service_item.theme = self.settings.value('images/theme')
+        else:
+            # force a nonexistent theme
+            service_item.theme = -1
+        resolved_transition_settings = self._get_custom_transition_settings(service_item)
+        if (not resolved_transition_settings) and items and isinstance(items[0], ServiceItem):
+            resolved_transition_settings = self._get_custom_transition_settings(items[0])
+        if not resolved_transition_settings:
+            resolved_transition_settings = {
+                'enabled': False,
+                'type': TransitionType.Fade,
+                'speed': TransitionSpeed.Normal
+            }
+        service_item.slide_transition_settings = resolved_transition_settings
+        missing_items_file_names = []
+        images = []
+        existing_images = []
+        # Expand groups to images
+        for bitem in items:
+            if (isinstance(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole), Folder) or
+                    bitem.data(0, QtCore.Qt.ItemDataRole.UserRole) is None):
+                for index in range(0, bitem.childCount()):
+                    if isinstance(bitem.child(index).data(0, QtCore.Qt.ItemDataRole.UserRole), Item):
+                        images.append(bitem.child(index).data(0, QtCore.Qt.ItemDataRole.UserRole))
+            elif isinstance(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole), Item):
+                images.append(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole))
+        # Don't try to display empty groups
+        if not images:
+            return False
+        # Find missing files
+        for image in images:
+            if not Path(image.file_path).exists():
+                missing_items_file_names.append(image.file_path)
+            else:
+                existing_images.append(image)
+        # We cannot continue, as all images do not exist.
+        if not existing_images:
+            if not remote:
+                critical_error_message_box(
+                    translate('ImagePlugin.MediaItem', 'Missing Image(s)'),
+                    translate('ImagePlugin.MediaItem', 'The following image(s) no longer exist: {names}'
+                              ).format(names='\n'.join(missing_items_file_names)))
+            return False
+        # We have missing as well as existing images. We ask what to do.
+        elif missing_items_file_names and QtWidgets.QMessageBox.question(
+                self, translate('ImagePlugin.MediaItem', 'Missing Image(s)'),
+                translate('ImagePlugin.MediaItem', 'The following image(s) no longer exist: {names}\n'
+                          'Do you want to add the other images anyway?'
+                          ).format(names='\n'.join(missing_items_file_names))) == \
+                QtWidgets.QMessageBox.StandardButton.No:
+            return False
+        # Continue with the existing images.
+        for image in existing_images:
+            name = image.name or Path(image.file_path).name
+            thumbnail_path = self.generate_thumbnail_path(image)
+            file_hash = service_item.add_from_image(Path(image.file_path), Path(name).stem, thumbnail_path)
+            if file_hash is None and Path(image.file_path).exists():
+                # File exists but couldn't be hashed (e.g. an unsynced cloud-storage placeholder).
+                service_item.slides.pop()
+                QtWidgets.QMessageBox.warning(
+                    self.main_window,
+                    translate('ImagesPlugin.MediaItem', 'File cannot be read'),
+                    translate('ImagesPlugin.MediaItem', 'The file "{file}" cannot be read. It may be in cloud storage that is not fully synced.').format(file=image.file_path)
+                )
+        return True
+
+    @staticmethod
+    def _get_transition_type_value(value):
+        if isinstance(value, str):
+            converted = TransitionType.from_string(value)
+            return converted if converted is not None else TransitionType.Fade
+        if value in (TransitionType.Fade, TransitionType.Slide, TransitionType.Convex,
+                     TransitionType.Concave, TransitionType.Zoom):
+            return value
+        return TransitionType.Fade
+
+    @staticmethod
+    def _get_transition_speed_value(value):
+        if isinstance(value, str):
+            converted = TransitionSpeed.from_string(value)
+            return converted if converted is not None else TransitionSpeed.Normal
+        if value in (TransitionSpeed.Normal, TransitionSpeed.Fast, TransitionSpeed.Slow):
+            return value
+        return TransitionSpeed.Normal
+
+    @classmethod
+    def _normalise_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return None
+        return {
+            'enabled': bool(settings.get('enabled', False)),
+            'type': cls._get_transition_type_value(settings.get('type', TransitionType.Fade)),
+            'speed': cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        }
+
+    @classmethod
+    def _is_default_transition_settings(cls, settings):
+        if not isinstance(settings, dict):
+            return False
+        transition_type = cls._get_transition_type_value(settings.get('type', TransitionType.Fade))
+        transition_speed = cls._get_transition_speed_value(settings.get('speed', TransitionSpeed.Normal))
+        transition_enabled = bool(settings.get('enabled', False))
+        return (not transition_enabled) and transition_type == TransitionType.Fade and \
+            transition_speed == TransitionSpeed.Normal
+
+    @classmethod
+    def _get_custom_transition_settings(cls, service_item):
+        slide_settings = cls._normalise_transition_settings(getattr(service_item, 'slide_transition_settings', None))
+        if slide_settings and not cls._is_default_transition_settings(slide_settings):
+            return slide_settings
+        return None
+
+    def on_reset_click(self):
+        """
+        Called to reset the Live background with the image selected.
+        """
+        self.reset_action.setVisible(False)
+        self.reset_action_context.setVisible(False)
+        self.live_controller.reload_theme()
+
+    def on_display_changed(self, service_item=None):
+        """
+        Triggered by the change of theme in the slide controller.
+        """
+        self.reset_action.setVisible(False)
+        self.reset_action_context.setVisible(False)
+
+    def on_replace_click(self):
+        """
+        Called to replace Live background with the image selected.
+        """
+        if check_item_selected(
+                self.list_view,
+                translate('ImagePlugin.MediaItem', 'You must select an image to replace the background with.')):
+            bitem = self.list_view.selectedItems()[0]
+            if not isinstance(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole), Item):
+                # Only continue when an image is selected.
+                return
+            file_path = Path(bitem.data(0, QtCore.Qt.ItemDataRole.UserRole).file_path)
+            if file_path.exists():
+                self.live_controller.set_background_image(file_path)
+                self.reset_action.setVisible(True)
+                self.reset_action_context.setVisible(True)
+            else:
+                critical_error_message_box(
+                    UiStrings().LiveBGError,
+                    translate('ImagePlugin.MediaItem', 'There was a problem replacing your background, '
+                              'the image file "{name}" no longer exists.').format(name=file_path))

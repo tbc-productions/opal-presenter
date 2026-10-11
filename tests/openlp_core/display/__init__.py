@@ -19,5 +19,5 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Test the :mod:`~openlp.core.display` module
+Test the :mod:`~opal.core.display` module
 """

@@ -1,31 +1,11 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<!--
-It comes with ABSOLUTELY NO WARRANTY, to the extent permitted by law. You may
-redistribute copies of update-mime-database under the terms of the GNU General
-Public License. For more information about these matters, see the file named
-COPYING.
--->
-<!--
-Notes:
-- the mime types in this file are valid with the version 0.30 of the
-  shared-mime-info package.
-- the "fdo #xxxxx" are the wish in the freedesktop.org bug database to include
-  the mime type there.
---> 
+<?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="application/x-openlp-service">
-    <sub-class-of type="application/zip"/>
-    <comment>OpenLP+ Service File (OpenLP format)</comment>
-    <glob pattern="*.osz"/>
-  </mime-type> 
-    <mime-type type="application/x-openlp-service">
-    <sub-class-of type="application/zip"/>
-    <comment>OpenLP+ Service File (OpenLP format)</comment>
-    <glob pattern="*.oszl"/>
-  </mime-type> 
-  <mime-type type="application/x-openlp-theme">
-    <sub-class-of type="application/zip"/>
-    <comment>OpenLP+ Theme File (OpenLP format)</comment>
-    <glob pattern="*.otz"/>
-  </mime-type> 
+  <mime-type type="application/x-opal-service"><sub-class-of type="application/zip"/><comment>Opal Presenter service</comment><glob pattern="*.opal-service"/></mime-type>
+  <mime-type type="application/x-opal-service-lite"><sub-class-of type="application/zip"/><comment>Opal Presenter service-lite</comment><glob pattern="*.opal-service-lite"/></mime-type>
+  <mime-type type="application/x-opal-song"><sub-class-of type="application/zip"/><comment>Opal Presenter song</comment><glob pattern="*.opal-song"/></mime-type>
+  <mime-type type="application/x-opal-slides"><sub-class-of type="application/zip"/><comment>Opal Presenter slides</comment><glob pattern="*.opal-slides"/></mime-type>
+  <mime-type type="application/x-opal-theme"><sub-class-of type="application/zip"/><comment>Opal Presenter theme</comment><glob pattern="*.opal-theme"/></mime-type>
+  <mime-type type="application/x-opal-settings"><sub-class-of type="application/zip"/><comment>Opal Presenter settings</comment><glob pattern="*.opal-settings"/></mime-type>
+  <mime-type type="application/x-opal-styles"><sub-class-of type="application/json"/><comment>Opal Presenter styles</comment><glob pattern="*.opal-styles"/></mime-type>
+  <mime-type type="application/x-opal-connection"><sub-class-of type="application/json"/><comment>Opal Presenter connection</comment><glob pattern="*.opal-connection"/></mime-type>
 </mime-info>

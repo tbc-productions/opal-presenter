@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.version package.
+Package to test the opal.core.version package.
 """
 from datetime import date
 from unittest.mock import MagicMock, patch
@@ -27,7 +27,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from requests.exceptions import ConnectionError
 
-from openlp.core.version import VersionWorker, check_for_update, get_version, update_check_date
+from opal.core.version import VersionWorker, check_for_update, get_version, update_check_date
 
 
 def test_worker_init():
@@ -46,8 +46,8 @@ def test_worker_init():
     assert worker.current_version == current_version
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_start(mock_get_web_page, mock_platform):
     """
     Test the VersionWorkder.start() method
@@ -57,7 +57,7 @@ def test_worker_start(mock_get_web_page, mock_platform):
     current_version = {'full': '2.0', 'version': '2.0', 'build': None}
     mock_platform.system.return_value = 'Linux'
     mock_platform.release.return_value = '4.12.0-1-amd64'
-    mock_get_web_page.return_value = '2.4.6'
+    mock_get_web_page.return_value = '{"tag_name":"2.4.6","draft":false,"prerelease":false}'
     worker = VersionWorker(last_check_date, current_version)
 
     # WHEN: The worker is run
@@ -66,15 +66,15 @@ def test_worker_start(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.0 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
     mock_quit.emit.assert_called_once_with()
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_start_fail(mock_get_web_page, mock_platform):
     """
     Test the Version Workder.start() method with no response
@@ -93,15 +93,15 @@ def test_worker_start_fail(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.0 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_not_called()
     mock_quit.emit.assert_called_once_with()
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_start_dev_version(mock_get_web_page, mock_platform):
     """
     Test the VersionWorkder.start() method for dev versions
@@ -111,7 +111,7 @@ def test_worker_start_dev_version(mock_get_web_page, mock_platform):
     current_version = {'full': '2.1.3', 'version': '2.1.3', 'build': None}
     mock_platform.system.return_value = 'Linux'
     mock_platform.release.return_value = '4.12.0-1-amd64'
-    mock_get_web_page.return_value = '2.4.6'
+    mock_get_web_page.return_value = '{"tag_name":"2.4.6","draft":false,"prerelease":false}'
     worker = VersionWorker(last_check_date, current_version)
 
     # WHEN: The worker is run
@@ -120,15 +120,15 @@ def test_worker_start_dev_version(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/dev_version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.1.3 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.1.3 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
     mock_quit.emit.assert_called_once_with()
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_start_nightly_version(mock_get_web_page, mock_platform):
     """
     Test the VersionWorkder.start() method for nightlies
@@ -138,7 +138,7 @@ def test_worker_start_nightly_version(mock_get_web_page, mock_platform):
     current_version = {'full': '2.1.0+git2345', 'version': '2.1', 'build': '2345'}
     mock_platform.system.return_value = 'Linux'
     mock_platform.release.return_value = '4.12.0-1-amd64'
-    mock_get_web_page.return_value = '2.4.6'
+    mock_get_web_page.return_value = '{"tag_name":"2.4.6","draft":false,"prerelease":false}'
     worker = VersionWorker(last_check_date, current_version)
 
     # WHEN: The worker is run
@@ -147,15 +147,15 @@ def test_worker_start_nightly_version(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/nightly_version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.1.0+git2345 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.1.0+git2345 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
     mock_quit.emit.assert_called_once_with()
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_empty_response(mock_get_web_page, mock_platform):
     """
     Test the VersionWorkder.start() method for empty responses
@@ -165,7 +165,7 @@ def test_worker_empty_response(mock_get_web_page, mock_platform):
     current_version = {'full': '2.1+git2345', 'version': '2.1', 'build': '2345'}
     mock_platform.system.return_value = 'Linux'
     mock_platform.release.return_value = '4.12.0-1-amd64'
-    mock_get_web_page.return_value = '\n'
+    mock_get_web_page.return_value = ''
     worker = VersionWorker(last_check_date, current_version)
 
     # WHEN: The worker is run
@@ -174,15 +174,15 @@ def test_worker_empty_response(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/nightly_version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.1+git2345 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.1+git2345 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     assert mock_new_version.emit.call_count == 0
     mock_quit.emit.assert_called_once_with()
 
 
-@patch('openlp.core.version.platform')
-@patch('openlp.core.version.get_web_page')
+@patch('opal.core.version.platform')
+@patch('opal.core.version.get_web_page')
 def test_worker_start_connection_error(mock_get_web_page, mock_platform):
     """
     Test the VersionWorkder.start() method when a ConnectionError happens
@@ -201,8 +201,8 @@ def test_worker_start_connection_error(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://get.openlp.org/versions/version.txt'
-    expected_headers = {'User-Agent': 'OpenLP+/2.0 Linux/4.12.0-1-amd64; '}
+    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_with(expected_download_url, headers=expected_headers)
     assert mock_get_web_page.call_count == 3
     mocked_no_internet.emit.assert_called_once_with()
@@ -221,7 +221,7 @@ def test_update_check_date(mock_settings):
     mock_settings.setValue.assert_called_once_with('core/last version test', date.today().strftime('%Y-%m-%d'))
 
 
-@patch('openlp.core.version.run_thread')
+@patch('opal.core.version.run_thread')
 def test_check_for_update(mocked_run_thread, mock_settings):
     """
     Test the check_for_update() function
@@ -236,7 +236,7 @@ def test_check_for_update(mocked_run_thread, mock_settings):
     assert mocked_run_thread.call_count == 1
 
 
-@patch('openlp.core.version.run_thread')
+@patch('opal.core.version.run_thread')
 def test_check_for_update_skipped(mocked_run_thread, mock_settings):
     """
     Test that the check_for_update() function skips running if it already ran today
@@ -256,7 +256,7 @@ def test_check_for_update_skipped(mocked_run_thread, mock_settings):
     ('3.0.2+git.cb1db9f43', {'full': '3.0.2+git.cb1db9f43', 'version': '3.0.2', 'build': 'git.cb1db9f43'}),
     ('3.1.2.dev15+gff6b05ed3', {'full': '3.1.2.dev15+gff6b05ed3', 'version': '3.1.2', 'build': 'gff6b05ed3'})
 ])
-@patch('openlp.core.version.AppLocation.get_directory')
+@patch('opal.core.version.AppLocation.get_directory')
 def test_get_version(mocked_get_directory: MagicMock, in_version: str, out_version: dict):
     """
     Test the get_version() function
@@ -268,7 +268,7 @@ def test_get_version(mocked_get_directory: MagicMock, in_version: str, out_versi
     mocked_get_directory.return_value = mocked_path
 
     # WHEN: get_version() is run
-    with patch('openlp.core.version.APPLICATION_VERSION', None):
+    with patch('opal.core.version.APPLICATION_VERSION', None):
         version = get_version()
 
     # THEN: version is something

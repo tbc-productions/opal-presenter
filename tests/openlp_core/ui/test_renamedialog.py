@@ -3,7 +3,7 @@ import fluentqt
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.renamedialog import RenameDialog
+from opal.core.ui.renamedialog import RenameDialog
 
 
 @pytest.mark.parametrize('accept', [True, False])

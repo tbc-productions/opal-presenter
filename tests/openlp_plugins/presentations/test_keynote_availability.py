@@ -2,7 +2,7 @@
 import plistlib
 from unittest.mock import MagicMock, patch
 
-from openlp.plugins.presentations.lib.keynotecontroller import (
+from opal.plugins.presentations.lib.keynotecontroller import (
     KEYNOTE_APPLESCRIPT, KeynoteDocument, _open_keynote_document, find_keynote_application)
 
 
@@ -19,7 +19,7 @@ def test_finds_renamed_keynote_application(tmp_path):
 def test_keynote_opens_through_launch_services(tmp_path):
     app = tmp_path / 'Keynote Creator Studio.app'
     deck = tmp_path / 'copied-deck.pptx'
-    with patch('openlp.plugins.presentations.lib.keynotecontroller.subprocess.run') as run:
+    with patch('opal.plugins.presentations.lib.keynotecontroller.subprocess.run') as run:
         _open_keynote_document(deck, app)
 
     run.assert_called_once_with(
@@ -32,7 +32,7 @@ def test_keynote_opens_through_launch_services(tmp_path):
 def test_imported_powerpoint_is_identified_by_keynote_document_name(tmp_path, settings):
     controller = MagicMock()
     controller.applescript.call.return_value = True
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(controller, tmp_path / 'copied-deck.pptx')
     document.file_path = tmp_path / 'copied-deck.pptx'
 
@@ -43,12 +43,12 @@ def test_imported_powerpoint_is_identified_by_keynote_document_name(tmp_path, se
 def test_keynote_starts_large_import_on_a_worker(tmp_path, settings):
     controller = MagicMock()
     controller.keynote_app = None
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 4
-    with patch('openlp.plugins.presentations.lib.keynotecontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.keynotecontroller._KeynoteStartWorker') as worker_type:
+    with patch('opal.plugins.presentations.lib.keynotecontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.keynotecontroller._KeynoteStartWorker') as worker_type:
         screens.return_value.current.custom_geometry = None
         document.start_presentation()
 
@@ -58,7 +58,7 @@ def test_keynote_starts_large_import_on_a_worker(tmp_path, settings):
 
 
 def test_keynote_applies_slide_selected_during_import(tmp_path, settings):
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(MagicMock(), tmp_path / 'slides.pptx')
     document._opening = True
     document._start_worker = MagicMock(error=None, start_slide=2)
@@ -74,7 +74,7 @@ def test_keynote_applies_slide_selected_during_import(tmp_path, settings):
 def test_keynote_export_saves_slide_titles_and_notes(tmp_path, settings):
     controller = MagicMock(keynote_app=tmp_path / 'Keynote.app')
     source = tmp_path / 'slides.key'
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(controller, source)
     document.file_path = source
     document.get_thumbnail_folder = MagicMock(return_value=tmp_path / 'thumbnails')
@@ -87,7 +87,7 @@ def test_keynote_export_saves_slide_titles_and_notes(tmp_path, settings):
         return ['Opening'], ['Presenter cue']
 
     controller.applescript.call.side_effect = export
-    with patch('openlp.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
+    with patch('opal.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
         assert document.load_presentation()
 
     assert (thumbnail_folder / 'slide1.png').is_file()
@@ -97,7 +97,7 @@ def test_keynote_export_saves_slide_titles_and_notes(tmp_path, settings):
 def test_keynote_recovers_metadata_for_cached_slide_images(tmp_path, settings):
     controller = MagicMock(keynote_app=tmp_path / 'Keynote.app')
     source = tmp_path / 'slides.key'
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = KeynoteDocument(controller, source)
     document.file_path = source
     document.get_thumbnail_folder = MagicMock(return_value=tmp_path / 'thumbnails')
@@ -106,7 +106,7 @@ def test_keynote_recovers_metadata_for_cached_slide_images(tmp_path, settings):
     (thumbnail_folder / 'slide1.png').write_bytes(b'image')
     controller.applescript.call.return_value = (['Opening'], ['Presenter cue'])
 
-    with patch('openlp.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
+    with patch('opal.plugins.presentations.lib.keynotecontroller._open_keynote_document'):
         assert document.load_presentation()
 
     controller.applescript.call.assert_called_once_with('get_slide_metadata', 'slides')

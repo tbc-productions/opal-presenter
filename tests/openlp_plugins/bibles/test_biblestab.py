@@ -24,8 +24,8 @@ This module contains tests for the lib submodule of the Bible plugin.
 import pytest
 from unittest.mock import MagicMock
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.bibles.lib.biblestab import BiblesTab
+from opal.core.common.registry import Registry
+from opal.plugins.bibles.lib.biblestab import BiblesTab
 
 __default_settings__ = {
     'bibles/verse separator': 'verse separator',

@@ -17,16 +17,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.obs_studio.obs_studio_plugin package.
+Package to test the opal.plugins.obs_studio.obs_studio_plugin package.
 """
 from unittest.mock import MagicMock, patch
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.ui.icons import UiIcons
-from openlp.plugins.obs_studio.obs_studio_plugin import ObsStudioPlugin
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.ui.icons import UiIcons
+from opal.plugins.obs_studio.obs_studio_plugin import ObsStudioPlugin
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def plugin(qapp, settings: Settings, state: State, registry: Registry):
     Fixture to provide a ObsStudioPlugin instance with mocked dependencies
     """
     with patch(
-        "openlp.plugins.obs_studio.lib.message_listener.MessageListener.__init__",
+        "opal.plugins.obs_studio.lib.message_listener.MessageListener.__init__",
         return_value=None
     ):
         plugin_instance = ObsStudioPlugin()
@@ -64,7 +64,7 @@ def test_initialise(plugin: ObsStudioPlugin):
     """
     # GIVEN: A ObsStudioPlugin Class
     # WHEN:  initialise has been called on the class
-    with patch('openlp.plugins.obs_studio.obs_studio_plugin.ObsStudioPlugin',
+    with patch('opal.plugins.obs_studio.obs_studio_plugin.ObsStudioPlugin',
                create=True):
         return_value = plugin.initialise()
     # THEN:
@@ -78,7 +78,7 @@ def test_finalise(plugin: ObsStudioPlugin):
     Test that the finalise function cleans up after the plugin
     """
     # GIVEN: A ObsStudioPlugin Class with a bunch of mocks
-    with patch('openlp.plugins.obs_studio.obs_studio_plugin.ObsStudioPlugin',
+    with patch('opal.plugins.obs_studio.obs_studio_plugin.ObsStudioPlugin',
                create=True):
         plugin.initialise()
     plugin.message_listener.finalise = MagicMock()

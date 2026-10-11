@@ -19,14 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.theme package.
+Package to test the opal.core.lib.theme package.
 """
 import pytest
+import json
 from PySide6 import QtCore
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.lib.theme import BackgroundType, BackgroundGradientType, TransitionType, TransitionSpeed, Theme
+from opal.core.lib.theme import BackgroundType, BackgroundGradientType, TransitionType, TransitionSpeed, Theme
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def mock_geometry():
     mocked_screen.display_geometry = QtCore.QRect(10, 20, 400, 600)
     mocked_screenlist = MagicMock()
     mocked_screenlist.current = mocked_screen
-    screenlist_patcher = patch('openlp.core.lib.theme.ScreenList', return_value=mocked_screenlist)
+    screenlist_patcher = patch('opal.core.lib.theme.ScreenList', return_value=mocked_screenlist)
     screenlist_patcher.start()
     yield
     screenlist_patcher.stop()
@@ -311,10 +312,10 @@ def test_set_default_footer(mock_geometry):
 
     # THEN: footer should be set, header should not have changed
     assert theme.font_main_x == 20, 'header should not have been changed'
-    assert theme.font_footer_x == 10, 'x pos should be reset to default of 10'
+    assert theme.font_footer_x == pytest.approx(400 * .02)
     assert theme.font_footer_y == 540, 'y pos should be reset to (screen_size_height * 9 / 10)'
-    assert theme.font_footer_width == 380, 'width should have been reset to (screen_size_width - 20)'
-    assert theme.font_footer_height == 60, 'height should have been reset to (screen_size_height / 10)'
+    assert theme.font_footer_width == pytest.approx(400 * .96)
+    assert theme.font_footer_height == pytest.approx(600 * .08)
 
 
 def test_set_default_header(mock_geometry):
@@ -335,10 +336,10 @@ def test_set_default_header(mock_geometry):
 
     # THEN: footer should be set, header should not have changed
     assert theme.font_footer_x == 200, 'footer should not have been changed'
-    assert theme.font_main_x == 10, 'x pos should be reset to default of 10'
-    assert theme.font_main_y == 0, 'y pos should be reset to 0'
-    assert theme.font_main_width == 380, 'width should have been reset to (screen_size_width - 20)'
-    assert theme.font_main_height == 540, 'height should have been reset to (screen_size_height * 9 / 10)'
+    assert theme.font_main_x == pytest.approx(400 * .02)
+    assert theme.font_main_y == pytest.approx(600 * .02)
+    assert theme.font_main_width == pytest.approx(400 * .96)
+    assert theme.font_main_height == pytest.approx(600 * .86)
 
 
 def test_set_default_header_footer(mock_geometry):
@@ -355,8 +356,74 @@ def test_set_default_header_footer(mock_geometry):
     theme.set_default_header_footer()
 
     # THEN: footer should be set, header should not have changed
-    assert theme.font_footer_x == 10, 'footer x pos should be reset to default of 10'
-    assert theme.font_main_x == 10, 'header x pos should be reset to default of 10'
+    assert theme.font_footer_x == pytest.approx(400 * .02)
+    assert theme.font_main_x == pytest.approx(400 * .02)
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (3840, 2160), (1024, 768)])
+def test_theme_layout_and_typography_follow_output_resolution(mock_geometry, width, height):
+    theme = Theme()
+    theme.display_size_width, theme.display_size_height = 1920, 1080
+    theme.font_main_override = theme.font_footer_override = True
+    for area, y, height_fraction in (('main', 108, .7), ('footer', 972, .1)):
+        for field, value in (('x', 192), ('width', 1536), ('y', y), ('height', 1080 * height_fraction),
+                             ('size', 64), ('outline_size', 2), ('shadow_size', 4), ('shadow_blur', 6),
+                             ('letter_adjustment', -1)):
+            setattr(theme, f'font_{area}_{field}', value)
+    saved = theme.export_theme()
+    with patch('opal.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
+        theme.set_default_header_footer()
+        once = theme.export_theme()
+        theme.set_default_header_footer()
+        assert theme.export_theme() == once
+        assert theme.font_main_x == pytest.approx(width * .1)
+        assert theme.font_main_width == pytest.approx(width * .8)
+        assert theme.font_footer_y == pytest.approx(height * .9)
+        assert theme.font_footer_height == pytest.approx(height * .1)
+        assert theme.font_main_size == pytest.approx(64 * height / 1080)
+        assert theme.font_footer_outline_size == pytest.approx(2 * height / 1080)
+        assert theme.font_main_shadow_size == pytest.approx(4 * height / 1080)
+        assert theme.font_main_shadow_blur == pytest.approx(6 * height / 1080)
+        assert theme.font_main_letter_adjustment == pytest.approx(-height / 1080)
+        assert (theme.display_size_width, theme.display_size_height) == (width, height)
+    restored = Theme()
+    restored.load_theme(saved)
+    assert restored.export_theme() == saved
+
+
+@pytest.mark.parametrize('invalid_size', [None, 0, -1, '1920', True, float('nan'), float('inf')])
+def test_old_theme_canvas_is_inferred_without_reusing_previous_dimensions(mock_geometry, invalid_size):
+    theme = Theme()
+    saved = json.loads(theme.export_theme())
+    saved.update(font_footer_x=10, font_footer_width=1900, font_footer_y=972, font_footer_height=108,
+                 display_size_width=invalid_size, display_size_height=invalid_size, font_main_size=64)
+    theme.load_theme(json.dumps(saved))
+    assert (theme.display_size_width, theme.display_size_height) == (1920, 1080)
+    theme.set_default_header_footer()
+    assert theme.font_main_size == pytest.approx(64 * 600 / 1080)
+    assert theme.font_footer_y == 540
+
+
+def test_portable_theme_normalises_a_copy_without_changing_the_saved_layout(mock_geometry):
+    theme = Theme()
+    theme.display_size_width, theme.display_size_height = 1920, 1080
+    theme.font_main_size = 64
+    before = theme.export_theme()
+    portable = json.loads(theme.export_theme_self_contained())
+    assert portable['font_main_size'] == pytest.approx(64 * 600 / 1080)
+    assert portable['display_size_height'] == 600
+    assert theme.export_theme() == before
+
+
+def test_legacy_xml_theme_records_its_original_canvas(mock_geometry):
+    theme = Theme()
+    theme.parse_xml('<?xml version="1.0"?><theme><font type="footer"><x>10</x><width>1900</width>'
+                    '<y>972</y><height>108</height>'
+                    '</font><font type="main"><size>64</size></font></theme>')
+    assert (theme.display_size_width, theme.display_size_height) == (1920, 1080)
+    theme.set_default_header_footer()
+    assert theme.font_main_size == pytest.approx(64 * 600 / 1080)
 
 
 def check_theme(theme):
@@ -366,4 +433,34 @@ def check_theme(theme):
     assert theme.font_footer_bold is False, 'font_footer_bold should be False'
     assert 'Arial' == theme.font_main_name, 'font_main_name should be "Arial"'
     assert theme.font_main_weight == theme.font_footer_weight == 0
-    assert 63 == len(theme.__dict__), 'The theme should have 63 attributes'
+    assert 65 == len(theme.__dict__), 'The theme should have 65 attributes'
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+def test_new_theme_defaults_use_the_same_reference_canvas(width, height):
+    with patch('opal.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
+        theme = Theme()
+    assert theme.font_main_size / height == pytest.approx(40 / 1080)
+    assert theme.font_footer_size / height == pytest.approx(12 / 1080)
+    assert theme.font_main_x / width == pytest.approx(.02)
+    assert theme.font_footer_width / width == pytest.approx(.96)
+
+
+@pytest.mark.parametrize('filename', ['opal', 'opal_light', 'sans_dark', 'sans_light'])
+def test_bundled_themes_have_whole_points_and_simple_percentages(filename):
+    path = Path(__file__).parents[3] / 'opal/core/lib/json/themes' / f'{filename}.json'
+    data = json.loads(path.read_text())
+    assert data['display_size_width'] == 1920
+    assert data['display_size_height'] == 1080
+    for area in ('main', 'footer'):
+        for field in ('size', 'outline_size', 'shadow_size', 'shadow_blur'):
+            assert type(data[f'font_{area}_{field}']) is int
+        for field in ('x', 'y', 'width', 'height'):
+            dimension = 1920 if field in ('x', 'width') else 1080
+            percent = data[f'font_{area}_{field}'] * 100 / dimension
+            assert percent == pytest.approx(round(percent, 1))
+        assert data[f'font_{area}_x'] > 0
+        assert data[f'font_{area}_y'] > 0
+        assert data[f'font_{area}_x'] + data[f'font_{area}_width'] < 1920
+        assert data[f'font_{area}_y'] + data[f'font_{area}_height'] < 1080

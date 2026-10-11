@@ -4,11 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.common import ThemeLevel
-from openlp.core.common.registry import Registry
-from openlp.core.lib.theme import Theme
-from openlp.core.lib.slidelayouts import slide_design, visual_design
-from openlp.plugins.songs.forms.editsongform import EditSongForm
+from opal.core.common import ThemeLevel
+from opal.core.common.registry import Registry
+from opal.core.lib.theme import Theme
+from opal.core.lib.slidelayouts import slide_design, visual_design
+from opal.plugins.songs.forms.editsongform import EditSongForm
 
 
 def load_editable_design(designer, value):
@@ -27,7 +27,7 @@ def designer(settings):
     manager.get_theme_names.return_value = ['Global', 'Song', 'Service']
     Registry().register('theme_manager', manager)
     form = EditSongForm(MagicMock(), None, MagicMock())
-    with patch('openlp.plugins.slide_designer.forms.designer.ScreenList') as screens:
+    with patch('opal.plugins.slide_designer.forms.designer.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QtCore.QSize(1920, 1080)
         load_editable_design(form.verse_form.slide_designer, {})
         form.verse_form.slide_designer.select_object('lyrics')
@@ -85,7 +85,7 @@ def test_canvas_text_box_edit_is_one_undo_and_flushes_before_save(designer):
 
 
 def test_canvas_lyrics_edit_preserves_other_pages_tags_and_undo(designer, settings):
-    from openlp.plugins.songs.songsplugin import song_footer
+    from opal.plugins.songs.songsplugin import song_footer
     settings.extend_default_settings(song_footer)
     form = designer.source_form
     source = '---[Verse:1]---\n{st}Repeat 😀\nRepeat 😀{/st}\n[--}{--]\nNext slide\n---[Chorus:1]---\nChorus'
@@ -120,6 +120,94 @@ def test_canvas_lyrics_edit_rejects_stale_source_and_cancel(designer):
     form.verse_text_edit.setPlainText('Sidebar edit')
     designer.canvas_text_changed({'id': 'lyrics', 'before': 'Before', 'text': 'Stale edit'})
     assert form.verse_text_edit.toPlainText() == 'Sidebar edit'
+
+
+@pytest.mark.parametrize('edited', [False, True])
+@pytest.mark.parametrize('action', ['st', 'it', 'clear', 'style'])
+def test_preview_selection_targets_formatting_instead_of_sidebar_cursor(designer, edited, action):
+    form = designer.source_form
+    source = '---[Verse:1]---\nFirst 😀\n{it}Second words{/it}\n---[Chorus:1]---\nSecond words'
+    form.verse_text_edit.setPlainText(source)
+    form.designer_select_section(0)
+    form.slide_grid.record_history = True
+    designer.undo_stack.clear()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['First 😀', '{it}Second words{/it}']
+    designer.page_keys = [(0, 0), (0, 1)]
+    designer.page_index = 1
+    designer.prepare_canvas_text()
+    designer.canvas_text_editing(True)
+    text = 'Second edited' if edited else 'Second words'
+    designer.display.run_in_display.return_value = {
+        'id': 'lyrics', 'before': 'Second words', 'text': text,
+        'selection': {'anchor': 6, 'position': 0}}
+    cell = form.slide_grid.cell_editor
+    if action == 'clear':
+        cell.remove_formatting()
+    elif action == 'style':
+        cell._on_custom_formatting_changed(1)
+    else:
+        cell._tag_actions[action].trigger()
+    actual = form.verse_text_edit.toPlainText()
+    assert actual.startswith('---[Verse:1]---\nFirst 😀\n')
+    assert actual.endswith('---[Chorus:1]---\nSecond words')
+    assert '{st}Second{/st}' in actual if action == 'st' else actual != source
+    assert ('edited' in actual) == edited
+    assert not designer._canvas_editing
+
+
+@pytest.mark.parametrize('action', ['st', 'it', 'clear', 'style'])
+@pytest.mark.parametrize('edited', [False, True])
+def test_preview_text_box_formatting_uses_its_selection_and_keeps_lyrics(designer, action, edited):
+    from opal.plugins.slide_designer.forms.textediting import visible_text
+    designer.source_form.verse_text_edit.setPlainText('Lyrics stay unchanged')
+    designer.add_element('text')
+    identifier = designer.selected
+    design = designer.editable_design()
+    original = '[C]First 😀 & <script>\n{it}Second words{/it}'
+    designer.design_target(design, identifier)['text'] = original
+    designer.commit(design, 'Set text')
+    designer.undo_stack.clear()
+    designer.display = MagicMock(_is_initialised=True)
+    designer.pages = ['Lyrics stay unchanged']
+    designer.prepare_canvas_text()
+    plain = visible_text(original, literal=True)[0]
+    text = plain.replace('words', 'edited') if edited else plain
+    designer.canvas_text_editing(True)
+    position = len(plain[:plain.index('Second')].encode('utf-16-le')) // 2
+    designer.display.run_in_display.return_value = {
+        'id': identifier, 'before': plain, 'text': text,
+        'selection': {'anchor': position, 'position': position + 6}}
+    cell = designer.source_form.slide_grid.cell_editor
+    if action == 'clear':
+        cell.remove_formatting()
+    elif action == 'style':
+        cell._on_custom_formatting_changed(1)
+    else:
+        cell._tag_actions[action].trigger()
+    actual = designer.design_target(designer.design, identifier)['text']
+    assert actual.startswith('[C]First 😀 & <script>\n')
+    assert visible_text(actual, literal=True)[0] == text
+    assert actual != original
+    assert designer.source_form.verse_text_edit.toPlainText() == 'Lyrics stay unchanged'
+    assert designer.undo_stack.count() == 1 + edited
+    designer.undo_stack.undo()
+    if edited:
+        designer.undo_stack.undo()
+    assert designer.design_target(designer.design, identifier)['text'] == original
+
+
+def test_text_box_selection_is_released_when_sidebar_receives_focus(designer):
+    designer._canvas_formatting_target = {'id': 'caption', 'selection': {'anchor': 0, 'position': 3}}
+    editor = designer.source_form.slide_grid.cell_editor._editor
+    QtCore.QCoreApplication.sendEvent(editor, QtGui.QFocusEvent(QtCore.QEvent.Type.FocusIn))
+    assert designer._canvas_formatting_target is None
+
+
+def test_text_box_selection_is_released_when_selecting_another_canvas_object(designer):
+    designer._canvas_formatting_target = {'id': 'caption', 'selection': {'anchor': 0, 'position': 3}}
+    designer.canvas_changed({'id': 'lyrics', 'changed': False})
+    assert designer._canvas_formatting_target is None
 
 
 def test_canvas_can_edit_empty_lyrics_in_theme_layout(designer):
@@ -167,7 +255,7 @@ def test_preview_uses_assigned_theme_with_global_fallback(designer, settings):
     designer.resolve_theme()
     designer.theme_manager.get_theme_data.assert_called_with('Global')
     assert not hasattr(designer, 'theme_source')
-    assert designer.canvas_combo.parentWidget() is designer.preview_footer.preview_group
+    assert designer.preview_output.parentWidget() is designer.preview_footer.preview_group
 
 
 def test_preview_uses_unsaved_verse_and_design(designer):
@@ -175,7 +263,7 @@ def test_preview_uses_unsaved_verse_and_design(designer):
     designer.display._is_initialised = True
     designer.display.format_slide.return_value = ['New lyrics']
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         theme = Theme()
     designer.theme_manager.get_theme_data.return_value = theme
@@ -198,7 +286,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
         return renderer
 
     with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
-            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+            patch('opal.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
                   side_effect=create_renderer) as create:
         designer.showEvent(QtGui.QShowEvent())
         designer.showEvent(QtGui.QShowEvent())
@@ -213,7 +301,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
 
 def test_preview_creation_can_retry_after_failure(designer):
     with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
-            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+            patch('opal.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
                   side_effect=[RuntimeError('Startup failed'), MagicMock()]) as create:
         with pytest.raises(RuntimeError, match='Startup failed'):
             designer.showEvent(QtGui.QShowEvent())
@@ -230,18 +318,18 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
     designer.display._is_initialised = True
     designer.display.format_slide.return_value = ['Lyrics']
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
     designer.fit_canvas()
     with patch.object(designer.viewport.window(), 'grab', wraps=designer.viewport.window().grab) as grab:
-        designer.canvas_combo.setCurrentIndex(2)
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 2560, 1080)))
         assert not designer.preview_cover.isHidden()
         designer.refresh()
         first_revision = designer._preview_revision
         designer.display.run_in_display.assert_called_with(
             'waitForDesignPreview', first_revision, return_event_name='designPreviewReady')
-        designer.canvas_combo.setCurrentIndex(3)
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 1440, 1080)))
         designer.refresh()
         designer.preview_ready(first_revision)
         assert not designer.preview_cover.isHidden()
@@ -249,9 +337,8 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
         designer.preview_ready(designer._preview_revision)
         assert designer.preview_cover.isHidden()
         assert not designer.preview_timeout.isActive()
-        designer.undo_stack.undo()
-        assert not designer.preview_cover.isHidden()
-        assert grab.call_count == 2
+        assert designer.undo_stack.count() == 0
+        assert grab.call_count == 1
         designer.clear_preview_cover()
 
 
@@ -259,7 +346,7 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
 def test_frozen_preview_preserves_surrounding_canvas_background(designer, settings, dark):
     import fluentqt
     from PySide6 import QtWidgets
-    from openlp.plugins.songs.songsplugin import song_footer
+    from opal.plugins.songs.songsplugin import song_footer
 
     settings.extend_default_settings(song_footer)
     original_theme = fluentqt.currentTheme()
@@ -277,13 +364,25 @@ def test_frozen_preview_preserves_surrounding_canvas_background(designer, settin
         host.show()
         designer.viewport.show()
         QtWidgets.QApplication.processEvents()
+        designer.fit_canvas()
+        preview = QtWidgets.QLabel('Slide preview', designer.viewport)
+        preview.setStyleSheet('background: #315efb; color: white')
+        preview.setGeometry(designer.preview_border.geometry().adjusted(1, 1, -1, -1))
+        preview.show()
+        expected = host.grab().toImage()
         designer.freeze_preview()
         snapshot = designer.preview_cover.pixmap()
-        captured = snapshot.toImage().pixelColor(QtCore.QPoint(5, 5) * snapshot.devicePixelRatio())
+        assert snapshot.deviceIndependentSize().toSize() == designer.preview_border.size()
+        assert designer.preview_cover.geometry() == designer.preview_border.geometry()
+        assert not designer.preview_cover.geometry().intersects(designer.preview_footer.geometry())
+        assert snapshot.toImage().pixelColor(QtCore.QPoint(5, 5) * snapshot.devicePixelRatio()) == \
+            QtGui.QColor('#315efb')
+        covered = host.grab().toImage()
+        for point in (QtCore.QPoint(5, 5), designer.preview_footer.geometry().center()):
+            pixel = designer.viewport.mapTo(host, point) * expected.devicePixelRatio()
+            assert covered.pixelColor(pixel) == expected.pixelColor(pixel)
         designer.clear_preview_cover()
-        expected = host.grab().toImage()
-        point = designer.viewport.mapTo(host, QtCore.QPoint(5, 5)) * expected.devicePixelRatio()
-        assert captured == expected.pixelColor(point)
+        preview.deleteLater()
     finally:
         designer.clear_preview_cover()
         designer.viewport.setParent(parent)
@@ -294,7 +393,7 @@ def test_frozen_preview_preserves_surrounding_canvas_background(designer, settin
 def test_formatting_preview_is_covered_before_pagination_until_render_finishes(designer):
     designer.display = MagicMock(_is_initialised=True)
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
 
@@ -316,7 +415,7 @@ def test_formatting_preview_is_covered_before_pagination_until_render_finishes(d
 def test_new_refresh_requested_during_pagination_keeps_cover_and_schedules_latest_render(designer):
     designer.display = MagicMock(_is_initialised=True)
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
     revisions = []
@@ -353,7 +452,7 @@ def test_failed_preview_render_releases_frozen_image(designer):
 
 
 def test_designer_only_belongs_to_inner_edit_dialog(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = designer.source_form.design_owner
     assert not hasattr(owner, 'slide_designer')
     assert owner.verse_form.slide_designer is designer
@@ -378,7 +477,7 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
         dialog.slide_designer.set_property('x', 35)
         return int(accepted)
 
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', new=edit_and_finish):
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', new=edit_and_finish):
         designer.source_form.exec()
     assert slide_design(owner.slide_design, designer.footer_key())['lyrics']['x'] == (35 if accepted else 10)
     if not accepted:
@@ -387,7 +486,7 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
 
 
 def test_bulk_preview_follows_section_selection(designer, settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -412,12 +511,15 @@ def test_assigning_theme_releases_imported_snapshot(designer):
 
 def test_fluent_inspector_edits_keep_precision_and_undo(designer):
     import fluentqt
-    numeric_fields = [field for field in designer.fields.values() if isinstance(field, fluentqt.NumberBox)]
+    geometry = {'x', 'y', 'width', 'height'}
+    numeric_fields = [field for key, field in designer.fields.items()
+                      if isinstance(field, fluentqt.NumberBox) and key not in geometry]
+    assert all(designer.fields[key].displayPrecision() == 1 for key in geometry)
     numeric_fields.append(designer.background_image_opacity)
     assert all(field.displayPrecision() == 0 for field in numeric_fields)
     designer.fields['x'].setValue(12.5)
     designer.fields['bold'].click()
-    assert designer.design['lyrics']['x'] == pytest.approx(12.5 / 1920 * 100)
+    assert designer.design['lyrics']['x'] == pytest.approx(12.5)
     assert designer.design['lyrics']['bold'] is True
     designer.undo_stack.undo()
     assert not designer.fields['bold'].isChecked()
@@ -488,7 +590,7 @@ def test_properties_header_stays_fixed_and_pane_can_resize(designer, qtbot):
 
 
 def test_custom_sidebar_commands_still_insert_slides(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     dialog = owner.edit_slide_form
     dialog.set_text('First')
@@ -512,13 +614,13 @@ def test_default_theme_has_a_label_without_changing_inheritance(designer):
         assert dialog.designer_theme_name() == ''
         return 1
 
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', new=accept):
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', new=accept):
         designer.source_form.exec()
     assert owner.theme_combo_box.currentText() == ''
 
 
 def test_layers_include_slide_text_and_new_objects_start_at_front(designer):
-    from openlp.core.lib.slidedesign import layer_order
+    from opal.core.lib.slidedesign import layer_order
     designer.add_element('rectangle')
     shape = designer.selected
     assert layer_order(designer.design) == ['lyrics', shape]
@@ -738,7 +840,7 @@ def test_multiple_properties_show_mixed_values_and_edit_applicable_objects_toget
 
 
 def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(designer):
-    from openlp.core.lib.slidelayouts import slide_design
+    from opal.core.lib.slidelayouts import slide_design
     designer.add_element('text')
     identifier = designer.selected
     with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
@@ -756,7 +858,7 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
     assert designer.document['masters'][master]['design'] == master_before
     assert slide_design(designer.document, 'v2:0:0') == master_before
     original = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
+    with patch('opal.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_design()
@@ -771,7 +873,7 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
 
 
 def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer):
-    from openlp.core.lib.slidelayouts import set_slide_design, layout_for_slide
+    from opal.core.lib.slidelayouts import set_slide_design, layout_for_slide
     load_editable_design(designer, {'version': 1, 'lyrics': {'font_size': 40}, 'elements': []})
     document = set_slide_design(designer.document, 'v1:0:0', {'version': 1, 'lyrics': {'font_size': 60}})
     document = set_slide_design(document, 'v2:0:0', {'version': 1, 'lyrics': {'font_size': 80}})
@@ -783,7 +885,7 @@ def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer)
         designer.switch_design_context()
         assert designer.reset_button.isEnabled()
     document = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.fluentqt.ContentDialog') as dialog:
+    with patch('opal.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_button.click()
@@ -807,7 +909,7 @@ def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer)
 
 
 def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
-    from openlp.core.lib.slidelayouts import slide_design
+    from opal.core.lib.slidelayouts import slide_design
     load_editable_design(designer, {'version': 1, 'masters': {'welcome': {'name': 'Welcome', 'design': {
         'version': 1, 'lyrics': {'font_size': 72}, 'elements': []}}},
         'assignments': {'v1:0:0': 'welcome', 'v2:0:0': 'welcome'}})
@@ -819,11 +921,11 @@ def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
 
 
 @pytest.mark.parametrize('kind,title,expected', [
-    ('song', 'Amazing Grace', 'Amazing Grace - OpenLP+'), ('song', '', 'New Song - OpenLP+'),
-    ('custom', 'Welcome', 'Welcome - OpenLP+'), ('custom', '  ', 'New Custom Slide - OpenLP+')])
+    ('song', 'Amazing Grace', 'Amazing Grace - Opal Presenter'), ('song', '', 'New Song - Opal Presenter'),
+    ('custom', 'Welcome', 'Welcome - Opal Presenter'), ('custom', '  ', 'New Custom Slide - Opal Presenter')])
 def test_designer_uses_independent_nonmodal_fluent_window_and_restores_editor_layout(designer, kind, title, expected):
-    from openlp.plugins.slide_designer.forms.window import exec_designer_window, DesignerWindow
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.plugins.slide_designer.forms.window import exec_designer_window, DesignerWindow
+    from opal.core.widgets import fluent as QtWidgets
     editor = designer.source_form
     editor.design_kind = kind
     editor.design_owner.title_edit.setText(title)
@@ -957,26 +1059,18 @@ def test_multi_row_drop_keeps_relative_order(designer):
     assert [element['id'] for element in designer.design['elements']] == ['a']
 
 
-def test_pixel_coordinates_and_canvas_change_preserve_shape_proportions(designer):
+def test_preview_output_keeps_percentages_and_saved_dimensions(designer):
     designer.add_element('rectangle')
-    designer.fields['x'].setValue(192)
-    designer.fields['y'].setValue(108)
-    designer.fields['width'].setValue(384)
-    designer.fields['height'].setValue(216)
-    assert designer.design['canvas_width'] == 1920
-    assert designer.fields['width'].value() == 384
-    original = copy.deepcopy(designer.design)
-    designer.canvas_combo.setCurrentIndex(3)  # 4:3
-    assert designer.canvas_size() == QtCore.QSize(1440, 1080)
-    element = designer.design['elements'][0]
-    assert element['width'] * 1440 / 100 == pytest.approx(288)
-    assert element['height'] * 1080 / 100 == pytest.approx(162)
-    assert (element['x'] + element['width'] / 2) == pytest.approx(20)
-    assert (element['y'] + element['height'] / 2) == pytest.approx(27.5)
-    designer.undo_stack.undo()
+    designer.fields['x'].setValue(10)
+    designer.fields['y'].setValue(10)
+    designer.fields['width'].setValue(20)
+    designer.fields['height'].setValue(20)
+    original = designer.serialised_design()
+    designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 1440, 1080)))
     assert designer.canvas_size() == QtCore.QSize(1920, 1080)
-    assert designer.design == original
-    assert designer.fields['width'].value() == 384
+    assert designer.serialised_design() == original
+    assert designer.fields['width'].value() == 20
+    assert not hasattr(designer, 'canvas_combo')
 
 
 @pytest.mark.parametrize('alignment', ['left', 'center', 'right', 'top', 'middle', 'bottom',
@@ -990,21 +1084,9 @@ def test_aspect_changes_preserve_aligned_layout_with_different_box_sizes(designe
     designer.select_objects(['date', 'title', 'lyrics'])
     designer.alignment_actions[alignment].trigger()
     original = copy.deepcopy(designer.design)
-    for preset, width, height in ((2, 2560, 1080), (3, 1440, 1080), (1, 1920, 1200), (0, 1920, 1080)):
-        designer.canvas_combo.setCurrentIndex(preset)
-        scale = min(width / 1920, height / 1080)
-        before = [original['lyrics']] + original['elements']
-        after = [designer.design['lyrics']] + designer.design['elements']
-        for first, second in zip(before, after):
-            # A single affine transform preserves aligned edges and even gaps regardless of box size.
-            for axis, extent, initial, current in (('x', 'width', 1920, width), ('y', 'height', 1080, height)):
-                expected_position = (first[axis] / 100 * initial - initial / 2) * scale + current / 2
-                assert second[axis] / 100 * current == pytest.approx(expected_position)
-                assert second[extent] / 100 * current == pytest.approx(first[extent] / 100 * initial * scale)
-    designer.undo_stack.undo()
-    assert designer.canvas_size() == QtCore.QSize(1920, 1200)
-    designer.undo_stack.redo()
-    assert designer.design['lyrics']['x'] == pytest.approx(original['lyrics']['x'])
+    for width, height in ((2560, 1080), (1440, 1080), (1920, 1200), (1920, 1080)):
+        designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', width, height)))
+        assert designer.design == original
 
 
 def test_footer_visibility_is_per_verse_split_and_page_with_undo(designer):
@@ -1029,7 +1111,7 @@ def test_footer_visibility_is_per_verse_split_and_page_with_undo(designer):
 
 
 def test_custom_footer_uses_outer_slide_number_and_survives_reorder_delete(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     owner.slide_list_view.addItems(['First', 'Second', 'Third'])
     owner.slide_design = {'version': 1, 'hidden_footers': ['custom-2:0:0']}
@@ -1048,43 +1130,24 @@ def test_custom_footer_uses_outer_slide_number_and_survives_reorder_delete(desig
     owner.deleteLater()
 
 
-def test_repeated_aspect_switches_return_to_original_geometry(designer):
-    designer.add_element('rectangle')
-    designer.fields['x'].setValue(250)
-    designer.fields['y'].setValue(120)
-    designer.fields['width'].setValue(384)
-    designer.fields['height'].setValue(216)
-    designer.add_element('text')
-    designer.fields['font_size'].setValue(48)
-    original = copy.deepcopy(designer.design['elements'])
-    layouts = {}
-    for _ in range(6):
-        for preset in (1, 3, 2, 0):
-            designer.canvas_combo.setCurrentIndex(preset)
-            actual = designer.design['elements']
-            if preset in layouts:
-                for first, second in zip(layouts[preset], actual):
-                    for key in ('x', 'y', 'width', 'height', 'font_size'):
-                        assert second[key] == pytest.approx(first[key])
-            else:
-                layouts[preset] = copy.deepcopy(actual)
-    for first, second in zip(original, designer.design['elements']):
-        for key in ('x', 'y', 'width', 'height', 'font_size'):
-            assert second[key] == pytest.approx(first[key])
-    # The reference survives closing/reopening the editor on a different aspect ratio.
-    designer.canvas_combo.setCurrentIndex(3)
-    saved = designer.serialised_design()
-    load_editable_design(designer, saved)
-    designer.canvas_combo.setCurrentIndex(0)
-    for first, second in zip(original, designer.design['elements']):
-        for key in ('x', 'y', 'width', 'height', 'font_size'):
-            assert second[key] == pytest.approx(first[key])
+def test_repeated_preview_switches_preserve_existing_slide_size(designer):
+    load_editable_design(designer, {'version': 1, 'canvas_width': 1440, 'canvas_height': 1080,
+                                    'elements': [{'id': 'box', 'kind': 'rectangle', 'x': 20, 'y': 10,
+                                                  'width': 30, 'height': 20}]})
+    original = designer.serialised_design()
+    for _ in range(3):
+        for width, height in ((1920, 1200), (1440, 1080), (2560, 1080), (1920, 1080)):
+            designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', width, height)))
+            assert designer.serialised_design() == original
+            assert designer.canvas_size() == QtCore.QSize(1440, 1080)
+    designer.load_design(original)
+    assert designer.serialised_design() == original
 
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_layout_name_content_dialog_has_header_and_rejects_blank_names(designer, accepted):
     import fluentqt
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
 
     def inspect(dialog):
         assert dialog.title() == 'New layout'
@@ -1110,7 +1173,7 @@ def test_layout_name_content_dialog_has_header_and_rejects_blank_names(designer,
 
 def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
     import fluentqt
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
 
     def inspect(dialog):
         assert dialog.title() == 'Rename layout'
@@ -1123,6 +1186,47 @@ def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
 
     with patch.object(fluentqt.ContentDialog, 'exec', inspect):
         assert designer.prompt_layout_name('Rename layout', 'Welcome') == ('Closing', True)
+
+
+@pytest.mark.parametrize('host_width', [1000, 360])
+@pytest.mark.parametrize('action', ['enter', 'create', 'escape', 'cancel'])
+def test_layout_name_prompt_fits_and_submits_through_visible_actions(designer, qtbot, monkeypatch, host_width, action):
+    from opal.core.widgets import fluent as QtWidgets
+    parent = QtWidgets.QWidget()
+    qtbot.addWidget(parent)
+    parent.resize(host_width, 320)
+    parent.show()
+    monkeypatch.setattr(designer, 'window', lambda: parent)
+    name = 'A long layout name ' * 20
+
+    def interact():
+        dialog = parent.findChild(QtWidgets.ContentDialog, 'layout_name_dialog')
+        try:
+            field = dialog.content()
+            primary = dialog._native_commands['primary']
+            field.setText('   ')
+            qtbot.keyClick(field, QtCore.Qt.Key.Key_Return)
+            assert dialog.isOpen()
+            assert not primary.isEnabled()
+            field.setText('  ' + name + '  ')
+            assert primary.isEnabled()
+            assert field.height() >= 32
+            assert dialog._content_scroll.verticalScrollBar().maximum() == 0
+            assert dialog._content_scroll.horizontalScrollBar().maximum() == 0
+            assert parent.rect().contains(dialog.geometry())
+            close = dialog._native_commands['close']
+            assert primary.mapTo(dialog, QtCore.QPoint()).x() < close.mapTo(dialog, QtCore.QPoint()).x()
+            if action in ('enter', 'escape'):
+                key = QtCore.Qt.Key.Key_Return if action == 'enter' else QtCore.Qt.Key.Key_Escape
+                qtbot.keyClick(field, key)
+            else:
+                qtbot.mouseClick(primary if action == 'create' else close, QtCore.Qt.MouseButton.LeftButton)
+        except Exception:
+            dialog.done(dialog.ResultNone)
+            raise
+
+    QtCore.QTimer.singleShot(250, interact)
+    assert designer.prompt_layout_name('New layout') == (name.strip(), action in ('enter', 'create'))
 
 
 def test_new_slide_uses_theme_and_locks_all_design_changes(designer):
@@ -1144,8 +1248,8 @@ def test_new_slide_uses_theme_and_locks_all_design_changes(designer):
     assert designer.footer_key() in designer.document['hidden_footers']
     designer.reset_section('slide')
     assert not designer.document.get('hidden_footers')
-    designer.canvas_combo.setCurrentIndex(2)
-    assert designer.canvas_size() == QtCore.QSize(2560, 1080)
+    designer.preview_output.combo.setCurrentIndex(designer.preview_output.index(('preset', 2560, 1080)))
+    assert designer.preview_output.output_size() == QtCore.QSize(2560, 1080)
     assert not designer.document.get('overrides')
     with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
         designer.new_layout()
@@ -1221,3 +1325,179 @@ def test_effects_target_background_and_images_with_mixed_selection_and_undo(desi
     for drawer, _ in designer.reset_sections.values():
         assert drawer.reset_button.text() == ''
         assert not drawer.reset_button.icon().isNull()
+
+
+def test_preview_output_does_not_resize_saved_canvas(designer):
+    designer.add_element('rectangle')
+    before = designer.serialised_design()
+    undo_count = designer.undo_stack.count()
+    output = designer.preview_output
+    output.combo.setCurrentIndex(output.index(('preset', 1920, 1200)))
+    assert output.output_size() == QtCore.QSize(1728, 1080)
+    assert designer.canvas_size() == QtCore.QSize(1920, 1080)
+    assert designer.serialised_design() == before
+    assert designer.undo_stack.count() == undo_count
+
+
+def test_preview_output_profiles_persist_rename_and_delete(designer):
+    output = designer.preview_output
+    output.save_profile('Venue', 1920, 1080)
+    output.populate()
+    assert output.profiles() == {'Venue': [1920, 1080]}
+    assert output.combo.currentData() == ('profile', 'Venue', 1920, 1080)
+    output.save_profile('Wide venue', 2560, 1080, 'Venue')
+    assert output.profiles() == {'Wide venue': [2560, 1080]}
+    output.delete_profile()
+    assert output.profiles() == {}
+    assert output.output_size() == designer.canvas_size()
+
+
+def test_preview_output_connected_displays_refresh(designer):
+    from opal.core.display.screens import Screen
+    output = designer.preview_output
+    screen = Screen(1, QtCore.QRect(0, 0, 1920, 1200))
+    with patch('opal.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[screen]):
+        output.refresh_outputs()
+        output.combo.setCurrentIndex(output.index(('display', 1, 1920, 1200)))
+        assert output.output_size() == QtCore.QSize(1728, 1080)
+        assert '16:10' in output.combo.currentText()
+    with patch('opal.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[]):
+        output.refresh_outputs()
+    assert output.combo.currentData() == ('preset', 1920, 1080)
+
+
+def test_preview_output_ignores_invalid_profiles(designer):
+    designer.settings.setValue('slide_designer/preview profiles',
+                               '{"Bad": [0, 1080], "Huge": [99999, 1], "Good": [1920, 1080]}')
+    assert designer.preview_output.profiles() == {'Good': [1920, 1080]}
+    designer.settings.setValue('slide_designer/preview profiles', 'invalid json')
+    assert designer.preview_output.profiles() == {}
+
+
+def test_preview_output_fits_design_and_maps_gestures_back_to_canvas(designer):
+    with patch('opal.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.base_theme = Theme()
+    designer.add_element('rectangle')
+    identifier = designer.selected
+    designer.preview_output.combo.setCurrentIndex(
+        designer.preview_output.index(('preset', 1920, 1200)))
+    theme = designer.output_theme(designer.design)
+    element = theme.song_design['elements'][0]
+    assert element['x'] == pytest.approx(10)
+    assert element['y'] == pytest.approx(14)
+    assert element['height'] == pytest.approx(18)
+    designer.canvas_changed({'id': identifier, 'changed': True,
+                             'geometry': {'x': 20, 'y': 23, 'width': 35, 'height': 18}})
+    element = designer.design['elements'][0]
+    assert element['x'] == pytest.approx(20)
+    assert element['y'] == pytest.approx(20)
+    assert element['height'] == pytest.approx(20)
+
+
+@pytest.mark.parametrize('submit', ['enter', 'mouse', 'cancel'])
+def test_preview_profile_dialog_validation_and_submission(designer, qtbot, submit):
+    from opal.core.widgets import fluent as QtWidgets
+    designer.setParent(None)
+    with patch.object(type(designer), 'showEvent', lambda self, event: None):
+        designer.show()
+    designer.resize(1000, 700)
+    output = designer.preview_output
+    output.save_profile('Existing', 1920, 1080)
+    output.combo.setCurrentIndex(0)
+    real_exec = QtWidgets.FormDialog.exec
+
+    def execute(dialog):
+        def interact():
+            name = dialog.content_widget.findChild(QtWidgets.QLineEdit)
+            buttons = dialog.content_widget.findChild(QtWidgets.QDialogButtonBox)
+            save = buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Save)
+            assert not save.isEnabled()
+            name.setText('   ')
+            assert not save.isEnabled()
+            name.setText('Existing')
+            assert not save.isEnabled()
+            name.setText('  Venue screen  ')
+            assert save.isEnabled()
+            fields = dialog.content_widget.findChildren(QtWidgets.QSpinBox)
+            fields[0].setValue(16)
+            fields[1].setValue(9)
+            if submit == 'cancel':
+                qtbot.keyClick(name, QtCore.Qt.Key.Key_Escape)
+            elif submit == 'enter':
+                qtbot.keyClick(name, QtCore.Qt.Key.Key_Return)
+            else:
+                primary = dialog._native_commands['primary']
+                qtbot.mouseClick(primary, QtCore.Qt.MouseButton.LeftButton)
+        QtCore.QTimer.singleShot(2000, dialog, dialog.reject)
+        QtCore.QTimer.singleShot(30, interact)
+        return real_exec(dialog)
+
+    with patch.object(QtWidgets.FormDialog, 'exec', execute):
+        output.edit_profile()
+    assert ('Venue screen' in output.profiles()) == (submit != 'cancel')
+    if submit != 'cancel':
+        assert output.output_size() == QtCore.QSize(1920, 1080)
+    assert output.profiles()['Existing'] == [1920, 1080]
+    designer.hide()
+
+
+def test_portrait_preview_keeps_output_controls_reachable(designer):
+    designer.viewport.resize(600, 500)
+    designer.display = MagicMock(_is_initialised=False)
+    designer.preview_output.save_profile('Portrait', 1080, 3840)
+    designer.fit_canvas()
+    _, _, width, height = designer.display.setGeometry.call_args.args
+    assert width > 0 and height > width
+    assert designer.preview_footer.width() > width
+    assert designer.preview_footer.width() <= designer.viewport.width()
+    assert designer.preview_footer.geometry().bottom() < designer.viewport.height()
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+@pytest.mark.parametrize('custom_layout', [False, True])
+def test_same_aspect_preview_keeps_reference_geometry_and_typography(designer, width, height, custom_layout):
+    with patch('opal.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
+        designer.base_theme = Theme()
+    theme = designer.base_theme
+    theme.font_main_x, theme.font_main_y = 192, 108
+    theme.font_main_width, theme.font_main_height = 1536, 756
+    theme.font_main_size, theme.font_footer_size = 64, 24
+    theme.font_main_outline_size = 3
+    original = copy.deepcopy(theme.__dict__)
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080} if custom_layout else {}
+    designer.preview_output.save_profile('Resolution', width, height)
+    preview = designer.output_theme(design)
+    assert designer.preview_output.combo.currentText() == 'Resolution · 16:9'
+    assert designer.preview_output.output_size() == QtCore.QSize(1920, 1080)
+    assert (preview.display_size_width, preview.display_size_height) == (1920, 1080)
+    assert preview.font_main_x == pytest.approx(192)
+    assert preview.font_main_y == pytest.approx(108)
+    assert preview.font_main_width == pytest.approx(1536)
+    assert preview.font_main_size == pytest.approx(64)
+    assert preview.font_footer_size == pytest.approx(24)
+    assert preview.font_main_outline_size == pytest.approx(3)
+    assert theme.__dict__ == original
+
+
+@pytest.mark.parametrize('width,height,font_size,reference_size', [
+    (1280, 720, 32, 48), (1280, 720, 400, 600), (3840, 2160, 1, .5)])
+def test_legacy_slide_canvas_shows_reference_points(designer, width, height, font_size, reference_size):
+    load_editable_design(designer, {'version': 1, 'canvas_width': width, 'canvas_height': height,
+                                    'lyrics': {'font_size': font_size}})
+    designer.select_object('lyrics')
+    assert designer.fields['font_size'].value() == pytest.approx(reference_size)
+    designer.fields['font_size'].setValue(64)
+    assert designer.design['lyrics']['font_size'] == pytest.approx(64 * height / 1080)
+    designer.undo_stack.undo()
+    assert designer.fields['font_size'].value() == pytest.approx(reference_size)
+
+
+@pytest.mark.parametrize('width,height', [(9, 16), (1080, 3840), (1366, 768), (16384, 1), (1, 16384)])
+def test_custom_preview_ratios_stay_exact_and_bounded(designer, width, height):
+    designer.preview_output.save_profile('Custom ratio', width, height)
+    size = designer.preview_output.output_size()
+    assert size.width() * height == size.height() * width
+    assert 1 <= size.width() <= 16384
+    assert 1 <= size.height() <= 16384

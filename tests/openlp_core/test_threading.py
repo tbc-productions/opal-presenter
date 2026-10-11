@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.threading package.
+Package to test the opal.core.threading package.
 """
 from PySide6 import QtCore
 from inspect import isfunction
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.threading import ThreadWorker, get_thread_worker, is_thread_finished, make_remove_thread, run_thread
+from opal.core.threading import ThreadWorker, get_thread_worker, is_thread_finished, make_remove_thread, run_thread
 
 
 def test_run_thread_no_name():
@@ -42,7 +42,7 @@ def test_run_thread_no_name():
         assert True, 'A ValueError was correctly thrown'
 
 
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.Registry')
 def test_run_thread_exists(MockRegistry):
     """
     Test that trying to run a thread with a name that already exists will throw a KeyError
@@ -60,8 +60,8 @@ def test_run_thread_exists(MockRegistry):
         assert True, 'A KeyError was correctly thrown'
 
 
-@patch('openlp.core.threading.QtCore.QThread')
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.QtCore.QThread')
+@patch('opal.core.threading.Registry')
 def test_run_thread(MockRegistry, MockQThread):
     """
     Test that running a thread works correctly
@@ -113,7 +113,7 @@ def test_thread_worker():
         assert False, 'A NotImplementedError should have been thrown'
 
 
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.Registry')
 def test_get_thread_worker(MockRegistry):
     """
     Test that calling the get_thread_worker() function returns the correct worker
@@ -129,7 +129,7 @@ def test_get_thread_worker(MockRegistry):
     assert worker is mocked_worker, 'The mocked worker should have been returned'
 
 
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.Registry')
 def test_get_thread_worker_mising(MockRegistry):
     """
     Test that calling the get_thread_worker() function raises a KeyError if it does not exist
@@ -144,7 +144,7 @@ def test_get_thread_worker_mising(MockRegistry):
     assert result is None
 
 
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.Registry')
 def test_is_thread_finished(MockRegistry):
     """
     Test the is_thread_finished() function
@@ -161,7 +161,7 @@ def test_is_thread_finished(MockRegistry):
     assert result is False, 'is_thread_finished should have returned False'
 
 
-@patch('openlp.core.threading.Registry')
+@patch('opal.core.threading.Registry')
 def test_is_thread_finished_missing(MockRegistry):
     """
     Test that calling the is_thread_finished() function returns True if the thread doesn't exist

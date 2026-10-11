@@ -6,8 +6,8 @@ import subprocess
 import sys
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from openlp.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
-from openlp.core.widgets import fluent as FluentWidgets
+from opal.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
+from opal.core.widgets import fluent as FluentWidgets
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ def test_tooltips_do_not_filter_internal_quick_objects():
     result = subprocess.run([sys.executable, '-c', '''
 from unittest.mock import patch
 from PySide6 import QtWidgets, QtQuickWidgets, QtCore
-from openlp.core.widgets.fluent_tooltips import install_fluent_tooltips
+from opal.core.widgets.fluent_tooltips import install_fluent_tooltips
 app = QtWidgets.QApplication([])
 with patch.object(app, 'installEventFilter') as global_filter:
     install_fluent_tooltips(app)

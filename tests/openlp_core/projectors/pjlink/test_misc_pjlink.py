@@ -24,18 +24,18 @@ Test PJLink._get_status()
 
 import logging
 
-import openlp.core.projectors.pjlink
+import opal.core.projectors.pjlink
 
 from PySide6 import QtNetwork
 from unittest.mock import DEFAULT, MagicMock, patch
 
-from openlp.core.projectors.constants import QSOCKET_STATE, STATUS_CODE, STATUS_MSG, \
+from opal.core.projectors.constants import QSOCKET_STATE, STATUS_CODE, STATUS_MSG, \
     E_GENERAL, S_CONNECTED, S_NOT_CONNECTED, S_CONNECTING, S_OK, \
     PJLINK_PORT
 
 from tests.resources.projector.data import TEST2_DATA
 
-test_module = openlp.core.projectors.pjlink.__name__
+test_module = opal.core.projectors.pjlink.__name__
 
 
 def test_connect_to_host_connected(pjlink, caplog):

@@ -27,9 +27,9 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.openlp import OpenLPSongImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.openlp import OpenLPSongImport
 
 from tests.utils.constants import RESOURCE_PATH
 
@@ -41,7 +41,7 @@ def test_create_importer(registry: Registry, settings: Settings):
     Test creating an instance of the OpenLP database importer
     """
     # GIVEN: A mocked out SongImport class, and a mocked out "manager"
-    with patch('openlp.plugins.songs.lib.importers.openlp.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.openlp.SongImport'):
         mocked_manager = MagicMock()
 
         # WHEN: An importer object is created
@@ -56,7 +56,7 @@ def test_invalid_import_source(registry: Registry, settings: Settings):
     Test OpenLPSongImport.do_import handles different invalid import_source values
     """
     # GIVEN: A mocked out SongImport class, and a mocked out "manager"
-    with patch('openlp.plugins.songs.lib.importers.openlp.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.openlp.SongImport'):
         mocked_manager = MagicMock()
         mocked_import_wizard = MagicMock()
         importer = OpenLPSongImport(mocked_manager, file_paths=[])
@@ -73,11 +73,11 @@ def test_invalid_import_source(registry: Registry, settings: Settings):
 
 
 @pytest.mark.parametrize('base_name', ['songs-1.9.7', 'songs-2.4.6'])
-@patch('openlp.plugins.songs.lib.importers.openlp.Song')
-@patch('openlp.plugins.songs.lib.importers.openlp.Author')
-@patch('openlp.plugins.songs.lib.importers.openlp.Topic')
-@patch('openlp.plugins.songs.lib.importers.openlp.SongBook')
-@patch('openlp.plugins.songs.lib.importers.openlp.MediaFile')
+@patch('opal.plugins.songs.lib.importers.openlp.Song')
+@patch('opal.plugins.songs.lib.importers.openlp.Author')
+@patch('opal.plugins.songs.lib.importers.openlp.Topic')
+@patch('opal.plugins.songs.lib.importers.openlp.SongBook')
+@patch('opal.plugins.songs.lib.importers.openlp.MediaFile')
 def test_openlp_db_import(MockMediaFile: MagicMock, MockSongBook: MagicMock, MockTopic: MagicMock,
                           MockAuthor: MagicMock, MockSong: MagicMock, mock_settings: MagicMock, base_name: str):
     """Test that OpenLP is able to import an older OpenLP database"""

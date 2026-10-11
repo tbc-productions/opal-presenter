@@ -1,9 +1,9 @@
 FluentQt and Python 3.14
 =======================
 
-OpenLP+ uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
+Opal Presenter uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
 1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.2+openlp.7`` instead. This is an OpenLP build, not an upstream
+as ``FluentQt 1.9.3+openlp.1`` instead. This is an OpenLP build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -43,7 +43,7 @@ Qt selects accessibility interfaces from meta-object class names; reusing
 QTabBar or QToolButton for a different native type causes invalid casts and
 can crash during macOS accessibility hit testing.
 
-``openlp.core.widgets.fluent`` is the operator UI construction boundary. Native
+``opal.core.widgets.fluent`` is the operator UI construction boundary. Native
 Fluent controls replace the compatible button, label, input, selection, menu and
 slider classes. Native CommandBar owns toolbar actions and responsive overflow;
 Open service uses FluentQt's native SplitButton. Qt still supplies application,
@@ -90,6 +90,17 @@ Qt's document, cursor, spell-checking and rich-text engines; FluentQt's public
 TextEdit API does not expose the operations these editors need. System file
 and print dialogs retain their platform implementations. Colour selection uses FluentQt's native ColorPicker.
 
+Compact forms, confirmations and input prompts use the shared ``ContentDialog``
+and ``FormDialog`` adapters. Primary actions stay on the left, secondary actions
+in the middle and Cancel or Close on the right; the default action controls
+emphasis without changing this order. Content keeps FluentQt's native padding
+and scrolls within the host window so lengthy messages leave the buttons visible.
+``FormDialog`` forwards its commands through the existing button box, preserving
+validation and Help behaviour. Larger editors retain ``QDialog`` with a visible
+heading.
+See the `dialog design pattern <dialogs.rst>`_ for implementation guidance and
+verification expectations.
+
 Theme changes display a restart reminder. Native controls can update their
 colours live, but existing QAction icons and ADS docking surfaces cache the
 startup scheme. Restarting applies the selected scheme consistently.
@@ -118,3 +129,27 @@ Binding type discovery also uses Qt metadata instead of C++ RTTI. Qt's private
 item models and partially constructed layout children can lack usable RTTI;
 wrapping those objects previously crashed the test suite. BindingApi shims
 without their own Qt meta-object retain their concrete Python wrapper type.
+
+Service selection and drag feedback
+-----------------------------------
+
+Library plugins, Cloud Library, Themes, Preview, Live and Service use the same
+boxed drag card, with the item type icon, title and a count for multiple items.
+The card follows the Fluent appearance and keeps the count visible when a long
+title is shortened.
+
+Service supports Ctrl/Command-click and Shift-click selection, including
+Shift-arrow selection. Dragging moves selected service items together in their
+original order; moving or cancelling a drag preserves the selection and expanded
+slides. Preview and Go Live are disabled for multiple selected rows. Notes apply
+the saved text to every selected service item, with parent and slide selections
+counted once. Matching existing notes appear in the editor; different notes start
+with an empty editor. Saving replaces each selected item's notes, while Cancel
+preserves them.
+
+Dropping selected service items into the Library imports each into its matching
+plugin, including mixed selections. Every item must have an enabled, supported
+Library destination before the import begins. Existing overwrite confirmations
+still apply. Cancelling an import stops the remaining items and retains items
+already imported. Delete removes all selected service items, using the existing
+confirmation preference.

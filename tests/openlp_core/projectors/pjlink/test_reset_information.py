@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.pjlink base package part 3.
+Package to test the opal.core.projectors.pjlink base package part 3.
 """
 from unittest.mock import call, patch
 
-import openlp.core.projectors.pjlink
-from openlp.core.projectors.constants import PJLINK_CLASS, STATUS_CODE, \
+import opal.core.projectors.pjlink
+from opal.core.projectors.constants import PJLINK_CLASS, STATUS_CODE, \
     S_NOT_CONNECTED, S_OFF, S_ON, QSOCKET_STATE
 
 
-@patch.object(openlp.core.projectors.pjlink, 'log')
+@patch.object(opal.core.projectors.pjlink, 'log')
 def test_projector_reset_information(mock_log, pjlink):
     """
     Test reset_information() resets all information and stops timers

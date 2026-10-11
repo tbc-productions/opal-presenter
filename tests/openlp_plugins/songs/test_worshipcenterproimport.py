@@ -25,12 +25,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 try:
     import pyodbc
-    from openlp.plugins.songs.lib.importers.worshipcenterpro import WorshipCenterProImport
+    from opal.plugins.songs.lib.importers.worshipcenterpro import WorshipCenterProImport
     CAN_RUN_TESTS = True
 except ImportError:
     class WorshipCenterProImport:
@@ -153,7 +153,7 @@ SONG_TEST_DATA = [{'title': 'Amazing Grace',
 
 @pytest.fixture
 def importer(registry: Registry, settings: Settings):
-    with patch('openlp.plugins.songs.lib.importers.worshipcenterpro.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.worshipcenterpro.SongImport'):
         yield WorshipCenterProImportLogger(MagicMock())
 
 
@@ -167,8 +167,8 @@ def test_create_importer(importer: WorshipCenterProImportLogger):
     assert importer is not None, 'Import should not be none'
 
 
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.translate')
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.pyodbc.connect')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.translate')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.pyodbc.connect')
 @pytest.mark.parametrize('error', [pyodbc.DatabaseError, pyodbc.IntegrityError, pyodbc.InternalError,
                                    pyodbc.OperationalError])
 def test_pyodbc_exception(mocked_pyodbc_connect: MagicMock, mocked_translate: MagicMock,
@@ -195,8 +195,8 @@ def test_pyodbc_exception(mocked_pyodbc_connect: MagicMock, mocked_translate: Ma
     mocked_log_error.assert_called_with('import_source', 'Translated Text')
 
 
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.translate')
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.pyodbc')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.translate')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.pyodbc')
 def test_song_import(mocked_pyodbc: MagicMock, mocked_translate: MagicMock,
                      importer: WorshipCenterProImportLogger):
     """
@@ -252,8 +252,8 @@ def test_song_import(mocked_pyodbc: MagicMock, mocked_translate: MagicMock,
     assert mocked_add_verse.call_count == add_verse_call_count, 'Incorrect number of calls made to add_verse'
 
 
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.translate')
-@patch('openlp.plugins.songs.lib.importers.worshipcenterpro.pyodbc')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.translate')
+@patch('opal.plugins.songs.lib.importers.worshipcenterpro.pyodbc')
 def test_song_import_stop(mocked_pyodbc: MagicMock, mocked_translate: MagicMock,
                           importer: WorshipCenterProImportLogger):
     """Test that the song importer stops when the flag is set"""

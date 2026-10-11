@@ -36,7 +36,7 @@ class SongImportTestHelper(object):
     def __init__(self, *args, **kwargs):
         self.importer_class_name = args[0]
         self.importer_module_name = args[1]
-        self.importer_module = __import__('openlp.plugins.songs.lib.importers.%s' %
+        self.importer_module = __import__('opal.plugins.songs.lib.importers.%s' %
                                           self.importer_module_name, fromlist=[self.importer_class_name])
         self.importer_class = getattr(self.importer_module, self.importer_class_name)
 
@@ -44,15 +44,15 @@ class SongImportTestHelper(object):
         """
         Patch and set up the mocks required.
         """
-        self.add_copyright_patcher = patch('openlp.plugins.songs.lib.importers.%s.%s.add_copyright' %
+        self.add_copyright_patcher = patch('opal.plugins.songs.lib.importers.%s.%s.add_copyright' %
                                            (self.importer_module_name, self.importer_class_name))
-        self.add_verse_patcher = patch('openlp.plugins.songs.lib.importers.%s.%s.add_verse' %
+        self.add_verse_patcher = patch('opal.plugins.songs.lib.importers.%s.%s.add_verse' %
                                        (self.importer_module_name, self.importer_class_name))
-        self.finish_patcher = patch('openlp.plugins.songs.lib.importers.%s.%s.finish' %
+        self.finish_patcher = patch('opal.plugins.songs.lib.importers.%s.%s.finish' %
                                     (self.importer_module_name, self.importer_class_name))
-        self.add_author_patcher = patch('openlp.plugins.songs.lib.importers.%s.%s.add_author' %
+        self.add_author_patcher = patch('opal.plugins.songs.lib.importers.%s.%s.add_author' %
                                         (self.importer_module_name, self.importer_class_name))
-        self.song_import_patcher = patch('openlp.plugins.songs.lib.importers.%s.SongImport' %
+        self.song_import_patcher = patch('opal.plugins.songs.lib.importers.%s.SongImport' %
                                          self.importer_module_name)
         self.mocked_add_copyright = self.add_copyright_patcher.start()
         self.mocked_add_verse = self.add_verse_patcher.start()

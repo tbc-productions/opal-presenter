@@ -1,19 +1,19 @@
 Windows Qt runtime packaging
 ============================
 
-OpenLP+ 4.0.1 was found installed with PySide6's Python extension modules but
+Opal Presenter 4.0.1 was found installed with PySide6's Python extension modules but
 without the Qt6 DLLs and Windows platform plugin. This fails at the first
 ``from PySide6 import QtCore`` import, before application logging starts.
-OpenLP+ 4.0.2 included the Qt DLLs but failed when the media player tried to
+Opal Presenter 4.0.2 included the Qt DLLs but failed when the media player tried to
 add a nonexistent ``_internal/Lib/site-packages/PySide6`` directory to the
 Windows DLL search path. The media player now uses the location of the loaded
 ``QtCore`` extension module, which works in both a Python environment and the
 frozen application.
 
-OpenLP registers a PyInstaller hook through the ``pyinstaller40`` entry point.
+Opal registers a PyInstaller hook through the ``pyinstaller40`` entry point.
 Install this source checkout in the build environment before running PyInstaller
-(the packaging repository already does this). The ``openlp.core`` hook coexists
-with the packaging repository's ``openlp`` plugin hook and the standard PySide6
+(the packaging repository already does this). The ``opal.core`` hook coexists
+with the packaging repository's ``opal`` plugin hook and the standard PySide6
 hooks. On Windows it explicitly includes the wheel's DLLs, preserving their
 relative paths, and the WebEngine helper. It rejects an incomplete or unloadable
 Qt installation instead of shipping an unusable executable. Only use DLLs from

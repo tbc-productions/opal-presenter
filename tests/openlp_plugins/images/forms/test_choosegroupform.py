@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Tests for choosegroupform from the openlp.plugins.images.forms package.
+Tests for choosegroupform from the opal.plugins.images.forms package.
 """
 import pytest
 from unittest.mock import MagicMock
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.images.forms.choosegroupform import ChooseGroupForm
+from opal.core.common.registry import Registry
+from opal.plugins.images.forms.choosegroupform import ChooseGroupForm
 
 
 @pytest.fixture()

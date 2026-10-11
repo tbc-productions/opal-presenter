@@ -24,11 +24,11 @@ Tests for commands that do not need much testing
 """
 
 import logging
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
-_process_lkup = openlp.core.projectors.pjlinkcommands._process_lkup
-_process_srch = openlp.core.projectors.pjlinkcommands._process_srch
+test_module = opal.core.projectors.pjlinkcommands.__name__
+_process_lkup = opal.core.projectors.pjlinkcommands._process_lkup
+_process_srch = opal.core.projectors.pjlinkcommands._process_srch
 
 
 def test_lkup_connect(fake_pjlink, settings, caplog):

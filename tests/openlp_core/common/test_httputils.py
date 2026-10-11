@@ -27,7 +27,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.httputils import ProxyMode, download_file, get_proxy_settings, get_url_file_size, \
+from opal.core.common.httputils import ProxyMode, download_file, get_proxy_settings, get_url_file_size, \
     get_random_user_agent, get_web_page
 
 
@@ -43,7 +43,7 @@ def test_get_random_user_agent_linux():
     """
     Test that getting a user agent on Linux returns a user agent suitable for Linux
     """
-    with patch('openlp.core.common.httputils.sys') as mocked_sys:
+    with patch('opal.core.common.httputils.sys') as mocked_sys:
 
         # GIVEN: The system is Linux
         mocked_sys.platform = 'linux2'
@@ -60,7 +60,7 @@ def test_get_random_user_agent_windows():
     """
     Test that getting a user agent on Windows returns a user agent suitable for Windows
     """
-    with patch('openlp.core.common.httputils.sys') as mocked_sys:
+    with patch('opal.core.common.httputils.sys') as mocked_sys:
 
         # GIVEN: The system is Windows
         mocked_sys.platform = 'win32'
@@ -76,7 +76,7 @@ def test_get_random_user_agent_macos():
     """
     Test that getting a user agent on OS X returns a user agent suitable for OS X
     """
-    with patch('openlp.core.common.httputils.sys') as mocked_sys:
+    with patch('opal.core.common.httputils.sys') as mocked_sys:
 
         # GIVEN: The system is macOS
         mocked_sys.platform = 'darwin'
@@ -92,7 +92,7 @@ def test_get_random_user_agent_default():
     """
     Test that getting a user agent on a non-Linux/Windows/OS X platform returns the default user agent
     """
-    with patch('openlp.core.common.httputils.sys') as mocked_sys:
+    with patch('opal.core.common.httputils.sys') as mocked_sys:
 
         # GIVEN: The system is something else
         mocked_sys.platform = 'freebsd'
@@ -118,9 +118,9 @@ def test_get_web_page_no_url():
     assert result is None, 'The return value of get_web_page should be None'
 
 
-@patch('openlp.core.common.httputils.requests')
-@patch('openlp.core.common.httputils.get_random_user_agent')
-@patch('openlp.core.common.httputils.Registry')
+@patch('opal.core.common.httputils.requests')
+@patch('opal.core.common.httputils.get_random_user_agent')
+@patch('opal.core.common.httputils.Registry')
 def test_get_web_page(MockRegistry, mocked_get_random_user_agent, mocked_requests):
     """
     Test that the get_web_page method works correctly
@@ -141,8 +141,8 @@ def test_get_web_page(MockRegistry, mocked_get_random_user_agent, mocked_request
     assert returned_page == 'text', 'The returned page should be the mock object'
 
 
-@patch('openlp.core.common.httputils.requests')
-@patch('openlp.core.common.httputils.get_random_user_agent')
+@patch('opal.core.common.httputils.requests')
+@patch('opal.core.common.httputils.get_random_user_agent')
 def test_get_web_page_with_header(mocked_get_random_user_agent, mocked_requests, settings):
     """
     Test that adding a header to the call to get_web_page() adds the header to the request
@@ -165,8 +165,8 @@ def test_get_web_page_with_header(mocked_get_random_user_agent, mocked_requests,
     assert returned_page == 'text', 'The returned page should be the mock object'
 
 
-@patch('openlp.core.common.httputils.requests')
-@patch('openlp.core.common.httputils.get_random_user_agent')
+@patch('opal.core.common.httputils.requests')
+@patch('opal.core.common.httputils.get_random_user_agent')
 def test_get_web_page_with_user_agent_in_headers(mocked_get_random_user_agent, mocked_requests, settings):
     """
     Test that adding a user agent in the header when calling get_web_page() adds that user agent to the request
@@ -174,7 +174,7 @@ def test_get_web_page_with_user_agent_in_headers(mocked_get_random_user_agent, m
     # GIVEN: Mocked out objects, a fake URL and a fake header
     mocked_requests.get.return_value = MagicMock(text='text')
     fake_url = 'this://is.a.fake/url'
-    user_agent_headers = {'User-Agent': 'OpenLP+/2.2.0'}
+    user_agent_headers = {'User-Agent': 'Opal Presenter/2.2.0'}
 
     # WHEN: The get_web_page() method is called
     returned_page = get_web_page(fake_url, headers=user_agent_headers)
@@ -186,9 +186,9 @@ def test_get_web_page_with_user_agent_in_headers(mocked_get_random_user_agent, m
     assert returned_page == 'text', 'The returned page should be "test"'
 
 
-@patch('openlp.core.common.httputils.requests')
-@patch('openlp.core.common.httputils.get_random_user_agent')
-@patch('openlp.core.common.httputils.Registry')
+@patch('opal.core.common.httputils.requests')
+@patch('opal.core.common.httputils.get_random_user_agent')
+@patch('opal.core.common.httputils.Registry')
 def test_get_web_page_update_openlp(MockRegistry, mocked_get_random_user_agent, mocked_requests):
     """
     Test that passing "update_openlp" as true to get_web_page calls Registry().get('app').process_events()
@@ -214,7 +214,7 @@ def test_get_web_page_update_openlp(MockRegistry, mocked_get_random_user_agent, 
     assert returned_page == 'text', 'The returned page should be the mock object'
 
 
-@patch('openlp.core.common.httputils.requests')
+@patch('opal.core.common.httputils.requests')
 def test_get_url_file_size(mocked_requests, settings):
     """
     Test that calling "get_url_file_size" works correctly
@@ -231,7 +231,7 @@ def test_get_url_file_size(mocked_requests, settings):
     assert file_size == 100
 
 
-@patch('openlp.core.common.httputils.requests')
+@patch('opal.core.common.httputils.requests')
 def test_socket_timeout(mocked_requests, temp_file):
     """
     Test socket timeout gets caught

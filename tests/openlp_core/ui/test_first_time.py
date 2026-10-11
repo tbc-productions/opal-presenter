@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.utils.__init__ package.
+Package to test the opal.core.utils.__init__ package.
 """
 from unittest.mock import patch
 
-from openlp.core.common.httputils import CONNECTION_RETRIES, get_web_page
+from opal.core.common.httputils import CONNECTION_RETRIES, get_web_page
 
 
-@patch('openlp.core.common.httputils.requests')
+@patch('opal.core.common.httputils.requests')
 def test_webpage_connection_retry(mocked_requests, mock_settings):
     """
     Test get_web_page will attempt CONNECTION_RETRIES+1 connections - bug 1409031

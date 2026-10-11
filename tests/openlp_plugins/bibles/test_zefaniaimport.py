@@ -23,8 +23,8 @@ This module contains tests for the Zefania Bible importer.
 """
 from unittest.mock import MagicMock, patch
 
-from openlp.plugins.bibles.lib.db import BibleDB
-from openlp.plugins.bibles.lib.importers.zefania import ZefaniaBible
+from opal.plugins.bibles.lib.db import BibleDB
+from opal.plugins.bibles.lib.importers.zefania import ZefaniaBible
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
@@ -54,7 +54,7 @@ def test_file_import(settings):
     #        get_book_ref_id_by_name, create_verse, create_book, session and get_language.
     test_data = load_external_result_data(TEST_PATH / 'dk1933.json')
     bible_file = 'zefania-dk1933.xml'
-    with patch('openlp.plugins.bibles.lib.importers.zefania.ZefaniaBible.application'):
+    with patch('opal.plugins.bibles.lib.importers.zefania.ZefaniaBible.application'):
         mocked_manager = MagicMock()
         mocked_import_wizard = MagicMock()
         importer = ZefaniaBible(mocked_manager, path='.', name='.', file_path=None)
@@ -84,7 +84,7 @@ def test_file_import_no_book_name(settings):
     #        get_book_ref_id_by_name, create_verse, create_book, session and get_language.
     test_data = load_external_result_data(TEST_PATH / 'rst.json')
     bible_file = 'zefania-rst.xml'
-    with patch('openlp.plugins.bibles.lib.importers.zefania.ZefaniaBible.application'):
+    with patch('opal.plugins.bibles.lib.importers.zefania.ZefaniaBible.application'):
         mocked_manager = MagicMock()
         mocked_import_wizard = MagicMock()
         importer = ZefaniaBible(mocked_manager, path='.', name='.', file_path=None)

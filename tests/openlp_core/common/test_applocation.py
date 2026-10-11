@@ -25,16 +25,16 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common import get_frozen_path
-from openlp.core.common.applocation import AppLocation
+from opal.core.common import get_frozen_path
+from opal.core.common.applocation import AppLocation
 
 
 FILE_LIST = ['file1', 'file2', 'file3.txt', 'file4.txt', 'file5.mp3', 'file6.mp3']
 
 
-@patch('openlp.core.common.applocation.AppLocation.get_directory')
-@patch('openlp.core.common.applocation.create_paths')
-@patch('openlp.core.common.applocation.os')
+@patch('opal.core.common.applocation.AppLocation.get_directory')
+@patch('opal.core.common.applocation.create_paths')
+@patch('opal.core.common.applocation.os')
 def test_get_data_path(mocked_os, mocked_create_paths, mocked_get_directory, mock_settings):
     """
     Test the AppLocation.get_data_path() method
@@ -72,8 +72,8 @@ def test_get_data_path_with_custom_location(mock_settings):
     assert data_path == Path('custom', 'dir'), 'Result should be "custom/dir"'
 
 
-@patch('openlp.core.common.applocation.Path.glob')
-@patch('openlp.core.common.applocation.AppLocation.get_data_path')
+@patch('opal.core.common.applocation.Path.glob')
+@patch('opal.core.common.applocation.AppLocation.get_data_path')
 def test_get_files_no_section_no_extension(mocked_get_data_path, mocked_glob):
     """
     Test the AppLocation.get_files() method with no parameters passed.
@@ -90,8 +90,8 @@ def test_get_files_no_section_no_extension(mocked_get_data_path, mocked_glob):
     assert result == [Path('file5.mp3'), Path('file6.mp3')], 'The file lists should be identical.'
 
 
-@patch('openlp.core.common.applocation.Path.glob')
-@patch('openlp.core.common.applocation.AppLocation.get_data_path')
+@patch('opal.core.common.applocation.Path.glob')
+@patch('opal.core.common.applocation.AppLocation.get_data_path')
 def test_get_files(mocked_get_data_path, mocked_glob):
     """
     Test the AppLocation.get_files() method with all parameters passed.
@@ -108,8 +108,8 @@ def test_get_files(mocked_get_data_path, mocked_glob):
     assert result == [Path('file5.mp3'), Path('file6.mp3')], 'The file lists should be identical.'
 
 
-@patch('openlp.core.common.applocation.AppLocation.get_data_path')
-@patch('openlp.core.common.applocation.create_paths')
+@patch('opal.core.common.applocation.AppLocation.get_data_path')
+@patch('opal.core.common.applocation.create_paths')
 def test_get_section_data_path(mocked_create_paths, mocked_get_data_path):
     """
     Test the AppLocation.get_section_data_path() method
@@ -126,7 +126,7 @@ def test_get_section_data_path(mocked_create_paths, mocked_get_data_path):
     assert data_path == Path('test', 'dir', 'section'), 'Result should be "test/dir/section"'
 
 
-@patch('openlp.core.common.applocation.get_frozen_path')
+@patch('opal.core.common.applocation.get_frozen_path')
 def test_get_directory_for_app_dir(mocked_get_frozen_path):
     """
     Test the AppLocation.get_directory() method for AppLocation.AppDir
@@ -141,9 +141,9 @@ def test_get_directory_for_app_dir(mocked_get_frozen_path):
     assert directory == Path.cwd() / Path('app', 'dir'), 'Directory should be "app/dir"'
 
 
-@patch('openlp.core.common.applocation.get_frozen_path')
-@patch('openlp.core.common.applocation.resolve')
-@patch('openlp.core.common.applocation.sys')
+@patch('opal.core.common.applocation.get_frozen_path')
+@patch('opal.core.common.applocation.resolve')
+@patch('opal.core.common.applocation.sys')
 def test_get_directory_for_plugins_dir(mocked_sys, mocked_resolve, mocked_get_frozen_path):
     """
     Test the AppLocation.get_directory() method for AppLocation.PluginsDir
@@ -167,8 +167,8 @@ def test_get_directory_for_language_dir_from_source():
     Test the AppLocation.get_directory() method for AppLocation.LanguageDir
     """
     # GIVEN: OpenLP is running from source (the default)
-    import openlp
-    openlp_resource_path = Path(openlp.__file__, '..', '..').resolve() / 'resources' / 'i18n'
+    import opal
+    openlp_resource_path = Path(opal.__file__, '..', '..').resolve() / 'resources' / 'i18n'
 
     # WHEN: We call AppLocation.get_directory
     directory = AppLocation.get_directory(AppLocation.LanguageDir)
@@ -177,16 +177,16 @@ def test_get_directory_for_language_dir_from_source():
     assert directory == openlp_resource_path
 
 
-@patch('openlp.core.common.applocation.resolve')
-@patch('openlp.core.common.applocation.is_win')
-@patch('openlp.core.common.applocation.os.getenv')
+@patch('opal.core.common.applocation.resolve')
+@patch('opal.core.common.applocation.is_win')
+@patch('opal.core.common.applocation.os.getenv')
 def test_get_directory_for_language_dir_from_windows(mocked_getenv, mocked_is_win, mocked_resolve):
     """
     Test the AppLocation.get_directory() method for AppLocation.LanguageDir
     """
     # GIVEN: OpenLP is running standalone
-    import openlp
-    openlp_i18n_path = Path(openlp.__file__).parent.resolve() / 'i18n'
+    import opal
+    openlp_i18n_path = Path(opal.__file__).parent.resolve() / 'i18n'
     mocked_resolve.side_effect = [Path('tmp'), openlp_i18n_path]
     mocked_is_win.return_value = True
     mocked_getenv.return_value = 'fake/path'
@@ -199,17 +199,17 @@ def test_get_directory_for_language_dir_from_windows(mocked_getenv, mocked_is_wi
     assert directory == openlp_i18n_path
 
 
-@patch('openlp.core.common.applocation.resolve')
-@patch('openlp.core.common.applocation.is_win')
-@patch('openlp.core.common.applocation.is_macosx')
-@patch('openlp.core.common.applocation.os.getenv')
+@patch('opal.core.common.applocation.resolve')
+@patch('opal.core.common.applocation.is_win')
+@patch('opal.core.common.applocation.is_macosx')
+@patch('opal.core.common.applocation.os.getenv')
 def test_get_directory_for_language_dir_from_macosx(mocked_getenv, mocked_is_macosx, mocked_is_win, mocked_resolve):
     """
     Test the AppLocation.get_directory() method for AppLocation.LanguageDir
     """
     # GIVEN: OpenLP is running standalone
-    import openlp
-    openlp_i18n_path = Path(openlp.__file__).parent.resolve() / 'i18n'
+    import opal
+    openlp_i18n_path = Path(opal.__file__).parent.resolve() / 'i18n'
     mocked_resolve.side_effect = [Path('tmp'), openlp_i18n_path]
     mocked_is_win.return_value = False
     mocked_is_macosx.return_value = True
@@ -223,22 +223,22 @@ def test_get_directory_for_language_dir_from_macosx(mocked_getenv, mocked_is_mac
     assert directory == openlp_i18n_path
 
 
-@patch('openlp.core.common.applocation.resolve')
-@patch('openlp.core.common.applocation.is_win')
-@patch('openlp.core.common.applocation.is_macosx')
-@patch('openlp.core.common.applocation.PlatformDirs')
-@patch('openlp.core.common.applocation.Path.exists', autospec=True)
+@patch('opal.core.common.applocation.resolve')
+@patch('opal.core.common.applocation.is_win')
+@patch('opal.core.common.applocation.is_macosx')
+@patch('opal.core.common.applocation.PlatformDirs')
+@patch('opal.core.common.applocation.Path.exists', autospec=True)
 def test_get_directory_for_language_dir_from_linux(mocked_exists, MockPlatformDirs, mocked_is_macosx, mocked_is_win,
                                                    mocked_resolve):
     """
     Test the AppLocation.get_directory() method for AppLocation.LanguageDir
     """
     # GIVEN: OpenLP is running standalone
-    openlp_i18n_path = Path('/usr/share/openlp/i18n')
+    openlp_i18n_path = Path('/usr/share/opal-presenter/i18n')
     mocked_resolve.return_value = openlp_i18n_path
     mocked_is_win.return_value = False
     mocked_is_macosx.return_value = False
-    candidate_dirs = ['/usr/share/gnome/openlp', '/usr/local/share/openlp', '/usr/share/openlp']
+    candidate_dirs = ['/usr/share/gnome/opal-presenter', '/usr/local/share/opal-presenter', '/usr/share/opal-presenter']
     mocked_dirs = MagicMock(site_data_dir=os.pathsep.join(candidate_dirs))
     MockPlatformDirs.return_value = mocked_dirs
     mocked_exists.side_effect = lambda p: p in candidate_dirs + [openlp_i18n_path]
@@ -251,7 +251,7 @@ def test_get_directory_for_language_dir_from_linux(mocked_exists, MockPlatformDi
     assert directory == openlp_i18n_path
 
 
-@patch('openlp.core.common.sys')
+@patch('opal.core.common.sys')
 def test_get_frozen_path_in_unfrozen_app(mocked_sys):
     """
     Test the _get_frozen_path() function when the application is not frozen (compiled by PyInstaller)
@@ -266,7 +266,7 @@ def test_get_frozen_path_in_unfrozen_app(mocked_sys):
     assert frozen_path == 'not frozen', '_get_frozen_path should return "not frozen"'
 
 
-@patch('openlp.core.common.sys')
+@patch('opal.core.common.sys')
 def test_get_frozen_path_in_frozen_app(mocked_sys):
     """
     Test the get_frozen_path() function when the application is frozen (compiled by PyInstaller)

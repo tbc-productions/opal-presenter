@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.planningcenter.lib.planningcenter_api package.
+Package to test the opal.plugins.planningcenter.lib.planningcenter_api package.
 """
 import os
 from email.message import EmailMessage
@@ -28,7 +28,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.planningcenter.lib.planningcenter_api import PlanningCenterAPI
+from opal.plugins.planningcenter.lib.planningcenter_api import PlanningCenterAPI
 
 TEST_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'resources', 'planningcenter'))
@@ -50,7 +50,7 @@ def test_init():
     assert api.airplane_mode is False, 'Class init without airplane mode'
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
 def test_init_with_airplane_mode(mocked_isdir: MagicMock):
     """
     Test that the api class can be instantiated with an application_id and secret
@@ -63,9 +63,9 @@ def test_init_with_airplane_mode(mocked_isdir: MagicMock):
     assert api.airplane_mode is True, 'Class init with airplane mode'
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.open')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.open')
 def test_get_from_services_api(mocked_open: MagicMock, mocked_opener: MagicMock, mocked_isdir: MagicMock,
                                api: PlanningCenterAPI):
     """
@@ -104,9 +104,9 @@ def test_check_credentials_raises_other_exceptions(api: PlanningCenterAPI):
     assert exc.value.code == 300, 'correct exception is raised from check_credentials'
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.open')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.os.path.isdir')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.open')
 def test_check_credentials_pass(mocked_open: MagicMock, mocked_opener: MagicMock, mocked_isdir: MagicMock,
                                 api: PlanningCenterAPI):
     """
@@ -122,7 +122,7 @@ def test_check_credentials_pass(mocked_open: MagicMock, mocked_opener: MagicMock
     assert result == 'jpk', 'check_credentials returns correct value for pass'
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
 def test_get_from_services_api_uses_default_auth_path(mocked_build_opener: MagicMock, api: PlanningCenterAPI):
     """
     Test that get_from_services_api uses the default opener auth path on success.
@@ -137,7 +137,7 @@ def test_get_from_services_api_uses_default_auth_path(mocked_build_opener: Magic
     mocked_fallback.assert_not_called()
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
 def test_get_from_services_api_falls_back_without_basic_challenge(mocked_build_opener: MagicMock,
                                                                   api: PlanningCenterAPI):
     """
@@ -158,7 +158,7 @@ def test_get_from_services_api_falls_back_without_basic_challenge(mocked_build_o
     mocked_fallback.assert_called_once_with(api.api_url + 'test')
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
+@patch('opal.plugins.planningcenter.lib.planningcenter_api.urllib.request.build_opener')
 def test_get_from_services_api_raises_with_basic_challenge(mocked_build_opener: MagicMock, api: PlanningCenterAPI):
     """
     Test that get_from_services_api does not fallback when 401 includes Basic challenge.

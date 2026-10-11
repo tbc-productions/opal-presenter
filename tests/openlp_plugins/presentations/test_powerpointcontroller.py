@@ -25,9 +25,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch, mock_open
 import pytest
 
-from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.plugins.presentations.lib.powerpointcontroller import PowerpointController, PowerpointDocument, \
+from opal.core.common.platform import is_win
+from opal.core.common.registry import Registry
+from opal.plugins.presentations.lib.powerpointcontroller import PowerpointController, PowerpointDocument, \
     _get_text_from_shapes
 from tests.utils.constants import RESOURCE_PATH
 
@@ -40,7 +40,7 @@ def presentation_setup(settings):
     """
     Fixture to patch the _setup method of PresentationDocument to prevent actual PowerPoint interaction during tests.
     """
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument._setup') as mocked_setup:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument._setup') as mocked_setup:
         yield mocked_setup
 
 
@@ -64,7 +64,7 @@ def test_show_error_msg(presentation_setup):
     """
     if is_win():
         # GIVEN: A PowerpointDocument with mocked controller and presentation
-        with patch('openlp.plugins.presentations.lib.powerpointcontroller.critical_error_message_box') as \
+        with patch('opal.plugins.presentations.lib.powerpointcontroller.critical_error_message_box') as \
                 mocked_critical_error_message_box:
             instance = PowerpointDocument(MagicMock(), MagicMock())
             instance.presentation = MagicMock()
@@ -97,8 +97,8 @@ def test_export_presentation_data_skips_if_already_exists(presentation_setup):
     doc.save_titles_and_notes.assert_not_called()
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='NoteText')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
+@patch('opal.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='NoteText')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
 def test_export_presentation_data_exports_all(mocked_get_thumb_folder, mock_get_text, presentation_setup):
     """
     Test that export_presentation_data creates thumbnails, saves titles and notes,
@@ -137,8 +137,8 @@ def test_export_presentation_data_exports_all(mocked_get_thumb_folder, mock_get_
     mock_file.assert_called_with(Path('/mocked/thumb/folder') / "index_map.txt", "w", encoding='utf-8')
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='Note')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
+@patch('opal.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='Note')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
 def test_export_presentation_data_skips_hidden_slides(mocked_get_thumb_folder, mock_get_text, presentation_setup):
     """
     Test that export_presentation_data skips hidden slides and only exports visible ones.
@@ -179,8 +179,8 @@ def test_export_presentation_data_skips_hidden_slides(mocked_get_thumb_folder, m
     slide3.Export.assert_called_once()
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='NoteText')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
+@patch('opal.plugins.presentations.lib.powerpointcontroller._get_text_from_shapes', return_value='NoteText')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
 def test_export_presentation_data_title_exception_handled(mocked_get_thumb_folder, mock_get_text, presentation_setup):
     """
     Test that export_presentation_data handles exceptions when accessing slide title.
@@ -225,7 +225,7 @@ def test_check_exported_data_returns_true_if_data_exists(presentation_setup):
     assert result is True
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
 def test_check_exported_data_reads_index_map_as_dict(mock_get_thumb_folder, presentation_setup):
     """
     Test that check_exported_presentation_data_exists reads the index_map from file and ensures it's a dictionary.
@@ -251,7 +251,7 @@ def test_check_exported_data_reads_index_map_as_dict(mock_get_thumb_folder, pres
     assert doc.slide_count == 2
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.PresentationDocument.get_thumbnail_folder')
 def test_check_exported_data_returns_false_on_file_error(mock_get_thumb_folder, presentation_setup):
     """
     Test that check_exported_presentation_data_exists returns False if index_map.txt is missing or causes an exception.
@@ -311,7 +311,7 @@ def test_get_text_from_shapes_with_no_shapes():
     assert result == '', 'result should be empty'
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_get_QRect_from_current_powerpoint_window_position(mocked_screen_list, presentation_setup):
     """
     Test that _get_QRect_from_current_powerpoint_window_position calculates QRect correctly based on DPI.
@@ -356,7 +356,7 @@ def test_get_QRect_from_current_powerpoint_window_position_with_no_presentation(
     assert result is False
 
 
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_get_QRect_from_current_powerpoint_window_position_raises_exception(mocked_screen_list, presentation_setup):
     """
     Test that _get_QRect_from_current_powerpoint_window_position returns False if an exception is raised.
@@ -439,7 +439,7 @@ def test_unblank_screen(presentation_setup):
     Test that unblank_screen works as expected
     """
     # GIVEN: A Document with mocked controller, presentation, ScreenList, and mocked function get_slide_number
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList') as mocked_screen_list:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList') as mocked_screen_list:
         mocked_screen_list_ret = MagicMock()
         mocked_screen_list_ret.screen_list = [1]
         mocked_screen_list.return_value = mocked_screen_list_ret
@@ -550,8 +550,8 @@ def test_get_slide_count_does_not_export_if_not_loaded(presentation_setup):
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32con')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32con')
 def test_is_active_view_state_paused(mocked_win32con, mocked_win32gui, presentation_setup):
     """
     Test that is_active calls Activate and FlashWindowEx when View.State is paused (2).
@@ -662,8 +662,8 @@ def test_is_active_com_error_known(presentation_setup):
     type(doc.presentation).SlideShowWindow = PropertyMock(side_effect=com_error)
 
     # WHEN: Calling is_active
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
             as mocked_trace_error_handler:
         result = doc.is_active()
 
@@ -687,8 +687,8 @@ def test_is_active_com_error_unknown(presentation_setup):
     type(doc.presentation).SlideShowWindow = PropertyMock(side_effect=com_error)
 
     # WHEN: Calling is_active
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
             as mocked_trace_error_handler:
         result = doc.is_active()
 
@@ -730,7 +730,7 @@ def test_stop_presentation_success(presentation_setup):
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_stop_presentation_no_ghost_window(mocked_screen_list, presentation_setup):
     """
     Test that stop_presentation exits the slideshow without checking for ghost windows when ShowType != 2.
@@ -799,8 +799,8 @@ def test_stop_presentation_exception_handling(presentation_setup):
     type(doc.presentation).SlideShowWindow = PropertyMock(side_effect=com_error)
 
     # WHEN: Calling stop_presentation and encountering an exception
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace, \
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace, \
             patch.object(doc, 'show_error_msg') as mocked_error:
         doc.stop_presentation()
 
@@ -811,8 +811,8 @@ def test_stop_presentation_exception_handling(presentation_setup):
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_close_presentation_with_ghost_window(mocked_registry, mocked_screen_list,
                                               presentation_setup):
     """
@@ -848,8 +848,8 @@ def test_close_presentation_with_ghost_window(mocked_registry, mocked_screen_lis
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_close_presentation_without_ghost_window(mocked_registry, mocked_screen_list,
                                                  presentation_setup):
     """
@@ -884,8 +884,8 @@ def test_close_presentation_without_ghost_window(mocked_registry, mocked_screen_
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_close_presentation_no_current_window_position(mocked_registry, mocked_screen_list,
                                                        presentation_setup):
     """
@@ -921,8 +921,8 @@ def test_close_presentation_no_current_window_position(mocked_registry, mocked_s
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_close_presentation_with_exception(mocked_registry, mocked_screen_list,
                                            presentation_setup):
     """
@@ -943,8 +943,8 @@ def test_close_presentation_with_exception(mocked_registry, mocked_screen_list,
     mocked_screen_list.return_value.__len__.return_value = 2
 
     # WHEN: Calling close_presentation and expecting exception to be handled
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace:
         doc.close_presentation()
 
     # THEN: Exception should be logged, and cleanup still performed
@@ -955,8 +955,8 @@ def test_close_presentation_with_exception(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_close_presentation_no_presentation(mocked_registry, mocked_screen_list,
                                             presentation_setup):
     """
@@ -972,7 +972,7 @@ def test_close_presentation_no_presentation(mocked_registry, mocked_screen_list,
     mocked_screen_list.return_value.__len__.return_value = 2
 
     # WHEN: Calling close_presentation
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.close_presentation()
 
     # THEN: Nothing is closed, but cleanup proceeds
@@ -981,9 +981,9 @@ def test_close_presentation_no_presentation(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_success(mocked_registry, mocked_screen_list,
                                     mocked_win32gui, presentation_setup):
     """
@@ -1035,9 +1035,9 @@ def test_start_presentation_success(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_failure(mocked_registry, mocked_screen_list,
                                     mocked_win32gui, presentation_setup):
     """
@@ -1062,9 +1062,9 @@ def test_start_presentation_failure(mocked_registry, mocked_screen_list,
 
     # WHEN: Calling start_presentation, expecting an exception to be handled
     with patch.object(doc, 'modify_powerpoint_display_monitor') as mocked_modify_registry, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
             patch.object(doc, 'show_error_msg') as mocked_show_error_msg, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
             as mocked_trace_error_handler:
         doc.start_presentation()
 
@@ -1078,9 +1078,9 @@ def test_start_presentation_failure(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_non_fullscreen(mocked_registry, mocked_screen_list,
                                            mocked_win32gui, presentation_setup):
     """
@@ -1125,9 +1125,9 @@ def test_start_presentation_non_fullscreen(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_no_ppt_window(mocked_registry, mocked_screen_list,
                                           mocked_win32gui, presentation_setup):
     """
@@ -1169,9 +1169,9 @@ def test_start_presentation_no_ppt_window(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_bring_to_top_fails(mocked_registry, mocked_screen_list,
                                                mocked_win32gui, presentation_setup):
     """
@@ -1207,7 +1207,7 @@ def test_start_presentation_bring_to_top_fails(mocked_registry, mocked_screen_li
 
     # WHEN: Calling start_presentation with BringWindowToTop failure
     with patch.object(doc, 'modify_powerpoint_display_monitor') as mocked_modify, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+            patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.start_presentation()
 
     # THEN: BringWindowToTop error is caught and logged
@@ -1218,8 +1218,8 @@ def test_start_presentation_bring_to_top_fails(mocked_registry, mocked_screen_li
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.Registry')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.Registry')
 def test_start_presentation_single_screen(mocked_registry, mocked_screen_list,
                                           presentation_setup):
     """
@@ -1251,7 +1251,7 @@ def test_start_presentation_single_screen(mocked_registry, mocked_screen_list,
     # WHEN: Calling start_presentation
     with patch.object(doc, 'modify_powerpoint_display_monitor'), \
             patch.object(doc, 'adjust_powerpoint_window_position'), \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.log'):
+            patch('opal.plugins.presentations.lib.powerpointcontroller.log'):
         doc.start_presentation()
 
     # THEN: activateWindow should not be called on single screen
@@ -1260,8 +1260,8 @@ def test_start_presentation_single_screen(mocked_registry, mocked_screen_list,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ctypes')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ctypes')
 def test_close_powerpoint_ghost_window_success(mocked_ctypes, mocked_win32gui,
                                                presentation_setup):
     """
@@ -1285,7 +1285,7 @@ def test_close_powerpoint_ghost_window_success(mocked_ctypes, mocked_win32gui,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
 def test_close_powerpoint_ghost_window_no_ghost_window(mocked_win32gui, presentation_setup):
     """
     Test that close_powerpoint_ghost_window does nothing if no ghost PowerPoint window is found.
@@ -1305,8 +1305,8 @@ def test_close_powerpoint_ghost_window_no_ghost_window(mocked_win32gui, presenta
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ctypes')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ctypes')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
 def test_close_powerpoint_ghost_window_postmessage_failure(mocked_win32gui, mocked_ctypes,
                                                            presentation_setup):
     """
@@ -1323,8 +1323,8 @@ def test_close_powerpoint_ghost_window_postmessage_failure(mocked_win32gui, mock
     mocked_ctypes.windll.user32.PostMessageW.side_effect = Exception('Simulated error')
 
     # WHEN: Calling close_powerpoint_ghost_window
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') \
             as mocked_trace_error_handler:
         result = doc.close_powerpoint_ghost_window(size)
 
@@ -1337,7 +1337,7 @@ def test_close_powerpoint_ghost_window_postmessage_failure(mocked_win32gui, mock
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32api')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32api')
 def test_get_win_display_name_by_geometry_match(mocked_win32api, presentation_setup):
     """
     Test that get_win_display_name_by_geometry returns the correct device name when monitor geometry matches.
@@ -1363,7 +1363,7 @@ def test_get_win_display_name_by_geometry_match(mocked_win32api, presentation_se
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32api')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32api')
 def test_get_win_display_name_by_geometry_no_match(mocked_win32api, presentation_setup):
     """
     Test that get_win_display_name_by_geometry returns None when there is no geometry match.
@@ -1388,7 +1388,7 @@ def test_get_win_display_name_by_geometry_no_match(mocked_win32api, presentation
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32api')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32api')
 def test_get_win_display_name_by_geometry_exception(mocked_win32api, presentation_setup):
     """
     Test that get_win_display_name_by_geometry handles exceptions and logs a warning.
@@ -1399,8 +1399,8 @@ def test_get_win_display_name_by_geometry_exception(mocked_win32api, presentatio
     mocked_win32api.EnumDisplayMonitors.side_effect = RuntimeError('Mocked error')
 
     # WHEN: Calling get_win_display_name_by_geometry
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
-            patch('openlp.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log, \
+            patch('opal.plugins.presentations.lib.powerpointcontroller.trace_error_handler') as mocked_trace:
         device_name = doc.get_win_display_name_by_geometry(mocked_geometry)
 
     # THEN: Should return None, log a warning, and call trace handler
@@ -1410,7 +1410,7 @@ def test_get_win_display_name_by_geometry_exception(mocked_win32api, presentatio
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.winreg')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.winreg')
 def test_modify_powerpoint_display_monitor_success(mocked_winreg, presentation_setup):
     """
     Test that modify_powerpoint_display_monitor correctly updates the registry key and returns the original value.
@@ -1434,7 +1434,7 @@ def test_modify_powerpoint_display_monitor_success(mocked_winreg, presentation_s
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.winreg')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.winreg')
 def test_modify_powerpoint_display_monitor_failure(mocked_winreg, presentation_setup):
     """
     Test that modify_powerpoint_display_monitor handles OSError gracefully and logs a warning.
@@ -1446,7 +1446,7 @@ def test_modify_powerpoint_display_monitor_failure(mocked_winreg, presentation_s
     mocked_winreg.OpenKey.side_effect = OSError
 
     # WHEN: Calling modify_powerpoint_display_monitor
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         original_value = doc.modify_powerpoint_display_monitor('new_value')
 
     # THEN: A warning should be logged, and no value should be returned
@@ -1464,7 +1464,7 @@ def test_modify_powerpoint_display_monitor_none_value(presentation_setup):
     doc = PowerpointDocument(MagicMock(), MagicMock())
 
     # WHEN: Calling modify_powerpoint_display_monitor with None
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log.warning') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log.warning') as mocked_log:
         result = doc.modify_powerpoint_display_monitor(None)
 
     # THEN: A warning should be logged, and the function should return None
@@ -1474,7 +1474,7 @@ def test_modify_powerpoint_display_monitor_none_value(presentation_setup):
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.winreg')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.winreg')
 def test_modify_powerpoint_display_monitor_missing_registry_key(mocked_winreg, presentation_setup):
     """
     Test that modify_powerpoint_display_monitor handles the case where the 'DisplayMonitor' registry key is missing.
@@ -1498,7 +1498,7 @@ def test_modify_powerpoint_display_monitor_missing_registry_key(mocked_winreg, p
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.winreg')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.winreg')
 def test_modify_powerpoint_display_monitor_no_change(mocked_winreg, presentation_setup):
     """
     Test that modify_powerpoint_display_monitor does not modify the registry
@@ -1522,8 +1522,8 @@ def test_modify_powerpoint_display_monitor_no_change(mocked_winreg, presentation
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ctypes')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ctypes')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_adjust_position_success_with_hwnd(mocked_screen_list, mocked_ctypes,
                                            presentation_setup):
     """
@@ -1556,7 +1556,7 @@ def test_adjust_position_success_with_hwnd(mocked_screen_list, mocked_ctypes,
     mocked_ctypes.byref.side_effect = lambda x: x
 
     # WHEN: Calling adjust_powerpoint_window_position
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.adjust_powerpoint_window_position(ppt_window, hwnd_to_scale=hwnd)
 
     # THEN: Window should be positioned and scaled correctly
@@ -1568,8 +1568,8 @@ def test_adjust_position_success_with_hwnd(mocked_screen_list, mocked_ctypes,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ctypes')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ctypes')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_adjust_position_border_calc_fails(mocked_screen_list, mocked_ctypes,
                                            presentation_setup):
     """
@@ -1592,7 +1592,7 @@ def test_adjust_position_border_calc_fails(mocked_screen_list, mocked_ctypes,
     mocked_screen.raw_screen.logicalDotsPerInch.return_value = 96
 
     # WHEN: Calling adjust_powerpoint_window_position and ctypes fails
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.adjust_powerpoint_window_position(ppt_window, hwnd_to_scale=1234)
 
     # THEN: Error is logged, but window still positioned with default values
@@ -1601,7 +1601,7 @@ def test_adjust_position_border_calc_fails(mocked_screen_list, mocked_ctypes,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_adjust_position_no_hwnd(mocked_screen_list, presentation_setup):
     """
     Test that adjust_powerpoint_window_position works when hwnd_to_scale is None (no border/caption calculation).
@@ -1619,7 +1619,7 @@ def test_adjust_position_no_hwnd(mocked_screen_list, presentation_setup):
     mocked_screen.raw_screen.logicalDotsPerInch.return_value = 96
 
     # WHEN: Calling adjust_powerpoint_window_position without hwnd_to_scale
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.adjust_powerpoint_window_position(ppt_window)
 
     # THEN: Window is adjusted with no caption/border
@@ -1631,7 +1631,7 @@ def test_adjust_position_no_hwnd(mocked_screen_list, presentation_setup):
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.ScreenList')
 def test_adjust_position_attribute_error(mocked_screen_list, presentation_setup):
     """
     Test that adjust_powerpoint_window_position handles AttributeError gracefully (e.g. ScreenList fails).
@@ -1641,7 +1641,7 @@ def test_adjust_position_attribute_error(mocked_screen_list, presentation_setup)
     ppt_window = MagicMock()
     mocked_screen_list.side_effect = AttributeError('fail')
     # WHEN: Calling adjust_powerpoint_window_position and ScreenList fails
-    with patch('openlp.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
+    with patch('opal.plugins.presentations.lib.powerpointcontroller.log') as mocked_log:
         doc.adjust_powerpoint_window_position(ppt_window)
 
     # THEN: The error is caught and logged
@@ -1649,8 +1649,8 @@ def test_adjust_position_attribute_error(mocked_screen_list, presentation_setup)
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32con')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32con')
 def test_window_enum_callback_finds_presentation_window(mocked_win32con, mocked_win32gui,
                                                         presentation_setup):
     """
@@ -1680,7 +1680,7 @@ def test_window_enum_callback_finds_presentation_window(mocked_win32con, mocked_
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
 def test_window_enum_callback_ignores_non_matching_title(mocked_win32gui, presentation_setup):
     """
     Test that _window_enum_callback does not save the handle
@@ -1708,7 +1708,7 @@ def test_window_enum_callback_ignores_non_matching_title(mocked_win32gui, presen
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on Windows')
-@patch('openlp.plugins.presentations.lib.powerpointcontroller.win32gui')
+@patch('opal.plugins.presentations.lib.powerpointcontroller.win32gui')
 def test_window_enum_callback_without_filename_check(mocked_win32gui, presentation_setup):
     """
     Test that _window_enum_callback finds a window even if the title doesn't contain the file name

@@ -19,30 +19,23 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.alerts.forms.alertform package.
+Package to test the opal.plugins.alerts.forms.alertform package.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from PySide6 import QtTest, QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.alerts.forms.alertform import AlertForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.alerts.forms.alertform import AlertForm
 
 
-def test_help(settings: Settings, registry: Registry):
+def test_no_help_button(settings: Settings, registry: Registry):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: An alert form and a patched help function
     registry.register('main_window', None)
     alert_form = AlertForm(MagicMock())
 
-    # WHEN: The Help button is clicked
-    with patch.object(alert_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(alert_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert alert_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None

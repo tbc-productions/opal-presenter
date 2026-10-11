@@ -1,7 +1,7 @@
 Interface themes
 ================
 
-Settings > Configure OpenLP+ > General > UI Settings contains one
+Settings > Configure Opal Presenter > General > UI Settings contains one
 ``Interface Theme (needs restart)`` selector on every platform:
 
 * **Auto** follows the system colour scheme and is the default.
@@ -16,7 +16,7 @@ indicators, upright layout navigation, and a compact accent Go live button. Serv
 Library remain on the left; Preview and Live keep their slide lists above the
 screen previews, with adjustable dividers.
 
-Restart OpenLP+ after changing the theme. Saved layouts remain available.
+Restart Opal Presenter after changing the theme. Saved layouts remain available.
 Saving a different theme displays a restart reminder. Legacy QDarkStyle selections
 map to Dark.
 Modern is available on Windows, macOS and Linux. Native Mica remains specific

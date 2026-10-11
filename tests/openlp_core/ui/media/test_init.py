@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ###########################################################################
 """
-Package to test the openlp.core.ui.media package.
+Package to test the opal.core.ui.media package.
 """
 import pytest
 
 from unittest.mock import MagicMock
 
 
-from openlp.core.common.registry import Registry
-from openlp.core.ui.media import MediaPlayItem, media_state, MediaState, MediaType
+from opal.core.common.registry import Registry
+from opal.core.ui.media import MediaPlayItem, media_state, MediaState, MediaType
 
 
 @pytest.mark.parametrize("theme, type, playing, result", [

@@ -26,7 +26,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from bs4 import BeautifulSoup
 
-from openlp.plugins.bibles.lib.importers.http import BSExtract
+from opal.plugins.bibles.lib.importers.http import BSExtract
 
 
 @pytest.fixture
@@ -35,9 +35,9 @@ def bsextract() -> BSExtract:
 
 
 @pytest.mark.skip('BSExtract does not currently use http for books')
-@patch('openlp.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
-@patch('openlp.plugins.bibles.lib.importers.http.log')
-@patch('openlp.plugins.bibles.lib.importers.http.urllib')
+@patch('opal.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
+@patch('opal.plugins.bibles.lib.importers.http.log')
+@patch('opal.plugins.bibles.lib.importers.http.urllib')
 def test_get_books_from_http_no_soup(mocked_urllib: MagicMock, mocked_log: MagicMock, mocked_get_soup: MagicMock,
                                      bsextract: BSExtract):
     """
@@ -59,10 +59,10 @@ def test_get_books_from_http_no_soup(mocked_urllib: MagicMock, mocked_log: Magic
 
 
 @pytest.mark.skip('BSExtract does not currently use http for books')
-@patch('openlp.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
-@patch('openlp.plugins.bibles.lib.importers.http.log')
-@patch('openlp.plugins.bibles.lib.importers.http.urllib')
-@patch('openlp.plugins.bibles.lib.importers.http.send_error_message')
+@patch('opal.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
+@patch('opal.plugins.bibles.lib.importers.http.log')
+@patch('opal.plugins.bibles.lib.importers.http.urllib')
+@patch('opal.plugins.bibles.lib.importers.http.send_error_message')
 def test_get_books_from_http_no_content(mocked_send_error_message: MagicMock, mocked_urllib: MagicMock,
                                         mocked_log: MagicMock, mocked_get_soup: MagicMock, bsextract: BSExtract):
     """
@@ -91,10 +91,10 @@ def test_get_books_from_http_no_content(mocked_send_error_message: MagicMock, mo
 
 
 @pytest.mark.skip('BSExtract does not currently use http for books')
-@patch('openlp.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
-@patch('openlp.plugins.bibles.lib.importers.http.log')
-@patch('openlp.plugins.bibles.lib.importers.http.urllib')
-@patch('openlp.plugins.bibles.lib.importers.http.send_error_message')
+@patch('opal.plugins.bibles.lib.importers.http.get_soup_for_bible_ref')
+@patch('opal.plugins.bibles.lib.importers.http.log')
+@patch('opal.plugins.bibles.lib.importers.http.urllib')
+@patch('opal.plugins.bibles.lib.importers.http.send_error_message')
 def test_get_books_from_http_content(mocked_send_error_message: MagicMock, mocked_urllib: MagicMock,
                                      mocked_log: MagicMock, mocked_get_soup: MagicMock, bsextract: BSExtract):
     """

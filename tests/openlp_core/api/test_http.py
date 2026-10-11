@@ -21,7 +21,7 @@
 import pytest
 from flask import Response
 
-from openlp.core.api.http import check_auth, authenticate
+from opal.core.api.http import check_auth, authenticate
 
 
 @pytest.mark.parametrize('auth,result', [((None, 'b3BlbmxwOnBhc3N3b3Jk'), True),
@@ -37,4 +37,4 @@ def test_authenticate():
     result = authenticate()
     assert isinstance(result, Response)
     assert result.status_code == 401
-    assert result.www_authenticate.realm == 'OpenLP+ Login Required'
+    assert result.www_authenticate.realm == 'Opal Presenter Login Required'

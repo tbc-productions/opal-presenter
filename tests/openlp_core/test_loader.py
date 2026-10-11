@@ -19,19 +19,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.loader package.
+Package to test the opal.core.loader package.
 """
 from unittest.mock import MagicMock, patch
 
-from openlp.core.loader import loader
+from opal.core.loader import loader
 
 
-@patch('openlp.core.loader.Renderer', autospec=True)
-@patch('openlp.core.loader.PluginManager', autospec=True)
-@patch('openlp.core.loader.State', autospec=True)
-@patch('openlp.core.loader.MediaController', autospec=True)
-@patch('openlp.core.loader.LiveController', autospec=True)
-@patch('openlp.core.loader.PreviewController', autospec=True)
+@patch('opal.core.loader.Renderer', autospec=True)
+@patch('opal.core.loader.PluginManager', autospec=True)
+@patch('opal.core.loader.State', autospec=True)
+@patch('opal.core.loader.MediaController', autospec=True)
+@patch('opal.core.loader.LiveController', autospec=True)
+@patch('opal.core.loader.PreviewController', autospec=True)
 def test_loader(MockPreviewController: MagicMock, MockLiveController: MagicMock,
                 MockMediaController: MagicMock, MockState: MagicMock, MockPluginManager: MagicMock,
                 MockRenderer: MagicMock):

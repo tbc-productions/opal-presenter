@@ -5,8 +5,8 @@
 """Tests for Bible slide row label parsing."""
 import pytest
 
-from openlp.plugins.bibles.lib import update_reference_separators
-from openlp.plugins.bibles.lib.slidelabel import (
+from opal.plugins.bibles.lib import update_reference_separators
+from opal.plugins.bibles.lib.slidelabel import (
     bible_chapter_hint_from_row_tag,
     row_label_from_raw_page_text,
 )
@@ -49,14 +49,14 @@ def test_row_label_spans_chapters():
 
 
 def test_bible_preview_preserves_superscripts_and_spacing():
-    from openlp.plugins.bibles.lib.slidelabel import bible_preview_html
+    from opal.plugins.bibles.lib.slidelabel import bible_preview_html
 
     assert bible_preview_html('{su}30&nbsp;{/su}A &amp; B\n{su}31&nbsp;{/su}C') == (
         '<sup>30 </sup>A &amp; B<br><sup>31 </sup>C')
 
 
 def test_bible_row_strips_custom_tags_around_superscripts():
-    from openlp.plugins.bibles.lib.slidelabel import bible_preview_html
+    from opal.plugins.bibles.lib.slidelabel import bible_preview_html
 
     assert bible_preview_html('{cg}{su}1&nbsp;{/su}In the beginning{/cg}') == (
         '<sup>1 </sup>In the beginning')

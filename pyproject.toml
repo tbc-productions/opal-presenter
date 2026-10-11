@@ -3,14 +3,14 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "openlp-plus"
+name = "opal-presenter"
 dynamic = ["version"]
 description = "Open-source church presentation and lyrics projection application."
-readme = "README.rst"
+readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.14,<3.15"
 authors = [
-    { name = "OpenLP+ Developers", email = "developer@tbcproductions.net" },
+    { name = "Opal Presenter Developers", email = "developer@tbcproductions.net" },
 ]
 keywords = [
     "bible",
@@ -65,12 +65,11 @@ dependencies = [
     "beautifulsoup4 >= 4.15.0",
     "chardet >= 7.6.0",
     "distro; platform_system == 'Linux'",
-    "FluentQt == 1.9.2+openlp.7",
+    "FluentQt == 1.9.3+openlp.1",
     "flask",
     "flask-cors >= 6.0.5",
     "imagecodecs",
     "lxml >= 6.1.3",
-    "keyring >= 25.0",
     "Mako >= 1.4.3",
     "numpy",
     "pillow >= 12.3.0",
@@ -127,32 +126,31 @@ test = [
 ]
 
 [project.scripts]
-openlp = "openlp.__main__:start"
+opal-presenter = "opal.__main__:start"
 
 [project.entry-points.pyinstaller40]
-hook-dirs = "openlp.__pyinstaller:get_hook_dirs"
+hook-dirs = "opal.__pyinstaller:get_hook_dirs"
 
 [project.urls]
-Homepage = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
-Source = "https://git.tbcproductions.net/tbcproductions/openlp-plus"
-Issues = "https://git.tbcproductions.net/tbcproductions/openlp-plus/issues"
-Documentation = "https://manual.openlp.org"
+Homepage = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
+Source = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
+Issues = "https://git.tbcproductions.net/tbcproductions/opal-presenter/issues"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "openlp/.version"
+version-file = "opal/.version"
 template = "{version}"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/openlp",
+    "/opal",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "openlp",
+    "opal",
 ]
 
 [tool.hatch.envs.default]
@@ -162,8 +160,8 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-# For those who have problems running "hatch run openlp"
-run_openlp = "python run_openlp.py"
+# For those who have problems running "hatch run opal-presenter"
+run_opal_presenter = "python run_opal_presenter.py"
 
 dependencies = [
     "flake8",
@@ -178,7 +176,7 @@ dependencies = [
 [tool.hatch.envs.test.scripts]
 run = "pytest tests {args}"
 run_selected = "pytest {args}"
-cov = "pytest tests --cov openlp --cov-report html {args}"
+cov = "pytest tests --cov opal --cov-report html {args}"
 debug = "pytest tests --pudb {args}"
 ci = "pytest tests --color=no --disable-warnings {args}"
 

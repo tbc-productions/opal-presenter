@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.ThemeTab package.
+Package to test the opal.core.ui.ThemeTab package.
 """
 from unittest.mock import MagicMock
 
-from openlp.core.common.registry import Registry
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.core.ui.themestab import ThemesTab
+from opal.core.common.registry import Registry
+from opal.core.ui.settingsform import SettingsForm
+from opal.core.ui.themestab import ThemesTab
 
 
 def test_save_triggers_processes_true(mock_settings):

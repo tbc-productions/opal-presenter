@@ -28,17 +28,20 @@ from lxml import etree
 
 resource_path = os.path.join('..', 'resources', 'images')
 resource_file_path = os.path.join(resource_path, 'openlp-2.qrc')
-src_directory = os.path.join('..', 'openlp')
+src_directory = os.path.join('..', 'opal')
 
 RESOURCES_TO_IGNORE = [
-    'openlp.svg',
-    'OpenLP.ico',
+    'OpalPresenter.icns',
+    'OpalPresenter.ico',
     'openlp-2.qrc',
-    'openlp-logo-16x16.png',
-    'openlp-logo-32x32.png',
-    'openlp-logo-48x48.png',
-    'openlp-logo-64x64.png',
-    'openlp-logo-128x128.png',
+    'opal-presenter-logo-16x16.png',
+    'opal-presenter-logo-32x32.png',
+    'opal-presenter-logo-48x48.png',
+    'opal-presenter-logo-64x64.png',
+    'opal-presenter-logo-128x128.png',
+    'opal-presenter-logo-256x256.png',
+    'opal-presenter-logo-512x512.png',
+    'opal-presenter-logo-1024x1024.png',
     'README.txt'
 ]
 

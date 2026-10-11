@@ -39,14 +39,14 @@ describe("Presentation preview backgrounds", function () {
           }, 1000);
         });
       };
-      frame.srcdoc = '<link rel="stylesheet" href="/base/openlp/core/display/html/reveal.css">' +
-        '<link rel="stylesheet" href="/base/openlp/core/display/html/display.css">' +
+      frame.srcdoc = '<link rel="stylesheet" href="/base/opal/core/display/html/reveal.css">' +
+        '<link rel="stylesheet" href="/base/opal/core/display/html/display.css">' +
         '<div class="reveal"><div class="slides"><section></section></div><div class="footer"></div></div>' +
         '<div id="logo-screen"></div><div id="logo-screen-image"></div>' +
         '<script src="/base/tests/js/fake_webchannel.js"></script>' +
-        '<script src="/base/openlp/core/display/html/reveal.js"></script>' +
-        '<script src="/base/openlp/core/display/html/display-init.js"></script>' +
-        '<script src="/base/openlp/core/display/html/display.js"></script>';
+        '<script src="/base/opal/core/display/html/reveal.js"></script>' +
+        '<script src="/base/opal/core/display/html/display-init.js"></script>' +
+        '<script src="/base/opal/core/display/html/display.js"></script>';
       document.body.appendChild(frame);
     });
   });
@@ -82,9 +82,9 @@ describe("Presentation preview backgrounds", function () {
     frame.srcdoc = '<div class="reveal"><div class="slides"><section></section></div></div>' +
       '<div class="footer"></div><div id="logo-screen"></div><div id="logo-screen-image"></div>' +
       '<script src="/base/tests/js/fake_webchannel.js"></script>' +
-      '<script src="/base/openlp/core/display/html/reveal.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display-init.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display.js"></script>';
+      '<script src="/base/opal/core/display/html/reveal.js"></script>' +
+      '<script src="/base/opal/core/display/html/display-init.js"></script>' +
+      '<script src="/base/opal/core/display/html/display.js"></script>';
     document.body.appendChild(frame);
   });
 
@@ -124,9 +124,9 @@ describe("Presentation preview backgrounds", function () {
     frame.srcdoc = '<div class="reveal"><div class="slides"><section></section></div></div>' +
       '<div class="footer"></div><div id="logo-screen"></div><div id="logo-screen-image"></div>' +
       '<script src="/base/tests/js/fake_webchannel.js"></script>' +
-      '<script src="/base/openlp/core/display/html/reveal.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display-init.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display.js"></script>';
+      '<script src="/base/opal/core/display/html/reveal.js"></script>' +
+      '<script src="/base/opal/core/display/html/display-init.js"></script>' +
+      '<script src="/base/opal/core/display/html/display.js"></script>';
     document.body.appendChild(frame);
   });
 });

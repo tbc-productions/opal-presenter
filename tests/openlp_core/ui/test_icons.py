@@ -18,22 +18,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.icons package.
+Package to test the opal.core.ui.icons package.
 """
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtGui
 
-from openlp.core.common import Singleton
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.icons import UiIcons
+from opal.core.common import Singleton
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.icons import UiIcons
 
 
 def test_simple_icon(settings: Settings):
     # GIVEN: an basic set of icons
-    with patch('openlp.core.ui.icons.UiIcons.__init__', return_value=None):
+    with patch('opal.core.ui.icons.UiIcons.__init__', return_value=None):
         icons = UiIcons()
         icon_list = {
             'active': {'icon': 'mdi.human-handsup'}
@@ -46,10 +46,10 @@ def test_simple_icon(settings: Settings):
         assert isinstance(icon_active, QtGui.QIcon)
 
 
-@patch('openlp.core.ui.icons.qta')
-@patch('openlp.core.ui.icons.build_icon')
-@patch('openlp.core.ui.icons.UiIcons.load_icons')
-@patch('openlp.core.ui.icons.AppLocation.get_directory')
+@patch('opal.core.ui.icons.qta')
+@patch('opal.core.ui.icons.build_icon')
+@patch('opal.core.ui.icons.UiIcons.load_icons')
+@patch('opal.core.ui.icons.AppLocation.get_directory')
 def test_uiicons_init(mocked_get_directory: MagicMock, mocked_load_icons: MagicMock, mocked_build_icon: MagicMock,
                       mocked_qta: MagicMock, settings: Settings, registry: Registry, request):
     """Test the __init__ method, that it makes the correct calls"""
@@ -71,4 +71,4 @@ def test_uiicons_init(mocked_get_directory: MagicMock, mocked_load_icons: MagicM
     mocked_qta.load_font.assert_called_once_with('op', 'OpenLP.ttf', 'openlp-charmap.json', directory=expected_dir)
     mocked_qta.set_defaults.assert_called_once_with(**icons._default_icon_colors)
     mocked_load_icons.assert_called_once_with(icons._icon_list)
-    mocked_build_icon.assert_called_once_with(':/icon/openlp-logo.svg')
+    mocked_build_icon.assert_called_once_with(':/icon/opal-presenter-icon.svg')

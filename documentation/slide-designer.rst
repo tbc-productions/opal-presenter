@@ -3,24 +3,27 @@ Slide designer
 
 Slide Designer is an optional plugin, enabled by default. Enable or disable it
 in Plugin Manager. Creating or editing an item opens directly in Slide Designer,
-without restarting OpenLP+. When disabled, songs and custom slides use their
+without restarting Opal Presenter. When disabled, songs and custom slides use their
 original dialogs and basic text editors. Saved designs and their projection/export
 behaviour remain intact; enabling the plugin makes those designs editable again.
 
 The designer opens in its own Fluent window, which can be minimised or maximised.
-The main OpenLP+ window and other library items remain available without replacing
-the draft. Its window title is the item name followed by ``- OpenLP+``, with
+The main Opal Presenter window and other library items remain available without replacing
+the draft. Its window title is the item name followed by ``- Opal Presenter``, with
 ``New Song`` or ``New Custom Slide`` used for unnamed items. Exit/Quit and closing
 the main window check each open designer for unsaved changes. Changed items offer
 Save, Discard and Cancel in a ContentDialog; unchanged items close without a prompt.
-Cancel or a validation failure stops quitting. Once the designers close, OpenLP+
+Cancel or a validation failure stops quitting. Once the designers close, Opal Presenter
 continues its normal unsaved-service and exit-confirmation behaviour.
 
 Songs have a collapsible navigation rail for Slides, Authors/Topics/Songbooks,
 Copyright/Flags/Comments and Linked Audio. Metadata controls, validation and saving
 use the existing Songs plugin. Custom Slides has a single workspace with Credits
 below its slide list. Title and, for songs, Alternative title are in the top
-command row. Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect-ratio
+command row. Songs without copyright information show a warning above the lyrics
+entry and a warning badge beside Copyright/Flags/Comments in the navigation rail.
+Both clear as soon as copyright information is entered.
+Verse order is below the song split controls. Theme is in the footer below the slide preview, with the Preview aspect ratio
 selector aligned to the right. The preview uses the assigned theme, falling back
 to the global theme. Imported theme snapshots remain in use until a new theme is chosen.
 
@@ -37,13 +40,8 @@ None removes it. Bold, italic and underline can still be combined independently.
 The picker shows Mixed when a selection contains different styles. Applying a
 style across slides preserves section labels and split markers.
 
-New designs start with a Full HD 1920 × 1080 canvas. The preview's canvas selector
-also offers 1920 × 1200 (16:10), 2560 × 1080 (ultrawide) and 1440 × 1080 (4:3).
-Position and size controls use pixels on that canvas. Changing canvas size fits
-and centres the whole layout, scaling positions, dimensions and fonts uniformly
-so aligned edges, relative spacing and object proportions are preserved. Changes use a fixed reference
-canvas, so switching aspect ratios repeatedly does not cumulatively resize or
-move the objects. The reference is saved with the design. Canvas changes support undo.
+New designs use Full HD 1920 × 1080 proportions automatically. Existing designs
+retain their saved proportions. There is no separate slide-size control.
 The previous preview remains visible while text, formatting, layout or aspect
 ratio changes render, then switches to the completed layout once its images,
 fonts and positioning are ready.
@@ -53,6 +51,24 @@ background still fills the screen; objects are never stretched to match the
 output aspect ratio. Earlier designs retain their existing output behaviour until
 edited in the designer. The XML retains normalised coordinates plus canvas
 width/height, avoiding rounding loss when converting between pixel sizes.
+
+Theme text and footer areas use percentage sizes and offsets from their nearest
+screen edges. Their boxes are kept inside the display, including when an older
+theme contains oversized or off-screen coordinates. Default main and footer
+areas leave a 2% margin at the display edges and a 2% gap between them. Text overflowing a box stays
+inside that box; lyrics still use the normal slide pagination, and long footers
+can use the theme's wrapping option.
+
+Position and box size in both designers use percentages of the slide canvas,
+shown with at most one decimal place. Point sizes are shown as whole numbers.
+Font sizes use reference points on a 1080-high canvas, independently of the
+connected display or selected preview ratio. Saved themes record their reference
+display dimensions, and rendering scales fonts, spacing, outlines and shadows
+with the display height. A 64-point font designed at 1080p therefore occupies the
+same proportion of the screen at 720p or 4K. Preview zoom follows the same scaling.
+For legacy themes without reference dimensions, the saved footer bounds provide
+an estimate; a custom footer that does not reach the screen edges can make that
+estimate inaccurate. Saving the theme records explicit dimensions for future use.
 
 Add text boxes, rectangles, ellipses and images with the toolbar. Select an
 element on the canvas or in Layers. The top row in Layers is the frontmost object;
@@ -112,9 +128,9 @@ retain independent copies and friendly labels when library entries are deleted.
 Original files smaller than 2 MiB are embedded as base64 data URIs. Larger files
 use content-addressed references and are bundled once in exported archives, including
 assets in master layouts and per-slide overrides. Songs with large assets export as
-``.osz`` packages containing OpenLyrics XML and media; the OpenLyrics importer accepts
+``.opal-song`` packages containing OpenLyrics XML and media; the OpenLyrics importer accepts
 these packages. Custom exports include their XML alongside the service data in
-``.osz`` archives. Themes retain ``.otz`` archives, embedding small backgrounds in their
+``.opal-slides`` archives. Themes use ``.opal-theme`` archives, embedding small backgrounds in their
 JSON and bundling larger files. Imports retain assets permanently, independently of
 the archive, original source files and library entries.
 
@@ -133,8 +149,20 @@ beyond PowerPoint's range are baked in full to preserve their appearance and ord
 ODP exports bake all filters into the image pixels. In both formats, slide text
 remains editable and images remain separate movable objects.
 
+Choose an aspect ratio: 16:9, 16:10, ultrawide 64:27 or 4:3. Connected displays
+and saved profiles show their aspect ratios; 720p, 1080p, 1440p and 4K displays
+with the same ratio produce identical previews. The display list refreshes when
+the picker opens; disconnected outputs fall back to 16:9. Use the profile pencil
+button to create or edit a named ratio, such as width 9 and height 16 for portrait.
+Names must be unique and ratio components must be between 1 and 16384.
+Existing profiles retain their proportions. The delete button removes the selected profile.
+Profiles are saved in local application settings and are available across items.
+Changing Preview aspect ratio fits and centres the existing layout without resizing the
+slide, changing the design or adding an undo step. Dragging and resizing
+objects in another output preview preserves the slide’s proportions.
+
 New slides use Theme by default. Theme locks design properties, object insertion
-and canvas manipulation; Show footer remains editable. Preview aspect ratios can
+and canvas manipulation; Show footer remains editable. Preview aspect ratio can
 still be changed without modifying the saved design. Songs do not automatically
 offer a Custom layout, and existing saved formatting is preserved. Earlier shared
 designs in custom slide items remain available as Custom, which can be renamed.
@@ -166,7 +194,7 @@ Portability
 Songs store a versioned design document in the songs database. OpenLyrics XML
 exports include it in an ``olp:design`` extension with namespace
 ``https://openlp.org/ns/slide-design/1``. Custom items store the same extension
-inside their existing XML and preserve it through their existing ``.osz`` export
+inside their existing XML and preserve it through their native Opal package export
 and import route. Service headers also retain the design.
 Layer order is saved with the design and used by the projection renderer. Older
 designs without an explicit order retain their original text-above-decorations
@@ -174,7 +202,7 @@ appearance.
 
 Added images and videos retain their original formats, using embedded data or
 archive assets according to their size. Exports include a snapshot of
-the resolved theme, including its background media. The receiving OpenLP+
+the resolved theme, including its background media. The receiving Opal Presenter
 installation therefore does not need those original image files or a matching
 named theme. Canvas dimensions, masters, assignments, local changes and per-page
 footer choices are included too.
@@ -183,7 +211,7 @@ Explicitly assigning a new theme releases an imported theme snapshot.
 
 Local video backgrounds and video objects travel with the design. Stream URLs and
 font files are not embedded. Fonts still need to be available on the receiving computer. Other
-OpenLyrics applications may ignore or reject the OpenLP+ extension. PPTX exports preserve editable slide text, text boxes, shapes and embedded images
+OpenLyrics applications may ignore or reject the Opal Presenter extension. PPTX exports preserve editable slide text, text boxes, shapes and embedded images
 in their saved layer order, including geometry, opacity, rotation, flips, outlines
 and shadows. Static backgrounds are composited at output resolution to retain
 image opacity and gradients. Presentation applications can differ in their
@@ -197,5 +225,5 @@ Choose no folder, an existing folder, or a new folder. Each rendered slide is
 captured at the current output resolution, including its theme, custom objects,
 effects and footer visibility. Images use the custom item's title, followed by
 ``(2)``, ``(3)`` and so on for subsequent slides. Numbering restarts for each item.
-These images are stored permanently in OpenLP+'s data folder; repeated saves do
+These images are stored permanently in Opal Presenter's data folder; repeated saves do
 not overwrite existing images. The original custom slides remain editable.

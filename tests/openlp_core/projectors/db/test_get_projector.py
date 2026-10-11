@@ -23,14 +23,14 @@ Test ProjectorDB.get_projectors()
 """
 
 import logging
-import openlp.core.projectors.db
+import opal.core.projectors.db
 
-from openlp.core.projectors.constants import PJLINK_PORT
+from opal.core.projectors.constants import PJLINK_PORT
 
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA, TEST3_DATA
 
-test_module = openlp.core.projectors.db.__name__
-Projector = openlp.core.projectors.db.Projector
+test_module = opal.core.projectors.db.__name__
+Projector = opal.core.projectors.db.Projector
 
 
 def test_invalid_projector(projectordb, caplog):

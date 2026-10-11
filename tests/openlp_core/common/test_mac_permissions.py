@@ -4,26 +4,26 @@ import plistlib
 import sys
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.mac_permissions import (
+from opal.core.common.mac_permissions import (
     _DraggableFileIcon, _accessibility_drag_target, _launching_app_bundle, _open_privacy_settings, _running_app_bundle,
     request_post_event_access, request_presentation_permissions)
 
 
 def test_running_app_bundle_uses_the_current_executable(tmp_path):
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     (bundle / 'Contents' / 'MacOS').mkdir(parents=True)
     (bundle / 'Contents' / 'Info.plist').touch()
-    executable = bundle / 'Contents' / 'MacOS' / 'OpenLP+'
+    executable = bundle / 'Contents' / 'MacOS' / 'Opal Presenter'
 
-    with patch('openlp.core.common.mac_permissions.sys.executable', str(executable)):
+    with patch('opal.core.common.mac_permissions.sys.executable', str(executable)):
         assert _running_app_bundle() == bundle
     python_bundle = tmp_path / 'Python.app'
     (python_bundle / 'Contents' / 'MacOS').mkdir(parents=True)
     (python_bundle / 'Contents' / 'Info.plist').touch()
     python_executable = python_bundle / 'Contents' / 'MacOS' / 'Python'
-    with patch('openlp.core.common.mac_permissions.sys.executable', str(python_executable)):
+    with patch('opal.core.common.mac_permissions.sys.executable', str(python_executable)):
         assert _running_app_bundle() == python_bundle
 
 
@@ -34,8 +34,8 @@ def test_development_drag_target_resolves_the_actual_python_executable(tmp_path)
     launcher.parent.mkdir(parents=True)
     launcher.symlink_to(executable)
 
-    with patch('openlp.core.common.mac_permissions.sys.executable', str(launcher)), \
-            patch('openlp.core.common.mac_permissions._launching_app_bundle', return_value=None):
+    with patch('opal.core.common.mac_permissions.sys.executable', str(launcher)), \
+            patch('opal.core.common.mac_permissions._launching_app_bundle', return_value=None):
         target, label = _accessibility_drag_target()
 
     assert target == executable
@@ -51,10 +51,10 @@ def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
     parents = [MagicMock(stdout='12 /path/to/python3.14\n'), MagicMock(stdout='13 /bin/zsh\n'),
                MagicMock(stdout=f'14 {helper}\n')]
 
-    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
-            patch('openlp.core.common.mac_permissions.os.getppid', return_value=11), \
-            patch('openlp.core.common.mac_permissions.subprocess.run', side_effect=parents) as run, \
-            patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=None):
+    with patch('opal.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('opal.core.common.mac_permissions.os.getppid', return_value=11), \
+            patch('opal.core.common.mac_permissions.subprocess.run', side_effect=parents) as run, \
+            patch('opal.core.common.mac_permissions._running_app_bundle', return_value=None):
         target, label = _accessibility_drag_target()
 
     assert target == ide
@@ -64,16 +64,16 @@ def test_development_drag_target_uses_the_ide_instead_of_its_python(tmp_path):
 
 
 def test_packaged_launch_uses_its_own_app(tmp_path):
-    bundle = tmp_path / 'OpenLP+.app'
-    with patch('openlp.core.common.mac_permissions._running_app_bundle', return_value=bundle), \
-            patch('openlp.core.common.mac_permissions._launching_app_bundle') as find_launcher:
-        assert _accessibility_drag_target() == (bundle, 'OpenLP+')
+    bundle = tmp_path / 'Opal Presenter.app'
+    with patch('opal.core.common.mac_permissions._running_app_bundle', return_value=bundle), \
+            patch('opal.core.common.mac_permissions._launching_app_bundle') as find_launcher:
+        assert _accessibility_drag_target() == (bundle, 'Opal Presenter')
     find_launcher.assert_not_called()
 
 
 def test_launcher_detection_stops_if_parent_lookup_fails():
-    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
-            patch('openlp.core.common.mac_permissions.subprocess.run', side_effect=OSError):
+    with patch('opal.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('opal.core.common.mac_permissions.subprocess.run', side_effect=OSError):
         assert _launching_app_bundle() is None
 
 
@@ -81,8 +81,8 @@ def test_native_accessibility_request_sets_prompt_option_and_releases_dictionary
     services, foundation = MagicMock(), MagicMock()
     services.AXIsProcessTrustedWithOptions.return_value = False
     foundation.CFDictionaryCreate.return_value = 123
-    with patch('openlp.core.common.mac_permissions.ctypes.CDLL', side_effect=[services, foundation]), \
-            patch('openlp.core.common.mac_permissions.ctypes.c_void_p.in_dll',
+    with patch('opal.core.common.mac_permissions.ctypes.CDLL', side_effect=[services, foundation]), \
+            patch('opal.core.common.mac_permissions.ctypes.c_void_p.in_dll',
                   side_effect=[ctypes.c_void_p(456), ctypes.c_void_p(789)]):
         assert not request_post_event_access()
 
@@ -96,7 +96,7 @@ def test_native_accessibility_request_sets_prompt_option_and_releases_dictionary
 def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     assert application is not None
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     resources = bundle / 'Contents' / 'Resources'
     resources.mkdir(parents=True)
     with (bundle / 'Contents' / 'Info.plist').open('wb') as info_file:
@@ -104,14 +104,14 @@ def test_app_icon_drag_contains_the_target_file_url(tmp_path):
     sample_icon = QtGui.QPixmap(64, 64)
     sample_icon.fill(QtCore.Qt.GlobalColor.red)
     sample_icon.save(str(resources / 'sample.png'))
-    icon = _DraggableFileIcon(bundle, 'OpenLP+.app', None)
+    icon = _DraggableFileIcon(bundle, 'Opal Presenter.app', None)
     assert icon.pixmap().toImage().pixelColor(32, 32) == QtGui.QColor('red')
     icon._drag_start_pos = QtCore.QPoint(0, 0)
     event = MagicMock()
     event.buttons.return_value = QtCore.Qt.MouseButton.LeftButton
     event.pos.return_value = QtCore.QPoint(100, 100)
 
-    with patch('openlp.core.common.mac_permissions.QtGui.QDrag') as drag_type:
+    with patch('opal.core.common.mac_permissions.QtGui.QDrag') as drag_type:
         icon.mouseMoveEvent(event)
 
     mime_data = drag_type.return_value.setMimeData.call_args.args[0]
@@ -129,8 +129,8 @@ def test_presentation_permissions_do_not_interrupt_startup_when_granted():
     assert application is not None
     parent = QtWidgets.QWidget()
 
-    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
-            patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics):
+    with patch('opal.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('opal.core.common.mac_permissions.ctypes.CDLL', return_value=graphics):
         request_presentation_permissions(parent)
 
     graphics.CGRequestPostEventAccess.assert_not_called()
@@ -170,11 +170,11 @@ def test_missing_permissions_offer_native_request_and_system_settings():
             dialog.accept()
 
     QtCore.QTimer.singleShot(0, use_dialog)
-    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
-            patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
-            patch('openlp.core.common.mac_permissions.request_post_event_access') as request_access, \
-            patch('openlp.core.common.mac_permissions._launching_app_bundle', return_value=None), \
-            patch('openlp.core.common.mac_permissions.QtGui.QDesktopServices.openUrl', return_value=True) as open_url:
+    with patch('opal.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('opal.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
+            patch('opal.core.common.mac_permissions.request_post_event_access') as request_access, \
+            patch('opal.core.common.mac_permissions._launching_app_bundle', return_value=None), \
+            patch('opal.core.common.mac_permissions.QtGui.QDesktopServices.openUrl', return_value=True) as open_url:
         request_presentation_permissions(parent)
 
     request_access.assert_called_once_with()
@@ -194,7 +194,7 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
     parent = QtWidgets.QWidget()
     parent.resize(800, 700)
     parent.show()
-    bundle = tmp_path / 'OpenLP+.app'
+    bundle = tmp_path / 'Opal Presenter.app'
     bundle.mkdir()
     interpreter = tmp_path / 'python3.14'
     interpreter.touch()
@@ -210,10 +210,10 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
                              if 'Or use + to add this file' in label.text()])
         dialog.accept()
 
-    with patch('openlp.core.common.mac_permissions.is_macosx', return_value=True), \
-            patch('openlp.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
-            patch('openlp.core.common.mac_permissions._accessibility_drag_target',
-                  side_effect=[(bundle, 'OpenLP+.app'), (interpreter, 'Python 3.14')]):
+    with patch('opal.core.common.mac_permissions.is_macosx', return_value=True), \
+            patch('opal.core.common.mac_permissions.ctypes.CDLL', return_value=graphics), \
+            patch('opal.core.common.mac_permissions._accessibility_drag_target',
+                  side_effect=[(bundle, 'Opal Presenter.app'), (interpreter, 'Python 3.14')]):
         QtCore.QTimer.singleShot(0, inspect_dialog)
         request_presentation_permissions(parent)
         QtCore.QTimer.singleShot(0, inspect_dialog)
@@ -229,8 +229,8 @@ def test_accessibility_dialog_offers_drag_for_app_and_development_run(tmp_path):
 
 
 def test_privacy_settings_link_falls_back_to_system_settings():
-    with patch('openlp.core.common.mac_permissions.QtGui.QDesktopServices.openUrl', return_value=False), \
-            patch('openlp.core.common.mac_permissions.subprocess.run') as run:
+    with patch('opal.core.common.mac_permissions.QtGui.QDesktopServices.openUrl', return_value=False), \
+            patch('opal.core.common.mac_permissions.subprocess.run') as run:
         _open_privacy_settings('Privacy_Accessibility')
 
     run.assert_called_once_with(['/usr/bin/open', '-a', 'System Settings'], check=False)

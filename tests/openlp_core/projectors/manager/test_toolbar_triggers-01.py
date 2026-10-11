@@ -32,7 +32,7 @@ on_show_projector()
 
 from unittest.mock import DEFAULT, patch
 
-from openlp.core.projectors.db import Projector
+from opal.core.projectors.db import Projector
 
 from tests.helpers.projector import FakePJLink
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA, TEST3_DATA

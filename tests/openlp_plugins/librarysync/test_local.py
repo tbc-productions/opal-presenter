@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openlp.plugins.librarysync.lib.local import LocalStorageProvider
-from openlp.plugins.librarysync.lib.profile import deserialize_profile, serialize_profile, validate_profile
-from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError
-from openlp.plugins.librarysync.lib.worker import PROVIDERS, SyncWorker
+from opal.plugins.librarysync.lib.local import LocalStorageProvider
+from opal.plugins.librarysync.lib.profile import deserialize_profile, serialize_profile, validate_profile
+from opal.plugins.librarysync.lib.provider import CATEGORIES, SyncError
+from opal.plugins.librarysync.lib.worker import PROVIDERS, SyncWorker
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def test_local_profile_roundtrip_has_no_credentials(storage):
     assert profile['folders'] == [{'id': '.', 'name': 'Campus Library', 'resource_key': ''}]
     assert 'access_token' not in profile and 'installed' not in profile
     assert deserialize_profile(serialize_profile(profile)) == profile
-    assert PROVIDERS['local-cloud'] is LocalStorageProvider
+    assert PROVIDERS == {'local-cloud': LocalStorageProvider}
 
 
 @pytest.mark.parametrize('path', ['', '.', '../storage', None, [], 'bad\x00path'])

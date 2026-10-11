@@ -28,16 +28,16 @@ on_edit_input()
 """
 
 import logging
-import openlp.core.projectors.manager
+import opal.core.projectors.manager
 
 from unittest.mock import DEFAULT, patch
 
-from openlp.core.projectors.constants import QSOCKET_STATE, \
+from opal.core.projectors.constants import QSOCKET_STATE, \
     S_CONNECTED, S_NOT_CONNECTED
 
 from tests.helpers.projector import FakePJLink
 
-test_module = openlp.core.projectors.manager.__name__
+test_module = opal.core.projectors.manager.__name__
 
 
 def test_on_add_projector(projector_manager):

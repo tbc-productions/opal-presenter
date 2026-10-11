@@ -25,14 +25,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
 try:
-    from openlp.plugins.songs.lib.importers.opspro import OPSProImport
+    from opal.plugins.songs.lib.importers.opspro import OPSProImport
     CAN_RUN_TESTS = True
 except ImportError:
     CAN_RUN_TESTS = False
@@ -70,7 +70,7 @@ def _build_data(test_file, dual_language):
     return song, lyrics
 
 
-@patch('openlp.plugins.songs.lib.importers.opspro.SongImport')
+@patch('opal.plugins.songs.lib.importers.opspro.SongImport')
 def test_create_importer(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test creating an instance of the OPS Pro file importer
@@ -85,7 +85,7 @@ def test_create_importer(mocked_songimport: MagicMock, registry: Registry, setti
     assert importer is not None, 'Import should not be none'
 
 
-@patch('openlp.plugins.songs.lib.importers.opspro.SongImport')
+@patch('opal.plugins.songs.lib.importers.opspro.SongImport')
 def test_detect_chorus(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test importing lyrics with a chorus in OPS Pro
@@ -105,7 +105,7 @@ def test_detect_chorus(mocked_songimport: MagicMock, registry: Registry, setting
     assert importer.verse_order_list_generated == _get_item(result_data, 'verse_order_list')
 
 
-@patch('openlp.plugins.songs.lib.importers.opspro.SongImport')
+@patch('opal.plugins.songs.lib.importers.opspro.SongImport')
 def test_join_and_split(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test importing lyrics with a split and join tags works in OPS Pro
@@ -125,7 +125,7 @@ def test_join_and_split(mocked_songimport: MagicMock, registry: Registry, settin
     assert importer.verse_order_list_generated == _get_item(result_data, 'verse_order_list')
 
 
-@patch('openlp.plugins.songs.lib.importers.opspro.SongImport')
+@patch('opal.plugins.songs.lib.importers.opspro.SongImport')
 def test_trans_off_tag(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test importing lyrics with a split and join and translations tags works in OPS Pro
@@ -145,7 +145,7 @@ def test_trans_off_tag(mocked_songimport: MagicMock, registry: Registry, setting
     assert importer.verse_order_list_generated == _get_item(result_data, 'verse_order_list')
 
 
-@patch('openlp.plugins.songs.lib.importers.opspro.SongImport')
+@patch('opal.plugins.songs.lib.importers.opspro.SongImport')
 def test_trans_tag(mocked_songimport: MagicMock, registry: Registry, settings: Settings):
     """
     Test importing lyrics with various translations tags works in OPS Pro

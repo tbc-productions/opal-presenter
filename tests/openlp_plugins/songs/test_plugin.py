@@ -21,7 +21,7 @@
 """
 This module contains tests for the plugin class Song plugin.
 """
-from openlp.plugins.songs.songsplugin import SongsPlugin
+from opal.plugins.songs.songsplugin import SongsPlugin
 
 
 def test_plugin_about():

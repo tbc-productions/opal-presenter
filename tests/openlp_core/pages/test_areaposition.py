@@ -19,10 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages.alignment package.
+Package to test the opal.core.pages.alignment package.
 """
 
-from openlp.core.pages.areaposition import AreaPositionPage
+import pytest
+
+from opal.core.pages.areaposition import AreaPositionPage
 
 
 def test_init_(settings):
@@ -64,238 +66,6 @@ def test_set_use_main_default_location(settings):
     assert page.main_position_check_box.isChecked() is True
 
 
-def test_get_main_x(settings):
-    """
-    Test the main_x getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to index 1
-    page = AreaPositionPage()
-    page.main_x_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.main_x
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_main_x(settings):
-    """
-    Test the main_x setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.main_x = 20
-
-    # THEN: The combobox should be correct
-    assert page.main_x_spin_box.value() == 20
-
-
-def test_get_main_y(settings):
-    """
-    Test the main_y getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indey 1
-    page = AreaPositionPage()
-    page.main_y_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.main_y
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_main_y(settings):
-    """
-    Test the main_y setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.main_y = 20
-
-    # THEN: The combobox should be correct
-    assert page.main_y_spin_box.value() == 20
-
-
-def test_get_main_width(settings):
-    """
-    Test the main_width getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indewidth 1
-    page = AreaPositionPage()
-    page.main_width_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.main_width
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_main_width(settings):
-    """
-    Test the main_width setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.main_width = 20
-
-    # THEN: The combobox should be correct
-    assert page.main_width_spin_box.value() == 20
-
-
-def test_get_main_height(settings):
-    """
-    Test the main_height getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indeheight 1
-    page = AreaPositionPage()
-    page.main_height_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.main_height
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_main_height(settings):
-    """
-    Test the main_height setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.main_height = 20
-
-    # THEN: The combobox should be correct
-    assert page.main_height_spin_box.value() == 20
-
-
-def test_get_footer_x(settings):
-    """
-    Test the footer_x getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to index 1
-    page = AreaPositionPage()
-    page.footer_x_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.footer_x
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_footer_x(settings):
-    """
-    Test the footer_x setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.footer_x = 20
-
-    # THEN: The combobox should be correct
-    assert page.footer_x_spin_box.value() == 20
-
-
-def test_get_footer_y(settings):
-    """
-    Test the footer_y getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indey 1
-    page = AreaPositionPage()
-    page.footer_y_spin_box.setValue(10)
-
-    # WHEN: The property is accessed
-    result = page.footer_y
-
-    # THEN: The result should be correct
-    assert result == 10
-
-
-def test_set_footer_y(settings):
-    """
-    Test the footer_y setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.footer_y = 20
-
-    # THEN: The combobox should be correct
-    assert page.footer_y_spin_box.value() == 20
-
-
-def test_get_footer_width(settings):
-    """
-    Test the footer_width getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indewidth 1
-    page = AreaPositionPage()
-    page.footer_width_spin_box.setValue(1900)
-
-    # WHEN: The property is accessed
-    result = page.footer_width
-
-    # THEN: The result should be correct
-    assert result == 1900
-
-
-def test_set_footer_width(settings):
-    """
-    Test the footer_width setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.footer_width = 1900
-
-    # THEN: The combobox should be correct
-    assert page.footer_width_spin_box.value() == 1900
-
-
-def test_get_footer_height(settings):
-    """
-    Test the footer_height getter
-    """
-    # GIVEN: A AreaPositionPage instance with the combobox set to indeheight 1
-    page = AreaPositionPage()
-    page.footer_height_spin_box.setValue(1080)
-
-    # WHEN: The property is accessed
-    result = page.footer_height
-
-    # THEN: The result should be correct
-    assert result == 1080
-
-
-def test_set_footer_height(settings):
-    """
-    Test the footer_height setter with an int
-    """
-    # GIVEN: A AreaPositionPage instance
-    page = AreaPositionPage()
-
-    # WHEN: The property is set
-    page.footer_height = 1080
-
-    # THEN: The combobox should be correct
-    assert page.footer_height_spin_box.value() == 1080
-
-
 def test_get_use_footer_default_location(settings):
     """
     Test the use_footer_default_location getter
@@ -323,3 +93,19 @@ def test_set_use_footer_default_location(settings):
 
     # THEN: The combobox should be correct
     assert page.footer_position_check_box.isChecked() is True
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (3840, 2160)])
+@pytest.mark.parametrize('area', ['main', 'footer'])
+@pytest.mark.parametrize('field', ['x', 'y', 'width', 'height'])
+def test_percentages_preserve_canvas_coordinates(settings, width, height, area, field):
+    page = AreaPositionPage()
+    page.canvas_width, page.canvas_height = width, height
+    dimension = width if field in ('x', 'width') else height
+    name = f'{area}_{field}'
+    control = getattr(page, name + '_spin_box')
+    setattr(page, name, dimension * 0.123456)
+    assert control.value() == pytest.approx(12.3456)
+    assert getattr(page, name) == pytest.approx(dimension * 0.123456)
+    control.setValue(25.25)
+    assert getattr(page, name) == pytest.approx(dimension * 0.2525)

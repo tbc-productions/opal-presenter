@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.media package.
+Package to test the opal.core.ui.media package.
 """
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -25,13 +25,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.ui import DisplayControllerType, HideMode
-from openlp.core.ui.media import MediaPlayItem, MediaState, MediaType
-from openlp.core.ui.media.mediacontroller import MediaController
-from openlp.core.widgets.toolbar import OpenLPToolbar
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.ui import DisplayControllerType, HideMode
+from opal.core.ui.media import MediaPlayItem, MediaState, MediaType
+from opal.core.ui.media.mediacontroller import MediaController
+from opal.core.widgets.toolbar import OpenLPToolbar
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -49,7 +49,7 @@ def media_env(qapp, registry: Registry):
     yield media_controller
 
 
-@patch('openlp.core.ui.media.mediacontroller.register_views')
+@patch('opal.core.ui.media.mediacontroller.register_views')
 def test_setup(mocked_register_views: MagicMock, media_env: MediaController):
     """
     Test that the setup method is called correctly
@@ -712,7 +712,7 @@ def test_media_hide(media_env, settings):
     media_env.media_controller._media_set_visibility.assert_called_once_with(mocked_slide_controller, False)
 
 
-@patch('openlp.core.ui.media.mediacontroller.Registry.execute')
+@patch('opal.core.ui.media.mediacontroller.Registry.execute')
 def test_media_unblank_without_media_does_not_start_playback(mocked_registry_execute, media_env):
     """
     Test that unblanking a text/live item without media does not trigger media playback logic.
@@ -900,7 +900,7 @@ def test_audio_only_preview_volume_controls_audio_player(media_env, settings):
     controller.media_player.volume.assert_not_called()
 
 
-@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+@patch('opal.core.ui.media.mediacontroller.critical_error_message_box')
 def test_load_media_rejects_unsupported_file(mocked_error_dialog: MagicMock, media_env):
     """
     Test that load_media() bails out early when media support probe fails.
@@ -930,7 +930,7 @@ def test_load_media_rejects_unsupported_file(mocked_error_dialog: MagicMock, med
     media_env.media_controller._check_file_type_and_load.assert_not_called()
 
 
-@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+@patch('opal.core.ui.media.mediacontroller.critical_error_message_box')
 def test_media_play_rejects_unsupported_file(mocked_error_dialog: MagicMock, media_env):
     """
     Test that media_play() returns False when media support probe fails.
@@ -954,7 +954,7 @@ def test_media_play_rejects_unsupported_file(mocked_error_dialog: MagicMock, med
     media_env.media_controller.media_reset.assert_called_once_with(mocked_controller)
 
 
-@patch('openlp.core.ui.media.mediacontroller.critical_error_message_box')
+@patch('opal.core.ui.media.mediacontroller.critical_error_message_box')
 def test_handle_media_playback_error_updates_state(mocked_error_dialog: MagicMock, media_env):
     """
     Test runtime playback error handling updates controller state and UI.
@@ -1319,7 +1319,7 @@ def test_hidden_media_is_retired_before_showing_song(media_env, settings, hide_m
 
     media_env.media_reset(controller, delayed=True)
     controller.current_hide_mode = None
-    with patch('openlp.core.ui.media.mediacontroller.Registry.execute') as execute:
+    with patch('opal.core.ui.media.mediacontroller.Registry.execute') as execute:
         media_env.media_unblank([None, True])
 
     controller.media_player.reset.assert_called_once_with()
@@ -1356,7 +1356,7 @@ def test_show_during_media_cleanup_shows_new_item(media_env):
     media_env.live_kill_timer = MagicMock(isActive=MagicMock(return_value=True))
     media_env.media_play = MagicMock()
 
-    with patch('openlp.core.ui.media.mediacontroller.Registry.execute') as execute:
+    with patch('opal.core.ui.media.mediacontroller.Registry.execute') as execute:
         media_env.media_unblank([None, True])
 
     execute.assert_called_once_with('live_display_show')

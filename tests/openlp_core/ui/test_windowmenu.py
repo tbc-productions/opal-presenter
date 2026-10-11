@@ -5,13 +5,13 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 from shiboken6 import delete
 
-from openlp.core.ui.windowmenu import WindowMenu
+from opal.core.ui.windowmenu import WindowMenu
 
 
 @pytest.fixture
 def window_menu(qapp, qtbot, monkeypatch):
     host = QtWidgets.QMainWindow()
-    host.setWindowTitle('OpenLP+')
+    host.setWindowTitle('Opal Presenter')
     qtbot.addWidget(host)
     host.show()
     controller = WindowMenu(host, host.menuBar())
@@ -30,7 +30,7 @@ def make_window(qtbot, title, flags=QtCore.Qt.WindowType.Window):
 
 @pytest.mark.parametrize('macos', [True, False])
 def test_platform_commands_and_shortcuts(window_menu, monkeypatch, macos):
-    monkeypatch.setattr('openlp.core.ui.windowmenu.is_macosx', lambda: macos)
+    monkeypatch.setattr('opal.core.ui.windowmenu.is_macosx', lambda: macos)
     controller = WindowMenu(window_menu.main_window, window_menu.main_window.menuBar())
     assert controller.menu.title() == '&Window'
     assert controller.zoom_action.text() == ('&Zoom' if macos else 'Ma&ximise')
@@ -47,7 +47,7 @@ def test_platform_commands_and_shortcuts(window_menu, monkeypatch, macos):
 
 
 def test_shared_mac_menu_includes_all_application_menus(window_menu, monkeypatch):
-    monkeypatch.setattr('openlp.core.ui.windowmenu.is_macosx', lambda: True)
+    monkeypatch.setattr('opal.core.ui.windowmenu.is_macosx', lambda: True)
     menu_bar = window_menu.main_window.menuBar()
     file_menu = menu_bar.addMenu('File')
     file_menu.addAction('Quit')
@@ -69,13 +69,13 @@ def test_live_list_filters_surfaces_and_refreshes_titles(window_menu, qtbot):
     child.show()
     window_menu.menu.aboutToShow.emit()
     assert [action.text() for action in window_menu._window_actions] == [
-        'OpenLP+', 'Floating Library', 'Song && Slides']
+        'Opal Presenter', 'Floating Library', 'Song && Slides']
     assert [action.isChecked() for action in window_menu._window_actions] == [True, False, False]
     editor.setWindowTitle('Renamed[*]')
     editor.setWindowModified(True)
     floating.hide()
     window_menu.menu.aboutToShow.emit()
-    assert [action.text() for action in window_menu._window_actions] == ['OpenLP+', 'Renamed*']
+    assert [action.text() for action in window_menu._window_actions] == ['Opal Presenter', 'Renamed*']
 
 
 def test_selecting_minimised_window_preserves_maximised_state(window_menu, qtbot, monkeypatch):
@@ -206,7 +206,7 @@ def test_window_menu_never_installs_application_event_filter(window_menu, qapp, 
 
 
 def test_focus_discovers_editor_and_state_changes_update_commands(window_menu, qapp, qtbot, monkeypatch):
-    monkeypatch.setattr('openlp.core.ui.windowmenu.is_macosx', lambda: False)
+    monkeypatch.setattr('opal.core.ui.windowmenu.is_macosx', lambda: False)
     editor = make_window(qtbot, 'New editor')
     monkeypatch.setattr(QtWidgets.QApplication, 'activeWindow', lambda: editor)
     app = QtWidgets.QApplication.instance()

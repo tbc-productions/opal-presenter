@@ -1,14 +1,14 @@
 """Preferences help icons provide guidance without covering settings controls."""
 from unittest.mock import patch
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.generaltab import GeneralTab
-from openlp.core.ui.servicetab import ServiceTab
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.plugins.bibles.lib.biblestab import BiblesTab
-from openlp.plugins.songs.lib.songstab import SongsTab
-from openlp.plugins.songs.songsplugin import song_footer
+from opal.core.ui.generaltab import GeneralTab
+from opal.core.ui.servicetab import ServiceTab
+from opal.core.ui.settingsform import SettingsForm
+from opal.plugins.bibles.lib.biblestab import BiblesTab
+from opal.plugins.songs.lib.songstab import SongsTab
+from opal.plugins.songs.songsplugin import song_footer
 
 
 def test_general_settings_show_help_only_for_useful_hints(settings):
@@ -18,8 +18,8 @@ def test_general_settings_show_help_only_for_useful_hints(settings):
     form.insert_tab(general_tab)
 
     assert form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
-    assert 'OpenLP+' in general_tab.check_for_updates_check_box.text()
-    assert 'OpenLP+' in general_tab.check_for_remote_updates_check_box.text()
+    assert 'Opal Presenter' in general_tab.check_for_updates_check_box.text()
+    assert 'Opal Presenter' in general_tab.check_for_remote_updates_check_box.text()
     assert not general_tab.auto_open_check_box.property('settings_help_icon_added')
     assert not general_tab.single_click_preview_check_box.property('settings_help_icon_added')
 
@@ -79,7 +79,7 @@ def test_bible_reference_hint_moves_to_help_icon(settings):
     help_icon = bibles_tab.verse_separator_check_box.parentWidget().findChild(QtWidgets.QToolButton,
                                                                               'settings_help_icon')
     assert '|' in help_icon.help_text
-    assert bibles_tab.reference_format_label.text() == 'Footer reference template:'
+    assert bibles_tab.reference_format_label.text() == 'Footer reference template'
     assert not bibles_tab.reference_format_label.wordWrap()
     reference_row = bibles_tab.reference_format_label.parentWidget().layout()
     assert reference_row.itemAt(0).widget() is bibles_tab.reference_format_label
@@ -95,7 +95,7 @@ def test_help_icon_error_does_not_hide_settings_section(settings):
     form = SettingsForm()
     general_tab = GeneralTab(form)
 
-    with patch('openlp.core.ui.settingsform.apply_settings_tooltips', side_effect=RuntimeError('help failed')):
+    with patch('opal.core.ui.settingsform.apply_settings_tooltips', side_effect=RuntimeError('help failed')):
         form.insert_tab(general_tab)
 
     assert form.setting_list_widget.count() == 1
@@ -105,7 +105,7 @@ def test_help_icon_error_does_not_hide_settings_section(settings):
 def test_help_button_opens_teaching_tip_from_keyboard(settings, qtbot):
     from PySide6 import QtCore, QtTest
     import fluentqt
-    from openlp.core.ui.settingstooltips import SettingsHelpButton
+    from opal.core.ui.settingstooltips import SettingsHelpButton
 
     window = QtWidgets.QWidget()
     qtbot.addWidget(window)
@@ -139,7 +139,7 @@ def test_help_button_opens_teaching_tip_from_keyboard(settings, qtbot):
 
 def test_help_tip_dismisses_when_clicking_outside_or_hiding_setting(settings, qtbot):
     from PySide6 import QtCore, QtTest
-    from openlp.core.ui.settingstooltips import SettingsHelpButton
+    from opal.core.ui.settingstooltips import SettingsHelpButton
 
     window = QtWidgets.QWidget()
     qtbot.addWidget(window)

@@ -23,10 +23,10 @@ Test the exception handling functions
 """
 from unittest.mock import patch
 
-from openlp.core.common.handlers import handle_permission_error
+from opal.core.common.handlers import handle_permission_error
 
 
-@patch('openlp.core.common.handlers.QtWidgets.QMessageBox')
+@patch('opal.core.common.handlers.QtWidgets.QMessageBox')
 def test_handle_permission_error(MockQMessageBox):
     """Test the handle_permission_error() function to make sure it catches PermissionError"""
     # GIVEN: A mocked QMessageBox class and a file path

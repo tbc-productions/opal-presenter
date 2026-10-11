@@ -19,12 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.formattingtags package.
+Package to test the opal.core.lib.formattingtags package.
 """
 import copy
 from unittest.mock import patch
 
-from openlp.core.lib.formattingtags import FormattingTags
+from opal.core.lib.formattingtags import FormattingTags
 
 
 TAG = {
@@ -41,9 +41,9 @@ def test_get_html_tags_no_user_tags(mock_settings):
     """
     Test the FormattingTags class' get_html_tags static method.
     """
-    with patch('openlp.core.lib.translate') as mocked_translate, \
-            patch('openlp.core.common.settings') as mocked_settings, \
-            patch('openlp.core.lib.formattingtags.json') as mocked_json:
+    with patch('opal.core.lib.translate') as mocked_translate, \
+            patch('opal.core.common.settings') as mocked_settings, \
+            patch('opal.core.lib.formattingtags.json') as mocked_json:
         # GIVEN: Our mocked modules and functions.
         mocked_translate.side_effect = lambda module, string_to_translate, comment: string_to_translate
         mocked_settings.value.return_value = ''
@@ -63,8 +63,8 @@ def test_get_html_tags_with_user_tags(mock_settings):
     """
     FormattingTags class - test the get_html_tags(), add_html_tags() and remove_html_tag() methods.
     """
-    with patch('openlp.core.lib.translate') as mocked_translate, \
-            patch('openlp.core.lib.formattingtags.json') as mocked_json:
+    with patch('opal.core.lib.translate') as mocked_translate, \
+            patch('opal.core.lib.formattingtags.json') as mocked_json:
         # GIVEN: Our mocked modules and functions.
         mocked_translate.side_effect = lambda module, string_to_translate: string_to_translate
         mock_settings.value.return_value = ''

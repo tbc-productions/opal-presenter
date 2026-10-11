@@ -19,18 +19,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.planningcenter.planningcenterplugin package.
+Package to test the opal.plugins.planningcenter.planningcenterplugin package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.ui.icons import UiIcons
-from openlp.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.ui.icons import UiIcons
+from opal.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
 
 
 @pytest.fixture
@@ -65,7 +65,7 @@ def test_initialise(plugin: PlanningCenterPlugin):
     """
     # GIVEN: A PlanningcenterPlugin Class
     # WHEN:  initialise has been called on the class
-    with patch('openlp.plugins.planningcenter.planningcenterplugin.PlanningCenterPlugin.import_planning_center',
+    with patch('opal.plugins.planningcenter.planningcenterplugin.PlanningCenterPlugin.import_planning_center',
                create=True):
         return_value = plugin.initialise()
     # THEN:
@@ -88,7 +88,7 @@ def test_import_menu_item_added(plugin: PlanningCenterPlugin):
     assert import_menu.isEmpty() is False, "Menu Item is populated"
 
 
-@patch('openlp.plugins.planningcenter.planningcenterplugin.SelectPlanForm')
+@patch('opal.plugins.planningcenter.planningcenterplugin.SelectPlanForm')
 def test_on_import_planning_center_triggered_with_auth_settings(MockSelectPlanForm: MagicMock,
                                                                 plugin: PlanningCenterPlugin,
                                                                 registry: Registry, settings: Settings):
@@ -112,7 +112,7 @@ def test_on_import_planning_center_triggered_with_auth_settings(MockSelectPlanFo
     assert mocked_settings_form.exec.call_count == 0, 'Settings Form was not shown'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.SelectPlanForm.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.SelectPlanForm.exec')
 def test_on_import_planning_center_triggered_without_auth_settings(mocked_selectplan_exec: MagicMock,
                                                                    plugin: PlanningCenterPlugin,
                                                                    registry: Registry, settings: Settings):

@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 import json
 import os
@@ -28,16 +28,16 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
-from openlp.core.common import ThemeLevel
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.common.json import OpenLPJSONEncoder
-from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.core.lib.formattingtags import FormattingTags
-from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.core.state import State
-from openlp.core.ui.icons import UiIcons
+from opal.core.common import ThemeLevel
+from opal.core.common.enum import ServiceItemType
+from opal.core.common.json import OpenLPJSONEncoder
+from opal.core.common.platform import is_win
+from opal.core.common.registry import Registry
+from opal.core.lib.formattingtags import FormattingTags
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.core.lib.theme import TransitionSpeed, TransitionType
+from opal.core.state import State
+from opal.core.ui.icons import UiIcons
 from tests.utils import convert_file_service_item
 from tests.utils.constants import RESOURCE_PATH
 
@@ -168,12 +168,12 @@ def test_service_item_load_image_from_service(state_media, settings):
                                       'file_hash': fake_hash2}]}}
 
     # WHEN: adding an image from a saved Service and mocked exists
-    with patch('openlp.core.ui.servicemanager.os.path.exists') as mocked_exists, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_data_path') as mocked_get_data_path, \
-            patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
-            patch('openlp.core.lib.serviceitem.copy'), \
-            patch('openlp.core.lib.serviceitem.move'):
+    with patch('opal.core.ui.servicemanager.os.path.exists') as mocked_exists, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_data_path') as mocked_get_data_path, \
+            patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
+            patch('opal.core.lib.serviceitem.copy'), \
+            patch('opal.core.lib.serviceitem.move'):
         mocked_sha256_file_hash.side_effect = [fake_hash1, fake_hash2]
         mocked_exists.return_value = True
         mocked_get_section_data_path.return_value = Path('/path/')
@@ -213,10 +213,10 @@ def test_old_service_item_load_image_from_service(state_media, settings):
 
     # WHEN: adding an image from a saved Service and mocked exists
     line = convert_file_service_item(TEST_PATH, 'serviceitem_image_1.osj')
-    with patch('openlp.core.ui.servicemanager.os.path.exists') as mocked_exists, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path, \
-            patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
-            patch('openlp.core.lib.serviceitem.move'):
+    with patch('opal.core.ui.servicemanager.os.path.exists') as mocked_exists, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path, \
+            patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
+            patch('opal.core.lib.serviceitem.move'):
         mocked_sha256_file_hash.return_value = fake_hash
         mocked_exists.return_value = True
         mocked_get_section_data_path.return_value = Path('/path/')
@@ -241,8 +241,8 @@ def test_old_service_item_load_image_from_service(state_media, settings):
         'This service item should be able to have new items added to it'
 
 
-@patch('openlp.core.lib.serviceitem.os.path.exists')
-@patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path')
+@patch('opal.core.lib.serviceitem.os.path.exists')
+@patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path')
 def test_service_item_load_image_from_local_service(mocked_get_section_data_path, mocked_exists, settings, state_media):
     """
     Test the Service Item - adding an image from a saved local service
@@ -266,7 +266,7 @@ def test_service_item_load_image_from_local_service(mocked_get_section_data_path
     # WHEN: adding an image from a saved Service and mocked exists
     line = convert_file_service_item(TEST_PATH, 'serviceitem_image_2.osj')
     line2 = convert_file_service_item(TEST_PATH, 'serviceitem_image_2.osj', 1)
-    with patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash:
+    with patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash:
         mocked_sha256_file_hash.return_value = 'abcd'
         service_item2.set_from_service(line2)
         service_item.set_from_service(line)
@@ -342,8 +342,8 @@ def test_add_from_command_for_a_presentation():
              'display_title': display_title, 'notes': notes, 'thumbnail': image}
 
     # WHEN: adding presentation to service_item
-    with patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
+    with patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
         mocked_sha256_file_hash.return_value = 'abcd'
         mocked_get_section_data_path.return_value = Path('.')
         service_item.add_from_command(TEST_PATH, presentation_name, image, display_title, notes)
@@ -366,8 +366,8 @@ def test_add_from_command_without_display_title_and_notes():
              'display_title': None, 'notes': None, 'thumbnail': image}
 
     # WHEN: adding image to service_item
-    with patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
+    with patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
         mocked_sha256_file_hash.return_value = 'abcd'
         mocked_get_section_data_path.return_value = Path('.')
         service_item.add_from_command(TEST_PATH, image_name, image)
@@ -377,7 +377,7 @@ def test_add_from_command_without_display_title_and_notes():
     assert service_item.get_frames()[0] == frame, 'Frames should match'
 
 
-@patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path')
+@patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path')
 def test_add_from_command_for_a_presentation_thumb(mocked_get_section_data_path):
     """
     Test the Service Item - adding a presentation, updating the thumb path & adding the thumb
@@ -397,7 +397,7 @@ def test_add_from_command_for_a_presentation_thumb(mocked_get_section_data_path)
              'display_title': display_title, 'notes': notes, 'thumbnail': expected_thumb_path}
 
     # WHEN: adding presentation to service_item
-    with patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash:
+    with patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash:
         mocked_sha256_file_hash.return_value = 'abcd'
         service_item.add_from_command(str(TEST_PATH), presentation_name, thumb, display_title, notes)
 
@@ -468,7 +468,7 @@ def test_service_item_load_duplicate_presentation_from_24x_service(state_media, 
     assert len(service_item2.slides) == 2, 'The service item should have 2 slides'
 
 
-@patch('openlp.core.lib.serviceitem.sha256_file_hash')
+@patch('opal.core.lib.serviceitem.sha256_file_hash')
 def test_service_item_load_song_and_audio_from_service(mock_sha256_file_hash, state_media, settings, service_item_env):
     """
     Test the Service Item - adding a song slide from a saved service
@@ -498,7 +498,7 @@ def test_service_item_load_song_and_audio_from_service(mock_sha256_file_hash, st
         'The tuple ("/test/abcd.mp3", "abcd") should be in the background_audio list'
 
 
-@patch('openlp.core.lib.serviceitem.sha256_file_hash')
+@patch('opal.core.lib.serviceitem.sha256_file_hash')
 def test_service_item_load_song_and_audio_from_service_no_media(mock_sha256_file_hash, state_media,
                                                                 settings, service_item_env):
     """
@@ -529,7 +529,7 @@ def test_service_item_load_song_and_audio_from_service_no_media(mock_sha256_file
     assert service_item.background_audio == [], 'The background_audio list is not populated'
 
 
-@patch('openlp.core.lib.serviceitem.sha256_file_hash')
+@patch('opal.core.lib.serviceitem.sha256_file_hash')
 def test_service_item_to_dict_is_valid_json(mock_sha256_file_hash, state_media, settings, service_item_env):
     """
     Test the Service Item - Converting to to_dict response to json
@@ -823,7 +823,7 @@ def test_get_transition_delay_slow(settings):
     assert delay == 2
 
 
-@patch('openlp.core.lib.serviceitem.sha256_file_hash')
+@patch('opal.core.lib.serviceitem.sha256_file_hash')
 def test_to_dict_text_item(mocked_sha256_file_hash, state_media, settings, service_item_env):
     """
     Test that the to_dict() method returns the correct data for the service item
@@ -1018,8 +1018,8 @@ def test_to_dict_image_item(state_media, settings, service_item_env):
     assert result == expected_dict
 
 
-@patch('openlp.core.lib.serviceitem.AppLocation.get_data_path')
-@patch('openlp.core.lib.serviceitem.image_to_data_uri')
+@patch('opal.core.lib.serviceitem.AppLocation.get_data_path')
+@patch('opal.core.lib.serviceitem.image_to_data_uri')
 def test_to_dict_presentation_item(mocked_image_uri, mocked_get_data_path, state_media, settings, service_item_env):
     """
     Test that the to_dict() method returns the correct data for the service item
@@ -1037,8 +1037,8 @@ def test_to_dict_presentation_item(mocked_image_uri, mocked_get_data_path, state
     mocked_image_uri.side_effect = lambda x: 'your img uri at: {}'.format(x.as_posix())
 
     # WHEN: adding presentation to service_item
-    with patch('openlp.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
-            patch('openlp.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
+    with patch('opal.core.lib.serviceitem.sha256_file_hash') as mocked_sha256_file_hash, \
+            patch('opal.core.lib.serviceitem.AppLocation.get_section_data_path') as mocked_get_section_data_path:
         mocked_sha256_file_hash.return_value = '4a067fed6834ea2bc4b8819f11636365'
         mocked_get_section_data_path.return_value = Path('/path/to/presentations/')
         service_item.add_from_command(TEST_PATH, presentation_name, image, display_title, notes)
@@ -1096,7 +1096,7 @@ def test_add_from_text_adds_per_slide_footer_html():
     ]
 
 
-@patch('openlp.core.lib.serviceitem.UiIcons')
+@patch('opal.core.lib.serviceitem.UiIcons')
 def test_add_from_text_per_slide_footer_html_is_honoured(mock_uiicons, settings, registry):
     """
     Test the Service Item - adding text slides with per slide footer_html is honoured
@@ -1226,7 +1226,7 @@ def test_update_theme(registry: Registry, is_text: bool, is_clear_called: bool):
 
 
 def test_bible_slide_labels_keep_chapter_between_pages(settings, registry):
-    from openlp.plugins.bibles.lib import update_reference_separators
+    from opal.plugins.bibles.lib import update_reference_separators
 
     update_reference_separators()
     renderer = MagicMock()

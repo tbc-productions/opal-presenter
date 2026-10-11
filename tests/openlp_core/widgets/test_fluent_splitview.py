@@ -2,8 +2,8 @@
 import pytest
 from PySide6 import QtCore, QtWidgets as Native
 
-from openlp.core.app import OpenLP
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.app import OpenLP
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture(scope='session')
@@ -30,12 +30,12 @@ def test_split_hover_resets_on_pane_entry_and_can_be_hovered_again(qtbot, orient
     view.show()
     QtWidgets.QApplication.processEvents()
     handle = view.handleGeometry(0).center()
-    qtbot.mouseMove(view, handle)
+    qtbot.mouseMove(view.windowHandle(), handle)
     assert view.cursor().shape() == cursor
     QtWidgets.QApplication.sendEvent(right, QtCore.QEvent(QtCore.QEvent.Type.Enter))
     assert view.cursor().shape() == QtCore.Qt.CursorShape.ArrowCursor
     assert right.cursor().shape() == QtCore.Qt.CursorShape.IBeamCursor
-    qtbot.mouseMove(view, handle + QtCore.QPoint(1, 1))
+    qtbot.mouseMove(view.windowHandle(), handle + QtCore.QPoint(1, 1))
     assert view.cursor().shape() == cursor
     QtWidgets.QApplication.sendEvent(left, QtCore.QEvent(QtCore.QEvent.Type.Enter))
     assert view.cursor().shape() == QtCore.Qt.CursorShape.ArrowCursor

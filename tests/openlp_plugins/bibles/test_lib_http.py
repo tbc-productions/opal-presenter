@@ -26,7 +26,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openlp.plugins.bibles.lib.importers.http import BGExtract, BSExtract, CWExtract
+from opal.plugins.bibles.lib.importers.http import BGExtract, BSExtract, CWExtract
 
 
 if not os.environ.get('OPENLP_RUN_HTTP_BIBLE_TESTS'):

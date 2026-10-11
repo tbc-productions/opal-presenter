@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.pluginmanager package.
+Package to test the opal.core.lib.pluginmanager package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.state import State
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.lib.pluginmanager import PluginManager
+from opal.core.state import State
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.lib.plugin import PluginStatus
+from opal.core.lib.pluginmanager import PluginManager
 
 
 @pytest.fixture()
@@ -44,7 +44,7 @@ def plugin_manager_env(registry, state):
     Registry().register('settings', MagicMock())
 
 
-@patch('openlp.core.lib.pluginmanager.Plugin.__subclasses__')
+@patch('opal.core.lib.pluginmanager.Plugin.__subclasses__')
 def test_bootstrap_initialise(mocked_subclasses, settings, state):
     """
     Test the PluginManager.bootstrap_initialise() method
@@ -83,13 +83,13 @@ def test_bootstrap_initialise_progress_counts_processed_plugins(registry, settin
     updates = []
     registry.register_function('startup_progress', lambda *args, **kwargs: updates.append((args, kwargs)))
 
-    with patch('openlp.core.lib.pluginmanager.extension_loader'), \
-            patch('openlp.core.lib.pluginmanager.Plugin.__subclasses__', return_value=[failed, loaded]):
+    with patch('opal.core.lib.pluginmanager.extension_loader'), \
+            patch('opal.core.lib.pluginmanager.Plugin.__subclasses__', return_value=[failed, loaded]):
         manager.bootstrap_initialise()
 
     assert updates == [
-        (('Loading plugins', 1, 2), {'progress_range': (25, 55)}),
-        (('Loading Songs', 2, 2), {'progress_range': (25, 55)})
+        (('Loading plugins…', 1, 2), {'progress_range': (25, 55)}),
+        (('Loading Songs…', 2, 2), {'progress_range': (25, 55)})
     ]
 
 
@@ -580,17 +580,17 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     registry.register_function('startup_progress', report)
 
     def initialise_first():
-        assert updates == [('Initialising First plugin', 0, 2)]
+        assert updates == [('Loading First plugin…', 0, 2)]
         if fails:
             raise RuntimeError('Plugin failed')
 
     first.initialise.side_effect = initialise_first
 
     def initialise_second():
-        assert updates[-1] == ('Initialising Second plugin', 1, 2)
+        assert updates[-1] == ('Loading Second plugin…', 1, 2)
 
     second.initialise.side_effect = initialise_second
-    with patch('openlp.core.lib.pluginmanager.State') as state_class:
+    with patch('opal.core.lib.pluginmanager.State') as state_class:
         state_class.return_value.list_plugins.return_value = [first, inactive, None, second]
         state_class.return_value.get_text.return_value = ''
         manager.initialise_plugins()
@@ -598,9 +598,9 @@ def test_initialise_plugins_progress_counts_processed_active_plugins(registry, f
     inactive.initialise.assert_not_called()
     second.initialise.assert_called_once_with()
     assert updates == [
-        ('Initialising First plugin', 0, 2),
-        ('Initialising First plugin', 1, 2),
-        ('Initialising Second plugin', 1, 2),
-        ('Initialising Second plugin', 2, 2),
-        ('Loading library and themes',)
+        ('Loading First plugin…', 0, 2),
+        ('Loading First plugin…', 1, 2),
+        ('Loading Second plugin…', 1, 2),
+        ('Loading Second plugin…', 2, 2),
+        ('Loading Library…',)
     ]

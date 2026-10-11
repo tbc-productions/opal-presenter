@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.db module.
+Package to test the opal.core.projectors.db module.
 record functions.
 
 PREREQUISITE: add_record() and get_all() functions validated.
@@ -29,11 +29,11 @@ import os
 import shutil
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.settings import Settings
-from openlp.core.db.upgrades import upgrade_db
-from openlp.core.projectors import upgrade
-from openlp.core.projectors.constants import PJLINK_PORT
-from openlp.core.projectors.db import Manufacturer, Model, Projector, ProjectorDB, ProjectorSource, Source
+from opal.core.common.settings import Settings
+from opal.core.db.upgrades import upgrade_db
+from opal.core.projectors import upgrade
+from opal.core.projectors.constants import PJLINK_PORT
+from opal.core.projectors.db import Manufacturer, Model, Projector, ProjectorDB, ProjectorSource, Source
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA, TEST3_DATA, TEST_DB, TEST_DB_PJLINK1
 from tests.utils.constants import TEST_RESOURCES_PATH
 

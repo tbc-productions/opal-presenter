@@ -26,14 +26,14 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib import ServiceItemContext
-from openlp.core.ui.media import MediaType, get_supported_media_suffix
-from openlp.core.ui.icons import UiIcons
-from openlp.plugins.media.lib.db import Item
-from openlp.plugins.media.lib.mediaitem import MediaMediaItem
+from opal.core.common.registry import Registry
+from opal.core.lib import ServiceItemContext
+from opal.core.ui.media import MediaType, get_supported_media_suffix
+from opal.core.ui.icons import UiIcons
+from opal.plugins.media.lib.db import Item
+from opal.plugins.media.lib.mediaitem import MediaMediaItem
 
 
 @pytest.fixture
@@ -44,8 +44,8 @@ def media_item(settings):
     Registry().register('main_window', mocked_main_window)
     Registry().register('live_controller', MagicMock())
     mocked_plugin = MagicMock()
-    with patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem._setup'), \
-            patch('openlp.plugins.media.lib.mediaitem.MediaMediaItem.setup_item'):
+    with patch('opal.plugins.media.lib.mediaitem.FolderLibraryItem._setup'), \
+            patch('opal.plugins.media.lib.mediaitem.MediaMediaItem.setup_item'):
         m_item = MediaMediaItem(None, mocked_plugin)
         m_item.manager = MagicMock()
     return m_item
@@ -79,8 +79,8 @@ def test_search_not_found(media_item):
     assert result == [], 'The result file should be empty'
 
 
-@patch('openlp.plugins.media.lib.mediaitem.or_')
-@patch('openlp.plugins.media.lib.mediaitem.Item')
+@patch('opal.plugins.media.lib.mediaitem.or_')
+@patch('opal.plugins.media.lib.mediaitem.Item')
 def test_get_list_audio(MockItem, mocked_or, media_item):
     """
     Test the ``MediaMediaItem.get_list()`` method to return all audio items
@@ -104,8 +104,8 @@ def test_get_list_audio(MockItem, mocked_or, media_item):
     assert media_list == [Path('test1.mp3'), Path('test2.ogg')]
 
 
-@patch('openlp.plugins.media.lib.mediaitem.or_')
-@patch('openlp.plugins.media.lib.mediaitem.Item')
+@patch('opal.plugins.media.lib.mediaitem.or_')
+@patch('opal.plugins.media.lib.mediaitem.Item')
 def test_get_list_video(MockItem, mocked_or, media_item):
     """
     Test the ``MediaMediaItem.get_list()`` method to return all audio items
@@ -163,8 +163,8 @@ def test_load_item_metadata_columns(media_item):
 
     with patch.object(Path, 'exists', return_value=True), \
             patch.object(Path, 'stat', return_value=mocked_stat), \
-            patch('openlp.plugins.media.lib.mediaitem.QtCore.QFileInfo') as mocked_qfileinfo, \
-            patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix', return_value=([], [])):
+            patch('opal.plugins.media.lib.mediaitem.QtCore.QFileInfo') as mocked_qfileinfo, \
+            patch('opal.plugins.media.lib.mediaitem.get_supported_media_suffix', return_value=([], [])):
         mocked_qfileinfo.return_value.isFile.return_value = True
 
         # WHEN: load_item() is called
@@ -175,7 +175,7 @@ def test_load_item_metadata_columns(media_item):
     assert result.toolTip(0) == '/media/video.mp4\nMP4 · 150.0 MB'
 
 
-@patch('openlp.plugins.media.lib.mediaitem.critical_error_message_box')
+@patch('opal.plugins.media.lib.mediaitem.critical_error_message_box')
 def test_generate_slide_data_blocks_unsupported_media(mocked_error_dialog: MagicMock, media_item, tmp_path):
     """
     Test that generate_slide_data returns False when the platform cannot decode the file.
@@ -248,8 +248,8 @@ def test_apply_media_length_probe_result_retries_when_worker_returns_zero(media_
     mocked_service_manager.repaint_service_list.assert_called_once_with(0, -1)
 
 
-@patch('openlp.plugins.media.lib.mediaitem.FolderLibraryItem.validate_and_load')
-@patch('openlp.plugins.media.lib.mediaitem.critical_error_message_box')
+@patch('opal.plugins.media.lib.mediaitem.FolderLibraryItem.validate_and_load')
+@patch('opal.plugins.media.lib.mediaitem.critical_error_message_box')
 def test_validate_and_load_filters_unsupported_files(mocked_error_dialog: MagicMock,
                                                      mocked_super_validate: MagicMock,
                                                      media_item,
@@ -286,7 +286,7 @@ def test_generate_thumbnail_path_prefers_file_hash(media_item, tmp_path):
     assert media_item.generate_thumbnail_path(item) == tmp_path / 'abc123.png'
 
 
-@patch('openlp.plugins.media.lib.mediaitem.delete_file')
+@patch('opal.plugins.media.lib.mediaitem.delete_file')
 def test_delete_item_removes_generated_thumbnail(mocked_delete_file: MagicMock, media_item, tmp_path):
     """Delete should remove the generated PNG thumbnail path."""
     media_item.service_path = tmp_path
@@ -298,10 +298,10 @@ def test_delete_item_removes_generated_thumbnail(mocked_delete_file: MagicMock, 
     mocked_delete_file.assert_called_once_with(tmp_path / 'abc123.png')
 
 
-@patch('openlp.plugins.media.lib.mediaitem.media_info')
-@patch('openlp.plugins.media.lib.mediaitem.build_icon')
-@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+@patch('opal.plugins.media.lib.mediaitem.media_info')
+@patch('opal.plugins.media.lib.mediaitem.build_icon')
+@patch('opal.plugins.media.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.media.lib.mediaitem.get_supported_media_suffix')
 def test_load_item_video_uses_cached_thumbnail(mocked_suffixes: MagicMock,
                                                mocked_validate_thumb: MagicMock,
                                                mocked_build_icon: MagicMock,
@@ -325,10 +325,10 @@ def test_load_item_video_uses_cached_thumbnail(mocked_suffixes: MagicMock,
     mocked_media_info.assert_not_called()
 
 
-@patch('openlp.plugins.media.lib.mediaitem.media_info')
-@patch('openlp.plugins.media.lib.mediaitem.build_icon')
-@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+@patch('opal.plugins.media.lib.mediaitem.media_info')
+@patch('opal.plugins.media.lib.mediaitem.build_icon')
+@patch('opal.plugins.media.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.media.lib.mediaitem.get_supported_media_suffix')
 def test_load_item_video_generates_thumbnail_when_missing(mocked_suffixes: MagicMock,
                                                           mocked_validate_thumb: MagicMock,
                                                           mocked_build_icon: MagicMock,
@@ -355,9 +355,9 @@ def test_load_item_video_generates_thumbnail_when_missing(mocked_suffixes: Magic
     mocked_build_icon.assert_called_once_with(tmp_path / 'abc123.png')
 
 
-@patch('openlp.plugins.media.lib.mediaitem.media_info')
-@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.media.lib.mediaitem.get_supported_media_suffix')
+@patch('opal.plugins.media.lib.mediaitem.media_info')
+@patch('opal.plugins.media.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.media.lib.mediaitem.get_supported_media_suffix')
 def test_load_item_video_defers_thumbnail_generation_on_initial_load(mocked_suffixes: MagicMock,
                                                                      mocked_validate_thumb: MagicMock,
                                                                      mocked_media_info: MagicMock,
@@ -379,9 +379,9 @@ def test_load_item_video_defers_thumbnail_generation_on_initial_load(mocked_suff
     mocked_media_info.assert_not_called()
 
 
-@patch('openlp.plugins.media.lib.mediaitem.media_info')
-@patch('openlp.plugins.media.lib.mediaitem.build_icon')
-@patch('openlp.plugins.media.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.media.lib.mediaitem.media_info')
+@patch('opal.plugins.media.lib.mediaitem.build_icon')
+@patch('opal.plugins.media.lib.mediaitem.validate_thumb')
 def test_on_focus_generates_deferred_thumbnails(mocked_validate_thumb: MagicMock,
                                                 mocked_build_icon: MagicMock,
                                                 mocked_media_info: MagicMock,

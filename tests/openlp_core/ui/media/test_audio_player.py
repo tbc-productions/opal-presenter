@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.media.mediaplayer package.
+Package to test the opal.core.ui.media.mediaplayer package.
 This class is for playing Media within OpenLP.
 """
 from unittest.mock import MagicMock, patch
@@ -28,9 +28,9 @@ from PySide6 import QtCore
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.ui.media import MediaType
-from openlp.core.ui.media.audioplayer import AudioPlayer
+from opal.core.common.registry import Registry
+from opal.core.ui.media import MediaType
+from opal.core.ui.media.audioplayer import AudioPlayer
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ def test_pause(base_audio_player):
     base_audio_player.media_player.pause.assert_called_once()
 
 
-@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+@patch('opal.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
 def test_stop(invoke_method, base_audio_player):
     """
     Test stopping the current item

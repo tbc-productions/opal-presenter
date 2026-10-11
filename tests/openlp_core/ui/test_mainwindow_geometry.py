@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.mainwindow import MainWindow
+from opal.core.ui.mainwindow import MainWindow
 
 
 class GeometryWindow(QtWidgets.QMainWindow):

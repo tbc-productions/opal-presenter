@@ -7,15 +7,15 @@ from zipfile import ZipFile
 
 import pytest
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import sha256_file_hash
-from openlp.core.common.applocation import AppLocation
-from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.ui.servicemanager import ServiceManager
-from openlp.plugins.presentations.lib.db import Item
-from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
+from opal.core.common import sha256_file_hash
+from opal.core.common.applocation import AppLocation
+from opal.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.ui.servicemanager import ServiceManager
+from opal.plugins.presentations.lib.db import Item
+from opal.plugins.presentations.lib.mediaitem import PresentationMediaItem
 from tests.utils.constants import RESOURCE_PATH
 
 

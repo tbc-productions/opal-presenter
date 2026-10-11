@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6.QtCore import QSize
 
-from openlp.core.lib.slidedesign import apply_design, normalise_design, layer_order
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.common.enum import ServiceItemType
+from opal.core.lib.slidedesign import apply_design, normalise_design, layer_order
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.common.enum import ServiceItemType
 
 
 DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 'font_size': 48},
@@ -19,7 +19,7 @@ DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 
 
 
 def test_filters_are_validated_and_background_only_effects_are_preserved():
-    from openlp.core.lib.slidedesign import normalise_filters
+    from opal.core.lib.slidedesign import normalise_filters
     assert normalise_filters({'blur': 500, 'hue-rotate': -400, 'brightness': 100, 'sepia': float('nan'),
                               'contrast': 'url(https://invalid)', 'unknown': 10}) == {'blur': 100, 'hue-rotate': -180}
     source = {'version': 1, 'background_filters': {'sepia': 75, 'brightness': 90}}
@@ -69,6 +69,21 @@ def test_apply_design_scales_geometry_without_mutating_theme():
     assert result.song_design_output_height == 720
 
 
+def test_text_box_markup_renders_tags_but_escapes_literal_html_and_keeps_saved_source(settings):
+    text = '{st}Caption{/st}\n<script>alert(1)</script> & [C]'
+    design = {'version': 1, 'elements': [
+        {'id': 'caption', 'kind': 'text', 'text': text, 'html': '<img src=x onerror=alert(1)>'}]}
+    result = apply_design(SimpleNamespace(font_main_size=32), design, QSize(1920, 1080))
+    markup = result.song_design['elements'][0]['html']
+    assert 'Caption</strong>' in markup
+    assert '<br>&lt;script&gt;alert(1)&lt;/script&gt; &amp; &#91;C&#93;' in markup
+    assert '<script>' not in markup
+    assert '<img' not in markup
+    assert result.song_design['elements'][0]['text'] == text
+    assert 'html' not in normalise_design(result.song_design)['elements'][0]
+    assert design['elements'][0]['text'] == text
+
+
 def test_service_header_round_trip_keeps_portable_design(settings):
     item = ServiceItem()
     item.service_item_type = ServiceItemType.Text
@@ -77,16 +92,16 @@ def test_service_header_round_trip_keeps_portable_design(settings):
     with patch.object(item, 'get_theme_data', return_value=None):
         saved = json.loads(json.dumps(item.get_service_repr(False)))
     restored = ServiceItem()
-    with patch('openlp.core.lib.serviceitem.State') as state, patch.object(restored, '_create_slides'):
+    with patch('opal.core.lib.serviceitem.State') as state, patch.object(restored, '_create_slides'):
         state.return_value.check_preconditions.return_value = False
         restored.set_from_service({'serviceitem': saved}, None)
     assert restored.slide_design == item.slide_design
 
 
 def test_service_packages_base_theme_without_applying_canvas_fit_twice(settings, registry):
-    from openlp.core.lib.theme import Theme
+    from opal.core.lib.theme import Theme
 
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         from PySide6.QtCore import QRect
         screens.return_value.current.display_geometry = QRect(0, 0, 1440, 1080)
         theme = Theme()
@@ -99,7 +114,7 @@ def test_service_packages_base_theme_without_applying_canvas_fit_twice(settings,
     item.service_item_type = ServiceItemType.Text
     item.slide_design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
                          'lyrics': {}, 'elements': []}
-    with patch('openlp.core.lib.slidedesign.ScreenList') as screens:
+    with patch('opal.core.lib.slidedesign.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QSize(1440, 1080)
         before = item.get_theme_data()
         saved = item.get_service_repr(False)['header']['slide_design']
@@ -117,7 +132,7 @@ def test_service_resolves_design_on_a_copy_of_the_selected_theme(settings, regis
     registry.register('theme_manager', manager)
     item = ServiceItem()
     item.slide_design = DESIGN
-    with patch('openlp.core.lib.slidedesign.ScreenList') as screens:
+    with patch('opal.core.lib.slidedesign.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QSize(1920, 1080)
         result = item.get_theme_data()
     assert result.font_main_x == 192
@@ -207,7 +222,7 @@ def test_service_hides_only_the_selected_verse_page_footer(settings, registry):
 
 
 def test_custom_footer_flags_follow_insertions_edits_and_deletions():
-    from openlp.core.lib.slidedesign import remap_custom_footers
+    from opal.core.lib.slidedesign import remap_custom_footers
     design = {'version': 1, 'hidden_footers': ['custom-1:0:0', 'custom-2:0:1', 'custom-3:0:0']}
     changed = remap_custom_footers(design, ['One', 'Two', 'Three'], ['New', 'One', 'Changed two', 'Three'])
     assert changed['hidden_footers'] == ['custom-2:0:0', 'custom-3:0:1', 'custom-4:0:0']
@@ -226,6 +241,23 @@ def test_pixel_canvas_accepts_one_pixel_textbox_and_imported_theme_scales_once()
     result = apply_design(SimpleNamespace(), design, QSize(1280, 720))
     assert result.font_main_size == 32
     assert result.font_main_width == pytest.approx(2 / 3)
+    assert (result.display_size_width, result.display_size_height) == (1280, 720)
+
+
+@pytest.mark.parametrize('pixel_canvas', [False, True])
+def test_imported_theme_effects_follow_the_same_scale_as_its_fonts(pixel_canvas):
+    design = {'version': 1, 'theme': {
+        'background_type': 'solid', 'display_size_width': 1920, 'display_size_height': 1080,
+        'font_main_size': 48, 'font_main_outline_size': 3, 'font_main_shadow_size': 6,
+        'font_main_shadow_blur': 9, 'font_main_letter_adjustment': -1}}
+    if pixel_canvas:
+        design.update(canvas_width=1920, canvas_height=1080)
+    result = apply_design(SimpleNamespace(), design, QSize(1280, 720))
+    assert result.font_main_size == 32
+    assert result.font_main_outline_size == 2
+    assert result.font_main_shadow_size == 4
+    assert result.font_main_shadow_blur == 6
+    assert result.font_main_letter_adjustment == pytest.approx(-2 / 3)
 
 
 def test_slide_bold_override_supersedes_theme_weight():
@@ -241,3 +273,24 @@ def test_portable_theme_preserves_font_weights():
         'version': 1, 'theme': {'background_type': 'solid', 'font_main_weight': 500, 'font_footer_weight': 800}})
     assert design['theme']['font_main_weight'] == 500
     assert design['theme']['font_footer_weight'] == 800
+
+
+@pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
+@pytest.mark.parametrize('embedded', [False, True])
+def test_inherited_fonts_scale_once_with_a_pixel_canvas(settings, width, height, embedded):
+    from PySide6.QtCore import QRect
+    from opal.core.lib.theme import Theme
+    with patch('opal.core.lib.theme.ScreenList') as screens:
+        screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
+        theme = Theme()
+    theme.font_main_size, theme.font_footer_size = 64, 24
+    theme.font_main_outline_size = 3
+    design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080}
+    if embedded:
+        design['theme'] = copy.deepcopy(theme.__dict__)
+    theme.scale_to_size(QSize(width, height))
+    result = apply_design(theme, design, QSize(width, height))
+    assert result.font_main_size / height == pytest.approx(64 / 1080)
+    assert result.font_footer_size / height == pytest.approx(24 / 1080)
+    assert result.font_main_outline_size / height == pytest.approx(3 / 1080)
+    assert (result.display_size_width, result.display_size_height) == (width, height)

@@ -24,14 +24,14 @@ This module contains tests for the plugin class Alerts plugin.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.state import State
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.alerts.alertsplugin import AlertsPlugin
+from opal.core.state import State
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.alerts.alertsplugin import AlertsPlugin
 
 
 @pytest.fixture
-@patch('openlp.plugins.alerts.alertsplugin.DBManager')
+@patch('opal.plugins.alerts.alertsplugin.DBManager')
 def alerts_plugin(mocked_manager: MagicMock, settings: Settings, state: State, registry: Registry):
     """An instance of the AlertsPlugin"""
     registry.register('main_window', None)
@@ -76,7 +76,7 @@ def test_alerts_initialise(alerts_plugin: AlertsPlugin):
     # GIVEN an environment
     alerts_plugin.tools_alert_item = MagicMock()
     # WHEN: I request the form
-    with patch('openlp.plugins.alerts.alertsplugin.ActionList.instance') as mocked_actionlist:
+    with patch('opal.plugins.alerts.alertsplugin.ActionList.instance') as mocked_actionlist:
         alerts_plugin.initialise()
         # THEN: the form is loaded
         mocked_actionlist.add_action.assert_called_once()
@@ -88,7 +88,7 @@ def test_alerts_finalise(alerts_plugin: AlertsPlugin):
     # GIVEN an environment
     alerts_plugin.tools_alert_item = MagicMock()
     # WHEN: I request the form
-    with patch('openlp.plugins.alerts.alertsplugin.ActionList.instance') as mocked_actionlist:
+    with patch('opal.plugins.alerts.alertsplugin.ActionList.instance') as mocked_actionlist:
         alerts_plugin.finalise()
         # THEN: the form is loaded
         mocked_actionlist.remove_action.assert_called_once()

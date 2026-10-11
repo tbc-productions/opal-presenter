@@ -25,9 +25,9 @@ All changes live on branch `stability-fixes`. These three files are dirty:
 
 | File | Scope |
 | --- | --- |
-| [openlp/core/display/html/display.js](../openlp/core/display/html/display.js) | Transitions + hide/show fixes + diagnostic logging |
-| [openlp/core/display/html/display.css](../openlp/core/display/html/display.css) | Pause-overlay transition override |
-| [openlp/core/display/window.py](../openlp/core/display/window.py) | `_disable_hide_transition()` + `handle_transition_debug` prefix |
+| [opal/core/display/html/display.js](../opal/core/display/html/display.js) | Transitions + hide/show fixes + diagnostic logging |
+| [opal/core/display/html/display.css](../opal/core/display/html/display.css) | Pause-overlay transition override |
+| [opal/core/display/window.py](../opal/core/display/window.py) | `_disable_hide_transition()` + `handle_transition_debug` prefix |
 
 The hide/show fixes (transition tokens, pause-overlay CSS, symmetric
 `_disable_hide_transition`) are captured in
@@ -36,7 +36,7 @@ only the song→image/presentation bug.
 
 ### Transition-system changes (landed, may help the bug)
 
-1. **[display.js:496](../openlp/core/display/html/display.js#L496)** — Reveal's
+1. **[display.js:496](../opal/core/display/html/display.js#L496)** — Reveal's
    init config now sets `backgroundTransition: "fade"` (previously `"none"`).
    Without this, reveal's internal `config.backgroundTransition` is "none"
    at init, which means the CSS rule
@@ -63,19 +63,19 @@ These were added to capture the output-display race. They should be
 
 | Location | Emits |
 | --- | --- |
-| [display.js:2348](../openlp/core/display/html/display.js#L2348) `setTheme` | theme arrival: `dst`, `dstType`, `isDisplay` |
-| [display.js:1424](../openlp/core/display/html/display.js#L1424) `setImageSlides.pre` | pre-render decisions: `themeSet`, `dst`, `useNativeBgImages`, `doTransitions`, `hasPdfBg` |
-| [display.js:1432](../openlp/core/display/html/display.js#L1432) `setImageSlides.post` | post-render mark |
-| [display.js:2470](../openlp/core/display/html/display.js#L2470) `applyTheme.configure` | enabled branch + effect |
-| [display.js:2473](../openlp/core/display/html/display.js#L2473) `applyTheme.configure` | disabled branch |
-| [display.js:~1218](../openlp/core/display/html/display.js#L1218) `_logTransitionDebug` | reveal config, wrapper `data-background-transition`, per-slide backgrounds summary, slide section count |
-| [window.py:616](../openlp/core/display/window.py#L616) `handle_transition_debug` | Prefixes every log line with `[DISPLAY]` or `[preview]` |
+| [display.js:2348](../opal/core/display/html/display.js#L2348) `setTheme` | theme arrival: `dst`, `dstType`, `isDisplay` |
+| [display.js:1424](../opal/core/display/html/display.js#L1424) `setImageSlides.pre` | pre-render decisions: `themeSet`, `dst`, `useNativeBgImages`, `doTransitions`, `hasPdfBg` |
+| [display.js:1432](../opal/core/display/html/display.js#L1432) `setImageSlides.post` | post-render mark |
+| [display.js:2470](../opal/core/display/html/display.js#L2470) `applyTheme.configure` | enabled branch + effect |
+| [display.js:2473](../opal/core/display/html/display.js#L2473) `applyTheme.configure` | disabled branch |
+| [display.js:~1218](../opal/core/display/html/display.js#L1218) `_logTransitionDebug` | reveal config, wrapper `data-background-transition`, per-slide backgrounds summary, slide section count |
+| [window.py:616](../opal/core/display/window.py#L616) `handle_transition_debug` | Prefixes every log line with `[DISPLAY]` or `[preview]` |
 
 ---
 
 ## How the flow actually runs (verified)
 
-### Python side ([slidecontroller.py](../openlp/core/ui/slidecontroller.py))
+### Python side ([slidecontroller.py](../opal/core/ui/slidecontroller.py))
 
 In `_process_item()` when switching items:
 
@@ -90,7 +90,7 @@ slidecontroller.py:1236  display.load_images(self.service_item.slides)  # async 
 `load_images` → `run_in_display('setImageSlides', imagesr)` with the
 default `is_sync=False`.
 
-### Bridge ([window.py:568](../openlp/core/display/window.py#L568))
+### Bridge ([window.py:568](../opal/core/display/window.py#L568))
 
 ```python
 wait_for(lambda: getattr(self, '_DisplayWindow__script_done', True))
@@ -108,23 +108,23 @@ serialising `runJavaScript` on the page's JS thread.
 
 ### JS side
 
-- **setTheme** ([display.js:2343](../openlp/core/display/html/display.js#L2343))
+- **setTheme** ([display.js:2343](../opal/core/display/html/display.js#L2343))
   - Stores `Display._theme = theme` (reference compare always true for
     freshly-parsed payloads → always stores)
   - Sets `_themeApplied = false`
   - Does **not** trigger reveal reconfigure — that happens later in
     `applyTheme`
-- **setImageSlides** ([display.js:1360](../openlp/core/display/html/display.js#L1360))
+- **setImageSlides** ([display.js:1360](../opal/core/display/html/display.js#L1360))
   - Reads `Display._theme.display_slide_transition` **at render time**
   - `useNativeBackgroundForImageSlides = themeTransitionsEnabled &&
     themeTransitionType === TransitionType.Fade`
   - If true → section gets `data-background-image` + `data-background-transition="fade"`
   - If false → section gets `<img>` child (no data-background-transition)
   - Calls `replaceSlides(parentSection)`
-- **replaceSlides** ([display.js:788](../openlp/core/display/html/display.js#L788))
+- **replaceSlides** ([display.js:788](../opal/core/display/html/display.js#L788))
   - Calls `applyTheme(new_slides, false)` **once** on the wrapper section
   - Then `Reveal.slide(...)` + `Reveal.sync()` to regenerate backgrounds
-- **applyTheme** ([display.js:2419](../openlp/core/display/html/display.js#L2419))
+- **applyTheme** ([display.js:2419](../opal/core/display/html/display.js#L2419))
   - Calls `Reveal.configure({transition, transitionSpeed, rtl})` based
     on `Display._theme.display_slide_transition` (song = disabled,
     image = enabled)
@@ -141,7 +141,7 @@ The image item's per-slide `data-background-transition="fade"` is set
 on the `<section>` before `replaceSlides` runs. `replaceSlides` appends
 the section to `_slidesContainer` and calls `Reveal.sync()`.
 
-Reveal's `syncBackground()` ([reveal.js:1157](../openlp/core/display/html/reveal.js#L1157))
+Reveal's `syncBackground()` ([reveal.js:1157](../opal/core/display/html/reveal.js#L1157))
 builds the corresponding `.slide-background` wrapper element by cloning
 attributes from the section. But if the **previous item (song)** left
 the `.backgrounds` container with `<div>` background nodes that don't
@@ -157,7 +157,7 @@ a full rebuild.
 **Why only on output**: the output display is initialised with
 `isDisplay=true` → `_doTransitions=true` unconditionally. The preview
 takes the `allowThemeTransitions` path and its
-`setAllowThemeTransitions` handler ([display.js:613](../openlp/core/display/html/display.js#L613))
+`setAllowThemeTransitions` handler ([display.js:613](../opal/core/display/html/display.js#L613))
 calls `applyTheme` on the root slide again after each item switch — a
 double application that the output doesn't perform.
 
@@ -264,7 +264,7 @@ requestAnimationFrame(function () {
 
 ### If H2 (theme-state race)
 
-In [slidecontroller.py:1019](../openlp/core/ui/slidecontroller.py#L1019)
+In [slidecontroller.py:1019](../opal/core/ui/slidecontroller.py#L1019)
 `_set_theme`, call the display with `is_sync=True` when it is the live
 output:
 
@@ -308,7 +308,7 @@ across a song→image switch.
 
 Manual reproduction:
 
-1. Start OpenLP+ with a two-monitor setup.
+1. Start Opal Presenter with a two-monitor setup.
 2. Load a service with: song → image → song → image → PDF presentation.
 3. Set the song theme transition to **off**; set image/PDF transitions to
    **fade**.

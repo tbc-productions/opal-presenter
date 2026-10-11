@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui package.
+Package to test the opal.core.ui package.
 """
 import hashlib
 import json
@@ -31,15 +31,15 @@ from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
-from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
-from openlp.core.resources import qInitResources
+from opal.core.ui.splashscreen import SplashScreen, SplashScreenProcess
+from opal.core.resources import qInitResources
 
 
 def test_splashscreen(mock_settings: MagicMock, qtbot):
-    """Startup uses the simple native Fluent surface and its loading spinner."""
+    """Startup uses branded artwork with a Fluent loading spinner."""
     qInitResources()
     splash = SplashScreen()
     qtbot.addWidget(splash)
@@ -49,12 +49,19 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert splash.iconSize() == QtCore.QSize(128, 128)
     assert isinstance(splash, fluentqt.SplashScreen)
     assert splash.objectName() == 'splashScreen'
-    assert splash.size() == QtCore.QSize(370, 370)
+    assert splash.size() == QtCore.QSize(640, 400)
+    assert not splash._artwork.isNull()
+    assert splash._artwork.size() == QtCore.QSize(1586, 992)
+    assert splash._logo.size() == QtCore.QSize(512, 512)
+    assert splash._logo.hasAlphaChannel()
+    assert splash._title_font.pixelSize() == 48
+    assert splash._title_font.weight() == QtGui.QFont.Weight.Normal
+    assert splash._title_font.family() == fluentqt.font_for_role(fluentqt.FontRole.Body).family()
     assert splash.contextMenuPolicy() == QtCore.Qt.ContextMenuPolicy.PreventContextMenu
     assert splash.windowFlags() & QtCore.Qt.WindowType.SplashScreen
     assert splash.presentation() == fluentqt.SplashScreen.Presentation.Simple
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Starting OpenLP+'
+    assert splash.text() == 'Starting…'
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring is not None
     assert ring.isVisible()
@@ -65,17 +72,76 @@ def test_splashscreen(mock_settings: MagicMock, qtbot):
     assert percentage.text() == '0%'
 
 
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_loading_lines_align_with_artwork(mock_settings, qtbot, theme):
+    """Both loading lines share the title's left edge, including long stages."""
+    previous_theme = fluentqt.current_theme()
+    try:
+        fluentqt.set_theme(theme)
+        splash = SplashScreen()
+        qtbot.addWidget(splash)
+        splash.show()
+        splash.set_status('Loading components and initialising a very large presentation library ' * 3, 55)
+        qtbot.waitUntil(lambda: splash.text().startswith('Loading components'))
+        status = splash.findChild(fluentqt.Label, 'splashStatusText')
+        percentage = splash.findChild(fluentqt.Label, 'splashPercentage')
+        for label in (status, percentage):
+            assert label.x() == 282
+            assert label.height() == 20
+            assert label.alignment() & QtCore.Qt.AlignmentFlag.AlignLeft
+            assert label.palette().color(label.foregroundRole()) == QtCore.Qt.GlobalColor.white
+            assert splash.rect().contains(label.geometry())
+        assert status.isTextElided()
+        assert status.geometry().bottom() < percentage.y()
+        assert percentage.text() == '55%'
+        ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
+        for progress in (0, 55, 100):
+            splash.set_status('Loading components', progress)
+            qtbot.wait(50)
+            assert ring.size() == QtCore.QSize(16, 16)
+            assert ring.x() == percentage.x() + percentage.fontMetrics().horizontalAdvance(percentage.text()) + 8
+            assert ring.geometry().center().y() == percentage.geometry().center().y()
+            pixels = ring.grab().toImage()
+            opaque_pixels = [pixels.pixelColor(x, y) for x in range(pixels.width()) for y in range(pixels.height())
+                             if pixels.pixelColor(x, y).alpha() > 200]
+            assert opaque_pixels
+            assert all(pixel.red() == pixel.green() == pixel.blue() == 255 for pixel in opaque_pixels)
+    finally:
+        fluentqt.set_theme(previous_theme)
+
+
 def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
     """A startup stage refreshes the UI while retaining indeterminate progress."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
-    with patch('openlp.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
+    with patch('opal.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
         splash.set_status('Loading components')
 
     assert splash.text() == 'Loading components'
     assert not splash.isIndeterminate()
     assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '0%'
     process_events.assert_called_once_with(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
+
+def test_status_updates_coalesce_without_delaying_progress(mock_settings, qtbot):
+    splash = SplashScreen()
+    qtbot.addWidget(splash)
+    splash.show()
+    splash.set_status('Loading Songs…', 25)
+    splash.set_status('Loading Media…', 55)
+    assert splash.text() == 'Starting…'
+    assert splash.progress() == 55
+    qtbot.waitUntil(lambda: splash.text() == 'Loading Media…')
+    splash.set_stage_progress('Loading Evening…', 0, 2, progress_range=(75, 90))
+    assert splash.text() == 'Loading Media…'
+    assert splash.progress() == 75
+    qtbot.waitUntil(lambda: splash.text() == 'Loading Evening…')
+    splash.set_stage_progress('Loading Evening…', 2, 2, progress_range=(75, 90))
+    assert splash.progress() == 90
+    splash.set_status(None, 100)
+    assert splash.progress() == 100
+    assert splash.text() == 'Loading Evening…'
+    splash.close()
 
 
 def test_splashscreen_hide_and_close(mock_settings: MagicMock, qtbot):
@@ -105,7 +171,7 @@ def test_overall_percentage_preserves_layout_and_progress(mock_settings: MagicMo
 
     assert splash.progress() == 62
     assert not splash.isIndeterminate()
-    assert splash.text() == 'Initialising plugins - 3 of 8'
+    qtbot.waitUntil(lambda: splash.text() == 'Initialising plugins')
     ring = splash.findChild(fluentqt.ProgressRing, 'splashProgressRing')
     assert ring.isVisible()
     assert ring.isIndeterminate()
@@ -152,16 +218,16 @@ def test_empty_stage_preserves_overall_percentage(mock_settings: MagicMock, qtbo
     """An empty stage preserves the progress made by earlier startup work."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
-    splash.set_status('Loading library', 75)
+    splash.set_status('Loading Library', 75)
     splash.set_stage_progress('Loading themes', 0, 0, progress_range=(75, 90))
     assert not splash.isIndeterminate()
     assert splash.findChild(fluentqt.Label, 'splashPercentage').text() == '75%'
-    assert splash.text() == 'Loading themes'
+    qtbot.waitUntil(lambda: splash.text() == 'Loading themes')
 
 
 def _run_observed_splash(*args, samples_file):
     """Observe painted frames in the helper without servicing the parent's Qt events."""
-    from openlp.core.ui.splashscreen import _run_splash
+    from opal.core.ui.splashscreen import _run_splash
 
     class ObservedSplash(SplashScreen):
         def __init__(self):
@@ -191,7 +257,7 @@ def _run_observed_splash(*args, samples_file):
             with open(samples_file, 'a') as output:
                 output.write(json.dumps(sample) + '\n')
 
-    with patch('openlp.core.ui.splashscreen.SplashScreen', ObservedSplash):
+    with patch('opal.core.ui.splashscreen.SplashScreen', ObservedSplash):
         _run_splash(*args)
 
 
@@ -199,7 +265,7 @@ def test_splash_animates_during_blocked_startup(mock_settings, qtbot, tmp_path):
     """Painted ring frames keep changing during synchronous work in the parent."""
     samples_file = tmp_path / 'splash-frames.jsonl'
     target = partial(_run_observed_splash, samples_file=str(samples_file))
-    with patch('openlp.core.ui.splashscreen._run_splash', target):
+    with patch('opal.core.ui.splashscreen._run_splash', target):
         splash = SplashScreenProcess()
     qtbot.addWidget(splash)
     process = splash._process
@@ -208,9 +274,9 @@ def test_splash_animates_during_blocked_startup(mock_settings, qtbot, tmp_path):
         splash.set_status('Loading plugins', 55)
         splash.set_stage_progress('Initialising plugins', 3, 8, progress_range=(55, 75))
         # Deliberately do not process Qt events in the parent during the heavy task.
-        time.sleep(0.6)
+        time.sleep(1.0)
         samples = [json.loads(line) for line in samples_file.read_text().splitlines()]
-        frames = [sample for sample in samples if sample['text'] == 'Initialising plugins - 3 of 8']
+        frames = [sample for sample in samples if sample['text'] == 'Initialising plugins']
         assert len({sample['frame'] for sample in frames}) >= 3, (os.getpid(), frames)
         assert all(sample['progress'] == 62 and sample['visible'] for sample in frames)
         assert all(sample['theme'] == fluentqt.current_theme().value for sample in frames)
@@ -272,7 +338,7 @@ def test_foreground_splash_yields_to_startup_dialog(mock_settings, qtbot):
 
 def test_splash_cleans_up_failed_launch(mock_settings):
     """A helper that never starts must release both pipe endpoints."""
-    with patch('openlp.core.ui.splashscreen.multiprocessing.get_context') as get_context:
+    with patch('opal.core.ui.splashscreen.multiprocessing.get_context') as get_context:
         context = get_context.return_value
         parent, child = MagicMock(), MagicMock()
         context.Pipe.return_value = (parent, child)
@@ -298,7 +364,7 @@ def test_native_splash_follows_parent_foreground(mock_settings, qtbot, tmp_path)
     qtbot.addWidget(competing)
     samples_file = tmp_path / 'foreground.jsonl'
     target = partial(_run_observed_splash, samples_file=str(samples_file))
-    with patch('openlp.core.ui.splashscreen._run_splash', target):
+    with patch('opal.core.ui.splashscreen._run_splash', target):
         splash = SplashScreenProcess()
     qtbot.addWidget(splash)
     try:
@@ -348,8 +414,8 @@ def test_native_splash_webengine_accessibility():
     # QApplication used elsewhere in the suite. No user settings are loaded.
     code = """
 from PySide6 import QtCore, QtWidgets, QtWebEngineWidgets
-from openlp.core.resources import qInitResources
-from openlp.core.ui.splashscreen import SplashScreen
+from opal.core.resources import qInitResources
+from opal.core.ui.splashscreen import SplashScreen
 import fluentqt
 app = QtWidgets.QApplication([])
 qInitResources()

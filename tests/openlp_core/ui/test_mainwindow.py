@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test openlp.core.ui.mainwindow package.
+Package to test opal.core.ui.mainwindow package.
 """
 import os
 from pathlib import Path
@@ -29,14 +29,14 @@ from tempfile import mkdtemp
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings
-from openlp.core.common.registry import Registry
-from openlp.core.display.screens import ScreenList
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.state import State
-from openlp.core.ui.mainwindow import (
+from opal.core.common.i18n import UiStrings
+from opal.core.common.registry import Registry
+from opal.core.display.screens import ScreenList
+from opal.core.lib.plugin import PluginStatus
+from opal.core.state import State
+from opal.core.ui.mainwindow import (
     MainWindow,
     _PRESET_LAYOUT_MODES,
     _PRESET_VISIBILITY_SNAPSHOT_KEY,
@@ -54,7 +54,7 @@ _MAIN_WINDOWS = []
 
 @pytest.fixture(autouse=True)
 def reset_actions_for_existing_tests(monkeypatch):
-    from openlp.core.common.actions import ActionList
+    from opal.core.common.actions import ActionList
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})
 
@@ -71,7 +71,7 @@ def modern_appearance(settings):
 
 
 def test_modern_window_navigation_and_spacing(modern_appearance, main_window):
-    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    from opal.core.widgets.fluent_navigation import LayoutPresetNavigation
     assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
     assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
     assert not main_window.layout_preset_navigation.buttons[0].icon().isNull()
@@ -87,7 +87,7 @@ def test_settings_dialog_has_main_window_as_smoke_host(main_window):
 
 
 def test_legacy_classic_setting_uses_modern_layout(legacy_classic_appearance, main_window, settings):
-    from openlp.core.widgets.fluent_navigation import LayoutPresetNavigation
+    from opal.core.widgets.fluent_navigation import LayoutPresetNavigation
     assert isinstance(main_window.layout_preset_navigation, LayoutPresetNavigation)
     assert main_window.layout_preset_navigation.buttons[0].text() == 'Workspace'
     assert main_window.main_content_layout.contentsMargins().left() == 6
@@ -140,6 +140,172 @@ def test_modern_factory_layout_has_usable_library_height(modern_appearance, main
     library = main_window.media_manager_dock
     assert service.dockAreaWidget() is not library.dockAreaWidget()
     assert library.dockAreaWidget().currentDockWidget() is library
+
+
+@pytest.mark.parametrize('width', [1000, 1200, 1600])
+@pytest.mark.parametrize('mode', ['default', 'setup', 'live', 'librarysync'])
+def test_factory_presets_reserve_controller_space(main_window, settings, width, mode):
+    """Large Library size hints must not squeeze the controllers to slivers."""
+    from opal.core.ui.advanceddocking import AdvancedDockWidget
+    from opal.core.ui.slidecontroller import PreviewController, LiveController
+    Registry().register('application-qt', QtWidgets.QApplication.instance())
+    Registry().register('media_controller', MagicMock())
+
+    def display_stub(parent, **kwargs):
+        widget = QtWidgets.QWidget(parent)
+        widget.show_display = MagicMock()
+        widget.set_scale = MagicMock()
+        return widget
+
+    class WideLibrary(QtWidgets.QLabel):
+        def sizeHint(self):
+            return QtCore.QSize(1200, 600)
+
+    main_window.media_manager_dock.setWidget(WideLibrary('Library'))
+    main_window.cloud_library_dock = AdvancedDockWidget(main_window, 'cloud_library_dock')
+    main_window.cloud_library_dock.setWidget(QtWidgets.QLabel('Cloud Library'))
+    main_window.cloud_library_dock.setDockVisible(False)
+    main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, main_window.cloud_library_dock)
+    controllers = (PreviewController(main_window), LiveController(main_window))
+    for controller in controllers:
+        with patch('opal.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+            controller.setup_ui()
+        main_window.dock_slide_controller(controller)
+    main_window._preview_controller, main_window._live_controller = controllers
+    main_window.resize(width, 800)
+    QtWidgets.QWidget.setVisible(main_window, True)
+    QtWidgets.QApplication.processEvents()
+    main_window._activate_layout_preset(mode)
+    QtWidgets.QApplication.processEvents()
+    available = main_window.dock_manager.width()
+    if mode == 'librarysync':
+        library_width = main_window.media_manager_dock.width()
+        cloud_width = main_window.cloud_library_dock.width()
+        assert library_width / available == pytest.approx(0.5, abs=0.03)
+        assert cloud_width / available == pytest.approx(0.5, abs=0.03)
+    else:
+        preview_width = main_window.preview_controller_dock.width()
+        assert preview_width / available >= 0.30
+        if mode != 'setup':
+            live_width = main_window.live_controller_dock.width()
+            assert live_width / available >= 0.30
+            if mode == 'live':
+                assert live_width > preview_width
+            else:
+                assert live_width == pytest.approx(preview_width, abs=2)
+        assert main_window.service_manager_dock.width() >= 190
+    measured_docks = (main_window.media_manager_dock, main_window.service_manager_dock,
+                      main_window.preview_controller_dock, main_window.live_controller_dock,
+                      main_window.cloud_library_dock)
+    sizes = [dock.dockAreaWidget().width() for dock in measured_docks if dock.isDockOpen()]
+    main_window._activate_layout_preset('live' if mode == 'default' else 'default')
+    QtWidgets.QApplication.processEvents()
+    main_window._activate_layout_preset(mode)
+    QtWidgets.QApplication.processEvents()
+    assert [dock.dockAreaWidget().width() for dock in measured_docks if dock.isDockOpen()] == \
+        pytest.approx(sizes, abs=2)
+    QtWidgets.QWidget.setVisible(main_window, False)
+
+
+@pytest.mark.parametrize('saved_tab', [None, 'media_manager_dock', 'theme_manager_dock', 'legacy', 'detached'])
+@patch('opal.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+def test_live_preset_groups_left_docks_and_defaults_to_service(mock_schedule, saved_tab, main_window, settings):
+    """Live opens all three tabs and selects Service, including when restoring older saved layouts."""
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    if saved_tab == 'detached':
+        # Library Sync removes Service from the dock layout.
+        main_window.removeDockWidget(main_window.service_manager_dock)
+    main_window._activate_layout_preset('live')
+    main_window._deferred_apply_left_column_dock_layout()
+    if saved_tab and saved_tab != 'detached':
+        if saved_tab == 'legacy':
+            main_window._reapply_left_column_dock_layout()
+            main_window.set_view_mode(False, True, False, True, True, False, 'live')
+        else:
+            getattr(main_window, saved_tab).raise_()
+        main_window._activate_layout_preset('setup')
+        main_window._deferred_apply_left_column_dock_layout()
+        main_window._activate_layout_preset('live')
+        main_window._deferred_apply_left_column_dock_layout()
+
+    service = main_window.service_manager_dock
+    library = main_window.media_manager_dock
+    themes = main_window.theme_manager_dock
+    assert set(main_window.tabifiedDockWidgets(service)) == {library, themes}
+    assert all(dock.isDockOpen() for dock in (service, library, themes))
+    assert all(not dock.isInFloatingContainer() for dock in (service, library, themes))
+    assert service.dockAreaWidget().currentDockWidget() is service
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
+    assert all(action.isChecked() for action in (main_window.view_service_manager_item,
+                                               main_window.view_media_manager_item,
+                                               main_window.view_theme_manager_item))
+
+
+@pytest.mark.parametrize('locked', [False, True])
+def test_rapid_preset_changes_finish_live_layout_before_saving(main_window, settings, locked):
+    """A second selection must save the completed layout, without waiting for a zero timer."""
+    from PySide6 import QtTest
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window.set_lock_panel(locked)
+    created = QtTest.QSignalSpy(main_window.dock_manager.floatingWidgetCreated)
+    for mode in ('live', 'setup', 'live', 'default', 'live') * 3:
+        main_window.layout_preset_navigation.buttons[main_window._layout_preset_mode_to_tab_index(mode)].click()
+        if mode == 'live':
+            service = main_window.service_manager_dock
+            area = service.dockAreaWidget()
+            assert area is main_window.media_manager_dock.dockAreaWidget()
+            assert area is main_window.theme_manager_dock.dockAreaWidget()
+            assert area.currentDockWidget() is service
+            assert not service.isInFloatingContainer()
+    QtWidgets.QApplication.processEvents()
+    assert created.count() == 0
+
+
+@pytest.mark.parametrize('startup', [False, True])
+def test_saved_floating_live_layout_is_repaired_before_any_window_is_shown(main_window, settings, startup):
+    main_window._preview_controller = _DummyController()
+    main_window._live_controller = _DummyController()
+    main_window._preview_controller.splitter = QtWidgets.QSplitter(main_window)
+    main_window._live_controller.splitter = QtWidgets.QSplitter(main_window)
+    service = main_window.service_manager_dock
+    service.setFloating(True)
+    main_window.tabifyDockWidget(service, main_window.media_manager_dock)
+    main_window.tabifyDockWidget(service, main_window.theme_manager_dock)
+    main_window._save_current_layout_to_preset('live')
+    settings.setValue('user interface/modern window state', main_window.saveState())
+    main_window._reapply_left_column_dock_layout_live()
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    if not startup:
+        QtWidgets.QWidget.setVisible(main_window, True)
+    shown = []
+
+    class Watch(QtCore.QObject):
+        def eventFilter(self, obj, event):
+            if event.type() == QtCore.QEvent.Type.Show:
+                shown.append(obj)
+            return False
+
+    watcher = Watch(main_window)
+    main_window.dock_manager.floatingWidgetCreated.connect(lambda floating: floating.installEventFilter(watcher))
+    if startup:
+        settings.setValue('core/view mode', 'live')
+        settings.setValue('user interface/is preset layout', True)
+        settings.setValue(_preset_layout_storage_key('live', 'main window state'), QtCore.QByteArray())
+        main_window.load_settings()
+        QtWidgets.QWidget.setVisible(main_window, True)
+    else:
+        main_window._activate_layout_preset('live')
+    QtWidgets.QApplication.processEvents()
+    assert not shown
+    assert not service.isInFloatingContainer()
+    assert main_window.dock_manager.isVisible()
+    QtWidgets.QWidget.setVisible(main_window, False)
 
 
 class _DummyRenderer:
@@ -260,17 +426,17 @@ def main_window(state, settings, qapp, request):
         if feature_options.get(name):
             settings.setValue(f'{name}/status', PluginStatus.Active)
     Registry().set_flag('no_web_server', feature_options.get('no_web_server', True))
-    add_toolbar_action_patcher = patch('openlp.core.ui.mainwindow.create_action', new=_create_mock_action)
+    add_toolbar_action_patcher = patch('opal.core.ui.mainwindow.create_action', new=_create_mock_action)
     add_toolbar_action_patcher.start()
-    plugin_form_patcher = patch('openlp.core.ui.mainwindow.PluginForm', new=_DummyPluginForm)
+    plugin_form_patcher = patch('opal.core.ui.mainwindow.PluginForm', new=_DummyPluginForm)
     plugin_form_patcher.start()
-    renderer_patcher = patch('openlp.core.display.render.Renderer', new=_DummyRenderer)
+    renderer_patcher = patch('opal.core.display.render.Renderer', new=_DummyRenderer)
     renderer_patcher.start()
-    action_group_patcher = patch('openlp.core.ui.mainwindow.QtGui.QActionGroup', new=_DummyActionGroup)
+    action_group_patcher = patch('opal.core.ui.mainwindow.QtGui.QActionGroup', new=_DummyActionGroup)
     action_group_patcher.start()
-    qmainwindow_show_patcher = patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show', lambda *_: None)
+    qmainwindow_show_patcher = patch('opal.core.ui.mainwindow.QtWidgets.QWidget.show', lambda *_: None)
     qmainwindow_show_patcher.start()
-    qmainwindow_show_minimised_patcher = patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.showMinimized',
+    qmainwindow_show_minimised_patcher = patch('opal.core.ui.mainwindow.QtWidgets.QWidget.showMinimized',
                                                lambda *_: None)
     qmainwindow_show_minimised_patcher.start()
     mocked_screen = MagicMock()
@@ -346,7 +512,7 @@ def test_cmd_line_arg_not_service_file(main_window):
     Test that passing a file that is not a service does nothing.
     """
     # GIVEN a non service file as an argument to openlp
-    args = ['run_openlp.py']
+    args = ['run_opal_presenter.py']
 
     # WHEN the argument is processed
     with patch.object(main_window.service_manager, 'load_file') as mocked_load_file, \
@@ -390,7 +556,7 @@ def test_cmd_line_arg_other_args(main_window):
         mocked_load_file.assert_called_with(Path(service_file))
 
 
-@patch('openlp.core.ui.mainwindow.resolve')
+@patch('opal.core.ui.mainwindow.resolve')
 def test_cmd_line_filename_with_spaces(mocked_resolve, main_window):
     """
     Test that a service file with spaces that split across arguments loads the file properly
@@ -409,7 +575,7 @@ def test_cmd_line_filename_with_spaces(mocked_resolve, main_window):
         mocked_load_file.assert_called_with(mocked_path_is_file)
 
 
-@patch('openlp.core.ui.mainwindow.resolve')
+@patch('opal.core.ui.mainwindow.resolve')
 def test_cmd_line_filename_with_spaces_and_security(mocked_resolve, main_window):
     """
     Test that passing a service file with spaces and a command line argument loads properly
@@ -563,7 +729,7 @@ def test_mainwindow_configuration(main_window):
 
 
 def test_escape_hides_native_show_even_when_openlp_display_is_hidden():
-    from openlp.core.ui import HideMode
+    from opal.core.ui import HideMode
 
     main_window = MagicMock()
     live = main_window.live_controller
@@ -586,7 +752,7 @@ def test_switch_projection_to_main_keeps_output_visible(always_on_top):
     main_window.live_controller.display.isVisible.return_value = True
     main_window._projection_topmost_suspended = False
     display = main_window.live_controller.display
-    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]), \
+    with patch('opal.core.ui.mainwindow.ScreenList', return_value=[object()]), \
             patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
             patch.object(QtWidgets.QApplication, 'activeWindow', return_value=display):
         MainWindow.on_switch_projection_window(main_window)
@@ -608,7 +774,7 @@ def test_switch_main_to_projection_restores_topmost_setting():
     main_window.live_controller.display.isVisible.return_value = True
     main_window._projection_topmost_suspended = True
     display = main_window.live_controller.display
-    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]), \
+    with patch('opal.core.ui.mainwindow.ScreenList', return_value=[object()]), \
             patch.object(QtWidgets.QApplication, 'activeModalWidget', return_value=None), \
             patch.object(QtWidgets.QApplication, 'activeWindow', return_value=main_window):
         MainWindow.on_switch_projection_window(main_window)
@@ -637,7 +803,7 @@ def test_projection_topmost_can_be_temporarily_suspended(qapp):
 
 
 def test_projection_switch_action_is_available_from_view_menu(main_window, settings):
-    from openlp.core.ui import HideMode
+    from opal.core.ui import HideMode
 
     action = main_window.view_switch_projection_item
 
@@ -649,14 +815,14 @@ def test_projection_switch_action_is_available_from_view_menu(main_window, setti
     live.current_hide_mode = None
     live.is_desktop_hide_available.return_value = True
     main_window._live_controller = live
-    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object()]):
+    with patch('opal.core.ui.mainwindow.ScreenList', return_value=[object()]):
         main_window._sync_view_display_output_menu_action()
         assert action.isEnabled()
         live.current_hide_mode = HideMode.Screen
         main_window._sync_view_display_output_menu_action()
         assert not action.isEnabled()
     assert action.isVisible()
-    with patch('openlp.core.ui.mainwindow.ScreenList', return_value=[object(), object()]):
+    with patch('opal.core.ui.mainwindow.ScreenList', return_value=[object(), object()]):
         main_window._sync_view_display_output_menu_action()
     assert not action.isVisible()
 
@@ -707,32 +873,36 @@ def test_on_search_shortcut_triggered_focuses_widget(main_window):
         mocked_widget.on_focus.assert_called_with()
 
 
-@patch('openlp.core.ui.mainwindow.FirstTimeForm')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+@patch('opal.core.ui.mainwindow.FirstTimeForm')
+@patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
 def test_on_first_time_wizard_clicked_show_projectors_after(mocked_warning, MockWizard, main_window):
     """Test that the projector manager is shown after the FTW is run"""
     # GIVEN: Main_window, patched things, patched "Yes" as confirmation to re-run wizard, settings to True.
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
+    MockWizard.return_value.opal_imported_library = None
     main_window.settings.setValue('projector/show after wizard', True)
     Registry().set_flag('projector_disabled', False)
 
     with patch.object(main_window, 'projector_manager_dock') as mocked_dock, \
-            patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents'):
+            patch.object(Registry(), 'execute'), patch.object(main_window, 'theme_manager_contents') as theme_manager:
         # WHEN: on_first_time_wizard_clicked is called
         main_window.on_first_time_wizard_clicked()
 
     # THEN: projector_manager_dock.setVisible should had been called once
     mocked_dock.setVisible.assert_called_once_with(True)
+    theme_manager.load_themes.assert_called_once()
+    theme_manager.load_first_time_themes.assert_not_called()
 
 
-@patch('openlp.core.ui.mainwindow.FirstTimeForm')
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+@patch('opal.core.ui.mainwindow.FirstTimeForm')
+@patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
 def test_on_first_time_wizard_clicked_hide_projectors_after(mocked_warning, MockWizard, main_window):
     """Test that the projector manager is hidden after the FTW is run"""
     # GIVEN: Main_window, patched things, patched "Yes" as confirmation to re-run wizard, settings to False.
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
+    MockWizard.return_value.opal_imported_library = None
     main_window.settings.setValue('projector/show after wizard', False)
 
     # WHEN: on_first_time_wizard_clicked is called
@@ -742,6 +912,30 @@ def test_on_first_time_wizard_clicked_hide_projectors_after(mocked_warning, Mock
 
     # THEN: projector_manager_dock.setVisible should had been called once
     mocked_dock.setVisible.assert_called_once_with(False)
+
+
+def test_opal_wizard_library_switch_waits_for_shutdown(main_window, tmp_path):
+    opal_current_path = tmp_path / 'current'
+    opal_imported_path = tmp_path / 'imported'
+    main_window.settings.setValue('advanced/data path', opal_current_path)
+    with patch('opal.core.ui.mainwindow.FirstTimeForm') as opal_wizard, \
+            patch.object(QtWidgets.QMessageBox, 'warning', return_value=QtWidgets.QMessageBox.StandardButton.Yes), \
+            patch.object(QtWidgets.QMessageBox, 'information'), \
+            patch.object(main_window.application, 'request_restart') as opal_restart, \
+            patch.object(main_window, 'theme_manager_contents') as opal_themes:
+        opal_wizard.return_value.exec.return_value = QtWidgets.QDialog.DialogCode.Accepted
+        opal_wizard.return_value.opal_imported_library = opal_imported_path
+        main_window.on_first_time_wizard_clicked()
+    assert main_window.new_data_path == opal_imported_path
+    assert not main_window.copy_data
+    assert not main_window.settings_replaced
+    assert main_window.settings.value('advanced/data path') == opal_current_path
+    opal_restart.assert_called_once()
+    opal_themes.load_themes.assert_not_called()
+    with patch('opal.core.ui.mainwindow.shutil.copytree') as opal_copy:
+        main_window.change_data_directory()
+    opal_copy.assert_not_called()
+    assert main_window.settings.value('advanced/data path') == opal_imported_path
 
 
 def test_increment_progress_bar_default_increment(main_window):
@@ -792,7 +986,7 @@ def test_eventFilter(main_window):
     assert Registry().get('application').args[0] == file_path, "The path should be in args."
 
 
-@patch('openlp.core.ui.mainwindow.is_macosx')
+@patch('opal.core.ui.mainwindow.is_macosx')
 @pytest.mark.skipif(QT_QPA_PLATFORM in ['offscreen', 'wayland'] or os.name != 'nt',
                     reason='Window minimisation behaviour is unstable on non-Windows test backends')
 def test_application_activate_event(mocked_is_macosx, main_window):
@@ -812,9 +1006,9 @@ def test_application_activate_event(mocked_is_macosx, main_window):
     assert main_window.isMinimized() is False
 
 
-@patch('openlp.core.app.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.common.applocation.AppLocation.get_data_path')
-@patch('openlp.core.common.applocation.AppLocation.get_directory')
+@patch('opal.core.app.QtWidgets.QMessageBox.critical')
+@patch('opal.core.common.applocation.AppLocation.get_data_path')
+@patch('opal.core.common.applocation.AppLocation.get_directory')
 def test_change_data_directory(mocked_get_directory, mocked_get_data_path, mocked_critical_box, main_window):
     """
     Test that changing the data directory works if the folder already exists
@@ -891,8 +1085,8 @@ def test_set_lock_panel_unlocked(main_window_reduced):
     assert main_window_reduced.projector_manager_dock.features() == all_dock_features
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow.open_cmd_line_files')
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.MainWindow.open_cmd_line_files')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_show_cmd_line_args(mocked_view_mode, mocked_open_cmd_line_files, main_window, settings):
     """Test that command line arguments are loaded on show"""
     # GIVEN: A newly opened OpenLP instance with some command line arguments
@@ -905,7 +1099,7 @@ def test_show_cmd_line_args(mocked_view_mode, mocked_open_cmd_line_files, main_w
     mocked_open_cmd_line_files.assert_called_once_with(main_window.application.args)
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_show_load_last_file(mocked_view_mode, main_window, settings):
     """Test that the last file opened is loaded on show"""
     # GIVEN: A newly opened OpenLP instance with some command line arguments
@@ -919,7 +1113,7 @@ def test_show_load_last_file(mocked_view_mode, main_window, settings):
     main_window.service_manager_contents.load_last_file.assert_called_once_with()
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_custom_layout(mocked_view_mode, main_window, settings):
     """Test that the view mode is called with the correct parameters for default mode"""
     # GIVEN a newly opened OpenLP instance, mocked screens and settings for a valid window position
@@ -945,8 +1139,8 @@ def test_load_settings_custom_layout(mocked_view_mode, main_window, settings):
     mocked_view_mode.assert_called_with(True, False, True, False, True, False)
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.QtWidgets.QWidget.show')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_view_mode_default_mode(mocked_view_mode, mocked_show, main_window, settings):
     """
     Test that the view mode is called with the correct parameters for default mode
@@ -968,8 +1162,8 @@ def test_load_settings_view_mode_default_mode(mocked_view_mode, mocked_show, mai
     mocked_view_mode.assert_called_with(True, True, True, True, True, False, 'default')
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.QtWidgets.QWidget.show')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_view_mode_setup_mode(mocked_view_mode, mocked_show, main_window, settings):
     """
     Test that the view mode is called with the correct parameters for setup mode
@@ -993,8 +1187,8 @@ def test_load_settings_view_mode_setup_mode(mocked_view_mode, mocked_show, main_
     mocked_view_mode.assert_called_with(True, True, True, True, False, False, 'setup')
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.QtWidgets.QWidget.show')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_window, settings):
     """
     Test that the view mode is called with the correct parameters for live mode
@@ -1015,10 +1209,10 @@ def test_load_settings_view_mode_live_mode(mocked_view_mode, mocked_show, main_w
 
     # THEN:
     # The default mode should have been called.
-    mocked_view_mode.assert_called_with(False, True, False, True, True, False, 'live')
+    mocked_view_mode.assert_called_with(True, True, True, True, True, False, 'live')
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_view_mode_preview(mocked_view_mode, main_window, settings):
     """
     Test that the view mode is called with the correct parameters for default
@@ -1041,7 +1235,7 @@ def test_load_settings_view_mode_preview(mocked_view_mode, main_window, settings
     mocked_view_mode.assert_called_with(True, True, True, False, True, False)
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_load_settings_view_mode_live(mocked_view_mode, main_window, settings):
     """
     Test that the view mode is called with the correct parameters for default
@@ -1095,8 +1289,9 @@ def test_left_dock_visibility_named_live_preset_without_saved_uses_factory(main_
     settings.setValue('user interface/is preset layout', True)
     settings.setValue('core/view mode', 'live')
     settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray())
-    settings.setValue('user interface/show library', True)
-    assert main_window._left_dock_visibility_from_settings() == (False, True, False)
+    settings.setValue('user interface/show library', False)
+    settings.setValue('user interface/show themes', False)
+    assert main_window._left_dock_visibility_from_settings() == (True, True, True)
 
 
 def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window, settings):
@@ -1104,8 +1299,8 @@ def test_left_dock_visibility_named_preset_with_saved_uses_settings(main_window,
     Once a preset has saved layout state, left-pane visibility follows stored settings (user customisation).
     """
     settings.setValue('user interface/is preset layout', True)
-    settings.setValue('core/view mode', 'live')
-    settings.setValue('user interface/modern preset layout/live/main window state', QtCore.QByteArray(b'1'))
+    settings.setValue('core/view mode', 'setup')
+    settings.setValue('user interface/modern preset layout/setup/main window state', QtCore.QByteArray(b'1'))
     settings.setValue('user interface/show library', True)
     settings.setValue('user interface/show service', False)
     settings.setValue('user interface/show themes', True)
@@ -1125,7 +1320,7 @@ def test_layout_preset_tab_bar_has_expected_tabs(main_window):
 
 
 def _check_library_sync_preset(main_window, settings):
-    from openlp.plugins.librarysync.librarysyncplugin import LibrarySyncPlugin
+    from opal.plugins.librarysync.librarysyncplugin import LibrarySyncPlugin
     main_window._preview_controller = _DummyController()
     main_window._live_controller = _DummyController()
     plugin = LibrarySyncPlugin()
@@ -1202,7 +1397,7 @@ def test_layout_preset_tabs_toggle_persists_off_state(main_window, settings):
     assert main_window.view_layout_preset_tabs_item.isChecked() is False
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+@patch('opal.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
 def test_activate_layout_preset_saved_state_without_snapshot_applies_canonical(mock_sched, main_window, settings):
     """
     restoreState() from a saved preset can resurrect wrong dock/panel visibility; without a JSON snapshot,
@@ -1225,7 +1420,7 @@ def test_activate_layout_preset_saved_state_without_snapshot_applies_canonical(m
     mock_canonical.assert_called_once_with('setup')
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
+@patch('opal.core.ui.mainwindow.MainWindow._schedule_left_column_dock_layout')
 def test_activate_layout_preset_saved_state_with_snapshot_skips_canonical(mock_sched, main_window, settings):
     """
     When a visibility snapshot exists, it defines panel state; canonical factory visibility is not applied.
@@ -1250,7 +1445,7 @@ def test_activate_layout_preset_saved_state_with_snapshot_skips_canonical(mock_s
     mock_canonical.assert_called_once_with('setup')
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
+@patch('opal.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
 def test_deferred_left_column_setup_preset_uses_setup_dock_geometry(mock_sizes, main_window, settings):
     """
     Setup mode without saved preset layout should build full-height Library+Themes | Service
@@ -1279,7 +1474,7 @@ def test_reapply_left_column_dock_layout_setup_places_library_before_service(mai
         QtCore.Qt.Orientation.Horizontal)
 
 
-@patch('openlp.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
+@patch('opal.core.ui.mainwindow.MainWindow._ensure_left_column_dock_sizes')
 def test_deferred_left_column_default_preset_uses_default_dock_geometry(mock_sizes, main_window, settings):
     """Default mode without saved preset should use the standard left-column dock layout."""
     settings.setValue('core/view mode', 'default')
@@ -1292,8 +1487,8 @@ def test_deferred_left_column_default_preset_uses_default_dock_geometry(mock_siz
     mock_setup.assert_not_called()
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QWidget.show')
-@patch('openlp.core.ui.mainwindow.MainWindow.set_view_mode')
+@patch('opal.core.ui.mainwindow.QtWidgets.QWidget.show')
+@patch('opal.core.ui.mainwindow.MainWindow.set_view_mode')
 def test_show_skips_factory_set_view_mode_when_saved_preset_layout(mocked_view_mode, mocked_show, main_window, settings):
     """
     Startup should not re-apply factory preset visibility when that preset already has saved layout.
@@ -1311,8 +1506,8 @@ def test_show_skips_factory_set_view_mode_when_saved_preset_layout(mocked_view_m
     mocked_view_mode.assert_not_called()
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
-@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+@patch('opal.core.ui.mainwindow.QtCore.QTimer.singleShot')
 def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_window, settings):
     """
     Reset clears per-preset saved window state and visibility snapshots.
@@ -1321,7 +1516,7 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
     main_window._preview_controller.panel = MagicMock()
     main_window._live_controller = MagicMock()
     main_window._live_controller.panel = MagicMock()
-    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
+    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Reset
     for mode in _PRESET_LAYOUT_MODES:
         settings.setValue(_preset_layout_storage_key(mode, 'main window state'), QtCore.QByteArray(b'1'))
         settings.setValue(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY), '{"show_library": true}')
@@ -1336,8 +1531,18 @@ def test_reset_layout_presets_clears_storage(mocked_timer, mocked_warning, main_
         assert settings.value(_preset_layout_storage_key(mode, _PRESET_VISIBILITY_SNAPSHOT_KEY)) in ('', None)
 
 
-@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
+@patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox.warning')
+def test_cancel_reset_layout_presets_preserves_storage(mocked_warning, main_window, settings):
+    mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Cancel
+    key = _preset_layout_storage_key('live', 'main window state')
+    settings.setValue(key, QtCore.QByteArray(b'saved layout'))
+    main_window.on_mode_reset_layout_presets_clicked()
+    assert settings.value(key) == QtCore.QByteArray(b'saved layout')
+    assert mocked_warning.call_args.args[-1] == QtWidgets.QMessageBox.StandardButton.Cancel
+
+
+@patch('opal.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_singleshot: MagicMock,
                               main_window: MainWindow):
     """
@@ -1355,8 +1560,8 @@ def test_screen_changed_modal(mocked_information: MagicMock, mocked_timer_single
     mocked_information.assert_called_once()
 
 
-@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=False)
+@patch('opal.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.mainwindow.show_screen_setup_message', return_value=False)
 def test_screen_changed_modal_sets_timestamp_after_blocking_on_modal(mocked_information: MagicMock,
                                                                      mocked_timer_singleshot: MagicMock,
                                                                      main_window: MainWindow):
@@ -1378,8 +1583,8 @@ def test_screen_changed_modal_sets_timestamp_after_blocking_on_modal(mocked_info
     assert main_window.should_show_screen_change_message is True
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.mainwindow.FileDialog')
+@patch('opal.core.ui.mainwindow.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.mainwindow.FileDialog')
 def test_on_settings_import_item_clicked(mock_dialog, mock_crit, main_window_reduced):
     """
     Check we don't attempt to import incompatible settings from the future.
@@ -1404,9 +1609,9 @@ def test_on_settings_import_item_clicked(mock_dialog, mock_crit, main_window_red
     assert mock_crit.call_count >= 2, 'Expected at least the confirmation and the failure dialog'
 
 
-@patch('openlp.core.ui.mainwindow.Path')
-@patch('openlp.core.ui.mainwindow.add_actions')
-@patch('openlp.core.ui.mainwindow.create_action')
+@patch('opal.core.ui.mainwindow.Path')
+@patch('opal.core.ui.mainwindow.add_actions')
+@patch('opal.core.ui.mainwindow.create_action')
 def test_update_recent_files_menu(mocked_create_action, mocked_add_actions, MockPath, settings, registry,
                                   main_window_reduced):
     """Test that the update_recent_files_menu() method works correctly"""
@@ -1423,9 +1628,9 @@ def test_update_recent_files_menu(mocked_create_action, mocked_add_actions, Mock
     assert mocked_create_action.call_count == 2
 
 
-@patch('openlp.core.ui.mainwindow.Path')
-@patch('openlp.core.ui.mainwindow.add_actions')
-@patch('openlp.core.ui.mainwindow.create_action')
+@patch('opal.core.ui.mainwindow.Path')
+@patch('opal.core.ui.mainwindow.add_actions')
+@patch('opal.core.ui.mainwindow.create_action')
 def test_update_recent_files_menu_as_string(mocked_create_action, mocked_add_actions, MockPath, settings, registry,
                                             main_window_reduced):
     """Test that the update_recent_files_menu() method works correctly when the entry is a string instead of a list"""
@@ -1442,9 +1647,9 @@ def test_update_recent_files_menu_as_string(mocked_create_action, mocked_add_act
     assert mocked_create_action.call_count == 2
 
 
-@patch('openlp.core.ui.mainwindow.Path')
-@patch('openlp.core.ui.mainwindow.add_actions')
-@patch('openlp.core.ui.mainwindow.create_action')
+@patch('opal.core.ui.mainwindow.Path')
+@patch('opal.core.ui.mainwindow.add_actions')
+@patch('opal.core.ui.mainwindow.create_action')
 def test_update_recent_files_menu_as_list_with_string(mocked_create_action, mocked_add_actions, MockPath, settings,
                                                       registry, main_window_reduced):
     """Test that the update_recent_files_menu() method works correctly when the entry is a string instead of a list"""
@@ -1461,7 +1666,7 @@ def test_update_recent_files_menu_as_list_with_string(mocked_create_action, mock
     assert mocked_create_action.call_count == 2
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QProgressDialog')
+@patch('opal.core.ui.mainwindow.QtWidgets.QProgressDialog')
 def test_show_wait_dialog(MockProcessDialog, main_window_reduced):
     """Test that the show wait dialog context manager works correctly"""
     # GIVEN: A mocked out QProgressDialog and a minimal main window
@@ -1483,7 +1688,7 @@ def test_show_wait_dialog(MockProcessDialog, main_window_reduced):
     mocked_wait_dialog.close.assert_called_once_with()
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_wait_for_threads(MockApp, main_window_reduced):
     """Test that the wait_for_threads() method correctly stops the threads"""
     # GIVEN: A mocked application, and a reduced main window
@@ -1505,7 +1710,7 @@ def test_wait_for_threads(MockApp, main_window_reduced):
     mocked_http_thread.wait.assert_called_once_with(100)
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_wait_for_threads_no_threads(MockApp, main_window_reduced):
     """Test that the wait_for_threads() method exits early when there are no threads"""
     # GIVEN: A mocked application, and a reduced main window
@@ -1518,7 +1723,7 @@ def test_wait_for_threads_no_threads(MockApp, main_window_reduced):
     assert MockApp.processEvents.call_count == 0, 'processEvents() should not have been called'
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_wait_for_threads_disappearing_thread(MockApp, main_window_reduced):
     """Test that the wait_for_threads() method correctly ignores threads that resolve themselves"""
     # GIVEN: A mocked application, and a reduced main window
@@ -1531,7 +1736,7 @@ def test_wait_for_threads_disappearing_thread(MockApp, main_window_reduced):
     assert MockApp.processEvents.call_count == 1, 'processEvents() should have only been called once'
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_wait_for_threads_stuck_thread(MockApp, main_window_reduced):
     """Test that the wait_for_threads() method correctly stops the threads"""
     # GIVEN: A mocked application, and a reduced main window
@@ -1554,7 +1759,7 @@ def test_wait_for_threads_stuck_thread(MockApp, main_window_reduced):
     mocked_http_thread.terminate.assert_called_once()
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_wait_for_threads_runtime_error(MockApp, main_window_reduced):
     """Test that the wait_for_threads() method handles a runtime error"""
     # GIVEN: A mocked application, and a reduced main window
@@ -1577,10 +1782,10 @@ def test_wait_for_threads_runtime_error(MockApp, main_window_reduced):
     mocked_http_thread.terminate.assert_not_called()
 
 
-@patch('openlp.core.ui.mainwindow.QtWidgets.QApplication')
+@patch('opal.core.ui.mainwindow.QtWidgets.QApplication')
 def test_network_worker_can_unwind_after_default_shutdown_limit(MockApp, main_window_reduced):
     """A bounded cloud request can clean up after the default five-second allowance."""
-    from openlp.plugins.librarysync.lib.worker import SyncWorker
+    from opal.plugins.librarysync.lib.worker import SyncWorker
     worker = SyncWorker('job', {}, MagicMock())
     thread = MagicMock()
     thread.isRunning.side_effect = [True] * 55 + [False, False]
@@ -1641,8 +1846,8 @@ def test_modern_navigation_contains_entire_dock_workspace(modern_appearance, mai
 
 def test_slide_controller_action_buttons_use_native_commandbars(modern_appearance, main_window):
     from PySide6 import QtGui
-    from openlp.core.widgets import fluent
-    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    from opal.core.widgets import fluent
+    from opal.core.ui.slidecontroller import PreviewController, LiveController
     Registry().register('application-qt', QtWidgets.QApplication.instance())
     Registry().register('media_controller', MagicMock())
 
@@ -1654,7 +1859,7 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
 
     controllers = (PreviewController(main_window), LiveController(main_window))
     for controller in controllers:
-        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+        with patch('opal.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
             controller.setup_ui()
         toolbar = controller.toolbar
         for action in (controller.previous_item, controller.next_item):
@@ -1745,7 +1950,7 @@ def test_slide_controller_action_buttons_use_native_commandbars(modern_appearanc
 
 
 def test_preview_renderers_are_embedded_below_dialogs(main_window):
-    from openlp.core.ui.slidecontroller import PreviewController, LiveController
+    from opal.core.ui.slidecontroller import PreviewController, LiveController
     Registry().register('application-qt', QtWidgets.QApplication.instance())
     Registry().register('media_controller', MagicMock())
 
@@ -1757,7 +1962,7 @@ def test_preview_renderers_are_embedded_below_dialogs(main_window):
 
     for controller_class in (PreviewController, LiveController):
         controller = controller_class(main_window)
-        with patch('openlp.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
+        with patch('opal.core.ui.slidecontroller.DisplayWindow', side_effect=display_stub):
             controller.setup_ui()
         main_window.dock_slide_controller(controller)
         assert not controller.preview_display.isWindow()
@@ -1785,7 +1990,9 @@ def test_default_theme_footer_link_opens_themes_settings(main_window, settings):
     button = main_window.default_theme_button
     assert isinstance(button, QtWidgets.fluentqt.HyperlinkButton)
     assert button.text() == 'Sunday worship'
-    assert main_window.default_theme_label.text() == 'Default Theme:'
+    assert main_window.default_theme_label.text() == 'Default Theme'
+    assert button.fontRole() == QtWidgets.fluentqt.FontRole.Caption
+    assert main_window.default_theme_label.font() == QtWidgets.fluentqt.font_for_role(QtWidgets.fluentqt.FontRole.Caption)
     with patch.object(main_window.settings_form, 'exec') as open_settings:
         button.click()
     open_settings.assert_called_once_with(UiStrings().Themes)
@@ -1841,8 +2048,8 @@ def test_unused_features_disabled_on_startup(main_window):
     assert Registry().get_flag('no_web_server') is True
     assert main_window.view_projector_manager_item.isVisible() is False
     assert main_window.import_projector_item.isVisible() is False
-    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
-            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+    with patch('opal.core.api.http.server.run_thread') as http_thread, \
+            patch('opal.core.api.websockets.run_thread') as websocket_thread:
         main_window.http_server.bootstrap_post_set_up()
         main_window.ws_server.bootstrap_post_set_up()
         http_thread.assert_not_called()
@@ -1862,8 +2069,8 @@ def test_enabled_features_start_on_next_session(main_window):
     assert Registry().get_flag('no_web_server') is False
     assert main_window.view_projector_manager_item.isVisible() is True
     assert main_window.import_projector_item.isVisible() is True
-    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
-            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+    with patch('opal.core.api.http.server.run_thread') as http_thread, \
+            patch('opal.core.api.websockets.run_thread') as websocket_thread:
         main_window.http_server.bootstrap_post_set_up()
         main_window.ws_server.bootstrap_post_set_up()
         http_thread.assert_called_once()
@@ -1877,8 +2084,8 @@ def test_enabled_features_start_on_next_session(main_window):
 def test_command_line_disable_overrides_enabled_remote(main_window):
     """The existing command-line override still prevents both remote servers."""
     assert Registry().get_flag('no_web_server') is True
-    with patch('openlp.core.api.http.server.run_thread') as http_thread, \
-            patch('openlp.core.api.websockets.run_thread') as websocket_thread:
+    with patch('opal.core.api.http.server.run_thread') as http_thread, \
+            patch('opal.core.api.websockets.run_thread') as websocket_thread:
         main_window.http_server.bootstrap_post_set_up()
         main_window.ws_server.bootstrap_post_set_up()
         http_thread.assert_not_called()
@@ -1886,8 +2093,8 @@ def test_command_line_disable_overrides_enabled_remote(main_window):
     main_window.ws_server.close()
 
 
-@patch('openlp.core.ui.mainwindow.QtCore.QTimer.singleShot')
-@patch('openlp.core.ui.mainwindow.show_screen_setup_message', return_value=True)
+@patch('opal.core.ui.mainwindow.QtCore.QTimer.singleShot')
+@patch('opal.core.ui.mainwindow.show_screen_setup_message', return_value=True)
 def test_screen_changed_configure_action_follows_display_refresh(message, timer, main_window):
     main_window._live_controller = MagicMock()
     main_window._preview_controller = MagicMock()
@@ -1898,7 +2105,7 @@ def test_screen_changed_configure_action_follows_display_refresh(message, timer,
         main_window.live_controller.setup_displays.assert_called_once()
         main_window.renderer.resize.assert_called_once()
 
-    with patch('openlp.core.ui.mainwindow.request_screen_configuration',
+    with patch('opal.core.ui.mainwindow.request_screen_configuration',
                side_effect=request_configuration) as configure:
         main_window.screen_changed()
     configure.assert_called_once()

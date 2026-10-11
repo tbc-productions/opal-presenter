@@ -1,11 +1,111 @@
 """Service tree clicks select individual items and disclose their slides."""
 from unittest.mock import MagicMock, patch
 
-from PySide6 import QtCore, QtWidgets
+import pytest
+from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
-from openlp.core.widgets import fluent
-from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
+from opal.core.widgets import fluent
+from opal.core.ui.fluenticons import fluent_icon
+from opal.core.ui.servicemanager import ServiceManager, ServiceManagerList
+
+
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_service_hover_keeps_row_geometry(qapp, qtbot, theme):
+    previous = fluentqt.currentTheme()
+    fluentqt.setTheme(theme)
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    first = fluent.QTreeWidgetItem(view, ['A long service title ' * 8])
+    child = fluent.QTreeWidgetItem(first, ['Slide thumbnail'])
+    second = fluent.QTreeWidgetItem(view, ['Next song'])
+    pixmap = QtGui.QPixmap(64, 48)
+    pixmap.fill(QtCore.Qt.GlobalColor.blue)
+    child.setIcon(0, QtGui.QIcon(pixmap))
+    first.setExpanded(True)
+    try:
+        view.show()
+        qtbot.wait(250)
+        for width in (320, 480):
+            view.resize(width, 240)
+            for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+                view.setLayoutDirection(direction)
+                QtWidgets.QApplication.processEvents()
+                rectangles = [view.visualItemRect(row) for row in (first, child, second)]
+                assert rectangles[0].width() == view.viewport().width()
+                for rect in rectangles:
+                    view._header_host.updateGeometries()
+                    qtbot.mouseMove(view.viewport(), rect.center())
+                    QtWidgets.QApplication.processEvents()
+                    assert view.header().sectionSize(0) == view.viewport().width()
+                    assert [view.visualItemRect(row) for row in (first, child, second)] == rectangles
+    finally:
+        view.close()
+        fluentqt.setTheme(previous)
+
+
+def test_service_type_icons_have_no_border_but_child_thumbnails_do(qapp, qtbot):
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    item = fluent.QTreeWidgetItem(view, ['Song'])
+    child = fluent.QTreeWidgetItem(item, ['Image'])
+    pixmap = QtGui.QPixmap(80, 80)
+    pixmap.fill(QtCore.Qt.GlobalColor.red)
+    option = QtWidgets.QStyleOptionViewItem()
+    option.rect = QtCore.QRect(0, 0, 400, 60)
+    option.state = QtWidgets.QStyle.StateFlag.State_Enabled
+    delegate = view.itemDelegateForColumn(0)
+    for row, bordered in ((item, False), (child, True)):
+        row.setIcon(0, QtGui.QIcon(pixmap))
+        painter = MagicMock()
+        delegate.paint(painter, option, view.indexFromItem(row))
+        assert painter.drawRoundedRect.call_count == int(bordered)
+
+
+@pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
+def test_service_slide_icons_are_compact_and_less_indented(qapp, qtbot, theme):
+    previous = fluentqt.currentTheme()
+    fluentqt.setTheme(theme)
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    item = fluent.QTreeWidgetItem(view, ['Song'])
+    child = fluent.QTreeWidgetItem(item, ['V1: A long slide preview ' * 8])
+    item.setIcon(0, fluent_icon('ic_fluent_music_note_2_24_regular'))
+    child.setIcon(0, fluent_icon('ic_fluent_slide_text_24_regular', color='#60A5FA'))
+    item.setExpanded(True)
+    view.resize(260, 200)
+    try:
+        view.show()
+        qtbot.wait(250)
+        delegate = view.itemDelegateForColumn(0)
+        for direction in (QtCore.Qt.LayoutDirection.LeftToRight, QtCore.Qt.LayoutDirection.RightToLeft):
+            view.setLayoutDirection(direction)
+            QtWidgets.QApplication.processEvents()
+            rectangles = []
+            for row in (item, child):
+                index = view.indexFromItem(row)
+                option = QtWidgets.QStyleOptionViewItem()
+                option.rect = view.visualRect(index)
+                option.font = view.font()
+                option.direction = direction
+                text, rect, _, _ = delegate._text_layout(option, index)
+                assert '…' in text if row is child else text == 'Song'
+                assert view.viewport().rect().contains(rect.toRect())
+                rectangles.append(rect)
+            edge = 'left' if direction == QtCore.Qt.LayoutDirection.LeftToRight else 'right'
+            assert abs(getattr(rectangles[1], edge)() - getattr(rectangles[0], edge)()) == 12
+            assert delegate.iconSize(option, view.indexFromItem(child)).width() <= 24
+            assert not delegate.iconBorderVisible(view.indexFromItem(child))
+            assert view.visualItemRect(child).height() == view.visualItemRect(item).height() + 8
+        view.setCurrentItem(item)
+        qtbot.keyClick(view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ShiftModifier)
+        assert view.currentItem() is child
+        qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=view.visualItemRect(child).center())
+        assert view.selectedItems() == [child]
+    finally:
+        view.close()
+        fluentqt.setTheme(previous)
 
 
 def test_service_tree_row_and_child_selection(qapp, qtbot):
@@ -105,7 +205,7 @@ def test_service_notes_indicator_allows_row_clicks(settings, qtbot):
 
 
 def test_service_inline_indicators_follow_label_and_fit_width(settings, qtbot):
-    from openlp.core.ui.servicemanager import SERVICE_ITEM_INDICATORS_ROLE
+    from opal.core.ui.servicemanager import SERVICE_ITEM_INDICATORS_ROLE
     view = ServiceManagerList(MagicMock())
     qtbot.addWidget(view)
     item = fluent.QTreeWidgetItem(view, ['Short label'])
@@ -137,3 +237,27 @@ def test_service_inline_indicators_follow_label_and_fit_width(settings, qtbot):
                 assert abs(rectangles[0].right() - (text_rect.right() - width - 6)) <= 1
                 assert rectangles[1].right() < rectangles[0].left()
     view.close()
+
+
+def test_service_mouse_and_keyboard_extended_selection(qapp, qtbot):
+    view = ServiceManagerList(MagicMock())
+    qtbot.addWidget(view)
+    rows = [fluent.QTreeWidgetItem(view, [title]) for title in ('A', 'B', 'C')]
+    view.resize(400, 240)
+    view.show()
+    QtWidgets.QApplication.processEvents()
+    qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=view.visualItemRect(rows[0]).center())
+    qtbot.mouseClick(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     QtCore.Qt.KeyboardModifier.ControlModifier,
+                     pos=view.visualItemRect(rows[2]).center())
+    assert view.selectedItems() == [rows[0], rows[2]]
+    qtbot.mousePress(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                     pos=view.visualItemRect(rows[0]).center())
+    assert view.selectedItems() == [rows[0], rows[2]]
+    qtbot.mouseRelease(view.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                       pos=view.visualItemRect(rows[0]).center())
+    view.setCurrentItem(rows[0])
+    qtbot.keyClick(view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ShiftModifier)
+    qtbot.keyRelease(view, QtCore.Qt.Key.Key_Shift)
+    assert view.selectedItems() == rows[:2]

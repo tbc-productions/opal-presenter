@@ -4,21 +4,21 @@ from types import SimpleNamespace
 
 import pytest
 
-from openlp.core.common.enum import PluginStatus
-from openlp.core.common.registry import Registry
-from openlp.core.lib.plugin import StringContent
-from openlp.core.widgets.slideeditor import get_slide_editor
-from openlp.plugins.slide_designer.slide_designer_plugin import SlideDesignerPlugin
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.songs.forms.editverseform import EditVerseForm
-from openlp.plugins.custom.forms.editcustomform import EditCustomForm
-from openlp.plugins.custom.forms.editcustomslideform import EditCustomSlideForm
+from opal.core.common.enum import PluginStatus
+from opal.core.common.registry import Registry
+from opal.core.lib.plugin import StringContent
+from opal.core.widgets.slideeditor import get_slide_editor
+from opal.plugins.slide_designer.slide_designer_plugin import SlideDesignerPlugin
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.songs.forms.editverseform import EditVerseForm
+from opal.plugins.custom.forms.editcustomform import EditCustomForm
+from opal.plugins.custom.forms.editcustomslideform import EditCustomSlideForm
 
 
 @pytest.mark.parametrize('kind', ['song', 'custom'])
 def test_checking_another_item_does_not_reuse_an_open_designer_draft(kind):
-    from openlp.plugins.songs.lib.mediaitem import SongMediaItem
-    from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
+    from opal.plugins.songs.lib.mediaitem import SongMediaItem
+    from opal.plugins.custom.lib.mediaitem import CustomMediaItem
 
     attribute = 'edit_song_form' if kind == 'song' else 'edit_custom_form'
     module = 'songs' if kind == 'song' else 'custom'
@@ -26,7 +26,7 @@ def test_checking_another_item_does_not_reuse_an_open_designer_draft(kind):
     media_class = SongMediaItem if kind == 'song' else CustomMediaItem
     draft = MagicMock(_designer_open=True)
     item = SimpleNamespace(**{attribute: draft}, main_window=MagicMock(), plugin=MagicMock())
-    with patch(f'openlp.plugins.{module}.lib.mediaitem.{form_class}') as new_form:
+    with patch(f'opal.plugins.{module}.lib.mediaitem.{form_class}') as new_form:
         media_class.ensure_available_editor(item)
         assert getattr(item, attribute) is new_form.return_value
         draft.load_song.assert_not_called()

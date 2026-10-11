@@ -1,13 +1,13 @@
 """Installed font weights and synthetic bold fallback in the theme controls."""
 from unittest.mock import patch
 
-from openlp.core.pages.fontselect import FontSelectPage
+from opal.core.pages.fontselect import FontSelectPage
 
 
 def test_supported_weights_deduplicate_font_faces(settings):
-    with patch('openlp.core.pages.fontselect.QtGui.QFontDatabase.styles',
+    with patch('opal.core.pages.fontselect.QtGui.QFontDatabase.styles',
                return_value=['Regular', 'Italic', 'Medium', 'Medium Italic', 'Black']), \
-            patch('openlp.core.pages.fontselect.QtGui.QFontDatabase.weight',
+            patch('opal.core.pages.fontselect.QtGui.QFontDatabase.weight',
                   side_effect=lambda family, style: {'Regular': 400, 'Italic': 400, 'Medium': 500,
                                                      'Medium Italic': 500, 'Black': 900}[style]):
         assert FontSelectPage.supported_weights('Example') == [400, 500, 900]

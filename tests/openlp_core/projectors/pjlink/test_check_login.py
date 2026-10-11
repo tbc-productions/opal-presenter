@@ -24,12 +24,12 @@ Test PJLink.check_login
 
 import logging
 
-import openlp.core.projectors.pjlink
+import opal.core.projectors.pjlink
 
 from unittest.mock import DEFAULT, patch
-from openlp.core.projectors.constants import PJLINK_PREFIX, E_SOCKET_TIMEOUT
+from opal.core.projectors.constants import PJLINK_PREFIX, E_SOCKET_TIMEOUT
 from tests.resources.projector.data import TEST_SALT
-test_module = openlp.core.projectors.pjlink.__name__
+test_module = opal.core.projectors.pjlink.__name__
 
 
 def test_socket_timeout(pjlink, caplog):

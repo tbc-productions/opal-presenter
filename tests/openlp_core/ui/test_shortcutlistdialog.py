@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.shortcutlistdialog package.
+Package to test the opal.core.ui.shortcutlistdialog package.
 """
 from unittest.mock import MagicMock
 
 from PySide6 import QtCore
 
-from openlp.core.ui.shortcutlistdialog import CaptureShortcutButton, ShortcutDataGrid
+from opal.core.ui.shortcutlistdialog import CaptureShortcutButton, ShortcutDataGrid
 
 
 def test_key_press_event(mock_settings):

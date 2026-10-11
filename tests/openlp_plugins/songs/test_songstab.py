@@ -25,12 +25,12 @@ import pytest
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.common.enum import SongFirstSlideMode
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.common.enum import SongFirstSlideMode
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.lib.songstab import SongsTab
-from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+from opal.core.common.registry import Registry
+from opal.plugins.songs.lib.songstab import SongsTab
+from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 __default_settings__ = {
     'songs/footer template': """${title}""",
@@ -163,8 +163,8 @@ def test_neolatin_notation_button(form):
     assert form.chord_notation == 'neo-latin'
 
 
-@patch('openlp.plugins.songs.lib.songstab.QtWidgets.QMessageBox.question')
-@patch('openlp.core.common.settings.Settings.setValue')
+@patch('opal.plugins.songs.lib.songstab.QtWidgets.QMessageBox.question')
+@patch('opal.core.common.settings.Settings.setValue')
 def test_password_change(mocked_settings_set_val, mocked_question, form):
     """
     Test the ccli password sends a warning when changed, and saves when accepted
@@ -180,8 +180,8 @@ def test_password_change(mocked_settings_set_val, mocked_question, form):
     assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
-@patch('openlp.plugins.songs.lib.songstab.QtWidgets.QMessageBox.question')
-@patch('openlp.core.common.settings.Settings.setValue')
+@patch('opal.plugins.songs.lib.songstab.QtWidgets.QMessageBox.question')
+@patch('opal.core.common.settings.Settings.setValue')
 def test_password_change_cancelled(mocked_settings_set_val, mocked_question, form):
     """
     Test the ccli password sends a warning when changed and does not save when cancelled
@@ -197,7 +197,7 @@ def test_password_change_cancelled(mocked_settings_set_val, mocked_question, for
     assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
-@patch('openlp.core.common.settings.Settings.setValue')
+@patch('opal.core.common.settings.Settings.setValue')
 def test_footer_nochange(mocked_settings_set_val, form):
     """
     Test the footer is not saved when not changed
@@ -209,7 +209,7 @@ def test_footer_nochange(mocked_settings_set_val, form):
     assert call('songs/footer template', form.footer_edit_box.toPlainText()) not in mocked_settings_set_val.call_args_list
 
 
-@patch('openlp.core.common.settings.Settings.setValue')
+@patch('opal.core.common.settings.Settings.setValue')
 def test_footer_change(mocked_settings_set_val, form):
     """
     Test the footer is saved when changed
@@ -291,11 +291,11 @@ def test_save_first_slide_settings(form):
 
 def test_section_color_picker_saves_choice_and_restores_defaults(form):
     """The shared colour dialog updates the swatch and the saved section colour."""
-    from openlp.core.widgets.buttons import ColorButton
+    from opal.core.widgets.buttons import ColorButton
 
     button = form.section_color_buttons['intro']
     assert isinstance(button, ColorButton)
-    with patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor',
+    with patch('opal.core.widgets.buttons.QtWidgets.QColorDialog.getColor',
                return_value=QtGui.QColor('#A1B2C3')) as dialog:
         button.click()
     dialog.assert_called_once_with(QtGui.QColor(DEFAULT_SECTION_COLORS['intro']), form.section_colors_group_box)
@@ -311,7 +311,7 @@ def test_section_color_picker_saves_choice_and_restores_defaults(form):
 def test_section_color_picker_cancel_preserves_colour(form):
     button = form.section_color_buttons['intro']
     original = button.color
-    with patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor', return_value=QtGui.QColor()):
+    with patch('opal.core.widgets.buttons.QtWidgets.QColorDialog.getColor', return_value=QtGui.QColor()):
         button.click()
     assert button.color == original
     assert form.section_colors['intro'] == original

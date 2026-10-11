@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${OPAL_TAG}"
-          BODY=$(printf '{"tag_name":"%s","name":"%s","body":"Automated release of %s","draft":false,"prerelease":false}' "$TAG" "$TAG" "$TAG")
+          BODY=$(printf '{"tag_name":"%s","name":"Opal Presenter %s","body":"Opal Presenter %s introduces an independent application identity and native document formats. Legacy OpenLP files remain importable. Install alongside the previous app; profiles are independent. See documentation/opal-formats.rst for compatibility details.","draft":true,"prerelease":false}' "$TAG" "$TAG" "$TAG")
           HTTP_CODE=$(curl -sS -o /tmp/release_response.json -w '%{http_code}' -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
             -H "Content-Type: application/json" \

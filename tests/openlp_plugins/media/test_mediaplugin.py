@@ -23,11 +23,11 @@ Test the media plugin
 """
 from unittest.mock import patch
 
-from openlp.core.state import State
-from openlp.plugins.media.mediaplugin import MediaPlugin
+from opal.core.state import State
+from opal.plugins.media.mediaplugin import MediaPlugin
 
 
-@patch('openlp.plugins.media.mediaplugin.Plugin.initialise')
+@patch('opal.plugins.media.mediaplugin.Plugin.initialise')
 def test_initialise(mock_initialise, state, settings):
     """
     Test that the initialise() method overwrites the built-in one, but still calls it

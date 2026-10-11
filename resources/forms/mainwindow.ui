@@ -16,7 +16,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle" >
-   <string>OpenLP+ (fork of OpenLP)</string>
+   <string>Opal Presenter (fork of OpenLP)</string>
   </property>
   <widget class="QWidget" name="MainContent" >
    <property name="sizePolicy" >
@@ -1983,7 +1983,7 @@
     <string>E&amp;xit</string>
    </property>
    <property name="statusTip" >
-    <string>Quit OpenLP+</string>
+    <string>Quit Opal Presenter</string>
    </property>
    <property name="shortcut" >
     <string>Alt+F4</string>
@@ -2130,7 +2130,7 @@
     <string>&amp;About</string>
    </property>
    <property name="statusTip" >
-    <string>More information about OpenLP+ (forked from OpenLP)</string>
+    <string>More information about Opal Presenter (forked from OpenLP)</string>
    </property>
    <property name="shortcut" >
     <string>Ctrl+F1</string>
@@ -2164,7 +2164,7 @@
   </action>
   <action name="ImportOpenlp2Item" >
    <property name="text" >
-    <string>OpenLP+ (OpenLP 2.0 format)</string>
+    <string>Opal Presenter (OpenLP 2.0 format)</string>
    </property>
    <property name="toolTip" >
     <string>Import songs in OpenLP 2.0 format (OpenLP compatible)</string>
@@ -2185,7 +2185,7 @@
   </action>
   <action name="ExportOpenlp2Item" >
    <property name="text" >
-    <string>OpenLP+ (OpenLP 2.0 format)</string>
+    <string>Opal Presenter (OpenLP 2.0 format)</string>
    </property>
   </action>
   <action name="LanguageTranslateItem" >

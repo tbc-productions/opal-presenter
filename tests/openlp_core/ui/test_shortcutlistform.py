@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.shortcutform package.
+Package to test the opal.core.ui.shortcutform package.
 """
 import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.shortcutlistform import ShortcutListForm, _qobject_is_alive
+from opal.core.ui.shortcutlistform import ShortcutListForm, _qobject_is_alive
 
 
 @pytest.fixture()
@@ -49,7 +49,7 @@ def test_adjust_button(form):
     text = 'new!'
 
     # WHEN: Call the method.
-    with patch('openlp.core.widgets.fluent.QPushButton.setChecked') as mocked_check_method:
+    with patch('opal.core.widgets.fluent.QPushButton.setChecked') as mocked_check_method:
         form._adjust_button(button, checked, enabled, text)
 
         # THEN: The button should be changed.
@@ -134,7 +134,7 @@ def test_action_shortcuts_returns_empty_when_shortcuts_raises_runtime_error(form
     """
     action = MagicMock()
     action.shortcuts.side_effect = RuntimeError('Internal C++ object already deleted.')
-    with patch('openlp.core.ui.shortcutlistform._qobject_is_alive', return_value=True):
+    with patch('opal.core.ui.shortcutlistform._qobject_is_alive', return_value=True):
         assert form._action_shortcuts(action) == []
 
 
@@ -158,7 +158,7 @@ def shortcut_form(settings, qtbot, monkeypatch):
     window.action_list = SimpleNamespace(categories=[SimpleNamespace(name='File', actions=actions)],
                                          update_shortcut_map=MagicMock())
     window.warning_mock = MagicMock(return_value=QtWidgets.QMessageBox.StandardButton.Ok)
-    monkeypatch.setattr('openlp.core.ui.shortcutlistform.QtWidgets.QMessageBox.warning', window.warning_mock)
+    monkeypatch.setattr('opal.core.ui.shortcutlistform.QtWidgets.QMessageBox.warning', window.warning_mock)
     window.reload_shortcut_list()
     return window
 
@@ -307,11 +307,11 @@ def test_restore_defaults_rejects_conflicting_pending_edits(shortcut_form):
 def test_restore_all_defaults_stays_in_draft_and_respects_confirmation(shortcut_form):
     action = shortcut_form._current_item_action()
     shortcut_form.changed_actions[action] = [QtGui.QKeySequence('Ctrl+K')]
-    with patch('openlp.core.ui.shortcutlistform.QtWidgets.QMessageBox.question',
+    with patch('opal.core.ui.shortcutlistform.QtWidgets.QMessageBox.question',
                return_value=QtWidgets.QMessageBox.StandardButton.No):
         shortcut_form.restore_all_action.trigger()
     assert shortcut_form._action_shortcuts(action) == [QtGui.QKeySequence('Ctrl+K')]
-    with patch('openlp.core.ui.shortcutlistform.QtWidgets.QMessageBox.question',
+    with patch('opal.core.ui.shortcutlistform.QtWidgets.QMessageBox.question',
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
         shortcut_form.restore_all_action.trigger()
     assert shortcut_form._action_shortcuts(action) == action.default_shortcuts

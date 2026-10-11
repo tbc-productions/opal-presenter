@@ -1,5 +1,5 @@
 """Checks for full-resolution frame capture used by presentation exports."""
-from openlp.core.lib.mediaposter import video_frame
+from opal.core.lib.mediaposter import video_frame
 from tests.utils.constants import RESOURCE_PATH
 
 

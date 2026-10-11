@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages.background package.
+Package to test the opal.core.pages.background package.
 """
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.lib.theme import BackgroundType, BackgroundGradientType
-from openlp.core.pages.background import BackgroundPage
+from opal.core.lib.theme import BackgroundType, BackgroundGradientType
+from opal.core.pages.background import BackgroundPage
 
 
 def test_init_(settings):
@@ -480,7 +480,7 @@ def test_set_stream_mrl(settings):
     assert page.stream_lineedit.text() == 'devicestream:/dev/vid3'
 
 
-@patch('openlp.plugins.media.forms.streamselectorform.StreamSelectorForm')
+@patch('opal.plugins.media.forms.streamselectorform.StreamSelectorForm')
 def test_on_device_stream_select_button_triggered(MockStreamSelectorForm, settings):
     """Test the device streaming selection
 
@@ -501,7 +501,7 @@ def test_on_device_stream_select_button_triggered(MockStreamSelectorForm, settin
     mocked_stream_selector_form.exec.assert_called_once_with()
 
 
-@patch('openlp.plugins.media.forms.networkstreamselectorform.NetworkStreamSelectorForm')
+@patch('opal.plugins.media.forms.networkstreamselectorform.NetworkStreamSelectorForm')
 def test_on_network_stream_select_button_triggered(MockStreamSelectorForm, settings):
     """Test the network streaming selection
 

@@ -21,5 +21,5 @@
 """
 :mod: `tests.openlp_core` module
 
-Tests modules/files for module openlp.core
+Tests modules/files for module opal.core
 """

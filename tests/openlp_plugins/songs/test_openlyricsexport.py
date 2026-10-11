@@ -28,7 +28,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.songs.lib.openlyricsexport import OpenLyricsExport
+from opal.plugins.songs.lib.openlyricsexport import OpenLyricsExport
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def test_export_same_filename(registry, settings, temp_folder):
     Test that files is not overwritten if songs has same title and author
     """
     # GIVEN: A mocked song_to_xml, 2 mocked songs, a mocked application and an OpenLyricsExport instance
-    with patch('openlp.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
+    with patch('opal.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
         mocked_song_to_xml.return_value = '<?xml version="1.0" encoding="UTF-8"?>\n<empty/>'
         author = MagicMock()
         author.display_name = 'Test Author'
@@ -71,7 +71,7 @@ def test_export_sort_of_authers_filename(registry, settings, temp_folder):
     Test that files is not overwritten if songs has same title and author
     """
     # GIVEN: A mocked song_to_xml, 1 mocked songs, a mocked application and an OpenLyricsExport instance
-    with patch('openlp.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
+    with patch('opal.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
         mocked_song_to_xml.return_value = '<?xml version="1.0" encoding="UTF-8"?>\n<empty/>'
         authorA = MagicMock()
         authorA.display_name = 'a Author'
@@ -109,7 +109,7 @@ def test_export_is_stopped(registry, settings, temp_folder):
     Test that the exporter stops when the flag is set
     """
     # GIVEN: A mocked song_to_xml, a mocked song, a mocked application and an OpenLyricsExport instance
-    with patch('openlp.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
+    with patch('opal.plugins.songs.lib.openlyricsexport.OpenLyrics.song_to_xml') as mocked_song_to_xml:
         mocked_song_to_xml.return_value = '<?xml version="1.0" encoding="UTF-8"?>\n<empty/>'
         author = MagicMock()
         author.display_name = 'Test Author'

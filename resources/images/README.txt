@@ -1,6 +1,9 @@
-OpenLP.ico
+Opal Presenter branding
 
-This Windows icon contains several images with different resolution.
-It can be recreated by command:
+Canonical logo: branding/OpalPresenter.png
+Small UI icon: resources/images/opal-presenter-icon.svg (shared window and General Settings icons)
+Projection background: branding/OpalBackground.jpg (background only, Cover scaling)
 
-icotool -c -o OpenLP.ico openlp-logo-16x16.png openlp-logo-32x32.png openlp-logo-48x48.png openlp-logo-64x64.png openlp-logo-128x128.png
+Run python scripts/update_opal_presenter_logo.py to export PNG sizes through 1024px, ICO, ICNS,
+projection, splash and About artwork. Pass --packaging PATH and --remote PATH for companion assets.
+Preserve the supplied logo's transparency. Projection never contains the logo.

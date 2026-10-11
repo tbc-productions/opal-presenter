@@ -22,15 +22,42 @@
 Tests for Library dock tab behavior.
 """
 
-from PySide6 import QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from unittest.mock import patch
+import weakref
 
-from openlp.core.widgets.docks import MediaToolBox
+from PySide6 import QtCore, QtGui
+from opal.core.widgets import fluent as QtWidgets
+
+from opal.core.widgets.docks import MediaToolBox
+from opal.core.ui.fluenticons import fluent_icon
 
 
 def _add_item(media_tool_box, label):
     widget = QtWidgets.QWidget()
     media_tool_box.addItem(widget, QtGui.QIcon(), label)
+
+
+def test_library_destruction_releases_rebuilt_selector_icons(qapp):
+    """Destroying Qt hosts releases both Python references to the latest icons."""
+    box = MediaToolBox()
+    box.addItem(QtWidgets.QWidget(), fluent_icon('ic_fluent_add_24_regular'), 'Songs')
+    box.setItemIcon(0, fluent_icon('ic_fluent_music_note_2_24_regular'))
+    selector = box._selector
+    reference = weakref.ref(selector._icons[0])
+    box.deleteLater()
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    assert box._items == []
+    assert selector._icons == []
+    assert reference() is None
+
+
+def test_library_drag_filter_is_not_installed_on_application(qapp, qtbot):
+    """WebEngine must be able to construct private objects without Python filters."""
+    with patch.object(QtWidgets.QApplication.instance(), 'installEventFilter') as global_filter:
+        box = MediaToolBox()
+        qtbot.addWidget(box)
+        _add_item(box, 'Songs')
+    global_filter.assert_not_called()
 
 
 def test_library_selector_stays_one_row_and_overflows(qapp):

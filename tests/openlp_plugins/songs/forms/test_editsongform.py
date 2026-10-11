@@ -19,21 +19,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.editsongform package.
+Package to test the opal.plugins.songs.forms.editsongform package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtTest, QtCore
 import fluentqt
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.songs.lib.db import Author, AuthorType
-from openlp.plugins.songs.lib.ui import SongStrings
+from opal.core.common.i18n import UiStrings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.songs.lib.db import Author, AuthorType
+from opal.plugins.songs.lib.ui import SongStrings
 
 
 @pytest.fixture()
@@ -67,7 +67,7 @@ def test_ui_defaults(form: EditSongForm):
 
 def test_song_editor_exec_opens_and_closes(form: EditSongForm):
     """With Slide Designer disabled, retain the original Fluent dialog lifecycle."""
-    from openlp.core.common.enum import PluginStatus
+    from opal.core.common.enum import PluginStatus
     form.settings.setValue('slide_designer/status', PluginStatus.Inactive)
     parent = form.parentWidget()
     parent.resize(1200, 900)
@@ -84,6 +84,62 @@ def test_song_editor_exec_opens_and_closes(form: EditSongForm):
         assert form.exec() == QtWidgets.QDialog.DialogCode.Rejected
         assert observed == [True]
     finally:
+        parent.close()
+
+
+@pytest.mark.parametrize('relocated', [True, False])
+@pytest.mark.parametrize('child_name', ['author_form', 'topic_form', 'song_book_form'])
+def test_maintenance_dialog_uses_current_editor_window(form, qtbot, relocated, child_name):
+    """Maintenance and its edit dialogs open in the designer's window and refresh song choices on close."""
+    from opal.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
+    parent = form.parentWidget()
+    parent.resize(1200, 900)
+    parent.show()
+    form.setAnimationEnabled(False)
+    form.show()
+    if relocated:
+        form.hide()
+        parent = fluentqt.Window()
+        qtbot.addWidget(parent)
+        parent.resize(1200, 900)
+        parent.show()
+        form._fluent_dialog_host = parent
+    observed = []
+
+    def inspect_and_close():
+        dialog = (parent.findChild(SongMaintenanceForm, 'song_maintenance_dialog') or
+                  form.parentWidget().findChild(SongMaintenanceForm, 'song_maintenance_dialog'))
+        observed.append(dialog is not None and dialog.window() is parent and dialog.isOpen() and dialog.isVisible())
+        if dialog is None:
+            return
+        QtCore.QTimer.singleShot(1000, dialog, dialog.reject)
+        dialog.setAnimationEnabled(False)
+        child = getattr(dialog, child_name)
+        child.setAnimationEnabled(False)
+
+        def close_child():
+            observed.append(child.window() is parent and child.isOpen() and child.isVisible())
+            child.reject()
+
+        QtCore.QTimer.singleShot(0, close_child)
+        child.exec()
+        dialog.reject()
+
+    QtCore.QTimer.singleShot(0, inspect_and_close)
+    try:
+        with patch.object(form, 'load_authors') as load_authors, \
+                patch.object(form, 'load_songbooks') as load_songbooks, \
+                patch.object(form, 'load_topics') as load_topics:
+            form.maintenance_button.click()
+        assert observed == [True, True]
+        load_authors.assert_called_once_with()
+        load_songbooks.assert_called_once_with()
+        load_topics.assert_called_once_with()
+        form.media_item.song_maintenance_form.exec.assert_not_called()
+    finally:
+        if relocated:
+            del form._fluent_dialog_host
+        form.close()
         parent.close()
 
 
@@ -284,9 +340,9 @@ def test_verse_order_lowercase(form: EditSongForm):
     assert form.verse_order_edit.text() == 'V1 V2 C1 V3 C1 V4 C1'
 
 
-def test_help(settings: Settings):
+def test_no_help_button(settings: Settings):
     """
-    Test the help button
+    Help buttons are absent
     """
     # GIVEN: An edit song form and a patched help function
     main_window = QtWidgets.QMainWindow()
@@ -294,16 +350,10 @@ def test_help(settings: Settings):
     Registry().register('theme_manager', MagicMock())
     edit_song_form = EditSongForm(MagicMock(), main_window, MagicMock())
 
-    # WHEN: The Help button is clicked
-    with patch.object(edit_song_form, 'provide_help') as mocked_help:
-        QtTest.QTest.mouseClick(edit_song_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help),
-                                QtCore.Qt.MouseButton.LeftButton)
-
-    # THEN: The Help function should be called
-    mocked_help.assert_called_once()
+    assert edit_song_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_adds_multiple_authors_from_delimited_text(mocked_question, form: EditSongForm):
     """Delimited author text should prompt once, create missing authors, and avoid duplicates."""
     existing_author = Author(first_name='John', last_name='Newton', display_name='John Newton')
@@ -335,7 +385,7 @@ def test_on_author_add_button_clicked_adds_multiple_authors_from_delimited_text(
     assert form.authors_list_view.item(1).text() == 'Jane Doe'
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_adds_multiple_authors_from_comma_delimited_text(mocked_question,
                                                                                       form: EditSongForm):
     """Comma-delimited author text should be handled by the multi-author add flow."""
@@ -363,7 +413,7 @@ def test_on_author_add_button_clicked_adds_multiple_authors_from_comma_delimited
     assert form.authors_list_view.count() == 2
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_declined_multiple_authors_does_not_add(mocked_question, form: EditSongForm):
     """Declining the multi-author prompt should fall back to adding the full text as one author."""
     existing_author = Author(first_name='John', last_name='Newton', display_name='John Newton')

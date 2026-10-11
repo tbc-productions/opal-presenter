@@ -23,7 +23,7 @@ This module contains tests for the CSV Bible importer.
 """
 from unittest.mock import MagicMock
 
-from openlp.plugins.alerts.lib.alertsmanager import AlertsManager
+from opal.plugins.alerts.lib.alertsmanager import AlertsManager
 
 
 def test_remove_message_text(registry):

@@ -25,9 +25,9 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.easyworship import EasyWorshipSongImport, FieldDescEntry, FieldType
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.easyworship import EasyWorshipSongImport, FieldDescEntry, FieldType
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -150,8 +150,8 @@ def _run_db_file_import(source_path: Path):
 
     # GIVEN: Test files with a mocked out SongImport class, a mocked out "manager", a mocked out "import_wizard",
     #       and mocked out "author", "add_copyright", "add_verse", "finish" methods.
-    with patch('openlp.plugins.songs.lib.importers.easyworship.SongImport'), \
-            patch('openlp.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding') as \
+    with patch('opal.plugins.songs.lib.importers.easyworship.SongImport'), \
+            patch('opal.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding') as \
             mocked_retrieve_windows_encoding:
         mocked_retrieve_windows_encoding.return_value = 'cp1252'
         mocked_manager = MagicMock()
@@ -232,7 +232,7 @@ def test_create_importer(registry: Registry, settings: Settings):
     Test creating an instance of the EasyWorship file importer
     """
     # GIVEN: A mocked out SongImport class, and a mocked out "manager"
-    with patch('openlp.plugins.songs.lib.importers.easyworship.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.easyworship.SongImport'):
         mocked_manager = MagicMock()
 
         # WHEN: An importer object is created
@@ -247,7 +247,7 @@ def test_find_field_exists(registry: Registry, settings: Settings):
     Test finding an existing field in a given list using the :mod:`db_find_field`
     """
     # GIVEN: A mocked out SongImport class, a mocked out "manager" and a list of field descriptions.
-    with patch('openlp.plugins.songs.lib.importers.easyworship.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.easyworship.SongImport'):
         mocked_manager = MagicMock()
         importer = EasyWorshipSongImport(mocked_manager, file_paths=[])
         importer.field_descriptions = TEST_FIELD_DESCS
@@ -266,7 +266,7 @@ def test_find_non_existing_field(registry: Registry, settings: Settings):
     Test finding an non-existing field in a given list using the :mod:`db_find_field`
     """
     # GIVEN: A mocked out SongImport class, a mocked out "manager" and a list of field descriptions
-    with patch('openlp.plugins.songs.lib.importers.easyworship.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.easyworship.SongImport'):
         mocked_manager = MagicMock()
         importer = EasyWorshipSongImport(mocked_manager, file_paths=[])
         importer.field_descriptions = TEST_FIELD_DESCS
@@ -285,8 +285,8 @@ def test_set_record_struct(registry: Registry, settings: Settings):
     """
     # GIVEN: A mocked out SongImport class, a mocked out struct class, and a mocked out "manager" and a list of
     #       field descriptions
-    with patch('openlp.plugins.songs.lib.importers.easyworship.SongImport'), \
-            patch('openlp.plugins.songs.lib.importers.easyworship.struct') as mocked_struct:
+    with patch('opal.plugins.songs.lib.importers.easyworship.SongImport'), \
+            patch('opal.plugins.songs.lib.importers.easyworship.struct') as mocked_struct:
         mocked_manager = MagicMock()
         importer = EasyWorshipSongImport(mocked_manager, file_paths=[])
 
@@ -299,7 +299,7 @@ def test_set_record_struct(registry: Registry, settings: Settings):
         mocked_struct.Struct.assert_called_with('>50sHIB250s250s10sQ')
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
 def test_get_field(MockSongImport: MagicMock, registry: Registry, settings: Settings):
     """
     Test the :mod:`db_get_field` module
@@ -321,7 +321,7 @@ def test_get_field(MockSongImport: MagicMock, registry: Registry, settings: Sett
             (result, TEST_FIELDS[field_index])
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
 def test_get_memo_field(MockSongImport: MagicMock, registry: Registry, settings: Settings):
     """
     Test the :mod:`db_get_field` module
@@ -355,8 +355,8 @@ def test_get_memo_field(MockSongImport: MagicMock, registry: Registry, settings:
                 mocked_memo_file.seek.assert_any_call(call[0], call[1])
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.is_file', side_effect=[True, False])
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.is_file', side_effect=[True, False])
 def test_do_import_source_invalid(mocked_is_file: MagicMock, MockSongImport: MagicMock, registry: Registry,
                                   settings: Settings):
     """
@@ -377,9 +377,9 @@ def test_do_import_source_invalid(mocked_is_file: MagicMock, MockSongImport: Mag
                                          'the "Songs.DB" file.')
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.stat')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.stat')
 def test_do_import_database_validity(mocked_stat: MagicMock, mocked_is_file: MagicMock,
                                      MockSongImport: MagicMock, registry: Registry, settings: Settings):
     """
@@ -398,11 +398,11 @@ def test_do_import_database_validity(mocked_stat: MagicMock, mocked_is_file: Mag
     mocked_stat.assert_called_once_with()
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.stat', **{'return_value.st_size': 0x800})
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.open')
-@patch('openlp.plugins.songs.lib.importers.easyworship.struct')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.stat', **{'return_value.st_size': 0x800})
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.open')
+@patch('opal.plugins.songs.lib.importers.easyworship.struct')
 def test_do_import_memo_validty(mocked_struct: MagicMock, mocked_open: MagicMock, mocked_stat: MagicMock,
                                 mocked_is_file: MagicMock, MockSongImport: MagicMock, registry: Registry,
                                 settings: Settings):
@@ -426,13 +426,13 @@ def test_do_import_memo_validty(mocked_struct: MagicMock, mocked_open: MagicMock
         assert mocked_open().seek.called is False, 'db_file.seek should not have been called.'
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.stat', **{'return_value.st_size': 0x800})
-@patch('openlp.plugins.songs.lib.importers.easyworship.Path.open')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.is_file', return_value=True)
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.stat', **{'return_value.st_size': 0x800})
+@patch('opal.plugins.songs.lib.importers.easyworship.Path.open')
 @patch('builtins.open')
-@patch('openlp.plugins.songs.lib.importers.easyworship.struct')
-@patch('openlp.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
+@patch('opal.plugins.songs.lib.importers.easyworship.struct')
+@patch('opal.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
 def test_code_page_to_encoding(mocked_retrieve_windows_encoding: MagicMock, mocked_struct: MagicMock,
                                mocked_open: MagicMock, mocked_path_open: MagicMock, mocked_path_stat: MagicMock,
                                mocked_path_is_file: MagicMock, MockSongImport: MagicMock, registry: Registry,
@@ -456,8 +456,8 @@ def test_code_page_to_encoding(mocked_retrieve_windows_encoding: MagicMock, mock
         mocked_retrieve_windows_encoding.assert_any_call(encoding)
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
 def test_ews_file_import(mocked_retrieve_windows_encoding: MagicMock, MockSongImport: MagicMock,
                          registry: Registry, settings: Settings):
     """
@@ -498,8 +498,8 @@ def test_ews_file_import(mocked_retrieve_windows_encoding: MagicMock, MockSongIm
     mocked_finish.assert_called_with()
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
-@patch('openlp.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.retrieve_windows_encoding')
 def test_ewsx_file_import(mocked_retrieve_windows_encoding: MagicMock, MockSongImport: MagicMock,
                           registry: Registry, settings: Settings):
     """
@@ -540,7 +540,7 @@ def test_ewsx_file_import(mocked_retrieve_windows_encoding: MagicMock, MockSongI
     mocked_finish.assert_called_with()
 
 
-@patch('openlp.plugins.songs.lib.importers.easyworship.SongImport')
+@patch('opal.plugins.songs.lib.importers.easyworship.SongImport')
 def test_import_rtf_unescaped_unicode(MockSongImport: MagicMock, registry: Registry, settings: Settings):
     """
     Test import of rtf without the expected escaping of unicode

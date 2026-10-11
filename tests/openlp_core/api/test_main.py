@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from openlp.core.api.main import get_mime_type
+from opal.core.api.main import get_mime_type
 
 
 def test_get_mime_type():

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.presentations.lib.pdfexport import export_to_pdf, PdfExportWorker, _export_mac, _export_libreoffice, \
+from opal.plugins.presentations.lib.pdfexport import export_to_pdf, PdfExportWorker, _export_mac, _export_libreoffice, \
     _export_windows, pdf_export_error_text, PdfExportCancelled, _run_libreoffice
 
 
@@ -23,10 +23,10 @@ def test_export_preserves_source_and_existing_pdf(tmp_path, controller):
         copies.append(copy)
         output.write_bytes(b'%PDF-1.7\nconverted slides')
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
-            patch('openlp.plugins.presentations.lib.pdfexport._export_windows', side_effect=export), \
-            patch('openlp.plugins.presentations.lib.pdfexport._export_libreoffice', side_effect=export), \
-            patch('openlp.plugins.presentations.lib.pdfexport.is_win', return_value=controller == 'Powerpoint'):
+    with patch('opal.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
+            patch('opal.plugins.presentations.lib.pdfexport._export_windows', side_effect=export), \
+            patch('opal.plugins.presentations.lib.pdfexport._export_libreoffice', side_effect=export), \
+            patch('opal.plugins.presentations.lib.pdfexport.is_win', return_value=controller == 'Powerpoint'):
         output = export_to_pdf(controller, source)
     assert output == tmp_path / 'Sunday (2).pdf'
     assert output.read_bytes().startswith(b'%PDF-')
@@ -46,7 +46,7 @@ def test_export_failure_does_not_publish_pdf(tmp_path, failure):
         if failure == 'invalid':
             output.write_bytes(b'not a PDF')
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
+    with patch('opal.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
             pytest.raises((RuntimeError, FileNotFoundError)):
         export_to_pdf('Keynote', source)
     assert list(tmp_path.iterdir()) == [source]
@@ -58,7 +58,7 @@ def test_mac_export_passes_paths_as_arguments(tmp_path):
     destination = tmp_path / 'slides.pdf'
     applescript, objc = MagicMock(), MagicMock()
     with patch.dict('sys.modules', {'applescript': applescript, 'objc': objc}), \
-            patch('openlp.plugins.presentations.lib.pdfexport.subprocess.run') as run:
+            patch('opal.plugins.presentations.lib.pdfexport.subprocess.run') as run:
         _export_mac('PowerPointMac', source, destination)
     run.assert_called_once_with(['/usr/bin/open', '-g', '-b', 'com.microsoft.Powerpoint', str(source)],
                                 check=True, capture_output=True, text=True, timeout=30)
@@ -89,7 +89,7 @@ def test_export_uses_library_name_for_hashed_source(tmp_path):
     def export(name, copy, output, *args):
         output.write_bytes(b'%PDF-1.7 converted')
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._export_mac', side_effect=export):
+    with patch('opal.plugins.presentations.lib.pdfexport._export_mac', side_effect=export):
         output = export_to_pdf('Keynote', source, output_name='Sunday sermon.pptx')
     assert output.name == 'Sunday sermon (2).pdf'
     assert source.read_bytes() == b'original presentation'
@@ -105,7 +105,7 @@ def test_libreoffice_uses_isolated_profile(tmp_path):
         assert '--headless' in command
         source.with_suffix('.pdf').write_bytes(b'%PDF-1.7')
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._run_libreoffice', side_effect=run):
+    with patch('opal.plugins.presentations.lib.pdfexport._run_libreoffice', side_effect=run):
         _export_libreoffice('maclo', source, output, tmp_path)
     assert output.read_bytes() == b'%PDF-1.7'
 
@@ -121,7 +121,7 @@ def test_cancel_after_native_export_discards_output(tmp_path):
         temporary_files.extend([copy, output])
         cancel_event.set()
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
+    with patch('opal.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
             pytest.raises(PdfExportCancelled):
         export_to_pdf('PowerPointMac', source, cancel_event=cancel_event)
     assert list(tmp_path.iterdir()) == [source]
@@ -145,8 +145,8 @@ def test_cancel_during_publication_removes_only_new_output(tmp_path):
         real_copy(source_file, target_file)
         cancel_event.set()
 
-    with patch('openlp.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
-            patch('openlp.plugins.presentations.lib.pdfexport.shutil.copyfileobj', side_effect=publish), \
+    with patch('opal.plugins.presentations.lib.pdfexport._export_mac', side_effect=export), \
+            patch('opal.plugins.presentations.lib.pdfexport.shutil.copyfileobj', side_effect=publish), \
             pytest.raises(PdfExportCancelled):
         export_to_pdf('Keynote', source, cancel_event=cancel_event)
     assert existing.read_bytes() == b'existing PDF'
@@ -177,7 +177,7 @@ def test_cancel_terminates_and_reaps_isolated_process():
 
     cancel_event = Event()
     cancel_event.set()
-    with patch('openlp.plugins.presentations.lib.pdfexport.subprocess.Popen', side_effect=start), \
+    with patch('opal.plugins.presentations.lib.pdfexport.subprocess.Popen', side_effect=start), \
             pytest.raises(PdfExportCancelled):
         _run_libreoffice([sys.executable, '-c', 'import time; time.sleep(60)'], cancel_event)
     assert len(processes) == 1
@@ -189,7 +189,7 @@ def test_worker_reports_export_failure():
     controller.name = 'Keynote'
     worker = PdfExportWorker(controller, Path('slides.pptx'))
     error = RuntimeError('Cannot export')
-    with patch('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=error):
+    with patch('opal.plugins.presentations.lib.pdfexport.export_to_pdf', side_effect=error):
         worker.run()
     assert worker.error is error
     assert worker.output is None

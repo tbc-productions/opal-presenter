@@ -21,8 +21,8 @@
 """
 This module contains tests for the Words of Worship song importer.
 """
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 

@@ -19,23 +19,23 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.formattingtagsform package.
+Package to test the opal.core.ui.formattingtagsform package.
 """
 import json
 from pathlib import Path
 
 import pytest
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 from unittest.mock import MagicMock, patch
 
-from openlp.core.lib.formattingtags import FormattingTags
-from openlp.core.ui.formattingtagform import EditColumn, FormattingTagForm
+from opal.core.lib.formattingtags import FormattingTags
+from opal.core.ui.formattingtagform import EditColumn, FormattingTagForm
 
 
 @pytest.fixture()
 def tagform_env(registry):
-    setup_patcher = patch('openlp.core.ui.formattingtagform.FormattingTagForm._setup')
+    setup_patcher = patch('opal.core.ui.formattingtagform.FormattingTagForm._setup')
     mocked_setup_patcher = setup_patcher.start()
     yield mocked_setup_patcher
     setup_patcher.stop()
@@ -76,35 +76,26 @@ def test_on_new_clicked(style_form):
     assert style_form._validate_tags_for_save()
 
 
-@patch('openlp.core.ui.formattingtagform.FileDialog.getSaveFileName')
-@patch('openlp.core.ui.formattingtagform.json.dump')
-def test_on_export_clicked_exports_tags(mock_json_dump, mock_get_save_file_name, tagform_env, mock_settings):
-    """
-    Test that clicking export writes custom tags to a JSON file.
-    """
-    # GIVEN: A formatting tag form with valid custom tags
+@patch('opal.core.ui.formattingtagform.FileDialog.getSaveFileName')
+def test_on_export_clicked_exports_tags(mock_get_save_file_name, tagform_env, mock_settings, tmp_path):
     form = FormattingTagForm(None)
     form.services = MagicMock()
     form.services.custom_tags = [{'desc': 'My Tag'}]
     form._validate_tags_for_save = MagicMock(return_value=True)
     form._reloadTable = MagicMock()
-    export_file_path = Path('/tmp/formatting-tags')
+    export_file_path = tmp_path / 'styles.opal-styles'
     mock_get_save_file_name.return_value = export_file_path, ''
-
-    # WHEN: on_export_clicked is called
-    with patch.object(Path, 'open') as mocked_path_open:
-        form.on_export_clicked()
-
-    # THEN: The selected path should be used with a .json suffix and tag data should be written
-    mocked_path_open.assert_called_once_with('w', encoding='utf-8')
-    mock_json_dump.assert_called_once_with(form.services.custom_tags, mocked_path_open().__enter__(), indent=2)
-    mock_settings.setValue.assert_called_with('formattingTags/last directory export', Path('/tmp'))
+    form.on_export_clicked()
+    value = json.loads(export_file_path.read_text())
+    assert value['format'] == 'opal-presenter'
+    assert value['type'] == 'styles'
+    assert value['data'] == [{'desc': 'My Tag'}]
 
 
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.formattingtagform.FormattingTags.get_html_tags')
-@patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName')
-@patch('openlp.core.ui.formattingtagform.json.load')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.formattingtagform.FormattingTags.get_html_tags')
+@patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName')
+@patch('opal.core.ui.formattingtagform.json.load')
 def test_on_import_clicked_imports_tags(mock_json_load, mock_get_open_file_name, mock_get_html_tags, mock_critical,
                                         tagform_env, mock_settings):
     """
@@ -140,11 +131,11 @@ def test_on_import_clicked_imports_tags(mock_json_load, mock_get_open_file_name,
     mock_critical.assert_not_called()
 
 
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.question')
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.formattingtagform.FormattingTags.get_html_tags')
-@patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName')
-@patch('openlp.core.ui.formattingtagform.json.load')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.question')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.formattingtagform.FormattingTags.get_html_tags')
+@patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName')
+@patch('opal.core.ui.formattingtagform.json.load')
 def test_on_import_clicked_overwrites_existing_tag(mock_json_load, mock_get_open_file_name, mock_get_html_tags,
                                                    mock_critical, mock_question, tagform_env, mock_settings):
     """
@@ -188,11 +179,11 @@ def test_on_import_clicked_overwrites_existing_tag(mock_json_load, mock_get_open
     mock_critical.assert_not_called()
 
 
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.question')
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.formattingtagform.FormattingTags.get_html_tags')
-@patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName')
-@patch('openlp.core.ui.formattingtagform.json.load')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.question')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.formattingtagform.FormattingTags.get_html_tags')
+@patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName')
+@patch('opal.core.ui.formattingtagform.json.load')
 def test_on_import_clicked_skips_existing_tag(mock_json_load, mock_get_open_file_name, mock_get_html_tags,
                                               mock_critical, mock_question, tagform_env, mock_settings):
     """
@@ -236,9 +227,9 @@ def test_on_import_clicked_skips_existing_tag(mock_json_load, mock_get_open_file
     mock_critical.assert_not_called()
 
 
-@patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName')
-@patch('openlp.core.ui.formattingtagform.json.load')
+@patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.critical')
+@patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName')
+@patch('opal.core.ui.formattingtagform.json.load')
 def test_on_import_clicked_shows_error_on_invalid_file(mock_json_load, mock_get_open_file_name, mock_critical,
                                                        tagform_env, mock_settings):
     """
@@ -487,8 +478,8 @@ def test_command_bar_overflow_keeps_import_export_accessible_on_one_row(style_fo
                   if widget.parentWidget() is bar and widget.isVisible() and widget.property('commandAction')]
     assert len({widget.y() for widget in presenters}) == 1
     with (
-        patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName', return_value=(None, '')) as import_file,
-        patch('openlp.core.ui.formattingtagform.FileDialog.getSaveFileName', return_value=(None, '')) as export_file
+        patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName', return_value=(None, '')) as import_file,
+        patch('opal.core.ui.formattingtagform.FileDialog.getSaveFileName', return_value=(None, '')) as export_file
     ):
         for action, picker in ((style_form.import_button, import_file), (style_form.export_button, export_file)):
             bar.setOverflowOpen(True)
@@ -552,7 +543,7 @@ def test_save_reveals_invalid_filtered_style(style_form):
     style_form.on_new_clicked()
     style_form.tag_table_widget.item(0, EditColumn.Tag).setText('bad tag')
     style_form.search_edit.setText('not found')
-    with patch('openlp.core.ui.formattingtagform.QtWidgets.QMessageBox.warning') as warning:
+    with patch('opal.core.ui.formattingtagform.QtWidgets.QMessageBox.warning') as warning:
         assert not style_form._validate_tags_for_save()
     warning.assert_called_once()
     assert style_form.search_edit.text() == ''
@@ -585,7 +576,7 @@ def test_import_in_dialog_preserves_draft_and_respects_cancel(style_form, settin
     style_form.on_new_clicked()
     qtbot.keyClicks(style_form.name_edit, 'Unsaved')
     style_form.show()
-    with patch('openlp.core.ui.formattingtagform.FileDialog.getOpenFileName', return_value=(imported, '')):
+    with patch('opal.core.ui.formattingtagform.FileDialog.getOpenFileName', return_value=(imported, '')):
         style_form.on_import_clicked()
     assert style_form.tag_table_widget.rowCount() == 2
     assert style_form.tag_table_widget.item(0, EditColumn.Description).text() == 'Unsaved'
@@ -601,8 +592,8 @@ def test_main_window_export_uses_saved_styles_not_stale_draft(style_form, settin
     style_form.on_new_clicked()
     style_form.accept()
     style_form.on_new_clicked()
-    exported = tmp_path / 'styles.json'
-    with patch('openlp.core.ui.formattingtagform.FileDialog.getSaveFileName', return_value=(exported, '')):
+    exported = tmp_path / 'styles.opal-styles'
+    with patch('opal.core.ui.formattingtagform.FileDialog.getSaveFileName', return_value=(exported, '')):
         style_form.on_export_clicked()
-    assert len(json.loads(exported.read_text())) == 1
+    assert len(json.loads(exported.read_text())['data']) == 1
     assert len(json.loads(settings.value('formattingTags/html_tags'))) == 1

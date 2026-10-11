@@ -23,9 +23,9 @@ Test the Confirmation Form
 """
 from unittest.mock import patch
 from PySide6 import QtTest, QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.confirmationform import ConfirmationForm
+from opal.core.ui.confirmationform import ConfirmationForm
 
 
 def test_confirmation_form_ui_setup(settings):
@@ -82,8 +82,8 @@ def test_confirmation_form_message_is_above_list(settings):
     assert message_widget.y() < list_widget.y()
 
 
-@patch('openlp.core.ui.confirmationform.ConfirmationForm.accept')
-@patch('openlp.core.ui.confirmationform.ConfirmationForm.reject')
+@patch('opal.core.ui.confirmationform.ConfirmationForm.accept')
+@patch('opal.core.ui.confirmationform.ConfirmationForm.reject')
 def test_confirmation_form_yes_button(mocked_reject, mocked_accept, settings):
     """
     Test when the Yes button is clicked
@@ -96,7 +96,7 @@ def test_confirmation_form_yes_button(mocked_reject, mocked_accept, settings):
     # WHEN: The Yes button is clicked
     buttons = form.findChildren(QtWidgets.QPushButton)
     for button in buttons:
-        if 'Yes' in button.text():
+        if 'Delete' in button.text():
             QtTest.QTest.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
             break
 
@@ -105,8 +105,8 @@ def test_confirmation_form_yes_button(mocked_reject, mocked_accept, settings):
     assert form.reject.call_count == 0
 
 
-@patch('openlp.core.ui.confirmationform.ConfirmationForm.accept')
-@patch('openlp.core.ui.confirmationform.ConfirmationForm.reject')
+@patch('opal.core.ui.confirmationform.ConfirmationForm.accept')
+@patch('opal.core.ui.confirmationform.ConfirmationForm.reject')
 def test_confirmation_form_no_button(mocked_reject, mocked_accept, settings):
     """
     Test when the No button is clicked
@@ -119,7 +119,7 @@ def test_confirmation_form_no_button(mocked_reject, mocked_accept, settings):
     # WHEN: The No button is clicked
     buttons = form.findChildren(QtWidgets.QPushButton)
     for button in buttons:
-        if 'No' in button.text():
+        if 'Cancel' in button.text():
             QtTest.QTest.mouseClick(button, QtCore.Qt.MouseButton.LeftButton)
             break
 

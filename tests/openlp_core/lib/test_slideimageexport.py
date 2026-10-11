@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.lib.presentationexport import PresentationPage
-from openlp.core.lib.slideimageexport import render_slide_images
+from opal.core.lib.presentationexport import PresentationPage
+from opal.core.lib.slideimageexport import render_slide_images
 
 
 @pytest.fixture
@@ -24,8 +24,8 @@ def renderer(mock_settings):
     pixmap.fill(QtGui.QColor('#234567'))
     pixmap.setDevicePixelRatio(2)
     display.webview.grab.return_value = pixmap
-    with patch('openlp.core.lib.slideimageexport.DisplayWindow', return_value=display), \
-            patch('openlp.core.lib.slideimageexport.ScreenList', return_value=SimpleNamespace(
+    with patch('opal.core.lib.slideimageexport.DisplayWindow', return_value=display), \
+            patch('opal.core.lib.slideimageexport.ScreenList', return_value=SimpleNamespace(
                 current=SimpleNamespace(display_geometry=QtCore.QRect(0, 0, 64, 36)))):
         yield display
 
@@ -35,7 +35,7 @@ def test_slide_names_and_numbering(tmp_path, renderer):
                               html_footer=f'Footer {index}')
              for index, (title, section) in enumerate([
                  ('Welcome', 0), ('Welcome', 0), ('Welcome', 0), ('Welcome', 1), ('Path/Title', 2)])]
-    with patch('openlp.core.lib.slideimageexport.service_pages', return_value=pages):
+    with patch('opal.core.lib.slideimageexport.service_pages', return_value=pages):
         images = render_slide_images([], tmp_path)
 
     assert [name for _, name in images] == [
@@ -53,8 +53,8 @@ def test_slide_names_and_numbering(tmp_path, renderer):
 
 def test_renderer_timeout_never_saves_a_partial_image(tmp_path, renderer):
     page = PresentationPage(section_name='Welcome', section_index=0, theme=object())
-    with patch('openlp.core.lib.slideimageexport.service_pages', return_value=[page]), \
-            patch('openlp.core.lib.slideimageexport.wait_for', side_effect=[True, False]):
+    with patch('opal.core.lib.slideimageexport.service_pages', return_value=[page]), \
+            patch('opal.core.lib.slideimageexport.wait_for', side_effect=[True, False]):
         with pytest.raises(RuntimeError, match='finish rendering'):
             render_slide_images([], tmp_path)
     assert list(tmp_path.rglob('*.png')) == []

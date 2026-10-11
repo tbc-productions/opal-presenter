@@ -2,7 +2,7 @@
 from PySide6 import QtCore
 import pytest
 
-from openlp.core.widgets.themeeditor import ThemeAreaOverlay
+from opal.core.widgets.themeeditor import ThemeAreaOverlay
 
 
 @pytest.fixture

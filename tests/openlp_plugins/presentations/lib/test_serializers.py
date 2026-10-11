@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 from pathlib import Path
 from unittest.mock import patch
 
 try:
     import Pyro5    # noqa
-    from openlp.plugins.presentations.lib.serializers import path_class_to_dict, path_dict_to_class, register_classes
+    from opal.plugins.presentations.lib.serializers import path_class_to_dict, path_dict_to_class, register_classes
 except ImportError:
     import pytest
     pytestmark = pytest.mark.skip('Pyro5 not installed')
@@ -35,29 +35,29 @@ except ImportError:
 def test_path_class_to_dict():
     """Test that the path_class_to_dict() method returns a correctly formatted dictionary"""
     # GIVEN: A Path object
-    path = Path('openlp/core/ui/aboutform.py')
+    path = Path('opal/core/ui/aboutform.py')
 
     # WHEN: path_class_to_dict() is called with the given Path object
     result = path_class_to_dict(path)
 
     # THEN: The dictionary should be formatted correctly
-    assert result == {'__class__': 'Path', 'parts': ('openlp', 'core', 'ui', 'aboutform.py')}
+    assert result == {'__class__': 'Path', 'parts': ('opal', 'core', 'ui', 'aboutform.py')}
 
 
 def test_path_dict_to_class():
     """Test that the path_dict_to_class() method returns the right object"""
     # GIVEN: A dictionary that was created from a Path object
-    path_dict = {'__class__': 'Path', 'parts': ('openlp', 'core', 'app.py')}
+    path_dict = {'__class__': 'Path', 'parts': ('opal', 'core', 'app.py')}
 
     # WHEN: path_dict_to_class() is called with the given dictionary
     result = path_dict_to_class('Path', path_dict)
 
     # THEN: The correct Path object should have been created
     assert isinstance(result, Path)
-    assert result == Path('openlp/core/app.py')
+    assert result == Path('opal/core/app.py')
 
 
-@patch('openlp.plugins.presentations.lib.serializers.SerializerBase')
+@patch('opal.plugins.presentations.lib.serializers.SerializerBase')
 def test_register_classes(MockSerializerBase):
     """Test that the register_classes() method registers the two functions"""
     # GIVEN: A mocked out SerializerBase

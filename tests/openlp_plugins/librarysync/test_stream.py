@@ -1,11 +1,11 @@
-"""Native media previews relay ranges over loopback without putting OAuth tokens in player URLs."""
+"""Native media previews relay ranges over loopback without putting credentials in player URLs."""
 from threading import Event, Thread
 from unittest.mock import MagicMock
 
 import requests
 
-from openlp.plugins.librarysync.lib.provider import CloudItem
-from openlp.plugins.librarysync.lib.stream import MediaStream
+from opal.plugins.librarysync.lib.provider import CloudItem
+from opal.plugins.librarysync.lib.stream import MediaStream
 
 
 def test_loopback_relay_supports_ranges_head_and_cancellation():

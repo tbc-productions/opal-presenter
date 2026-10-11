@@ -5,10 +5,10 @@ from types import SimpleNamespace
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.display.screens import Screen
-from openlp.plugins.presentations.lib.db import Item
-from openlp.plugins.presentations.lib.powerpointmaccontroller import (
+from opal.core.common.registry import Registry
+from opal.core.display.screens import Screen
+from opal.plugins.presentations.lib.db import Item
+from opal.plugins.presentations.lib.powerpointmaccontroller import (
     PowerPointMacController, PowerPointMacDocument, _keep_operator_window_on_top, _powerpoint_monitor_name)
 
 
@@ -17,7 +17,7 @@ from openlp.plugins.presentations.lib.powerpointmaccontroller import (
 def test_operator_window_level_is_restored_after_native_setup(previous_level, fails):
     native_window = MagicMock()
     native_window.level.return_value = previous_level
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._operator_native_window',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._operator_native_window',
                return_value=native_window), \
             patch.dict('sys.modules', {'AppKit': SimpleNamespace(NSPopUpMenuWindowLevel=101)}):
         try:
@@ -33,7 +33,7 @@ def test_operator_window_level_is_restored_after_native_setup(previous_level, fa
 
 
 def test_operator_window_guard_does_not_block_launch_when_native_window_unavailable():
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._operator_native_window',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._operator_native_window',
                side_effect=RuntimeError('Native window unavailable')):
         with _keep_operator_window_on_top():
             reached_launch = True
@@ -71,7 +71,7 @@ def test_controller_opens_settings_without_starting_a_show(tmp_path):
     controller = object.__new__(PowerPointMacController)
     controller.applescript = MagicMock()
     path = tmp_path / 'slides.pptx'
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') as open_document:
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') as open_document:
         controller.show_slide_show_settings(path)
     open_document.assert_called_once_with(path)
     controller.applescript.call.assert_called_once_with('show_slide_show_settings', path.name)
@@ -84,15 +84,15 @@ def test_monitor_selection_failure_does_not_launch_on_wrong_screen(settings, tmp
     controller = MagicMock()
     controller.applescript.call.return_value = 1
     controller.configure_slide_show_monitor.side_effect = RuntimeError('Cannot select monitor')
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 1
     main_window = MagicMock()
     Registry().register('main_window', main_window)
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'), \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document'), \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
                   return_value=[]):
         screens.return_value.current.custom_geometry = None
         document.start_presentation()
@@ -109,16 +109,16 @@ def test_monitor_selection_failure_does_not_launch_on_wrong_screen(settings, tmp
 def monitor_document(settings, tmp_path):
     controller = MagicMock()
     controller.applescript.call.return_value = 1
-    with patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
+    with patch('opal.plugins.presentations.lib.presentationcontroller.PresentationDocument._setup'):
         document = PowerPointMacDocument(controller, tmp_path / 'slides.pptx')
     document.file_path = tmp_path / 'slides.pptx'
     document.ui_slidenumber = 1
     primary = Screen(0, QtCore.QRect(0, 0, 1920, 1080), is_primary=True)
     output = Screen(1, QtCore.QRect(1920, 0, 1920, 1080))
-    with patch('openlp.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') \
+    with patch('opal.plugins.presentations.lib.powerpointmaccontroller.ScreenList') as screens, \
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._open_powerpoint_document') \
             as open_deck, \
-            patch('openlp.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
+            patch('opal.plugins.presentations.lib.powerpointmaccontroller._read_slide_advance_times',
                   return_value=[]):
         screens.return_value.current = output
         screens.return_value.__iter__.side_effect = lambda: iter([primary, output])
@@ -126,7 +126,7 @@ def monitor_document(settings, tmp_path):
 
 
 def test_failed_monitor_setup_is_not_retried_by_slide_clicks(monitor_document):
-    from openlp.plugins.presentations.lib.messagelistener import Controller
+    from opal.plugins.presentations.lib.messagelistener import Controller
 
     document, screens, open_deck = monitor_document
     document.controller.configure_slide_show_monitor.side_effect = RuntimeError('Monitor unavailable')

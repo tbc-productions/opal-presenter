@@ -7,21 +7,21 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.lib import ItemCapabilities
-from openlp.core.lib.mediamanageritem import MediaManagerItem
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.lib.theme import Theme, TransitionSpeed, TransitionType
-from openlp.core.ui.serviceitemeditform import ServiceItemEditForm
-from openlp.core.ui.servicemanager import ServiceManager
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.common.enum import ServiceItemType
+from opal.core.lib import ItemCapabilities
+from opal.core.lib.mediamanageritem import MediaManagerItem
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.lib.theme import Theme, TransitionSpeed, TransitionType
+from opal.core.ui.serviceitemeditform import ServiceItemEditForm
+from opal.core.ui.servicemanager import ServiceManager
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture
 def set_env(settings, registry, state):
-    with patch('openlp.core.lib.theme.ScreenList') as theme_screens, \
-            patch('openlp.core.lib.slidedesign.ScreenList') as design_screens, \
-            patch('openlp.core.lib.slideset.ScreenList') as set_screens:
+    with patch('opal.core.lib.theme.ScreenList') as theme_screens, \
+            patch('opal.core.lib.slidedesign.ScreenList') as design_screens, \
+            patch('opal.core.lib.slideset.ScreenList') as set_screens:
         for screens in (theme_screens, design_screens, set_screens):
             screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         theme = Theme()
@@ -224,7 +224,7 @@ def test_set_labels_are_local_and_remain_attached_after_reordering_and_save(set_
     form = ServiceItemEditForm()
     form.set_service_item(target)
     form.item_grid.selectRow(1)
-    with patch('openlp.core.ui.serviceitemeditform.RenameDialog.get_text',
+    with patch('opal.core.ui.serviceitemeditform.RenameDialog.get_text',
                return_value=(' Sermon introduction ', True)):
         form.on_rename_button_clicked()
     assert target.slides[1]['title'] == 'Projected words'
@@ -268,7 +268,7 @@ def test_transition_dialog_refreshes_already_rendered_set(set_manager, set_env, 
         choices[1].setCurrentIndex(choices[1].findData(TransitionSpeed.Slow))
         return QtWidgets.QDialog.DialogCode.Accepted
 
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QDialog.exec', accept):
+    with patch('opal.core.ui.servicemanager.QtWidgets.FormDialog.exec', accept):
         set_manager.on_service_item_transition_form()
     assert target.rendered_slides != original
     for frame in target.rendered_slides:
@@ -286,7 +286,7 @@ def test_renaming_a_split_page_renames_its_source_slide(set_manager, set_env, tm
     target.append_to_set([custom('First[---]Second')])
     set_manager.service_items = [{'service_item': target}]
     set_manager.find_service_item.return_value = (0, 2)
-    with patch('openlp.core.ui.servicemanager.RenameDialog.get_text',
+    with patch('opal.core.ui.servicemanager.RenameDialog.get_text',
                return_value=('New label', True)):
         set_manager.on_service_item_rename()
     assert target.title == 'Announcements'
@@ -296,7 +296,7 @@ def test_renaming_a_split_page_renames_its_source_slide(set_manager, set_env, tm
 
 
 def test_set_thumbnails_survive_source_removal_and_follow_reordering(set_env, registry, tmp_path):
-    from openlp.core.lib.slideset import set_thumbnail
+    from opal.core.lib.slideset import set_thumbnail
     target = image(tmp_path)
     target.append_to_set([custom('Welcome[---]Second page')])
     (tmp_path / 'welcome.png').unlink()
@@ -329,6 +329,6 @@ def test_service_tree_uses_mixed_set_thumbnails(set_env, tmp_path):
     target = image(tmp_path)
     target.append_to_set([custom()])
     child = QtWidgets.QTreeWidgetItem()
-    ServiceManager._set_child_thumbnail(None, child, target, target.display_slides[0])
+    ServiceManager._set_child_icon(None, child, target, target.display_slides[0])
     pixels = child.icon(0).pixmap(64, 48).toImage()
     assert pixels.pixelColor(32, 24) == QtGui.QColor('red')

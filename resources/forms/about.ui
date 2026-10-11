@@ -14,11 +14,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-    <string>About OpenLP+</string>
+    <string>About Opal Presenter</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../images/openlp-2.qrc">
-    <normaloff>:/icon/openlp-logo-16x16.png</normaloff>:/icon/openlp-logo-16x16.png</iconset>
+    <normaloff>:/icon/opal-presenter.png</normaloff>:/icon/opal-presenter.png</iconset>
   </property>
   <property name="modal">
    <bool>true</bool>
@@ -36,7 +36,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap resource="../images/openlp-2.qrc">:/graphics/openlp-splash-screen.png</pixmap>
+      <pixmap resource="../images/openlp-2.qrc">:/graphics/opal-presenter-splash.png</pixmap>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -68,15 +68,15 @@
           <bool>true</bool>
          </property>
          <property name="plainText">
-          <string>OpenLP+ &lt;version&gt; - Open Source Lyrics Projection
+          <string>Opal Presenter &lt;version&gt; - Open Source Lyrics Projection
 
-OpenLP+ is a fork of OpenLP.
+Opal Presenter is a fork of OpenLP.
 
-OpenLP+ is free church presentation software, or lyrics projection software, used to display slides of songs, Bible verses, videos, images, and even presentations (if OpenOffice.org, PowerPoint or PowerPoint Viewer is installed) for church worship using a computer and a data projector.
+Opal Presenter is free church presentation software, or lyrics projection software, used to display slides of songs, Bible verses, videos, images, and even presentations (if OpenOffice.org, PowerPoint or PowerPoint Viewer is installed) for church worship using a computer and a data projector.
 
 Find out more about upstream OpenLP: http://openlp.org/
 
-OpenLP and OpenLP+ are written and maintained by volunteers. If you would like to see more free Christian software being written, please consider contributing by using the button below.</string>
+OpenLP and Opal Presenter are written and maintained by volunteers. If you would like to see more free Christian software being written, please consider contributing by using the button below.</string>
          </property>
         </widget>
        </item>

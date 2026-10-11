@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Functional tests to test the :mod:`~openlp.core.common.platform` module.
+Functional tests to test the :mod:`~opal.core.common.platform` module.
 """
 from unittest.mock import patch
 
 import pytest
 
-from openlp.core.common.platform import is_win, is_macosx, is_linux, is_64bit_instance
+from opal.core.common.platform import is_win, is_macosx, is_linux, is_64bit_instance
 
 
 def test_is_win():
@@ -33,8 +33,8 @@ def test_is_win():
     Test the is_win() function
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.platform.os') as mocked_os, \
-            patch('openlp.core.common.platform.sys') as mocked_sys:
+    with patch('opal.core.common.platform.os') as mocked_os, \
+            patch('opal.core.common.platform.sys') as mocked_sys:
 
         # WHEN: The mocked os.name and sys.platform are set to 'nt' and 'win32' repectivly
         mocked_os.name = 'nt'
@@ -51,8 +51,8 @@ def test_is_macosx():
     Test the is_macosx() function
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.platform.os') as mocked_os, \
-            patch('openlp.core.common.platform.sys') as mocked_sys:
+    with patch('opal.core.common.platform.os') as mocked_os, \
+            patch('opal.core.common.platform.sys') as mocked_sys:
 
         # WHEN: The mocked os.name and sys.platform are set to 'posix' and 'darwin' repectivly
         mocked_os.name = 'posix'
@@ -69,8 +69,8 @@ def test_is_linux():
     Test the is_linux() function
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.platform.os') as mocked_os, \
-            patch('openlp.core.common.platform.sys') as mocked_sys:
+    with patch('opal.core.common.platform.os') as mocked_os, \
+            patch('opal.core.common.platform.sys') as mocked_sys:
 
         # WHEN: The mocked os.name and sys.platform are set to 'posix' and 'linux3' repectively
         mocked_os.name = 'posix'
@@ -88,9 +88,9 @@ def test_is_linux_distro():
     Test the is_linux() function for a particular Linux distribution
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.platform.os') as mocked_os, \
-            patch('openlp.core.common.platform.sys') as mocked_sys, \
-            patch('openlp.core.common.platform.distro_id') as mocked_distro_id:
+    with patch('opal.core.common.platform.os') as mocked_os, \
+            patch('opal.core.common.platform.sys') as mocked_sys, \
+            patch('opal.core.common.platform.distro_id') as mocked_distro_id:
 
         # WHEN: The mocked os.name and sys.platform are set to 'posix' and 'linux3' repectively
         #       and the distro is Fedora
@@ -109,7 +109,7 @@ def test_is_64bit_instance():
     Test the is_64bit_instance() function
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.platform.sys') as mocked_sys:
+    with patch('opal.core.common.platform.sys') as mocked_sys:
 
         # WHEN: The mocked sys.maxsize is set to 32-bit
         mocked_sys.maxsize = 2**32

@@ -23,16 +23,16 @@ Tests for PJLink command routing
 """
 
 import logging
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
 from unittest.mock import MagicMock, patch
 
-from openlp.core.projectors.pjlinkcommands import process_command
-from openlp.core.projectors.constants import PJLINK_ERRORS, STATUS_CODE, \
+from opal.core.projectors.pjlinkcommands import process_command
+from opal.core.projectors.constants import PJLINK_ERRORS, STATUS_CODE, \
     E_AUTHENTICATION, E_UNDEFINED, E_PARAMETER, E_UNAVAILABLE, E_PROJECTOR, \
     S_DATA_OK, STATUS_MSG
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
+test_module = opal.core.projectors.pjlinkcommands.__name__
 
 
 def test_valid_command(pjlink, caplog):
@@ -50,7 +50,7 @@ def test_valid_command(pjlink, caplog):
              f'({pjlink.name}) Calling function for {test_cmd}')
             ]
     caplog.clear()
-    with patch.dict(openlp.core.projectors.pjlinkcommands.pjlink_functions,
+    with patch.dict(opal.core.projectors.pjlinkcommands.pjlink_functions,
                     {test_cmd: MagicMock(return_value=None)}) as mock_clss:
         # WHEN: called with CLSS command
         chk = process_command(projector=pjlink, cmd=test_cmd, data=test_data)

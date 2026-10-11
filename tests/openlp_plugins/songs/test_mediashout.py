@@ -26,12 +26,12 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
 try:
-    from openlp.plugins.songs.lib.importers.mediashout import MediaShoutImport
+    from opal.plugins.songs.lib.importers.mediashout import MediaShoutImport
     CAN_RUN_TESTS = True
 except ImportError:
     class MediaShoutImport:
@@ -58,7 +58,7 @@ def test_constructor(importer: MediaShoutImport):
     assert importer is not None
 
 
-@patch('openlp.plugins.songs.lib.importers.mediashout.pyodbc')
+@patch('opal.plugins.songs.lib.importers.mediashout.pyodbc')
 def test_do_import_fails_to_connect(mocked_pyodbc: MagicMock, importer: MediaShoutImport):
     """
     Test that do_import exits early when unable to connect to the database
@@ -74,7 +74,7 @@ def test_do_import_fails_to_connect(mocked_pyodbc: MagicMock, importer: MediaSho
     mocked_log_error.assert_called_once_with('mediashout.db', 'Unable to open the MediaShout database.')
 
 
-@patch('openlp.plugins.songs.lib.importers.mediashout.pyodbc')
+@patch('opal.plugins.songs.lib.importers.mediashout.pyodbc')
 def test_do_import(mocked_pyodbc: MagicMock, importer: MediaShoutImport):
     """
     Test the MediaShoutImport do_import method
@@ -117,7 +117,7 @@ def test_do_import(mocked_pyodbc: MagicMock, importer: MediaShoutImport):
     mocked_process_song.assert_called_once_with(song, [verse], [play_order], [theme, group])
 
 
-@patch('openlp.plugins.songs.lib.importers.mediashout.pyodbc')
+@patch('opal.plugins.songs.lib.importers.mediashout.pyodbc')
 def test_do_import_without_topics(mocked_pyodbc: MagicMock, importer: MediaShoutImport):
     """
     Test the MediaShoutImport do_import method with the Themes and Groups tables don't exist
@@ -152,7 +152,7 @@ def test_do_import_without_topics(mocked_pyodbc: MagicMock, importer: MediaShout
     mocked_process_song.assert_called_once_with(song, [verse], [play_order], [])
 
 
-@patch('openlp.plugins.songs.lib.importers.mediashout.pyodbc')
+@patch('opal.plugins.songs.lib.importers.mediashout.pyodbc')
 def test_do_import_breaks_on_stop(mocked_pyodbc: MagicMock, importer: MediaShoutImport):
     """
     Test the MediaShoutImport do_import stops when the user presses the cancel button

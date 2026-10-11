@@ -19,19 +19,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.ui package.
+Package to test the opal.core.lib.ui package.
 """
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings, translate
-from openlp.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, add_welcome_page, \
+from opal.core.common.i18n import UiStrings, translate
+from opal.core.lib.ui import MultipleViewModeList, add_list_view_mode_items_to_toolbar, add_welcome_page, \
     create_action, create_button, create_button_box, create_horizontal_adjusting_combo_box, \
     create_valign_selection_widgets, create_widget_action, critical_error_message_box, find_and_set_in_combo_box, \
     set_case_insensitive_completer, set_list_view_mode_toolbar_state
-from openlp.core.widgets.toolbar import OpenLPToolbar
+from opal.core.widgets.toolbar import OpenLPToolbar
 
 
 def test_add_welcome_page():
@@ -42,7 +42,7 @@ def test_add_welcome_page():
     wizard = QtWidgets.QWizard()
 
     # WHEN: A welcome page has been added to the wizard
-    add_welcome_page(wizard, ':/wizards/openlp-osx-wizard.png')
+    add_welcome_page(wizard)
 
     # THEN: The wizard should have one page with a pixmap.
     assert 1 == len(wizard.pageIds()), 'The wizard should have one page.'
@@ -78,7 +78,7 @@ def test_create_button_box():
     assert QtWidgets.QDialogButtonBox.ButtonRole.HelpRole, btnbox.buttonRole(btnbox.buttons()[0])
 
 
-@patch('openlp.core.lib.ui.Registry')
+@patch('opal.core.lib.ui.Registry')
 def test_critical_error_message_box(MockRegistry):
     """
     Test the critical_error_message_box() function
@@ -91,8 +91,8 @@ def test_critical_error_message_box(MockRegistry):
     MockRegistry.return_value.get.return_value.error_message.assert_called_once_with('Error', 'This is an error')
 
 
-@patch('openlp.core.lib.ui.Registry')
-@patch('openlp.core.lib.ui.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.ui.Registry')
+@patch('opal.core.lib.ui.QtWidgets.QMessageBox.critical')
 def test_critical_error_message_box_without_mainwindow(mocked_critical, MockRegistry):
     """
     Test the critical_error_message_box() function
@@ -107,7 +107,7 @@ def test_critical_error_message_box_without_mainwindow(mocked_critical, MockRegi
     mocked_critical.assert_called_once_with(None, 'Error', 'This is an error')
 
 
-@patch('openlp.core.lib.ui.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.ui.QtWidgets.QMessageBox.critical')
 def test_critical_error_question(mocked_critical):
     """
     Test the critical_error_message_box() function
@@ -141,7 +141,7 @@ def test_create_horizontal_adjusting_combo_box():
     assert QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon == combo.sizeAdjustPolicy()
 
 
-@patch('openlp.core.lib.ui.log')
+@patch('opal.core.lib.ui.log')
 def test_create_button(mocked_log):
     """
     Test creating a button
@@ -178,7 +178,7 @@ def test_create_tool_button():
     assert btn.isEnabled() is True
 
 
-@patch('openlp.core.lib.ui.log')
+@patch('opal.core.lib.ui.log')
 def test_create_action(mocked_log):
     """
     Test creating an action
@@ -187,7 +187,7 @@ def test_create_action(mocked_log):
     dialog = QtWidgets.QDialog()
 
     # WHEN: We create an action with some properties
-    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/openlp-osx-wizard.png',
+    action = create_action(dialog, 'my_action', text='my text', icon=':/wizards/opal-presenter-about.png',
                            tooltip='my tooltip', statustip='my statustip', test=1)
 
     # THEN: These properties should be set
@@ -205,8 +205,8 @@ def test_create_action_on_mac_osx():
     Test creating an action on OS X calls the correct method
     """
     # GIVEN: A dialog and a mocked out is_macosx() method to always return True
-    with patch('openlp.core.lib.ui.is_macosx') as mocked_is_macosx, \
-            patch('openlp.core.lib.ui.QtGui.QAction') as MockedQAction:
+    with patch('opal.core.lib.ui.is_macosx') as mocked_is_macosx, \
+            patch('opal.core.lib.ui.QtGui.QAction') as MockedQAction:
         mocked_is_macosx.return_value = True
         mocked_action = MagicMock()
         MockedQAction.return_value = mocked_action
@@ -224,8 +224,8 @@ def test_create_action_not_on_mac_osx():
     Test creating an action on something other than OS X doesn't call the method
     """
     # GIVEN: A dialog and a mocked out is_macosx() method to always return True
-    with patch('openlp.core.lib.ui.is_macosx') as mocked_is_macosx, \
-            patch('openlp.core.lib.ui.QtGui.QAction') as MockedQAction:
+    with patch('opal.core.lib.ui.is_macosx') as mocked_is_macosx, \
+            patch('opal.core.lib.ui.QtGui.QAction') as MockedQAction:
         mocked_is_macosx.return_value = False
         mocked_action = MagicMock()
         MockedQAction.return_value = mocked_action
@@ -280,7 +280,7 @@ def test_create_valign_selection_widgets():
     label, combo = create_valign_selection_widgets(dialog)
 
     # THEN: We should get a label and a combobox.
-    assert translate('OpenLP.Ui', '&Vertical Align:') == label.text()
+    assert translate('OpenLP.Ui', '&Vertical Align') == label.text()
     assert isinstance(combo, QtWidgets.QComboBox)
     assert combo == label.buddy()
     for text in [UiStrings().Top, UiStrings().Middle, UiStrings().Bottom]:
@@ -492,11 +492,26 @@ def test_set_list_view_mode_toolbar_state_view_mode_icon_mode(settings):
     assert toolbar.actions_map['gridView'].isChecked() is True
 
 
-@patch('openlp.core.lib.ui.Registry')
-@patch('openlp.core.lib.ui.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.ui.Registry')
+@patch('opal.core.lib.ui.QtWidgets.QMessageBox.critical')
 def test_critical_error_respects_explicit_parent(mocked_critical, registry):
     """Errors with an owner must not be redirected to the main window."""
     parent = MagicMock()
     critical_error_message_box('Error', 'Missing title', parent=parent)
     mocked_critical.assert_called_once_with(parent, 'Error', 'Missing title')
     registry.return_value.get.return_value.error_message.assert_not_called()
+
+
+@patch('opal.core.lib.ui.QtWidgets.QMessageBox.critical')
+def test_critical_error_uses_active_wizard(mocked_critical, registry):
+    main_window = MagicMock()
+    registry.register('main_window', main_window)
+    wizard = QtWidgets.QWizard()
+    wizard.addPage(QtWidgets.QWizardPage())
+    wizard.show()
+    QtWidgets.QApplication.processEvents()
+    critical_error_message_box('Error', 'Missing title')
+    mocked_critical.assert_called_once_with(wizard, 'Error', 'Missing title')
+    main_window.error_message.assert_not_called()
+    wizard.close()
+    wizard.deleteLater()

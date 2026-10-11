@@ -2,12 +2,12 @@
 import pytest
 from PySide6 import QtGui
 
-from openlp.core.widgets.edits import SpellTextEdit
+from opal.core.widgets.edits import SpellTextEdit
 
 
 @pytest.fixture
 def editor(mock_settings, monkeypatch):
-    from openlp.core.lib.formattingtags import FormattingTags
+    from opal.core.lib.formattingtags import FormattingTags
     tags = [{'desc': name, 'start tag': '{' + tag + '}', 'end tag': '{/' + tag + '}',
              'start html': '<span style="color:' + colour + '">'}
             for name, tag, colour in [('Red', 'r', 'red'), ('Blue', 'bl', 'blue')]]

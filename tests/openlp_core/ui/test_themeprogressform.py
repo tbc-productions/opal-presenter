@@ -19,22 +19,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.themeform package.
+Package to test the opal.core.ui.themeform package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.themeprogressform import ThemeProgressForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.themeprogressform import ThemeProgressForm
 
 
 @pytest.fixture
 def form(qapp, registry: Registry) -> ThemeProgressForm:
     """Common code used to create the ThemeProgressForm object"""
-    with patch('openlp.core.ui.themeprogressdialog.ThemePreviewRenderer'), \
-            patch('openlp.core.ui.themeprogressdialog.UiThemeProgressDialog.setup_ui'):
+    with patch('opal.core.ui.themeprogressdialog.ThemePreviewRenderer'), \
+            patch('opal.core.ui.themeprogressdialog.UiThemeProgressDialog.setup_ui'):
         form = ThemeProgressForm()
     return form
 
@@ -49,8 +49,8 @@ def test_init(form: ThemeProgressForm):
     assert form is not None
 
 
-@patch('openlp.core.ui.themeprogressform.ScreenList')
-@patch('openlp.core.ui.themeprogressform.QtWidgets.QDialog.show')
+@patch('opal.core.ui.themeprogressform.ScreenList')
+@patch('opal.core.ui.themeprogressform.QtWidgets.QDialog.show')
 def test_show(mocked_show: MagicMock, MockScreenList: MagicMock, form: ThemeProgressForm, settings: Settings):
     """
     Test that the ThemeProgressForm is created without problems
@@ -74,8 +74,8 @@ def test_show(mocked_show: MagicMock, MockScreenList: MagicMock, form: ThemeProg
     mocked_show.assert_called_once()
 
 
-@patch('openlp.core.ui.themeprogressform.ScreenList')
-@patch('openlp.core.ui.themeprogressform.QtWidgets.QDialog.show')
+@patch('opal.core.ui.themeprogressform.ScreenList')
+@patch('opal.core.ui.themeprogressform.QtWidgets.QDialog.show')
 def test_show_divide_by_zero(mocked_show: MagicMock, MockScreenList: MagicMock, form: ThemeProgressForm,
                              settings: Settings):
     """
@@ -151,8 +151,8 @@ def test_get_preview_not_visible(form: ThemeProgressForm, registry: Registry, se
     assert preview is None
 
 
-@patch('openlp.core.ui.themeprogressform.wait_for')
-@patch('openlp.core.ui.themeprogressform.QtWidgets.QApplication.instance')
+@patch('opal.core.ui.themeprogressform.wait_for')
+@patch('opal.core.ui.themeprogressform.QtWidgets.QApplication.instance')
 def test_warm_up_preview(mocked_app_instance: MagicMock, mocked_wait_for: MagicMock, form: ThemeProgressForm,
                          registry: Registry, settings: Settings):
     """

@@ -25,12 +25,12 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from PySide6 import QtCore, QtTest, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.forms.editverseform import EditVerseForm
-from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.forms.editverseform import EditVerseForm
+from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 
 @pytest.fixture()
@@ -61,8 +61,8 @@ def test_exec(edit_verse_form: EditVerseForm):
 
 
 @pytest.mark.parametrize('chords_enabled', [True, False])
-@patch('openlp.plugins.songs.forms.editverseform.QtWidgets.QDialog')
-@patch('openlp.plugins.songs.forms.editverseform.transpose_lyrics')
+@patch('opal.plugins.songs.forms.editverseform.QtWidgets.QDialog')
+@patch('opal.plugins.songs.forms.editverseform.transpose_lyrics')
 def test_accept(mocked_transpose_lyrics: MagicMock, MockQDialog: MagicMock, chords_enabled: bool, settings: Settings,
                 edit_verse_form: EditVerseForm):
     """Test the accept method of the form"""
@@ -79,9 +79,9 @@ def test_accept(mocked_transpose_lyrics: MagicMock, MockQDialog: MagicMock, chor
         mocked_transpose_lyrics.assert_not_called()
 
 
-@patch('openlp.plugins.songs.forms.editverseform.QtWidgets.QDialog')
-@patch('openlp.plugins.songs.forms.editverseform.transpose_lyrics')
-@patch('openlp.plugins.songs.forms.editverseform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editverseform.QtWidgets.QDialog')
+@patch('opal.plugins.songs.forms.editverseform.transpose_lyrics')
+@patch('opal.plugins.songs.forms.editverseform.critical_error_message_box')
 def test_accept_exception(mocked_critical_error: MagicMock, mocked_transpose_lyrics: MagicMock, MockQDialog: MagicMock,
                           settings: Settings, edit_verse_form: EditVerseForm):
     """Test the accept method of the form correctly handles the KeyError exception"""
@@ -257,7 +257,7 @@ def test_on_split_button_clicked(edit_verse_form: EditVerseForm):
         'The verse number should be [---]\nText\n'
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
 def test_on_transpose_up_button_clicked_key_warning(mocked_show_key_warning: MagicMock, edit_verse_form: EditVerseForm):
     """
     Test that transpose button will transpose the chords and warn about missing song key
@@ -273,7 +273,7 @@ def test_on_transpose_up_button_clicked_key_warning(mocked_show_key_warning: Mag
     assert 'Am[Ab]azing gr[Ab/C]ace, how sw[C#]eet the s[Ab]ound' == edit_verse_form.verse_text_edit.toPlainText()
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
 def test_on_transpose_up_button_clicked_no_key_warning(mocked_show_key_warning: MagicMock,
                                                        edit_verse_form: EditVerseForm):
     """
@@ -290,8 +290,8 @@ def test_on_transpose_up_button_clicked_no_key_warning(mocked_show_key_warning: 
     assert '[=Ab]Am[Ab]azing gr[Ab/C]ace, how sw[Db]eet the s[Ab]ound' == edit_verse_form.verse_text_edit.toPlainText()
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
-@patch('openlp.plugins.songs.forms.editverseform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.critical_error_message_box')
 def test_on_transpose_up_button_clicked_with_keyerror(mocked_critical_error: MagicMock,
                                                       mocked_show_key_warning: MagicMock,
                                                       edit_verse_form: EditVerseForm):
@@ -311,7 +311,7 @@ def test_on_transpose_up_button_clicked_with_keyerror(mocked_critical_error: Mag
         message='Transposing failed because of invalid chord:\n\'"A" not found in "chords"\'')
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
 def test_on_transpose_down_button_clicked_key_warning(mocked_show_key_warning: MagicMock,
                                                       edit_verse_form: EditVerseForm):
     """
@@ -328,7 +328,7 @@ def test_on_transpose_down_button_clicked_key_warning(mocked_show_key_warning: M
     assert 'Am[F#]azing gr[F#/A#]ace, how sw[B]eet the s[F#]ound' == edit_verse_form.verse_text_edit.toPlainText()
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
 def test_on_transpose_down_button_clicked_no_key_warning(mocked_show_key_warning: MagicMock,
                                                          edit_verse_form: EditVerseForm):
     """
@@ -345,8 +345,8 @@ def test_on_transpose_down_button_clicked_no_key_warning(mocked_show_key_warning
     assert '[=F#]Am[F#]azing gr[F#/A#]ace, how sw[B]eet the s[F#]ound' == edit_verse_form.verse_text_edit.toPlainText()
 
 
-@patch('openlp.plugins.songs.forms.editverseform.show_key_warning')
-@patch('openlp.plugins.songs.forms.editverseform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editverseform.show_key_warning')
+@patch('opal.plugins.songs.forms.editverseform.critical_error_message_box')
 def test_on_transpose_down_button_clicked_keyerror(mocked_critical_error: MagicMock, mocked_show_key_warning: MagicMock,
                                                    edit_verse_form: EditVerseForm):
     """
@@ -505,7 +505,7 @@ def test_get_all_verses(edit_verse_form: EditVerseForm):
     assert result == '---[Verse:1]---\n[=G]Am[G]azing gr[G/B]ace, how sw[C]eet the s[G]ound'
 
 
-@patch('openlp.plugins.songs.forms.editverseform.VERSE_REGEX')
+@patch('opal.plugins.songs.forms.editverseform.VERSE_REGEX')
 def test_update_suggested_verse_number_no_end_part(mocked_verse_regex: MagicMock, edit_verse_form: EditVerseForm):
     """
     Test the update_suggested_verse_number() method when a verse tag doesn't  contain its end

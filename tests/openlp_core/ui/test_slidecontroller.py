@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.slidecontroller package.
+Package to test the opal.core.ui.slidecontroller package.
 """
 from collections import namedtuple
 import datetime
@@ -30,18 +30,18 @@ from unittest.mock import MagicMock, call, patch, sentinel
 from PySide6 import QtCore, QtGui
 from pytest import mark
 
-from openlp.core.state import State
-from openlp.core.common import ThemeLevel
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.common.utils import wait_for
-from openlp.core.lib import ItemCapabilities, ServiceItemAction
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.core.ui import HideMode
-from openlp.core.ui.media import MediaState, MediaType
-from openlp.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
+from opal.core.state import State
+from opal.core.common import ThemeLevel
+from opal.core.common.enum import ServiceItemType
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.common.utils import wait_for
+from opal.core.lib import ItemCapabilities, ServiceItemAction
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.lib.theme import TransitionSpeed, TransitionType
+from opal.core.ui import HideMode
+from opal.core.ui.media import MediaState, MediaType
+from opal.core.ui.slidecontroller import DESKTOP_CAPTURE_INTERVAL_MS, NON_TEXT_MENU, WIDE_MENU, NARROW_MENU, \
     InfoLabel, LiveController, PreviewController, SlideController
 
 
@@ -2223,14 +2223,14 @@ def test_update_preview_restores_slides_after_show_desktop(settings: Settings, i
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
     controller._capture_maindisplay = MagicMock(return_value='desktop capture')
-    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+    with patch('opal.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
         controller.display_maindisplay()
     assert controller._live_preview_is_capture is True
 
     # An intermediate cover must not lose track of the captured slide underneath.
     if intermediate_mode is not None:
         controller._current_hide_mode = intermediate_mode
-        with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
+        with patch('opal.core.ui.slidecontroller.image_to_byte', return_value='desktop bytes'):
             controller.update_preview()
         controller.preview_display.load_verses.assert_not_called()
         controller.preview_display.load_images.assert_not_called()
@@ -2271,7 +2271,7 @@ def test_desktop_monitor_captures_screen_without_becoming_transparent(settings: 
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
 
-    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='desktop jpeg'):
+    with patch('opal.core.ui.slidecontroller.image_to_byte', return_value='desktop jpeg'):
         controller.update_preview()
 
     controller._capture_maindisplay_desktop.assert_called_once_with()
@@ -2351,7 +2351,7 @@ def test_update_item_transitions_updates_active_displays(settings: Settings):
     preview_display.run_in_display.assert_called_once_with('updateItemTransitionSettings', False, 1.2, 'ease-in')
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
 def test_display_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry):
     """
     Test the display_maindisplay method
@@ -2431,10 +2431,10 @@ def _init__capture_maindisplay_mocks(geometry: list, mocked_screenlist: MagicMoc
                                         mocked_screenlist_instance=mocked_screenlist_instance)
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[34, 67, 77, 42], [0, 0, 800, 600]]])
 def test__capture_maindisplay(mocked_is_wayland_compositor: MagicMock, mocked_application: MagicMock,
                               mocked_screenlist: MagicMock, mocked_image_to_byte: MagicMock, geometry: list,
@@ -2453,9 +2453,9 @@ def test__capture_maindisplay(mocked_is_wayland_compositor: MagicMock, mocked_ap
     mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_called_once()
 
 
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('item_type', [ServiceItemType.Text, ServiceItemType.Image])
 def test_capture_rendered_item_uses_display_window(mocked_is_wayland_compositor: MagicMock,
                                                    mocked_application: MagicMock,
@@ -2474,10 +2474,10 @@ def test_capture_rendered_item_uses_display_window(mocked_is_wayland_compositor:
     mocks.mocked_screenlist_instance.current.try_grab_screen_part.assert_not_called()
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[34, 67, 77, 42], [0, 0, 800, 600]]])
 def test__capture_maindisplay_wayland_fallbacks_to_windowed(mocked_is_wayland_compositor: MagicMock,
                                                             mocked_application: MagicMock,
@@ -2500,10 +2500,10 @@ def test__capture_maindisplay_wayland_fallbacks_to_windowed(mocked_is_wayland_co
     mocks.mocked_primary_screen.grabWindow.assert_not_called()
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[400, 400, 800, 600], [0, 0, 800, 600]], [[510, 0, 800, 600], [0, 0, 800, 600]],
                                [[0, 320, 800, 600], [0, 0, 800, 600]], [[-200, -100, 800, 600], [0, 0, 800, 600]],
                                [[-120, 0, 800, 600], [0, 0, 800, 600]], [[0, -140, 800, 600], [0, 0, 800, 600]],
@@ -2531,9 +2531,9 @@ def test__capture_maindisplay_offscreen_fallbacks_to_windowed(mocked_is_wayland_
     mocks.mocked_primary_screen.grabWindow.assert_not_called()
 
 
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[34, 67, 77, 42], [0, 0, 800, 600]]])
 def test__capture_maindisplay_offscreen_command_screenshot(mocked_is_wayland_compositor: MagicMock,
                                                            mocked_application: MagicMock,
@@ -2565,9 +2565,9 @@ def test__capture_maindisplay_offscreen_command_screenshot(mocked_is_wayland_com
     assert photo == pixmap
 
 
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[-800, -600, 800, 600], [0, 0, 800, 600]]])
 def test__capture_maindisplay_window_fakes_black_screen_when_blank(mocked_is_wayland_compositor: MagicMock,
                                                                     mocked_application: MagicMock,
@@ -2599,9 +2599,9 @@ def test__capture_maindisplay_window_fakes_black_screen_when_blank(mocked_is_way
     assert image.pixelColor(int(geometry[1][2] / 2), int(geometry[1][3] / 2)) == QtGui.QColorConstants.Black
 
 
-@patch('openlp.core.ui.slidecontroller.ScreenList')
-@patch('openlp.core.ui.slidecontroller.QtWidgets.QApplication')
-@patch('openlp.core.ui.slidecontroller.is_wayland_compositor')
+@patch('opal.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.QtWidgets.QApplication')
+@patch('opal.core.ui.slidecontroller.is_wayland_compositor')
 @mark.parametrize('geometry', [[[-800, -600, 800, 600], [0, 0, 800, 600]]])
 def test__capture_maindisplay_window_uses_desktop_capture_when_screen_hidden(mocked_is_wayland_compositor: MagicMock,
                                                                               mocked_application: MagicMock,
@@ -2629,7 +2629,7 @@ def test__capture_maindisplay_window_uses_desktop_capture_when_screen_hidden(moc
     mocks.slide_controller._capture_maindisplay_desktop.assert_called_once_with()
 
 
-@patch('openlp.core.ui.slidecontroller.ScreenList')
+@patch('opal.core.ui.slidecontroller.ScreenList')
 def test__capture_maindisplay_desktop_uses_qt_capture(mocked_screenlist: MagicMock, settings: Settings):
     """
     Test that desktop capture always uses the Qt capture path.
@@ -2692,7 +2692,7 @@ def test_live_media_monitor_keeps_refreshing_without_screen_mirroring(settings: 
     controller._capture_maindisplay_desktop = MagicMock(return_value='video frame')
 
     controller.update_preview()
-    with patch('openlp.core.ui.slidecontroller.image_to_byte', return_value='video jpeg'):
+    with patch('opal.core.ui.slidecontroller.image_to_byte', return_value='video jpeg'):
         controller._on_desktop_capture_timer()
         controller._on_desktop_capture_timer()
 
@@ -2719,7 +2719,7 @@ def test_live_media_monitor_keeps_refreshing_without_screen_mirroring(settings: 
     assert controller._capture_maindisplay_desktop.call_count == 2
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
 def test_grab_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry):
     """
     Test the grab_maindisplay method
@@ -2743,7 +2743,7 @@ def test_grab_maindisplay(mocked_image_to_byte: MagicMock, registry: Registry):
     assert grabbed_stuff == 'placeholder bytified'
 
 
-@patch('openlp.core.ui.slidecontroller.image_to_byte')
+@patch('opal.core.ui.slidecontroller.image_to_byte')
 def test_grab_maindisplay_cached(mocked_image_to_byte: MagicMock, registry: Registry):
     """
     Test the grab_maindisplay method with pre-cached screenshot
@@ -2772,8 +2772,8 @@ def test_paint_event_text_fits():
     font = QtGui.QFont()
     metrics = QtGui.QFontMetrics(font)
 
-    with patch('openlp.core.ui.slidecontroller.QtWidgets.QLabel'), \
-            patch('openlp.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
+    with patch('opal.core.ui.slidecontroller.QtWidgets.QLabel'), \
+            patch('opal.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
 
         # GIVEN: An instance of InfoLabel, with horizontal padding and mocked text
         info_label = InfoLabel()
@@ -2800,8 +2800,8 @@ def test_paint_event_text_doesnt_fit():
     font = QtGui.QFont()
     metrics = QtGui.QFontMetrics(font)
 
-    with patch('openlp.core.ui.slidecontroller.QtWidgets.QLabel'), \
-            patch('openlp.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
+    with patch('opal.core.ui.slidecontroller.QtWidgets.QLabel'), \
+            patch('opal.core.ui.slidecontroller.QtGui.QPainter') as mocked_qpainter:
 
         # GIVEN: An instance of InfoLabel, with horizontal padding and mocked text
         info_label = InfoLabel()
@@ -2868,7 +2868,7 @@ def test_initial_preview_controller(registry: Registry):
     assert preview_controller.is_live is False, 'The slide controller should be a Preview controller'
 
 
-@patch('openlp.core.ui.slidecontroller.DisplayWindow')
+@patch('opal.core.ui.slidecontroller.DisplayWindow')
 def test_live_display_receives_switch_action(mocked_display_class, registry: Registry):
     """The switch shortcut remains active when the independent projection window has focus."""
     main_window = MagicMock()
@@ -2983,35 +2983,50 @@ def test_wide_hide_controls_are_not_temporarily_hidden(settings, is_text):
             assert 'show_screen_button' not in args[0]
 
 
-@mark.parametrize('hide_mode,has_item,has_display,expected_icon', [
-    (None, True, True, True),
-    (HideMode.Blank, True, True, True),
-    (HideMode.Theme, True, True, True),
-    (HideMode.Logo, True, True, True),
-    (HideMode.Screen, True, True, False),
-    (None, False, True, True),
-    (None, True, False, False),
+@mark.parametrize('hide_mode,expected,icon_text', [
+    (None, 'Live', '●'),
+    (HideMode.Blank, 'Black', '■'),
+    (HideMode.Theme, 'Theme', ''),
+    (HideMode.Logo, 'Logo', ''),
+    (HideMode.Screen, 'Desktop', ''),
 ])
-def test_live_status_record_icon(settings, hide_mode, has_item, has_display, expected_icon):
-    """Record indicates an active OpenLP display, including blank, theme and logo output."""
-    from fluentqt import FontIcon
-    from openlp.core.widgets import fluent as QtWidgets
-
+@mark.parametrize('has_item,has_display', [(True, True), (False, True), (True, False), (False, False)])
+def test_live_status_badge(settings, hide_mode, expected, icon_text, has_item, has_display):
+    """Only loaded output has a badge, and each mode uses its own label and symbol."""
     controller = SlideController(None)
-    controller.output_status_label = QtWidgets.QLabel(controller)
-    controller.output_status_icon = FontIcon('ic_fluent_record_24_regular', controller)
+    controller.panel = controller
+    controller._setup_output_status()
     controller.displays = [MagicMock()] if has_display else []
     controller._current_hide_mode = hide_mode
 
     controller._update_output_status(has_item)
 
-    assert controller.output_status_icon.isHidden() is not expected_icon
-    assert controller.output_status_label.property('onAir') is (has_item and hide_mode is None and has_display)
-    if hide_mode == HideMode.Screen:
-        assert controller.output_status_label.text() == 'Desktop'
-
+    visible = has_item and has_display
+    assert controller.output_status_badge.isHidden() is not visible
+    assert controller.output_status_label.text() == (expected if visible else '')
+    assert controller.output_status_label.property('onAir') is (visible and hide_mode is None)
+    assert controller.output_status_icon.text() == icon_text
+    if not icon_text:
+        assert not controller.output_status_icon.pixmap().isNull()
     controller.close_displays()
-    assert controller.output_status_icon.isHidden()
+    assert controller.output_status_badge.isHidden()
+
+
+def test_live_status_badge_mode_transitions(settings):
+    """Changing mode updates the icon and tint without retaining the previous state."""
+    controller = SlideController(None)
+    controller.panel = controller
+    controller._setup_output_status()
+    controller.displays = [MagicMock()]
+    for mode, state, text in [(HideMode.Screen, 'desktop', 'Desktop'),
+                              (HideMode.Theme, 'neutral', 'Theme'),
+                              (None, 'live', 'Live'),
+                              (HideMode.Blank, 'neutral', 'Black')]:
+        controller._current_hide_mode = mode
+        controller._update_output_status(True)
+        assert controller.output_status_badge.property('outputState') == state
+        assert controller.output_status_label.text() == text
+        assert controller.output_status_icon.pixmap().isNull() is (mode in (None, HideMode.Blank))
 
 
 @mark.parametrize('narrow', [False, True])
@@ -3032,8 +3047,8 @@ def test_priority_display_modes_stay_visible(settings, narrow):
 
 def test_slides_to_end_shows_stop_icon_when_started(settings):
     """Starting playback shows the Stop command on the selected action."""
-    from openlp.core.common.i18n import UiStrings
-    from openlp.core.ui.icons import UiIcons
+    from opal.core.common.i18n import UiStrings
+    from opal.core.ui.icons import UiIcons
 
     controller = SlideController(None)
     controller.play_slides_once = QtGui.QAction(controller)
@@ -3053,8 +3068,8 @@ def test_slides_to_end_shows_stop_icon_when_started(settings):
 
 def test_pinned_live_modes_have_no_unmanaged_dropdown(settings, registry, qapp):
     """Mode changes must not reveal the old dropdown over the pinned buttons."""
-    from openlp.core.widgets.toolbar import OpenLPToolbar
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets.toolbar import OpenLPToolbar
+    from opal.core.widgets import fluent as QtWidgets
 
     registry.register('application-qt', QtWidgets.QApplication.instance())
     controller = SlideController(None)

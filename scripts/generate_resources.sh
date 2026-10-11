@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 #
-# This script automates the generation of resources.py for OpenLP+ saving a
+# This script automates the generation of resources.py for Opal Presenter saving a
 # backup of the old resources, inserting the coding and copyright header and
 # conforming it to the project coding standards.
 #
@@ -30,7 +30,7 @@
 # 3 - run sh scripts/generate_resources.sh
 #
 # Once you have confirmed the resources are correctly modified to an updated,
-# working state you may optionally remove openlp/core/resources.py.old
+# working state you may optionally remove opal/core/resources.py.old
 #
 ###############################################################################
 
@@ -73,60 +73,60 @@ if [ "$RCC_CMD" = "" ]; then
 fi
 
 # Backup the existing resources
-if [ -f "$PROJECT_ROOT/openlp/core/resources.py" ]; then
+if [ -f "$PROJECT_ROOT/opal/core/resources.py" ]; then
     echo "Backup old resources file"
-    mv "$PROJECT_ROOT/openlp/core/resources.py" "$PROJECT_ROOT/openlp/core/resources.py.old"
+    mv "$PROJECT_ROOT/opal/core/resources.py" "$PROJECT_ROOT/opal/core/resources.py.old"
 fi
 
 # Create the new data from the updated qrc
 echo "Generate new resources file"
-if ! $RCC_CMD -g python -o "$PROJECT_ROOT/openlp/core/resources.py.new" "$PROJECT_ROOT/resources/images/openlp-2.qrc"; then
+if ! $RCC_CMD -g python -o "$PROJECT_ROOT/opal/core/resources.py.new" "$PROJECT_ROOT/resources/images/openlp-2.qrc"; then
     echo "ERROR: Failed to generate resources from openlp-2.qrc"
-    if [ -f "$PROJECT_ROOT/openlp/core/resources.py.old" ]; then
-        mv "$PROJECT_ROOT/openlp/core/resources.py.old" "$PROJECT_ROOT/openlp/core/resources.py"
+    if [ -f "$PROJECT_ROOT/opal/core/resources.py.old" ]; then
+        mv "$PROJECT_ROOT/opal/core/resources.py.old" "$PROJECT_ROOT/opal/core/resources.py"
     fi
     exit 1
 fi
 
 # Remove patch breaking lines
 echo "Remove comments at top of file"
-if [ ! -f "$PROJECT_ROOT/openlp/core/resources.py.new" ]; then
+if [ ! -f "$PROJECT_ROOT/opal/core/resources.py.new" ]; then
     echo "ERROR: Generated resources file not found"
-    if [ -f "$PROJECT_ROOT/openlp/core/resources.py.old" ]; then
-        mv "$PROJECT_ROOT/openlp/core/resources.py.old" "$PROJECT_ROOT/openlp/core/resources.py"
+    if [ -f "$PROJECT_ROOT/opal/core/resources.py.old" ]; then
+        mv "$PROJECT_ROOT/opal/core/resources.py.old" "$PROJECT_ROOT/opal/core/resources.py"
     fi
     exit 1
 fi
-cat "$PROJECT_ROOT/openlp/core/resources.py.new" | sed '1,5d' > "$PROJECT_ROOT/openlp/core/resources.py"
+cat "$PROJECT_ROOT/opal/core/resources.py.new" | sed '1,5d' > "$PROJECT_ROOT/opal/core/resources.py"
 
-# Patch resources.py to OpenLP+ coding style
+# Patch resources.py to Opal Presenter coding style
 ARCH=`uname -m`
 echo "Architecture is: $ARCH"
 PATCH_STATUS=0
 if [ "$ARCH" = "arm64" ]; then
     echo "Running ARM64 patch"
-    patch --posix -s "$PROJECT_ROOT/openlp/core/resources.py" "$SCRIPT_DIR/resources.arm64.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
+    patch --posix -s "$PROJECT_ROOT/opal/core/resources.py" "$SCRIPT_DIR/resources.arm64.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
 else
     echo "Running x86 patch"
-    patch --posix -s "$PROJECT_ROOT/openlp/core/resources.py" "$SCRIPT_DIR/resources.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
+    patch --posix -s "$PROJECT_ROOT/opal/core/resources.py" "$SCRIPT_DIR/resources.patch" >/dev/null 2>&1 || PATCH_STATUS=$?
 fi
 
 if [ "$PATCH_STATUS" -ne 0 ]; then
     echo "Patch did not apply cleanly (exit code: $PATCH_STATUS). Applying fallback normalisation."
     # Keep behaviour consistent even if legacy patch hunks drift.
-    sed '/^qInitResources()$/d' "$PROJECT_ROOT/openlp/core/resources.py" > "$PROJECT_ROOT/openlp/core/resources.py.tmp"
-    mv "$PROJECT_ROOT/openlp/core/resources.py.tmp" "$PROJECT_ROOT/openlp/core/resources.py"
+    sed '/^qInitResources()$/d' "$PROJECT_ROOT/opal/core/resources.py" > "$PROJECT_ROOT/opal/core/resources.py.tmp"
+    mv "$PROJECT_ROOT/opal/core/resources.py.tmp" "$PROJECT_ROOT/opal/core/resources.py"
     PATCH_STATUS=0
 fi
 
 if [ "$PATCH_STATUS" -eq 0 ]; then
     # Ensure import-time registration does not happen twice.
-    sed '/^qInitResources()$/d' "$PROJECT_ROOT/openlp/core/resources.py" > "$PROJECT_ROOT/openlp/core/resources.py.tmp"
-    mv "$PROJECT_ROOT/openlp/core/resources.py.tmp" "$PROJECT_ROOT/openlp/core/resources.py"
+    sed '/^qInitResources()$/d' "$PROJECT_ROOT/opal/core/resources.py" > "$PROJECT_ROOT/opal/core/resources.py.tmp"
+    mv "$PROJECT_ROOT/opal/core/resources.py.tmp" "$PROJECT_ROOT/opal/core/resources.py"
 fi
 
 # Remove temporary file
-rm -f "$PROJECT_ROOT/openlp/core/resources.py.new" 2>/dev/null
-rm -f "$PROJECT_ROOT/openlp/core/resources.py.old" 2>/dev/null
-rm -f "$PROJECT_ROOT/openlp/core/resources.py.orig" 2>/dev/null
-rm -f "$PROJECT_ROOT/openlp/core/resources.py.rej" 2>/dev/null
+rm -f "$PROJECT_ROOT/opal/core/resources.py.new" 2>/dev/null
+rm -f "$PROJECT_ROOT/opal/core/resources.py.old" 2>/dev/null
+rm -f "$PROJECT_ROOT/opal/core/resources.py.orig" 2>/dev/null
+rm -f "$PROJECT_ROOT/opal/core/resources.py.rej" 2>/dev/null

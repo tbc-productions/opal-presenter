@@ -27,8 +27,8 @@ import pytest
 from PySide6.QtCore import QObject
 from PySide6.QtNetwork import QHostAddress, QNetworkAddressEntry, QNetworkInterface
 
-# import openlp.core.common
-from openlp.core.common import get_network_interfaces
+# import opal.core.common
+from opal.core.common import get_network_interfaces
 
 
 class FakeIP4InterfaceEntry(QObject):
@@ -99,7 +99,7 @@ def invalid_if():
     return FakeIP4InterfaceEntry(name='invalid', is_valid=False)
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_no_interfaces(mocked_log: MagicMock):
     """
     Test no interfaces available
@@ -109,7 +109,7 @@ def test_network_interfaces_no_interfaces(mocked_log: MagicMock):
     call_warning = [call('No active IPv4 network interfaces detected')]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = []
         interfaces = get_network_interfaces()
 
@@ -119,7 +119,7 @@ def test_network_interfaces_no_interfaces(mocked_log: MagicMock):
     assert not interfaces, 'There should have been no active interfaces listed'
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_lo(mock_log: MagicMock, fake_lo: FakeIP4InterfaceEntry):
     """
     Test get_network_interfaces() returns an empty dictionary if "lo" is the only network interface
@@ -131,7 +131,7 @@ def test_network_interfaces_lo(mock_log: MagicMock, fake_lo: FakeIP4InterfaceEnt
     ]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = [fake_lo]
         interfaces = get_network_interfaces()
 
@@ -140,7 +140,7 @@ def test_network_interfaces_lo(mock_log: MagicMock, fake_lo: FakeIP4InterfaceEnt
     assert interfaces == {}, 'There should be no interfaces listed'
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_localhost(mock_log: MagicMock, fake_localhost: FakeIP4InterfaceEntry):
     """
     Test get_network_interfaces() returns an empty dictionary if "localhost" is the only network interface
@@ -152,7 +152,7 @@ def test_network_interfaces_localhost(mock_log: MagicMock, fake_localhost: FakeI
     ]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = [fake_localhost]
         interfaces = get_network_interfaces()
 
@@ -161,7 +161,7 @@ def test_network_interfaces_localhost(mock_log: MagicMock, fake_localhost: FakeI
     assert interfaces == {}, 'There should be no interfaces listed'
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_eth25(mock_log: MagicMock, fake_address: FakeIP4InterfaceEntry):
     """
     Test get_network_interfaces() returns proper dictionary with 'eth25'
@@ -177,7 +177,7 @@ def test_network_interfaces_eth25(mock_log: MagicMock, fake_address: FakeIP4Inte
     ]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = [fake_address]
         interfaces = get_network_interfaces()
 
@@ -186,7 +186,7 @@ def test_network_interfaces_eth25(mock_log: MagicMock, fake_address: FakeIP4Inte
     assert interfaces == fake_address.fake_data
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_lo_eth25(mock_log: MagicMock, fake_lo: FakeIP4InterfaceEntry,
                                      fake_address: FakeIP4InterfaceEntry):
     """
@@ -204,7 +204,7 @@ def test_network_interfaces_lo_eth25(mock_log: MagicMock, fake_lo: FakeIP4Interf
     ]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = [fake_lo, fake_address]
         interfaces = get_network_interfaces()
 
@@ -213,7 +213,7 @@ def test_network_interfaces_lo_eth25(mock_log: MagicMock, fake_lo: FakeIP4Interf
     assert interfaces == fake_address.fake_data, 'There should have been only "eth25" interface listed'
 
 
-@patch('openlp.core.common.log')
+@patch('opal.core.common.log')
 def test_network_interfaces_invalid(mock_log: MagicMock, invalid_if: FakeIP4InterfaceEntry):
     """
     Test get_network_interfaces() returns an empty dictionary when there are no valid interfaces
@@ -226,7 +226,7 @@ def test_network_interfaces_invalid(mock_log: MagicMock, invalid_if: FakeIP4Inte
     call_warning = [call('No active IPv4 network interfaces detected')]
 
     # WHEN: get_network_interfaces() is called
-    with patch('openlp.core.common.QNetworkInterface') as mock_network_interface:
+    with patch('opal.core.common.QNetworkInterface') as mock_network_interface:
         mock_network_interface.allInterfaces.return_value = [invalid_if]
         interfaces = get_network_interfaces()
 

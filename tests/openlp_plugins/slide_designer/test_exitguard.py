@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.plugins.slide_designer.forms.exitguard import DesignerExitGuard
-from openlp.core.app import OpenLPApplication
+from opal.plugins.slide_designer.forms.exitguard import DesignerExitGuard
+from opal.core.app import OpenLPApplication
 
 
 @pytest.fixture

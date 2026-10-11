@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib import ServiceItemContext
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.ui.fluenticons import service_icon
-from openlp.core.ui.icons import UiIcons
-from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
-from openlp.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
-from openlp.core.widgets.views import ListWidgetWithDnD
+from opal.core.common.registry import Registry
+from opal.core.lib import ServiceItemContext
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.ui.fluenticons import service_icon
+from opal.core.ui.icons import UiIcons
+from opal.core.ui.slidecontroller import SlideController
+from opal.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
+from opal.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
+from opal.core.widgets.views import ListWidgetWithDnD
 
 pytestmark = pytest.mark.usefixtures('qapp')
 
@@ -77,7 +77,7 @@ def test_all_library_drags_paint_the_coloured_icon_and_use_a_plain_cursor(librar
     library.plugin.name = name
     library.get_library_tab_icon = lambda: service_icon(getattr(UiIcons(), icon), name)
     mime = ItemDragData(library=library)
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         execute_drag(library.list_view, mime)
     pixmap = drag.return_value.setPixmap.call_args.args[0]
     image = pixmap.toImage()
@@ -118,7 +118,7 @@ def test_drag_clears_hover_feedback_on_drop_cancel_and_failure(library, result):
             raise RuntimeError('Drag failed')
         return result
 
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = native_drag
         if result is RuntimeError:
             with pytest.raises(RuntimeError, match='Drag failed'):
@@ -308,3 +308,42 @@ def test_controller_rejects_theme_without_supported_current_item(controller, the
     assert not enter.isAccepted() and not controller._drop_hint.isVisible()
     assert not controller.drop_item(mime)
     controller.service_manager.apply_theme_to_item.assert_not_called()
+
+
+def test_service_batch_drag_captures_items_and_rejects_controller_drop():
+    items = [song('First'), song('Second')]
+    mime = ItemDragData(items=items)
+    items.clear()
+    assert [item.title for item in mime.service_items()] == ['First', 'Second']
+    assert mime.can_drop('service')
+    assert not mime.can_drop('preview')
+    assert not mime.can_drop('live')
+    mime.items[1].is_valid = False
+    assert not mime.can_drop('service')
+
+
+@pytest.mark.parametrize('dark', [False, True])
+def test_drag_card_uses_shared_theme_and_font_despite_source_styling(library, dark):
+    import fluentqt
+    previous = fluentqt.current_theme()
+    fluentqt.set_theme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)
+    try:
+        mime = ItemDragData(library=library)
+        mime.title = 'A very long label ' * 20
+        with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
+            execute_drag(library.list_view, mime)
+            first = drag.return_value.setPixmap.call_args.args[0].toImage()
+            font = library.list_view.font()
+            font.setPointSize(28)
+            library.list_view.setFont(font)
+            palette = library.list_view.palette()
+            palette.setColor(QtGui.QPalette.ColorRole.Base, QtCore.Qt.GlobalColor.red)
+            library.list_view.setPalette(palette)
+            execute_drag(library.list_view, mime)
+            second = drag.return_value.setPixmap.call_args.args[0].toImage()
+        assert first == second
+        host = fluentqt.FluentWidget()
+        assert first.pixelColor(4, 28) == host.theme_tokens().colors.bgSolid
+        host.deleteLater()
+    finally:
+        fluentqt.set_theme(previous)

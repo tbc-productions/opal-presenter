@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.filelock package.
+Package to test the opal.core.lib.filelock package.
 """
 import time
 from pathlib import Path
 from unittest.mock import patch
 
-from openlp.core.lib.filelock import FileLock, LOCK_EXPIRE_SECS
+from opal.core.lib.filelock import FileLock, LOCK_EXPIRE_SECS
 
 
-@patch('openlp.core.lib.filelock.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.filelock.QtWidgets.QMessageBox.critical')
 def test_file_lock_simple(mocked_critical, temp_folder):
     """
     Test the creation of a FileLock
@@ -47,7 +47,7 @@ def test_file_lock_simple(mocked_critical, temp_folder):
     assert lock_acquired
 
 
-@patch('openlp.core.lib.filelock.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.filelock.QtWidgets.QMessageBox.critical')
 def test_file_lock_relock(mocked_critical, temp_folder):
     """
     Test the relocking of a FileLock
@@ -69,8 +69,8 @@ def test_file_lock_relock(mocked_critical, temp_folder):
     assert relocking_succeded
 
 
-@patch('openlp.core.lib.filelock.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.lib.filelock.getpass.getuser')
+@patch('opal.core.lib.filelock.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.filelock.getpass.getuser')
 def test_file_lock_already_locked(mocked_getuser, mocked_critical, temp_folder):
     """
     Test the creation of a FileLock when a lock already exists
@@ -95,9 +95,9 @@ def test_file_lock_already_locked(mocked_getuser, mocked_critical, temp_folder):
     assert not lock2_acquired
 
 
-@patch('openlp.core.lib.filelock.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.lib.filelock.getpass.getuser')
-@patch('openlp.core.lib.filelock.time.time')
+@patch('opal.core.lib.filelock.QtWidgets.QMessageBox.critical')
+@patch('opal.core.lib.filelock.getpass.getuser')
+@patch('opal.core.lib.filelock.time.time')
 def test_file_lock_claim_expired_lock(mocked_time, mocked_getuser, mocked_critical, temp_folder):
     """
     Test the claiming of an expired lock

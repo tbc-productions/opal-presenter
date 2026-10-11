@@ -27,9 +27,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lxml import etree, objectify
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML
 from tests.utils.constants import RESOURCE_PATH
 
 TEST_PATH = RESOURCE_PATH / 'songs' / 'openlyrics'
@@ -148,7 +148,7 @@ def test_process_formatting_tags(settings: Settings, open_lyrics: OpenLyrics):
         'The formatting tags should contain both the old and the new'
 
 
-@patch('openlp.plugins.songs.lib.openlyricsxml.Author')
+@patch('opal.plugins.songs.lib.openlyricsxml.Author')
 def test_process_author(MockAuthor: MagicMock, open_lyrics: OpenLyrics):
     """
     Test that _process_authors works
@@ -166,7 +166,7 @@ def test_process_author(MockAuthor: MagicMock, open_lyrics: OpenLyrics):
     assert mocked_song.method_calls[1][1][1] == 'words'
 
 
-@patch('openlp.plugins.songs.lib.openlyricsxml.SongBook')
+@patch('opal.plugins.songs.lib.openlyricsxml.SongBook')
 def test_process_songbooks(MockSongBook: MagicMock, open_lyrics: OpenLyrics):
     """
     Test that _process_songbooks works

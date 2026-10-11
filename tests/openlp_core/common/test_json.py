@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.common.json package.
+Package to test the opal.core.common.json package.
 """
 import json
 import os
 from pathlib import Path
 from unittest.mock import patch
 
-from openlp.core.common.json import JSONMixin, OpenLPJSONDecoder, OpenLPJSONEncoder, PathSerializer, _registered_classes
-from openlp.core.common.platform import is_win
+from opal.core.common.json import JSONMixin, OpenLPJSONDecoder, OpenLPJSONEncoder, PathSerializer, _registered_classes
+from opal.core.common.platform import is_win
 
 
 class BaseTestClass(object):
@@ -173,7 +173,7 @@ def test_object_hook_non_path_object():
     instance = OpenLPJSONDecoder()
 
     # WHEN: Calling the object_hook method with a decoded JSON object which contains a Path
-    with patch('openlp.core.common.json.Path') as mocked_path:
+    with patch('opal.core.common.json.Path') as mocked_path:
         result = instance.object_hook({'key': 'value'})
 
         # THEN: The object should be returned unchanged and a Path object should not have been initiated
@@ -230,7 +230,7 @@ def test_default_non_path_object():
     """
     Test the default method when called with a object other than a Path object
     """
-    with patch('openlp.core.common.json.JSONEncoder.default') as mocked_super_default:
+    with patch('opal.core.common.json.JSONEncoder.default') as mocked_super_default:
 
         # GIVEN: An instance of OpenLPJSONEncoder
         instance = OpenLPJSONEncoder()
@@ -262,7 +262,7 @@ def test_path_encode_json():
     Test that `Path.encode_json` returns a Path object from a dictionary representation of a Path object decoded
     from JSON
     """
-    # GIVEN: A Path object from openlp.core.common.path
+    # GIVEN: A Path object from opal.core.common.path
     # WHEN: Calling encode_json, with a dictionary representation
     path = PathSerializer.encode_json(
         {'parts': ['path', 'to', 'fi.le'], "json_meta": {"class": "Path", "version": 1}}, extra=1, args=2)
@@ -276,7 +276,7 @@ def test_path_encode_json_base_path():
     Test that `Path.encode_json` returns a Path object from a dictionary representation of a Path object decoded
     from JSON when the base_path arg is supplied.
     """
-    # GIVEN: A Path object from openlp.core.common.path
+    # GIVEN: A Path object from opal.core.common.path
     # WHEN: Calling encode_json, with a dictionary representation
     path = PathSerializer.encode_json(
         {'parts': ['path', 'to', 'fi.le'], "json_meta": {"class": "Path", "version": 1}}, base_path=Path('/base'))
@@ -289,7 +289,7 @@ def test_path_json_object():
     """
     Test that `Path.json_object` creates a JSON decode-able object from a Path object
     """
-    # GIVEN: A Path object from openlp.core.common.path
+    # GIVEN: A Path object from opal.core.common.path
     path = Path('/base', 'path', 'to', 'fi.le')
 
     # WHEN: Calling json_object
@@ -303,7 +303,7 @@ def test_path_json_object_is_js():
     """
     Test that `Path.json_object` creates a JSON decode-able object from a Path object
     """
-    # GIVEN: A Path object from openlp.core.common.path
+    # GIVEN: A Path object from opal.core.common.path
     if is_win():
         path = Path('c:\\', 'base', 'path', 'to', 'fi.le')
     else:
@@ -324,7 +324,7 @@ def test_path_json_object_base_path():
     Test that `Path.json_object` creates a JSON decode-able object from a Path object, that is relative to the
     base_path
     """
-    # GIVEN: A Path object from openlp.core.common.path
+    # GIVEN: A Path object from opal.core.common.path
     path = Path('/base', 'path', 'to', 'fi.le')
 
     # WHEN: Calling json_object with a base_path

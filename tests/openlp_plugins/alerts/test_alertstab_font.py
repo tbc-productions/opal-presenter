@@ -1,8 +1,8 @@
 """Alert font selection for existing installations."""
 import pytest
 
-from openlp.core.common.settings import get_default_alert_font
-from openlp.plugins.alerts.lib.alertstab import AlertsTab
+from opal.core.common.settings import get_default_alert_font
+from opal.plugins.alerts.lib.alertstab import AlertsTab
 
 
 @pytest.mark.parametrize('saved_font', ['', '   '])
@@ -11,7 +11,7 @@ def test_empty_saved_font_selects_default(registry, settings, saved_font):
     settings.setValue('alerts/font face', saved_font)
     expected = get_default_alert_font()
 
-    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/openlp-logo.svg')
+    alerts_tab = AlertsTab(None, 'alerts', 'Alerts', ':/icon/opal-presenter.png')
 
     assert settings.value('alerts/font face') == expected
     assert alerts_tab.font_combo_box.currentText() == expected

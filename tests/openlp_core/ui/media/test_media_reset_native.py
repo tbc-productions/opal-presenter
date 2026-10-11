@@ -43,8 +43,8 @@ def run_native_reset(media_file):
     from PySide6.QtMultimedia import QAudioOutput, QMediaCaptureSession, QMediaPlayer
     from PySide6.QtMultimediaWidgets import QVideoWidget
 
-    from openlp.core.ui.media import MediaPlayItem, MediaType
-    from openlp.core.ui.media.mediaplayer import MediaPlayer
+    from opal.core.ui.media import MediaPlayItem, MediaType
+    from opal.core.ui.media.mediaplayer import MediaPlayer
 
     app = QtWidgets.QApplication([])
     player = MediaPlayer()

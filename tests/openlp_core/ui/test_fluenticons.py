@@ -5,14 +5,14 @@ import fluentqt
 from PySide6 import QtCore, QtGui
 import pytest
 
-from openlp.core.ui.fluenticons import fluent_icon, service_icon
-from openlp.core.ui.icons import UiIcons
+from opal.core.ui.fluenticons import fluent_icon, service_icon
+from opal.core.ui.icons import UiIcons
 
 
 @pytest.mark.parametrize('dark', [False, True])
 def test_catalogue_renders(settings, dark):
     """Every mapped Fluent glyph must render visible pixels, without a fallback."""
-    with patch('openlp.core.ui.icons.is_ui_theme_dark', return_value=dark):
+    with patch('opal.core.ui.icons.is_ui_theme_dark', return_value=dark):
         icons = object.__new__(UiIcons)
         icons.__init__()
     for name, spec in icons._icon_list.items():
@@ -44,8 +44,8 @@ def test_mode_and_state_colours(settings, mode, state, color):
 
 @pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
 @pytest.mark.parametrize('plugin,token', [
-    ('songs', 'systemCaution'), ('bibles', 'systemSuccess'), ('presentations', 'purple'),
-    ('images', 'systemInfo'), ('media', 'systemCritical'), ('custom', 'orange')
+    ('songs', 9), ('bibles', 'systemSuccess'), ('presentations', 'purple'),
+    ('images', 'systemInfo'), ('media', 8), ('custom', 'orange')
 ])
 def test_service_icon_uses_fluent_theme_tokens(qapp, theme, plugin, token):
     """Service colours follow Fluent tokens in both appearances and preserve scalable glyphs."""
@@ -54,7 +54,8 @@ def test_service_icon_uses_fluent_theme_tokens(qapp, theme, plugin, token):
         fluentqt.set_theme(theme)
         host = fluentqt.FluentWidget()
         colors = host.theme_tokens().colors
-        expected = (colors.charts[11 if theme == fluentqt.Theme.Dark else 6] if token == 'purple'
+        expected = (colors.charts[token] if isinstance(token, int)
+                    else colors.charts[11 if theme == fluentqt.Theme.Dark else 6] if token == 'purple'
                     else colors.charts[6 if theme == fluentqt.Theme.Dark else 11] if token == 'orange'
                     else getattr(colors, token))
         original = fluent_icon('ic_fluent_add_24_regular')
@@ -81,7 +82,7 @@ def test_service_icon_preserves_raster_alpha_and_dpr(qapp):
     assert image.devicePixelRatio() == 2
     assert image.pixelColor(0, 0).alpha() == 0
     assert image.pixelColor(40, 40).alpha() == 255
-    assert image.pixelColor(40, 40).name() == fluentqt.FluentWidget().theme_tokens().colors.systemCaution.name()
+    assert image.pixelColor(40, 40).name() == fluentqt.FluentWidget().theme_tokens().colors.charts[9].name()
 
 
 def test_service_icon_preserves_unknown_plugin_and_null_icons(qapp):
@@ -93,8 +94,8 @@ def test_service_icon_preserves_unknown_plugin_and_null_icons(qapp):
 @pytest.mark.parametrize('plugin', ['songs', 'bibles', 'presentations', 'images', 'media', 'custom'])
 def test_service_and_library_share_icon_colours(qapp, plugin):
     from types import SimpleNamespace
-    from openlp.core.lib.mediamanageritem import MediaManagerItem
-    from openlp.core.ui.servicemanager import ServiceManager
+    from opal.core.lib.mediamanageritem import MediaManagerItem
+    from opal.core.ui.servicemanager import ServiceManager
 
     original = fluent_icon('ic_fluent_add_24_regular')
     library = SimpleNamespace(plugin=SimpleNamespace(name=plugin, icon=original))

@@ -26,17 +26,17 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import get_file_type_glob
-from openlp.core.common.enum import ImageThemeMode
-from openlp.core.common.registry import Registry
-from openlp.core.db.manager import DBManager
-from openlp.core.lib import build_icon, create_thumb
-from openlp.core.lib.serviceitem import ItemCapabilities
-from openlp.core.lib.theme import TransitionSpeed, TransitionType
-from openlp.core.widgets.views import TreeWidgetWithDnD
-from openlp.plugins.images.lib.mediaitem import ImageMediaItem
+from opal.core.common import get_file_type_glob
+from opal.core.common.enum import ImageThemeMode
+from opal.core.common.registry import Registry
+from opal.core.db.manager import DBManager
+from opal.core.lib import build_icon, create_thumb
+from opal.core.lib.serviceitem import ItemCapabilities
+from opal.core.lib.theme import TransitionSpeed, TransitionType
+from opal.core.widgets.views import TreeWidgetWithDnD
+from opal.plugins.images.lib.mediaitem import ImageMediaItem
 from tests.utils.constants import TEST_RESOURCES_PATH
 
 
@@ -48,8 +48,8 @@ def media_item(registry: Registry, mock_settings: MagicMock):
     Registry().register('main_window', mocked_main_window)
     Registry().register('live_controller', MagicMock())
     mocked_plugin = MagicMock()
-    with patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem._setup'), \
-            patch('openlp.plugins.images.lib.mediaitem.ImageMediaItem.setup_item'):
+    with patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem._setup'), \
+            patch('opal.plugins.images.lib.mediaitem.ImageMediaItem.setup_item'):
         m_item = ImageMediaItem(None, mocked_plugin)
         m_item.settings_section = 'images'
         m_item.list_view = MagicMock()
@@ -76,7 +76,7 @@ def test_setup_item(registry: Registry, media_item: ImageMediaItem):
     mocked_list_view.activateDnD.assert_called_once_with()
 
 
-@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.retranslate_ui')
+@patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem.retranslate_ui')
 def test_retranslate_ui(mocked_retranslate_ui: MagicMock, media_item: ImageMediaItem):
     """Test that the retranslate_ui method sets up the strings in the UI"""
     # GIVEN: An insance of ImageMediaItem with some stuff mocked out
@@ -106,7 +106,7 @@ def test_retranslate_ui(mocked_retranslate_ui: MagicMock, media_item: ImageMedia
     media_item.reset_action_context.setToolTip.assert_called_once_with(expected_reset_tooltip)
 
 
-@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.retranslate_ui')
+@patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem.retranslate_ui')
 def test_retranslate_ui_file_masks_are_case_insensitive(mocked_retranslate_ui: MagicMock,
                                                         media_item: ImageMediaItem):
     """Test that on_new_file_masks contains case-insensitive glob patterns for common image extensions"""
@@ -133,7 +133,7 @@ def test_retranslate_ui_file_masks_are_case_insensitive(mocked_retranslate_ui: M
         'The file mask should contain a case-insensitive pattern for bmp'
 
 
-@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.required_icons')
+@patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem.required_icons')
 def test_required_icons(mocked_required_icons: MagicMock, media_item: ImageMediaItem):
     """Test that the required_icons() method sets up the flags for icons needed"""
     # GIVEN: An insance of ImageMediaItem
@@ -147,8 +147,8 @@ def test_required_icons(mocked_required_icons: MagicMock, media_item: ImageMedia
     assert media_item.add_to_service_item is True
 
 
-@patch('openlp.plugins.images.lib.mediaitem.create_paths')
-@patch('openlp.plugins.images.lib.mediaitem.Item', autospec=True)
+@patch('opal.plugins.images.lib.mediaitem.create_paths')
+@patch('opal.plugins.images.lib.mediaitem.Item', autospec=True)
 def test_initialise(MockItem: MagicMock, mocked_create_paths: MagicMock, media_item: ImageMediaItem):
     """Test that the initialise method does the right things"""
     # GIVEN: An instance of ImageMediaItem and some stuff mocked out
@@ -204,8 +204,8 @@ def test_on_display_changed(media_item):
     media_item.reset_action_context.setVisible.assert_called_with(False)
 
 
-@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
-@patch('openlp.plugins.images.lib.mediaitem.isinstance')
+@patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
+@patch('opal.plugins.images.lib.mediaitem.isinstance')
 def test_on_selection_change_replace_action_disabled_without_image_selection(mocked_isinstance,
                                                                              mocked_super_selection_change,
                                                                              media_item):
@@ -225,8 +225,8 @@ def test_on_selection_change_replace_action_disabled_without_image_selection(moc
     media_item.replace_action.setEnabled.assert_called_once_with(False)
 
 
-@patch('openlp.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
-@patch('openlp.plugins.images.lib.mediaitem.isinstance')
+@patch('opal.plugins.images.lib.mediaitem.FolderLibraryItem.on_selection_change')
+@patch('opal.plugins.images.lib.mediaitem.isinstance')
 def test_on_selection_change_replace_action_enabled_with_image_selection(mocked_isinstance,
                                                                          mocked_super_selection_change,
                                                                          media_item):
@@ -314,16 +314,16 @@ def test_generate_slide_data_preserves_existing_title(media_item):
         'images/theme': None,
     }.get(key))
 
-    with patch('openlp.plugins.images.lib.mediaitem.Path.exists', return_value=True):
+    with patch('opal.plugins.images.lib.mediaitem.Path.exists', return_value=True):
         media_item.generate_slide_data(mocked_service_item)
 
     # THEN: The existing service item title should be preserved
     assert mocked_service_item.title == 'Existing service title'
 
 
-@patch('openlp.plugins.images.lib.mediaitem.check_item_selected')
-@patch('openlp.plugins.images.lib.mediaitem.isinstance')
-@patch('openlp.plugins.images.lib.mediaitem.Path.exists')
+@patch('opal.plugins.images.lib.mediaitem.check_item_selected')
+@patch('opal.plugins.images.lib.mediaitem.isinstance')
+@patch('opal.plugins.images.lib.mediaitem.Path.exists')
 def test_on_replace_click(mocked_exists, mocked_isinstance, mocked_check_item_selected, media_item):
     """
     Test that on_replace_click() actually sets the background
@@ -375,7 +375,7 @@ def test_generate_thumbnail_path_filename(media_item):
     assert result == Path('.') / 'myimage.jpg'
 
 
-@patch('openlp.plugins.images.lib.mediaitem.create_thumb')
+@patch('opal.plugins.images.lib.mediaitem.create_thumb')
 def test_load_item_file_not_exist(mocked_create_thumb: MagicMock, media_item: ImageMediaItem):
     """Test the load_item method when the file does not exist"""
     # GIVEN: A media item and an Item to load
@@ -391,9 +391,9 @@ def test_load_item_file_not_exist(mocked_create_thumb: MagicMock, media_item: Im
     mocked_create_thumb.assert_not_called()
 
 
-@patch('openlp.plugins.images.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.images.lib.mediaitem.create_thumb', wraps=create_thumb)
-@patch('openlp.plugins.images.lib.mediaitem.build_icon', wraps=build_icon)
+@patch('opal.plugins.images.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.images.lib.mediaitem.create_thumb', wraps=create_thumb)
+@patch('opal.plugins.images.lib.mediaitem.build_icon', wraps=build_icon)
 def test_load_item_valid_thumbnail(mocked_build_icon: MagicMock, mocked_create_thumb: MagicMock,
                                    mocked_validate_thumb: MagicMock, media_item: ImageMediaItem, registry: Registry):
     """Test the load_item method with an existing thumbnail"""
@@ -415,8 +415,8 @@ def test_load_item_valid_thumbnail(mocked_build_icon: MagicMock, mocked_create_t
     mocked_build_icon.assert_called_once_with(image_path)
 
 
-@patch('openlp.plugins.images.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.images.lib.mediaitem.create_thumb', wraps=create_thumb)
+@patch('opal.plugins.images.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.images.lib.mediaitem.create_thumb', wraps=create_thumb)
 def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_validate_thumb: MagicMock,
                                      media_item: ImageMediaItem, registry: Registry):
     """Test the load_item method with no valid thumbnails"""
@@ -439,8 +439,8 @@ def test_load_item_missing_thumbnail(mocked_create_thumb: MagicMock, mocked_vali
         mocked_create_thumb.assert_called_once_with(image_path, Path(tmpdir, 'tractor.jpg'))
 
 
-@patch('openlp.plugins.images.lib.mediaitem.validate_thumb')
-@patch('openlp.plugins.images.lib.mediaitem.build_icon')
+@patch('opal.plugins.images.lib.mediaitem.validate_thumb')
+@patch('opal.plugins.images.lib.mediaitem.build_icon')
 def test_load_item_metadata_columns(mocked_build_icon: MagicMock, mocked_validate_thumb: MagicMock,
                                     media_item: ImageMediaItem):
     """Test that load_item populates the Date column and tooltip with type and size for an existing file"""
