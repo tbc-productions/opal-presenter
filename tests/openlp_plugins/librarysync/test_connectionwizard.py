@@ -133,7 +133,7 @@ def test_setup_provider_needs_runtime_and_profile_support(settings, qtbot, monke
     widget = ConnectionWizard()
     qtbot.addWidget(widget)
     assert widget.provider_combo.count() == 2
-    assert widget.provider_combo.findData('google-drive') == -1
+    assert widget.provider_combo.findData('unavailable') == -1
 
 
 def test_local_setup_validates_before_keyboard_and_mouse_submission(wizard, tmp_path, qtbot):

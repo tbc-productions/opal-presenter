@@ -1,4 +1,4 @@
-"""Native media previews relay ranges over loopback without putting OAuth tokens in player URLs."""
+"""Native media previews relay ranges over loopback without putting credentials in player URLs."""
 from threading import Event, Thread
 from unittest.mock import MagicMock
 

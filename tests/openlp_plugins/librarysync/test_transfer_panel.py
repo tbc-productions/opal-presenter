@@ -207,7 +207,7 @@ def test_no_connections_shows_setup_infobar_and_disables_connect(panel, qtbot, m
 
 def test_cached_listing_and_permissions_are_visible(panel):
     item = CloudItem('image', 'Sunday.png', size=100, category='images',
-                     preview_url='https://drive.google.com/file/d/image/view')
+                     preview_url='https://storage.example.test/image/view')
     panel.category = 'images'
     panel.jobs['listing'] = {'kind': 'browse', 'generation': panel.generation, 'context': False}
     panel.job_ready('listing', (CloudItem('.', 'Church', folder=True), [item], 'next'))
@@ -1022,7 +1022,7 @@ def test_cloud_move_collision_cannot_overwrite_without_permission_to_remove_orig
     assert not Path(temporary.name).exists()
 
 
-def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot, tmp_path, monkeypatch):
+def test_cloud_image_view_loads_original_instead_of_provider_thumbnail(panel, qtbot, tmp_path, monkeypatch):
     from threading import Event
     from opal.plugins.librarysync.lib.preview import show_preview
 
@@ -1032,7 +1032,7 @@ def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot
     image.save(str(source))
     monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     item = CloudItem('image', 'Welcome.png', category='images', size=source.stat().st_size, version='1',
-                     thumbnail_url='https://drive.google.com/thumbnail')
+                     thumbnail_url='https://storage.example.test/thumbnail')
     panel.selected_items = MagicMock(return_value=[item])
     panel.start_job = MagicMock()
     panel.open_preview()
@@ -1223,7 +1223,7 @@ def persistent_cache(panel, tmp_path, monkeypatch):
     return cache, folder, item
 
 
-def test_persistent_listing_is_shown_after_restart_without_reloading_drive(panel, persistent_cache, qtbot, monkeypatch):
+def test_persistent_listing_survives_restart_without_reloading_storage(panel, persistent_cache, qtbot, monkeypatch):
     from opal.plugins.librarysync.lib.worker import PROVIDERS
     cache, folder, item = persistent_cache
     provider = MagicMock()
@@ -1581,7 +1581,7 @@ def test_local_storage_connect_and_export_handlers_do_nothing(panel, monkeypatch
     panel.start_job = MagicMock()
     save = MagicMock()
     monkeypatch.setattr('opal.plugins.librarysync.lib.panel.FileDialog.getSaveFileName', save)
-    panel.connect_drive()
+    panel.connect_storage()
     panel.export_connection()
     panel.start_job.assert_not_called()
     save.assert_not_called()

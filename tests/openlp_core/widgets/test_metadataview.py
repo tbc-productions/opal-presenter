@@ -19,7 +19,7 @@ def qapp(native_application):
 
 
 def test_metadata_groups_prioritise_content_and_preserve_values(qtbot):
-    values = {'Source': 'Google Drive', 'File size': '2 kB', 'Modified': 'Today',
+    values = {'Source': 'Local Cloud Storage', 'File size': '2 kB', 'Modified': 'Today',
               'Authors': 'Philip Percival, Simone Richardson', 'Copyright': '<b>Organisation</b>',
               'CCLI number': '7006994', 'Created': 'Yesterday', 'Modified by': 'Sam'}
     view = MetadataView(values)

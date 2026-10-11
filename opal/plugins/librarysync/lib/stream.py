@@ -1,4 +1,4 @@
-"""An ephemeral loopback relay keeps Google credentials out of the native media player's URLs."""
+"""An ephemeral loopback relay serves provider media to the native player."""
 import mimetypes
 import re
 import secrets

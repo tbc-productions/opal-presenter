@@ -177,7 +177,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.toolbar = OpenLPToolbar(self)
         self.toolbar.addWidget(self.roots)
         self.connect_action = QtGui.QAction(UiIcons().cloud_arrow_right, tr('Connect'), self)
-        self.connect_action.triggered.connect(self.connect_drive)
+        self.connect_action.triggered.connect(self.connect_storage)
         self.toolbar.add_pinned_action(self.connect_action)
         self.refresh_action = self.toolbar.addAction(UiIcons().refresh, tr('Refresh'), self.refresh)
         self.download_action = self.toolbar.addAction(UiIcons().download, tr('Add to Library'), self.download_selected)
@@ -425,7 +425,7 @@ class CloudLibrary(QtWidgets.QWidget):
             except (OSError, SyncError) as error:
                 self.set_status(str(error), error=True)
 
-    def connect_drive(self):
+    def connect_storage(self):
         if self.profile and self.profile['provider'] == 'local-cloud':
             return
         if not self.profile:

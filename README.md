@@ -28,8 +28,8 @@ to and from cloud storage.
 - **Remote and stage views:** control a service and open stage, live and chords
   views through a browser on the local network.
 - **Library Sync:** upload and download songs, presentations, images, media,
-  custom slides and themes to and from Google Drive or a local folder managed by
-  your cloud storage application.
+  custom slides and themes to and from a local or synced folder. Your desktop
+  storage app handles syncing and sharing.
 - **Portable documents:** bundle services, songs, custom slides and themes in
   native Opal packages; import OpenLP files and export content to formats
   including OpenLyrics, PPTX, ODP, PDF and images.
@@ -54,9 +54,9 @@ Some features need additional software or configuration:
 - **Presentations:** native presentation control needs a compatible presentation
   application, such as Microsoft PowerPoint or LibreOffice Impress. Availability
   varies by platform.
-- **Library Sync:** Google Drive uploads and downloads need a Google account,
-  access to the configured folder and an organisation-configured OAuth connection.
-  Local folder uploads and downloads need a folder available on the computer. See the
+- **Library Sync:** uploads and downloads need a folder available on the computer.
+  For shared libraries, sync the folder using your desktop storage app. No cloud
+  API setup or credentials are required. See the
   [Library Sync guide](documentation/library-sync.rst).
 - **Planning Center:** service plan imports need account credentials.
 - **OBS Studio:** scene control needs OBS Studio and its Advanced Scene Switcher

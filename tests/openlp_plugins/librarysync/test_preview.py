@@ -80,14 +80,14 @@ def test_cloud_image_uses_fluent_inspector_and_friendly_name(settings, qtbot, tm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     item = CloudItem('image', 'Sunday [123456abcdef].png', category='images', modified='2026-10-09T01:00:00Z',
-                     provider_name='Google Drive', size=path.stat().st_size)
+                     provider_name='Local Cloud Storage', size=path.stat().st_size)
     window = show_preview(parent, item, path)
     assert isinstance(window, CloudMediaPreview)
     assert isinstance(window, QtWidgets.fluentqt.Window)
     assert window.isWindow()
     assert window.windowTitle() == 'Sunday'
     assert not any(label.text() == 'Sunday' for label in window.contentWidget().findChildren(QtWidgets.QLabel))
-    assert window.metadata['Source'].text() == 'Google Drive'
+    assert window.metadata['Source'].text() == 'Local Cloud Storage'
     assert window.metadata['Resolution'].text() == '200 × 100'
     assert window.metadata['Access'].text() == 'View'
     assert 'Modified' in window.metadata
@@ -153,7 +153,7 @@ def test_cloud_presentation_has_async_thumbnails_and_selectable_slides(settings,
     painter.end()
     del writer
     item = CloudItem('presentation', 'Welcome.pptx', category='presentations', size=2048,
-                     provider_name='Google Drive')
+                     provider_name='Local Cloud Storage')
     window = show_preview(None, item, tmp_path / item.name, path)
     qtbot.addWidget(window)
     window.show()
@@ -191,13 +191,13 @@ def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings,
     viewer.stop = MagicMock()
     monkeypatch.setattr('PySide6.QtWebEngineWidgets.QWebEngineView', lambda *args: viewer)
     item = CloudItem('document', 'Welcome.pptx', category='presentations', can_download=False,
-                     preview_url='https://drive.google.com/file/d/document/view', provider_name='Google Drive')
+                     preview_url='https://storage.example.test/document/view', provider_name='Cloud storage')
     window = show_preview(None, item, None)
     qtbot.addWidget(window)
     assert isinstance(window, CloudPreviewWindow) and window.isWindow()
     details = window.findChild(MetadataView)
     assert details.fields is window.metadata
-    assert window.metadata['Source'].text() == 'Google Drive'
+    assert window.metadata['Source'].text() == 'Cloud storage'
     assert window.metadata['Access'].text() == 'View'
     viewer.setUrl.assert_called_once_with(QtCore.QUrl(item.preview_url))
     window.reject()

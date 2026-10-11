@@ -77,7 +77,7 @@ def test_failed_export_keeps_previous_connection_file(profile, tmp_path, monkeyp
     assert list(tmp_path.iterdir()) == [path]
 
 
-@pytest.mark.parametrize('provider', ['google-drive', 'unsupported', None, [], {}])
+@pytest.mark.parametrize('provider', ['retired-provider', 'unsupported', None, [], {}])
 def test_unsupported_profile_provider_is_rejected(profile, provider):
     profile['provider'] = provider
     with pytest.raises(SyncError, match='not supported'):
