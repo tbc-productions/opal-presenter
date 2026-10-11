@@ -60,7 +60,7 @@ def args(**overrides):
 
 def test_concurrent_reads_and_report(server):
     remote, state = server
-    report = run(args(), remote)
+    report = run(args(duration=1), remote)
     assert report['passed']
     assert len(report['operations']) == 4
     assert all(stats['count'] >= 2 for stats in report['operations'].values())

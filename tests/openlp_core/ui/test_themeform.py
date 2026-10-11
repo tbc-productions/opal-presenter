@@ -1080,6 +1080,21 @@ def test_expanded_background_resizes_for_gradient_controls(interactive_theme_for
     assert form.background_section.height() >= page.height() + 40
 
 
+def test_drawer_refit_reflows_following_sections(interactive_theme_form, qtbot):
+    form = interactive_theme_form
+    form.can_update_theme = False
+    form.show()
+    for section in (form.background_section, form.position_section):
+        section.setAnimationEnabled(False)
+        section.setExpanded(True)
+    qtbot.waitUntil(lambda: form.position_section.y() > form.background_section.geometry().bottom())
+
+    form.background_page.background_type = 'gradient'
+    form.background_section._fit_content()
+
+    assert form.position_section.y() > form.background_section.geometry().bottom()
+
+
 def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_theme_form):
     from PySide6 import QtTest
     form = interactive_theme_form

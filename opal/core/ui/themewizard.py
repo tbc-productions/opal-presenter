@@ -145,6 +145,11 @@ class _ThemePropertySection(fluentqt.Expander):
             content.resize(clip.width(), height)
             self.updateGeometry()
             self.layoutHeightChanged.emit(self.height())
+        parent = self.parentWidget()
+        if parent is not None:
+            parent_layout = QtWidgets.QWidget.layout(parent)
+            if parent_layout is not None:
+                parent_layout.activate()
 
 
 class Ui_ThemeWizard(object):
