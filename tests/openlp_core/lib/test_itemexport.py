@@ -3,8 +3,8 @@ import json
 import zipfile
 from unittest.mock import MagicMock
 
-from openlp.core.lib.itemexport import suggested_item_export_path, write_item_service
-from openlp.core.lib.serviceitem import ServiceItem
+from opal.core.lib.itemexport import suggested_item_export_path, write_item_service
+from opal.core.lib.serviceitem import ServiceItem
 
 
 def test_suggested_item_export_path_uses_item_title(tmp_path):

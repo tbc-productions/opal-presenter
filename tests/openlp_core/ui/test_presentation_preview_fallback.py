@@ -3,10 +3,10 @@ from pathlib import Path
 from threading import Lock
 from unittest.mock import MagicMock, patch
 
-from openlp.core.lib import ItemCapabilities
-from openlp.core.common.registry import Registry
-from openlp.core.ui import HideMode
-from openlp.core.ui.slidecontroller import SlideController
+from opal.core.lib import ItemCapabilities
+from opal.core.common.registry import Registry
+from opal.core.ui import HideMode
+from opal.core.ui.slidecontroller import SlideController
 
 
 def test_failed_native_capture_uses_selected_slide_thumbnail(settings, tmp_path):
@@ -39,7 +39,7 @@ def test_native_presentation_window_capture_precedes_desktop_capture(settings):
     controller.selected_row = 4
     capture = MagicMock()
     capture.isNull.return_value = False
-    with patch('openlp.core.ui.slidecontroller.Registry') as registry, \
+    with patch('opal.core.ui.slidecontroller.Registry') as registry, \
             patch.object(controller, '_capture_maindisplay_desktop') as desktop:
         registry.return_value.has_function.return_value = True
         registry.return_value.execute.return_value = [(True, capture)]
@@ -64,8 +64,8 @@ def test_mac_powerpoint_keeps_previous_frame_when_window_capture_fails(settings,
     controller.selected_row = 4
     controller.screen_capture = b'previous live capture'
     controller.preview_display = MagicMock()
-    with patch('openlp.core.ui.slidecontroller.Registry') as registry, \
-            patch('openlp.core.ui.slidecontroller.is_macosx', return_value=True), \
+    with patch('opal.core.ui.slidecontroller.Registry') as registry, \
+            patch('opal.core.ui.slidecontroller.is_macosx', return_value=True), \
             patch.object(controller, '_capture_maindisplay_desktop') as desktop:
         registry.return_value.has_function.return_value = True
         registry.return_value.execute.return_value = [(False, None)]
@@ -98,7 +98,7 @@ def test_mac_powerpoint_live_pane_holds_capture_during_slide_change(settings, tm
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
 
-    with patch('openlp.core.ui.slidecontroller.is_macosx', return_value=True):
+    with patch('opal.core.ui.slidecontroller.is_macosx', return_value=True):
         controller.update_preview()
 
     controller.service_item.get_rendered_frame.assert_not_called()
@@ -129,7 +129,7 @@ def test_mac_powerpoint_live_pane_recovers_from_logo(settings, tmp_path):
     controller._update_desktop_capture_timer = MagicMock()
     controller.output_has_changed = MagicMock()
 
-    with patch('openlp.core.ui.slidecontroller.is_macosx', return_value=True):
+    with patch('opal.core.ui.slidecontroller.is_macosx', return_value=True):
         controller.update_preview()
 
     controller.preview_display.hide_display.assert_not_called()
@@ -139,8 +139,8 @@ def test_mac_powerpoint_live_pane_recovers_from_logo(settings, tmp_path):
     # Keep Logo up until a fresh native frame is ready after unblanking.
     controller._current_hide_mode = None
     controller._capture_maindisplay = MagicMock(return_value='new capture')
-    with patch('openlp.core.ui.slidecontroller.is_macosx', return_value=True), \
-            patch('openlp.core.ui.slidecontroller.image_to_byte', return_value=b'new capture'):
+    with patch('opal.core.ui.slidecontroller.is_macosx', return_value=True), \
+            patch('opal.core.ui.slidecontroller.image_to_byte', return_value=b'new capture'):
         controller.update_preview()
         controller.display_maindisplay()
 

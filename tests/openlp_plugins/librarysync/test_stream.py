@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import requests
 
-from openlp.plugins.librarysync.lib.provider import CloudItem
-from openlp.plugins.librarysync.lib.stream import MediaStream
+from opal.plugins.librarysync.lib.provider import CloudItem
+from opal.plugins.librarysync.lib.stream import MediaStream
 
 
 def test_loopback_relay_supports_ranges_head_and_cancellation():

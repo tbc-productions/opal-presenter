@@ -4,10 +4,10 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.projectors.editform import ProjectorEditForm
-from openlp.core.projectors.sourceselectform import SourceSelectSingle, SourceSelectTabs
-from openlp.core.widgets.dialogs import DownloadProgressDialog
-from openlp.core.widgets.widgets import ProxyDialog
+from opal.core.projectors.editform import ProjectorEditForm
+from opal.core.projectors.sourceselectform import SourceSelectSingle, SourceSelectTabs
+from opal.core.widgets.dialogs import DownloadProgressDialog
+from opal.core.widgets.widgets import ProxyDialog
 
 
 @pytest.mark.parametrize('kind', ['proxy', 'source_single', 'source_single_edit',
@@ -48,8 +48,8 @@ def test_dialog_exec_retains_qt_methods(settings, kind):
 
 
 def test_projector_details_has_one_close_command(settings, qtbot):
-    from openlp.core.projectors.db import Projector
-    from openlp.core.widgets import fluent
+    from opal.core.projectors.db import Projector
+    from opal.core.widgets import fluent
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(1200, 900)

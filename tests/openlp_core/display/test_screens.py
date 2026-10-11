@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.screenlist package.
+Package to test the opal.core.lib.screenlist package.
 """
 from unittest.mock import MagicMock, patch
 
@@ -27,7 +27,7 @@ import pytest
 
 from PySide6 import QtCore
 
-from openlp.core.display.screens import Screen, ScreenList
+from opal.core.display.screens import Screen, ScreenList
 
 
 def test_geometry_signal_updates_its_own_screen():
@@ -44,7 +44,7 @@ def test_geometry_signal_updates_its_own_screen():
     callback = primary.geometryChanged.connect.call_args.args[0]
     new_geometry = QtCore.QRect(0, 0, 1280, 800)
 
-    with patch('openlp.core.display.screens.ConfigScreenChangedEmitter'):
+    with patch('opal.core.display.screens.ConfigScreenChangedEmitter'):
         callback(new_geometry)
 
     assert screen_list[0].geometry == new_geometry
@@ -62,7 +62,7 @@ def test_added_screen_geometry_signal_keeps_its_target_after_another_is_added():
     screen_list.screens = []
     screen_list.application = MagicMock()
     screen_list.application.primaryScreen.return_value = first
-    with patch('openlp.core.display.screens.ConfigScreenChangedEmitter'):
+    with patch('opal.core.display.screens.ConfigScreenChangedEmitter'):
         screen_list.on_screen_added(first)
         screen_list.on_screen_added(second)
         callback = first.geometryChanged.connect.call_args.args[0]
@@ -176,8 +176,8 @@ def test_create_screen_list_with_settings_matching(mocked_screens, settings):
 
 
 @patch('PySide6.QtWidgets.QApplication.screens')
-@patch('openlp.core.display.screens.show_screen_setup_message')
-@patch('openlp.core.display.screens.request_screen_configuration')
+@patch('opal.core.display.screens.show_screen_setup_message')
+@patch('opal.core.display.screens.request_screen_configuration')
 @pytest.mark.parametrize('configure', [False, True])
 def test_create_screen_list_with_screen_unplugged(request_configuration, screen_warning, mocked_screens,
                                                   settings, configure):

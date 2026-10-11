@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.alerts.forms.alertform package.
+Package to test the opal.plugins.alerts.forms.alertform package.
 """
 from unittest.mock import MagicMock
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.alerts.forms.alertform import AlertForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.alerts.forms.alertform import AlertForm
 
 
 def test_no_help_button(settings: Settings, registry: Registry):

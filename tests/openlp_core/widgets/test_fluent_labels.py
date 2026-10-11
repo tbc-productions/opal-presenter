@@ -1,6 +1,6 @@
 """Qt mnemonic labels stay readable in native Fluent painters."""
 from PySide6 import QtCore, QtGui, QtWidgets
-from openlp.core.widgets import fluent
+from opal.core.widgets import fluent
 
 
 def test_command_mnemonics_and_literal_ampersands(qapp):
@@ -45,8 +45,8 @@ def test_tab_labels_decode_ampersands_after_updates_and_removal(qapp):
 
 def test_verse_rows_fit_visible_lyrics_on_first_show(qapp, qtbot, settings):
     """Loading a hidden editor must not reserve space for narrow, wrapped lyrics."""
-    from openlp.core.ui import SingleColumnTableWidget
-    from openlp.core.widgets.edits import FormattingTagDelegate
+    from opal.core.ui import SingleColumnTableWidget
+    from opal.core.widgets.edits import FormattingTagDelegate
 
     widget = SingleColumnTableWidget(None)
     qtbot.addWidget(widget)
@@ -120,7 +120,7 @@ def test_form_labels_centre_on_fields_and_allow_explicit_top_alignment(qapp, qtb
 
 
 def test_form_labels_centre_on_composite_fields_and_keep_multiline_labels_at_top(qapp, qtbot, settings):
-    from openlp.core.widgets.edits import PathEdit
+    from opal.core.widgets.edits import PathEdit
 
     host = QtWidgets.QWidget()
     qtbot.addWidget(host)

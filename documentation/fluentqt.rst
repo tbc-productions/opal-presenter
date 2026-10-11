@@ -43,7 +43,7 @@ Qt selects accessibility interfaces from meta-object class names; reusing
 QTabBar or QToolButton for a different native type causes invalid casts and
 can crash during macOS accessibility hit testing.
 
-``openlp.core.widgets.fluent`` is the operator UI construction boundary. Native
+``opal.core.widgets.fluent`` is the operator UI construction boundary. Native
 Fluent controls replace the compatible button, label, input, selection, menu and
 slider classes. Native CommandBar owns toolbar actions and responsive overflow;
 Open service uses FluentQt's native SplitButton. Qt still supplies application,

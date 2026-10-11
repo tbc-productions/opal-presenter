@@ -21,7 +21,7 @@
 """
 This module contains tests for the plugin class Images plugin.
 """
-from openlp.plugins.images.imageplugin import ImagePlugin
+from opal.plugins.images.imageplugin import ImagePlugin
 
 
 def test_image_plugin_about():

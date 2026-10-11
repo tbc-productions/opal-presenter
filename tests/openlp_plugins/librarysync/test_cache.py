@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from openlp.plugins.librarysync.lib.cache import CloudCache
-from openlp.plugins.librarysync.lib.provider import CloudItem
+from opal.plugins.librarysync.lib.cache import CloudCache
+from opal.plugins.librarysync.lib.provider import CloudItem
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def profile():
 
 @pytest.fixture
 def cache_root(tmp_path, monkeypatch):
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     return tmp_path
 
 
@@ -83,7 +83,7 @@ def test_corrupt_preview_size_is_a_cache_miss(profile, cache_root, tmp_path):
 
 
 def test_cache_evicts_oldest_files_across_connections_and_expires_unused_files(profile, cache_root, monkeypatch):
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.MAX_BYTES', 10)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.MAX_BYTES', 10)
     cache = CloudCache(profile, 'account')
     other = CloudCache(profile, 'other-account')
     cache.store(cache.path / 'old.cache', b'123456')

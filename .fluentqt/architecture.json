@@ -3,7 +3,7 @@
   "language": "pyside6",
   "profile": "full",
   "integration": "direct-library",
-  "source_root": "openlp",
+  "source_root": "opal",
   "tests_root": "tests",
   "layers": {
     "app": [

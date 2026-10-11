@@ -1,8 +1,8 @@
 """Alert font selection for existing installations."""
 import pytest
 
-from openlp.core.common.settings import get_default_alert_font
-from openlp.plugins.alerts.lib.alertstab import AlertsTab
+from opal.core.common.settings import get_default_alert_font
+from opal.plugins.alerts.lib.alertstab import AlertsTab
 
 
 @pytest.mark.parametrize('saved_font', ['', '   '])

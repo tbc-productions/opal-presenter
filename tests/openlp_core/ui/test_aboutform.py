@@ -27,10 +27,10 @@ from unittest.mock import patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.aboutform import AboutForm
+from opal.core.ui.aboutform import AboutForm
 
 
-@patch('openlp.core.ui.aboutform.webbrowser')
+@patch('opal.core.ui.aboutform.webbrowser')
 @pytest.mark.parametrize('button_name,caption,url', [
     ('donate_button', 'Donate to OpenLP', 'http://openlp.org/donate'),
     ('contribute_button', 'Contribute to OpenLP', 'http://openlp.org/contribute')
@@ -77,7 +77,7 @@ def test_about_form_keyboard_close(mock_settings, qtbot):
     qtbot.waitUntil(lambda: not about_form.isVisible(), timeout=1000)
 
 
-@patch('openlp.core.ui.aboutform.get_version')
+@patch('opal.core.ui.aboutform.get_version')
 def test_about_form_build_number(mocked_get_version, mock_settings):
     """
     Test that the build number is added to the about form

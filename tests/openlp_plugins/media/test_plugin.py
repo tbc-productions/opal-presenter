@@ -21,7 +21,7 @@
 """
 This module contains tests for the plugin class Media plugin.
 """
-from openlp.plugins.media.mediaplugin import MediaPlugin
+from opal.plugins.media.mediaplugin import MediaPlugin
 
 
 def test_plugin_about():

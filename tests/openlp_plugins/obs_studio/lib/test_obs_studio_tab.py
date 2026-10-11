@@ -17,18 +17,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.obs_studio.lib.obs_studio_tab package.
+Package to test the opal.plugins.obs_studio.lib.obs_studio_tab package.
 """
 from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.plugins.obs_studio.obs_studio_plugin import ObsStudioPlugin
-from openlp.plugins.obs_studio.lib.obs_studio_tab import ObsStudioTab
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.plugins.obs_studio.obs_studio_plugin import ObsStudioPlugin
+from opal.plugins.obs_studio.lib.obs_studio_tab import ObsStudioTab
 
 
 @pytest.fixture
@@ -58,14 +58,14 @@ def tab(plugin: ObsStudioPlugin) -> ObsStudioTab:
     del dialog
 
 
-@patch('openlp.plugins.obs_studio.lib.obs_studio_tab.QtWidgets.QMessageBox.warning')
+@patch('opal.plugins.obs_studio.lib.obs_studio_tab.QtWidgets.QMessageBox.warning')
 def test_incorrect_port(mocked_warning: MagicMock, tab: ObsStudioTab):
     """
     Test that the tab can be created and test button clicked with an incorrect port
     """
     # GIVEN: A ObsStudioTab Class with an incorrect port
     # WHEN: The test button is clicked
-    with patch('openlp.plugins.obs_studio.lib.obs_studio_tab.ObsStudioAPI', side_effect=ConnectionError('Refused')):
+    with patch('opal.plugins.obs_studio.lib.obs_studio_tab.ObsStudioAPI', side_effect=ConnectionError('Refused')):
         QtTest.QTest.mouseClick(tab.test_button, QtCore.Qt.LeftButton)
 
     # THEN: The warning messagebox should be called

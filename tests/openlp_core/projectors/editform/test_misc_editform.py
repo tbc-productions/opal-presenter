@@ -23,19 +23,19 @@ Test ProjectorEditForm methods that don't have many paths/options
 """
 
 import logging
-from openlp.core.widgets import fluent as QtWidgets
-import openlp.core.projectors.editform
-import openlp.core.projectors.db
+from opal.core.widgets import fluent as QtWidgets
+import opal.core.projectors.editform
+import opal.core.projectors.db
 
 from unittest.mock import patch
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA
 
-_test_module = openlp.core.projectors.editform.__name__
-_test_module_db = openlp.core.projectors.db.__name__
+_test_module = opal.core.projectors.editform.__name__
+_test_module_db = opal.core.projectors.db.__name__
 
-Message = openlp.core.projectors.editform.Message
-Projector = openlp.core.projectors.db.Projector
-ProjectorEditForm = openlp.core.projectors.editform.ProjectorEditForm
+Message = opal.core.projectors.editform.Message
+Projector = opal.core.projectors.db.Projector
+ProjectorEditForm = opal.core.projectors.editform.ProjectorEditForm
 
 
 def test_exec_projector_bad(projector_editform, caplog):

@@ -26,10 +26,10 @@ Test aspects of the song export wizard.
 import pytest
 from unittest.mock import MagicMock
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.plugins.songs.lib.db import Song
-from openlp.plugins.songs.forms.songexportform import SongExportForm
+from opal.plugins.songs.lib.db import Song
+from opal.plugins.songs.forms.songexportform import SongExportForm
 
 
 @pytest.fixture()

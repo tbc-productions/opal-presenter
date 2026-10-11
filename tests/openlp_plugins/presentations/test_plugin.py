@@ -26,8 +26,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.presentations.presentationplugin import PresentationPlugin
-from openlp.plugins.presentations.lib.presentationtab import PresentationTab
+from opal.plugins.presentations.presentationplugin import PresentationPlugin
+from opal.plugins.presentations.lib.presentationtab import PresentationTab
 
 
 TEST_RESOURCES_PATH = Path(__file__) / '..' / '..' / '..' / 'resources'
@@ -52,9 +52,9 @@ def test_plugin_about():
     )
 
 
-@patch('openlp.core.common.applocation.create_paths')
-@patch('openlp.plugins.presentations.lib.presentationcontroller.create_paths')
-@patch('openlp.plugins.presentations.lib.presentationcontroller.PresentationController.is_available')
+@patch('opal.core.common.applocation.create_paths')
+@patch('opal.plugins.presentations.lib.presentationcontroller.create_paths')
+@patch('opal.plugins.presentations.lib.presentationcontroller.PresentationController.is_available')
 def test_create_settings_tab(mocked_pres_ctrl_is_available, mocked_create_paths1, mocked_create_paths2, qapp, state,
                              registry, settings):
     """Test creating the settings tab"""
@@ -69,9 +69,9 @@ def test_create_settings_tab(mocked_pres_ctrl_is_available, mocked_create_paths1
     assert isinstance(presentations_plugin.settings_tab, PresentationTab)
 
 
-@patch('openlp.core.common.applocation.create_paths')
-@patch('openlp.plugins.presentations.lib.presentationcontroller.create_paths')
-@patch('openlp.plugins.presentations.presentationplugin.DBManager')
+@patch('opal.core.common.applocation.create_paths')
+@patch('opal.plugins.presentations.lib.presentationcontroller.create_paths')
+@patch('opal.plugins.presentations.presentationplugin.DBManager')
 def test_initialise(MockedManager, mocked_create_paths1, mocked_create_paths2, state, registry, mock_settings):
     """Test that initialising the plugin works correctly"""
     # GIVEN: Some initial values needed for intialisation and a presentations plugin

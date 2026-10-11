@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.pjlink commands package.
+Package to test the opal.core.projectors.pjlink commands package.
 """
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.projectors.pjlink import PJLink
-from openlp.core.projectors.pjlinkcommands import process_command
-from openlp.core.projectors.constants import E_ERROR, E_WARN, PJLINK_ERST_DATA, PJLINK_ERST_STATUS, S_OK
+from opal.core.projectors.pjlink import PJLink
+from opal.core.projectors.pjlinkcommands import process_command
+from opal.core.projectors.constants import E_ERROR, E_WARN, PJLINK_ERST_DATA, PJLINK_ERST_STATUS, S_OK
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_ackn(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test ackn command (empty test)
@@ -44,7 +44,7 @@ def test_projector_ackn(mocked_log: MagicMock, pjlink: PJLink):
     ])
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_all_error(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test test_projector_process_erst_all_error
@@ -76,7 +76,7 @@ def test_projector_erst_all_error(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_all_ok(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test to verify pjlink.projector_errors is set to None when no errors
@@ -96,7 +96,7 @@ def test_projector_erst_all_ok(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_all_warn(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test test_projector_process_erst_all_error
@@ -130,7 +130,7 @@ def test_projector_erst_all_warn(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_data_invalid_length(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test test_projector_process_erst_data_invalid_length
@@ -153,7 +153,7 @@ def test_projector_erst_data_invalid_length(mocked_log: MagicMock, pjlink: PJLin
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_data_invalid_nan(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test ERST called with invalid data
@@ -174,7 +174,7 @@ def test_projector_erst_data_invalid_nan(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_erst_warn_cover_only(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test test_projector_process_erst_warn_cover_only
@@ -204,7 +204,7 @@ def test_projector_erst_warn_cover_only(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inf1(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving INF1 data (manufacturer)
@@ -226,7 +226,7 @@ def test_projector_inf1(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_inf2(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving INF2 data (model)
@@ -248,7 +248,7 @@ def test_projector_inf2(mocked_log: MagicMock, pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlinkcommands.log')
+@patch('opal.core.projectors.pjlinkcommands.log')
 def test_projector_info(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test saving INF2 data (model)

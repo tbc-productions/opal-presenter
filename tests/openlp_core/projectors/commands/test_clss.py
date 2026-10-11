@@ -24,12 +24,12 @@ Tests for PJLink CLSS command
 """
 
 import logging
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
-from openlp.core.projectors.pjlinkcommands import process_clss
+from opal.core.projectors.pjlinkcommands import process_clss
 from unittest.mock import patch
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
+test_module = opal.core.projectors.pjlinkcommands.__name__
 
 
 def test_reply_long_no_number(pjlink, caplog):

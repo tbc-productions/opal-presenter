@@ -2,11 +2,11 @@
 from unittest.mock import patch
 
 import pytest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.generaltab import GeneralTab
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.core.ui.style import UiThemes
+from opal.core.ui.generaltab import GeneralTab
+from opal.core.ui.settingsform import SettingsForm
+from opal.core.ui.style import UiThemes
 
 
 @pytest.fixture()
@@ -27,7 +27,7 @@ def test_changed_theme_prompts_after_saving(settings, form, index):
         assert settings.value('advanced/ui_theme_name') == GeneralTab.get_ui_theme_name(index)
         assert settings.value('advanced/interface style') == 'modern'
 
-    with patch('openlp.core.ui.settingsform.show_restart_message', side_effect=check_saved_theme) as reminder:
+    with patch('opal.core.ui.settingsform.show_restart_message', side_effect=check_saved_theme) as reminder:
         form.accept()
 
     reminder.assert_called_once_with(
@@ -41,7 +41,7 @@ def test_unchanged_theme_does_not_prompt(settings, form):
     tab.ui_theme_style_combo_box.setCurrentIndex(0)
     tab.number_edit.setText('12345')
 
-    with patch('openlp.core.ui.settingsform.show_restart_message') as reminder:
+    with patch('opal.core.ui.settingsform.show_restart_message') as reminder:
         form.accept()
 
     assert settings.value('core/ccli number') == '12345'
@@ -53,7 +53,7 @@ def test_cancelled_theme_change_does_not_prompt_or_save(settings, form):
     form.insert_tab(tab)
     tab.ui_theme_style_combo_box.setCurrentIndex(1)
 
-    with patch('openlp.core.ui.settingsform.show_restart_message') as reminder:
+    with patch('opal.core.ui.settingsform.show_restart_message') as reminder:
         form.reject()
 
     assert settings.value('advanced/interface style') == 'modern'

@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.projectors.pjlink base package part 1.
+Package to test the opal.core.projectors.pjlink base package part 1.
 """
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.projectors.pjlink import PJLink
-from openlp.core.projectors.pjlinkcommands import process_command
-from openlp.core.projectors.constants import E_NOT_CONNECTED, E_UNKNOWN_SOCKET_ERROR, QSOCKET_STATE, \
+from opal.core.projectors.pjlink import PJLink
+from opal.core.projectors.pjlinkcommands import process_command
+from opal.core.projectors.constants import E_NOT_CONNECTED, E_UNKNOWN_SOCKET_ERROR, QSOCKET_STATE, \
     S_CONNECTED, S_CONNECTING, S_OK, S_ON, STATUS_CODE, STATUS_MSG, S_NOT_CONNECTED
 
 
@@ -102,7 +102,7 @@ def test_poll_loop_set_interval(pjlink: PJLink):
     ]
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_change_status_unknown_socket_error(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test change_status with connection error
@@ -133,7 +133,7 @@ def test_projector_change_status_unknown_socket_error(mocked_log: MagicMock, pjl
                                                       STATUS_MSG[E_UNKNOWN_SOCKET_ERROR])
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_change_status_connection_status_connecting(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test change_status with connecting status
@@ -161,7 +161,7 @@ def test_projector_change_status_connection_status_connecting(mocked_log: MagicM
     assert mocked_update_icons.emit.called is True, 'Should have called UpdateIcons'
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_change_status_connection_status_connected(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test change_status with connected status
@@ -187,7 +187,7 @@ def test_projector_change_status_connection_status_connected(mocked_log: MagicMo
     assert pjlink.status_connect == S_CONNECTED, 'Status connect should be CONNECTED'
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_change_status_connection_status_with_message(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test change_status with connection status
@@ -214,7 +214,7 @@ def test_projector_change_status_connection_status_with_message(mocked_log: Magi
     assert pjlink.status_connect == S_OK, 'Status connect should not have changed'
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_av_mute_status(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve shutter/audio state
@@ -231,7 +231,7 @@ def test_projector_get_av_mute_status(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd, priority=False)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_available_inputs(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve avaliable inputs
@@ -248,7 +248,7 @@ def test_projector_get_available_inputs(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_error_status(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve projector error status
@@ -265,7 +265,7 @@ def test_projector_get_error_status(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_input_source(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve current input
@@ -282,7 +282,7 @@ def test_projector_get_input_source(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_lamp_status(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve lamp(s) status
@@ -299,7 +299,7 @@ def test_projector_get_lamp_status(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_manufacturer(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve manufacturer name
@@ -316,7 +316,7 @@ def test_projector_get_manufacturer(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_model(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to get model information
@@ -333,7 +333,7 @@ def test_projector_get_model(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_name(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to get user-assigned name
@@ -350,7 +350,7 @@ def test_projector_get_name(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_other_info(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve other information
@@ -367,7 +367,7 @@ def test_projector_get_other_info(mocked_log: MagicMock, pjlink: PJLink):
     mocked_send_command.assert_called_once_with(cmd=cmd)
 
 
-@patch('openlp.core.projectors.pjlink.log')
+@patch('opal.core.projectors.pjlink.log')
 def test_projector_get_power_status(mocked_log: MagicMock, pjlink: PJLink):
     """
     Test sending command to retrieve current power state

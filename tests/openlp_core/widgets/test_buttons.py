@@ -19,11 +19,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-This module contains tests for the openlp.core.widgets.buttons module
+This module contains tests for the opal.core.widgets.buttons module
 """
 from unittest.mock import MagicMock, patch
 
-from openlp.core.widgets.buttons import ColorButton
+from opal.core.widgets.buttons import ColorButton
 
 
 def test_constructor(mock_settings: MagicMock):
@@ -97,7 +97,7 @@ def test_color_setter():
     mocked_change_color.assert_called_with('#000000')
 
 
-@patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
+@patch('opal.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
 def test_on_clicked_invalid_color(mocked_get_color: MagicMock):
     """
     Test the on_click method when an invalid color has been supplied
@@ -119,7 +119,7 @@ def test_on_clicked_invalid_color(mocked_get_color: MagicMock):
         'colorChange signal should not have been emitted with an invalid color'
 
 
-@patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
+@patch('opal.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
 def test_on_clicked_same_color(mocked_get_color: MagicMock):
     """
     Test the on_click method when a new color has not been chosen
@@ -141,7 +141,7 @@ def test_on_clicked_same_color(mocked_get_color: MagicMock):
         'colorChange signal should not have been emitted when the color has not changed'
 
 
-@patch('openlp.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
+@patch('opal.core.widgets.buttons.QtWidgets.QColorDialog.getColor')
 def test_on_clicked_new_color(mocked_get_color: MagicMock):
     """
     Test the on_click method when a new color has been chosen and is valid

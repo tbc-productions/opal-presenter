@@ -23,7 +23,7 @@ Functional tests to test the Http init.
 """
 from unittest.mock import MagicMock
 
-from openlp.core.api.http import authenticate, check_auth, requires_auth
+from opal.core.api.http import authenticate, check_auth, requires_auth
 
 
 password = 'c3VwZXJmbHk6bGFtYXM='

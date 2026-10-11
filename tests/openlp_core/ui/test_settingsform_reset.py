@@ -1,10 +1,10 @@
 """Tests for resetting preferences from the settings dialog."""
 from unittest.mock import MagicMock, patch
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.ui.settingsform import SettingsForm
+from opal.core.common.registry import Registry
+from opal.core.ui.settingsform import SettingsForm
 
 
 def test_reset_to_defaults_cancel_keeps_saved_settings(settings):
@@ -40,7 +40,7 @@ def test_reset_to_defaults_keeps_library_location_and_setup_state(settings, tmp_
 
     with patch.object(QtWidgets.QMessageBox, 'warning',
                       return_value=QtWidgets.QMessageBox.StandardButton.Reset), \
-            patch('openlp.core.ui.settingsform.show_restart_message') as information:
+            patch('opal.core.ui.settingsform.show_restart_message') as information:
         form.reset_defaults_button.click()
 
     assert settings.value('advanced/data path') == library_path

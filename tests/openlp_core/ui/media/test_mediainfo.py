@@ -25,7 +25,7 @@ from unittest.mock import patch
 
 from PySide6 import QtCore, QtGui
 
-from openlp.core.ui.media.mediainfo import media_info
+from opal.core.ui.media.mediainfo import media_info
 
 
 def test_scaled_thumb_is_fixed_size(qapp):
@@ -87,9 +87,9 @@ def test_get_media_duration_waits_for_duration_after_loaded_status(qapp):
         elif event_step['count'] == 2:
             probe.duration_changed_event(5000)
 
-    with patch('openlp.core.ui.media.mediainfo.QMediaPlayer', _FakePlayer), \
-            patch('openlp.core.ui.media.mediainfo.sleep', lambda _x: None), \
-            patch('openlp.core.ui.media.mediainfo.QtWidgets.QApplication.instance') as mocked_instance:
+    with patch('opal.core.ui.media.mediainfo.QMediaPlayer', _FakePlayer), \
+            patch('opal.core.ui.media.mediainfo.sleep', lambda _x: None), \
+            patch('opal.core.ui.media.mediainfo.QtWidgets.QApplication.instance') as mocked_instance:
         mocked_instance.return_value.processEvents.side_effect = _process_events_side_effect
 
         duration = probe.get_media_duration('C:/video.mp4')

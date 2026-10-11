@@ -25,16 +25,16 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.bibles.lib.manager import BibleManager
+from opal.core.common.registry import Registry
+from opal.plugins.bibles.lib.manager import BibleManager
 from tests.utils.constants import TEST_RESOURCES_PATH
 
 
 @pytest.fixture()
 def manager(settings):
     Registry().register('service_list', MagicMock())
-    with patch('openlp.core.common.applocation.AppLocation.get_section_data_path') as mocked_get_data_path, \
-            patch('openlp.core.common.applocation.AppLocation.get_files') as mocked_get_files:
+    with patch('opal.core.common.applocation.AppLocation.get_section_data_path') as mocked_get_data_path, \
+            patch('opal.core.common.applocation.AppLocation.get_files') as mocked_get_files:
         # GIVEN: A mocked out AppLocation.get_files()
         mocked_get_files.return_value = ["tests.sqlite"]
         mocked_get_data_path.return_value = Path(TEST_RESOURCES_PATH) / 'bibles'

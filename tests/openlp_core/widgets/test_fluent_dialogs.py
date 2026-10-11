@@ -2,12 +2,12 @@
 import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
-from openlp.core.widgets import fluent
+from opal.core.widgets import fluent
 
 
 def test_preconstructed_application_forms_stay_hidden_on_startup(qapp, registry, mock_settings):
-    from openlp.core.ui.aboutform import AboutForm
-    from openlp.core.ui.settingsform import SettingsForm
+    from opal.core.ui.aboutform import AboutForm
+    from opal.core.ui.settingsform import SettingsForm
     parent = QtWidgets.QMainWindow()
     parent.resize(1200, 900)
     forms = [AboutForm(parent), SettingsForm(parent)]
@@ -19,7 +19,7 @@ def test_preconstructed_application_forms_stay_hidden_on_startup(qapp, registry,
 
 
 def test_settings_exec_uses_parent_window_for_smoke(qapp, registry, mock_settings, monkeypatch):
-    from openlp.core.ui.settingsform import SettingsForm
+    from opal.core.ui.settingsform import SettingsForm
     parent = QtWidgets.QMainWindow()
     parent.resize(1200, 900)
     settings = SettingsForm(parent)
@@ -219,12 +219,12 @@ def test_dialog_stays_inside_resized_parent(qapp):
 
 
 @pytest.mark.parametrize('module_name, ui_name', [
-    ('openlp.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
-    ('openlp.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
-    ('openlp.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
-    ('openlp.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
-    ('openlp.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
-    ('openlp.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
+    ('opal.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
+    ('opal.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
+    ('opal.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
+    ('opal.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
+    ('opal.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
+    ('opal.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
 ])
 def test_compact_dialogs_fit_fields_and_labels(qapp, registry, mock_settings, module_name, ui_name):
     """Old height caps must not compress fields after Fluent padding is applied."""
@@ -567,7 +567,7 @@ def test_plain_horizontal_dialog_puts_heading_above_content(qapp, qtbot):
 
 
 def test_folder_form_has_room_for_both_rows_and_primary_action(qapp, registry, mock_settings, qtbot):
-    from openlp.core.ui.folders import AddFolderForm
+    from opal.core.ui.folders import AddFolderForm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(1000, 800)
@@ -585,7 +585,7 @@ def test_folder_form_has_room_for_both_rows_and_primary_action(qapp, registry, m
 
 
 def test_planning_center_keeps_import_before_refresh(qapp, registry, mock_settings, qtbot):
-    from openlp.plugins.planningcenter.forms.selectplandialog import Ui_SelectPlanDialog
+    from opal.plugins.planningcenter.forms.selectplandialog import Ui_SelectPlanDialog
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(1000, 700)
@@ -726,8 +726,8 @@ def test_open_content_dialog_grows_when_body_changes(qapp, qtbot, form):
 
 @pytest.mark.parametrize('kind', ['book', 'language'])
 def test_bible_matching_dialog_wraps_long_names(qapp, qtbot, registry, mock_settings, kind):
-    from openlp.plugins.bibles.forms.booknamedialog import Ui_BookNameDialog
-    from openlp.plugins.bibles.forms.languagedialog import Ui_LanguageDialog
+    from opal.plugins.bibles.forms.booknamedialog import Ui_BookNameDialog
+    from opal.plugins.bibles.forms.languagedialog import Ui_LanguageDialog
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(1000, 900)
@@ -752,7 +752,7 @@ def test_bible_matching_dialog_wraps_long_names(qapp, qtbot, registry, mock_sett
 
 
 def test_confirmation_list_expands_past_eight_rows_before_scrolling(qapp, qtbot, registry, mock_settings):
-    from openlp.core.ui.confirmationform import ConfirmationForm
+    from opal.core.ui.confirmationform import ConfirmationForm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(1000, 1000)
@@ -774,17 +774,17 @@ def test_confirmation_list_expands_past_eight_rows_before_scrolling(qapp, qtbot,
 
 
 @pytest.mark.parametrize('module_name, ui_name', [
-    ('openlp.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
-    ('openlp.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
-    ('openlp.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
-    ('openlp.plugins.songs.forms.mediafilesdialog', 'Ui_MediaFilesDialog'),
-    ('openlp.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
-    ('openlp.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
-    ('openlp.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
-    ('openlp.plugins.bibles.forms.booknamedialog', 'Ui_BookNameDialog'),
-    ('openlp.plugins.bibles.forms.languagedialog', 'Ui_LanguageDialog'),
-    ('openlp.plugins.songusage.forms.songusagedeletedialog', 'Ui_SongUsageDeleteDialog'),
-    ('openlp.plugins.planningcenter.forms.selectplandialog', 'Ui_SelectPlanDialog'),
+    ('opal.plugins.songs.forms.authorsdialog', 'Ui_AuthorsDialog'),
+    ('opal.plugins.songs.forms.topicsdialog', 'Ui_TopicsDialog'),
+    ('opal.plugins.songs.forms.songbookdialog', 'Ui_SongBookDialog'),
+    ('opal.plugins.songs.forms.mediafilesdialog', 'Ui_MediaFilesDialog'),
+    ('opal.core.ui.filerenamedialog', 'Ui_FileRenameDialog'),
+    ('opal.core.ui.firsttimelanguagedialog', 'Ui_FirstTimeLanguageDialog'),
+    ('opal.core.ui.starttimedialog', 'Ui_StartTimeDialog'),
+    ('opal.plugins.bibles.forms.booknamedialog', 'Ui_BookNameDialog'),
+    ('opal.plugins.bibles.forms.languagedialog', 'Ui_LanguageDialog'),
+    ('opal.plugins.songusage.forms.songusagedeletedialog', 'Ui_SongUsageDeleteDialog'),
+    ('opal.plugins.planningcenter.forms.selectplandialog', 'Ui_SelectPlanDialog'),
 ])
 def test_application_content_forms_fit_and_recover_after_host_resize(
         qapp, qtbot, registry, mock_settings, module_name, ui_name):
@@ -827,8 +827,8 @@ def test_application_content_forms_fit_and_recover_after_host_resize(
 def test_preview_profile_form_reflows_on_narrow_hosts(qapp, qtbot, registry, mock_settings):
     from types import SimpleNamespace
     from unittest.mock import MagicMock
-    from openlp.plugins.slide_designer.forms.previewoutput import PreviewOutput
-    from openlp.core.ui.style import set_default_theme
+    from opal.plugins.slide_designer.forms.previewoutput import PreviewOutput
+    from opal.core.ui.style import set_default_theme
     set_default_theme(QtWidgets.QApplication.instance())
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)

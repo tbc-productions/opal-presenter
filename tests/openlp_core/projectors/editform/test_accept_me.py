@@ -23,14 +23,14 @@ Test ProjectorEditForm.accept_me
 """
 from unittest.mock import MagicMock, patch, call
 
-from openlp.core.projectors.editform import ProjectorEditForm, Message
-from openlp.core.projectors.constants import PJLINK_VALID_PORTS
-from openlp.core.projectors.db import Projector
+from opal.core.projectors.editform import ProjectorEditForm, Message
+from opal.core.projectors.constants import PJLINK_VALID_PORTS
+from opal.core.projectors.db import Projector
 from tests.resources.projector.data import TEST1_DATA
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_name_blank(mocked_show_warning: MagicMock, mocked_log: MagicMock, mock_settings: MagicMock):
     """
     Test when name field blank
@@ -39,7 +39,7 @@ def test_accept_me_name_blank(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText('')
 
@@ -51,8 +51,8 @@ def test_accept_me_name_blank(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_show_warning.assert_called_once_with(message=Message.NameBlank)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_database_error_id(mocked_show_warning: MagicMock, mocked_log: MagicMock,
                                      mock_settings: MagicMock):
     """
@@ -64,7 +64,7 @@ def test_accept_me_database_error_id(mocked_show_warning: MagicMock, mocked_log:
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.projector.id = test_id
@@ -79,8 +79,8 @@ def test_accept_me_database_error_id(mocked_show_warning: MagicMock, mocked_log:
     mocked_show_warning.assert_called_once_with(message=Message.DatabaseError)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_name_database_error_name(mocked_show_warning: MagicMock, mocked_log: MagicMock,
                                             mock_settings: MagicMock):
     """
@@ -91,7 +91,7 @@ def test_accept_me_name_database_error_name(mocked_show_warning: MagicMock, mock
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.projector.name = name
@@ -107,8 +107,8 @@ def test_accept_me_name_database_error_name(mocked_show_warning: MagicMock, mock
     mocked_show_warning.assert_called_once_with(message=Message.DatabaseError)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_name_duplicate(mocked_show_warning: MagicMock, mocked_log: MagicMock,
                                   mock_settings: MagicMock):
     """
@@ -119,7 +119,7 @@ def test_accept_me_name_duplicate(mocked_show_warning: MagicMock, mocked_log: Ma
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = [MagicMock()]
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.projector.name = name
@@ -134,8 +134,8 @@ def test_accept_me_name_duplicate(mocked_show_warning: MagicMock, mocked_log: Ma
     mocked_show_warning.assert_called_once_with(message=Message.NameDuplicate)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_name_multiple(mocked_show_warning: MagicMock, mocked_log: MagicMock, mock_settings: MagicMock):
     """
     Test when multiple database records have the same name
@@ -150,7 +150,7 @@ def test_accept_me_name_multiple(mocked_show_warning: MagicMock, mocked_log: Mag
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = [projector_1, projector_2]
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
 
@@ -168,8 +168,8 @@ def test_accept_me_name_multiple(mocked_show_warning: MagicMock, mocked_log: Mag
     mocked_show_warning.assert_called_once_with(message=Message.DatabaseMultiple)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_ip_blank(mocked_show_warning: MagicMock, mocked_log: MagicMock, mock_settings: MagicMock):
     """
     Test when IP field blank
@@ -179,7 +179,7 @@ def test_accept_me_ip_blank(mocked_show_warning: MagicMock, mocked_log: MagicMoc
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText('')
@@ -193,8 +193,8 @@ def test_accept_me_ip_blank(mocked_show_warning: MagicMock, mocked_log: MagicMoc
     mocked_show_warning.assert_called_once_with(message=Message.IPBlank)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_ip_invalid(mocked_show_warning: MagicMock, mocked_log: MagicMock, mock_settings: MagicMock):
     """
     Test when IP invalid
@@ -204,7 +204,7 @@ def test_accept_me_ip_invalid(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText('300.256.900.512')
@@ -218,8 +218,8 @@ def test_accept_me_ip_invalid(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_show_warning.assert_called_once_with(message=Message.IPInvalid)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_port_blank(mocked_show_warning: MagicMock, mocked_log: MagicMock, mock_settings: MagicMock):
     """
     Test when port field blank
@@ -230,7 +230,7 @@ def test_accept_me_port_blank(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -245,8 +245,8 @@ def test_accept_me_port_blank(mocked_show_warning: MagicMock, mocked_log: MagicM
     mocked_show_warning.assert_called_once_with(message=Message.PortBlank)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_port_not_decimal(mocked_show_warning: MagicMock, mocked_log: MagicMock):
     """
     Test when port not a decimal digit
@@ -257,7 +257,7 @@ def test_accept_me_port_not_decimal(mocked_show_warning: MagicMock, mocked_log: 
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -272,8 +272,8 @@ def test_accept_me_port_not_decimal(mocked_show_warning: MagicMock, mocked_log: 
     mocked_show_warning.assert_called_once_with(message=Message.PortInvalid)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_port_too_low(mocked_show_warning: MagicMock, mocked_log: MagicMock):
     """
     Test when port number less than PJLINK_VALID_PORTS lower value
@@ -285,7 +285,7 @@ def test_accept_me_port_too_low(mocked_show_warning: MagicMock, mocked_log: Magi
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -300,8 +300,8 @@ def test_accept_me_port_too_low(mocked_show_warning: MagicMock, mocked_log: Magi
     mocked_show_warning.assert_called_once_with(message=Message.PortInvalid)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accpt_me_port_too_high(mocked_show_warning: MagicMock, mocked_log: MagicMock):
     """
     Test when port number greater than PJLINK_VALID_PORTS higher value
@@ -313,7 +313,7 @@ def test_accpt_me_port_too_high(mocked_show_warning: MagicMock, mocked_log: Magi
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.return_value = []
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -328,8 +328,8 @@ def test_accpt_me_port_too_high(mocked_show_warning: MagicMock, mocked_log: Magi
     mocked_show_warning.assert_called_once_with(message=Message.PortInvalid)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_address_duplicate(mocked_show_warning: MagicMock, mocked_log: MagicMock):
     """
     Test when IP:Port address duplicate
@@ -341,7 +341,7 @@ def test_accept_me_address_duplicate(mocked_show_warning: MagicMock, mocked_log:
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.side_effect = [[], [Projector(**TEST1_DATA)]]
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -357,8 +357,8 @@ def test_accept_me_address_duplicate(mocked_show_warning: MagicMock, mocked_log:
     mocked_show_warning.assert_called_once_with(message=Message.AddressDuplicate)
 
 
-@patch('openlp.core.projectors.editform.log')
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.log')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_address_multiple(mocked_show_warning: MagicMock, mocked_log: MagicMock):
     """
     Test when database has multiple same IP:Port records
@@ -375,7 +375,7 @@ def test_accept_me_address_multiple(mocked_show_warning: MagicMock, mocked_log: 
     mocked_projectordb = MagicMock()
     mocked_projectordb.get_projector.side_effect = [[], [projector_1, projector_2]]
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(name)
     projector_editform.ip_text.setText(ip)
@@ -395,7 +395,7 @@ def test_accept_me_address_multiple(mocked_show_warning: MagicMock, mocked_log: 
     mocked_show_warning.assert_called_once_with(message=Message.DatabaseMultiple)
 
 
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_save_new(mocked_show_warning: MagicMock):
     """
     Test editform saving new projector instance
@@ -406,7 +406,7 @@ def test_accept_me_save_new(mocked_show_warning: MagicMock):
     mocked_projectordb.add_projector.return_value = True
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
     projector_editform.new_projector = True
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(TEST1_DATA['name'])
     projector_editform.ip_text.setText(TEST1_DATA['ip'])
@@ -423,7 +423,7 @@ def test_accept_me_save_new(mocked_show_warning: MagicMock):
     mocked_close.assert_called_once()
 
 
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_save_new_fail(mocked_show_warning: MagicMock):
     """
     Test editform saving new projector instance where db fails to save
@@ -434,7 +434,7 @@ def test_accept_me_save_new_fail(mocked_show_warning: MagicMock):
     mocked_projectordb.add_projector.return_value = False
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
     projector_editform.new_projector = True
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(TEST1_DATA['name'])
     projector_editform.ip_text.setText(TEST1_DATA['ip'])
@@ -451,7 +451,7 @@ def test_accept_me_save_new_fail(mocked_show_warning: MagicMock):
     assert mocked_close.call_count == 0, 'The form should not have closed'
 
 
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_accept_me_save_update(mocked_show_warning: MagicMock):
     """
     Test editform update projector instance in database
@@ -461,7 +461,7 @@ def test_accept_me_save_update(mocked_show_warning: MagicMock):
     mocked_projectordb.get_projector.side_effect = [[MagicMock()], []]
     mocked_projectordb.update_projector.return_value = True
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(TEST1_DATA['name'])
     projector_editform.ip_text.setText(TEST1_DATA['ip'])
@@ -479,7 +479,7 @@ def test_accept_me_save_update(mocked_show_warning: MagicMock):
     mocked_close.assert_called_once()
 
 
-@patch('openlp.core.projectors.editform.Message.show_warning')
+@patch('opal.core.projectors.editform.Message.show_warning')
 def test_save_update_fail(mocked_show_warning: MagicMock):
     """
     Test editform updating projector instance where db fails to save
@@ -489,7 +489,7 @@ def test_save_update_fail(mocked_show_warning: MagicMock):
     mocked_projectordb.get_projector.side_effect = [[MagicMock()], []]
     mocked_projectordb.update_projector.return_value = False
     projector_editform = ProjectorEditForm(None, mocked_projectordb)
-    with patch('openlp.core.projectors.editform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.projectors.editform.QtWidgets.FormDialog.exec'):
         projector_editform.exec()
     projector_editform.name_text.setText(TEST1_DATA['name'])
     projector_editform.ip_text.setText(TEST1_DATA['ip'])

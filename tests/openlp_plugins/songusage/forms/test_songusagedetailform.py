@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songusage.forms.songusagedetailform package.
+Package to test the opal.plugins.songusage.forms.songusagedetailform package.
 """
 from unittest.mock import MagicMock
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.settings import Settings
-from openlp.plugins.songusage.forms.songusagedetailform import SongUsageDetailForm
+from opal.core.common.settings import Settings
+from opal.plugins.songusage.forms.songusagedetailform import SongUsageDetailForm
 
 
 def test_no_help_button(settings: Settings):
@@ -76,8 +76,8 @@ def test_date_range_uses_two_compact_calendar_date_pickers(settings, qtbot):
 
 
 def test_date_pickers_restore_and_export_selected_range(settings, qtbot, tmp_path):
-    from openlp.core.common.registry import Registry
-    from openlp.plugins.songusage.lib.db import SongUsageItem
+    from opal.core.common.registry import Registry
+    from opal.plugins.songusage.lib.db import SongUsageItem
     main_window = QtWidgets.QMainWindow()
     qtbot.addWidget(main_window)
     main_window.information_message = MagicMock()

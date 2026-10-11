@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 import io
 import os
@@ -29,10 +29,10 @@ from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore, QtGui
 
-from openlp.core.lib import DataType, build_icon, check_item_selected, create_separated_list, create_thumb, \
+from opal.core.lib import DataType, build_icon, check_item_selected, create_separated_list, create_thumb, \
     get_text_file_string, image_to_byte, read_or_fail, read_int, resize_image, seek_or_fail, str_to_bool, \
     validate_thumb
-from openlp.core.common.registry import Registry
+from opal.core.common.registry import Registry
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -204,8 +204,8 @@ def test_build_icon_with_resource():
     """
     Test the build_icon() function with a resource URI
     """
-    with patch('openlp.core.lib.QtGui') as MockedQtGui, \
-            patch('openlp.core.lib.QtGui.QPixmap') as MockedQPixmap:
+    with patch('opal.core.lib.QtGui') as MockedQtGui, \
+            patch('opal.core.lib.QtGui.QPixmap') as MockedQPixmap:
         # GIVEN: A mocked QIcon and a mocked QPixmap
         MockedQtGui.QIcon = MagicMock
         MockedQtGui.QIcon.Mode = MagicMock
@@ -229,7 +229,7 @@ def test_image_to_byte():
     """
     Test the image_to_byte() function
     """
-    with patch('openlp.core.lib.QtCore') as MockedQtCore:
+    with patch('opal.core.lib.QtCore') as MockedQtCore:
         # GIVEN: A set of mocked-out Qt classes
         mocked_byte_array = MagicMock()
         MockedQtCore.QByteArray.return_value = mocked_byte_array
@@ -254,8 +254,8 @@ def test_image_to_byte_base_64():
     """
     Test the image_to_byte() function
     """
-    with patch('openlp.core.lib.QtCore') as MockedQtCore, \
-            patch('openlp.core.lib.base64.b64encode') as mocked_b64encode:
+    with patch('opal.core.lib.QtCore') as MockedQtCore, \
+            patch('opal.core.lib.base64.b64encode') as mocked_b64encode:
         # GIVEN: A set of mocked-out Qt classes
         mocked_b64encode.side_effect = lambda x: MagicMock(decode=MagicMock(return_value='{} base64ified'.format(x)))
         mocked_byte_array = "byte_array"
@@ -477,7 +477,7 @@ def test_create_thumb_empty_img(qapp, registry: Registry):
     assert thumb_path.exists() is False, 'Test was not run, because the thumb already exists.'
 
     # WHEN: Create the thumb.
-    with patch('openlp.core.lib.QtGui.QImageReader.size') as mocked_size:
+    with patch('opal.core.lib.QtGui.QImageReader.size') as mocked_size:
         mocked_size.return_value = QtCore.QSize(0, 0)
         icon = create_thumb(image_path, thumb_path, size=None)
 
@@ -488,7 +488,7 @@ def test_create_thumb_empty_img(qapp, registry: Registry):
     assert expected_size_1 == QtGui.QImageReader(str(thumb_path)).size(), 'The thumb should have the given size'
 
     # WHEN: Create the thumb.
-    with patch('openlp.core.lib.QtGui.QImageReader.size') as mocked_size:
+    with patch('opal.core.lib.QtGui.QImageReader.size') as mocked_size:
         mocked_size.return_value = QtCore.QSize(0, 0)
         icon = create_thumb(image_path, thumb_path, size=thumb_size)
 
@@ -504,8 +504,8 @@ def test_create_thumb_empty_img(qapp, registry: Registry):
         pass
 
 
-@patch('openlp.core.lib.QtGui.QImageReader')
-@patch('openlp.core.lib.build_icon')
+@patch('opal.core.lib.QtGui.QImageReader')
+@patch('opal.core.lib.build_icon')
 def test_create_thumb_path_fails(mocked_build_icon: MagicMock, MockQImageReader: MagicMock, qapp,
                                  registry: Registry):
     """
@@ -524,7 +524,7 @@ def test_create_thumb_path_fails(mocked_build_icon: MagicMock, MockQImageReader:
     mocked_build_icon.assert_called_once_with(image_path)
 
 
-@patch('openlp.core.lib.QtWidgets', MagicMock())
+@patch('opal.core.lib.QtWidgets', MagicMock())
 def test_check_item_selected_true():
     """
     Test that the check_item_selected() function returns True when there are selected indexes
@@ -547,8 +547,8 @@ def test_check_item_selected_false(registry: Registry):
     Test that the check_item_selected() function returns False when there are no selected indexes.
     """
     # GIVEN: A mocked out QtWidgets module and a list widget with selected indexes
-    with patch('openlp.core.lib.QtWidgets') as MockedQtWidgets, \
-            patch('openlp.core.lib.translate') as mocked_translate:
+    with patch('opal.core.lib.QtWidgets') as MockedQtWidgets, \
+            patch('opal.core.lib.translate') as mocked_translate:
         mocked_translate.return_value = 'mocked translate'
         mocked_list_widget = MagicMock()
         mocked_list_widget.selectedIndexes.return_value = False
@@ -693,7 +693,7 @@ def test_resize_thumb_same_aspect_ratio(registry: Registry):
     assert wanted_width == result_size.width(), 'The image should have the requested width.'
 
 
-@patch('openlp.core.lib.QtCore.QLocale.createSeparatedList')
+@patch('opal.core.lib.QtCore.QLocale.createSeparatedList')
 def test_create_separated_list_qlocate(mocked_createSeparatedList: MagicMock):
     """
     Test the create_separated_list function using the Qt provided method

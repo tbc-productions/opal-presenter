@@ -25,20 +25,20 @@ import logging
 import pytest
 from unittest.mock import MagicMock, patch
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.songs.lib import VerseType
-from openlp.plugins.songs.lib.db import Author
-from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.songs.lib import VerseType
+from opal.plugins.songs.lib.db import Author
+from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 
 @pytest.fixture
 def edit_song_form(settings: Settings):
     Registry().register("service_list", MagicMock())
-    with patch('openlp.plugins.songs.forms.editsongform.EditSongForm.__init__', return_value=None):
+    with patch('opal.plugins.songs.forms.editsongform.EditSongForm.__init__', return_value=None):
         return EditSongForm(None, MagicMock(), MagicMock())
 
 
@@ -76,7 +76,7 @@ def test_validate_nonmatching_tags(edit_song_form):
     assert valid is True, "The tags list should be valid"
 
 
-@patch('openlp.plugins.songs.forms.editsongform.set_case_insensitive_completer')
+@patch('opal.plugins.songs.forms.editsongform.set_case_insensitive_completer')
 def test_load_objects(mocked_set_case_insensitive_completer, edit_song_form, settings):
     """
     Test the _load_objects() method
@@ -109,7 +109,7 @@ def test_load_objects(mocked_set_case_insensitive_completer, edit_song_form, set
     mocked_combo.setCurrentText.assert_called_once_with('')
 
 
-@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editsongform.critical_error_message_box')
 def test_add_multiple_audio_from_file(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that not more than one Linked Audio item can be added
@@ -126,7 +126,7 @@ def test_add_multiple_audio_from_file(mocked_error_message, edit_song_form_with_
     assert edit_song_form_with_ui.audio_list_widget.count() == 1
 
 
-@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editsongform.critical_error_message_box')
 def test_add_multiple_audio_from_media(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that not more than one Linked Audio item can be added
@@ -143,7 +143,7 @@ def test_add_multiple_audio_from_media(mocked_error_message, edit_song_form_with
     assert edit_song_form_with_ui.audio_list_widget.count() == 1
 
 
-@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editsongform.critical_error_message_box')
 def test_validate_song_multiple_audio(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that a form with multiple Linked Audio items does not pass validation
@@ -172,7 +172,7 @@ def test_validate_song_multiple_audio(mocked_error_message, edit_song_form_with_
     assert song_valid is False
 
 
-@patch('openlp.plugins.songs.forms.editsongform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.editsongform.critical_error_message_box')
 def test_validate_song_one_audio(mocked_error_message, edit_song_form_with_ui: EditSongForm):
     """
     Test that a form with one Linked Audio item passes validation

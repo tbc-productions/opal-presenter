@@ -3,13 +3,13 @@ from unittest.mock import patch
 
 import pytest
 
-from openlp.core.common.enum import PluginStatus
-from openlp.core.lib.plugin import Plugin
-from openlp.core.state import State
-from openlp.core.ui.pluginform import PluginForm
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.plugins.projector.projectorplugin import ProjectorPlugin
-from openlp.plugins.remote_interface.remoteinterfaceplugin import RemoteInterfacePlugin
+from opal.core.common.enum import PluginStatus
+from opal.core.lib.plugin import Plugin
+from opal.core.state import State
+from opal.core.ui.pluginform import PluginForm
+from opal.core.ui.settingsform import SettingsForm
+from opal.plugins.projector.projectorplugin import ProjectorPlugin
+from opal.plugins.remote_interface.remoteinterfaceplugin import RemoteInterfacePlugin
 
 
 @pytest.mark.parametrize('plugin_class,alias,configuration', [
@@ -50,7 +50,7 @@ def test_plugin_manager_lists_features_and_explains_restart(settings, state, reg
     form.load()
     assert form.plugin_list_widget.count() == 2
     assert form.status_checkbox.isEnabled()
-    with patch('openlp.core.ui.pluginform.show_restart_message') as message:
+    with patch('opal.core.ui.pluginform.show_restart_message') as message:
         form.status_checkbox.setChecked(True)
         assert projector.is_active()
         message.assert_called_once()

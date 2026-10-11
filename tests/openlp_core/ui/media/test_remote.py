@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.media.remote package.
+Package to test the opal.core.ui.media.remote package.
 """
 import pytest
 from unittest.mock import MagicMock
 
-from openlp.core.api import app as flask_app
-from openlp.core.common.registry import Registry
-from openlp.core.ui.media.remote import media_play, media_pause, media_stop, register_views
+from opal.core.api import app as flask_app
+from opal.core.common.registry import Registry
+from opal.core.ui.media.remote import media_play, media_pause, media_stop, register_views
 
 
 def test_media_play_valid(settings):

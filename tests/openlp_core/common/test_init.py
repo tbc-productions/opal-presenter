@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Functional tests to test the :mod:`~openlp.core.common` module
+Functional tests to test the :mod:`~opal.core.common` module
 """
 import os
 import pytest
@@ -29,10 +29,10 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-from openlp.core.common import Singleton, add_actions, clean_filename, clean_button_text, de_hump, delete_file, \
+from opal.core.common import Singleton, add_actions, clean_filename, clean_button_text, de_hump, delete_file, \
     extension_loader, get_file_encoding, get_filesystem_encoding, get_uno_command, get_uno_instance, md5_hash, \
     normalize_str, path_to_module, qmd5_hash, sha256_file_hash, trace_error_handler, verify_ip_address
-from openlp.core.common.platform import is_win
+from opal.core.common.platform import is_win
 
 from tests.resources.projector.data import TEST_HASH, TEST_PIN, TEST_SALT
 from tests.utils.constants import TEST_RESOURCES_PATH
@@ -62,7 +62,7 @@ def test_extension_loader_no_files_found():
     """
     # GIVEN: A mocked `Path.glob` method which does not match any files
     with patch.object(Path, 'glob', return_value=[]), \
-         patch('openlp.core.common.importlib.import_module') as mocked_import_module:
+         patch('opal.core.common.importlib.import_module') as mocked_import_module:
 
         # WHEN: Calling `extension_loader`
         extension_loader(Path('/', 'app', 'dir', 'openlp'), 'glob', ['file2.py', 'file3.py'])
@@ -81,14 +81,14 @@ def test_extension_loader_files_found():
             Path('/', 'app', 'dir', 'openlp', 'import_dir', 'file2.py'),
             Path('/', 'app', 'dir', 'openlp', 'import_dir', 'file3.py'),
             Path('/', 'app', 'dir', 'openlp', 'import_dir', 'file4.py')]), \
-            patch('openlp.core.common.import_openlp_module') as mocked_import_module:
+            patch('opal.core.common.import_opal_module') as mocked_import_module:
 
         # WHEN: Calling `extension_loader` with a list of files to exclude
         extension_loader(Path('/', 'app', 'dir', 'openlp'), 'glob', ['file2.py', 'file3.py'])
         # THEN: `extension_loader` should only try to import the files that are matched by the
         #       blob, excluding the files listed in the `excluded_files` argument
-        mocked_import_module.assert_has_calls([call('openlp.import_dir.file1'),
-                                               call('openlp.import_dir.file4')])
+        mocked_import_module.assert_has_calls([call('opal.import_dir.file1'),
+                                               call('opal.import_dir.file4')])
         assert "/app/dir/community" not in sys.path, \
             "Community path has been added to the application sys.path"
 
@@ -103,7 +103,7 @@ def test_extension_loader_files_found_community():
             Path(p_prefix, 'app', 'dir', 'contrib', 'import_dir', 'file2.py'),
             Path(p_prefix, 'app', 'dir', 'contrib', 'import_dir', 'file3.py'),
             Path(p_prefix, 'app', 'dir', 'contrib', 'import_dir', 'file4.py')]), \
-            patch('openlp.core.common.import_openlp_module') as mocked_import_module:
+            patch('opal.core.common.import_opal_module') as mocked_import_module:
 
         # WHEN: Calling `extension_loader` with a list of files to exclude
         extension_loader(Path(p_prefix, 'app', 'dir'), 'glob', ['file2.py', 'file3.py'], True)
@@ -124,8 +124,8 @@ def test_extension_loader_import_error():
     # GIVEN: A mocked `import_module` which raises an `ImportError`
     with patch.object(Path, 'glob', return_value=[
             Path(p_prefix, 'app', 'dir', 'openlp', 'import_dir', 'file1.py')]), \
-            patch('openlp.core.common.import_openlp_module', side_effect=ImportError()), \
-            patch('openlp.core.common.log') as mocked_logger:
+            patch('opal.core.common.import_opal_module', side_effect=ImportError()), \
+            patch('opal.core.common.log') as mocked_logger:
 
         # WHEN: Calling `extension_loader`
         extension_loader(Path(p_prefix, 'app', 'dir', 'openlp'), 'glob')
@@ -141,8 +141,8 @@ def test_extension_loader_os_error():
     # GIVEN: A mocked `SourceFileLoader` which raises an `OSError`
     with patch.object(Path, 'glob', return_value=[
             Path('/', 'app', 'dir', 'openlp', 'import_dir', 'file1.py')]), \
-            patch('openlp.core.common.import_openlp_module', side_effect=OSError()), \
-            patch('openlp.core.common.log') as mocked_logger:
+            patch('opal.core.common.import_opal_module', side_effect=OSError()), \
+            patch('opal.core.common.log') as mocked_logger:
 
         # WHEN: Calling `extension_loader`
         extension_loader(Path('/', 'app', 'dir', 'openlp'), 'glob')
@@ -190,7 +190,7 @@ def test_path_to_module():
     result = path_to_module(path)
 
     # THEN: path_to_module should return the module name
-    assert result == 'openlp.core.ui.media.mediaplayer'
+    assert result == 'opal.core.ui.media.mediaplayer'
 
 
 def test_path_to_module_community():
@@ -212,7 +212,7 @@ def test_trace_error_handler():
     Test the trace_error_handler() method
     """
     # GIVEN: Mocked out objects
-    with patch('openlp.core.common.traceback') as mocked_traceback:
+    with patch('opal.core.common.traceback') as mocked_traceback:
         mocked_traceback.extract_stack.return_value = [('openlp.fake', 56, None, 'trace_error_handler_test')]
         mocked_logger = MagicMock()
 
@@ -635,7 +635,7 @@ def test_get_uno_command_libreoffice_command_exists():
     """
 
     # GIVEN: A patched 'which' method which returns a path when called with 'libreoffice'
-    with patch('openlp.core.common.which',
+    with patch('opal.core.common.which',
                **{'side_effect': lambda command: {'libreoffice': '/usr/bin/libreoffice'}[command]}):
         # WHEN: Calling get_uno_command
         result = get_uno_command()
@@ -653,7 +653,7 @@ def test_get_uno_command_only_soffice_command_exists():
 
     # GIVEN: A patched 'which' method which returns None when called with 'libreoffice' and a path when called with
     #        'soffice'
-    with patch('openlp.core.common.which',
+    with patch('opal.core.common.which',
                **{'side_effect': lambda command: {'libreoffice': None, 'soffice': '/usr/bin/soffice'}[
                    command]}):
         # WHEN: Calling get_uno_command
@@ -673,7 +673,7 @@ def test_get_uno_command_when_no_command_exists():
 
     # GIVEN: A patched 'which' method which returns None
     with pytest.raises(FileNotFoundError), \
-            patch('openlp.core.common.which', **{'return_value': None}):
+            patch('opal.core.common.which', **{'return_value': None}):
         # WHEN: Calling get_uno_command
         # THEN: a FileNotFoundError exception should be raised
         get_uno_command()
@@ -686,7 +686,7 @@ def test_get_uno_command_connection_type():
     """
 
     # GIVEN: A patched 'which' method which returns 'libreoffice'
-    with patch('openlp.core.common.which', **{'return_value': 'libreoffice'}):
+    with patch('opal.core.common.which', **{'return_value': 'libreoffice'}):
         # WHEN: Calling get_uno_command with a connection type other than pipe
         result = get_uno_command('socket')
 
@@ -700,8 +700,8 @@ def test_get_filesystem_encoding_sys_function_not_called():
     Test the get_filesystem_encoding() function does not call the sys.getdefaultencoding() function
     """
     # GIVEN: sys.getfilesystemencoding returns "cp1252"
-    with patch('openlp.core.common.sys.getfilesystemencoding') as mocked_getfilesystemencoding, \
-            patch('openlp.core.common.sys.getdefaultencoding') as mocked_getdefaultencoding:
+    with patch('opal.core.common.sys.getfilesystemencoding') as mocked_getfilesystemencoding, \
+            patch('opal.core.common.sys.getdefaultencoding') as mocked_getdefaultencoding:
         mocked_getfilesystemencoding.return_value = 'cp1252'
 
         # WHEN: get_filesystem_encoding() is called
@@ -718,8 +718,8 @@ def test_get_filesystem_encoding_sys_function_is_called():
     Test the get_filesystem_encoding() function calls the sys.getdefaultencoding() function
     """
     # GIVEN: sys.getfilesystemencoding returns None and sys.getdefaultencoding returns "utf-8"
-    with patch('openlp.core.common.sys.getfilesystemencoding') as mocked_getfilesystemencoding, \
-            patch('openlp.core.common.sys.getdefaultencoding') as mocked_getdefaultencoding:
+    with patch('opal.core.common.sys.getfilesystemencoding') as mocked_getfilesystemencoding, \
+            patch('opal.core.common.sys.getdefaultencoding') as mocked_getdefaultencoding:
         mocked_getfilesystemencoding.return_value = None
         mocked_getdefaultencoding.return_value = 'utf-8'
 
@@ -798,7 +798,7 @@ def test_delete_file_path_exception():
     # GIVEN: A test `Path` object with a patched exists method which raises an OSError
     #       called.
     with patch.object(Path, 'exists') as mocked_exists, \
-            patch('openlp.core.common.log') as mocked_log:
+            patch('opal.core.common.log') as mocked_log:
         mocked_exists.side_effect = OSError
 
         # WHEN: Calling delete_file with a the test Path object
@@ -814,7 +814,7 @@ def test_get_file_encoding_done():
     Test get_file_encoding when the detector sets done to True
     """
     # GIVEN: A mocked UniversalDetector instance with done attribute set to True after first iteration
-    with patch('openlp.core.common.UniversalDetector') as mocked_universal_detector, \
+    with patch('opal.core.common.UniversalDetector') as mocked_universal_detector, \
             patch.object(Path, 'open', return_value=BytesIO(b'data' * 260)) as mocked_open:
         encoding_result = {'encoding': 'UTF-8', 'confidence': 0.99}
         mocked_universal_detector_inst = MagicMock(**{'close.return_value': encoding_result})
@@ -837,7 +837,7 @@ def test_get_file_encoding_eof():
     """
     # GIVEN: A mocked UniversalDetector instance which isn't set to done and a mocked open, with 1040 bytes of test
     #       data (enough to run the iterator twice)
-    with patch('openlp.core.common.UniversalDetector') as mocked_universal_detector, \
+    with patch('opal.core.common.UniversalDetector') as mocked_universal_detector, \
             patch.object(Path, 'open', return_value=BytesIO(b'data' * 260)) as mocked_open:
         encoding_result = {'encoding': 'UTF-8', 'confidence': 0.99}
         mocked_universal_detector_inst = MagicMock(mock=mocked_universal_detector,
@@ -860,9 +860,9 @@ def test_get_file_encoding_oserror():
     """
     # GIVEN: A mocked UniversalDetector instance which isn't set to done and a mocked open, with 1040 bytes of test
     #       data (enough to run the iterator twice)
-    with patch('openlp.core.common.UniversalDetector') as mocked_universal_detector, \
+    with patch('opal.core.common.UniversalDetector') as mocked_universal_detector, \
             patch('builtins.open', side_effect=OSError), \
-            patch('openlp.core.common.log') as mocked_log:
+            patch('opal.core.common.log') as mocked_log:
         encoding_result = {'encoding': 'UTF-8', 'confidence': 0.99}
         mocked_universal_detector_inst = MagicMock(mock=mocked_universal_detector,
                                                    **{'done': False, 'close.return_value': encoding_result})

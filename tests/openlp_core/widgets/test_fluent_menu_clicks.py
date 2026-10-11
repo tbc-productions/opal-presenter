@@ -1,7 +1,7 @@
 """Button menus commit a short click without depending on native hover timing."""
 from PySide6 import QtCore, QtTest, QtWidgets
 
-from openlp.core.widgets import fluent
+from opal.core.widgets import fluent
 
 
 def test_short_menu_click_survives_hover_reset_and_toggles_once(qapp, qtbot):

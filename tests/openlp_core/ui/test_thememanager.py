@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.thememanager package.
+Package to test the opal.core.ui.thememanager package.
 """
 import pytest
 import os
@@ -29,13 +29,13 @@ from tempfile import mkdtemp
 from unittest.mock import ANY, MagicMock, patch, call, sentinel
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.lib.theme import Theme
-from openlp.core.ui.thememanager import ThemeManager
-from openlp.core.widgets.themeviews import ThemeViews
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.lib.theme import Theme
+from opal.core.ui.thememanager import ThemeManager
+from opal.core.widgets.themeviews import ThemeViews
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -43,15 +43,15 @@ from tests.utils.constants import RESOURCE_PATH
 def theme_manager(registry: Registry, settings: Settings, tmp_path) -> ThemeManager:
     registry.register('main_window', None)
     thm = ThemeManager()
-    with patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'designer'):
+    with patch('opal.core.lib.designmedia.asset_root', return_value=tmp_path / 'designer'):
         yield thm
 
 
-@patch('openlp.core.lib.theme.ScreenList')
+@patch('opal.core.lib.theme.ScreenList')
 def test_export_theme(mocked_screens, theme_manager: ThemeManager, tmp_path):
     """Native themes contain a versioned manifest and the existing JSON payload."""
     import zipfile
-    from openlp.core.lib.nativefile import read_manifest
+    from opal.core.lib.nativefile import read_manifest
     mocked_screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
     theme_manager.theme_path = tmp_path / 'themes'
     folder = theme_manager.theme_path / 'Default'
@@ -125,7 +125,7 @@ def test_screen_changed_skips_thumbnail_refresh_when_dimensions_match(theme_mana
     theme_manager.theme_form.refresh_preview.assert_called_once_with()
 
 
-@patch('openlp.core.ui.thememanager.Theme')
+@patch('opal.core.ui.thememanager.Theme')
 def test_get_global_theme(mocked_theme: MagicMock, theme_manager: ThemeManager):
     """
     Test the global theme method returns the theme data for the global theme
@@ -141,7 +141,7 @@ def test_get_global_theme(mocked_theme: MagicMock, theme_manager: ThemeManager):
     assert result == sentinel.global_theme
 
 
-@patch('openlp.core.ui.thememanager.Theme')
+@patch('opal.core.ui.thememanager.Theme')
 def test_get_theme_data(mocked_theme: MagicMock, theme_manager: ThemeManager):
     """
     Test that the get theme data method returns the requested theme data
@@ -156,7 +156,7 @@ def test_get_theme_data(mocked_theme: MagicMock, theme_manager: ThemeManager):
     assert result == sentinel.theme2
 
 
-@patch('openlp.core.ui.thememanager.Theme')
+@patch('opal.core.ui.thememanager.Theme')
 def test_get_theme_data_missing(mocked_theme: MagicMock, theme_manager: ThemeManager):
     """
     Test that the get theme data method returns the default theme when theme name not found
@@ -172,8 +172,8 @@ def test_get_theme_data_missing(mocked_theme: MagicMock, theme_manager: ThemeMan
     assert result == sentinel.default_theme
 
 
-@patch('openlp.core.ui.thememanager.shutil')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.shutil')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_same_image(mocked_create_paths: MagicMock, mocked_shutil: MagicMock, theme_manager: ThemeManager):
     """
     Test that we don't try to overwrite a theme background image with itself
@@ -199,8 +199,8 @@ def test_save_theme_same_image(mocked_create_paths: MagicMock, mocked_shutil: Ma
     assert mocked_shutil.copyfile.called is False, 'copyfile should not be called'
 
 
-@patch('openlp.core.ui.thememanager.shutil')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.shutil')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_diff_images(mocked_create_paths, mocked_shutil, theme_manager: ThemeManager):
     """
     Test that we do overwrite a theme background image when a new is submitted
@@ -223,9 +223,9 @@ def test_save_theme_diff_images(mocked_create_paths, mocked_shutil, theme_manage
     assert mocked_shutil.copyfile.called is True, 'copyfile should be called'
 
 
-@patch('openlp.core.ui.thememanager.shutil')
-@patch('openlp.core.ui.thememanager.delete_file')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.shutil')
+@patch('opal.core.ui.thememanager.delete_file')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_delete_old_image(mocked_create_paths, mocked_del_file, mocked_shutil, theme_manager: ThemeManager):
     """
     Test that we do delete a old theme background image when a new is submitted
@@ -249,8 +249,8 @@ def test_save_theme_delete_old_image(mocked_create_paths, mocked_del_file, mocke
 
 
 @patch.object(ThemeManager, 'log_exception')
-@patch('openlp.core.ui.thememanager.delete_file')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.delete_file')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_missing_original(mocked_paths, mocked_delete, mocked_log_exception, theme_manager: ThemeManager):
     """
     Test that we revert to the old theme background image if the source is missing
@@ -286,8 +286,8 @@ def test_save_theme_missing_original(mocked_paths, mocked_delete, mocked_log_exc
 
 
 @patch.object(ThemeManager, 'log_warning')
-@patch('openlp.core.ui.thememanager.delete_file')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.delete_file')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_missing_new(mocked_paths, mocked_delete, mocked_log_warning, theme_manager: ThemeManager):
     """
     Test that we log a warning if the new background is missing
@@ -311,9 +311,9 @@ def test_save_theme_missing_new(mocked_paths, mocked_delete, mocked_log_warning,
     mocked_log_warning.assert_called_once_with('Background source does not exist, retaining cached background')
 
 
-@patch('openlp.core.ui.thememanager.shutil')
-@patch('openlp.core.ui.thememanager.delete_file')
-@patch('openlp.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.shutil')
+@patch('opal.core.ui.thememanager.delete_file')
+@patch('opal.core.ui.thememanager.create_paths')
 def test_save_theme_background_override(mocked_paths, mocked_delete, mocked_shutil, theme_manager: ThemeManager):
     """
     Test that we log a warning if the new background is missing
@@ -360,9 +360,9 @@ def test_save_theme_special_char_name(registry, temp_folder, theme_manager: Them
         'Theme with special characters should have been created!'
 
 
-@patch('openlp.core.ui.thememanager.QtWidgets.QMessageBox.question',
+@patch('opal.core.ui.thememanager.QtWidgets.QMessageBox.question',
        return_value=QtWidgets.QMessageBox.StandardButton.Yes)
-@patch('openlp.core.ui.thememanager.translate')
+@patch('opal.core.ui.thememanager.translate')
 def test_over_write_message_box_yes(mocked_translate, mocked_qmessagebox_question, theme_manager: ThemeManager):
     """
     Test that theme_manager.over_write_message_box returns True when the user clicks yes.
@@ -380,9 +380,9 @@ def test_over_write_message_box_yes(mocked_translate, mocked_qmessagebox_questio
         defaultButton=ANY)
 
 
-@patch('openlp.core.ui.thememanager.QtWidgets.QMessageBox.question',
+@patch('opal.core.ui.thememanager.QtWidgets.QMessageBox.question',
        return_value=QtWidgets.QMessageBox.StandardButton.No)
-@patch('openlp.core.ui.thememanager.translate')
+@patch('opal.core.ui.thememanager.translate')
 def test_over_write_message_box_no(mocked_translate, mocked_qmessagebox_question, theme_manager: ThemeManager):
     """
     Test that theme_manager.over_write_message_box returns False when the user clicks no.
@@ -400,13 +400,13 @@ def test_over_write_message_box_no(mocked_translate, mocked_qmessagebox_question
         defaultButton=ANY)
 
 
-@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+@patch('opal.core.lib.theme.Theme.set_default_header_footer')
 def test_unzip_theme(mocked_theme_set_defaults, theme_manager: ThemeManager):
     """
     Test that unzipping of themes works
     """
     # GIVEN: A theme file, a output folder and some mocked out internal functions
-    with patch('openlp.core.ui.thememanager.critical_error_message_box') \
+    with patch('opal.core.ui.thememanager.critical_error_message_box') \
             as mocked_critical_error_message_box:
         theme_manager.update_preview_images = MagicMock()
         theme_manager.theme_path = Path(mkdtemp())
@@ -428,10 +428,10 @@ def test_unzip_theme_invalid_version(theme_manager: ThemeManager):
     Test that themes with invalid (< 2.0) or with no version attributes are rejected
     """
     # GIVEN: An instance of ThemeManager whilst mocking a theme that returns a theme with no version attribute
-    with patch('openlp.core.ui.thememanager.zipfile.ZipFile') as mocked_zip_file, \
-            patch('openlp.core.ui.thememanager.ElementTree.getroot') as mocked_getroot, \
-            patch('openlp.core.ui.thememanager.XML'), \
-            patch('openlp.core.ui.thememanager.critical_error_message_box') as mocked_critical_error_message_box:
+    with patch('opal.core.ui.thememanager.zipfile.ZipFile') as mocked_zip_file, \
+            patch('opal.core.ui.thememanager.ElementTree.getroot') as mocked_getroot, \
+            patch('opal.core.ui.thememanager.XML'), \
+            patch('opal.core.ui.thememanager.critical_error_message_box') as mocked_critical_error_message_box:
 
         mocked_zip_file.return_value = MagicMock(**{'namelist.return_value': [os.path.join('theme', 'theme.xml')]})
         mocked_getroot.return_value = MagicMock(**{'get.return_value': None})
@@ -461,8 +461,8 @@ def test_update_preview_images(theme_manager: ThemeManager):
     worker.quit = MagicMock()
     worker.quit.emit = MagicMock()
 
-    with patch('openlp.core.ui.thememanager.ThemeThumbnailRefreshWorker', return_value=worker) as mocked_worker, \
-            patch('openlp.core.ui.thememanager.run_thread') as mocked_run_thread:
+    with patch('opal.core.ui.thememanager.ThemeThumbnailRefreshWorker', return_value=worker) as mocked_worker, \
+            patch('opal.core.ui.thememanager.run_thread') as mocked_run_thread:
 
         # WHEN: ThemeManager.update_preview_images() is called
         theme_manager.update_preview_images()
@@ -520,8 +520,8 @@ def test_theme_manager_initialise(theme_manager):
     theme_manager.build_theme_path.assert_called_once_with()
 
 
-@patch('openlp.core.ui.thememanager.create_paths')
-@patch('openlp.core.ui.thememanager.AppLocation.get_section_data_path')
+@patch('opal.core.ui.thememanager.create_paths')
+@patch('opal.core.ui.thememanager.AppLocation.get_section_data_path')
 def test_build_theme_path(mocked_get_section_data_path, mocked_create_paths, theme_manager):
     """
     Test the thememanager build_theme_path
@@ -562,7 +562,7 @@ def test_theme_edit_request_focuses_existing_draft(theme_manager, action):
     form.windowState.return_value = QtCore.Qt.WindowState.WindowMinimized
     theme_manager.theme_form = form
     draft = form.theme
-    with patch('openlp.core.ui.thememanager.Theme') as new_theme:
+    with patch('opal.core.ui.thememanager.Theme') as new_theme:
         getattr(theme_manager, action)()
     assert form.theme is draft
     form.setWindowState.assert_called_once_with(QtCore.Qt.WindowState.WindowNoState)
@@ -572,8 +572,8 @@ def test_theme_edit_request_focuses_existing_draft(theme_manager, action):
     new_theme.assert_not_called()
 
 
-@patch('openlp.core.ui.themeform.ThemeForm._setup')
-@patch('openlp.core.ui.filerenameform.FileRenameForm._setup')
+@patch('opal.core.ui.themeform.ThemeForm._setup')
+@patch('opal.core.ui.filerenameform.FileRenameForm._setup')
 def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     """
     Test the functions of bootstrap_post_setup are called.
@@ -603,8 +603,8 @@ def test_bootstrap_post(mocked_rename_form, mocked_theme_form, theme_manager):
     theme_manager._regenerate_previews_with_progress_dialog.assert_not_called()
 
 
-@patch('openlp.core.lib.theme.Theme.set_default_header')
-@patch('openlp.core.lib.theme.Theme.set_default_footer')
+@patch('opal.core.lib.theme.Theme.set_default_header')
+@patch('opal.core.lib.theme.Theme.set_default_footer')
 def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, theme_manager):
     """Test that cloning the theme data works correctly"""
     # GIVEN: A theme manager, a theme (without a background source) and a new theme name
@@ -630,7 +630,7 @@ def test_clone_theme_data(mock_set_default_header, mock_set_default_footer, them
 
 
 @pytest.mark.parametrize('view_mode', [QtWidgets.QListView.ViewMode.ListMode, QtWidgets.QListView.ViewMode.IconMode])
-@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+@patch('opal.core.lib.theme.Theme.set_default_header_footer')
 def test_copy_theme_during_thumbnail_refresh_has_no_duplicates(mock_defaults, theme_manager, tmp_path, view_mode):
     """Finishing a thumbnail refresh during copying must not overlap theme-list reloads."""
     from PySide6 import QtCore, QtGui
@@ -661,10 +661,10 @@ def test_copy_theme_during_thumbnail_refresh_has_no_duplicates(mock_defaults, th
         return [path.relative_to(tmp_path) for path in tmp_path.glob('*/*.json')]
 
     theme_manager.generate_image = MagicMock(side_effect=generate_preview)
-    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+    with patch('opal.core.ui.thememanager.AppLocation.get_files',
                side_effect=find_theme_files) as get_files, \
-            patch('openlp.core.ui.thememanager.validate_thumb', side_effect=lambda *args: refresh_finished), \
-            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+            patch('opal.core.ui.thememanager.validate_thumb', side_effect=lambda *args: refresh_finished), \
+            patch('opal.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
         theme_manager.load_themes()
         theme_manager.theme_list_widget.setCurrentRow(0)
         refresh_finished = False
@@ -694,9 +694,9 @@ def test_load_themes_can_retry_after_error(theme_manager, tmp_path):
     theme_manager.theme_list_widget = ThemeViews(theme_manager)
     theme_manager._get_theme_data = MagicMock(side_effect=[ValueError('Invalid theme'), sentinel.original_theme])
     theme_manager._push_themes = MagicMock()
-    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[Path('Original.json')]), \
-            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
-            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+    with patch('opal.core.ui.thememanager.AppLocation.get_files', return_value=[Path('Original.json')]), \
+            patch('opal.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('opal.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
         with pytest.raises(ValueError, match='Invalid theme'):
             theme_manager.load_themes()
         theme_manager.load_themes()
@@ -706,8 +706,8 @@ def test_load_themes_can_retry_after_error(theme_manager, tmp_path):
     theme_manager._push_themes.assert_called_once_with()
 
 
-@patch('openlp.core.ui.thememanager.State')
-@patch('openlp.core.ui.thememanager.QtWidgets.QMessageBox.question',
+@patch('opal.core.ui.thememanager.State')
+@patch('opal.core.ui.thememanager.QtWidgets.QMessageBox.question',
        return_value=QtWidgets.QMessageBox.StandardButton.Yes)
 def test_on_delete_theme_deletes_selected_themes(mocked_question: MagicMock, mocked_state: MagicMock,
                                                  theme_manager: ThemeManager):
@@ -739,7 +739,7 @@ def test_on_delete_theme_deletes_selected_themes(mocked_question: MagicMock, moc
     theme_manager._push_themes.assert_called_once_with()
 
 
-@patch('openlp.core.ui.thememanager.critical_error_message_box')
+@patch('opal.core.ui.thememanager.critical_error_message_box')
 def test_on_delete_theme_blocks_default_theme(mocked_critical: MagicMock, theme_manager: ThemeManager):
     """
     Test that deleting the default theme is blocked.
@@ -781,10 +781,10 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
         updates.append((args, list(theme_manager._theme_list)))
 
     Registry().register_function('startup_progress', report)
-    with patch('openlp.core.ui.thememanager.AppLocation.get_files',
+    with patch('opal.core.ui.thememanager.AppLocation.get_files',
                return_value=[Path('b.json'), Path('missing.json'), Path('a.json')]), \
-            patch('openlp.core.ui.thememanager.validate_thumb', return_value=True), \
-            patch('openlp.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
+            patch('opal.core.ui.thememanager.validate_thumb', return_value=True), \
+            patch('opal.core.ui.thememanager.build_icon', return_value=QtGui.QIcon()):
         theme_manager.load_themes()
 
     assert updates == [
@@ -798,7 +798,7 @@ def test_load_themes_progress_counts_existing_files(theme_manager, tmp_path):
     theme_manager._push_themes.assert_called_once_with()
 
 
-@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+@patch('opal.core.lib.theme.Theme.set_default_header_footer')
 def test_install_builtin_themes(mock_defaults, theme_manager, tmp_path):
     """
     Test that the four bundled themes install with their fonts and embedded backgrounds intact.
@@ -830,7 +830,7 @@ def test_install_builtin_themes(mock_defaults, theme_manager, tmp_path):
         assert theme.font_main_color == ('#0E0E11' if name == 'Sans Light' else '#FFFFFF')
 
 
-@patch('openlp.core.lib.theme.Theme.set_default_header_footer')
+@patch('opal.core.lib.theme.Theme.set_default_header_footer')
 def test_install_builtin_themes_keeps_existing(mock_defaults, theme_manager, tmp_path):
     """
     Test that installing the built-in themes does not overwrite a theme the user has already edited.
@@ -858,7 +858,7 @@ def test_load_first_time_themes_defaults_to_opal(theme_manager):
     theme_manager._regenerate_previews_with_progress_dialog = MagicMock()
 
     # WHEN: The first time themes are loaded
-    with patch('openlp.core.ui.thememanager.AppLocation.get_files', return_value=[]):
+    with patch('opal.core.ui.thememanager.AppLocation.get_files', return_value=[]):
         theme_manager.load_first_time_themes()
 
     # THEN: Opal becomes the global theme

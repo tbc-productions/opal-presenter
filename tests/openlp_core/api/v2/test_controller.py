@@ -23,8 +23,8 @@ from unittest.mock import MagicMock, patch
 
 from flask.testing import FlaskClient
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
 def test_retrieve_live_items(flask_client: FlaskClient, registry: Registry, settings: Settings):
@@ -180,7 +180,7 @@ def test_controller_get_themes_retrieves_themes_list(flask_client: FlaskClient, 
     assert type(res) is list
 
 
-@patch('openlp.core.api.versions.v2.controller.image_to_data_uri')
+@patch('opal.core.api.versions.v2.controller.image_to_data_uri')
 def test_controller_get_themes_retrieves_themes_list_service(mocked_image_to_data_uri: MagicMock,
                                                              flask_client: FlaskClient, registry: Registry,
                                                              settings: Settings):

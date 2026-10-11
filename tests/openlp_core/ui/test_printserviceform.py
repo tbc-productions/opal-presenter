@@ -26,12 +26,12 @@ import pytest
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 import fluentqt
 
-from openlp.core.ui.printserviceform import PrintServiceForm, SERVICE_ICONS
-from openlp.core.lib import ItemCapabilities
-from openlp.core.lib.serviceprint import white_contrast
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.common.registry import Registry
+from opal.core.ui.printserviceform import PrintServiceForm, SERVICE_ICONS
+from opal.core.lib import ItemCapabilities
+from opal.core.lib.serviceprint import white_contrast
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.common.enum import ServiceItemType
+from opal.core.common.registry import Registry
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def print_form(settings, registry, qtbot, temp_folder):
     service_manager = MagicMock()
     service_manager.service_items = []
     registry.register('service_manager', service_manager)
-    with patch('openlp.core.ui.printserviceform.AppLocation.get_data_path', return_value=Path(temp_folder)):
+    with patch('opal.core.ui.printserviceform.AppLocation.get_data_path', return_value=Path(temp_folder)):
         form = PrintServiceForm()
         qtbot.addWidget(form)
         yield form

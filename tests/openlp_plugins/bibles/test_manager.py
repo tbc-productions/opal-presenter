@@ -24,7 +24,7 @@ This module contains tests for the manager submodule of the Bibles plugin.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.plugins.bibles.lib.manager import BibleManager
+from opal.plugins.bibles.lib.manager import BibleManager
 
 
 def test_delete_bible_by_file_path(settings):
@@ -33,7 +33,7 @@ def test_delete_bible_by_file_path(settings):
     """
     # GIVEN: An instance of BibleManager and a mocked bible
     with patch.object(BibleManager, 'reload_bibles'), \
-            patch('openlp.plugins.bibles.lib.manager.delete_file', return_value=True) as mocked_delete_file:
+            patch('opal.plugins.bibles.lib.manager.delete_file', return_value=True) as mocked_delete_file:
         instance = BibleManager(MagicMock())
         # We need to keep a reference to the mock for close_all as it gets set to None later on!
         mocked_close = MagicMock()
@@ -58,7 +58,7 @@ def test_delete_bible_by_name(settings):
     """
     # GIVEN: An instance of BibleManager and a mocked bible
     with patch.object(BibleManager, 'reload_bibles'), \
-            patch('openlp.plugins.bibles.lib.manager.delete_file', return_value=True) as mocked_delete_file:
+            patch('opal.plugins.bibles.lib.manager.delete_file', return_value=True) as mocked_delete_file:
         instance = BibleManager(MagicMock())
         # We need to keep a reference to the mock for close_all as it gets set to None later on!
         mocked_close = MagicMock()

@@ -19,9 +19,9 @@
 ##########################################################################
 from unittest.mock import MagicMock
 
-from openlp.core.state import State, MessageType
-from openlp.core.common.registry import Registry
-from openlp.core.lib.plugin import PluginStatus
+from opal.core.state import State, MessageType
+from opal.core.common.registry import Registry
+from opal.core.lib.plugin import PluginStatus
 
 
 """

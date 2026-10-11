@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui package.
+Package to test the opal.core.ui package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtTest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.filerenameform import FileRenameForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.filerenameform import FileRenameForm
 
 
 @pytest.fixture()
@@ -43,7 +43,7 @@ def test_window_title(form: FileRenameForm):
     Test the windowTitle of the FileRenameDialog
     """
     # GIVEN: A mocked FormDialog.exec() method
-    with patch('openlp.core.widgets.fluent.FormDialog.exec'):
+    with patch('opal.core.widgets.fluent.FormDialog.exec'):
 
         # WHEN: The form is executed with no args
         form.exec()
@@ -70,7 +70,7 @@ def test_line_edit_focus(form: FileRenameForm):
     Test that the file_name_edit setFocus has called with True when executed
     """
     # GIVEN: A mocked FormDialog.exec() method and mocked file_name_edit.setFocus() method.
-    with patch('openlp.core.widgets.fluent.FormDialog.exec'):
+    with patch('opal.core.widgets.fluent.FormDialog.exec'):
         mocked_set_focus = MagicMock()
         form.file_name_edit.setFocus = mocked_set_focus
 

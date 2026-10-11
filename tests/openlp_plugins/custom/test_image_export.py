@@ -3,12 +3,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
+from opal.plugins.custom.lib.mediaitem import CustomMediaItem
 
 
 @pytest.fixture
 def media_item(mock_settings):
-    with patch('openlp.core.lib.mediamanageritem.MediaManagerItem._setup'), \
+    with patch('opal.core.lib.mediamanageritem.MediaManagerItem._setup'), \
             patch.object(CustomMediaItem, 'setup_item'):
         yield CustomMediaItem(None, MagicMock())
 
@@ -16,9 +16,9 @@ def media_item(mock_settings):
 def test_cancel_does_not_render(media_item):
     media_item.list_view = MagicMock()
     media_item.list_view.selectedItems.return_value = [object()]
-    with patch('openlp.core.lib.pluginmanager.PluginManager.get_plugin_by_name'), \
-            patch('openlp.core.ui.folders.ChooseFolderForm') as chooser, \
-            patch('openlp.core.lib.slideimageexport.render_slide_images') as render:
+    with patch('opal.core.lib.pluginmanager.PluginManager.get_plugin_by_name'), \
+            patch('opal.core.ui.folders.ChooseFolderForm') as chooser, \
+            patch('opal.core.lib.slideimageexport.render_slide_images') as render:
         chooser.return_value.exec.return_value = 0
         media_item.on_save_to_image_library()
     render.assert_not_called()
@@ -40,10 +40,10 @@ def test_passes_folder_and_cleans_temporary_files(media_item):
         paths.append(path)
         return [(path, 'Welcome.png')]
 
-    with patch('openlp.core.lib.pluginmanager.PluginManager.get_plugin_by_name') as get_plugin, \
-            patch('openlp.core.ui.folders.ChooseFolderForm') as chooser, \
-            patch('openlp.core.ui.presentationexportdialog.ExportProgressDialog') as progress, \
-            patch('openlp.core.lib.slideimageexport.render_slide_images', side_effect=render):
+    with patch('opal.core.lib.pluginmanager.PluginManager.get_plugin_by_name') as get_plugin, \
+            patch('opal.core.ui.folders.ChooseFolderForm') as chooser, \
+            patch('opal.core.ui.presentationexportdialog.ExportProgressDialog') as progress, \
+            patch('opal.core.lib.slideimageexport.render_slide_images', side_effect=render):
         chooser.return_value.exec.return_value = 1
         folder = chooser.return_value.folder
         media_item.on_save_to_image_library()
@@ -56,9 +56,9 @@ def test_passes_folder_and_cleans_temporary_files(media_item):
 def test_requires_enabled_images_plugin(media_item):
     media_item.list_view = MagicMock()
     media_item.list_view.selectedItems.return_value = [object()]
-    with patch('openlp.core.lib.pluginmanager.PluginManager.get_plugin_by_name', return_value=None), \
-            patch('openlp.core.ui.folders.ChooseFolderForm') as chooser, \
-            patch('openlp.plugins.custom.lib.mediaitem.QtWidgets.QMessageBox.information') as message:
+    with patch('opal.core.lib.pluginmanager.PluginManager.get_plugin_by_name', return_value=None), \
+            patch('opal.core.ui.folders.ChooseFolderForm') as chooser, \
+            patch('opal.plugins.custom.lib.mediaitem.QtWidgets.QMessageBox.information') as message:
         media_item.on_save_to_image_library()
     chooser.assert_not_called()
     message.assert_called_once()

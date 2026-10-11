@@ -48,8 +48,8 @@ def test_udp_listen_add_duplicate(projector_manager, caplog):
     assert caplog.messages == log_entries, "Invalid log entries"
 
 
-@patch('openlp.core.projectors.manager.PJLinkUDP')
-@patch('openlp.core.projectors.manager.Registry')
+@patch('opal.core.projectors.manager.PJLinkUDP')
+@patch('opal.core.projectors.manager.Registry')
 def test_udp_listen_add_new(mock_registry, mock_udp, projector_manager, caplog):
     """
     Test adding new UDP port listener
@@ -88,7 +88,7 @@ def test_udp_listen_delete_missing(projector_manager, caplog):
     assert caplog.messages == log_entries, "Invalid log entries"
 
 
-@patch('openlp.core.projectors.manager.Registry')
+@patch('opal.core.projectors.manager.Registry')
 def test_udp_listen_delete_single(mock_registry, projector_manager, caplog):
     """
     Test deleting UDP listener

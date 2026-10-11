@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore
 
-from openlp.plugins.bibles.lib.importers.http import get_soup_for_bible_ref
+from opal.plugins.bibles.lib.importers.http import get_soup_for_bible_ref
 
 
 def test_download_keeps_gui_timers_running(qapp, registry):
@@ -24,8 +24,8 @@ def test_download_keeps_gui_timers_running(qapp, registry):
         release.set()
 
     QtCore.QTimer.singleShot(20, tick)
-    with patch('openlp.plugins.bibles.lib.importers.http.get_proxy_settings', return_value={}), \
-            patch('openlp.plugins.bibles.lib.importers.http.get_web_page', side_effect=download):
+    with patch('opal.plugins.bibles.lib.importers.http.get_proxy_settings', return_value={}), \
+            patch('opal.plugins.bibles.lib.importers.http.get_web_page', side_effect=download):
         soup = get_soup_for_bible_ref('https://example.com/bible')
     assert soup.get_text() == 'Genesis'
     assert download_threads and download_threads[0] != gui_thread
@@ -35,9 +35,9 @@ def test_download_keeps_gui_timers_running(qapp, registry):
 def test_download_failure_is_reported_on_gui_thread(qapp, registry):
     registry.register('application', MagicMock())
     error_threads = []
-    with patch('openlp.plugins.bibles.lib.importers.http.get_proxy_settings', return_value={}), \
-            patch('openlp.plugins.bibles.lib.importers.http.get_web_page', side_effect=ConnectionError), \
-            patch('openlp.plugins.bibles.lib.importers.http.send_error_message',
+    with patch('opal.plugins.bibles.lib.importers.http.get_proxy_settings', return_value={}), \
+            patch('opal.plugins.bibles.lib.importers.http.get_web_page', side_effect=ConnectionError), \
+            patch('opal.plugins.bibles.lib.importers.http.send_error_message',
                   side_effect=lambda error: error_threads.append((error, get_ident()))):
         assert get_soup_for_bible_ref('https://example.com/bible') is None
     assert error_threads == [('download', get_ident())]

@@ -23,7 +23,7 @@ This module contains tests for the PresentationManager song importer.
 """
 import pytest
 
-from openlp.core.common.platform import is_macosx
+from opal.core.common.platform import is_macosx
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 

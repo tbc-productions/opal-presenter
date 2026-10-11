@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.display.window package.
+Package to test the opal.core.display.window package.
 """
 import time
 import json
@@ -30,13 +30,13 @@ from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore
 
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.core.display.screens import Screen
-from openlp.core.display.window import TRANSITION_END_EVENT_NAME, DisplayWindow, DisplayWatcher
-from openlp.core.lib.theme import Theme
-from openlp.core.ui import HideMode
+from opal.core.common.enum import ServiceItemType
+from opal.core.common.platform import is_win
+from opal.core.common.registry import Registry
+from opal.core.display.screens import Screen
+from opal.core.display.window import TRANSITION_END_EVENT_NAME, DisplayWindow, DisplayWatcher
+from opal.core.lib.theme import Theme
+from opal.core.ui import HideMode
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def mock_geometry():
     mocked_screen.display_geometry = QtCore.QRect(10, 20, 400, 600)
     mocked_screenlist = MagicMock()
     mocked_screenlist.current = mocked_screen
-    screenlist_patcher = patch('openlp.core.lib.theme.ScreenList', return_value=mocked_screenlist)
+    screenlist_patcher = patch('opal.core.lib.theme.ScreenList', return_value=mocked_screenlist)
     screenlist_patcher.start()
     yield
     screenlist_patcher.stop()
@@ -67,9 +67,9 @@ def test_load_images_passes_fit_and_logo_colour(display_window_env, mock_setting
 
 @pytest.fixture
 def display_window_env():
-    box_layout_patcher = patch('openlp.core.display.window.QtWidgets.QVBoxLayout')
-    web_view_patcher = patch('openlp.core.display.webengine.WebEngineView')
-    web_view_schemes_patcher = patch('openlp.core.display.webengine.WebViewSchemes')
+    box_layout_patcher = patch('opal.core.display.window.QtWidgets.QVBoxLayout')
+    web_view_patcher = patch('opal.core.display.webengine.WebEngineView')
+    web_view_schemes_patcher = patch('opal.core.display.webengine.WebViewSchemes')
     box_layout_patcher.start()
     web_view_patcher.start()
     web_view_schemes_patcher.start()
@@ -126,7 +126,7 @@ def test_live_display_stacking_follows_setting(always_on_top, display_window_env
 
 
 @pytest.mark.parametrize('always_on_top, expected_method', [(False, 'show'), (True, 'showFullScreen')])
-@patch('openlp.core.display.window.is_macosx', return_value=False)
+@patch('opal.core.display.window.is_macosx', return_value=False)
 def test_auto_show_respects_stacking_setting(mocked_is_macosx, always_on_top, expected_method,
                                              display_window_env, mock_settings):
     """Normal stacking uses a screen-sized window instead of a native fullscreen window."""
@@ -159,7 +159,7 @@ def test_live_geometry_uses_screen_configuration_even_with_main_window_visible(d
     main_window.frameGeometry.assert_not_called()
 
 
-@patch('openlp.core.display.window.is_macosx')
+@patch('opal.core.display.window.is_macosx')
 def test_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, display_window_env):
     """
     Test that on macOS, the Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow attribute is set
@@ -174,7 +174,7 @@ def test_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, display
     assert display_window.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow) is True
 
 
-@patch('openlp.core.display.window.is_macosx')
+@patch('opal.core.display.window.is_macosx')
 def test_not_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, display_window_env):
     """
     Test that on systems other than macOS, the Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow attribute is NOT set
@@ -189,7 +189,7 @@ def test_not_macos_toolwindow_attribute_set(mocked_is_macosx, mock_settings, dis
     assert display_window.testAttribute(QtCore.Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow) is False
 
 
-@patch('openlp.core.display.window.is_macosx')
+@patch('opal.core.display.window.is_macosx')
 def test_auto_show_macos_always_uses_show(mocked_is_macosx, display_window_env, mock_settings):
     """
     Test that macOS always uses windowed show mode, never native fullscreen.
@@ -335,8 +335,8 @@ def test_set_display_custom_url_works_http(registry, display_window_env, mock_se
     test_path = 'http://localhost:4200?testing=true'
     registry.register('display_custom_url', test_path)
 
-    with patch('openlp.core.display.window.DisplayWindow.set_url') as mocked_set_url, \
-         patch('openlp.core.display.window.QtCore.QUrl') as mocked_qurl:
+    with patch('opal.core.display.window.DisplayWindow.set_url') as mocked_set_url, \
+         patch('opal.core.display.window.QtCore.QUrl') as mocked_qurl:
         mocked_qurl.side_effect = lambda input: input
         # WHEN: creating a DisplayWindow
         DisplayWindow()
@@ -566,12 +566,12 @@ def test_after_loaded_callback(display_window_env, mock_settings, registry):
     mocked_after_loaded_callback.assert_called_once()
 
 
-@patch('openlp.core.display.window.wait_for')
+@patch('opal.core.display.window.wait_for')
 def test_preview_frame_logs_do_not_flood_debug_output(mocked_wait_for, display_window_env, mock_settings):
     """Routine capture payloads stay quiet while display control actions remain logged."""
     window = DisplayWindow(embedded=True)
     window.webview = MagicMock()
-    with patch('openlp.core.display.window.log.debug') as debug:
+    with patch('opal.core.display.window.log.debug') as debug:
         for _ in range(3):
             window.set_single_image_data('#000', 'jpeg data')
         debug.assert_not_called()
@@ -580,7 +580,7 @@ def test_preview_frame_logs_do_not_flood_debug_output(mocked_wait_for, display_w
     assert window.webview.page().runJavaScript.call_count == 4
 
 
-@patch('openlp.core.display.window.wait_for')
+@patch('opal.core.display.window.wait_for')
 def test_run_in_display_no_sync_no_wait(mocked_wait_for, display_window_env, mock_settings):
     """
     test a script is run on the webview
@@ -598,7 +598,7 @@ def test_run_in_display_no_sync_no_wait(mocked_wait_for, display_window_env, moc
     assert mocked_wait_for.call_count == 1, 'wait_for should have only been called once'
 
 
-@patch('openlp.core.display.window.wait_for')
+@patch('opal.core.display.window.wait_for')
 def test_run_in_display_sync_no_wait(mocked_wait_for, display_window_env, mock_settings):
     """
     test a synced script is run on the webview and immediately returns a result
@@ -624,7 +624,7 @@ def test_run_in_display_sync_no_wait(mocked_wait_for, display_window_env, mock_s
     webengine_page.runJavaScript.assert_called_once()
 
 
-@patch('openlp.core.display.window.is_win')
+@patch('opal.core.display.window.is_win')
 def test_fix_font_bold_windows(mocked_is_win, display_window_env, mock_settings):
     """
     Test that on Windows, fonts that end with "Bold" are handled
@@ -643,7 +643,7 @@ def test_fix_font_bold_windows(mocked_is_win, display_window_env, mock_settings)
     assert result == 'Arial Rounded MT'
 
 
-@patch('openlp.core.display.window.is_win')
+@patch('opal.core.display.window.is_win')
 def test_fix_font_bold_not_windows(mocked_is_win, display_window_env, mock_settings):
     """
     Test that on NOT Windows, fonts that end with "Bold" are ignored
@@ -662,7 +662,7 @@ def test_fix_font_bold_not_windows(mocked_is_win, display_window_env, mock_setti
     assert result == 'Arial Rounded MT Bold'
 
 
-@patch('openlp.core.display.window.is_win')
+@patch('opal.core.display.window.is_win')
 def test_fix_font_foundry(mocked_is_win, display_window_env, mock_settings):
     """
     Test that a font with a foundry name in it has the foundry removed
@@ -735,7 +735,7 @@ def test_video_background_uses_browser_playback_copy_and_retains_saved_original(
     theme.background_type = 'video'
     original = theme.background_filename = Path('/tmp/original.mp4')
     playback = Path('/tmp/playback.webm')
-    with patch('openlp.core.lib.videoplayback.video_playback_path', return_value=playback):
+    with patch('opal.core.lib.videoplayback.video_playback_path', return_value=playback):
         window.set_theme(theme, service_item_type=ServiceItemType.Text)
     rendered = json.loads(window.run_in_display.call_args.kwargs['raw_parameters'])
     assert rendered['background_type'] == 'video'
@@ -768,8 +768,8 @@ def test_set_theme_not_display_live(display_window_env, mock_settings, mock_geom
     display_window.run_in_display.assert_called_once_with('setTheme', raw_parameters=result_theme, is_sync=False)
 
 
-@patch('openlp.core.display.window.Registry.execute')
-@patch('openlp.core.display.window.ScreenList')
+@patch('opal.core.display.window.Registry.execute')
+@patch('opal.core.display.window.ScreenList')
 def test_show_display(mocked_screenlist: MagicMock, mocked_registry_execute: MagicMock, display_window_env,
                       mock_settings: MagicMock, registry: Registry):
     """
@@ -791,7 +791,7 @@ def test_show_display(mocked_screenlist: MagicMock, mocked_registry_execute: Mag
     display_window.run_in_display.assert_called_once_with('show')
 
 
-@patch('openlp.core.display.window.ScreenList')
+@patch('opal.core.display.window.ScreenList')
 def test_show_display_no_display(mocked_screenlist, display_window_env, mock_settings):
     """
     Test show_display function when no displays are available
@@ -1013,7 +1013,7 @@ def test_logo_cover_raises_live_output_before_fading(display_window_env, mock_se
     display_window.setVisible = calls.visible
     display_window.raise_ = calls.raise_window
     display_window.run_in_display = calls.render
-    with patch('openlp.core.display.window.ScreenList') as screens:
+    with patch('opal.core.display.window.ScreenList') as screens:
         screens.return_value.__len__.return_value = 2
         display_window.hide_display(HideMode.Logo)
 
@@ -1203,7 +1203,7 @@ def test_hide_transparent_to_screen(display_window_env, mock_settings):
     display_window.setVisible.assert_called_once_with(False)
 
 
-@patch('openlp.core.display.window.ScreenList')
+@patch('opal.core.display.window.ScreenList')
 def test_hide_display_no_display(mocked_screenlist, display_window_env, mock_settings):
     """
     Test show_display function when no displays are available
@@ -1359,7 +1359,7 @@ def test_run_in_display_dumps_json(display_window_env, mock_settings):
                                                            '[1, 2, "test"], {"test1": "test2"})', False)
 
 
-@patch('openlp.core.display.window.is_macosx', return_value=True)
+@patch('opal.core.display.window.is_macosx', return_value=True)
 def test_embedded_preview_has_no_native_tool_or_transparency_flags(mocked_is_macosx, display_window_env, mock_settings):
     """Embed before WebEngine starts, rather than converting an existing native tool window."""
     from PySide6 import QtWidgets

@@ -24,9 +24,9 @@ This module contains tests for the lib submodule of the Images plugin.
 import pytest
 from unittest.mock import MagicMock
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.enum import ImageThemeMode
-from openlp.plugins.images.lib.imagetab import ImageTab
+from opal.core.common.registry import Registry
+from opal.core.common.enum import ImageThemeMode
+from opal.plugins.images.lib.imagetab import ImageTab
 
 
 @pytest.fixture()

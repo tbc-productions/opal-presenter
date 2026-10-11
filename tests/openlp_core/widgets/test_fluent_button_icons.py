@@ -3,10 +3,10 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
-from openlp.core.app import OpenLP
-from openlp.core.ui.fluenticons import _icon_font, fluent_icon
-from openlp.core.widgets import fluent
-from openlp.core.widgets.toolbar import OpenLPToolbar
+from opal.core.app import OpenLP
+from opal.core.ui.fluenticons import _icon_font, fluent_icon
+from opal.core.widgets import fluent
+from opal.core.widgets.toolbar import OpenLPToolbar
 
 
 @pytest.fixture(scope='session')

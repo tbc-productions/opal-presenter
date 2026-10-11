@@ -19,17 +19,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.firsttimeform package.
+Package to test the opal.core.ui.firsttimeform package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtTest
-from openlp.core.common.registry import Registry
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.ui.firsttimeform import FirstTimeForm
-from openlp.core.ui.firsttimewizard import FirstTimePage
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.common.registry import Registry
+from opal.core.lib.plugin import PluginStatus
+from opal.core.ui.firsttimeform import FirstTimeForm
+from opal.core.ui.firsttimewizard import FirstTimePage
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture
@@ -173,7 +173,7 @@ def test_keyboard_setup_navigation(wizard, qtbot):
 
 
 def test_setup_display_fits_and_features_scroll_below_heading(wizard, qtbot):
-    from openlp.core.display.screens import Screen
+    from opal.core.display.screens import Screen
     widget = wizard.screen_selection_widget
     widget.screens = [Screen(0, QtCore.QRect(0, 0, 1920, 1080), is_primary=True, is_display=True)]
     widget.load()
@@ -206,7 +206,7 @@ def test_backup_field_inline_clear_and_open(wizard, qtbot, tmp_path):
     clear = field.findChild(QtWidgets.QWidget, 'fluentLineEditClearButton')
     assert not clear.isVisible()
     path = tmp_path / 'backup.conf'
-    with patch('openlp.core.widgets.dialogs.FileDialog.getOpenFileName', return_value=(path, '')):
+    with patch('opal.core.widgets.dialogs.FileDialog.getOpenFileName', return_value=(path, '')):
         QtTest.QTest.mouseClick(page.browse_button, QtCore.Qt.MouseButton.LeftButton)
     field.setFocus()
     qtbot.waitUntil(clear.isVisible)
@@ -253,7 +253,7 @@ def test_opal_import_source_options(wizard, qtbot, tmp_path):
     assert opal_page.opal_library_edit.isEnabled()
     (tmp_path / 'library').mkdir()
     opal_page.opal_library_edit.setText(str(tmp_path / 'library'))
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library', return_value=tmp_path / 'copy'), \
+    with patch('opal.core.ui.firsttimeform.copy_opal_library', return_value=tmp_path / 'copy'), \
             patch.object(QtWidgets.QWizard, 'accept') as opal_accept:
         wizard.accept()
     opal_accept.assert_called_once()
@@ -273,10 +273,10 @@ def test_opal_library_folder_picker(wizard, qtbot, tmp_path):
         wizard.next()
     opal_page = wizard.import_settings_page
     opal_page.opal_source_combo.setCurrentIndex(1)
-    with patch('openlp.core.widgets.dialogs.FileDialog.getExistingDirectory', return_value=tmp_path):
+    with patch('opal.core.widgets.dialogs.FileDialog.getExistingDirectory', return_value=tmp_path):
         QtTest.QTest.mouseClick(opal_page.opal_library_button, QtCore.Qt.MouseButton.LeftButton)
     assert opal_page.opal_library_edit.text() == str(tmp_path)
-    with patch('openlp.core.widgets.dialogs.FileDialog.getExistingDirectory', return_value=None):
+    with patch('opal.core.widgets.dialogs.FileDialog.getExistingDirectory', return_value=None):
         QtTest.QTest.mouseClick(opal_page.opal_library_button, QtCore.Qt.MouseButton.LeftButton)
     assert opal_page.opal_library_edit.text() == str(tmp_path)
 
@@ -303,7 +303,7 @@ def test_opal_finish_requires_selected_import_path(wizard, qtbot, tmp_path, opal
     assert not opal_page.isComplete()
     assert not opal_finish.isEnabled()
     with patch.object(QtWidgets.QWizard, 'accept') as opal_accept, \
-            patch('openlp.core.ui.firsttimeform.copy_opal_library') as opal_copy:
+            patch('opal.core.ui.firsttimeform.copy_opal_library') as opal_copy:
         qtbot.mouseClick(opal_finish, QtCore.Qt.MouseButton.LeftButton)
         QtTest.QTest.keyClick(opal_finish, QtCore.Qt.Key.Key_Return)
         wizard.accept()
@@ -352,7 +352,7 @@ def test_opal_finish_rechecks_removed_import_path(wizard, qtbot, tmp_path, opal_
     assert opal_finish.isEnabled()
     opal_path.unlink() if opal_settings_selected else opal_path.rmdir()
     with patch.object(QtWidgets.QWizard, 'accept') as opal_accept, \
-            patch('openlp.core.ui.firsttimeform.copy_opal_library') as opal_copy:
+            patch('opal.core.ui.firsttimeform.copy_opal_library') as opal_copy:
         qtbot.mouseClick(opal_finish, QtCore.Qt.MouseButton.LeftButton)
     opal_accept.assert_not_called()
     opal_copy.assert_not_called()
@@ -367,7 +367,7 @@ def test_opal_none_ignores_hidden_import_fields(wizard, tmp_path, opal_import_no
     opal_page.opal_library_edit.setText(str(tmp_path / 'missing-library'))
     opal_page.file_edit.setText(str(tmp_path / 'missing-settings'))
     opal_page.opal_source_combo.setCurrentIndex(0)
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library') as opal_copy, \
+    with patch('opal.core.ui.firsttimeform.copy_opal_library') as opal_copy, \
             patch.object(QtWidgets.QWizard, 'accept') as opal_accept:
         wizard.accept()
     opal_accept.assert_called_once()
@@ -390,8 +390,8 @@ def test_opal_library_import_on_finish(wizard, tmp_path, opal_rerun, opal_import
     wizard.has_run_wizard = opal_rerun
     wizard.import_settings_page.opal_source_combo.setCurrentIndex(2)
     wizard.import_settings_page.opal_library_edit.setText(str(opal_source))
-    with patch('openlp.core.ui.firsttimeform.AppLocation.get_directory', return_value=tmp_path / 'opal/data'), \
-            patch('openlp.core.ui.firsttimeform.AppLocation.get_data_path', return_value=tmp_path / 'current'), \
+    with patch('opal.core.ui.firsttimeform.AppLocation.get_directory', return_value=tmp_path / 'opal/data'), \
+            patch('opal.core.ui.firsttimeform.AppLocation.get_data_path', return_value=tmp_path / 'current'), \
             patch.object(QtWidgets.QWizard, 'accept') as opal_accept:
         wizard.accept()
     opal_accept.assert_called_once()
@@ -434,7 +434,7 @@ def test_opal_failed_import_can_be_corrected(wizard, qtbot, tmp_path, opal_impor
     assert wizard.currentId() == FirstTimePage.ImportSettings
     (tmp_path / 'corrected').mkdir()
     opal_page.opal_library_edit.setText(str(tmp_path / 'corrected'))
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library', return_value=tmp_path / 'copy'):
+    with patch('opal.core.ui.firsttimeform.copy_opal_library', return_value=tmp_path / 'copy'):
         opal_finish.setFocus()
         QtTest.QTest.keyClick(opal_finish, QtCore.Qt.Key.Key_Return)
     assert wizard.result() == QtWidgets.QDialog.DialogCode.Accepted
@@ -452,7 +452,7 @@ def test_opal_failed_settings_import_ignores_unselected_library(wizard, tmp_path
     wizard.import_settings_page.opal_library_edit.setText(str(tmp_path / 'source'))
     wizard.import_settings_page.file_edit.setText(str(opal_settings))
     wizard.settings.import_settings.return_value = False
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library') as opal_copy, \
+    with patch('opal.core.ui.firsttimeform.copy_opal_library') as opal_copy, \
             patch.object(QtWidgets.QMessageBox, 'critical'), patch.object(QtWidgets.QWizard, 'accept') as opal_accept:
         wizard.accept()
     opal_accept.assert_not_called()
@@ -465,7 +465,7 @@ def test_opal_failed_settings_import_ignores_unselected_library(wizard, tmp_path
 def test_opal_cancel_does_not_copy(wizard, tmp_path):
     wizard.import_settings_page.opal_source_combo.setCurrentIndex(1)
     wizard.import_settings_page.opal_library_edit.setText(str(tmp_path))
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library') as opal_copy:
+    with patch('opal.core.ui.firsttimeform.copy_opal_library') as opal_copy:
         wizard.reject()
     opal_copy.assert_not_called()
 
@@ -484,8 +484,8 @@ def test_opal_import_uses_only_selected_card(wizard, tmp_path, opal_settings_sel
     wizard.import_settings_page.file_edit.setText(str(opal_settings))
 
     wizard.settings.import_settings.return_value = True
-    with patch('openlp.core.ui.firsttimeform.copy_opal_library', return_value=opal_library) as opal_copy, \
-            patch('openlp.core.ui.firsttimeform.AppLocation.get_data_path', return_value=tmp_path / 'current'), \
+    with patch('opal.core.ui.firsttimeform.copy_opal_library', return_value=opal_library) as opal_copy, \
+            patch('opal.core.ui.firsttimeform.AppLocation.get_data_path', return_value=tmp_path / 'current'), \
             patch.object(QtWidgets.QWizard, 'accept') as opal_accept:
         wizard.accept()
     opal_accept.assert_called_once()
@@ -533,7 +533,7 @@ def test_opal_import_keyboard_and_narrow_host(wizard, qtbot):
 @pytest.mark.parametrize('opal_missing', [False, True])
 def test_opal_native_settings_copy_files(
         settings, qtbot, tmp_path, opal_missing, opal_import_notice):
-    from openlp.core.display.screens import Screen
+    from opal.core.display.screens import Screen
     opal_external = tmp_path / 'video.mp4'
     if not opal_missing:
         opal_external.write_bytes(b'original video')
@@ -556,7 +556,7 @@ def test_opal_native_settings_copy_files(
     opal_wizard.import_settings_page.opal_settings_radio.setChecked(True)
     opal_wizard.import_settings_page.file_edit.setText(str(opal_backup))
     opal_wizard.import_settings_page.opal_library_edit.setText(str(tmp_path / 'unselected-library'))
-    with patch('openlp.core.ui.firsttimeform.AppLocation.get_directory', return_value=tmp_path / 'opal/data'), \
+    with patch('opal.core.ui.firsttimeform.AppLocation.get_directory', return_value=tmp_path / 'opal/data'), \
             patch.object(QtWidgets.QWizard, 'accept') as opal_accept, patch.object(QtWidgets.QMessageBox, 'critical'):
         opal_wizard.accept()
     if opal_missing:

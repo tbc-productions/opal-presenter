@@ -26,8 +26,8 @@ from unittest.mock import MagicMock, call, patch
 
 from lxml import objectify
 
-from openlp.plugins.bibles.lib.bibleimport import BibleImport
-from openlp.plugins.bibles.lib.importers.opensong import OpenSongBible, get_text, parse_chapter_number
+from opal.plugins.bibles.lib.bibleimport import BibleImport
+from opal.plugins.bibles.lib.importers.opensong import OpenSongBible, get_text, parse_chapter_number
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
@@ -37,7 +37,7 @@ TEST_PATH = RESOURCE_PATH / 'bibles'
 
 @pytest.fixture
 def manager():
-    db_man = patch('openlp.plugins.bibles.lib.db.DBManager')
+    db_man = patch('opal.plugins.bibles.lib.db.DBManager')
     yield db_man.start()
     db_man.stop()
 
@@ -251,7 +251,7 @@ def test_process_chapters_stop_import(manager, mock_settings):
     assert importer.parse_chapter_number.called is False
 
 
-@patch('openlp.plugins.bibles.lib.importers.opensong.parse_chapter_number', **{'side_effect': [1, 2]})
+@patch('opal.plugins.bibles.lib.importers.opensong.parse_chapter_number', **{'side_effect': [1, 2]})
 def test_process_chapters_completes(mocked_parse_chapter_number, manager, mock_settings):
     """
     Test process_chapters when it completes
@@ -304,7 +304,7 @@ def test_process_verses_completes(manager, mock_settings):
     """
     Test process_verses when it completes
     """
-    with patch('openlp.plugins.bibles.lib.importers.opensong.get_text',
+    with patch('opal.plugins.bibles.lib.importers.opensong.get_text',
                **{'side_effect': ['Verse1 Text', 'Verse2 Text']}) as mocked_get_text, \
             patch.object(OpenSongBible, 'parse_verse_number',
                          **{'side_effect': [1, 2]}) as mocked_parse_verse_number:
@@ -401,7 +401,7 @@ def test_file_import(manager, mock_settings):
     #       get_book_ref_id_by_name, create_verse, create_book, session and get_language.
     test_data = load_external_result_data(TEST_PATH / 'dk1933.json')
     bible_file = 'opensong-dk1933.xml'
-    with patch('openlp.plugins.bibles.lib.importers.opensong.OpenSongBible.application'):
+    with patch('opal.plugins.bibles.lib.importers.opensong.OpenSongBible.application'):
         mocked_manager = MagicMock()
         mocked_import_wizard = MagicMock()
         importer = OpenSongBible(mocked_manager, path='.', name='.', file_path=None)

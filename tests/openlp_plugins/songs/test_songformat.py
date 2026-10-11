@@ -21,7 +21,7 @@
 """
 This module contains tests for the SongFormat class
 """
-from openlp.plugins.songs.lib.importer import SongFormat
+from opal.plugins.songs.lib.importer import SongFormat
 
 
 def test_get_format_list():

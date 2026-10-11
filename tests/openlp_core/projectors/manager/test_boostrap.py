@@ -22,14 +22,14 @@
 Test ProjectorManager.bootstrap_* methods
 """
 import logging
-import openlp.core.projectors.manager
+import opal.core.projectors.manager
 
 from unittest.mock import DEFAULT, MagicMock, patch
 
-test_module = openlp.core.projectors.manager.__name__
+test_module = opal.core.projectors.manager.__name__
 
 
-@patch('openlp.core.projectors.manager.ProjectorDB')
+@patch('opal.core.projectors.manager.ProjectorDB')
 def test_bootstrap_initialise(mock_db, projector_manager, caplog):
     """
     Test ProjectorManager initializes with existing ProjectorDB instance
@@ -53,7 +53,7 @@ def test_bootstrap_initialise(mock_db, projector_manager, caplog):
         mock_db.assert_not_called()
 
 
-@patch('openlp.core.projectors.manager.ProjectorDB')
+@patch('opal.core.projectors.manager.ProjectorDB')
 def test_bootstrap_initialise_nodb(mock_db, projector_manager_nodb, caplog):
     """
     Test ProjectorManager initializes with a new ProjectorDB instance
@@ -77,8 +77,8 @@ def test_bootstrap_initialise_nodb(mock_db, projector_manager_nodb, caplog):
         mock_db.assert_called_once()
 
 
-@patch('openlp.core.projectors.manager.ProjectorEditForm')
-@patch('openlp.core.projectors.manager.QtCore.QTimer')
+@patch('opal.core.projectors.manager.ProjectorEditForm')
+@patch('opal.core.projectors.manager.QtCore.QTimer')
 def test_bootstrap_post_set_up_autostart_false(mock_timer, mocked_edit, projector_manager, settings, caplog):
     """
     Test post-initialize calls proper setups
@@ -112,8 +112,8 @@ def test_bootstrap_post_set_up_autostart_false(mock_timer, mocked_edit, projecto
         assert caplog.record_tuples == logs, 'Invalid log entries'
 
 
-@patch('openlp.core.projectors.manager.ProjectorEditForm')
-@patch('openlp.core.projectors.manager.QtCore.QTimer')
+@patch('opal.core.projectors.manager.ProjectorEditForm')
+@patch('opal.core.projectors.manager.QtCore.QTimer')
 def test_bootstrap_post_set_up_autostart_true(mock_timer, mocked_edit, projector_manager, settings, caplog):
     """
     Test post-initialize calls proper setups
@@ -152,8 +152,8 @@ def test_bootstrap_post_set_up_autostart_true(mock_timer, mocked_edit, projector
 def test_disabled_projector_does_not_load_database_or_connections(projector_manager_nodb, registry):
     """Disabling prevents database creation, projector connections and UDP listeners."""
     registry.set_flag('projector_disabled', True)
-    with patch('openlp.core.projectors.manager.ProjectorDB') as database, \
-            patch('openlp.core.projectors.manager.ProjectorEditForm') as edit_form, \
+    with patch('opal.core.projectors.manager.ProjectorDB') as database, \
+            patch('opal.core.projectors.manager.ProjectorEditForm') as edit_form, \
             patch.object(projector_manager_nodb, '_load_projectors') as load:
         projector_manager_nodb.bootstrap_initialise()
         projector_manager_nodb.bootstrap_post_set_up()

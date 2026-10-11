@@ -5,7 +5,7 @@ import zipfile
 
 import pytest
 
-from openlp.core.lib.nativefile import document, read_document, read_manifest, service_payload, write_manifest
+from opal.core.lib.nativefile import document, read_document, read_manifest, service_payload, write_manifest
 
 
 def test_native_package_round_trip():
@@ -45,7 +45,7 @@ def test_legacy_import_requires_explicit_fallback():
 
 
 def test_atomic_package_failure_preserves_destination(tmp_path):
-    from openlp.core.lib.itemexport import export_archive
+    from opal.core.lib.itemexport import export_archive
     destination = tmp_path / 'existing.opal-song'
     destination.write_bytes(b'existing document')
     with pytest.raises(OSError):
@@ -58,7 +58,7 @@ def test_atomic_package_failure_preserves_destination(tmp_path):
 
 def test_plain_openlyrics_omits_extensions_and_assets(tmp_path):
     from lxml import etree
-    from openlp.core.lib.itemexport import write_xml_package
+    from opal.core.lib.itemexport import write_xml_package
     xml = ('<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.9">'
            '<properties><titles><title>Grace</title></titles></properties>'
            '<lyrics><verse name="v1"><lines><chord name="G"/>Amazing grace</lines></verse></lyrics>'
@@ -80,7 +80,7 @@ def test_plain_openlyrics_omits_extensions_and_assets(tmp_path):
                           '<lyrics><verse name="v1"><lines>Welcome</lines></verse></lyrics></song>'),
     ('slides', '.opal-slides', '<song><title>Welcome</title><lyrics><verse>Welcome</verse></lyrics></song>')])
 def test_native_xml_round_trip_and_type_validation(tmp_path, file_type, suffix, xml):
-    from openlp.core.lib.itemexport import read_xml_package, write_xml_package
+    from opal.core.lib.itemexport import read_xml_package, write_xml_package
     path = tmp_path / ('Welcome' + suffix)
     write_xml_package(path, xml)
     original = path.read_bytes()
@@ -95,10 +95,10 @@ def test_native_xml_round_trip_and_type_validation(tmp_path, file_type, suffix, 
 @pytest.mark.parametrize('lite', [False, True])
 def test_native_service_load_preserves_metadata(tmp_path, lite):
     from unittest.mock import MagicMock, patch
-    from openlp.core.lib.itemexport import export_archive
-    from openlp.core.lib.serviceitem import ServiceItem
-    from openlp.core.ui.servicemanager import ServiceLoadWorker
-    with patch('openlp.core.lib.serviceitem.UiIcons'):
+    from opal.core.lib.itemexport import export_archive
+    from opal.core.lib.serviceitem import ServiceItem
+    from opal.core.ui.servicemanager import ServiceLoadWorker
+    with patch('opal.core.lib.serviceitem.UiIcons'):
         item = ServiceItem()
         item.title, item.name = 'Welcome', 'custom'
         item.add_from_text('Welcome', 'v1')
@@ -122,7 +122,7 @@ def test_native_service_load_preserves_metadata(tmp_path, lite):
 
 def test_malformed_service_rejected_before_media_extraction(tmp_path):
     from unittest.mock import MagicMock
-    from openlp.core.ui.servicemanager import ServiceLoadWorker
+    from opal.core.ui.servicemanager import ServiceLoadWorker
     path = tmp_path / 'Bad.opal-service'
     with zipfile.ZipFile(path, 'w') as archive:
         write_manifest(archive, 'service', 'service.json')
@@ -139,7 +139,7 @@ def test_malformed_service_rejected_before_media_extraction(tmp_path):
 @pytest.mark.parametrize('change', [{'data': [{}]}, {'header': {'type': 'unknown'}},
                                    {'header': {'capabilities': None}}])
 def test_incomplete_service_slide_is_rejected(change):
-    from openlp.core.lib.nativefile import validate_service
+    from opal.core.lib.nativefile import validate_service
     value = {'header': {'title': 'Welcome', 'name': 'custom', 'type': 1, 'theme': None, 'footer': [],
                         'audit': '', 'notes': '', 'from_plugin': False, 'capabilities': []},
              'data': [{'raw_slide': 'Welcome', 'verseTag': 'v1'}]}

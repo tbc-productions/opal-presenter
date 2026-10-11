@@ -7,8 +7,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from openlp.plugins.images.lib.db import Base, Folder, Item
-from openlp.plugins.images.lib.mediaitem import ImageMediaItem
+from opal.plugins.images.lib.db import Base, Folder, Item
+from opal.plugins.images.lib.mediaitem import ImageMediaItem
 
 
 @pytest.mark.parametrize('folder_kind', ['none', 'existing', 'new'])
@@ -30,7 +30,7 @@ def test_generated_images_survive_source_cleanup_and_keep_names(tmp_path, folder
                                   _insert_saved_items=MagicMock())
         source = tmp_path / 'Welcome.png'
         source.write_bytes(b'identical image bytes')
-        with patch('openlp.plugins.images.lib.mediaitem.AppLocation.get_section_data_path', return_value=tmp_path):
+        with patch('opal.plugins.images.lib.mediaitem.AppLocation.get_section_data_path', return_value=tmp_path):
             # Identical content is intentional; numbering represents the slide sequence.
             ImageMediaItem.add_generated_images(library, [(source, 'Welcome.png'), (source, 'Welcome (2).png')], folder)
             ImageMediaItem.add_generated_images(library, [(source, 'Welcome.png')], folder)
@@ -49,7 +49,7 @@ def test_database_failure_removes_generated_files(tmp_path):
     source.write_bytes(b'image')
     library = SimpleNamespace(settings_section='images', manager=MagicMock(), _insert_saved_items=MagicMock())
     library.manager.save_objects.return_value = False
-    with patch('openlp.plugins.images.lib.mediaitem.AppLocation.get_section_data_path', return_value=tmp_path):
+    with patch('opal.plugins.images.lib.mediaitem.AppLocation.get_section_data_path', return_value=tmp_path):
         with pytest.raises(OSError, match='save the images'):
             ImageMediaItem.add_generated_images(library, [(source, 'Welcome.png')])
     assert list((tmp_path / 'library').iterdir()) == []

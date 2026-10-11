@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.theme package.
+Package to test the opal.core.lib.theme package.
 """
 import pytest
 import json
@@ -27,7 +27,7 @@ from PySide6 import QtCore
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.lib.theme import BackgroundType, BackgroundGradientType, TransitionType, TransitionSpeed, Theme
+from opal.core.lib.theme import BackgroundType, BackgroundGradientType, TransitionType, TransitionSpeed, Theme
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def mock_geometry():
     mocked_screen.display_geometry = QtCore.QRect(10, 20, 400, 600)
     mocked_screenlist = MagicMock()
     mocked_screenlist.current = mocked_screen
-    screenlist_patcher = patch('openlp.core.lib.theme.ScreenList', return_value=mocked_screenlist)
+    screenlist_patcher = patch('opal.core.lib.theme.ScreenList', return_value=mocked_screenlist)
     screenlist_patcher.start()
     yield
     screenlist_patcher.stop()
@@ -371,7 +371,7 @@ def test_theme_layout_and_typography_follow_output_resolution(mock_geometry, wid
                              ('letter_adjustment', -1)):
             setattr(theme, f'font_{area}_{field}', value)
     saved = theme.export_theme()
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
         theme.set_default_header_footer()
         once = theme.export_theme()
@@ -438,7 +438,7 @@ def check_theme(theme):
 
 @pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
 def test_new_theme_defaults_use_the_same_reference_canvas(width, height):
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, width, height)
         theme = Theme()
     assert theme.font_main_size / height == pytest.approx(40 / 1080)
@@ -449,7 +449,7 @@ def test_new_theme_defaults_use_the_same_reference_canvas(width, height):
 
 @pytest.mark.parametrize('filename', ['opal', 'opal_light', 'sans_dark', 'sans_light'])
 def test_bundled_themes_have_whole_points_and_simple_percentages(filename):
-    path = Path(__file__).parents[3] / 'openlp/core/lib/json/themes' / f'{filename}.json'
+    path = Path(__file__).parents[3] / 'opal/core/lib/json/themes' / f'{filename}.json'
     data = json.loads(path.read_text())
     assert data['display_size_width'] == 1920
     assert data['display_size_height'] == 1080

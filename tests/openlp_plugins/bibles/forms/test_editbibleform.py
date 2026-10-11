@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.bibles.forms.editbibleform package.
+Package to test the opal.plugins.bibles.forms.editbibleform package.
 """
 from unittest.mock import MagicMock
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.plugins.bibles.forms.editbibleform import EditBibleForm
+from opal.plugins.bibles.forms.editbibleform import EditBibleForm
 
 
 def test_no_help_button(settings):

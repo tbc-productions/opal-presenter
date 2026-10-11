@@ -3,9 +3,9 @@ from unittest.mock import Mock
 
 import pytest
 from PySide6 import QtCore, QtGui, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.fluentstyle import FluentAccentButton
+from opal.core.ui.fluentstyle import FluentAccentButton
 
 
 def test_accent_button_keeps_action_mouse_keyboard_and_disabled_behavior(qapp):
@@ -56,7 +56,7 @@ def test_accent_render_uses_application_scheme_with_transparent_widget_palette(q
 
 
 def test_native_controls_do_not_install_a_projection_stylesheet(settings):
-    from openlp.core.ui.style import get_application_stylesheet, set_default_theme
+    from opal.core.ui.style import get_application_stylesheet, set_default_theme
     from PySide6 import QtWidgets as NativeQt
     import fluentqt
     app = QtWidgets.QApplication.instance()

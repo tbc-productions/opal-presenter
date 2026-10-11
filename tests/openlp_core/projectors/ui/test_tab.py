@@ -24,16 +24,16 @@ Test projector settings tab UI
 
 import logging
 
-import openlp.core.projectors.tab
+import opal.core.projectors.tab
 
 from PySide6 import QtWidgets  # noqa
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 from unittest.mock import MagicMock
 
-from openlp.core.projectors.tab import ProjectorTab
+from opal.core.projectors.tab import ProjectorTab
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA
 
-test_module = openlp.core.projectors.tab.__name__
+test_module = opal.core.projectors.tab.__name__
 
 
 def test_load_settings(settings):

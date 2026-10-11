@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 
-from openlp.core.widgets.fluent_inputs import FluentFontComboBox
+from opal.core.widgets.fluent_inputs import FluentFontComboBox
 
 
 def test_font_padding_stays_stable_on_focus_popup_selection_and_resize(qapp, qtbot):
@@ -61,7 +61,7 @@ def test_font_typing_highlights_closest_match_without_hiding_options(qapp, qtbot
 
 
 def test_dot_prefixed_families_are_hidden_but_saved_font_is_preserved(qapp, qtbot):
-    with patch('openlp.core.widgets.fluent_inputs.QtGui.QFontDatabase.families',
+    with patch('opal.core.widgets.fluent_inputs.QtGui.QFontDatabase.families',
                return_value=['.Hidden system font', 'Arial', 'Courier New']):
         fonts = FluentFontComboBox()
     qtbot.addWidget(fonts)
@@ -75,7 +75,7 @@ def test_dot_prefixed_families_are_hidden_but_saved_font_is_preserved(qapp, qtbo
 
 
 def test_partial_name_and_typo_commit_the_closest_font(qapp, qtbot):
-    with patch('openlp.core.widgets.fluent_inputs.QtGui.QFontDatabase.families',
+    with patch('opal.core.widgets.fluent_inputs.QtGui.QFontDatabase.families',
                return_value=['Arial', 'Arial Narrow', 'Courier New', 'Times New Roman']):
         fonts = FluentFontComboBox()
     qtbot.addWidget(fonts)

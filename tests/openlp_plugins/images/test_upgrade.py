@@ -29,9 +29,9 @@ from unittest.mock import patch
 
 from sqlalchemy import create_engine, select, table, column
 
-from openlp.core.common.applocation import AppLocation
-from openlp.core.db.upgrades import upgrade_db
-from openlp.plugins.images.lib import upgrade
+from opal.core.common.applocation import AppLocation
+from opal.core.db.upgrades import upgrade_db
+from opal.plugins.images.lib import upgrade
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -58,7 +58,7 @@ def test_image_filenames_table(db_url, settings):
     """
     # GIVEN: An unversioned image database
     with patch.object(AppLocation, 'get_data_path', return_value=Path('/', 'test', 'dir')), \
-            patch('openlp.plugins.images.lib.upgrade.sha256_file_hash') as mocked_sha256_file_hash:
+            patch('opal.plugins.images.lib.upgrade.sha256_file_hash') as mocked_sha256_file_hash:
         mocked_sha256_file_hash.return_value = 'abcd'
         # WHEN: Initalising the database manager
 

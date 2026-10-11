@@ -25,16 +25,16 @@ This test verifies that video playback continues to display correctly
 even when OpenLP loses focus (e.g., when another application becomes active).
 
 The fix is documented at:
-- openlp/core/ui/media/mediaplayer.py - media_widget is now a true top-level window (parent=None)
-- openlp/core/ui/media/mediabase.py - resize() positions it on display screen
+- opal/core/ui/media/mediaplayer.py - media_widget is now a true top-level window (parent=None)
+- opal/core/ui/media/mediabase.py - resize() positions it on display screen
 """
 
 from unittest.mock import MagicMock
 
 from PySide6 import QtCore
 
-from openlp.core.ui.media.mediabase import MediaBase
-from openlp.core.display.screens import ScreenList, Screen
+from opal.core.ui.media.mediabase import MediaBase
+from opal.core.display.screens import ScreenList, Screen
 
 
 def test_media_widget_positioned_on_display_screen():
@@ -101,7 +101,7 @@ def test_media_widget_window_flags_keep_rendering():
     2. Video playback working on presentation display
     3. Video remaining visible when OpenLP loses focus
     """
-    from openlp.core.ui.media.mediaplayer import MediaPlayer
+    from opal.core.ui.media.mediaplayer import MediaPlayer
     media_player = MediaPlayer()
     assert media_player is not None
 

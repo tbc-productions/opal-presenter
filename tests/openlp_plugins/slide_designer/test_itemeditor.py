@@ -4,16 +4,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.registry import Registry
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.custom.forms.editcustomform import EditCustomForm
-from openlp.plugins.slide_designer.forms.itemeditor import SongItemDesigner, CustomItemDesigner
+from opal.core.common.registry import Registry
+from opal.core.widgets import fluent as QtWidgets
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.custom.forms.editcustomform import EditCustomForm
+from opal.plugins.slide_designer.forms.itemeditor import SongItemDesigner, CustomItemDesigner
 
 
 @pytest.fixture(autouse=True)
 def section_settings(settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -161,7 +161,7 @@ def test_copyright_warning_tracks_initial_and_edited_draft(settings, copyright):
 
 @pytest.mark.parametrize('keyboard', [False, True])
 def test_copyright_badge_fits_navigation_and_preserves_activation(integrated, qtbot, keyboard):
-    from openlp.plugins.slide_designer.forms.window import DesignerWindow
+    from opal.plugins.slide_designer.forms.window import DesignerWindow
 
     owner, editor = integrated
     if editor.design_kind != 'song':
@@ -273,7 +273,7 @@ def test_dirty_state_compares_content_metadata_design_and_undo(integrated):
     ('unchanged', True), ('cancel', True), ('discard', True), ('save', True), ('save', False)])
 def test_exit_prompt_respects_save_discard_cancel_and_validation(integrated, qtbot, choice, save_succeeds):
     import fluentqt
-    from openlp.plugins.slide_designer.forms.window import DesignerWindow
+    from opal.plugins.slide_designer.forms.window import DesignerWindow
     owner, editor = integrated
     window = DesignerWindow(editor)
     qtbot.addWidget(window)
@@ -328,7 +328,7 @@ def test_cancel_restores_original_editor_widgets_without_saving(settings, kind):
     parent = owner.title_edit.parentWidget()
     theme_parent = owner.theme_combo_box.parentWidget()
     layout = owner.authors_tab.layout() if kind == 'song' else None
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', return_value=0), \
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', return_value=0), \
             patch.object(owner, 'accept') as save:
         assert owner.exec() == 0
     save.assert_not_called()
@@ -386,7 +386,7 @@ def test_chord_validation_is_preserved_in_integrated_song_editor(integrated):
 
 def test_missing_title_message_is_visible_in_designer_window(integrated):
     """Real validation must present its ContentDialog over this draft, not the main window."""
-    from openlp.core.widgets.fluent_dialogs import FluentMessageBox
+    from opal.core.widgets.fluent_dialogs import FluentMessageBox
 
     owner, editor = integrated
     owner.title_edit.clear()

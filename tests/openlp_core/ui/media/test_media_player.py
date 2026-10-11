@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.media.mediaplayer package.
+Package to test the opal.core.ui.media.mediaplayer package.
 This class is for playing Media within OpenLP.
 """
 from unittest.mock import MagicMock, call, patch
@@ -28,10 +28,10 @@ from PySide6 import QtCore
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.display.screens import Screen, ScreenList
-from openlp.core.ui.media import MediaPlayItem, MediaType
-from openlp.core.ui.media.mediaplayer import MediaPlayer
+from opal.core.common.registry import Registry
+from opal.core.display.screens import Screen, ScreenList
+from opal.core.ui.media import MediaPlayItem, MediaType
+from opal.core.ui.media.mediaplayer import MediaPlayer
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def test_init(mock_settings):
     assert media_player is not None
 
 
-@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+@patch('opal.core.ui.media.mediaplayer.QtWidgets')
 def test_setup_live(MockedQtWidgets, settings):
     """
     Test the setup method for Live Controller
@@ -87,7 +87,7 @@ def test_setup_live(MockedQtWidgets, settings):
 
 
 @pytest.mark.parametrize('always_on_top', [False, True])
-@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+@patch('opal.core.ui.media.mediaplayer.QtWidgets')
 def test_live_media_stacking_follows_setting(mocked_qt_widgets, always_on_top, settings):
     """Video output uses the same topmost setting as the live display window."""
     settings.setValue('core/always on top', always_on_top)
@@ -101,7 +101,7 @@ def test_live_media_stacking_follows_setting(mocked_qt_widgets, always_on_top, s
     assert bool(flags & QtCore.Qt.WindowType.WindowStaysOnTopHint) is always_on_top
 
 
-@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+@patch('opal.core.ui.media.mediaplayer.QtWidgets')
 def test_live_media_respects_temporary_main_window_focus(mocked_qt_widgets, settings, registry):
     """A newly created video window stays below the controls during a one-screen focus switch."""
     settings.setValue('core/always on top', True)
@@ -117,7 +117,7 @@ def test_live_media_respects_temporary_main_window_focus(mocked_qt_widgets, sett
     assert not flags & QtCore.Qt.WindowType.WindowStaysOnTopHint
 
 
-@patch('openlp.core.ui.media.mediaplayer.QtWidgets')
+@patch('opal.core.ui.media.mediaplayer.QtWidgets')
 def test_setup_preview(MockedQtWidgets, settings):
     """
     Test the setup method for Preview controller
@@ -292,7 +292,7 @@ def test_pause_stream(base_media_player):
     base_media_player.device_audio_input.setMuted.assert_called_with(True)
 
 
-@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+@patch('opal.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
 def test_stop_media(invoke_method, base_media_player):
     """
     Test stopping the current item
@@ -369,7 +369,7 @@ def test_seek_unseekable_media(base_media_player):
 
 
 @pytest.mark.parametrize('signals_blocked', [False, True])
-@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+@patch('opal.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
 def test_reset_detaches_surface_before_stopping(invoke_method, base_media_player, signals_blocked):
     """Retiring hidden video must detach its surface before stopping the decoder."""
     player = base_media_player
@@ -397,7 +397,7 @@ def test_reset_detaches_surface_before_stopping(invoke_method, base_media_player
     ]
 
 
-@patch('openlp.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
+@patch('opal.core.ui.media.mediabase.QtCore.QMetaObject.invokeMethod')
 def test_reset_restores_signals_after_stop_failure(invoke_method, base_media_player):
     """A failed cleanup must not leave the reusable player with signals disabled."""
     base_media_player.media_player.blockSignals.return_value = False
@@ -614,7 +614,7 @@ def test_position_changed_dual(base_media_player, registry):
     mocked_controller.preview_media_tick.emit.assert_not_called()
 
 
-@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+@patch('opal.core.ui.media.mediaplayer.QMediaDevices')
 def test_apply_audio_output_setting_live(mocked_media_devices, mock_settings, base_media_player):
     """
     Test applying the configured live audio output device.
@@ -635,7 +635,7 @@ def test_apply_audio_output_setting_live(mocked_media_devices, mock_settings, ba
     base_media_player.audio_output.setDevice.assert_called_once_with(output_device)
 
 
-@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+@patch('opal.core.ui.media.mediaplayer.QMediaDevices')
 def test_apply_audio_output_setting_preview(mocked_media_devices, mock_settings, base_media_player):
     """
     Test applying the configured preview audio output device.
@@ -656,7 +656,7 @@ def test_apply_audio_output_setting_preview(mocked_media_devices, mock_settings,
     base_media_player.audio_output.setDevice.assert_called_once_with(output_device)
 
 
-@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+@patch('opal.core.ui.media.mediaplayer.QMediaDevices')
 def test_apply_audio_output_setting_system_default(mocked_media_devices, mock_settings, base_media_player):
     """
     Test that selecting System default replaces a previously selected device.
@@ -685,7 +685,7 @@ def test_set_visible_safe_when_controller_is_none(base_media_player):
     # THEN: No exception should be raised
 
 
-@patch('openlp.core.ui.media.mediaplayer.QMediaDevices')
+@patch('opal.core.ui.media.mediaplayer.QMediaDevices')
 def test_missing_audio_output_falls_back_to_default(devices, mock_settings, base_media_player):
     """An unplugged configured output must not leave media attached to a stale device."""
     mock_settings.value.return_value = 'Unplugged speakers'

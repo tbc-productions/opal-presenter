@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch
 from PySide6 import QtCore, QtGui
 from lxml import etree
 
-from openlp.core.display.screens import Screen, ScreenList
-from openlp.core.lib.slidedesign import apply_design, image_to_png_uri, normalise_design, package_design
-from openlp.core.lib.theme import Theme
-from openlp.plugins.custom.lib.customxmlhandler import CustomXML
-from openlp.plugins.songs.lib.db import Song
-from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML, DESIGN_NAMESPACE
+from opal.core.display.screens import Screen, ScreenList
+from opal.core.lib.slidedesign import apply_design, image_to_png_uri, normalise_design, package_design
+from opal.core.lib.theme import Theme
+from opal.plugins.custom.lib.customxmlhandler import CustomXML
+from opal.plugins.songs.lib.db import Song
+from opal.plugins.songs.lib.openlyricsxml import OpenLyrics, SongXML, DESIGN_NAMESPACE
 
 
 def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, tmp_path):
@@ -49,7 +49,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     assert str(path) not in (exported if isinstance(exported, str) else exported.decode())
     assert 'theme' not in json.loads(song.slide_design), 'Export must not freeze the library theme'
     path.unlink()
-    with patch('openlp.plugins.songs.lib.openlyricsxml.clean_song'):
+    with patch('opal.plugins.songs.lib.openlyricsxml.clean_song'):
         imported = handler.xml_to_song(exported)
     restored = normalise_design(imported.slide_design)
     assert restored['elements'][0]['src'] == uri

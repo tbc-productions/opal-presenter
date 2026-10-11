@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.screen_settings import request_screen_configuration, show_screen_setup_message
-from openlp.core.widgets import fluent
+from opal.core.common.screen_settings import request_screen_configuration, show_screen_setup_message
+from opal.core.widgets import fluent
 
 
 @pytest.mark.parametrize('configure', [False, True])
@@ -22,7 +22,7 @@ def test_screen_setup_dialog_secondary_action(qapp, configure):
 def test_screen_configuration_opens_screens_after_current_event(qapp, registry):
     settings_form = MagicMock()
     registry.register('settings_form', settings_form)
-    with patch('openlp.core.common.screen_settings.QtCore.QTimer.singleShot') as timer:
+    with patch('opal.core.common.screen_settings.QtCore.QTimer.singleShot') as timer:
         request_screen_configuration()
     settings_form.exec.assert_not_called()
     delay, callback = timer.call_args.args
@@ -33,7 +33,7 @@ def test_screen_configuration_opens_screens_after_current_event(qapp, registry):
 
 def test_startup_screen_configuration_waits_for_settings_form(qapp, registry):
     later_startup_listener = MagicMock()
-    with patch('openlp.core.common.screen_settings.QtCore.QTimer.singleShot') as timer:
+    with patch('opal.core.common.screen_settings.QtCore.QTimer.singleShot') as timer:
         request_screen_configuration()
         request_screen_configuration()
         timer.assert_not_called()

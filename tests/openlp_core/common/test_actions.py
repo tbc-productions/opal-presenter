@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.common.actions package.
+Package to test the opal.core.common.actions package.
 """
 import pytest
 from unittest.mock import MagicMock
 
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.actions import ActionList, CategoryActionList
-from openlp.core.common.registry import Registry
+from opal.core.common.actions import ActionList, CategoryActionList
+from opal.core.common.registry import Registry
 
 
 MOCK_ACTION1 = MagicMock(**{'text.return_value': 'first'})

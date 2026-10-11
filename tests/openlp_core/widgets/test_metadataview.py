@@ -3,9 +3,9 @@ from fluentqt import FontRole, Label, ScrollBar
 from PySide6 import QtCore, QtWidgets as Native
 import pytest
 
-from openlp.core.app import OpenLP
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.metadataview import MetadataView
+from opal.core.app import OpenLP
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.metadataview import MetadataView
 
 
 @pytest.fixture(scope='session')

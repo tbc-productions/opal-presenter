@@ -23,8 +23,8 @@ This module contains tests for the SongImport submodule of the Songs plugin.
 """
 from unittest.mock import MagicMock
 
-from openlp.plugins.songs.lib.db import AuthorType
-from openlp.plugins.songs.lib.importers.songimport import SongImport
+from opal.plugins.songs.lib.db import AuthorType
+from opal.plugins.songs.lib.importers.songimport import SongImport
 
 
 def test_parse_author_simple_with_type(settings):

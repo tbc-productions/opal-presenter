@@ -31,9 +31,9 @@ from time import sleep
 from typing import Optional
 from unittest.mock import DEFAULT, MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.projectors.db import Projector
-from openlp.core.projectors.manager import ProjectorManager
+from opal.core.common.registry import Registry
+from opal.core.projectors.db import Projector
+from opal.core.projectors.manager import ProjectorManager
 
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA, TEST3_DATA
 

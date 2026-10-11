@@ -4,20 +4,20 @@ from unittest.mock import patch
 
 import pytest
 from PySide6 import QtCore, QtGui, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui import HideMode
-from openlp.core.ui.modernstyle import (
+from opal.core.ui import HideMode
+from opal.core.ui.modernstyle import (
     ModernPresetTabBar, apply_mica, get_modern_stylesheet, is_modern_style, refine_modern_layout, set_modern_palette
 )
-from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.ui.style import UiThemes, get_application_stylesheet, get_library_stylesheet, set_default_theme
+from opal.core.ui.slidecontroller import SlideController
+from opal.core.ui.style import UiThemes, get_application_stylesheet, get_library_stylesheet, set_default_theme
 
 
 @pytest.mark.parametrize('windows', [True, False])
 def test_modern_supported_platforms(settings, windows):
     settings.setValue('advanced/interface style', 'modern')
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=windows):
+    with patch('opal.core.ui.modernstyle.is_win', return_value=windows):
         assert is_modern_style() is True
 
 
@@ -28,7 +28,7 @@ def test_modern_color_schemes_have_solid_readable_surfaces(settings, qapp, schem
     settings.setValue('advanced/interface style', 'modern')
     settings.setValue('advanced/ui_theme_name', scheme)
     try:
-        with patch('openlp.core.ui.modernstyle.is_win', return_value=True):
+        with patch('opal.core.ui.modernstyle.is_win', return_value=True):
             set_default_theme(app)
             palette = app.palette()
             base = palette.color(QtGui.QPalette.ColorRole.Base)
@@ -44,8 +44,8 @@ def test_modern_color_schemes_have_solid_readable_surfaces(settings, qapp, schem
 
 def test_non_windows_does_not_call_native_material_api(settings):
     settings.setValue('advanced/interface style', 'classic')
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=False), \
-            patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
+    with patch('opal.core.ui.modernstyle.is_win', return_value=False), \
+            patch('opal.core.ui.modernstyle._set_dwm_attribute') as native:
         assert apply_mica(None) is False
         native.assert_not_called()
 
@@ -53,10 +53,10 @@ def test_non_windows_does_not_call_native_material_api(settings):
 @pytest.mark.parametrize('build', [19045, 22000])
 def test_older_windows_falls_back_without_native_calls(settings, build):
     settings.setValue('advanced/interface style', 'modern')
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True), \
-            patch('openlp.core.ui.modernstyle.sys.getwindowsversion', create=True,
+    with patch('opal.core.ui.modernstyle.is_win', return_value=True), \
+            patch('opal.core.ui.modernstyle.sys.getwindowsversion', create=True,
                   return_value=SimpleNamespace(build=build)), \
-            patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
+            patch('opal.core.ui.modernstyle._set_dwm_attribute') as native:
         assert apply_mica(None) is False
         native.assert_not_called()
 
@@ -64,20 +64,20 @@ def test_older_windows_falls_back_without_native_calls(settings, build):
 def test_failed_mica_keeps_solid_fallback(settings):
     settings.setValue('advanced/interface style', 'modern')
     window = QtWidgets.QMainWindow()
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True), \
-            patch('openlp.core.ui.modernstyle.sys.getwindowsversion', create=True,
+    with patch('opal.core.ui.modernstyle.is_win', return_value=True), \
+            patch('opal.core.ui.modernstyle.sys.getwindowsversion', create=True,
                   return_value=SimpleNamespace(build=22621)), \
-            patch('openlp.core.ui.modernstyle._set_dwm_attribute', side_effect=OSError):
+            patch('opal.core.ui.modernstyle._set_dwm_attribute', side_effect=OSError):
         assert apply_mica(window) is False
 
 
 def test_mica_uses_documented_attributes(settings):
     settings.setValue('advanced/interface style', 'modern')
     window = QtWidgets.QMainWindow()
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True), \
-            patch('openlp.core.ui.modernstyle.sys.getwindowsversion', create=True,
+    with patch('opal.core.ui.modernstyle.is_win', return_value=True), \
+            patch('opal.core.ui.modernstyle.sys.getwindowsversion', create=True,
                   return_value=SimpleNamespace(build=22621)), \
-            patch('openlp.core.ui.modernstyle._set_dwm_attribute', return_value=True) as native:
+            patch('opal.core.ui.modernstyle._set_dwm_attribute', return_value=True) as native:
         assert apply_mica(window) is True
         assert native.call_args.args[1:] == (38, 2)
         assert native.call_args_list[0].args[1] == 20
@@ -124,7 +124,7 @@ def test_modern_header_background_is_actually_rendered(settings):
     table.setVerticalHeaderLabels(['V1', 'C1'])
     table.verticalHeader().setStyleSheet('QHeaderView::section { padding-left: 2px; padding-right: 2px; }')
     table.verticalHeaderItem(1).setBackground(QtGui.QColor('#38bd65'))
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True):
+    with patch('opal.core.ui.modernstyle.is_win', return_value=True):
         window.setStyleSheet(get_application_stylesheet())
     window.resize(400, 200)
     window.show()
@@ -159,7 +159,7 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
     QtWidgets.QApplication.processEvents()
     splitters[0].setSizes([200, 100])
     splitters[1].setSizes([80, 220])
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=True):
+    with patch('opal.core.ui.modernstyle.is_win', return_value=True):
         refine_modern_layout(window)
     QtWidgets.QApplication.processEvents()
     assert abs(splitters[0].sizes()[0] - splitters[1].sizes()[0]) <= 1
@@ -174,7 +174,7 @@ def test_modern_splitter_alignment_and_compact_icons(settings):
 
 
 def test_slide_lists_align_with_different_command_bar_controls(qapp):
-    from openlp.core.widgets.toolbar import OpenLPToolbar
+    from opal.core.widgets.toolbar import OpenLPToolbar
 
     window = QtWidgets.QMainWindow()
     content = QtWidgets.QWidget(window)
@@ -223,8 +223,8 @@ def test_slide_lists_align_with_different_command_bar_controls(qapp):
 
 def test_macos_modern_does_not_call_windows_api(settings):
     settings.setValue('advanced/interface style', 'modern')
-    with patch('openlp.core.ui.modernstyle.is_win', return_value=False), \
-            patch('openlp.core.ui.modernstyle._set_dwm_attribute') as native:
+    with patch('opal.core.ui.modernstyle.is_win', return_value=False), \
+            patch('opal.core.ui.modernstyle._set_dwm_attribute') as native:
         assert is_modern_style()
         assert apply_mica(None) is False
         native.assert_not_called()
@@ -234,7 +234,7 @@ def test_macos_modern_preserves_system_font(settings, qapp):
     app = QtWidgets.QApplication.instance()
     old_palette, old_font = app.palette(), app.font()
     try:
-        with patch('openlp.core.ui.modernstyle.is_win', return_value=False):
+        with patch('opal.core.ui.modernstyle.is_win', return_value=False):
             set_modern_palette(app)
             assert app.font() == old_font
     finally:

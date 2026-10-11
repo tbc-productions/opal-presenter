@@ -25,11 +25,11 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from openlp.core.common.path import Path
-from openlp.core.common.platform import is_macosx
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.presentations.lib.maclocontroller import MacLOController, MacLODocument
+from opal.core.common.path import Path
+from opal.core.common.platform import is_macosx
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.presentations.lib.maclocontroller import MacLOController, MacLODocument
 
 from tests.utils.constants import TEST_RESOURCES_PATH
 
@@ -50,7 +50,7 @@ TEST_FILE = Path(TEST_RESOURCES_PATH) / 'presentations' / 'test.odp'
 
 @pytest.fixture
 def controller(registry: Registry, settings: Settings):
-    with patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server'):
+    with patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server'):
         _controller = MacLOController(MagicMock(settings_section='presentations'))
     _controller._client = MagicMock()
     _controller.server_process = MagicMock()
@@ -64,7 +64,7 @@ def document(controller: MacLOController):
     return document
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
 def test_constructor(mocked_start_server: MagicMock, registry: Registry, settings: Settings):
     """
     Test the Constructor from the MacLOController
@@ -83,8 +83,8 @@ def test_constructor(mocked_start_server: MagicMock, registry: Registry, setting
     mocked_start_server.assert_not_called()
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
-@patch('openlp.plugins.presentations.lib.maclocontroller.Proxy')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.Proxy')
 def test_client(MockedProxy: MagicMock, mocked_start_server: MagicMock, registry: Registry, settings: Settings):
     """
     Test the client property of the Controller
@@ -104,12 +104,12 @@ def test_client(MockedProxy: MagicMock, mocked_start_server: MagicMock, registry
     mocked_client._pyroReconnect.assert_called_once_with(tries=10)
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
 def test_check_available(mocked_start_server: MagicMock, controller: MacLOController):
     """
     Test the check_available() method
     """
-    from openlp.plugins.presentations.lib.maclocontroller import macuno_available
+    from opal.plugins.presentations.lib.maclocontroller import macuno_available
 
     # GIVEN: A controller
     # WHEN: check_available() is run
@@ -119,7 +119,7 @@ def test_check_available(mocked_start_server: MagicMock, controller: MacLOContro
     assert result == macuno_available
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
 def test_start_process(mocked_start_server: MagicMock, controller: MacLOController):
     """
     Test the start_process() method
@@ -132,7 +132,7 @@ def test_start_process(mocked_start_server: MagicMock, controller: MacLOControll
     controller._client.start_process.assert_called_once_with()
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
 def test_kill(mocked_start_server: MagicMock, controller: MacLOController):
     """
     Test the kill() method
@@ -151,7 +151,7 @@ def test_kill(mocked_start_server: MagicMock, controller: MacLOController):
     assert controller._client is None
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
+@patch('opal.plugins.presentations.lib.maclocontroller.MacLOController._start_server')
 def test_kill_client_already_closed(mocked_start_server: MagicMock, controller: MacLOController):
     """
     Test the kill() method when the client is already closed
@@ -171,7 +171,7 @@ def test_kill_client_already_closed(mocked_start_server: MagicMock, controller: 
     assert controller._client is None
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.maclocontroller.ScreenList')
 def test_load_presentation_cannot_load(MockedScreenList: MagicMock, controller: MacLOController,
                                        document: MacLODocument):
     """
@@ -191,7 +191,7 @@ def test_load_presentation_cannot_load(MockedScreenList: MagicMock, controller: 
     assert result is False
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.maclocontroller.ScreenList')
 def test_load_presentation(MockedScreenList: MagicMock, controller: MacLOController, document: MacLODocument):
     """
     Test the load_presentation() method
@@ -228,7 +228,7 @@ def test_create_thumbnails_already_exist(controller: MacLOController, document: 
     assert controller._client.extract_thumbnails.call_count == 0
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.delete_file')
+@patch('opal.plugins.presentations.lib.maclocontroller.delete_file')
 def test_create_thumbnails(mocked_delete_file: MagicMock, controller: MacLOController, document: MacLODocument):
     """
     Test the create_thumbnails() method
@@ -365,8 +365,8 @@ def test_stop_presentation(controller: MacLOController, document: MacLODocument)
     controller._client.stop_presentation.assert_called_once_with()
 
 
-@patch('openlp.plugins.presentations.lib.maclocontroller.ScreenList')
-@patch('openlp.plugins.presentations.lib.maclocontroller.Registry')
+@patch('opal.plugins.presentations.lib.maclocontroller.ScreenList')
+@patch('opal.plugins.presentations.lib.maclocontroller.Registry')
 def test_start_presentation(MockedRegistry: MagicMock, MockedScreenList: MagicMock, controller: MacLOController,
                             document: MacLODocument):
     """

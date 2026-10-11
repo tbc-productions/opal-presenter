@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 
-from openlp.plugins.custom.lib.customxmlhandler import CustomXML
+from opal.plugins.custom.lib.customxmlhandler import CustomXML
 
 
 custom_xml_test1 = '<?xml version="1.0" encoding="utf-8"?><song version="1.0"><lyrics language="en"/>' \

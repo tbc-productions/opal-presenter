@@ -28,11 +28,11 @@ from unittest.mock import patch
 
 import pytest
 
-from openlp.core.widgets.fluent import QDialog
+from opal.core.widgets.fluent import QDialog
 
-from openlp.core.projectors.constants import PJLINK_DEFAULT_CODES, PJLINK_DEFAULT_SOURCES
-from openlp.core.projectors.db import Projector, ProjectorDB
-from openlp.core.projectors.sourceselectform import SourceSelectSingle, source_group
+from opal.core.projectors.constants import PJLINK_DEFAULT_CODES, PJLINK_DEFAULT_SOURCES
+from opal.core.projectors.db import Projector, ProjectorDB
+from opal.core.projectors.sourceselectform import SourceSelectSingle, source_group
 from tests.resources.projector.data import TEST1_DATA, TEST_DB
 
 

@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.widgets.fontselect package.
+Package to test the opal.core.widgets.fontselect package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.pages.fontselect import FontSelectPage
+from opal.core.pages.fontselect import FontSelectPage
 
 
 def test_init_(settings):
@@ -310,7 +310,7 @@ def test_set_font_name_property(settings):
     instance.font_name_combobox.setCurrentFont = MagicMock()
 
     # WHEN: The `font_name` property is set
-    with patch('openlp.core.pages.fontselect.QtGui.QFont') as MockFont:
+    with patch('opal.core.pages.fontselect.QtGui.QFont') as MockFont:
         mocked_font = MagicMock()
         MockFont.return_value = mocked_font
         instance.font_name = 'Serif'

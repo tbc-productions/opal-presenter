@@ -2,7 +2,7 @@
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.widgets.toolbar import OpenLPToolbar
+from opal.core.widgets.toolbar import OpenLPToolbar
 
 
 def test_single_command_bar_has_one_overflow_and_keeps_separator_order(qapp, qtbot):
@@ -107,8 +107,8 @@ def test_library_page_switch_aligns_commands_before_returning_from_show(qapp, qt
 def test_icon_sync_skips_buttons_deleted_during_command_rebuild(settings, qtbot, monkeypatch):
     import fluentqt
     from shiboken6 import delete, isValid
-    from openlp.core.ui.icons import UiIcons
-    from openlp.core.widgets.fluent_buttons import set_fluent_button_icon
+    from opal.core.ui.icons import UiIcons
+    from opal.core.widgets.fluent_buttons import set_fluent_button_icon
 
     toolbar = OpenLPToolbar(None)
     qtbot.addWidget(toolbar)
@@ -125,7 +125,7 @@ def test_icon_sync_skips_buttons_deleted_during_command_rebuild(settings, qtbot,
             delete(removed)
         set_fluent_button_icon(button, icon)
 
-    monkeypatch.setattr('openlp.core.widgets.fluent_commands.set_fluent_button_icon', rebuild_during_sync)
+    monkeypatch.setattr('opal.core.widgets.fluent_commands.set_fluent_button_icon', rebuild_during_sync)
     group.sync_button_icons()
     assert not isValid(removed)
     assert removed not in synced and first in synced and last in synced

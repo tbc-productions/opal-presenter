@@ -5,14 +5,14 @@ import fluentqt
 from PySide6 import QtCore, QtGui
 import pytest
 
-from openlp.core.ui.fluenticons import fluent_icon, service_icon
-from openlp.core.ui.icons import UiIcons
+from opal.core.ui.fluenticons import fluent_icon, service_icon
+from opal.core.ui.icons import UiIcons
 
 
 @pytest.mark.parametrize('dark', [False, True])
 def test_catalogue_renders(settings, dark):
     """Every mapped Fluent glyph must render visible pixels, without a fallback."""
-    with patch('openlp.core.ui.icons.is_ui_theme_dark', return_value=dark):
+    with patch('opal.core.ui.icons.is_ui_theme_dark', return_value=dark):
         icons = object.__new__(UiIcons)
         icons.__init__()
     for name, spec in icons._icon_list.items():
@@ -94,8 +94,8 @@ def test_service_icon_preserves_unknown_plugin_and_null_icons(qapp):
 @pytest.mark.parametrize('plugin', ['songs', 'bibles', 'presentations', 'images', 'media', 'custom'])
 def test_service_and_library_share_icon_colours(qapp, plugin):
     from types import SimpleNamespace
-    from openlp.core.lib.mediamanageritem import MediaManagerItem
-    from openlp.core.ui.servicemanager import ServiceManager
+    from opal.core.lib.mediamanageritem import MediaManagerItem
+    from opal.core.ui.servicemanager import ServiceManager
 
     original = fluent_icon('ic_fluent_add_24_regular')
     library = SimpleNamespace(plugin=SimpleNamespace(name=plugin, icon=original))

@@ -2,8 +2,8 @@
 import pytest
 
 from PySide6 import QtCore, QtGui, QtWidgets
-from openlp.core.widgets import fluent
-from openlp.core.widgets.toolbar import OpenLPToolbar
+from opal.core.widgets import fluent
+from opal.core.widgets.toolbar import OpenLPToolbar
 
 
 def test_binding_discovery_accepts_private_qt_models_and_native_widgets(qapp, qtbot):
@@ -257,7 +257,7 @@ def test_adapters_use_safe_accessibility_interfaces(qapp):
 
 def test_library_selector_clicks_overflow_and_accessibility(qapp):
     from PySide6 import QtTest
-    from openlp.core.widgets.docks import MediaToolBox
+    from opal.core.widgets.docks import MediaToolBox
     box = MediaToolBox()
     pages = []
     for label in ('Songs', 'Bibles', 'Presentations', 'Images', 'Media', 'Custom Slides'):
@@ -311,7 +311,7 @@ def test_library_selector_clicks_overflow_and_accessibility(qapp):
 
 def test_library_overflow_short_clicks_trigger_once_and_respect_disabled(qapp):
     from PySide6 import QtTest
-    from openlp.core.widgets.docks import FluentLibraryOverflowMenu
+    from opal.core.widgets.docks import FluentLibraryOverflowMenu
     menu = FluentLibraryOverflowMenu()
     first = menu.addAction('Songs')
     disabled = menu.addAction('Bibles')
@@ -357,7 +357,7 @@ def test_flat_lists_are_native_datagrids_with_optional_headers(qapp):
 
 
 def test_song_datagrid_headers_sorting_and_row_selection(qapp):
-    from openlp.plugins.songs.lib.mediaitem import SongListWidget
+    from opal.plugins.songs.lib.mediaitem import SongListWidget
     view = SongListWidget()
     assert isinstance(view, fluent.fluentqt.DataGrid)
     assert not view.header().isHidden()
@@ -381,8 +381,8 @@ def test_hierarchy_column_labels_restore_visible_header(qapp):
 
 
 def test_library_columns_retain_standard_font_and_treeview(qapp):
-    from openlp.core.widgets.views import TreeWidgetWithDnD
-    from openlp.plugins.songs.lib.mediaitem import SongListWidget
+    from opal.core.widgets.views import TreeWidgetWithDnD
+    from opal.plugins.songs.lib.mediaitem import SongListWidget
     tree = TreeWidgetWithDnD()
     standard_tree_font = tree.font()
     for _ in range(2):
@@ -394,7 +394,7 @@ def test_library_columns_retain_standard_font_and_treeview(qapp):
 
 
 def test_preview_live_slide_list_is_native_datagrid(settings):
-    from openlp.core.widgets.views import ListPreviewWidget
+    from opal.core.widgets.views import ListPreviewWidget
     parent = QtWidgets.QWidget()
     view = ListPreviewWidget(parent, 16 / 9)
     assert isinstance(view, fluent.fluentqt.DataGrid)
@@ -426,7 +426,7 @@ def test_application_menus_use_native_mac_widgets(qapp, monkeypatch):
 
 @pytest.mark.parametrize('theme', [fluent.fluentqt.Theme.Light, fluent.fluentqt.Theme.Dark])
 def test_file_libraries_keep_native_tree_appearance(qapp, theme):
-    from openlp.core.widgets.views import TreeWidgetWithDnD
+    from opal.core.widgets.views import TreeWidgetWithDnD
     previous = fluent.fluentqt.current_theme()
     fluent.fluentqt.set_theme(theme)
     try:
@@ -464,7 +464,7 @@ def test_file_libraries_keep_native_tree_appearance(qapp, theme):
 
 
 def test_file_tree_chevron_click_expands_and_row_click_selects(qapp, qtbot):
-    from openlp.core.widgets.views import TreeWidgetWithDnD
+    from opal.core.widgets.views import TreeWidgetWithDnD
     view = TreeWidgetWithDnD(name='images')
     view.setup_columns(['Name'])
     folder = fluent.QTreeWidgetItem(view, ['Folder'])
@@ -688,7 +688,7 @@ def test_progress_bar_and_trailing_label_share_available_width(qapp, qtbot):
 @pytest.mark.parametrize('asynchronous', [False, True])
 def test_relocated_editor_dialog_uses_its_host(qapp, qtbot, asynchronous):
     """Resolve the draft's presentation window before Fluent captures its overlay host."""
-    from openlp.core.widgets.fluent_dialogs import FluentDialog
+    from opal.core.widgets.fluent_dialogs import FluentDialog
     owner = QtWidgets.QWidget()
     host = QtWidgets.QWidget()
     qtbot.addWidget(owner)
@@ -717,7 +717,7 @@ def test_relocated_editor_dialog_uses_its_host(qapp, qtbot, asynchronous):
 
 def test_library_header_sorting_and_new_rows_share_the_same_sort_order(qapp):
     from PySide6 import QtTest
-    from openlp.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
+    from opal.core.widgets.views import FileTreeWidgetItem, TreeWidgetWithDnD
     view = TreeWidgetWithDnD(name='images')
     view.setup_columns(['Name', 'Updated'])
     view.resize(650, 350)

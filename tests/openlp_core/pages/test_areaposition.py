@@ -19,12 +19,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages.alignment package.
+Package to test the opal.core.pages.alignment package.
 """
 
 import pytest
 
-from openlp.core.pages.areaposition import AreaPositionPage
+from opal.core.pages.areaposition import AreaPositionPage
 
 
 def test_init_(settings):

@@ -22,7 +22,7 @@
 This module contains tests for the versereferencelist submodule of the Bibles plugin.
 """
 
-from openlp.plugins.bibles.lib.versereferencelist import VerseReferenceList
+from opal.plugins.bibles.lib.versereferencelist import VerseReferenceList
 
 
 def test_add_first_verse():
@@ -136,7 +136,7 @@ def test_add_existing_version():
 
 
 def test_format_verses_consolidates_chapters(settings):
-    from openlp.plugins.bibles.lib import update_reference_separators
+    from opal.plugins.bibles.lib import update_reference_separators
 
     update_reference_separators()
     references = VerseReferenceList()
@@ -149,7 +149,7 @@ def test_format_verses_consolidates_chapters(settings):
 
 
 def test_consolidated_references_keep_separate_selections(settings):
-    from openlp.plugins.bibles.lib import update_reference_separators
+    from opal.plugins.bibles.lib import update_reference_separators
 
     update_reference_separators()
     references = VerseReferenceList()

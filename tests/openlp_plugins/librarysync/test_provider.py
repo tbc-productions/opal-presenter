@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openlp.plugins.librarysync.lib.google import API, WRITE_API, GoogleDriveProvider, cloud_item
-from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError
+from opal.plugins.librarysync.lib.google import API, WRITE_API, GoogleDriveProvider, cloud_item
+from opal.plugins.librarysync.lib.provider import CloudItem, SyncError
 
 
 def response(status=200, data=None, headers=None, chunks=()):

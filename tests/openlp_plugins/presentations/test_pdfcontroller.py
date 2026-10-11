@@ -29,8 +29,8 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore, QtGui
 
-from openlp.core.display.screens import ScreenList
-from openlp.plugins.presentations.lib.pdfcontroller import PdfController, PdfDocument
+from opal.core.display.screens import ScreenList
+from opal.plugins.presentations.lib.pdfcontroller import PdfController, PdfDocument
 from tests.utils.constants import RESOURCE_PATH
 
 

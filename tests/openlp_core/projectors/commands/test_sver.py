@@ -24,16 +24,16 @@ Tests for commands that do not need much testing
 """
 
 import logging
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
 from copy import deepcopy
 
-from openlp.core.projectors.constants import PJLINK_SVER_MAX_LEN
+from opal.core.projectors.constants import PJLINK_SVER_MAX_LEN
 
 from tests.resources.projector.data import TEST1_DATA, TEST2_DATA
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
-_process_sver = openlp.core.projectors.pjlinkcommands._process_sver
+test_module = opal.core.projectors.pjlinkcommands.__name__
+_process_sver = opal.core.projectors.pjlinkcommands._process_sver
 
 
 def test_sver_none(fake_pjlink, caplog):

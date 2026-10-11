@@ -19,17 +19,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.bibles.forms.bibleimportform package.
+Package to test the opal.plugins.bibles.forms.bibleimportform package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.bibles.forms.bibleimportform import BibleImportForm, PYSWORD_AVAILABLE
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.bibles.forms.bibleimportform import BibleImportForm, PYSWORD_AVAILABLE
 
 
 @pytest.fixture
@@ -38,16 +38,16 @@ def import_form(registry: Registry, settings: Settings) -> BibleImportForm:
     yield BibleImportForm(None, MagicMock(), MagicMock())
 
 
-@patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract.get_bibles_from_http')
-@patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract.get_bibles_from_http')
-@patch('openlp.plugins.bibles.forms.bibleimportform.BSExtract.get_bibles_from_http')
+@patch('opal.plugins.bibles.forms.bibleimportform.CWExtract.get_bibles_from_http')
+@patch('opal.plugins.bibles.forms.bibleimportform.BGExtract.get_bibles_from_http')
+@patch('opal.plugins.bibles.forms.bibleimportform.BSExtract.get_bibles_from_http')
 def test_on_web_update_button_clicked(mocked_bsextract: MagicMock, mocked_bgextract: MagicMock,
                                       mocked_cwextract: MagicMock, import_form: BibleImportForm):
     """
     Test that on_web_update_button_clicked handles problems correctly
     """
     # GIVEN: Some mocked GUI components and mocked bibleextractors
-    with patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box'):
+    with patch('opal.plugins.bibles.forms.bibleimportform.critical_error_message_box'):
         mocked_bsextract.return_value = None
         mocked_bgextract.return_value = None
         mocked_cwextract.return_value = None
@@ -84,12 +84,12 @@ def test_no_help_button(import_form: BibleImportForm):
 @pytest.mark.parametrize('result', [None, {}, {1: ''}, {1: '   '}])
 def test_web_download_rejects_empty_chapter(import_form, result):
     """Even a listed translation with books must return actual verse text."""
-    from openlp.plugins.bibles.lib import SearchResults
+    from opal.plugins.bibles.lib import SearchResults
     import_form.web_bible_list = {0: {'King James Version': ('kjv', 'en')}}
     import_form.web_translation_combo_box.addItem('King James Version')
     chapter = SearchResults('Genesis', 1, result) if result is not None else None
-    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
+    with patch('opal.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
+            patch('opal.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
         extractor.return_value.get_books_from_http.return_value = ['Genesis']
         extractor.return_value.get_bible_chapter.return_value = chapter
         assert not import_form.validate_web_download()
@@ -97,11 +97,11 @@ def test_web_download_rejects_empty_chapter(import_form, result):
 
 
 def test_web_download_validates_selected_translation(import_form):
-    from openlp.plugins.bibles.lib import SearchResults
+    from opal.plugins.bibles.lib import SearchResults
     import_form.web_bible_list = {1: {'King James Version': ('KJV', 'en')}}
     import_form.web_source_combo_box.setCurrentIndex(1)
     import_form.web_translation_combo_box.addItem('King James Version')
-    with patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as extractor:
+    with patch('opal.plugins.bibles.forms.bibleimportform.BGExtract') as extractor:
         extractor.return_value.get_books_from_http.return_value = ['Genesis']
         extractor.return_value.get_bible_chapter.return_value = SearchResults('Genesis', 1, {1: 'In the beginning'})
         assert import_form.validate_web_download()
@@ -113,8 +113,8 @@ def test_web_download_validates_selected_translation(import_form):
 def test_web_download_handles_failed_books(import_form, books):
     import_form.web_bible_list = {0: {'King James Version': ('kjv', 'en')}}
     import_form.web_translation_combo_box.addItem('King James Version')
-    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
+    with patch('opal.plugins.bibles.forms.bibleimportform.CWExtract') as extractor, \
+            patch('opal.plugins.bibles.forms.bibleimportform.critical_error_message_box') as error:
         if isinstance(books, Exception):
             extractor.return_value.get_books_from_http.side_effect = books
         else:
@@ -125,9 +125,9 @@ def test_web_download_handles_failed_books(import_form, books):
 
 
 def test_web_lists_disable_unavailable_sources(import_form):
-    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.BSExtract') as server:
+    with patch('opal.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
+            patch('opal.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
+            patch('opal.plugins.bibles.forms.bibleimportform.BSExtract') as server:
         crosswalk.return_value.get_bibles_from_http.return_value = []
         gateway.return_value.get_bibles_from_http.return_value = [('King James Version', 'KJV', 'en')]
         server.return_value.get_bibles_from_http.return_value = []
@@ -142,9 +142,9 @@ def test_web_lists_disable_unavailable_sources(import_form):
     assert import_form.web_source_combo_box.itemText(1) == 'BibleGateway'
     assert import_form.web_source_combo_box.itemText(2) == 'BibleServer - unavailable'
     # A later successful refresh restores the labels and enables every source.
-    with patch('openlp.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
-            patch('openlp.plugins.bibles.forms.bibleimportform.BSExtract') as server:
+    with patch('opal.plugins.bibles.forms.bibleimportform.CWExtract') as crosswalk, \
+            patch('opal.plugins.bibles.forms.bibleimportform.BGExtract') as gateway, \
+            patch('opal.plugins.bibles.forms.bibleimportform.BSExtract') as server:
         for extractor in (crosswalk, gateway, server):
             extractor.return_value.get_bibles_from_http.return_value = [('King James Version', 'KJV', 'en')]
         import_form.on_web_update_button_clicked()
@@ -154,7 +154,7 @@ def test_web_lists_disable_unavailable_sources(import_form):
 
 
 def test_source_fields_align_and_match_button_heights(import_form, qtbot):
-    from openlp.plugins.bibles.lib.manager import BibleFormat
+    from opal.plugins.bibles.lib.manager import BibleFormat
     qtbot.addWidget(import_form)
     import_form.show()
     import_form.next()
@@ -216,7 +216,7 @@ def test_license_error_is_modal_over_wizard_and_blocks_repeat_next(import_form, 
 
 
 def test_web_import_uses_spinner_and_local_import_keeps_progress_bar(import_form):
-    from openlp.plugins.bibles.lib.manager import BibleFormat
+    from opal.plugins.bibles.lib.manager import BibleFormat
     import_form.format_combo_box.setCurrentIndex(BibleFormat.WebDownload)
     import_form.pre_wizard()
     assert import_form.progress_bar.isHidden()
@@ -233,7 +233,7 @@ def test_web_import_uses_spinner_and_local_import_keeps_progress_bar(import_form
 @pytest.mark.parametrize('web_import', [True, False])
 @pytest.mark.parametrize('size', [(640, 540), (460, 380)])
 def test_import_status_stays_below_instructions_without_large_gaps(import_form, qtbot, web_import, size):
-    from openlp.plugins.bibles.lib.manager import BibleFormat
+    from opal.plugins.bibles.lib.manager import BibleFormat
     qtbot.addWidget(import_form)
     import_form.setStartId(import_form.pageIds()[-1])
     with patch.object(import_form, 'perform_wizard'), patch.object(import_form, 'post_wizard'):

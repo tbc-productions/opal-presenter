@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.planningcenter.forms.selectplanform package.
+Package to test the opal.plugins.planningcenter.forms.selectplanform package.
 """
 import os
 import re
@@ -29,18 +29,18 @@ from unittest.mock import patch, MagicMock
 import pytest
 from PySide6 import QtTest, QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.ui.servicemanager import ServiceManager
-from openlp.plugins.bibles.bibleplugin import BiblePlugin
-from openlp.plugins.bibles.lib.mediaitem import BibleMediaItem
-from openlp.plugins.custom.customplugin import CustomPlugin
-from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
-from openlp.plugins.planningcenter.forms.selectplanform import SelectPlanForm
-from openlp.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
-from openlp.plugins.songs.lib.mediaitem import SongMediaItem
-from openlp.plugins.songs.songsplugin import SongsPlugin
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.ui.servicemanager import ServiceManager
+from opal.plugins.bibles.bibleplugin import BiblePlugin
+from opal.plugins.bibles.lib.mediaitem import BibleMediaItem
+from opal.plugins.custom.customplugin import CustomPlugin
+from opal.plugins.custom.lib.mediaitem import CustomMediaItem
+from opal.plugins.planningcenter.forms.selectplanform import SelectPlanForm
+from opal.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
+from opal.plugins.songs.lib.mediaitem import SongMediaItem
+from opal.plugins.songs.songsplugin import SongsPlugin
 from tests.utils.constants import TEST_RESOURCES_PATH
 
 TEST_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), TEST_RESOURCES_PATH, 'planningcenter'))
@@ -62,8 +62,8 @@ def form(plugin: PlanningCenterPlugin):
     yield form_
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_initial_defaults(mocked_date: MagicMock, mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the SelectPlanForm displays with correct defaults
@@ -88,8 +88,8 @@ def test_initial_defaults(mocked_date: MagicMock, mocked_exec: MagicMock, form: 
     assert form.slide_theme_selection_combo_box.count() == 0, 'Count of custom slide themes is incorrect'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.QMessageBox.warning')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.QMessageBox.warning')
 def test_warning_messagebox_shown_for_bad_credentials(mocked_warning: MagicMock, mocked_exec: MagicMock,
                                                       form: SelectPlanForm):
     """
@@ -104,7 +104,7 @@ def test_warning_messagebox_shown_for_bad_credentials(mocked_warning: MagicMock,
         mocked_warning.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_disable_import_buttons(mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the import buttons are disabled when the "Select Plan Date" element in the
@@ -120,8 +120,8 @@ def test_disable_import_buttons(mocked_exec: MagicMock, form: SelectPlanForm):
     assert not form.update_existing_button.isEnabled(), '"Refresh Service" button should be disabled'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_default_plan_date_is_next_sunday(mocked_date: MagicMock, mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the SelectPlanForm displays Next Sunday's Date by Default
@@ -139,8 +139,8 @@ def test_default_plan_date_is_next_sunday(mocked_date: MagicMock, mocked_exec: M
         'The next Sunday\'s Date is not selected in the plan_selection_combo_box'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.PlanningCenterAPI.get_plan_list')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.PlanningCenterAPI.get_plan_list')
 def test_plan_selection_combobox_item_texts(mocked_get_plan_list: MagicMock, mocked_exec: MagicMock,
                                             form: SelectPlanForm):
     """
@@ -176,7 +176,7 @@ def test_plan_selection_combobox_item_texts(mocked_get_plan_list: MagicMock, moc
     assert form.plan_selection_combo_box.itemText(4) == 'January 4, 2019 - Series'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_service_type_changed_called_when_service_type_combo_changed(mocked_exec: MagicMock, form: SelectPlanForm):
     """
     Test that the "on_service_type_combobox_changed" function is executed when the
@@ -191,7 +191,7 @@ def test_service_type_changed_called_when_service_type_combo_changed(mocked_exec
     assert form.plan_selection_combo_box.itemText(0) == 'Select Plan Date', 'Plan Combo Box has default text'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_plan_selection_changed_called_when_plan_selection_combo_changed(mocked_exec: MagicMock,
                                                                          form: SelectPlanForm):
     """
@@ -210,7 +210,7 @@ def test_plan_selection_changed_called_when_plan_selection_combo_changed(mocked_
     assert form.update_existing_button.isEnabled(), 'Update button should be enabled'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
 def test_settings_tab_displayed_when_edit_auth_button_clicked(mocked_exec: MagicMock, registry: Registry,
                                                               form: SelectPlanForm):
     """
@@ -228,8 +228,8 @@ def test_settings_tab_displayed_when_edit_auth_button_clicked(mocked_exec: Magic
     mocked_settings_form.exec.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.SelectPlanForm._do_import')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.SelectPlanForm._do_import')
 def test_import_function_called_when_import_button_clicked(mocked_do_import: MagicMock, mocked_exec: MagicMock,
                                                            form: SelectPlanForm):
     """
@@ -247,12 +247,12 @@ def test_import_function_called_when_import_button_clicked(mocked_do_import: Mag
     mocked_do_import.assert_called_with(update=False)
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
-@patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
-@patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.parse_reference')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.warning_message_box')
+@patch('opal.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
+@patch('opal.plugins.planningcenter.lib.customimport.CustomSlide')
+@patch('opal.plugins.planningcenter.forms.selectplanform.parse_reference')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_service_imported_when_import_button_clicked(mocked_date: MagicMock, mocked_parse_reference: MagicMock,
                                                      MockCustomSlide: MagicMock, mocked_finish: MagicMock,
                                                      mocked_warning_box: MagicMock, mocked_exec: MagicMock,
@@ -285,12 +285,12 @@ def test_service_imported_when_import_button_clicked(mocked_date: MagicMock, moc
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
-@patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
-@patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.parse_reference')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.warning_message_box')
+@patch('opal.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
+@patch('opal.plugins.planningcenter.lib.customimport.CustomSlide')
+@patch('opal.plugins.planningcenter.forms.selectplanform.parse_reference')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_service_refreshed_when_refresh_button_clicked(mocked_date: MagicMock, mocked_parse_reference: MagicMock,
                                                        MockCustomSlide: MagicMock, mocked_finish: MagicMock,
                                                        mocked_warning_box: MagicMock, mocked_exec: MagicMock,
@@ -323,12 +323,12 @@ def test_service_refreshed_when_refresh_button_clicked(mocked_date: MagicMock, m
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
-@patch('openlp.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
-@patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.parse_reference')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.warning_message_box')
+@patch('opal.plugins.planningcenter.lib.songimport.PlanningCenterSongImport.finish')
+@patch('opal.plugins.planningcenter.lib.customimport.CustomSlide')
+@patch('opal.plugins.planningcenter.forms.selectplanform.parse_reference')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_other_bible_is_used_when_bible_gui_form_is_blank(mocked_date: MagicMock, mocked_parse_reference: MagicMock,
                                                           MockCustomSlide: MagicMock, mocked_finish: MagicMock,
                                                           mocked_warning_box: MagicMock, mocked_exec: MagicMock,
@@ -358,12 +358,12 @@ def test_other_bible_is_used_when_bible_gui_form_is_blank(mocked_date: MagicMock
     assert mocked_warning_box.call_count == 0, 'No warnings triggered'
 
 
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.warning_message_box')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.PlanningCenterSongImport.finish')
-@patch('openlp.plugins.planningcenter.lib.customimport.CustomSlide')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.parse_reference')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.warning_message_box')
+@patch('opal.plugins.planningcenter.forms.selectplanform.PlanningCenterSongImport.finish')
+@patch('opal.plugins.planningcenter.lib.customimport.CustomSlide')
+@patch('opal.plugins.planningcenter.forms.selectplanform.parse_reference')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_warning_importing_bible_with_no_bible_available(mocked_date: MagicMock, mocked_parse_reference: MagicMock,
                                                          MockCustomSlide: MagicMock, mocked_finish: MagicMock,
                                                          mocked_warning_box: MagicMock, mocked_exec: MagicMock,
@@ -394,8 +394,8 @@ def test_warning_importing_bible_with_no_bible_available(mocked_date: MagicMock,
 
 
 @pytest.mark.skip('fails to run when executed with all other openlp tests.  awaiting pytest fixtures to enable again')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
-@patch('openlp.plugins.planningcenter.forms.selectplanform.date')
+@patch('opal.plugins.planningcenter.forms.selectplanform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.planningcenter.forms.selectplanform.date')
 def test_less_mocking_service_refreshed_when_refresh_button_clicked(mocked_date: MagicMock, mocked_exec: MagicMock,
                                                                     form: SelectPlanForm):
     """
@@ -418,10 +418,10 @@ def test_less_mocking_service_refreshed_when_refresh_button_clicked(mocked_date:
     service_manager = ServiceManager()
     service_manager.setup_ui(service_manager)
     # init songs plugin
-    with patch('openlp.plugins.songs.lib.mediaitem.EditSongForm'), \
-            patch('openlp.plugins.custom.lib.mediaitem.EditCustomForm'), \
-            patch('openlp.core.lib.mediamanageritem.create_widget_action'), \
-            patch('openlp.core.widgets.toolbar.create_widget_action'):
+    with patch('opal.plugins.songs.lib.mediaitem.EditSongForm'), \
+            patch('opal.plugins.custom.lib.mediaitem.EditCustomForm'), \
+            patch('opal.core.lib.mediamanageritem.create_widget_action'), \
+            patch('opal.core.widgets.toolbar.create_widget_action'):
         # init songs plugin
         songs_plugin = SongsPlugin()
         song_media_item = SongMediaItem(None, songs_plugin)

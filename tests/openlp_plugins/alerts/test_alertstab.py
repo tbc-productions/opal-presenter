@@ -23,8 +23,8 @@ This module contains tests for the Alerts settings tab.
 """
 from PySide6 import QtGui
 
-from openlp.core.common.settings import Settings
-from openlp.plugins.alerts.lib.alertstab import AlertsTab
+from opal.core.common.settings import Settings
+from opal.plugins.alerts.lib.alertstab import AlertsTab
 
 
 def test_update_display_uses_preview_palette_colors(registry, settings: Settings):

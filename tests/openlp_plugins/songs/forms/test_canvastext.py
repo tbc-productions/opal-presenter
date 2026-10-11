@@ -1,7 +1,7 @@
 """Source-preserving editing of paginated lyrics."""
 import pytest
 
-from openlp.plugins.slide_designer.forms.textediting import visible_text, replace_visible_text, source_selection
+from opal.plugins.slide_designer.forms.textediting import visible_text, replace_visible_text, source_selection
 
 
 @pytest.mark.parametrize('source,before,after,expected', [

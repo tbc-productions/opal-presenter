@@ -147,6 +147,9 @@ platform, use the source instructions below.
 
    You can also start it with `python run_opal_presenter.py` from the repository root.
 
+   The Python package is `opal`; `python -m opal` also starts the application.
+   Reinstall editable installations after updating from the former `openlp` package.
+
 Optional source-install extras include `spellcheck` and `sword-bibles`. For
 example, `python -m pip install -e ".[spellcheck,sword-bibles]"` installs both;
 spell checking also needs the system Enchant library.

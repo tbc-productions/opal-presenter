@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the :mod:`~openlp.core.ui.serviceitemeditform` package.
+Package to test the :mod:`~opal.core.ui.serviceitemeditform` package.
 """
 import pytest
 import fluentqt
@@ -27,8 +27,8 @@ from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore, QtTest
 
-from openlp.core.ui.serviceitemeditform import ServiceItemEditForm
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.ui.serviceitemeditform import ServiceItemEditForm
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def test_commands_follow_selected_row_in_either_column(form):
     assert [slide['title'] for slide in form.item_list] == ['Second', 'First', 'Third']
     assert form.item_grid.currentRow() == 1
     form.item_grid.setCurrentCell(1, 0)
-    with patch('openlp.core.ui.serviceitemeditform.RenameDialog.get_text', return_value=('Renamed', True)):
+    with patch('opal.core.ui.serviceitemeditform.RenameDialog.get_text', return_value=('Renamed', True)):
         form.rename_action.trigger()
     assert form.item_grid.item(1, 1).text() == 'Renamed'
     form.delete_action.trigger()
@@ -207,7 +207,7 @@ def test_drag_events_move_selected_rows_and_reject_external_drops(form):
         grid.dragEnterEvent(event)
         grid.dropEvent(event)
         return QtCore.Qt.DropAction.MoveAction
-    with patch('openlp.core.ui.serviceitemeditdialog.QtGui.QDrag') as drag:
+    with patch('opal.core.ui.serviceitemeditdialog.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = drag_loop
         grid.startDrag(QtCore.Qt.DropAction.MoveAction)
     assert [frame['title'] for frame in form.item_list] == ['Third', 'First', 'Second']

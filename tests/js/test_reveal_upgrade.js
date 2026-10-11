@@ -21,15 +21,15 @@ describe("Reveal display startup", function () {
         return check(win, errors);
       }).then(done, done.fail);
     };
-    frame.srcdoc = '<link rel="stylesheet" href="/base/openlp/core/display/html/reveal.css">' +
-      '<link rel="stylesheet" href="/base/openlp/core/display/html/display.css">' +
+    frame.srcdoc = '<link rel="stylesheet" href="/base/opal/core/display/html/reveal.css">' +
+      '<link rel="stylesheet" href="/base/opal/core/display/html/display.css">' +
       '<div class="reveal"><div class="slides"><section>' +
       '<span class="fragment">First</span><span class="fragment">Second</span>' +
       '</section></div><div class="footer"></div></div>' +
       '<script src="/base/tests/js/fake_webchannel.js"></script>' +
-      '<script src="/base/openlp/core/display/html/reveal.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display-init.js"></script>' +
-      '<script src="/base/openlp/core/display/html/display.js"></script>';
+      '<script src="/base/opal/core/display/html/reveal.js"></script>' +
+      '<script src="/base/opal/core/display/html/display-init.js"></script>' +
+      '<script src="/base/opal/core/display/html/display.js"></script>';
     document.body.appendChild(frame);
   }
 

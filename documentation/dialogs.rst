@@ -1,7 +1,7 @@
 Dialog design pattern
 =====================
 
-Construct operator UI through ``openlp.core.widgets.fluent``. Its shared dialog
+Construct operator UI through ``opal.core.widgets.fluent``. Its shared dialog
 adapters keep native Fluent presentation, same-window modal behaviour and the
 existing Qt result contracts. Do not construct ``fluentqt.ContentDialog`` or
 native Qt message/input dialogs directly in application code.
@@ -112,7 +112,7 @@ Wizard presentation
 -------------------
 
 Keep multi-step workflows on ``QtWidgets.QWizard`` and ``QtWidgets.QWizardPage``
-from ``openlp.core.widgets.fluent``. The shared adapters retain Qt's page IDs,
+from ``opal.core.widgets.fluent``. The shared adapters retain Qt's page IDs,
 registered fields, completion checks, validation and result contracts. Set page
 headings with ``setTitle()`` and instructions with ``setSubTitle()``; these use
 Fluent Title and Body typography with a step caption rather than Qt's banner.

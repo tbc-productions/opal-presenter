@@ -25,12 +25,12 @@ Test _process_avmt
 
 import logging
 
-import openlp.core.projectors.pjlinkcommands
+import opal.core.projectors.pjlinkcommands
 
 from unittest.mock import patch
 
-test_module = openlp.core.projectors.pjlinkcommands.__name__
-_process_avmt = openlp.core.projectors.pjlinkcommands._process_avmt
+test_module = opal.core.projectors.pjlinkcommands.__name__
+_process_avmt = opal.core.projectors.pjlinkcommands._process_avmt
 
 
 def test_avmt_mute(fake_pjlink):
@@ -41,7 +41,7 @@ def test_avmt_mute(fake_pjlink):
     fake_pjlink.mute = False
 
     # WHEN: Called
-    openlp.core.projectors.pjlinkcommands._process_avmt_mute(projector=fake_pjlink, data=True)
+    opal.core.projectors.pjlinkcommands._process_avmt_mute(projector=fake_pjlink, data=True)
 
     # THEN: mute should have been changed
     assert fake_pjlink.mute is True, 'Mute did not change'
@@ -55,14 +55,14 @@ def test_avmt_shutter(fake_pjlink):
     fake_pjlink.shutter = False
 
     # WHEN: Called
-    openlp.core.projectors.pjlinkcommands._process_avmt_shutter(projector=fake_pjlink, data=True)
+    opal.core.projectors.pjlinkcommands._process_avmt_shutter(projector=fake_pjlink, data=True)
 
     # THEN: mute should have been changed
     assert fake_pjlink.shutter is True, 'Mute did not change'
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_bad_data(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test avmt bad data fail
@@ -84,8 +84,8 @@ def test_avmt_bad_data(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_not_called()
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_10(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 10 = Shutter open, audio unchanged
@@ -107,8 +107,8 @@ def test_avmt_10(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_called_once_with('AVMT')
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_11(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 11 = Shutter closed, audio unchanged
@@ -129,8 +129,8 @@ def test_avmt_11(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_called_once_with('AVMT')
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_20(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 20 = Shutter unchanged, audio normal
@@ -151,8 +151,8 @@ def test_avmt_20(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_called_once_with('AVMT')
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_21(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 21 = Shutter unchanged, audio mute
@@ -173,8 +173,8 @@ def test_avmt_21(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_called_once_with('AVMT')
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_30(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 30 = Shutter open, audio normal
@@ -198,8 +198,8 @@ def test_avmt_30(mock_shutter, mock_mute, fake_pjlink, caplog):
     fake_pjlink.status_timer_delete.assert_called_once_with('AVMT')
 
 
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_mute')
-@patch.object(openlp.core.projectors.pjlinkcommands, '_process_avmt_shutter')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_mute')
+@patch.object(opal.core.projectors.pjlinkcommands, '_process_avmt_shutter')
 def test_avmt_31(mock_shutter, mock_mute, fake_pjlink, caplog):
     """
     Test 31 = Shutter closed, audio mute

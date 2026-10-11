@@ -25,16 +25,16 @@ import os
 import shutil
 from unittest.mock import patch, PropertyMock
 
-from openlp.core.db.upgrades import upgrade_db
-from openlp.plugins.songs.lib import upgrade
-from openlp.plugins.songs.lib.db import Author, AuthorType, SongBook, Song
+from opal.core.db.upgrades import upgrade_db
+from opal.plugins.songs.lib import upgrade
+from opal.plugins.songs.lib.db import Author, AuthorType, SongBook, Song
 from tests.utils.constants import TEST_RESOURCES_PATH
 
 
-@patch('openlp.plugins.songs.lib.db.get_natural_key')
-@patch('openlp.plugins.songs.lib.db.create_separated_list')
-@patch('openlp.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
-@patch('openlp.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.get_natural_key')
+@patch('opal.plugins.songs.lib.db.create_separated_list')
+@patch('opal.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
 def test_init_on_load(mock_detail_cache, mock_sort_cache, mock_create_list, mock_get_key):
     """
     Test if init_on_load creates sort_key and show_text
@@ -64,9 +64,9 @@ def test_init_on_load(mock_detail_cache, mock_sort_cache, mock_create_list, mock
     mock_create_list.assert_called_once_with(['Test Author'])
 
 
-@patch('openlp.plugins.songs.lib.db.get_natural_key')
-@patch('openlp.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
-@patch('openlp.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.get_natural_key')
+@patch('opal.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
 def test_init_on_load_fallback_to_title(mock_detail_cache, mock_sort_cache, mock_get_key):
     """
     Test init_on_load uses title as show_text when no authors are present
@@ -91,10 +91,10 @@ def test_init_on_load_fallback_to_title(mock_detail_cache, mock_sort_cache, mock
     mock_get_key.assert_called_once_with('This is a Test')
 
 
-@patch('openlp.plugins.songs.lib.db.get_natural_key')
-@patch('openlp.plugins.songs.lib.db.create_separated_list')
-@patch('openlp.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
-@patch('openlp.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.get_natural_key')
+@patch('opal.plugins.songs.lib.db.create_separated_list')
+@patch('opal.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
 def test_init_on_load_uses_cached_values(mock_detail_cache, mock_sort_cache, mock_create_list, mock_get_key):
     """
     Test init_on_load uses cached sort_key and show_text if available
@@ -119,10 +119,10 @@ def test_init_on_load_uses_cached_values(mock_detail_cache, mock_sort_cache, moc
     mock_create_list.assert_not_called()
 
 
-@patch('openlp.plugins.songs.lib.db.get_natural_key')
-@patch('openlp.plugins.songs.lib.db.create_separated_list')
-@patch('openlp.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
-@patch('openlp.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.get_natural_key')
+@patch('opal.plugins.songs.lib.db.create_separated_list')
+@patch('opal.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
 def test_init_on_load_force_recalculation(mock_detail_cache, mock_sort_cache, mock_create_list, mock_get_key):
     """
     Test init_on_load recalculates song_detail when force flag is True
@@ -150,10 +150,10 @@ def test_init_on_load_force_recalculation(mock_detail_cache, mock_sort_cache, mo
     mock_create_list.assert_called_once_with(['Recalc Author'])
 
 
-@patch('openlp.plugins.songs.lib.db.get_natural_key')
-@patch('openlp.plugins.songs.lib.db.create_separated_list')
-@patch('openlp.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
-@patch('openlp.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.get_natural_key')
+@patch('opal.plugins.songs.lib.db.create_separated_list')
+@patch('opal.plugins.songs.lib.db.sort_key_cache', new_callable=dict)
+@patch('opal.plugins.songs.lib.db.song_detail_cache', new_callable=dict)
 def test_init_on_load_with_media_files(mock_detail_cache, mock_sort_cache, mock_create_list, mock_get_key):
     """
     Test init_on_load includes (A) in song_detail when media_files exist

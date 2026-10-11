@@ -3,11 +3,11 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.ui.servicemanager import ServiceManager
+from opal.core.ui.servicemanager import ServiceManager
 
 
 def test_service_commandbar_shares_overflow_across_sections(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
+    from opal.core.common.actions import ActionList
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})
     for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
@@ -50,8 +50,8 @@ def test_service_commandbar_shares_overflow_across_sections(registry, settings, 
 
 
 def test_top_service_commandbar_shares_overflow_and_opens_services(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
-    from openlp.core.widgets import fluent
+    from opal.core.common.actions import ActionList
+    from opal.core.widgets import fluent
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})
     for name in ('main_window', 'live_controller', 'renderer', 'plugin_manager'):
@@ -102,9 +102,9 @@ def test_top_service_commandbar_shares_overflow_and_opens_services(registry, set
 
 
 def test_service_context_menu_uses_standard_fluent_row_geometry(registry, settings, qtbot, monkeypatch):
-    from openlp.core.common.actions import ActionList
-    from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem, ServiceItemType
-    from openlp.core.widgets import fluent
+    from opal.core.common.actions import ActionList
+    from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem, ServiceItemType
+    from opal.core.widgets import fluent
 
     monkeypatch.setattr(ActionList, 'instance', None)
     monkeypatch.setattr(ActionList, 'shortcut_map', {})

@@ -19,13 +19,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.common.mixins package.
+Package to test the opal.core.common.mixins package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.mixins import RegistryProperties
-from openlp.core.common.registry import Registry
+from opal.core.common.mixins import RegistryProperties
+from opal.core.common.registry import Registry
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_application(registry_env):
     assert registry_env.application == application, 'The application value should match'
 
 
-@patch('openlp.core.common.mixins.is_win')
+@patch('opal.core.common.mixins.is_win')
 def test_application_on_windows(mocked_is_win, registry_env):
     """
     Test property if registry value assigned on Windows
@@ -78,7 +78,7 @@ def test_application_on_windows(mocked_is_win, registry_env):
     assert registry_env.application == application, 'The application value should match'
 
 
-@patch('openlp.core.common.mixins.is_win')
+@patch('opal.core.common.mixins.is_win')
 def test_get_application_on_windows(mocked_is_win):
     """
     Set that getting the application object on Windows happens dynamically
@@ -104,7 +104,7 @@ def test_debug_logging_preserves_queued_qobject_receiver(qapp, caplog):
     """Debug tracing must not deliver GUI callbacks in a worker thread."""
     import logging
     from PySide6 import QtCore
-    from openlp.core.common.mixins import LogMixin
+    from opal.core.common.mixins import LogMixin
 
     class Receiver(QtCore.QObject, LogMixin):
         def receive(self, title, message):
@@ -147,7 +147,7 @@ def test_debug_logging_preserves_queued_qobject_receiver(qapp, caplog):
 def test_logging_wrapper_retains_method_arguments_and_exceptions(caplog):
     """Binding the tracing wrapper must preserve normal method behaviour."""
     import logging
-    from openlp.core.common.mixins import LogMixin
+    from opal.core.common.mixins import LogMixin
 
     class Receiver(LogMixin):
         def multiply(self, value, *, factor=2):

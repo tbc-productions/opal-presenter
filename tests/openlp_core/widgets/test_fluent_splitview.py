@@ -2,8 +2,8 @@
 import pytest
 from PySide6 import QtCore, QtWidgets as Native
 
-from openlp.core.app import OpenLP
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.app import OpenLP
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture(scope='session')

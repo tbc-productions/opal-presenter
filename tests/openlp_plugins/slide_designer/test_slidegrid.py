@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.slide_designer.forms.slidegrid import slide_rows
+from opal.core.common.registry import Registry
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.slide_designer.forms.slidegrid import slide_rows
 
 
 @pytest.fixture
 def form(settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -256,7 +256,7 @@ def test_source_context_menu_uses_shared_history(form):
 
 
 def test_custom_source_edits_splits_and_round_trips(form):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     editor = owner.edit_slide_form
     try:
@@ -327,7 +327,7 @@ def test_backspace_at_start_of_first_row_keeps_content(form, qtbot):
 
 
 def test_custom_slide_split_merge_and_design_undo(form, qtbot):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     editor = owner.edit_slide_form
     editor.set_text('First\nSecond\n[===]\nLast')
@@ -467,8 +467,8 @@ def test_deleting_first_slide_keeps_heading_on_its_continuation(form):
 
 
 def test_cross_slide_text_selection_cuts_partial_lines_and_undo(form):
-    from openlp.core.widgets import fluent as QtWidgets
-    from openlp.plugins.slide_designer.forms.slidegrid import qt_length
+    from opal.core.widgets import fluent as QtWidgets
+    from opal.plugins.slide_designer.forms.slidegrid import qt_length
     source = '---[Verse:1]---\nHello 🙏 world\n[--}{--]\nSecond line'
     form.set_verse(source)
     grid = form.slide_grid
@@ -529,7 +529,7 @@ def test_shift_click_and_drag_across_rows(form, qtbot):
 
 
 def test_custom_slide_cut_move_keeps_local_design_and_footer(form):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     editor = owner.edit_slide_form
     editor.set_text('First\n[===]\nSecond\n[===]\nThird')

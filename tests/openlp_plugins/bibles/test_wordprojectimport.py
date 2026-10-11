@@ -25,7 +25,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from openlp.plugins.bibles.lib.importers.wordproject import WordProjectBible
+from opal.plugins.bibles.lib.importers.wordproject import WordProjectBible
 from tests.utils.constants import RESOURCE_PATH
 
 

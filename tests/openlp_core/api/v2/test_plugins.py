@@ -24,12 +24,12 @@ from unittest.mock import MagicMock
 
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.enum import PluginStatus
-from openlp.core.display.render import Renderer
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.state import State
-from openlp.core.api.versions.v2.plugins import search
+from opal.core.common.registry import Registry
+from opal.core.common.enum import PluginStatus
+from opal.core.display.render import Renderer
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.state import State
+from opal.core.api.versions.v2.plugins import search
 from tests.openlp_core.lib.test_serviceitem import TEST_PATH as SERVICEITEM_TEST_PATH
 from tests.utils import convert_file_service_item
 

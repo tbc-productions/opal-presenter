@@ -19,8 +19,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib.settings package.
+Package to test the opal.core.lib.settings package.
 """
+import pickle
 import pytest
 import shutil
 import tempfile
@@ -29,12 +30,12 @@ from unittest.mock import call, patch
 
 from PySide6 import QtCore
 
-from openlp.core.common import settings as modsettings
-from openlp.core.common.platform import is_macosx
-from openlp.core.common.settings import Settings, media_players_conv, upgrade_dark_theme_to_ui_theme, \
+from opal.core.common import settings as modsettings
+from opal.core.common.platform import is_macosx
+from opal.core.common.settings import Settings, media_players_conv, upgrade_dark_theme_to_ui_theme, \
     check_for_variant_migration
-from openlp.core.common.enum import PluginStatus
-from openlp.core.ui.style import UiThemes
+from opal.core.common.enum import PluginStatus
+from opal.core.ui.style import UiThemes
 
 from tests.utils.constants import RESOURCE_PATH
 
@@ -225,10 +226,10 @@ def test_extend_default_settings():
                                                  'test/extended 1': 1, 'test/extended 2': 2}
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_single_setting(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings works correctly for single value upgrades"""
     # GIVEN: A settings object with an upgrade step to take (99, so that we don't interfere with real ones)
@@ -252,10 +253,10 @@ def test_upgrade_single_setting(mocked_remove, mocked_setValue, mocked_value, mo
     mocked_remove.assert_called_once_with('single/value')
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_setting_value(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings correctly uses the new value when it's not a function"""
     # GIVEN: A settings object with an upgrade step to take (99, so that we don't interfere with real ones)
@@ -279,10 +280,10 @@ def test_upgrade_setting_value(mocked_remove, mocked_setValue, mocked_value, moc
     mocked_remove.assert_called_once_with('values/old value')
 
 
-@patch('openlp.core.common.settings.QtCore.QSettings.contains')
-@patch('openlp.core.common.settings.QtCore.QSettings.value')
-@patch('openlp.core.common.settings.QtCore.QSettings.setValue')
-@patch('openlp.core.common.settings.QtCore.QSettings.remove')
+@patch('opal.core.common.settings.QtCore.QSettings.contains')
+@patch('opal.core.common.settings.QtCore.QSettings.value')
+@patch('opal.core.common.settings.QtCore.QSettings.setValue')
+@patch('opal.core.common.settings.QtCore.QSettings.remove')
 def test_upgrade_multiple_one_invalid(mocked_remove, mocked_setValue, mocked_value, mocked_contains):
     """Test that the upgrade mechanism for settings works correctly for multiple values where one is invalid"""
     # GIVEN: A settings object with an upgrade step to take
@@ -398,6 +399,16 @@ def test_upgrade_dark_theme_to_ui_theme_false():
     assert result == UiThemes.Automatic
 
 
+@pytest.mark.parametrize('payload,expected', [
+    (b'copenlp.core.common.enum\nPluginStatus\n(I1\ntR.', PluginStatus.Active),
+    (b'copenlp.core.ui.style\nUiThemes\n(Vautomatic\ntR.', UiThemes.Automatic),
+    (b'copenlp.core.common.settings\nProxyMode\n(I1\ntR.', modsettings.ProxyMode.NO_PROXY),
+])
+def test_legacy_enum_settings_use_opal_classes(payload, expected):
+    """Stored enum names must resolve to the renamed classes without duplicate imports."""
+    assert pickle.loads(payload) is expected
+
+
 def test_settings_pyqt5_pyside6_migration_ini():
     """Test that an ini file created by PyQt5 can be read by PySide6"""
     # WHEN: The system is using ini configuration
@@ -445,8 +456,8 @@ def test_settings_pyqt5_pyside6_migration_ini_missing():
 
 def test_settings_zip_export_import(settings, monkeypatch):
     """Test exporting and importing settings using ZIP format"""
-    from openlp.core.common import settings as modsettings
-    from openlp.core.common.applocation import AppLocation
+    from opal.core.common import settings as modsettings
+    from opal.core.common.applocation import AppLocation
     original_version = modsettings.__version__
     modsettings.__version__ = 4
     try:
@@ -599,7 +610,7 @@ def test_legacy_settings_import_preserves_profile(settings, tmp_path):
 
 def test_invalid_native_settings_do_not_change_values(settings, tmp_path):
     import zipfile
-    from openlp.core.lib.nativefile import write_manifest
+    from opal.core.lib.nativefile import write_manifest
     source = tmp_path / 'invalid.opal-settings'
     settings.setValue('core/ccli number', 'before')
     with zipfile.ZipFile(source, 'w') as archive:

@@ -24,7 +24,7 @@ Functional tests to test the Impress class and related methods.
 import pytest
 from unittest.mock import MagicMock, call, patch
 
-from openlp.plugins.presentations.lib.impresscontroller import ImpressController, ImpressDocument, TextType
+from opal.plugins.presentations.lib.impresscontroller import ImpressController, ImpressDocument, TextType
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -51,7 +51,7 @@ def test_constructor(settings, mock_plugin):
     assert 'Impress' == controller.name, 'The name of the presentation controller should be correct'
 
 
-@patch('openlp.plugins.presentations.lib.impresscontroller.log')
+@patch('opal.plugins.presentations.lib.impresscontroller.log')
 def test_check_available(mocked_log, settings, mock_plugin):
     """
     Test `ImpressController.check_available` on Windows
@@ -60,8 +60,8 @@ def test_check_available(mocked_log, settings, mock_plugin):
     controller = ImpressController(plugin=mock_plugin)
 
     # WHEN: `check_available` is called on Windows and the COM server is not registered
-    with patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
-            patch('openlp.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=False), \
+    with patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
+            patch('opal.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=False), \
             patch.object(controller, 'get_com_servicemanager') as mocked_get_com_servicemanager:
         result = controller.check_available()
 
@@ -70,7 +70,7 @@ def test_check_available(mocked_log, settings, mock_plugin):
         assert result is False
 
 
-@patch('openlp.plugins.presentations.lib.impresscontroller.log')
+@patch('opal.plugins.presentations.lib.impresscontroller.log')
 def test_check_available_on_windows(mocked_log, settings, mock_plugin):
     """
     Test `ImpressController.check_available` on Windows
@@ -79,8 +79,8 @@ def test_check_available_on_windows(mocked_log, settings, mock_plugin):
     controller = ImpressController(plugin=mock_plugin)
 
     # WHEN: `check_available` is called on Windows and the COM server is registered
-    with patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
-            patch('openlp.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=True), \
+    with patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=True), \
+            patch('opal.plugins.presentations.lib.impresscontroller.is_com_registered', return_value=True), \
             patch.object(controller, 'get_com_servicemanager') as mocked_get_com_servicemanager:
         result = controller.check_available()
 
@@ -89,8 +89,8 @@ def test_check_available_on_windows(mocked_log, settings, mock_plugin):
         assert result is True
 
 
-@patch('openlp.plugins.presentations.lib.impresscontroller.log')
-@patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=False)
+@patch('opal.plugins.presentations.lib.impresscontroller.log')
+@patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=False)
 def test_check_available_on_linux(mocked_is_win, mocked_log, settings, mock_plugin):
     """
     Test `ImpressController.check_available` when not on Windows
@@ -99,7 +99,7 @@ def test_check_available_on_linux(mocked_is_win, mocked_log, settings, mock_plug
     controller = ImpressController(plugin=mock_plugin)
 
     # WHEN: `check_available` is called on Windows and `uno_available` is True
-    with patch('openlp.plugins.presentations.lib.impresscontroller.uno_available', True), \
+    with patch('opal.plugins.presentations.lib.impresscontroller.uno_available', True), \
             patch.object(controller, 'get_com_servicemanager') as mocked_get_com_servicemanager:
         result = controller.check_available()
 
@@ -108,7 +108,7 @@ def test_check_available_on_linux(mocked_is_win, mocked_log, settings, mock_plug
         assert result is True
 
 
-@patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=True)
+@patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=True)
 def test_start_process_on_windows(mocked_is_win, settings, mock_plugin):
     """
     Test that start_process() on Windows starts the process
@@ -126,9 +126,9 @@ def test_start_process_on_windows(mocked_is_win, settings, mock_plugin):
                                                                call('Bridge_GetValueObject')]
 
 
-@patch('openlp.plugins.presentations.lib.impresscontroller.is_win', return_value=False)
-@patch('openlp.plugins.presentations.lib.impresscontroller.get_uno_command', return_value='libreoffice')
-@patch('openlp.plugins.presentations.lib.impresscontroller.QtCore.QProcess')
+@patch('opal.plugins.presentations.lib.impresscontroller.is_win', return_value=False)
+@patch('opal.plugins.presentations.lib.impresscontroller.get_uno_command', return_value='libreoffice')
+@patch('opal.plugins.presentations.lib.impresscontroller.QtCore.QProcess')
 def test_start_process_on_linux(MockQProcess, mocked_get_uno_command, mocked_is_win, settings, mock_plugin):
     """
     Test that start_process() on Linux starts the process

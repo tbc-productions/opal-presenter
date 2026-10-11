@@ -8,13 +8,13 @@ import fluentqt
 from PySide6 import QtCore, QtGui, QtWidgets
 from fluentqt import GridView, TreeView
 
-from openlp.core.widgets.mediapicker import MediaPicker, MediaLibraryPathEdit
-from openlp.plugins.images.lib.db import Folder, Item
-from openlp.core.app import OpenLP
-from openlp.core.lib.designmedia import cache_media, resolve_media, media_label
-from openlp.core.widgets.mediapreview import MediaPreview, reveal_media
-from openlp.core.widgets.libraryview import LibraryView, LIBRARY_THUMBNAIL_ROLE
-from openlp.core.widgets.views import TreeWidgetWithDnD
+from opal.core.widgets.mediapicker import MediaPicker, MediaLibraryPathEdit
+from opal.plugins.images.lib.db import Folder, Item
+from opal.core.app import OpenLP
+from opal.core.lib.designmedia import cache_media, resolve_media, media_label
+from opal.core.widgets.mediapreview import MediaPreview, reveal_media
+from opal.core.widgets.libraryview import LibraryView, LIBRARY_THUMBNAIL_ROLE
+from opal.core.widgets.views import TreeWidgetWithDnD
 
 
 @pytest.fixture(scope='session')
@@ -49,9 +49,9 @@ def library(tmp_path, settings):
     manager.save_object.side_effect = save
     media_item = SimpleNamespace(manager=manager, item_class=Item, folder_class=Folder, _insert_saved_items=MagicMock())
     plugin = SimpleNamespace(media_item=media_item, is_active=lambda: True)
-    with patch('openlp.core.widgets.mediapicker.PluginManager.get_plugin_by_name',
+    with patch('opal.core.widgets.mediapicker.PluginManager.get_plugin_by_name',
                side_effect=lambda name: plugin if name == 'images' else None), \
-            patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'):
+            patch('opal.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'):
         yield media_item
 
 
@@ -183,7 +183,7 @@ def test_picker_grid_navigation_selection_search_and_thumbnail_update(qtbot, lib
 
 
 def test_picker_keeps_image_and_video_folders_separate(qtbot, library, tmp_path):
-    from openlp.plugins.media.lib.db import Folder as MediaFolder, Item as MediaItem
+    from opal.plugins.media.lib.db import Folder as MediaFolder, Item as MediaItem
     folder = MediaFolder(id=1, name='Videos')
     path = tmp_path / 'Loop.mp4'
     path.write_bytes(b'video')
@@ -191,7 +191,7 @@ def test_picker_keeps_image_and_video_folders_separate(qtbot, library, tmp_path)
     manager = MagicMock()
     manager.get_all_objects.side_effect = lambda model: [folder] if model == MediaFolder else [item]
     video_library = SimpleNamespace(manager=manager, item_class=MediaItem, folder_class=MediaFolder)
-    with patch('openlp.core.widgets.mediapicker.PluginManager.get_plugin_by_name',
+    with patch('opal.core.widgets.mediapicker.PluginManager.get_plugin_by_name',
                side_effect=lambda name: SimpleNamespace(media_item=library if name == 'images' else video_library,
                                                         is_active=lambda: True)):
         picker = MediaPicker()
@@ -223,7 +223,7 @@ def test_picker_adds_managed_file_to_library_and_keeps_original_name(qtbot, libr
     assert image.save(str(path))
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
-    with patch('openlp.core.widgets.mediapicker.FileDialog.getOpenFileNames', return_value=([path], None)):
+    with patch('opal.core.widgets.mediapicker.FileDialog.getOpenFileNames', return_value=([path], None)):
         picker.add_files()
     added = library.manager.save_object.call_args.args[0]
     assert added.name == 'New image.jpg'
@@ -244,7 +244,7 @@ def test_picker_adds_files_to_the_browsed_folder(qtbot, library, tmp_path, setti
     picker = MediaPicker(kinds=('image',))
     qtbot.addWidget(picker)
     picker.browser.activate_tile(picker.browser.grid.item(0))
-    with patch('openlp.core.widgets.mediapicker.FileDialog.getOpenFileNames', return_value=([path], None)):
+    with patch('opal.core.widgets.mediapicker.FileDialog.getOpenFileNames', return_value=([path], None)):
         picker.add_files()
     added = library.manager.save_object.call_args.args[0]
     assert added.folder_id == 1
@@ -301,7 +301,7 @@ def test_media_tiles_offer_context_actions_for_their_own_original(qtbot, library
     picker.browser.activate_tile(picker.browser.grid.item(0))
     grid = picker.browser.grid
     position = grid.visualItemRect(grid.item(0)).center()
-    with patch('openlp.core.widgets.mediapicker.media_context_menu') as context:
+    with patch('opal.core.widgets.mediapicker.media_context_menu') as context:
         grid.customContextMenuRequested.emit(position)
     context.assert_called_once_with(grid.viewport(), position,
                                     Path(library.manager.get_all_objects(Item)[1].file_path), 'Forest.png')
@@ -368,7 +368,7 @@ def test_audio_inspector_has_playback_controls_and_releases_player(settings, qtb
 
 
 def test_inspector_missing_original_reports_error(settings, qtbot, tmp_path):
-    with patch('openlp.core.widgets.mediapreview.QtWidgets.QMessageBox.warning') as warning:
+    with patch('opal.core.widgets.mediapreview.QtWidgets.QMessageBox.warning') as warning:
         MediaPreview.show_media(None, tmp_path / 'missing.png')
     warning.assert_called_once()
 
@@ -393,9 +393,9 @@ def test_pdf_inspector_renders_pages_without_library_thumbnails(settings, qtbot,
     ('mac', 'open', ['-R']), ('windows', 'explorer', ['/select,'])])
 def test_show_in_file_manager_selects_original_file(qtbot, library, platform, command, arguments):
     path = Path(library.manager.get_all_objects(Item)[0].file_path)
-    with patch('openlp.core.widgets.mediapreview.is_macosx', return_value=platform == 'mac'), \
-            patch('openlp.core.widgets.mediapreview.is_win', return_value=platform == 'windows'), \
-            patch('openlp.core.widgets.mediapreview.QtCore.QProcess.startDetached') as start:
+    with patch('opal.core.widgets.mediapreview.is_macosx', return_value=platform == 'mac'), \
+            patch('opal.core.widgets.mediapreview.is_win', return_value=platform == 'windows'), \
+            patch('opal.core.widgets.mediapreview.QtCore.QProcess.startDetached') as start:
         reveal_media(path)
     start.assert_called_once_with(command, arguments + [str(path.resolve())])
 

@@ -2,11 +2,11 @@
 import pytest
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 
-from openlp.core.common.actions import ActionList
-from openlp.core.lib.ui import create_widget_action
-from openlp.core.ui.library import _add_library_context_menu_separator
-from openlp.core.widgets import fluent
-from openlp.core.widgets.views import TreeWidgetWithDnD
+from opal.core.common.actions import ActionList
+from opal.core.lib.ui import create_widget_action
+from opal.core.ui.library import _add_library_context_menu_separator
+from opal.core.widgets import fluent
+from opal.core.widgets.views import TreeWidgetWithDnD
 
 
 def test_library_menu_has_no_empty_rows_or_trailing_gap(qapp, qtbot):

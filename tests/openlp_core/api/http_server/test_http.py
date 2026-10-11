@@ -22,14 +22,14 @@ Functional tests to test the Http Server Class.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.api.http.server import HttpServer, HttpWorker
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.api.http.server import HttpServer, HttpWorker
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
-@patch('openlp.core.api.http.server.HttpWorker')
-@patch('openlp.core.api.http.server.run_thread')
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.http.server.HttpWorker')
+@patch('opal.core.api.http.server.run_thread')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_server_start(mocked_get_section_data_path: MagicMock, mocked_run_thread: MagicMock,
                       MockHttpWorker: MagicMock, registry: Registry):
     """
@@ -47,9 +47,9 @@ def test_server_start(mocked_get_section_data_path: MagicMock, mocked_run_thread
     assert MockHttpWorker.call_count == 1, 'The http thread should have been called once'
 
 
-@patch('openlp.core.api.http.server.HttpWorker')
-@patch('openlp.core.api.http.server.run_thread')
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.http.server.HttpWorker')
+@patch('opal.core.api.http.server.run_thread')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_server_start_not_required(mocked_get_section_data_path: MagicMock, mocked_run_thread: MagicMock,
                                    MockHttpWorker: MagicMock, registry: Registry):
     """
@@ -68,9 +68,9 @@ def test_server_start_not_required(mocked_get_section_data_path: MagicMock, mock
     assert MockHttpWorker.call_count == 0, 'The http thread should not have been called'
 
 
-@patch('openlp.core.api.http.server.application')
-@patch('openlp.core.api.http.server.create_server')
-@patch('openlp.core.api.http.server.AppLocation.get_section_data_path')
+@patch('opal.core.api.http.server.application')
+@patch('opal.core.api.http.server.create_server')
+@patch('opal.core.api.http.server.AppLocation.get_section_data_path')
 def test_worker_start(mocked_get_path: MagicMock, mocked_create_server: MagicMock,
                       mocked_application: MagicMock, registry: Registry, settings: Settings):
     """Test starting the HTTP worker"""

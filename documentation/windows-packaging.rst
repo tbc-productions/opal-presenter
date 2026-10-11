@@ -10,10 +10,10 @@ Windows DLL search path. The media player now uses the location of the loaded
 ``QtCore`` extension module, which works in both a Python environment and the
 frozen application.
 
-OpenLP registers a PyInstaller hook through the ``pyinstaller40`` entry point.
+Opal registers a PyInstaller hook through the ``pyinstaller40`` entry point.
 Install this source checkout in the build environment before running PyInstaller
-(the packaging repository already does this). The ``openlp.core`` hook coexists
-with the packaging repository's ``openlp`` plugin hook and the standard PySide6
+(the packaging repository already does this). The ``opal.core`` hook coexists
+with the packaging repository's ``opal`` plugin hook and the standard PySide6
 hooks. On Windows it explicitly includes the wheel's DLLs, preserving their
 relative paths, and the WebEngine helper. It rejects an incomplete or unloadable
 Qt installation instead of shipping an unusable executable. Only use DLLs from

@@ -19,19 +19,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.planningcenter.lib.planningcentertab package.
+Package to test the opal.plugins.planningcenter.lib.planningcentertab package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.state import State
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.planningcenter.lib.planningcentertab import PlanningCenterTab
-from openlp.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
+from opal.core.state import State
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.planningcenter.lib.planningcentertab import PlanningCenterTab
+from opal.plugins.planningcenter.planningcenterplugin import PlanningCenterPlugin
 
 
 @pytest.fixture
@@ -54,8 +54,8 @@ def tab(plugin: PlanningCenterPlugin) -> PlanningCenterTab:
     del dialog
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.check_credentials')
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.check_credentials')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
 def test_bad_authentication_credentials(mocked_warning: MagicMock, mocked_check_credentials: MagicMock,
                                         tab: PlanningCenterTab):
     """
@@ -69,7 +69,7 @@ def test_bad_authentication_credentials(mocked_warning: MagicMock, mocked_check_
     mocked_warning.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
 def test_empty_authentication_credentials(mocked_warning: MagicMock, tab: PlanningCenterTab):
     """
     Test that the tab can be created and Test authentication clicked for missing application id and secret
@@ -83,8 +83,8 @@ def test_empty_authentication_credentials(mocked_warning: MagicMock, tab: Planni
     mocked_warning.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.check_credentials')
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.information')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.check_credentials')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.information')
 def test_good_authentication_credentials(mocked_information: MagicMock, mocked_check_credentials: MagicMock,
                                          tab: PlanningCenterTab):
     """
@@ -98,7 +98,7 @@ def test_good_authentication_credentials(mocked_information: MagicMock, mocked_c
     mocked_information.assert_called_once()
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.get_service_type_list')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.get_service_type_list')
 def test_load_service_type_combobox_items(mocked_get_service_type_list: MagicMock, tab: PlanningCenterTab):
     """
     Test that clicking default service type combo box loads the service types
@@ -136,8 +136,8 @@ def test_load_service_type_combobox_items(mocked_get_service_type_list: MagicMoc
     assert tab.def_service_type_combobox.itemData(tab.def_service_type_combobox.currentIndex()) == "2"
 
 
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.get_service_type_list')
-@patch('openlp.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.PlanningCenterAPI.get_service_type_list')
+@patch('opal.plugins.planningcenter.lib.planningcentertab.QtWidgets.QMessageBox.warning')
 def test_load_service_type_combobox_items_bad_auth(
     mocked_warning: MagicMock,
     mocked_get_service_type_list: MagicMock,

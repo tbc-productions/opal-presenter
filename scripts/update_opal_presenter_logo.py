@@ -112,7 +112,7 @@ def main():
         (1920, 1080), Image.Resampling.LANCZOS).save(images / 'opal-presenter-background.png')
     poster(logo, (370, 370)).save(images / 'opal-presenter-splash.png')
     poster(logo, (200, 400)).save(images / 'opal-presenter-about.png')
-    display = ROOT / 'openlp/core/display/html'
+    display = ROOT / 'opal/core/display/html'
     for name in ('opal-presenter-background.png', 'opal-presenter-splash.png'):
         (display / name).write_bytes((images / name).read_bytes())
     if args.packaging:

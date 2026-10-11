@@ -31,11 +31,11 @@ from unittest.mock import MagicMock, patch, sentinel
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.forms.songselectform import SongSelectForm
-from openlp.plugins.songs.lib import Song
-from openlp.plugins.songs.lib.songselect import BASE_URL, LOGIN_PAGE, Pages, SongSelectImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.forms.songselectform import SongSelectForm
+from opal.plugins.songs.lib import Song
+from opal.plugins.songs.lib.songselect import BASE_URL, LOGIN_PAGE, Pages, SongSelectImport
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 
@@ -54,9 +54,9 @@ def form(registry: Registry, settings: Settings) -> SongSelectForm:
     """A SongSelectForm object"""
     # registry.get('application').setApplicationVersion('0.0')
     # registry.get('application').processEvents = lambda: None
-    with patch('openlp.plugins.songs.forms.songselectdialog.QtWidgets.QGridLayout'), \
-            patch('openlp.plugins.songs.forms.songselectdialog.WebEngineView'), \
-            patch('openlp.plugins.songs.forms.songselectdialog.QtWidgets.QVBoxLayout'):
+    with patch('opal.plugins.songs.forms.songselectdialog.QtWidgets.QGridLayout'), \
+            patch('opal.plugins.songs.forms.songselectdialog.WebEngineView'), \
+            patch('opal.plugins.songs.forms.songselectdialog.QtWidgets.QVBoxLayout'):
         yield SongSelectForm(None, MagicMock(), MagicMock())
 
 
@@ -154,7 +154,7 @@ def test_get_page_type_other(importer: SongSelectImport):
     assert result == Pages.Other
 
 
-@patch('openlp.plugins.songs.lib.songselect.wait_for')
+@patch('opal.plugins.songs.lib.songselect.wait_for')
 def test_run_javascript(mocked_wait_for: MagicMock, importer: SongSelectImport):
     """
     Test run javascript calls the page object
@@ -188,7 +188,7 @@ def test_reset_webview(importer: SongSelectImport):
     importer.webview.setUrl.assert_called_with(QtCore.QUrl(LOGIN_PAGE))
 
 
-@patch('openlp.plugins.songs.lib.songselect.SongSelectImport.set_page')
+@patch('opal.plugins.songs.lib.songselect.SongSelectImport.set_page')
 def test_set_home_page(mocked_set_page: MagicMock, importer: SongSelectImport):
     """
     Test that when the home method is called, it attempts to go to the home page
@@ -201,7 +201,7 @@ def test_set_home_page(mocked_set_page: MagicMock, importer: SongSelectImport):
     mocked_set_page.assert_called_with(BASE_URL)
 
 
-@patch('openlp.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
+@patch('opal.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
 def test_set_page(mocked_run_js: MagicMock, importer: SongSelectImport):
     """
     Test set page runs the correct script
@@ -214,7 +214,7 @@ def test_set_page(mocked_run_js: MagicMock, importer: SongSelectImport):
     mocked_run_js.assert_called_with('document.location = "my_new_page"')
 
 
-@patch('openlp.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
+@patch('opal.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
 def test_set_login_fields(mocked_run_js: MagicMock, importer: SongSelectImport):
     """
     Test correct js is sent to set login fields
@@ -229,8 +229,8 @@ def test_set_login_fields(mocked_run_js: MagicMock, importer: SongSelectImport):
                                       ))
 
 
-@patch('openlp.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
-@patch('openlp.plugins.songs.lib.songselect.wait_for')
+@patch('opal.plugins.songs.lib.songselect.SongSelectImport._run_javascript')
+@patch('opal.plugins.songs.lib.songselect.wait_for')
 def test_get_page(mocked_wait_for: MagicMock, mocked_run_js: MagicMock, importer: SongSelectImport):
     """
     Test get page sends js requests
@@ -270,9 +270,9 @@ def test_get_song_number_from_url_nonumber(importer: SongSelectImport):
     assert result is None
 
 
-@patch('openlp.plugins.songs.lib.songselect.clean_song')
-@patch('openlp.plugins.songs.lib.songselect.Topic')
-@patch('openlp.plugins.songs.lib.songselect.Author')
+@patch('opal.plugins.songs.lib.songselect.clean_song')
+@patch('opal.plugins.songs.lib.songselect.Topic')
+@patch('opal.plugins.songs.lib.songselect.Author')
 def test_save_song_new_author(MockedAuthor: MagicMock, MockedTopic: MagicMock, mocked_clean_song: MagicMock,
                               importer: SongSelectImport):
     """
@@ -306,8 +306,8 @@ def test_save_song_new_author(MockedAuthor: MagicMock, MockedTopic: MagicMock, m
     assert 1 == len(result.authors_songs), 'There should only be one author'
 
 
-@patch('openlp.plugins.songs.lib.songselect.clean_song')
-@patch('openlp.plugins.songs.lib.songselect.Author')
+@patch('opal.plugins.songs.lib.songselect.clean_song')
+@patch('opal.plugins.songs.lib.songselect.Author')
 def test_save_song_existing_author(MockedAuthor: MagicMock, mocked_clean_song: MagicMock, importer: SongSelectImport):
     """
     Test that saving a song with an existing author performs the correct actions
@@ -339,8 +339,8 @@ def test_save_song_existing_author(MockedAuthor: MagicMock, mocked_clean_song: M
     assert 1 == len(result.authors_songs), 'There should only be one author'
 
 
-@patch('openlp.plugins.songs.lib.songselect.clean_song')
-@patch('openlp.plugins.songs.lib.songselect.Author')
+@patch('opal.plugins.songs.lib.songselect.clean_song')
+@patch('opal.plugins.songs.lib.songselect.Author')
 def test_save_song_unknown_author(MockedAuthor: MagicMock, mocked_clean_song: MagicMock, importer: SongSelectImport):
     """
     Test that saving a song with an author name of only one word performs the correct actions
@@ -372,9 +372,9 @@ def test_save_song_unknown_author(MockedAuthor: MagicMock, mocked_clean_song: Ma
     assert 1 == len(result.authors_songs), 'There should only be one author'
 
 
-@patch('openlp.plugins.songs.lib.songselect.clean_song')
-@patch('openlp.plugins.songs.lib.songselect.Topic')
-@patch('openlp.plugins.songs.lib.songselect.Author')
+@patch('opal.plugins.songs.lib.songselect.clean_song')
+@patch('opal.plugins.songs.lib.songselect.Topic')
+@patch('opal.plugins.songs.lib.songselect.Author')
 def test_save_song_topics(MockedAuthor: MagicMock, MockedTopic: MagicMock, mocked_clean_song: MagicMock,
                           importer: SongSelectImport):
     """
@@ -425,7 +425,7 @@ def test_create_form(form: SongSelectForm):
     assert isinstance(form.db_manager, MagicMock), 'The correct db_manager should have been assigned'
 
 
-@patch('openlp.plugins.songs.lib.songselect.SongSelectImport')
+@patch('opal.plugins.songs.lib.songselect.SongSelectImport')
 def test_initialise(mocked_ss_import: MagicMock, form: SongSelectForm):
     """
     Test the initialise method
@@ -451,7 +451,7 @@ def test_songselect_download_uses_finished_signal(form: SongSelectForm):
     assert form.current_download_item is download_item
 
 
-@patch('openlp.plugins.songs.forms.songselectform.QtWidgets.QDialog.exec')
+@patch('opal.plugins.songs.forms.songselectform.QtWidgets.QDialog.exec')
 def test_exec(mocked_exec: MagicMock, form: SongSelectForm):
     """
     Test the exec method
@@ -469,8 +469,8 @@ def test_exec(mocked_exec: MagicMock, form: SongSelectForm):
     mocked_exec.assert_called_once()
 
 
-@patch('openlp.plugins.songs.forms.songselectform.QtWidgets.QDialog.done')
-@patch('openlp.plugins.songs.forms.songselectform.QtWidgets.QProgressDialog')
+@patch('opal.plugins.songs.forms.songselectform.QtWidgets.QDialog.done')
+@patch('opal.plugins.songs.forms.songselectform.QtWidgets.QProgressDialog')
 def test_done(mocked_prog_dialog: MagicMock, mocked_done: MagicMock, form: SongSelectForm):
     """
     Test the done method closes th dialog
@@ -553,7 +553,7 @@ def test_signin_page_loaded(form: SongSelectForm):
     form.song_select_importer.set_login_fields.assert_called_with('user', 'pass')
 
 
-@patch('openlp.plugins.songs.forms.songselectdialog.QtWidgets.QListWidgetItem')
+@patch('opal.plugins.songs.forms.songselectdialog.QtWidgets.QListWidgetItem')
 def test_view_song(mock_qtlist: MagicMock, form: SongSelectForm):
     """
     Test that the _view_song method does the important stuff
@@ -585,7 +585,7 @@ def test_view_song(mock_qtlist: MagicMock, form: SongSelectForm):
     assert form.author_list_widget.addItem.call_count > 0
 
 
-@patch('openlp.plugins.songs.forms.songselectform.QtWidgets.QMessageBox.critical')
+@patch('opal.plugins.songs.forms.songselectform.QtWidgets.QMessageBox.critical')
 def test_view_song_invalid(mock_message: MagicMock, form: SongSelectForm):
     """
     Test that the _view_song doesn't mess up when the song doesn't exist

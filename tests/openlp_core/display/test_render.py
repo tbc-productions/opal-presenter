@@ -19,18 +19,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Test the :mod:`~openlp.core.display.render` package.
+Test the :mod:`~opal.core.display.render` package.
 """
 from unittest.mock import MagicMock, call, patch
 
 from PySide6 import QtCore
 
-from openlp.core.display.render import compare_chord_lyric_width, find_formatting_tags, remove_tags, render_chords, \
+from opal.core.display.render import compare_chord_lyric_width, find_formatting_tags, remove_tags, render_chords, \
     render_chords_for_printing, render_tags, ThemePreviewRenderer
-from openlp.core.lib.formattingtags import FormattingTags
+from opal.core.lib.formattingtags import FormattingTags
 
 
-@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+@patch('opal.core.display.render.FormattingTags.get_html_tags')
 def test_remove_tags(mocked_get_tags):
     """
     Test remove_tags() method.
@@ -65,7 +65,7 @@ def test_remove_tags(mocked_get_tags):
     assert result_string == expected_string, 'The strings should be identical'
 
 
-@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+@patch('opal.core.display.render.FormattingTags.get_html_tags')
 def test_render_tags(mocked_get_tags, settings):
     """
     Test the render_tags() method.
@@ -106,7 +106,7 @@ def test_render_tags(mocked_get_tags, settings):
     assert result_string == expected_string, 'The strings should be identical.'
 
 
-@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+@patch('opal.core.display.render.FormattingTags.get_html_tags')
 def test_render_tags_unknown_tag_dims_content(mocked_get_tags, settings):
     """
     Unknown formatting tags in a slide should have their content wrapped in a
@@ -135,7 +135,7 @@ def test_render_tags_unknown_tag_dims_content(mocked_get_tags, settings):
     assert result_string == expected_string
 
 
-@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+@patch('opal.core.display.render.FormattingTags.get_html_tags')
 def test_render_tags_unknown_tag_nested(mocked_get_tags, settings):
     """
     Nested unknown tags should each wrap their own content in a dim span.
@@ -152,7 +152,7 @@ def test_render_tags_unknown_tag_nested(mocked_get_tags, settings):
                              '<span style="opacity: 65%">B</span> C</span>')
 
 
-@patch('openlp.core.display.render.FormattingTags.get_html_tags')
+@patch('opal.core.display.render.FormattingTags.get_html_tags')
 def test_render_tags_unknown_tag_without_close_is_left_alone(mocked_get_tags, settings):
     """
     An unknown start tag without a matching close tag should be left unchanged
@@ -295,7 +295,7 @@ def test_format_slide(settings):
     Test that the format_slide function works as expected
     """
     # GIVEN: Renderer where no text fits on screen (force one line per slide)
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     lyrics = 'hello {st}test{/st}\nline two line after a {st}nice{/st} new line'
@@ -316,7 +316,7 @@ def test_format_slide_no_split(settings):
     Test that the format_slide function doesn't split a slide that fits
     """
     # GIVEN: Renderer where no text fits on screen (force one line per slide)
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     lyrics = 'line one\n[---]\nline two'
@@ -337,7 +337,7 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
     Test that ThemePreviewRenderer.save_screenshot captures via grab() on HiDPI systems.
     """
     # GIVEN: A ThemePreviewRenderer with mocked internals
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     mocked_pixmap = MagicMock()
@@ -354,9 +354,9 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
     mocked_screen = MagicMock()
     mocked_screen.devicePixelRatio.return_value = 2.0
 
-    with patch('openlp.core.display.render.wait_for') as mocked_wait_for, \
-            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance, \
-            patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
+    with patch('opal.core.display.render.wait_for') as mocked_wait_for, \
+            patch('opal.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance, \
+            patch('opal.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
         mocked_qapplication_instance.return_value = MagicMock()
         mocked_screen_at.return_value = mocked_screen
 
@@ -381,7 +381,7 @@ def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi
     Test that ThemePreviewRenderer.save_screenshot uses webview.render() on standard DPI systems.
     """
     # GIVEN: A ThemePreviewRenderer with mocked internals
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     mocked_pixmap = MagicMock()
@@ -396,8 +396,8 @@ def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi
     mocked_screen = MagicMock()
     mocked_screen.devicePixelRatio.return_value = 1.0
 
-    with patch('openlp.core.display.render.QtGui.QPixmap') as mocked_qpixmap, \
-            patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
+    with patch('opal.core.display.render.QtGui.QPixmap') as mocked_qpixmap, \
+            patch('opal.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at:
         mocked_qpixmap.return_value = mocked_pixmap
         mocked_screen_at.return_value = mocked_screen
 
@@ -411,12 +411,12 @@ def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi
         assert result == mocked_pixmap
 
 
-@patch('openlp.core.display.render.wait_for')
-@patch('openlp.core.display.render.ThemePreviewRenderer.grab')
-@patch('openlp.core.display.render.ThemePreviewRenderer.load_verses')
-@patch('openlp.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
-@patch('openlp.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
-@patch('openlp.core.display.render.ThemePreviewRenderer.set_theme')
+@patch('opal.core.display.render.wait_for')
+@patch('opal.core.display.render.ThemePreviewRenderer.grab')
+@patch('opal.core.display.render.ThemePreviewRenderer.load_verses')
+@patch('opal.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
+@patch('opal.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
+@patch('opal.core.display.render.ThemePreviewRenderer.set_theme')
 def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mocked_format_slide,
                                                           mocked_generate_footer, mocked_load_verses,
                                                           mocked_grab, mocked_wait_for, settings):
@@ -424,7 +424,7 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     Test that generate_preview() does not add an artificial timeout wait.
     """
     # GIVEN: A preview renderer with the pieces needed to render a preview
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     preview_renderer.force_page = False
@@ -441,8 +441,8 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     # Mock a HiDPI screen so generate_preview consistently uses the grab() screenshot branch.
     mocked_screen = MagicMock()
     mocked_screen.devicePixelRatio.return_value = 2.0
-    with patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
-            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
+    with patch('opal.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
+            patch('opal.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
         mocked_screen_at.return_value = mocked_screen
         mocked_qapplication_instance.return_value = MagicMock()
 
@@ -458,17 +458,17 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     mocked_wait_for.assert_called_once()
 
 
-@patch('openlp.core.display.render.ThemePreviewRenderer.grab')
-@patch('openlp.core.display.render.ThemePreviewRenderer.load_verses')
-@patch('openlp.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
-@patch('openlp.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
+@patch('opal.core.display.render.ThemePreviewRenderer.grab')
+@patch('opal.core.display.render.ThemePreviewRenderer.load_verses')
+@patch('opal.core.display.render.ThemePreviewRenderer.generate_footer', return_value='footer')
+@patch('opal.core.display.render.ThemePreviewRenderer.format_slide', return_value=['preview text'])
 def test_generate_preview_disables_theme_transitions_during_screenshot(
         mocked_format_slide, mocked_generate_footer, mocked_load_verses, mocked_grab, settings):
     """
     Test that generate_preview() disables theme transitions while capturing a screenshot.
     """
     # GIVEN: A preview renderer with transition support enabled
-    with patch('openlp.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
         init_fn.return_value = None
         preview_renderer = ThemePreviewRenderer()
     preview_renderer.force_page = False
@@ -491,8 +491,8 @@ def test_generate_preview_disables_theme_transitions_during_screenshot(
     # Mock a HiDPI screen so generate_preview consistently uses the grab() screenshot branch.
     mocked_screen = MagicMock()
     mocked_screen.devicePixelRatio.return_value = 2.0
-    with patch('openlp.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
-            patch('openlp.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
+    with patch('opal.core.display.render.QtGui.QGuiApplication.screenAt') as mocked_screen_at, \
+            patch('opal.core.display.render.QtWidgets.QApplication.instance') as mocked_qapplication_instance:
         mocked_screen_at.return_value = mocked_screen
         mocked_qapplication_instance.return_value = MagicMock()
 
@@ -507,7 +507,7 @@ def test_generate_preview_disables_theme_transitions_during_screenshot(
 
 
 def test_remove_unknown_tags_preserves_content_and_literal_braces():
-    from openlp.core.display.render import remove_unknown_tags
+    from opal.core.display.render import remove_unknown_tags
 
     assert remove_unknown_tags('{cg}Go {custom}in peace{/custom}\nAmen{/cg} {literal}') == (
         'Go in peace\nAmen {literal}')

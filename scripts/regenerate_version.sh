@@ -21,4 +21,4 @@ echo "Running: pip install -e ."
 .venv/bin/python -m pip install -e .
 
 echo "Version file regenerated successfully."
-echo "New version: $(cat openlp/.version)"
+echo "New version: $(cat opal/.version)"

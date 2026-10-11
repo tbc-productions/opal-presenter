@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui package.
+Package to test the opal.core.ui package.
 """
 import pytest
 from unittest.mock import patch
 
 from PySide6 import QtCore, QtTest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.servicenoteform import ServiceNoteForm
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.servicenoteform import ServiceNoteForm
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def test_basic_display(form: ServiceNoteForm):
     form.text_edit.setPlainText('')
 
     # WHEN displaying the UI and pressing enter
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -57,7 +57,7 @@ def test_basic_display(form: ServiceNoteForm):
     # WHEN displaying the UI, having set the text and pressing enter
     text = 'OpenLP is the best worship software'
     form.text_edit.setPlainText(text)
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)
     QtTest.QTest.mouseClick(ok_widget, QtCore.Qt.MouseButton.LeftButton)
@@ -67,7 +67,7 @@ def test_basic_display(form: ServiceNoteForm):
 
     # WHEN displaying the UI, having set the text and pressing enter
     form.text_edit.setPlainText('')
-    with patch('openlp.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
+    with patch('opal.core.ui.servicenoteform.QtWidgets.FormDialog.exec'):
         form.exec()
         form.text_edit.setPlainText(text)
     ok_widget = form.button_box.button(form.button_box.StandardButton.Save)

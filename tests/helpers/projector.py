@@ -25,8 +25,8 @@ Help classes/functions for PJLink Projector tests
 from unittest.mock import MagicMock
 from PySide6 import QtNetwork
 
-from openlp.core.projectors.constants import S_NOT_CONNECTED, S_OFF, S_OK
-from openlp.core.projectors.db import Projector
+from opal.core.projectors.constants import S_NOT_CONNECTED, S_OFF, S_OK
+from opal.core.projectors.db import Projector
 from tests.resources.projector.data import TEST1_DATA
 
 

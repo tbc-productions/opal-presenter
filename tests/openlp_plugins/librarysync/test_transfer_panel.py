@@ -8,15 +8,15 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.dnd import ItemDragData, ThemeDragData
-from openlp.plugins.librarysync.lib.panel import CloudDragData, CloudLibrary
-from openlp.plugins.librarysync.lib.preview import CloudPreviewWindow
-from openlp.plugins.librarysync.lib.provider import CATEGORIES, CloudItem, SyncError
-from openlp.plugins.librarysync.lib.transfer import (
+from opal.core.lib.plugin import PluginStatus
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.dnd import ItemDragData, ThemeDragData
+from opal.plugins.librarysync.lib.panel import CloudDragData, CloudLibrary
+from opal.plugins.librarysync.lib.preview import CloudPreviewWindow
+from opal.plugins.librarysync.lib.provider import CATEGORIES, CloudItem, SyncError
+from opal.plugins.librarysync.lib.transfer import (
     import_item, item_category, prepare_upload, read_xml_item, safe_name, safe_xml, write_upload)
-from openlp.plugins.librarysync.lib.worker import SyncWorker
+from opal.plugins.librarysync.lib.worker import SyncWorker
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
     assert panel.status.parentWidget() is panel.footer
     panel.set_status('Ready to connect')
     assert panel.status.toolTip() == 'Ready to connect'
-    from openlp.core.widgets.docks import MediaToolBox
+    from opal.core.widgets.docks import MediaToolBox
     from fluentqt import Breadcrumb
     assert isinstance(panel.sections, MediaToolBox)
     assert isinstance(panel.tree, QtWidgets.QTreeDataGrid)
@@ -56,7 +56,7 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
 
 
 def test_transfer_progress_shares_footer_and_starts_indeterminate(panel, monkeypatch):
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.run_thread', MagicMock())
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.run_thread', MagicMock())
     panel.start_job('upload', MagicMock())
     job_id = next(iter(panel.jobs))
     assert panel.footer.layout().itemAt(0).widget() is panel.footer.count_label
@@ -89,7 +89,7 @@ def test_old_transfer_progress_cannot_change_current_footer(panel):
 
 
 def test_transfer_footer_height_is_stable_and_cancel_is_small_subtle(panel, qtbot):
-    from openlp.core.widgets.libraryfooter import LibraryFooter
+    from opal.core.widgets.libraryfooter import LibraryFooter
     library_footer = LibraryFooter()
     qtbot.addWidget(library_footer)
     library_footer.show()
@@ -282,7 +282,7 @@ def test_local_cross_type_drop_switches_view_and_checks_correct_destination(pane
     old_tree.addTopLevelItem(row)
     old_tree.itemAt = MagicMock(return_value=row)
     source = (category, tmp_path / 'Welcome.xml', None, 'Welcome')
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.prepare_upload', MagicMock(return_value=[source]))
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.prepare_upload', MagicMock(return_value=[source]))
     panel.start_job, panel.browse = MagicMock(), MagicMock()
     enter = QtGui.QDragEnterEvent(QtCore.QPoint(1, 1), QtCore.Qt.DropAction.CopyAction, mime,
                                   QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
@@ -484,7 +484,7 @@ def test_preview_opens_inside_application_without_external_browser(panel, monkey
     QtWidgets.QVBoxLayout(window.contentWidget())
     window.show = MagicMock()
     show = MagicMock(return_value=window)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.show_preview', show)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.show_preview', show)
     opened = MagicMock()
     monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
     panel.update_actions()
@@ -505,7 +505,7 @@ def test_opening_and_closing_view_restores_normal_footer_status(panel, monkeypat
     window = CloudPreviewWindow(panel)
     QtWidgets.QVBoxLayout(window.contentWidget())
     window.show = MagicMock()
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.show_preview', lambda *args: window)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.show_preview', lambda *args: window)
     temporary = TemporaryDirectory()
     cancelled = Event()
     worker = SimpleNamespace(cancel=cancelled, stop=cancelled.set)
@@ -585,7 +585,7 @@ def test_provider_runs_in_worker_and_delivers_on_gui_thread(panel, qtbot, monkey
     thread_ids = []
     provider = MagicMock()
     provider.type_folder.return_value = None
-    monkeypatch.setitem(__import__('openlp.plugins.librarysync.lib.worker', fromlist=['PROVIDERS']).PROVIDERS,
+    monkeypatch.setitem(__import__('opal.plugins.librarysync.lib.worker', fromlist=['PROVIDERS']).PROVIDERS,
                         'google-drive', lambda profile, cancel: provider)
     app = QtWidgets.QApplication.instance()
     if not hasattr(app, 'worker_threads'):
@@ -604,10 +604,10 @@ def test_provider_runs_in_worker_and_delivers_on_gui_thread(panel, qtbot, monkey
 
 
 def test_restart_restores_saved_connection_and_account_without_prompt(panel, qtbot, monkeypatch):
-    from openlp.core.common.settings import Settings
-    from openlp.plugins.librarysync.lib.auth import GoogleAuth
-    from openlp.plugins.librarysync.lib.worker import PROVIDERS
-    from openlp.plugins.librarysync.lib.profile import validate_profile
+    from opal.core.common.settings import Settings
+    from opal.plugins.librarysync.lib.auth import GoogleAuth
+    from opal.plugins.librarysync.lib.worker import PROVIDERS
+    from opal.plugins.librarysync.lib.profile import validate_profile
     store = MagicMock()
     store.load.return_value = {'access_token': 'saved-test-token', 'expires_at': time.time() + 3600,
                                'refresh_token': 'saved-test-refresh'}
@@ -624,7 +624,7 @@ def test_restart_restores_saved_connection_and_account_without_prompt(panel, qtb
     imported, opened = MagicMock(), MagicMock()
     monkeypatch.setattr(CloudLibrary, 'import_connection', imported)
     monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', opened)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: None)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: None)
     fresh_settings = Settings(panel.plugin.settings.fileName(), QtCore.QSettings.Format.IniFormat)
     assert isinstance(fresh_settings.value('librarysync/profile'), dict)
     restored = CloudLibrary(SimpleNamespace(settings=fresh_settings), None)
@@ -687,7 +687,7 @@ def test_remote_filename_cannot_escape_storage():
 
 
 def test_worker_error_never_exposes_credentials(qapp, monkeypatch):
-    from openlp.plugins.librarysync.lib.worker import PROVIDERS
+    from opal.plugins.librarysync.lib.worker import PROVIDERS
     monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: MagicMock())
     worker = SyncWorker('job', {'provider': 'google-drive'}, MagicMock(side_effect=RuntimeError('private-token')))
     errors = []
@@ -697,7 +697,7 @@ def test_worker_error_never_exposes_credentials(qapp, monkeypatch):
 
 
 def test_worker_stop_finishes_without_publishing(qapp, monkeypatch):
-    from openlp.plugins.librarysync.lib.worker import PROVIDERS
+    from opal.plugins.librarysync.lib.worker import PROVIDERS
     provider = MagicMock()
     monkeypatch.setitem(PROVIDERS, 'google-drive', lambda profile, cancel: provider)
     worker = SyncWorker('job', {'provider': 'google-drive'}, lambda *args: 'result')
@@ -721,15 +721,15 @@ def test_file_import_does_not_report_unsaved_file_as_added(tmp_path):
 
 
 def test_song_round_trip_uses_native_export_and_real_database(settings, tmp_path, qtbot):
-    from openlp.core.db.manager import DBManager
-    from openlp.plugins.songs.lib.db import Song, init_schema
-    from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics
+    from opal.core.db.manager import DBManager
+    from opal.plugins.songs.lib.db import Song, init_schema
+    from opal.plugins.songs.lib.openlyricsxml import OpenLyrics
     from tests.utils.constants import RESOURCE_PATH
     manager = DBManager('songs', init_schema, db_url='sqlite:///' + str(tmp_path / 'songs.sqlite'))
     try:
         source = RESOURCE_PATH / 'songs' / 'openlyrics' / 'Amazing Grace.xml'
         original = OpenLyrics(manager).xml_to_song(source.read_text(encoding='utf-8'))
-        from openlp.plugins.songs.lib.mediaitem import SongListWidget
+        from opal.plugins.songs.lib.mediaitem import SongListWidget
         view = SongListWidget()
         qtbot.addWidget(view)
         view.addItem(SongListWidget.make_item(original.title, original.song_author_display, original.id))
@@ -760,7 +760,7 @@ def test_song_round_trip_uses_native_export_and_real_database(settings, tmp_path
         assert view.count() == 2
         assert len(manager.get_all_objects(Song)) == 2
         assert original.song_author_display == imported.song_author_display
-        from openlp.plugins.songs.lib.mediaitem import SongMediaItem
+        from opal.plugins.songs.lib.mediaitem import SongMediaItem
         library.save_auto_select_id = MagicMock()
         library.auto_select_id = -1
         SongMediaItem.display_results_song(library, manager.get_all_objects(Song))
@@ -771,7 +771,7 @@ def test_song_round_trip_uses_native_export_and_real_database(settings, tmp_path
 
 def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, qtbot, monkeypatch):
     from PySide6 import QtTest
-    from openlp.core.widgets.views import FileTreeWidgetItem
+    from opal.core.widgets.views import FileTreeWidgetItem
     panel.resize(850, 650)
     panel.show()
     zone = QtCore.QTimeZone(b'Australia/Sydney')
@@ -789,7 +789,7 @@ def test_cloud_lists_show_metadata_and_keep_downloads_in_sorted_position(panel, 
     assert panel.tree.viewport().geometry().top() >= panel.tree.header().height()
     assert [panel.tree.topLevelItem(i).text(0) for i in range(2)] == ['Alpha', 'Zeta']
     assert panel.tree.topLevelItem(0).text(1) == '4 KB'
-    from openlp.plugins.librarysync.lib.preview import cloud_metadata
+    from opal.plugins.librarysync.lib.preview import cloud_metadata
     assert panel.tree.topLevelItem(0).text(2) == cloud_metadata(items[1])['Modified']
     assert not panel.folder_action.isEnabled()
     header = panel.tree.header()
@@ -846,7 +846,7 @@ def test_theme_context_menu_includes_write_actions_with_item_permissions(panel, 
 @pytest.mark.parametrize('operation', ['rename', 'folder'])
 @pytest.mark.parametrize('accepted', [True, False])
 def test_cloud_names_use_content_dialog_and_cancel_without_writing(panel, monkeypatch, operation, accepted):
-    from openlp.core.widgets.views import FileTreeWidgetItem
+    from opal.core.widgets.views import FileTreeWidgetItem
     folder = CloudItem('images', 'Images', folder=True, category='images', can_upload=True)
     item = CloudItem('image', 'Welcome.png', category='images', can_edit=True)
     panel.folder, panel.category = folder, 'images'
@@ -974,8 +974,8 @@ def test_upload_checks_duplicate_and_only_overwrites_after_confirmation(panel, t
 
 def test_download_declined_overwrite_preserves_local_item_and_starts_no_job(panel, monkeypatch):
     plugin = SimpleNamespace(is_active=lambda: True)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.local_item', lambda *args: SimpleNamespace(id=42))
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.local_item', lambda *args: SimpleNamespace(id=42))
     panel.confirm_overwrite = MagicMock(return_value=False)
     panel.start_job = MagicMock()
     panel.download([CloudItem('song', 'Welcome.xml', category='songs')])
@@ -1025,13 +1025,13 @@ def test_cloud_move_collision_cannot_overwrite_without_permission_to_remove_orig
 
 def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot, tmp_path, monkeypatch):
     from threading import Event
-    from openlp.plugins.librarysync.lib.preview import show_preview
+    from opal.plugins.librarysync.lib.preview import show_preview
 
     source = tmp_path / 'original.png'
     image = QtGui.QImage(1920, 1080, QtGui.QImage.Format.Format_RGB32)
     image.fill(QtGui.QColor('blue'))
     image.save(str(source))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     item = CloudItem('image', 'Welcome.png', category='images', size=source.stat().st_size, version='1',
                      thumbnail_url='https://drive.google.com/thumbnail')
     panel.selected_items = MagicMock(return_value=[item])
@@ -1061,11 +1061,11 @@ def test_cloud_image_view_loads_original_instead_of_drive_thumbnail(panel, qtbot
 
 def test_cloud_presentation_downloads_deck_and_reuses_rendered_pdf(panel, monkeypatch, tmp_path):
     from threading import Event
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     controller = SimpleNamespace(name='Keynote', keynote_app=None)
     plugin = SimpleNamespace(is_active=lambda: True, media_item=SimpleNamespace(
         find_controller_by_type=lambda path: 'Keynote', controllers={'Keynote': controller}))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
     item = CloudItem('deck', 'Welcome.pptx', category='presentations', size=4, version='1')
     panel.selected_items = MagicMock(return_value=[item])
     panel.start_job = MagicMock()
@@ -1081,7 +1081,7 @@ def test_cloud_presentation_downloads_deck_and_reuses_rendered_pdf(panel, monkey
         return path
 
     export = MagicMock(side_effect=convert)
-    monkeypatch.setattr('openlp.plugins.presentations.lib.pdfexport.export_to_pdf', export)
+    monkeypatch.setattr('opal.plugins.presentations.lib.pdfexport.export_to_pdf', export)
     try:
         result = operation(provider, Event(), MagicMock(), MagicMock(), MagicMock())
         assert kind == 'preview' and result[2].suffix == '.pdf'
@@ -1155,7 +1155,7 @@ def test_updated_column_can_be_resized_when_cloud_list_overflows(panel, qtbot):
     panel.connected = True
     panel.update_actions()
     from PySide6 import QtTest
-    from openlp.plugins.librarysync.lib.preview import format_local_time
+    from opal.plugins.librarysync.lib.preview import format_local_time
 
     panel.resize(650, 500)
     panel.show()
@@ -1214,8 +1214,8 @@ def test_cloud_metadata_resize_handle_follows_mouse_without_shifting_name(panel,
 
 @pytest.fixture
 def persistent_cache(panel, tmp_path, monkeypatch):
-    from openlp.plugins.librarysync.lib.cache import CloudCache
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    from opal.plugins.librarysync.lib.cache import CloudCache
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     cache = CloudCache(panel.profile, 'account')
     folder = CloudItem('songs', 'Songs', folder=True, category='songs', can_upload=True, drive_id='library-drive')
     item = CloudItem('song', 'Welcome.xml', category='songs', version='1', can_edit=True, can_delete=True)
@@ -1225,7 +1225,7 @@ def persistent_cache(panel, tmp_path, monkeypatch):
 
 
 def test_persistent_listing_is_shown_after_restart_without_reloading_drive(panel, persistent_cache, qtbot, monkeypatch):
-    from openlp.plugins.librarysync.lib.worker import PROVIDERS
+    from opal.plugins.librarysync.lib.worker import PROVIDERS
     cache, folder, item = persistent_cache
     provider = MagicMock()
     provider.cache_account.return_value = 'account'
@@ -1270,7 +1270,7 @@ def test_refresh_bypasses_cache_and_captures_change_baseline_before_listing(pane
 def test_visible_poll_marks_relevant_changes_out_of_date_and_persists_cursor(
         panel, persistent_cache, qtbot, change, expected):
     from threading import Event
-    from openlp.plugins.librarysync.lib.provider import CloudChange
+    from opal.plugins.librarysync.lib.provider import CloudChange
     cache, folder, item = persistent_cache
     panel.jobs['snapshot'] = {'kind': 'browse', 'context': False, 'generation': panel.generation}
     panel.job_ready('snapshot', (folder, [item], '', True, ('baseline', False)))
@@ -1336,7 +1336,7 @@ def test_poll_stops_when_hidden_and_failure_keeps_cached_view_available(panel, p
 
 def test_mutation_invalidates_disk_listing_even_after_partial_failure(panel, persistent_cache, monkeypatch):
     cache, folder, item = persistent_cache
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.run_thread', MagicMock())
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.run_thread', MagicMock())
     provider = MagicMock()
     provider.cache_account.return_value = 'account'
 
@@ -1409,7 +1409,7 @@ def test_setup_connection_checks_existing_name_before_saving(panel, monkeypatch)
     wizard = MagicMock()
     wizard.exec.return_value = QtWidgets.QDialog.DialogCode.Rejected
     factory = MagicMock(return_value=wizard)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.ConnectionWizard', factory)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.ConnectionWizard', factory)
     panel.setup_connection()
     factory.assert_called_once_with(panel, existing_names=['Church Library'])
     assert panel.profile['name'] == 'Church Library'
@@ -1473,7 +1473,7 @@ def test_disconnected_handlers_do_not_export_or_prompt(panel, monkeypatch):
     dialog = MagicMock()
     save = MagicMock()
     monkeypatch.setattr(QtWidgets.fluentqt.ContentDialog, 'exec', dialog)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.FileDialog.getSaveFileName', save)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.FileDialog.getSaveFileName', save)
     panel.start_job = MagicMock()
     panel.disconnect()
     panel.export_connection()
@@ -1542,9 +1542,9 @@ def test_batch_cloud_moves_distinguish_file_extensions(panel, same_extension):
 @pytest.mark.parametrize('same_extension', [False, True])
 def test_batch_downloads_distinguish_file_extensions(panel, monkeypatch, same_extension):
     plugin = SimpleNamespace(is_active=lambda: True)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: plugin)
     existing = MagicMock(return_value=None)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.local_item', existing)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.local_item', existing)
     panel.start_job = MagicMock()
     items = [CloudItem('first', 'Welcome.png', category='images'),
              CloudItem('second', 'Welcome.PNG' if same_extension else 'Welcome.jpg', category='images')]
@@ -1558,7 +1558,7 @@ def test_batch_downloads_distinguish_file_extensions(panel, monkeypatch, same_ex
 
 @pytest.mark.parametrize('category', ['images', 'media', 'presentations'])
 def test_local_library_duplicate_lookup_matches_actual_file_extension(category):
-    from openlp.plugins.librarysync.lib.transfer import local_item
+    from opal.plugins.librarysync.lib.transfer import local_item
     first = SimpleNamespace(id=1, name='Welcome.png', file_path='/library/Welcome.png')
     second = SimpleNamespace(id=2, name='Welcome.jpg', file_path='/library/Welcome.jpg')
     plugin = MagicMock()
@@ -1588,9 +1588,9 @@ def test_importing_another_image_format_does_not_replace_existing_file(tmp_path)
 def test_view_reuses_uploaded_bytes_without_downloading(panel, tmp_path, monkeypatch, category, extension):
     from tempfile import TemporaryDirectory
     from threading import Event
-    from openlp.plugins.librarysync.lib.cache import CloudCache
+    from opal.plugins.librarysync.lib.cache import CloudCache
 
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     source = tmp_path / ('Welcome' + extension)
     source.write_bytes(b'uploaded file')
     item = CloudItem('uploaded', source.name, category=category, size=source.stat().st_size, version='2')
@@ -1625,9 +1625,9 @@ def test_view_reuses_uploaded_bytes_without_downloading(panel, tmp_path, monkeyp
 def test_unsuccessful_or_changed_upload_does_not_seed_preview(panel, tmp_path, monkeypatch, outcome):
     from tempfile import TemporaryDirectory
     from threading import Event
-    from openlp.plugins.librarysync.lib.cache import CloudCache
+    from opal.plugins.librarysync.lib.cache import CloudCache
 
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.cache.AppLocation.get_directory', lambda kind: tmp_path)
     source = tmp_path / 'Welcome.png'
     source.write_bytes(b'original file')
     item = CloudItem('uploaded', source.name, category='images', size=source.stat().st_size, version='2')
@@ -1667,7 +1667,7 @@ def test_outdated_listing_refreshes_automatically_at_most_every_ten_seconds(pane
     panel.folder = folder
     panel.browse = MagicMock()
     clock = SimpleNamespace(monotonic=MagicMock(return_value=1000))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.time', clock)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.time', clock)
     panel.jobs['changes'] = {'kind': 'changes', 'context': None, 'generation': panel.generation}
     panel.job_ready('changes', ('next', True))
     panel.job_completed('changes')

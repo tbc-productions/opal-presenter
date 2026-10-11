@@ -26,10 +26,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib import VerseType
-from openlp.plugins.songs.lib.importers.songshowplus import SongShowPlusImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib import VerseType
+from opal.plugins.songs.lib.importers.songshowplus import SongShowPlusImport
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 
@@ -38,7 +38,7 @@ TEST_PATH = RESOURCE_PATH / 'songs' / 'songshowplus'
 
 @pytest.fixture
 def importer(registry: Registry, settings: Settings):
-    with patch('openlp.plugins.songs.lib.importers.songshowplus.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.songshowplus.SongImport'):
         yield SongShowPlusImport(MagicMock(), file_paths=[])
 
 

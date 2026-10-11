@@ -3,17 +3,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.ui.style import (UiThemes, get_application_stylesheet, get_library_stylesheet,
+from opal.core.ui.style import (UiThemes, get_application_stylesheet, get_library_stylesheet,
                                   is_ui_theme_dark, set_default_theme)
 
-import openlp.core.ui.style
+import opal.core.ui.style
 import fluentqt
 
 
-@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-@patch('openlp.core.ui.style.is_system_darkmode')
+@patch('opal.core.ui.style.HAS_DARK_THEME', False)
+@patch('opal.core.ui.style.is_system_darkmode')
 def test_is_ui_theme_automatic_dark_when_system_dark(mocked_is_system_darkmode, mock_settings):
     """Test that the Automatic UI Theme is Dark on System Dark Theme"""
     # GIVEN: UI theme is Automatic and System Theme is Dark
@@ -27,8 +27,8 @@ def test_is_ui_theme_automatic_dark_when_system_dark(mocked_is_system_darkmode, 
     assert result is True
 
 
-@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
-@patch('openlp.core.ui.style.is_system_darkmode')
+@patch('opal.core.ui.style.HAS_DARK_THEME', False)
+@patch('opal.core.ui.style.is_system_darkmode')
 def test_is_ui_theme_dark_automatic_light_when_system_light(mocked_is_system_darkmode, mock_settings):
     """Test that the Automatic UI Theme is not Dark on System Light Theme"""
     # GIVEN: UI theme is Automatic and System Theme is Light
@@ -42,7 +42,7 @@ def test_is_ui_theme_dark_automatic_light_when_system_light(mocked_is_system_dar
     assert result is False
 
 
-@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('opal.core.ui.style.HAS_DARK_THEME', False)
 def test_is_ui_theme_dark_defaultlight_not_dark(mock_settings):
     """Test that the DefaultLight UI Theme is not Dark"""
     # GIVEN: UI theme is DefaultLight
@@ -55,7 +55,7 @@ def test_is_ui_theme_dark_defaultlight_not_dark(mock_settings):
     assert result is False
 
 
-@patch('openlp.core.ui.style.HAS_DARK_THEME', False)
+@patch('opal.core.ui.style.HAS_DARK_THEME', False)
 def test_is_ui_theme_dark_defaultdark_dark(mock_settings):
     """Test that the DefaultDark UI Theme is Dark"""
     # GIVEN: UI theme is DefaultDark
@@ -68,8 +68,8 @@ def test_is_ui_theme_dark_defaultdark_dark(mock_settings):
     assert result is True
 
 
-@pytest.mark.skipif(not hasattr(openlp.core.ui.style, 'qdarkstyle'), reason='qdarkstyle is not installed')
-@patch('openlp.core.ui.style.HAS_DARK_THEME', True)
+@pytest.mark.skipif(not hasattr(opal.core.ui.style, 'qdarkstyle'), reason='qdarkstyle is not installed')
+@patch('opal.core.ui.style.HAS_DARK_THEME', True)
 def test_is_ui_theme_dark_qdarkstyle_dark(mock_settings):
     """Test that the QDarkStyle UI Theme is Dark"""
     # GIVEN: UI theme is DefaultDark
@@ -82,10 +82,10 @@ def test_is_ui_theme_dark_qdarkstyle_dark(mock_settings):
     assert result is True
 
 
-@patch('openlp.core.ui.style.is_macosx', return_value=True)
+@patch('opal.core.ui.style.is_macosx', return_value=True)
 def test_set_default_lightmode_on_macos_uses_fusion_and_standard_palette(_mock_is_macosx):
     """Test that explicit light mode uses Fusion styling and sets a palette on macOS."""
-    from openlp.core.ui.style import set_default_lightmode
+    from opal.core.ui.style import set_default_lightmode
 
     mock_app = MagicMock()
     set_default_lightmode(mock_app)
@@ -94,10 +94,10 @@ def test_set_default_lightmode_on_macos_uses_fusion_and_standard_palette(_mock_i
     mock_app.setPalette.assert_called_once()
 
 
-@patch('openlp.core.ui.style.is_macosx', return_value=True)
+@patch('opal.core.ui.style.is_macosx', return_value=True)
 def test_set_default_darkmode_on_macos_uses_fusion_and_sets_palette(_mock_is_macosx):
     """Test that explicit dark mode uses Fusion and applies dark palette on macOS."""
-    from openlp.core.ui.style import set_default_darkmode
+    from opal.core.ui.style import set_default_darkmode
 
     mock_app = MagicMock()
     set_default_darkmode(mock_app)
@@ -111,12 +111,12 @@ def test_set_default_darkmode_on_macos_uses_fusion_and_sets_palette(_mock_is_mac
                                           (QtCore.Qt.ColorScheme.Unknown, False)])
 def test_linux_system_colour_scheme(scheme, dark):
     """Auto follows Qt's system colour scheme on platforms without a native probe."""
-    with patch('openlp.core.ui.style.IS_SYSTEM_DARKMODE', None), \
-            patch('openlp.core.ui.style.is_win', return_value=False), \
-            patch('openlp.core.ui.style.is_macosx', return_value=False), \
-            patch('openlp.core.ui.style.QtWidgets.QApplication.instance') as app:
+    with patch('opal.core.ui.style.IS_SYSTEM_DARKMODE', None), \
+            patch('opal.core.ui.style.is_win', return_value=False), \
+            patch('opal.core.ui.style.is_macosx', return_value=False), \
+            patch('opal.core.ui.style.QtWidgets.QApplication.instance') as app:
         app.return_value.styleHints.return_value.colorScheme.return_value = scheme
-        assert openlp.core.ui.style.is_system_darkmode() is dark
+        assert opal.core.ui.style.is_system_darkmode() is dark
 
 
 @pytest.mark.parametrize('scheme, expected', [

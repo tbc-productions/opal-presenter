@@ -24,9 +24,9 @@ This module contains tests for the lib submodule of the Bibles plugin.
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.bibles import lib
-from openlp.plugins.bibles.lib import SearchResults, get_reference_match, update_reference_separators
+from opal.core.common.registry import Registry
+from opal.plugins.bibles import lib
+from opal.plugins.bibles.lib import SearchResults, get_reference_match, update_reference_separators
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def mocked_bible_test(registry):
     Registry().register('settings', ret_value)
 
 
-@patch('openlp.plugins.bibles.lib.update_reference_separators')
+@patch('opal.plugins.bibles.lib.update_reference_separators')
 def test_get_reference_separator(mocked_update_reference_separators):
     """
     Test the get_reference_separator method

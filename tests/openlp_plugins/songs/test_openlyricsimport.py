@@ -26,11 +26,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lxml import etree
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
-from openlp.plugins.songs.lib.importers.songimport import SongImport
-from openlp.plugins.songs.lib.ui import SongStrings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
+from opal.plugins.songs.lib.importers.songimport import SongImport
+from opal.plugins.songs.lib.ui import SongStrings
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -58,7 +58,7 @@ SONG_TEST_DATA = {
 
 @pytest.fixture
 def importer(registry: Registry, settings: Settings) -> OpenLyricsImport:
-    with patch('openlp.plugins.songs.lib.importers.openlyrics.SongImport'):
+    with patch('opal.plugins.songs.lib.importers.openlyrics.SongImport'):
         yield OpenLyricsImport(MagicMock(), file_paths=[])
 
 
@@ -103,7 +103,7 @@ def test_file_import(importer: OpenLyricsImport):
         assert importer.open_lyrics.xml_to_song.called is True
 
 
-@patch('openlp.plugins.songs.lib.importers.openlyrics.log', autospec=True)
+@patch('opal.plugins.songs.lib.importers.openlyrics.log', autospec=True)
 def test_can_parse_file_having_a_processing_instruction(mocked_logger: MagicMock, importer: OpenLyricsImport):
     """
     Test files having a processing instruction can be parsed

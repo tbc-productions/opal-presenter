@@ -10,10 +10,10 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 
-from openlp.plugins.librarysync.lib.auth import GoogleAuth, TokenStore
-from openlp.plugins.librarysync.lib.profile import (
+from opal.plugins.librarysync.lib.auth import GoogleAuth, TokenStore
+from opal.plugins.librarysync.lib.profile import (
     deserialize_profile, folder_reference, read_profile, serialize_profile, validate_profile, write_profile)
-from openlp.plugins.librarysync.lib.provider import SyncError
+from opal.plugins.librarysync.lib.provider import SyncError
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ def test_connection_name_must_be_a_short_nonempty_label(profile, name):
 def test_failed_export_keeps_previous_connection_file(profile, tmp_path, monkeypatch):
     path = tmp_path / 'organisation.librarysync.json'
     path.write_text('previous connection')
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.profile.Path.replace',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.profile.Path.replace',
                         MagicMock(side_effect=OSError('disk error')))
     with pytest.raises(OSError):
         write_profile(path, profile)
@@ -101,7 +101,7 @@ def test_folder_reference_preserves_resource_key():
 
 def test_token_store_rejects_plaintext_backend(monkeypatch):
     backend = type('PlaintextKeyring', (), {'priority': 10, '__module__': 'keyrings.alt.file'})()
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.auth.keyring.get_keyring', lambda: backend)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.auth.keyring.get_keyring', lambda: backend)
     with pytest.raises(SyncError, match='credential store'):
         TokenStore('church')
 
@@ -113,7 +113,7 @@ def test_refresh_preserves_refresh_token_and_saves_only_to_store(profile, monkey
     reply = MagicMock(status_code=200)
     reply.json.return_value = {'access_token': 'new-token', 'expires_in': 3600}
     post = MagicMock(return_value=reply)
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.auth.requests.post', post)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.auth.requests.post', post)
     assert auth.access_token() == 'new-token'
     assert store.save.call_args.args[0]['refresh_token'] == 'user-refresh-token'
     assert post.call_args.kwargs['data']['grant_type'] == 'refresh_token'
@@ -150,7 +150,7 @@ def test_browser_sign_in_checks_state_and_uses_pkce(profile, monkeypatch):
             callback.wfile = MagicMock()
             callback.do_GET()
 
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.auth.HTTPServer', Server)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.auth.HTTPServer', Server)
     auth.sign_in(Event(), lambda url: opened.update(parse_qs(urlparse(url).query)))
     fields = auth.exchange.call_args.args[0]
     expected = base64.urlsafe_b64encode(hashlib.sha256(fields['code_verifier'].encode()).digest()).rstrip(b'=').decode()
@@ -166,7 +166,7 @@ def test_expired_sign_in_error_does_not_include_tokens(profile, monkeypatch):
     store.load.return_value = {}
     auth = GoogleAuth(profile['installed'], store)
     reply = SimpleNamespace(status_code=400, text='private-token')
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.auth.requests.post', lambda *args, **kwargs: reply)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.auth.requests.post', lambda *args, **kwargs: reply)
     with pytest.raises(SyncError) as error:
         auth.exchange({'grant_type': 'refresh_token', 'refresh_token': 'private-token'})
     assert 'private-token' not in str(error.value)

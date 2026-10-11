@@ -7,17 +7,17 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.registry import Registry
-from openlp.core.display.screens import ScreenList
-from openlp.core.lib.theme import Theme
-from openlp.core.ui.thememanager import ThemeManager
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.dnd import ThemeDragData
-from openlp.core.widgets.themeviews import ThemeViews
-from openlp.plugins.librarysync.lib.panel import CloudDragData, CloudLibrary
-from openlp.plugins.librarysync.lib.preview import text_service_item
-from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError
-from openlp.plugins.librarysync.lib.transfer import import_item, prepare_upload, read_theme_item, write_upload
+from opal.core.common.registry import Registry
+from opal.core.display.screens import ScreenList
+from opal.core.lib.theme import Theme
+from opal.core.ui.thememanager import ThemeManager
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.dnd import ThemeDragData
+from opal.core.widgets.themeviews import ThemeViews
+from opal.plugins.librarysync.lib.panel import CloudDragData, CloudLibrary
+from opal.plugins.librarysync.lib.preview import text_service_item
+from opal.plugins.librarysync.lib.provider import CloudItem, SyncError
+from opal.plugins.librarysync.lib.transfer import import_item, prepare_upload, read_theme_item, write_upload
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ def test_local_themes_footer_and_cloud_drop_targets(theme, settings, qtbot, monk
     assert settings.value('user interface/theme thumbnail size') == 150
     manager.theme_list_widget.takeItem(0)
     assert manager.footer_status_bar.count_label.text() == '1 item'
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: None)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.PluginManager.get_plugin_by_name', lambda name: None)
     panel = CloudLibrary(SimpleNamespace(settings=settings), None)
     qtbot.addWidget(panel)
     panel.install_drop_targets()
@@ -111,14 +111,14 @@ def test_local_themes_footer_and_cloud_drop_targets(theme, settings, qtbot, monk
 
 
 def test_cloud_theme_preview_works_without_song_plugin_settings(theme, settings, qtbot, monkeypatch):
-    from openlp.plugins.librarysync.lib.preview import CloudSlidePreview
+    from opal.plugins.librarysync.lib.preview import CloudSlidePreview
     display = QtWidgets.QWidget()
     display.set_theme = MagicMock()
     display.set_scale = MagicMock()
     display.load_verses = MagicMock()
     display.go_to_slide = MagicMock()
     display.deregister_display = MagicMock()
-    monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    monkeypatch.setattr('opal.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
     warning = MagicMock()
     monkeypatch.setattr(QtWidgets.QMessageBox, 'warning', warning)
     parent = QtWidgets.QWidget()

@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.plugins.librarysync.lib.connectionwizard import ConnectionWizard
-from openlp.plugins.librarysync.lib.profile import read_profile
+from opal.core.widgets import fluent as QtWidgets
+from opal.plugins.librarysync.lib.connectionwizard import ConnectionWizard
+from opal.plugins.librarysync.lib.profile import read_profile
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def test_wizard_exports_on_finish_and_retains_folder_key(wizard, tmp_path, monke
     wizard.next()
     wizard.next()
     exported = tmp_path / 'church.opal-connection'
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName',
                         lambda *args, **kwargs: (exported, ''))
     assert wizard.validateCurrentPage()
     assert wizard.profile['folders'][0]['resource_key'] == 'link-key'
@@ -64,7 +64,7 @@ def test_cancelled_export_keeps_wizard_open(wizard, monkeypatch):
     wizard.next()
     wizard.next()
     dialog = MagicMock(return_value=(None, ''))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName', dialog)
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName', dialog)
     assert not wizard.validateCurrentPage()
     assert wizard.profile is None
     wizard.export_check.setChecked(False)
@@ -79,7 +79,7 @@ def test_wizard_can_load_google_desktop_client_json(wizard, tmp_path, monkeypatc
     client_file.write_text(json.dumps({'installed': {
         'client_id': 'church.apps.googleusercontent.com', 'client_secret': 'desktop-client',
         'token_uri': 'https://attacker.example'}}))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getOpenFileName',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getOpenFileName',
                         lambda *args, **kwargs: (client_file, ''))
     page.load_google_client()
     assert page.client_id.text() == 'church.apps.googleusercontent.com'
@@ -134,8 +134,8 @@ def test_back_preserves_provider_details_and_updates_review(wizard):
 
 
 def test_wizard_routes_to_selected_provider_and_skips_other_pages(settings, qtbot, monkeypatch):
-    from openlp.plugins.librarysync.lib import connectionwizard
-    from openlp.plugins.librarysync.lib.profile import PROFILE_VALIDATORS, serialize_profile
+    from opal.plugins.librarysync.lib import connectionwizard
+    from opal.plugins.librarysync.lib.profile import PROFILE_VALIDATORS, serialize_profile
 
     class OtherProviderPage(QtWidgets.QWizardPage):
         display_name = 'Other cloud'
@@ -171,7 +171,7 @@ def test_wizard_routes_to_selected_provider_and_skips_other_pages(settings, qtbo
 
 
 def test_setup_provider_needs_runtime_and_profile_support(settings, qtbot, monkeypatch):
-    from openlp.plugins.librarysync.lib import connectionwizard
+    from opal.plugins.librarysync.lib import connectionwizard
     monkeypatch.setitem(connectionwizard.PROVIDER_PAGES, 'unavailable', connectionwizard.GoogleDrivePage)
     widget = ConnectionWizard()
     qtbot.addWidget(widget)
@@ -182,9 +182,9 @@ def test_export_failure_keeps_profile_unset(wizard, tmp_path, monkeypatch):
     fill_wizard(wizard)
     wizard.next()
     wizard.next()
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getSaveFileName',
                         lambda *args, **kwargs: (tmp_path / 'connection.json', ''))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.write_profile',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.write_profile',
                         MagicMock(side_effect=OSError('disk error')))
     assert not wizard.validateCurrentPage()
     assert wizard.profile is None
@@ -199,7 +199,7 @@ def test_local_storage_page_chooses_folder_and_saves_without_credentials(wizard,
     assert wizard.currentPage() is page
     assert not wizard.export_check.isChecked()
     assert not wizard.button(QtWidgets.QWizard.WizardButton.NextButton).isEnabled()
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getExistingDirectory',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getExistingDirectory',
                         lambda *args, **kwargs: tmp_path)
     page.choose_folder()
     assert page.folder_path.text() == str(tmp_path)
@@ -237,7 +237,7 @@ def test_local_storage_rejects_missing_folder_or_file(wizard, tmp_path):
 def test_cancelled_local_folder_picker_retains_selection(wizard, tmp_path, monkeypatch):
     page = wizard.provider_pages['local-cloud']
     page.folder_path.setText(str(tmp_path))
-    monkeypatch.setattr('openlp.plugins.librarysync.lib.connectionwizard.FileDialog.getExistingDirectory',
+    monkeypatch.setattr('opal.plugins.librarysync.lib.connectionwizard.FileDialog.getExistingDirectory',
                         lambda *args, **kwargs: None)
     page.choose_folder()
     assert page.folder_path.text() == str(tmp_path)

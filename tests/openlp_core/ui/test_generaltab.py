@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.generaltab package.
+Package to test the opal.core.ui.generaltab package.
 """
 import pytest
 
-from openlp.core.resources import qInitResources
-from openlp.core.ui.generaltab import GeneralTab
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.core.ui.style import UiThemes
+from opal.core.resources import qInitResources
+from opal.core.ui.generaltab import GeneralTab
+from opal.core.ui.settingsform import SettingsForm
+from opal.core.ui.style import UiThemes
 
 from PySide6 import QtCore, QtGui, QtTest
 

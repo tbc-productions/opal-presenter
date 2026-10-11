@@ -24,13 +24,13 @@ This module contains tests for the SWORD Bible importer.
 from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
-from openlp.plugins.bibles.lib.db import BibleDB
+from opal.plugins.bibles.lib.db import BibleDB
 from tests.utils import load_external_result_data
 from tests.utils.constants import RESOURCE_PATH
 
 
 try:
-    from openlp.plugins.bibles.lib.importers.sword import SwordBible
+    from opal.plugins.bibles.lib.importers.sword import SwordBible
     HAS_PYSWORD = True
 except ImportError:
     HAS_PYSWORD = False
@@ -55,7 +55,7 @@ def test_create_importer(settings):
 
 
 @skipUnless(HAS_PYSWORD, 'pysword not installed')
-@patch('openlp.plugins.bibles.lib.importers.sword.modules')
+@patch('opal.plugins.bibles.lib.importers.sword.modules')
 def test_simple_import(mocked_pysword_modules, settings):
     """
     Test that a simple SWORD import works

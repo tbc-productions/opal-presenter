@@ -24,8 +24,8 @@ For the Presentation tests
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.presentations.lib.mediaitem import PresentationMediaItem
+from opal.core.common.registry import Registry
+from opal.plugins.presentations.lib.mediaitem import PresentationMediaItem
 
 
 @pytest.fixture
@@ -33,8 +33,8 @@ def media_item(settings, mock_plugin):
     """Local test setup"""
     Registry().register('service_manager', MagicMock())
     Registry().register('main_window', MagicMock())
-    with patch('openlp.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup'), \
-            patch('openlp.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item'):
+    with patch('opal.plugins.presentations.lib.mediaitem.FolderLibraryItem._setup'), \
+            patch('opal.plugins.presentations.lib.mediaitem.PresentationMediaItem.setup_item'):
         m_item = PresentationMediaItem(None, mock_plugin, MagicMock())
         m_item.settings_section = 'media'
     return m_item

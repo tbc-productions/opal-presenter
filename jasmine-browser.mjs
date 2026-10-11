@@ -9,9 +9,9 @@ export default {
   srcDir: '.',
   srcFiles: [
     'tests/js/fake_webchannel.js',
-    'openlp/core/display/html/reveal.js',
-    'openlp/core/display/html/display-init.js',
-    'openlp/core/display/html/display.js'
+    'opal/core/display/html/reveal.js',
+    'opal/core/display/html/display-init.js',
+    'opal/core/display/html/display.js'
   ],
   specDir: 'tests/js',
   specFiles: readdirSync(path.join(projectDir, 'tests/js'))
@@ -26,7 +26,7 @@ export default {
   browser: {name: 'headlessChrome'},
   middleware: {
     // Keep iframe rendering fixtures at the same URLs as the previous runner.
-    '/base/openlp/core/display/html': serveStatic(path.join(projectDir, 'openlp/core/display/html')),
+    '/base/opal/core/display/html': serveStatic(path.join(projectDir, 'opal/core/display/html')),
     '/base/tests/js': serveStatic(path.join(projectDir, 'tests/js'))
   }
 };

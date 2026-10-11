@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore
 
-from openlp.core.common.settings import Settings
-from openlp.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
+from opal.core.common.settings import Settings
+from opal.core.ui.layoutrecovery import begin_layout_startup, complete_layout_startup
 
 
 def screen_list(count=1, match=0):
@@ -133,8 +133,8 @@ import os
 import sys
 from unittest.mock import MagicMock
 from PySide6 import QtCore
-from openlp.core.common.settings import Settings
-from openlp.core.ui.layoutrecovery import begin_layout_startup
+from opal.core.common.settings import Settings
+from opal.core.ui.layoutrecovery import begin_layout_startup
 Settings.setDefaultFormat(QtCore.QSettings.Format.IniFormat)
 Settings.set_filename(sys.argv[1])
 screens = MagicMock()
@@ -166,7 +166,7 @@ assert QtCore.QSettings.value(settings, 'layout recovery/user interface/main win
 
 
 def test_application_keeps_marker_until_queued_startup_completes(settings, qapp, monkeypatch):
-    from openlp.core import app as app_module
+    from opal.core import app as app_module
 
     settings.setValue('core/has run wizard', True)
     settings.setValue('core/show splash', False)

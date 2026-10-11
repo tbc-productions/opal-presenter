@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6.QtCore import QSize
 
-from openlp.core.lib.slidedesign import apply_design, normalise_design, layer_order
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.common.enum import ServiceItemType
+from opal.core.lib.slidedesign import apply_design, normalise_design, layer_order
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.common.enum import ServiceItemType
 
 
 DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 'font_size': 48},
@@ -19,7 +19,7 @@ DESIGN = {'version': 1, 'canvas_height': 1080, 'lyrics': {'x': 10, 'width': 80, 
 
 
 def test_filters_are_validated_and_background_only_effects_are_preserved():
-    from openlp.core.lib.slidedesign import normalise_filters
+    from opal.core.lib.slidedesign import normalise_filters
     assert normalise_filters({'blur': 500, 'hue-rotate': -400, 'brightness': 100, 'sepia': float('nan'),
                               'contrast': 'url(https://invalid)', 'unknown': 10}) == {'blur': 100, 'hue-rotate': -180}
     source = {'version': 1, 'background_filters': {'sepia': 75, 'brightness': 90}}
@@ -92,16 +92,16 @@ def test_service_header_round_trip_keeps_portable_design(settings):
     with patch.object(item, 'get_theme_data', return_value=None):
         saved = json.loads(json.dumps(item.get_service_repr(False)))
     restored = ServiceItem()
-    with patch('openlp.core.lib.serviceitem.State') as state, patch.object(restored, '_create_slides'):
+    with patch('opal.core.lib.serviceitem.State') as state, patch.object(restored, '_create_slides'):
         state.return_value.check_preconditions.return_value = False
         restored.set_from_service({'serviceitem': saved}, None)
     assert restored.slide_design == item.slide_design
 
 
 def test_service_packages_base_theme_without_applying_canvas_fit_twice(settings, registry):
-    from openlp.core.lib.theme import Theme
+    from opal.core.lib.theme import Theme
 
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         from PySide6.QtCore import QRect
         screens.return_value.current.display_geometry = QRect(0, 0, 1440, 1080)
         theme = Theme()
@@ -114,7 +114,7 @@ def test_service_packages_base_theme_without_applying_canvas_fit_twice(settings,
     item.service_item_type = ServiceItemType.Text
     item.slide_design = {'version': 1, 'canvas_width': 1920, 'canvas_height': 1080,
                          'lyrics': {}, 'elements': []}
-    with patch('openlp.core.lib.slidedesign.ScreenList') as screens:
+    with patch('opal.core.lib.slidedesign.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QSize(1440, 1080)
         before = item.get_theme_data()
         saved = item.get_service_repr(False)['header']['slide_design']
@@ -132,7 +132,7 @@ def test_service_resolves_design_on_a_copy_of_the_selected_theme(settings, regis
     registry.register('theme_manager', manager)
     item = ServiceItem()
     item.slide_design = DESIGN
-    with patch('openlp.core.lib.slidedesign.ScreenList') as screens:
+    with patch('opal.core.lib.slidedesign.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QSize(1920, 1080)
         result = item.get_theme_data()
     assert result.font_main_x == 192
@@ -222,7 +222,7 @@ def test_service_hides_only_the_selected_verse_page_footer(settings, registry):
 
 
 def test_custom_footer_flags_follow_insertions_edits_and_deletions():
-    from openlp.core.lib.slidedesign import remap_custom_footers
+    from opal.core.lib.slidedesign import remap_custom_footers
     design = {'version': 1, 'hidden_footers': ['custom-1:0:0', 'custom-2:0:1', 'custom-3:0:0']}
     changed = remap_custom_footers(design, ['One', 'Two', 'Three'], ['New', 'One', 'Changed two', 'Three'])
     assert changed['hidden_footers'] == ['custom-2:0:0', 'custom-3:0:1', 'custom-4:0:0']
@@ -279,8 +279,8 @@ def test_portable_theme_preserves_font_weights():
 @pytest.mark.parametrize('embedded', [False, True])
 def test_inherited_fonts_scale_once_with_a_pixel_canvas(settings, width, height, embedded):
     from PySide6.QtCore import QRect
-    from openlp.core.lib.theme import Theme
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    from opal.core.lib.theme import Theme
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QRect(0, 0, 1920, 1080)
         theme = Theme()
     theme.font_main_size, theme.font_footer_size = 64, 24

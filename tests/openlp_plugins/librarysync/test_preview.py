@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.plugins.librarysync.lib.preview import (
+from opal.core.widgets import fluent as QtWidgets
+from opal.plugins.librarysync.lib.preview import (
     CloudMediaPreview, CloudPresentationPreview, CloudPreviewWindow, cloud_metadata, show_preview, text_service_item)
-from openlp.plugins.librarysync.lib.provider import CloudItem, SyncError, friendly_name
-from openlp.plugins.librarysync.lib.transfer import safe_xml
+from opal.plugins.librarysync.lib.provider import CloudItem, SyncError, friendly_name
+from opal.plugins.librarysync.lib.transfer import safe_xml
 
 
 @pytest.mark.parametrize('name,expected', [
@@ -185,7 +185,7 @@ def test_cloud_presentation_has_async_thumbnails_and_selectable_slides(settings,
 
 
 def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings, qtbot, monkeypatch):
-    from openlp.core.widgets.metadataview import MetadataView
+    from opal.core.widgets.metadataview import MetadataView
     viewer = QtWidgets.QWidget()
     viewer.setUrl = MagicMock()
     viewer.stop = MagicMock()
@@ -205,9 +205,9 @@ def test_provider_viewer_uses_grouped_metadata_without_fetching_a_page(settings,
 
 
 def test_cloud_slide_window_uses_preview_controller_and_embedded_display(settings, qtbot, monkeypatch):
-    from openlp.core.display.screens import ScreenList
-    from openlp.plugins.librarysync.lib.preview import CloudSlidePreview
-    from openlp.core.widgets.views import ListPreviewWidget
+    from opal.core.display.screens import ScreenList
+    from opal.plugins.librarysync.lib.preview import CloudSlidePreview
+    from opal.core.widgets.views import ListPreviewWidget
     ScreenList.create(QtWidgets.QApplication.instance())
     display = QtWidgets.QWidget()
     display.set_theme = MagicMock()
@@ -215,7 +215,7 @@ def test_cloud_slide_window_uses_preview_controller_and_embedded_display(setting
     display.load_verses = MagicMock()
     display.go_to_slide = MagicMock()
     display.deregister_display = MagicMock()
-    monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    monkeypatch.setattr('opal.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
     words = 'One\nTwo\nThree\nFour\nFive\nSix'
     root, xml = safe_xml(b'<song><title>Welcome</title><lyrics><verse>Hello everyone</verse></lyrics></song>')
     parent = QtWidgets.QWidget()
@@ -279,21 +279,21 @@ def test_cloud_metadata_uses_provider_permissions_and_places_audit_fields_last()
 
 
 def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings, qtbot, monkeypatch):
-    from openlp.core.common.registry import Registry
-    from openlp.core.display.screens import ScreenList
+    from opal.core.common.registry import Registry
+    from opal.core.display.screens import ScreenList
     from PySide6 import QtCore
     ScreenList.create(QtWidgets.QApplication.instance())
     Registry().register('theme_manager', SimpleNamespace(get_theme_names=lambda: []))
     display = QtWidgets.QWidget()
     display.set_scale = MagicMock()
     display.deregister_display = MagicMock()
-    monkeypatch.setattr('openlp.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
+    monkeypatch.setattr('opal.core.display.window.DisplayWindow', lambda *args, **kwargs: display)
     prepared = safe_xml(b'<song xmlns:olp="https://openlp.org/ns/library-sync/1"><title>Welcome</title>'
                         b'<olp:theme>Organisation theme</olp:theme><lyrics>'
                         b'<verse>Welcome everyone</verse></lyrics></song>')
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
-    from openlp.plugins.librarysync.lib.preview import CloudSlidePreview
+    from opal.plugins.librarysync.lib.preview import CloudSlidePreview
     from pathlib import Path
     window = show_preview(parent, CloudItem('custom', 'Welcome.xml', category='custom'), Path('Welcome.xml'), prepared)
     assert isinstance(window, CloudSlidePreview)
@@ -312,7 +312,7 @@ def test_specific_theme_is_reported_warned_and_preview_scales_on_resize(settings
 
 @pytest.mark.parametrize('zone_name, date, hour', [('Australia/Sydney', 9, 1), ('America/New_York', 8, 10)])
 def test_cloud_dates_use_system_timezone_with_daylight_saving(monkeypatch, zone_name, date, hour):
-    from openlp.plugins.librarysync.lib.preview import format_local_time
+    from opal.plugins.librarysync.lib.preview import format_local_time
     zone = QtCore.QTimeZone(zone_name.encode())
     monkeypatch.setattr(QtCore.QTimeZone, 'systemTimeZone', lambda: zone)
     local = QtCore.QDateTime(QtCore.QDate(2026, 10, date), QtCore.QTime(hour, 0), zone)

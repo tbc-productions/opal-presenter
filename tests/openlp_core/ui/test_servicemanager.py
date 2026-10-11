@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.slidecontroller package.
+Package to test the opal.core.ui.slidecontroller package.
 """
 import json
 from copy import copy
@@ -33,25 +33,25 @@ from zipfile import BadZipFile
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common import ThemeLevel
-from openlp.core.common.i18n import translate
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.state import State
-from openlp.core.common.enum import ServiceItemType
-from openlp.core.lib.exceptions import ValidationError
-from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.lib.theme import Theme
-from openlp.core.ui.servicemanager import ServiceManager, SERVICE_ITEM_INDICATORS_ROLE
-from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.widgets.toolbar import OpenLPToolbar
-from openlp.plugins.songs.lib import VerseType
-from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+from opal.core.common import ThemeLevel
+from opal.core.common.i18n import translate
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.state import State
+from opal.core.common.enum import ServiceItemType
+from opal.core.lib.exceptions import ValidationError
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.core.lib.theme import Theme
+from opal.core.ui.servicemanager import ServiceManager, SERVICE_ITEM_INDICATORS_ROLE
+from opal.core.ui.slidecontroller import SlideController
+from opal.core.widgets.toolbar import OpenLPToolbar
+from opal.plugins.songs.lib import VerseType
+from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
 
 from tests.utils.constants import RESOURCE_PATH
-from openlp.core.widgets.dnd import ItemDragData, ThemeDragData
+from opal.core.widgets.dnd import ItemDragData, ThemeDragData
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
@@ -323,7 +323,7 @@ def service_manager(registry: Registry, settings: Settings):
     # Service manager
     svc_manager = ServiceManager()
     _add_toolbar_action = partial(_create_mock_action, svc_manager)
-    add_toolbar_action_patcher = patch('openlp.core.ui.servicemanager.OpenLPToolbar.add_toolbar_action')
+    add_toolbar_action_patcher = patch('opal.core.ui.servicemanager.OpenLPToolbar.add_toolbar_action')
     mocked_add_toolbar_action = add_toolbar_action_patcher.start()
     mocked_add_toolbar_action.side_effect = _add_toolbar_action
     svc_manager.setup_ui(svc_manager)
@@ -937,8 +937,8 @@ def test_single_click_preview_false(settings: Settings):
         make_preview.assert_not_called()
 
 
-@patch('openlp.core.ui.servicemanager.zipfile')
-@patch('openlp.core.ui.servicemanager.Path')
+@patch('opal.core.ui.servicemanager.zipfile')
+@patch('opal.core.ui.servicemanager.Path')
 def test_save_file_raises_permission_error(mocked_path: MagicMock, mocked_zipfile: MagicMock,
                                            settings: Settings):
     """
@@ -967,10 +967,10 @@ def test_save_file_raises_permission_error(mocked_path: MagicMock, mocked_zipfil
     mocked_save_file_as.assert_called_with()
 
 
-@patch('openlp.core.ui.servicemanager.zipfile')
-@patch('openlp.core.ui.servicemanager.os')
-@patch('openlp.core.ui.servicemanager.shutil')
-@patch('openlp.core.ui.servicemanager.len')
+@patch('opal.core.ui.servicemanager.zipfile')
+@patch('opal.core.ui.servicemanager.os')
+@patch('opal.core.ui.servicemanager.shutil')
+@patch('opal.core.ui.servicemanager.len')
 def test_save_file_large_file(mocked_len: MagicMock, mocked_shutil: MagicMock, mocked_os: MagicMock,
                               mocked_zipfile: MagicMock, registry: Registry):
     """
@@ -998,7 +998,7 @@ def test_save_file_large_file(mocked_len: MagicMock, mocked_shutil: MagicMock, m
 
     # WHEN: The service is saved and no error is raised
     with patch.object(service_manager, 'save_file_as') as mocked_save_file_as, \
-            patch('openlp.core.ui.servicemanager.Path'):
+            patch('opal.core.ui.servicemanager.Path'):
         mocked_save_file_as.return_value = False
         result = service_manager.save_file()
 
@@ -1067,7 +1067,7 @@ def test_theme_change_song(settings: Settings):
         'The visibility should be True'
 
 
-@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
+@patch('opal.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items(mocked_tree: MagicMock, settings: Settings):
     """
     test that an unmodified service item that is regenerated is still unmodified
@@ -1095,7 +1095,7 @@ def test_regenerate_service_items(mocked_tree: MagicMock, settings: Settings):
     service_manager.repaint_service_list.assert_called_once()
 
 
-@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
+@patch('opal.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items_modified(mocked_tree: MagicMock, settings: Settings):
     """
     test that an unmodified service item that is regenerated is still unmodified
@@ -1123,7 +1123,7 @@ def test_regenerate_service_items_modified(mocked_tree: MagicMock, settings: Set
     service_manager.repaint_service_list.assert_called_once()
 
 
-@patch('openlp.core.widgets.fluent.QTreeWidgetItemIterator')
+@patch('opal.core.widgets.fluent.QTreeWidgetItemIterator')
 def test_regenerate_service_items_set_modified(mocked_tree: MagicMock, settings: Settings):
     """
     test that a service item that is regenerated with the modified argument becomes modified
@@ -1188,7 +1188,7 @@ def test_cancel_native_service_drag_leaves_rows_and_data_in_sync(drag_service):
         assert view._drop_line.isVisible()
         return QtCore.Qt.DropAction.IgnoreAction
 
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = cancel
         view.startDrag(QtCore.Qt.DropAction.MoveAction)
     assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
@@ -1217,7 +1217,7 @@ def test_native_service_drop_moves_once_and_keeps_expansion_and_child_selection(
         event.setDropAction.assert_called_once_with(QtCore.Qt.DropAction.MoveAction)
         return QtCore.Qt.DropAction.MoveAction
 
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = drop
         view.startDrag(QtCore.Qt.DropAction.MoveAction)
     assert _service_orders(manager) == (['B', 'C', 'A'], ['B', 'C', 'A'])
@@ -1230,7 +1230,7 @@ def test_native_service_drop_moves_once_and_keeps_expansion_and_child_selection(
 def test_drag_out_of_service_does_not_reorder(drag_service):
     manager = drag_service
     view = manager.service_manager_list
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.return_value = QtCore.Qt.DropAction.CopyAction
         view.startDrag(QtCore.Qt.DropAction.MoveAction | QtCore.Qt.DropAction.CopyAction)
     assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
@@ -1268,7 +1268,7 @@ def test_service_drag_scrolls_at_the_edge_and_updates_insertion(drag_service):
     view.verticalScrollBar().setValue(20)
     manager.begin_external_drag_preview('images')
     point = QtCore.QPoint(20, view.viewport().height() - 4)
-    with patch('openlp.core.ui.servicemanager.QtGui.QCursor.pos', return_value=view.viewport().mapToGlobal(point)), \
+    with patch('opal.core.ui.servicemanager.QtGui.QCursor.pos', return_value=view.viewport().mapToGlobal(point)), \
             patch.object(manager, 'update_external_drag_preview') as update:
         view._scroll_drag()
     assert view.verticalScrollBar().value() == 28
@@ -1312,7 +1312,7 @@ def test_service_rejects_unknown_drag(drag_service, destination):
 @pytest.fixture()
 def theme_drag(registry, qtbot):
     themes = {}
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         for name in ('Original', 'Ocean'):
             themes[name] = Theme()
@@ -1592,7 +1592,7 @@ def test_on_new_service_clicked_not_saved_false_save(registry: Registry):
     assert result is False, 'The method should have returned early'
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox')
+@patch('opal.core.ui.servicemanager.QtWidgets.QMessageBox')
 def test_on_new_service_clicked_unmodified_blank_service(mocked_message_box, registry):
     """New on an untouched blank service is a no-op, without an alert."""
     manager = ServiceManager(None)
@@ -1713,7 +1713,7 @@ def test_load_service_modified_cancel_save(registry: Registry):
     assert result is False, 'The method did not exit early'
 
 
-@patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName')
+@patch('opal.core.ui.servicemanager.FileDialog.getOpenFileName')
 def test_load_service_without_file_path_canceled(mocked_get_open_file_name: MagicMock, registry: Registry):
     """Test that the load_service() method does nothing when no file is loaded and the load dialog is canceled"""
     # GIVEN: A modified ServiceManager
@@ -1752,7 +1752,7 @@ def test_load_service_modified_saved_with_file_path(registry: Registry):
     service_manager.load_file_in_thread.assert_called_once_with(Path.home() / 'service.osz')
 
 
-@patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName')
+@patch('opal.core.ui.servicemanager.FileDialog.getOpenFileName')
 def test_load_service_no_file_path_passed_or_selected(mocked_get_open_file_name: MagicMock,
                                                       mock_settings: MagicMock, registry: Registry):
     """Test that the load_service() method exits early when no file is passed and no file is selected in the dialog"""
@@ -1768,7 +1768,7 @@ def test_load_service_no_file_path_passed_or_selected(mocked_get_open_file_name:
     assert result is False, 'The method did not exit early'
 
 
-@patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName')
+@patch('opal.core.ui.servicemanager.FileDialog.getOpenFileName')
 def test_load_service_no_file_path_passed_file_selected(mocked_get_open_file_name: MagicMock,
                                                         mock_settings: MagicMock, registry: Registry):
     """Test that the load_service() method loads a file chosen in the dialog when no file is passed"""
@@ -1836,7 +1836,7 @@ def test_on_recent_service_clicked_unmodified(registry: Registry):
     service_manager.load_file_in_thread.assert_called_once()
 
 
-@patch('openlp.core.ui.servicemanager.Path', autospec=True)
+@patch('opal.core.ui.servicemanager.Path', autospec=True)
 def test_service_manager_load_file_str(MockPath: MagicMock, registry: Registry):
     """Test the service manager's load_file method when it is given a str"""
     # GIVEN: A service manager and a mocked path object
@@ -1853,7 +1853,7 @@ def test_service_manager_load_file_str(MockPath: MagicMock, registry: Registry):
     MockPath.return_value.exists.assert_called_once()
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox')
+@patch('opal.core.ui.servicemanager.QtWidgets.QMessageBox')
 def test_service_manager_delete_confirmation_dialog(MockMessageBox: MagicMock, registry: Registry):
     """Test the _delete_confirmation_dialog() method"""
     # GIVEN: A service manager and a mocked QMessageBox class
@@ -2004,7 +2004,7 @@ def test_load_last_file(registry: Registry):
     service_manager.load_file_in_thread.assert_called_once_with(Path('filename.osz'))
 
 
-@patch('openlp.core.ui.servicemanager.Path')
+@patch('opal.core.ui.servicemanager.Path')
 def test_load_file_not_exists(MockPath: MagicMock, registry: Registry):
     """Test the load_file() method when the file does not exist"""
     # GIVEN: A mocked path object, and a service manager
@@ -2019,7 +2019,7 @@ def test_load_file_not_exists(MockPath: MagicMock, registry: Registry):
     MockPath.assert_called_once_with('fake/path.osz')
 
 
-@patch('openlp.core.ui.servicemanager.Path')
+@patch('opal.core.ui.servicemanager.Path')
 def test_load_file_os_error(MockPath: MagicMock, registry: Registry):
     """Test the load_file() method when the path object raises an OSError exception"""
     # GIVEN: A mocked path object, and a service manager
@@ -2034,9 +2034,9 @@ def test_load_file_os_error(MockPath: MagicMock, registry: Registry):
     MockPath.assert_called_once_with('fake/path.osz')
 
 
-@patch('openlp.core.ui.servicemanager.critical_error_message_box')
-@patch('openlp.core.ui.servicemanager.zipfile.ZipFile')
-@patch('openlp.core.ui.servicemanager.Path')
+@patch('opal.core.ui.servicemanager.critical_error_message_box')
+@patch('opal.core.ui.servicemanager.zipfile.ZipFile')
+@patch('opal.core.ui.servicemanager.Path')
 @pytest.mark.parametrize('error', [NameError, OSError, ValidationError, BadZipFile])
 def test_load_file_zipfile_exception(MockPath: MagicMock, MockZipFile: MagicMock,
                                      mocked_critical_error_message_box: MagicMock, registry: Registry,
@@ -2057,8 +2057,8 @@ def test_load_file_zipfile_exception(MockPath: MagicMock, MockZipFile: MagicMock
                                                               'or not a valid OpenLP 2 or OpenLP 3 service file.')
 
 
-@patch('openlp.core.ui.servicemanager.zipfile.ZipFile')
-@patch('openlp.core.ui.servicemanager.Path')
+@patch('opal.core.ui.servicemanager.zipfile.ZipFile')
+@patch('opal.core.ui.servicemanager.Path')
 def test_load_file_extract_and_fix(MockPath: MagicMock, MockZipFile: MagicMock, mock_settings: MagicMock,
                                    request: pytest.FixtureRequest):
     """Test that OpenLP correctly reads the files in a service file, and fixes a corrupted file"""
@@ -2281,7 +2281,7 @@ def test_load_file_extract_and_fix(MockPath: MagicMock, MockZipFile: MagicMock, 
     service_manager = ServiceManager(None)
 
     _add_toolbar_action = partial(_create_mock_action, service_manager)
-    add_toolbar_action_patcher = patch('openlp.core.ui.servicemanager.OpenLPToolbar.add_toolbar_action')
+    add_toolbar_action_patcher = patch('opal.core.ui.servicemanager.OpenLPToolbar.add_toolbar_action')
     mocked_add_toolbar_action = add_toolbar_action_patcher.start()
     mocked_add_toolbar_action.side_effect = _add_toolbar_action
     request.addfinalizer(add_toolbar_action_patcher.stop)
@@ -2331,9 +2331,9 @@ def test_bootstrap_initialise(service_manager: ServiceManager):
     service_manager.theme_update_service.connect.assert_called_once_with(service_manager.on_service_theme_change)
 
 
-@patch('openlp.core.ui.servicemanager.ServiceNoteForm')
-@patch('openlp.core.ui.servicemanager.ServiceItemEditForm')
-@patch('openlp.core.ui.servicemanager.StartTimeForm')
+@patch('opal.core.ui.servicemanager.ServiceNoteForm')
+@patch('opal.core.ui.servicemanager.ServiceItemEditForm')
+@patch('opal.core.ui.servicemanager.StartTimeForm')
 def test_bootstrap_post_set_up(MockStartTimeForm: MagicMock, MockServiceItemEditForm: MagicMock,
                                MockServiceNoteForm: MagicMock, service_manager: ServiceManager):
     """
@@ -2479,8 +2479,8 @@ def test_preview_and_live_actions_enabled_with_selection(service_manager: Servic
     assert service_manager.note_toolbar_action.isEnabled() is True
 
 
-@patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt')
-@patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal')
+@patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt')
+@patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal')
 def test_default_context_menu(mocked_mapToGlobal, mocked_item_at_method, service_manager: ServiceManager):
     """
     Test the context_menu() method with a default service item
@@ -2527,8 +2527,8 @@ def test_edit_context_menu(service_manager: ServiceManager):
     """
     # GIVEN: A service item added
     service_manager.setup_ui(service_manager)
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
-            patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
+    with patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
+            patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
         mocked_item = MagicMock()
         mocked_item.parent.return_value = None
         mocked_item_at_method.return_value = mocked_item
@@ -2572,8 +2572,8 @@ def test_maintain_context_menu(service_manager: ServiceManager):
     """
     # GIVEN: A service item added
     service_manager.setup_ui(service_manager)
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
-            patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
+    with patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
+            patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
         mocked_item = MagicMock()
         mocked_item.parent.return_value = None
         mocked_item_at_method.return_value = mocked_item
@@ -2616,8 +2616,8 @@ def test_loopy_context_menu(service_manager: ServiceManager):
     """
     # GIVEN: A service item added
     service_manager.setup_ui(service_manager)
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
-            patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
+    with patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
+            patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
         mocked_item = MagicMock()
         mocked_item.parent.return_value = None
         mocked_item_at_method.return_value = mocked_item
@@ -2662,8 +2662,8 @@ def test_start_time_context_menu(service_manager: ServiceManager):
     """
     # GIVEN: A service item added
     service_manager.setup_ui(service_manager)
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
-            patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
+    with patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
+            patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
         mocked_item = MagicMock()
         mocked_item.parent.return_value = None
         mocked_item_at_method.return_value = mocked_item
@@ -2706,8 +2706,8 @@ def test_auto_start_context_menu(service_manager: ServiceManager):
     """
     # GIVEN: A service item added
     service_manager.setup_ui(service_manager)
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
-            patch('openlp.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
+    with patch('opal.core.ui.servicemanager.QtWidgets.QTreeWidget.itemAt') as mocked_item_at_method, \
+            patch('opal.core.ui.servicemanager.QtWidgets.QWidget.mapToGlobal'):
         mocked_item = MagicMock()
         mocked_item.parent.return_value = None
         mocked_item_at_method.return_value = mocked_item
@@ -2986,7 +2986,7 @@ def test_replace_service_list_call_not_parallel(registry: Registry, service_mana
     service_manager._repaint_service_list.assert_called_once()
 
 
-@patch('openlp.core.ui.servicemanager.sha256_file_hash')
+@patch('opal.core.ui.servicemanager.sha256_file_hash')
 def test_get_write_file_list(mocked_sha256_file_hash: MagicMock, registry: Registry,
                              service_manager: ServiceManager):
     """Test that the get_write_file_list() works properly"""
@@ -3008,8 +3008,8 @@ def test_get_write_file_list(mocked_sha256_file_hash: MagicMock, registry: Regis
     assert len(write_list) == 6
 
 
-@patch('openlp.core.ui.servicemanager.ServiceItem')
-@patch('openlp.core.ui.servicemanager.find_and_set_in_combo_box')
+@patch('opal.core.ui.servicemanager.ServiceItem')
+@patch('opal.core.ui.servicemanager.find_and_set_in_combo_box')
 def test_process_service_items(mocked_fns_combo: Mock, MockServiceItem: Mock, service_manager: ServiceManager,
                                registry: Registry):
     """Test the process_service_items() method"""
@@ -3075,7 +3075,7 @@ def test_resolve_missing_service_item_files_remove_choice(service_manager: Servi
     service_item.title = 'Gone.jpg'
 
     remove_button = object()
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls:
+    with patch('opal.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls:
         mocked_box = MagicMock()
         mocked_box.addButton.side_effect = [object(), remove_button]
         mocked_box.clickedButton.return_value = remove_button
@@ -3100,8 +3100,8 @@ def test_resolve_missing_service_item_files_locate_image(service_manager: Servic
     service_item.title = 'Missing'
 
     locate_button = object()
-    with patch('openlp.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls, \
-            patch('openlp.core.ui.servicemanager.FileDialog.getOpenFileName',
+    with patch('opal.core.ui.servicemanager.QtWidgets.QMessageBox') as mocked_box_cls, \
+            patch('opal.core.ui.servicemanager.FileDialog.getOpenFileName',
                   return_value=(replacement, '')):
         mocked_box = MagicMock()
         mocked_box.addButton.side_effect = [locate_button, object()]
@@ -3161,9 +3161,9 @@ def test_regenerate_image_thumbnails_creates_missing(tmp_path: Path):
     service_item.get_frames.return_value = [frame]
 
     thumbnail_root = tmp_path / 'section-data'
-    with patch('openlp.core.ui.servicemanager.AppLocation.get_section_data_path',
+    with patch('opal.core.ui.servicemanager.AppLocation.get_section_data_path',
                return_value=thumbnail_root), \
-            patch('openlp.core.ui.servicemanager.create_thumb') as mocked_create:
+            patch('opal.core.ui.servicemanager.create_thumb') as mocked_create:
         def fake_create(src, dest, *args, **kwargs):
             Path(dest).write_bytes(b'thumb')
         mocked_create.side_effect = fake_create
@@ -3188,17 +3188,17 @@ def test_regenerate_image_thumbnails_skips_valid(tmp_path: Path):
     service_item.name = 'images'
     service_item.get_frames.return_value = [frame]
 
-    with patch('openlp.core.ui.servicemanager.AppLocation.get_section_data_path',
+    with patch('opal.core.ui.servicemanager.AppLocation.get_section_data_path',
                return_value=tmp_path), \
-            patch('openlp.core.ui.servicemanager.create_thumb') as mocked_create:
+            patch('opal.core.ui.servicemanager.create_thumb') as mocked_create:
         ServiceManager._regenerate_image_thumbnails(service_item)
 
     mocked_create.assert_not_called()
     assert frame['thumbnail'] == existing_thumb
 
 
-@patch('openlp.core.ui.servicemanager.ServiceItem')
-@patch('openlp.core.ui.servicemanager.find_and_set_in_combo_box')
+@patch('opal.core.ui.servicemanager.ServiceItem')
+@patch('opal.core.ui.servicemanager.find_and_set_in_combo_box')
 def test_process_service_items_removes_missing_file_item(mocked_fns_combo: Mock, MockServiceItem: Mock,
                                                         service_manager: ServiceManager, registry: Registry):
     """When the user chooses to remove a missing-file item, it is not added to the service."""
@@ -3240,7 +3240,7 @@ def test_on_theme_combo_box_selected(service_manager: ServiceManager, registry: 
     assert settings.value('servicemanager/service theme') == 'Blue'
 
 
-@patch('openlp.core.ui.servicemanager.find_and_set_in_combo_box')
+@patch('opal.core.ui.servicemanager.find_and_set_in_combo_box')
 def test_on_service_theme_change(mocked_find: MagicMock, service_manager: ServiceManager, registry: Registry,
                                  settings: Settings):
     """Test the on_service_theme_change() method"""
@@ -3380,7 +3380,7 @@ def test_cancel_service_batch_drag_keeps_selection_and_source_items(drag_service
         manager._move_internal_drag_preview(3)
         return QtCore.Qt.DropAction.IgnoreAction
 
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = cancel
         view.startDrag(QtCore.Qt.DropAction.MoveAction)
     assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])

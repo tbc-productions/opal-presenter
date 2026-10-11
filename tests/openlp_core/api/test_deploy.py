@@ -22,7 +22,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from openlp.core.api.deploy import REMOTE_URL, deploy_zipfile, download_version_info, download_and_install, \
+from opal.core.api.deploy import REMOTE_URL, deploy_zipfile, download_version_info, download_and_install, \
     get_installed_version
 
 
@@ -31,7 +31,7 @@ CONFIG_DICT = {'latest': {'version': '0.1', 'filename': 'opal-presenter-web-remo
                          'url': json.loads(CONFIG_FILE)['assets'][0]['browser_download_url']}}
 
 
-@patch('openlp.core.api.deploy.ZipFile')
+@patch('opal.core.api.deploy.ZipFile')
 def test_deploy_zipfile(MockZipFile):
     """
     Remote Deploy tests - test the dummy zip file is processed correctly
@@ -49,8 +49,8 @@ def test_deploy_zipfile(MockZipFile):
     mocked_zipfile.extractall.assert_called_once_with(Path('/tmp/remotes'))
 
 
-@patch('openlp.core.api.deploy.get_openlp_user_agent')
-@patch('openlp.core.api.deploy.get_web_page')
+@patch('opal.core.api.deploy.get_openlp_user_agent')
+@patch('opal.core.api.deploy.get_web_page')
 def test_download_version_info_connection_error(mocked_get_web_page, mocked_get_openlp_user_agent):
     """
     Test that if a ConnectionError occurs while downloading a sha256 False is returned
@@ -66,8 +66,8 @@ def test_download_version_info_connection_error(mocked_get_web_page, mocked_get_
     assert result is False, 'download_version_info() should return False when encountering ConnectionError'
 
 
-@patch('openlp.core.api.deploy.get_openlp_user_agent')
-@patch('openlp.core.api.deploy.get_web_page')
+@patch('opal.core.api.deploy.get_openlp_user_agent')
+@patch('opal.core.api.deploy.get_web_page')
 def test_download_version_info_empty_file(mocked_get_web_page, mocked_get_openlp_user_agent):
     """
     Test that if there's no config when downloading a sha256 None is returned
@@ -83,8 +83,8 @@ def test_download_version_info_empty_file(mocked_get_web_page, mocked_get_openlp
     assert result is None, 'download_version_info() should return None when there is a problem downloading the page'
 
 
-@patch('openlp.core.api.deploy.get_openlp_user_agent')
-@patch('openlp.core.api.deploy.get_web_page')
+@patch('opal.core.api.deploy.get_openlp_user_agent')
+@patch('opal.core.api.deploy.get_web_page')
 def test_download_version_info(mocked_get_web_page, mocked_get_openlp_user_agent):
     """
     Test that the sha256 and the version are returned
@@ -100,8 +100,8 @@ def test_download_version_info(mocked_get_web_page, mocked_get_openlp_user_agent
     assert result == CONFIG_DICT, 'download_version_info() should return a dictionary of version information'
 
 
-@patch('openlp.core.api.deploy.log.warning')
-@patch('openlp.core.api.deploy.download_version_info')
+@patch('opal.core.api.deploy.log.warning')
+@patch('opal.core.api.deploy.download_version_info')
 def test_download_and_install_log_warning(mocked_download_version_info, mocked_warning):
     """
     Test that when the version info fails, a warning is logged
@@ -117,9 +117,9 @@ def test_download_and_install_log_warning(mocked_download_version_info, mocked_w
     mocked_warning.assert_called_once_with('Unable to access the version information, abandoning download')
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
-@patch('openlp.core.api.deploy.download_file')
-@patch('openlp.core.api.deploy.download_version_info')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.download_file')
+@patch('opal.core.api.deploy.download_version_info')
 def test_download_and_install_download_fails(mocked_download_version_info, mocked_download_file,
                                              mocked_get_section_data_path):
     """
@@ -138,10 +138,10 @@ def test_download_and_install_download_fails(mocked_download_version_info, mocke
     assert result is None, 'The result should be None'
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
-@patch('openlp.core.api.deploy.deploy_zipfile')
-@patch('openlp.core.api.deploy.download_file')
-@patch('openlp.core.api.deploy.download_version_info')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.deploy_zipfile')
+@patch('opal.core.api.deploy.download_file')
+@patch('opal.core.api.deploy.download_version_info')
 def test_download_and_install(mocked_download_version_info, mocked_download_file, mocked_deploy_zipfile,
                               mocked_get_section_data_path):
     # GIVEN: A bunch of mocks
@@ -165,7 +165,7 @@ def test_download_and_install(mocked_download_version_info, mocked_download_file
     mocked_deploy_zipfile.assert_called_once_with(mocked_remote_path, 'remote.zip')
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_get_installed_version_not_installed(mocked_get_section_data_path):
     """Test that if there is no remote installed, None is returned"""
     # GIVEN: A mocked AppLocation and no file installed
@@ -181,7 +181,7 @@ def test_get_installed_version_not_installed(mocked_get_section_data_path):
     assert result is None
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_get_installed_version_no_valid_version(mocked_get_section_data_path):
     """Test that if there is no valid version number, None is returned"""
     # GIVEN: A mocked AppLocation and no file installed
@@ -198,7 +198,7 @@ def test_get_installed_version_no_valid_version(mocked_get_section_data_path):
     assert result is None
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_get_installed_version(mocked_get_section_data_path):
     """Test that get_installed_version returns the version number"""
     # GIVEN: A mocked AppLocation and no file installed
@@ -215,7 +215,7 @@ def test_get_installed_version(mocked_get_section_data_path):
     assert result == '0.9.7'
 
 
-@patch('openlp.core.api.deploy.AppLocation.get_section_data_path')
+@patch('opal.core.api.deploy.AppLocation.get_section_data_path')
 def test_get_installed_version_nondefault_syntax(mocked_get_section_data_path):
     """Test that get_installed_version accepts double quotes and no trailing semicolon in version file"""
     # GIVEN: A mocked AppLocation and no file installed

@@ -25,9 +25,9 @@ Tests for Library dock tab behavior.
 from unittest.mock import patch
 
 from PySide6 import QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.widgets.docks import MediaToolBox
+from opal.core.widgets.docks import MediaToolBox
 
 
 def _add_item(media_tool_box, label):

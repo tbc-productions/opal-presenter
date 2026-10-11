@@ -8,22 +8,22 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.lib.designmedia import (
+from opal.core.lib.designmedia import (
     EMBED_LIMIT, cache_media, media_to_source, media_references, resolve_media, restore_media, valid_media_source,
     write_media
 )
-from openlp.core.lib.itemexport import write_xml_package
-from openlp.core.lib.slidedesign import apply_design, normalise_design
-from openlp.core.lib.theme import Theme
-from openlp.core.ui.thememanager import ThemeManager
+from opal.core.lib.itemexport import write_xml_package
+from opal.core.lib.slidedesign import apply_design, normalise_design
+from opal.core.lib.theme import Theme
+from opal.core.ui.thememanager import ThemeManager
 
 
 @pytest.fixture
 def assets(tmp_path):
     screens = MagicMock()
     screens.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
-    with patch('openlp.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'), \
-            patch('openlp.core.lib.theme.ScreenList', return_value=screens):
+    with patch('opal.core.lib.designmedia.asset_root', return_value=tmp_path / 'managed'), \
+            patch('opal.core.lib.theme.ScreenList', return_value=screens):
         yield tmp_path
 
 
@@ -49,7 +49,7 @@ def test_small_media_preserves_original_bytes_and_dimensions(assets):
 @pytest.mark.parametrize('large', [False, True])
 def test_original_jpeg_orientation_matches_designer_and_presentation_export(assets, large):
     from PIL import Image
-    from openlp.core.lib.presentationexport import _load_image
+    from opal.core.lib.presentationexport import _load_image
     path = assets / 'portrait.jpg'
     image = Image.new('RGB', (120, 60), 'blue')
     metadata = image.getexif()
@@ -189,7 +189,7 @@ def test_theme_archive_inlines_small_backgrounds_and_bundles_large_ones(assets, 
 
 
 def test_legacy_oversized_inline_images_are_packaged_without_changing_the_saved_design(assets):
-    from openlp.core.lib.slidedesign import package_design
+    from opal.core.lib.slidedesign import package_design
     path = image_file(assets / 'legacy.png', large=True)
     source = 'data:image/png;base64,' + base64.b64encode(path.read_bytes()).decode('ascii')
     design = {'version': 1, 'elements': [{'id': 'photo', 'kind': 'image', 'src': source}]}
@@ -199,11 +199,11 @@ def test_legacy_oversized_inline_images_are_packaged_without_changing_the_saved_
 
 
 def test_item_archive_restores_large_assets_before_temporary_service_files_are_removed(assets):
-    from openlp.core.lib.itemexport import write_item_service
-    from openlp.core.lib.serviceitem import ServiceItem
+    from opal.core.lib.itemexport import write_item_service
+    from opal.core.lib.serviceitem import ServiceItem
     reference = cache_media(image_file(assets / 'photo.png', large=True))
     design = {'version': 1, 'elements': [{'id': 'photo', 'kind': 'image', 'src': reference}]}
-    with patch('openlp.core.lib.serviceitem.UiIcons'):
+    with patch('opal.core.lib.serviceitem.UiIcons'):
         source_item = ServiceItem()
         source_item.add_from_text('Welcome')
         header = source_item.get_service_repr(False)
@@ -217,10 +217,10 @@ def test_item_archive_restores_large_assets_before_temporary_service_files_are_r
     with zipfile.ZipFile(archive_path) as archive:
         service = json.loads(archive.read('service.json'))
         archive.extractall(extracted)
-    with patch('openlp.core.lib.serviceitem.UiIcons'):
+    with patch('opal.core.lib.serviceitem.UiIcons'):
         item = ServiceItem()
     with patch.object(item, 'add_icon'), patch.object(item, '_create_slides'), \
-            patch('openlp.core.lib.serviceitem.State') as state:
+            patch('opal.core.lib.serviceitem.State') as state:
         state.return_value.check_preconditions.return_value = False
         item.set_from_service(service[1], path=extracted, version=3)
     import shutil
@@ -231,7 +231,7 @@ def test_item_archive_restores_large_assets_before_temporary_service_files_are_r
 @pytest.mark.parametrize('suffix', ['.xml', '.osz', '.opal-song'])
 def test_song_import_retains_media_from_xml_companions_or_an_archive(assets, suffix):
     from types import SimpleNamespace
-    from openlp.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
+    from opal.plugins.songs.lib.importers.openlyrics import OpenLyricsImport
     reference = cache_media(image_file(assets / 'photo.png', large=True))
     design = {'version': 1, 'background': {'type': 'solid', 'image': reference}}
     xml = '<song xmlns="http://openlyrics.info/namespace/2009/song"><design xmlns="https://openlp.org/ns/slide-design/1">' + json.dumps(design) + '</design></song>'
@@ -270,7 +270,7 @@ def test_failed_archive_export_preserves_existing_destination(assets):
 
 @pytest.mark.parametrize('kind', ['image', 'video'])
 def test_theme_retains_original_and_friendly_label_after_library_source_is_deleted(assets, kind):
-    from openlp.core.lib.designmedia import media_label
+    from opal.core.lib.designmedia import media_label
     source = image_file(assets / 'Church background.png') if kind == 'image' else assets / 'Church background.mp4'
     if kind == 'video':
         source.write_bytes(b'original video')
@@ -292,8 +292,8 @@ def test_theme_retains_original_and_friendly_label_after_library_source_is_delet
 
 
 def test_html_video_background_does_not_start_native_media_but_linked_audio_still_does():
-    from openlp.core.lib.serviceitem import ServiceItem
-    from openlp.core.lib import ItemCapabilities
+    from opal.core.lib.serviceitem import ServiceItem
+    from opal.core.lib import ItemCapabilities
     item = MagicMock()
     capabilities = {ItemCapabilities.HasBackgroundVideo}
     item.is_capable.side_effect = lambda capability: capability in capabilities

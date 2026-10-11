@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-This module contains tests for the openlp.core.widgets.edits module
+This module contains tests for the opal.core.widgets.edits module
 """
 import pytest
 from pathlib import Path
@@ -28,15 +28,15 @@ from typing import Any
 
 from PySide6 import QtCore, QtGui, QtTest
 import fluentqt
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.path import path_to_str
-from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.core.widgets.dialogs import FileDialog
-from openlp.core.widgets.edits import (
+from opal.core.common.path import path_to_str
+from opal.core.common.platform import is_win
+from opal.core.common.registry import Registry
+from opal.core.widgets.dialogs import FileDialog
+from opal.core.widgets.edits import (
     PathEdit, HistoryComboBox, SearchEdit, SpellTextEdit, Highlighter, FormattingTagDelegate)
-from openlp.core.widgets.enums import PathEditType
+from opal.core.widgets.enums import PathEditType
 
 
 class SearchTypes(object):
@@ -59,7 +59,7 @@ else:
 
 
 @pytest.fixture()
-@patch('openlp.core.ui.icons.is_ui_theme_dark')
+@patch('opal.core.ui.icons.is_ui_theme_dark')
 def search_edit(mock_is_dark: MagicMock, mock_settings: MagicMock) -> SearchEdit:
     main_window = QtWidgets.QMainWindow()
     Registry().register('main_window', main_window)
@@ -82,7 +82,7 @@ def history_combo(mock_settings: MagicMock) -> HistoryComboBox:
 
 @pytest.fixture()
 def path_edit(mock_settings: MagicMock) -> PathEdit:
-    with patch('openlp.core.widgets.edits.PathEdit._setup'):
+    with patch('opal.core.widgets.edits.PathEdit._setup'):
         return PathEdit()
 
 
@@ -192,8 +192,8 @@ def test_update_button_tool_tips_files(path_edit: PathEdit):
     path_edit.revert_button.setToolTip.assert_called_once_with('Revert to default file.')
 
 
-@patch('openlp.core.widgets.edits.FileDialog.getExistingDirectory', return_value=None)
-@patch('openlp.core.widgets.edits.FileDialog.getOpenFileName')
+@patch('opal.core.widgets.edits.FileDialog.getExistingDirectory', return_value=None)
+@patch('opal.core.widgets.edits.FileDialog.getOpenFileName')
 def test_on_browse_button_clicked_directory(mocked_get_open_file_name: MagicMock,
                                             mocked_get_existing_directory: MagicMock, path_edit: PathEdit):
     """
@@ -221,9 +221,9 @@ def test_on_browse_button_clicked_directory_custom_caption(path_edit: PathEdit):
     """
     # GIVEN: An instance of PathEdit with the `path_type` set to `Directories` and a mocked
     #        QFileDialog.getExistingDirectory with `default_caption` set.
-    with patch('openlp.core.widgets.edits.FileDialog.getExistingDirectory', return_value=None) as \
+    with patch('opal.core.widgets.edits.FileDialog.getExistingDirectory', return_value=None) as \
             mocked_get_existing_directory, \
-            patch('openlp.core.widgets.edits.FileDialog.getOpenFileName') as mocked_get_open_file_name:
+            patch('opal.core.widgets.edits.FileDialog.getOpenFileName') as mocked_get_open_file_name:
         path_edit._path_type = PathEditType.Directories
         path_edit._path = Path('test', 'path')
         path_edit.dialog_caption = 'Directory Caption'
@@ -243,8 +243,8 @@ def test_on_browse_button_clicked_file(path_edit: PathEdit):
     Test the `browse_button` `clicked` handler on_browse_button_clicked when the `path_type` is set to Files.
     """
     # GIVEN: An instance of PathEdit with the `path_type` set to `Files` and a mocked QFileDialog.getOpenFileName
-    with patch('openlp.core.widgets.edits.FileDialog.getExistingDirectory') as mocked_get_existing_directory, \
-            patch('openlp.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
+    with patch('opal.core.widgets.edits.FileDialog.getExistingDirectory') as mocked_get_existing_directory, \
+            patch('opal.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
             mocked_get_open_file_name:
         path_edit._path_type = PathEditType.Files
         path_edit._path = Path('test', 'pat.h')
@@ -265,8 +265,8 @@ def test_on_browse_button_clicked_file_custom_caption(path_edit: PathEdit):
     """
     # GIVEN: An instance of PathEdit with the `path_type` set to `Files` and a mocked QFileDialog.getOpenFileName
     #        with `default_caption` set.
-    with patch('openlp.core.widgets.edits.FileDialog.getExistingDirectory') as mocked_get_existing_directory, \
-            patch('openlp.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
+    with patch('opal.core.widgets.edits.FileDialog.getExistingDirectory') as mocked_get_existing_directory, \
+            patch('opal.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
             mocked_get_open_file_name:
         path_edit._path_type = PathEditType.Files
         path_edit._path = Path('test', 'pat.h')
@@ -288,7 +288,7 @@ def test_on_browse_button_clicked_user_cancels(path_edit: PathEdit):
     """
     # GIVEN: An instance of PathEdit with a mocked QFileDialog.getOpenFileName which returns an empty str for the
     #        file path.
-    with patch('openlp.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
+    with patch('opal.core.widgets.edits.FileDialog.getOpenFileName', return_value=(None, '')) as \
             mocked_get_open_file_name:
 
         # WHEN: Calling on_browse_button_clicked
@@ -305,7 +305,7 @@ def test_on_browse_button_clicked_user_accepts(path_edit: PathEdit):
     """
     # GIVEN: An instance of PathEdit with a mocked QFileDialog.getOpenFileName which returns a str for the file
     #        path.
-    with patch('openlp.core.widgets.edits.FileDialog.getOpenFileName',
+    with patch('opal.core.widgets.edits.FileDialog.getOpenFileName',
                return_value=(Path('test', 'pat.h'), '')) as mocked_get_open_file_name, \
             patch.object(path_edit, 'on_new_path'):
 
@@ -352,7 +352,7 @@ def test_on_new_path_no_change(path_edit: PathEdit):
     Test `on_new_path` when called with a path that is the same as the existing path.
     """
     # GIVEN: An instance of PathEdit with a test path and mocked `pathChanged` signal
-    with patch('openlp.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
+    with patch('opal.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
         path_edit._path = Path('/old', 'test', 'pat.h')
         path_edit.pathChanged = MagicMock()
 
@@ -368,7 +368,7 @@ def test_on_new_path_change(path_edit: PathEdit):
     Test `on_new_path` when called with a path that is the different to the existing path.
     """
     # GIVEN: An instance of PathEdit with a test path and mocked `pathChanged` signal
-    with patch('openlp.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
+    with patch('opal.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
         path_edit._path = Path('/old', 'test', 'pat.h')
         path_edit.pathChanged = MagicMock()
 
@@ -384,7 +384,7 @@ def test_on_new_path_none(path_edit: PathEdit):
     Test `on_new_path` when called with a path that is None
     """
     # GIVEN: An instance of PathEdit with a test path and mocked `pathChanged` signal
-    with patch('openlp.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
+    with patch('opal.core.widgets.edits.PathEdit.path', new_callable=PropertyMock):
         path_edit._path = Path('/old', 'test', 'pat.h')
         path_edit.pathChanged = MagicMock()
 
@@ -884,7 +884,7 @@ def test_spell_text_edit_source_button_mapping(mock_settings):
     assert editor.highlighter.rich_text_mode is True
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mock_settings):
     """Color dropdown should include formatting tags that define text colors."""
     mock_get_html_tags.return_value = [
@@ -901,8 +901,8 @@ def test_spell_text_edit_color_menu_population(mock_get_html_tags: MagicMock, mo
     assert editor._custom_formatting_combo.placeholderText() == 'Styles'
 
 
-@patch('openlp.core.widgets.edits.FormattingTagForm')
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTagForm')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_html_tags: MagicMock,
                                                                       mock_formatting_tag_form: MagicMock,
                                                                       mock_settings):
@@ -930,7 +930,7 @@ def test_spell_text_edit_edit_color_button_opens_dialog_and_refreshes(mock_get_h
     assert editor._color_tags == ['{bl}']
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_custom_formatting_replaces_previous_style(mock_get_html_tags, mock_settings):
     """Choosing a style replaces the previous one while preserving bold and undo."""
     mock_get_html_tags.return_value = [
@@ -956,7 +956,7 @@ def test_spell_text_edit_custom_formatting_replaces_previous_style(mock_get_html
     assert editor.toPlainText() == '{st}{r}Hello world{/r}{/st}'
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_custom_formatting_preserves_slide_markers(mock_get_html_tags, mock_settings):
     mock_get_html_tags.return_value = [
         {'desc': 'Red', 'start tag': '{r}', 'end tag': '{/r}', 'start html': '<span style="color:red">'}
@@ -970,7 +970,7 @@ def test_custom_formatting_preserves_slide_markers(mock_get_html_tags, mock_sett
     assert editor.toPlainText() == 'First slide\n[---]\nSecond slide'
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock_settings):
     """Native combo rows carry readable names, colour and tag metadata."""
     mock_get_html_tags.return_value = [
@@ -987,7 +987,7 @@ def test_spell_text_edit_custom_formatting_model_labels(mock_get_html_tags, mock
 @pytest.mark.parametrize('foreground, background', [
     ('#ffffff', '#ffffff'), ('#ffff00', '#ffffff'), ('#000000', '#202020'), ('#ff0000', '#ffffff')])
 def test_style_preview_adds_a_contrasting_background(foreground, background):
-    from openlp.core.widgets.edits import FormattingStyleDelegate
+    from opal.core.widgets.edits import FormattingStyleDelegate
     foreground, background = QtGui.QColor(foreground), QtGui.QColor(background)
     patch = FormattingStyleDelegate.preview_background(foreground, background)
     assert patch is not None
@@ -995,7 +995,7 @@ def test_style_preview_adds_a_contrasting_background(foreground, background):
     assert FormattingStyleDelegate.preview_background(foreground, patch) is None
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_color_menu_toggle_applies_and_removes(mock_get_html_tags: MagicMock, mock_settings):
     """Clicking a color option should apply the tag when inactive and remove it when active."""
     mock_get_html_tags.return_value = [
@@ -1023,7 +1023,7 @@ def test_spell_text_edit_color_menu_toggle_applies_and_removes(mock_get_html_tag
     assert editor.toPlainText() == 'Hello'
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_spell_text_edit_update_toolbar_state_checks_color_action(mock_get_html_tags: MagicMock, mock_settings):
     """The color dropdown action should become checked when the cursor is inside that color region."""
     mock_get_html_tags.return_value = [
@@ -1483,7 +1483,7 @@ def test_spell_text_edit_apply_formatting_by_tag_applies_when_not_active(mock_se
     assert editor.toPlainText() == '{st}Hello{/st}'
 
 
-@patch('openlp.core.widgets.edits.FormattingTags.get_html_tags')
+@patch('opal.core.widgets.edits.FormattingTags.get_html_tags')
 def test_custom_format_preview_and_single_command_bar(mock_tags, mock_settings, qtbot):
     """Custom styles are previewed and remain selectable beside a single overflow menu."""
     mock_tags.return_value = [

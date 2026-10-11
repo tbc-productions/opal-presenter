@@ -20,19 +20,19 @@
 ##########################################################################
 """
 Package to test the screens tab functionality (primarily ScreenSelectionWidget and ScreenButton classes)
-within openlp/core/widgets/widgets.py
+within opal/core/widgets/widgets.py
 """
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.app import OpenLP
-from openlp.core.common.settings import ProxyMode, Settings
-from openlp.core.display.screens import Screen
-from openlp.core.widgets.widgets import ProxyWidget, ProxyDialog, ScreenButton, ScreenSelectionWidget
+from opal.core.app import OpenLP
+from opal.core.common.settings import ProxyMode, Settings
+from opal.core.display.screens import Screen
+from opal.core.widgets.widgets import ProxyWidget, ProxyDialog, ScreenButton, ScreenSelectionWidget
 
 
 pytestmark = pytest.mark.usefixtures('qapp')
@@ -148,7 +148,7 @@ def test_radio_button_exclusivity_no_proxy(settings: Settings):
     Test that only one radio button can be checked at a time, and that the line edits are only enabled when the
     `manual_proxy_radio` is checked
     """
-    # GIVEN: An instance of the `openlp.core.common.widgets.widgets.ProxyWidget` with a radio already checked
+    # GIVEN: An instance of the `opal.core.common.widgets.widgets.ProxyWidget` with a radio already checked
     proxy_widget = ProxyWidget()
     proxy_widget.manual_proxy_radio.setChecked(True)
 
@@ -169,7 +169,7 @@ def test_radio_button_exclusivity_system_proxy(settings: Settings):
     Test that only one radio button can be checked at a time, and that the line edits are only enabled when the
     `manual_proxy_radio` is checked
     """
-    # GIVEN: An instance of the `openlp.core.common.widgets.widgets.ProxyWidget` with a radio already checked
+    # GIVEN: An instance of the `opal.core.common.widgets.widgets.ProxyWidget` with a radio already checked
     proxy_widget = ProxyWidget()
     proxy_widget.manual_proxy_radio.setChecked(True)
 
@@ -190,7 +190,7 @@ def test_radio_button_exclusivity_manual_proxy(settings: Settings):
     Test that only one radio button can be checked at a time, and that the line edits are only enabled when the
     `manual_proxy_radio` is checked
     """
-    # GIVEN: An instance of the `openlp.core.common.widgets.widgets.ProxyWidget` with a radio already checked
+    # GIVEN: An instance of the `opal.core.common.widgets.widgets.ProxyWidget` with a radio already checked
     proxy_widget = ProxyWidget()
     proxy_widget.no_proxy_radio.setChecked(True)
 
@@ -323,7 +323,7 @@ def test_init_default_args():
     """
     # GIVEN: The ScreenSelectionWidget class
     # WHEN: Initialising ScreenSelectionWidget with default arguments
-    with patch('openlp.core.widgets.widgets.QtCore.QTimer') as MockTimer:
+    with patch('opal.core.widgets.widgets.QtCore.QTimer') as MockTimer:
         mocked_timer = MagicMock()
         MockTimer.return_value = mocked_timer
         instance = ScreenSelectionWidget()
@@ -343,7 +343,7 @@ def test_init_with_args():
     screens_object_mock = MagicMock()
 
     # WHEN: Initialising ScreenSelectionWidget with the screens keyword arg set
-    with patch('openlp.core.widgets.widgets.QtCore.QTimer') as MockTimer:
+    with patch('opal.core.widgets.widgets.QtCore.QTimer') as MockTimer:
         mocked_timer = MagicMock()
         MockTimer.return_value = mocked_timer
         instance = ScreenSelectionWidget(screens=screens_object_mock)
@@ -407,7 +407,7 @@ def test_save_screen_display():
     assert mocked_screen_object.is_display is True
 
 
-@patch('openlp.core.widgets.widgets.QtCore.QRect')
+@patch('opal.core.widgets.widgets.QtCore.QRect')
 def test_save_screen_full_screen(mocked_q_rect: MagicMock):
     """
     Test ScreenSelectionWidget._save_screen when the display is set to full screen
@@ -426,7 +426,7 @@ def test_save_screen_full_screen(mocked_q_rect: MagicMock):
     mocked_q_rect.assert_not_called()
 
 
-@patch('openlp.core.widgets.widgets.QtCore.QRect')
+@patch('opal.core.widgets.widgets.QtCore.QRect')
 def test_save_screen_custom_geometry(mocked_q_rect: MagicMock):
     """
     Test ScreenSelectionWidget._save_screen when a custom geometry is set
@@ -485,7 +485,7 @@ def test_load():
     instance.screens = [Screen(number=0)]
 
     # WHEN: load() is called
-    with patch('openlp.core.widgets.widgets.ScreenButton'):
+    with patch('opal.core.widgets.widgets.ScreenButton'):
         instance.load()
 
     # THEN: The mocks should have been called
@@ -515,7 +515,7 @@ def test_on_identify_timer_shot():
 
 def test_on_identify_button_clicked(qapp, qtbot):
     """Countdown expires all banners, and a second click restarts without duplicates."""
-    from openlp.core.widgets.widgets import ScreenIdentificationBanner
+    from opal.core.widgets.widgets import ScreenIdentificationBanner
     import fluentqt
 
     instance = ScreenSelectionWidget(None, mocked_screens(None))
@@ -582,8 +582,8 @@ def test_on_display_clicked_with_unchecked():
     instance.current_screen = mocked_screen_2
 
     # WHEN: on_display_clicked() is called when the checkbox is checked
-    with patch('openlp.core.widgets.widgets.translate') as mocked_translate, \
-            patch('openlp.core.widgets.widgets.critical_error_message_box') as mocked_error:
+    with patch('opal.core.widgets.widgets.translate') as mocked_translate, \
+            patch('opal.core.widgets.widgets.critical_error_message_box') as mocked_error:
         mocked_translate.side_effect = lambda c, s: s
         instance.on_display_clicked(False)
 

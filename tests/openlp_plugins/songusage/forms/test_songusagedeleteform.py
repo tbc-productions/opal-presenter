@@ -19,16 +19,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songusage.forms.songusagedeleteform package.
+Package to test the opal.plugins.songusage.forms.songusagedeleteform package.
 """
 import pytest
 from unittest.mock import MagicMock
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.settings import Settings
-from openlp.plugins.songusage.forms.songusagedeleteform import SongUsageDeleteForm
+from opal.core.common.settings import Settings
+from opal.plugins.songusage.forms.songusagedeleteform import SongUsageDeleteForm
 
 
 def test_no_help_button(settings: Settings):
@@ -44,8 +44,8 @@ def test_no_help_button(settings: Settings):
 
 @pytest.mark.parametrize('confirmed', [False, True])
 def test_deletion_requires_confirmation_and_matches_inclusive_date(settings, qtbot, monkeypatch, confirmed):
-    from openlp.core.common.registry import Registry
-    from openlp.plugins.songusage.lib.db import SongUsageItem
+    from opal.core.common.registry import Registry
+    from opal.plugins.songusage.lib.db import SongUsageItem
     main_window = QtWidgets.QMainWindow()
     qtbot.addWidget(main_window)
     main_window.resize(1000, 800)

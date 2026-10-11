@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry, RegistryBase
+from opal.core.common.registry import Registry, RegistryBase
 
 
 def dummy_function_1():
@@ -94,8 +94,8 @@ def test_registry_function(registry: Registry):
     assert return_value[0] == 'function_2', 'A return value is provided and matches'
 
 
-@patch('openlp.core.common.registry.log')
-@patch('openlp.core.common.registry.trace_error_handler')
+@patch('opal.core.common.registry.log')
+@patch('opal.core.common.registry.trace_error_handler')
 def test_registry_function_type_error(mocked_trace_error: MagicMock, mocked_log: MagicMock, registry: Registry):
     """Test that a TypeError is logged"""
     # GIVEN: A registry, some mocks, and a rigged function
@@ -114,8 +114,8 @@ def test_registry_function_type_error(mocked_trace_error: MagicMock, mocked_log:
         'Exception while executing listener %r for event %s', mock_function, 'mock')
 
 
-@patch('openlp.core.common.registry.log')
-@patch('openlp.core.common.registry.trace_error_handler')
+@patch('opal.core.common.registry.log')
+@patch('opal.core.common.registry.trace_error_handler')
 def test_registry_function_does_not_exist(mocked_trace_error: MagicMock, mocked_log: MagicMock,
                                           registry: Registry):
     """Test that a TypeError is logged"""

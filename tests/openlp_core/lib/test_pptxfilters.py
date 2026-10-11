@@ -12,8 +12,8 @@ from pptx import Presentation
 from pptx.oxml.ns import qn
 from PySide6 import QtGui
 
-from openlp.core.lib.pptxfilters import native_filter_effects, NAMESPACE, PHOTO_REL, BGRA_FORMAT, _office_jpegxr
-from openlp.core.lib.presentationexport import PresentationPage, _image_bytes, _write_pptx
+from opal.core.lib.pptxfilters import native_filter_effects, NAMESPACE, PHOTO_REL, BGRA_FORMAT, _office_jpegxr
+from opal.core.lib.presentationexport import PresentationPage, _image_bytes, _write_pptx
 from tests.openlp_core.lib.test_presentationexport import _theme
 
 

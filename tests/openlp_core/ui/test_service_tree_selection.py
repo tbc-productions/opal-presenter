@@ -5,9 +5,9 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
-from openlp.core.widgets import fluent
-from openlp.core.ui.fluenticons import fluent_icon
-from openlp.core.ui.servicemanager import ServiceManager, ServiceManagerList
+from opal.core.widgets import fluent
+from opal.core.ui.fluenticons import fluent_icon
+from opal.core.ui.servicemanager import ServiceManager, ServiceManagerList
 
 
 @pytest.mark.parametrize('theme', [fluentqt.Theme.Light, fluentqt.Theme.Dark])
@@ -205,7 +205,7 @@ def test_service_notes_indicator_allows_row_clicks(settings, qtbot):
 
 
 def test_service_inline_indicators_follow_label_and_fit_width(settings, qtbot):
-    from openlp.core.ui.servicemanager import SERVICE_ITEM_INDICATORS_ROLE
+    from opal.core.ui.servicemanager import SERVICE_ITEM_INDICATORS_ROLE
     view = ServiceManagerList(MagicMock())
     qtbot.addWidget(view)
     item = fluent.QTreeWidgetItem(view, ['Short label'])

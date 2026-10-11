@@ -24,13 +24,13 @@ This module contains tests for the lib submodule of the Presentations plugin.
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.ui import HideMode
-from openlp.plugins.presentations.lib.mediaitem import MessageListener
-from openlp.plugins.presentations.lib.messagelistener import Controller
+from opal.core.common.registry import Registry
+from opal.core.ui import HideMode
+from opal.plugins.presentations.lib.mediaitem import MessageListener
+from opal.plugins.presentations.lib.messagelistener import Controller
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_start_presentation(media_mock, media_item):
     """
     Find and chose a controller to play a presentations.
@@ -59,7 +59,7 @@ def test_start_presentation(media_mock, media_item):
     assert len(controllers) > 0, 'We have loaded a controller'
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_timing_toggle_updates_only_the_current_powerpoint(media_mock, media_item):
     listener = MessageListener(media_item)
     listener.live_handler = MagicMock()
@@ -76,7 +76,7 @@ def test_timing_toggle_updates_only_the_current_powerpoint(media_mock, media_ite
     listener.live_handler.doc.set_slide_timings.assert_called_once_with(False)
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_timing_control_only_reports_usable_timings_for_current_mac_show(media_mock, media_item):
     listener = MessageListener(media_item)
     listener.live_handler = MagicMock()
@@ -185,7 +185,7 @@ def test_black_screen_returns_to_same_running_presentation():
     controller.doc.start_presentation.assert_not_called()
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_start_presentation_with_no_player(media_mock, media_item):
     """
     Find and chose a controller to play a presentations when the player is not available.
@@ -218,7 +218,7 @@ def test_start_presentation_with_no_player(media_mock, media_item):
     assert len(controllers) > 0, 'We have loaded a controller'
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_start_pdf_presentation(media_mock, media_item):
     """
     Test the startup of pdf presentation succeed.
@@ -261,8 +261,8 @@ def test_add_handler_failure():
     assert controller.doc.ui_slidenumber == 0, 'doc.ui_slidenumber should be 0'
 
 
-@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
-@patch('openlp.plugins.presentations.lib.messagelistener.Registry')
+@patch('opal.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('opal.plugins.presentations.lib.messagelistener.Registry')
 def test_add_handler_hide_mode_screen_and_slidenumber_zero(
         mocked_registry: MagicMock, mocked_presentation_list: MagicMock):
     """
@@ -287,7 +287,7 @@ def test_add_handler_hide_mode_screen_and_slidenumber_zero(
     assert controller.doc.ui_slidenumber == 1, 'doc.ui_slidenumber should be 1'
 
 
-@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('opal.plugins.presentations.lib.messagelistener.PresentationList')
 def test_add_handler_hide_mode_theme(mocked_presentation_list: MagicMock):
     """
     Test that add_handler calls blank() when hide_mode is HideMode.Theme.
@@ -307,7 +307,7 @@ def test_add_handler_hide_mode_theme(mocked_presentation_list: MagicMock):
     mocked_blank.assert_called_once_with(HideMode.Theme)
 
 
-@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('opal.plugins.presentations.lib.messagelistener.PresentationList')
 def test_add_handler_hide_mode_blank(mocked_presentation_list: MagicMock):
     """
     Test that add_handler calls blank() when hide_mode is HideMode.Blank.
@@ -327,8 +327,8 @@ def test_add_handler_hide_mode_blank(mocked_presentation_list: MagicMock):
     mocked_blank.assert_called_once_with(HideMode.Blank)
 
 
-@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
-@patch('openlp.plugins.presentations.lib.messagelistener.Registry')
+@patch('opal.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('opal.plugins.presentations.lib.messagelistener.Registry')
 def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presentation_list: MagicMock):
     """
     Test that add_handler starts once and jumps to the selected slide when slide_no = 1.
@@ -355,8 +355,8 @@ def test_add_handler_slidenumber_one(mocked_registry: MagicMock, mocked_presenta
     mocked_registry_instance.execute.assert_called_with('live_display_hide', HideMode.Screen)
 
 
-@patch('openlp.plugins.presentations.lib.messagelistener.PresentationList')
-@patch('openlp.plugins.presentations.lib.messagelistener.Registry')
+@patch('opal.plugins.presentations.lib.messagelistener.PresentationList')
+@patch('opal.plugins.presentations.lib.messagelistener.Registry')
 def test_add_handler_native_show_starts_at_selected_slide(mocked_registry, mocked_presentation_list):
     controller = Controller(True)
     document = MagicMock()
@@ -372,7 +372,7 @@ def test_add_handler_native_show_starts_at_selected_slide(mocked_registry, mocke
     document.goto_slide.assert_not_called()
 
 
-@patch('openlp.plugins.presentations.lib.mediaitem.MessageListener._setup')
+@patch('opal.plugins.presentations.lib.mediaitem.MessageListener._setup')
 def test_message_listener_next_passes_restore_focus_option(media_mock, media_item):
     """
     Test that MessageListener.next forwards restore_focus option to the live handler.
@@ -381,7 +381,7 @@ def test_message_listener_next_passes_restore_focus_option(media_mock, media_ite
     message_listener.live_handler = MagicMock()
     message_listener.live_handler.next.return_value = False
 
-    with patch('openlp.plugins.presentations.lib.messagelistener.Registry') as mocked_registry:
+    with patch('opal.plugins.presentations.lib.messagelistener.Registry') as mocked_registry:
         mocked_registry.return_value.get.return_value.value.return_value = False
         message_listener.next([MagicMock(), True, {'restore_focus': False}])
 

@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from openlp.core.common.platform import is_macosx
+from opal.core.common.platform import is_macosx
 
 try:
     import Pyro5    # noqa: F401
@@ -34,7 +34,7 @@ except ImportError:
     has_pyro5 = False
 
 if has_pyro5:
-    from openlp.plugins.presentations.lib.libreofficeserver import LibreOfficeServer, TextType, main
+    from opal.plugins.presentations.lib.libreofficeserver import LibreOfficeServer, TextType, main
 
 
 pytestmark = [
@@ -59,7 +59,7 @@ def test_constructor():
     assert server._process is None
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.Popen')
+@patch('opal.plugins.presentations.lib.libreofficeserver.Popen')
 def test_start_process(MockedPopen):
     """
     Test that the correct command is issued to run LibreOffice
@@ -85,7 +85,7 @@ def test_start_process(MockedPopen):
     assert server._process is mocked_process
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_desktop_already_has_desktop(mocked_uno):
     """
     Test that setup_desktop() exits early when there's already a desktop
@@ -102,7 +102,7 @@ def test_desktop_already_has_desktop(mocked_uno):
     assert server._manager is None
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_desktop_exception(mocked_uno):
     """
     Test that setting up the desktop works correctly when an exception occurs
@@ -137,7 +137,7 @@ def test_desktop_exception(mocked_uno):
     assert server._desktop is None
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_desktop(mocked_uno):
     """
     Test that setting up the desktop works correctly
@@ -173,7 +173,7 @@ def test_desktop(mocked_uno):
     assert server._desktop is mocked_desktop
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.PropertyValue')
+@patch('opal.plugins.presentations.lib.libreofficeserver.PropertyValue')
 def test_create_property(MockedPropertyValue):
     """
     Test that the _create_property() method works correctly
@@ -357,7 +357,7 @@ def test_shutdown():
     server._process.kill.assert_called_once_with()
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_load_presentation_exception(mocked_uno):
     """
     Test the load_presentation() method when an exception occurs
@@ -380,7 +380,7 @@ def test_load_presentation_exception(mocked_uno):
     assert result is False
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_load_presentation(mocked_uno):
     """
     Test the load_presentation() method
@@ -415,7 +415,7 @@ def test_load_presentation(mocked_uno):
     assert server._control is None
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
 def test_extract_thumbnails_no_pages(mocked_uno):
     """
     Test the extract_thumbnails() method when there are no pages
@@ -440,8 +440,8 @@ def test_extract_thumbnails_no_pages(mocked_uno):
     assert thumbnails == []
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.uno')
-@patch('openlp.plugins.presentations.lib.libreofficeserver.os')
+@patch('opal.plugins.presentations.lib.libreofficeserver.uno')
+@patch('opal.plugins.presentations.lib.libreofficeserver.os')
 def test_extract_thumbnails(mocked_os, mocked_uno):
     """
     Test the extract_thumbnails() method
@@ -749,7 +749,7 @@ def test_stop_presentation():
     assert server._control is None
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.time.sleep')
+@patch('opal.plugins.presentations.lib.libreofficeserver.time.sleep')
 def test_start_presentation_no_control(mocked_sleep):
     """
     Test the start_presentation() method when there's no control
@@ -853,7 +853,7 @@ def test_goto_slide():
     mocked_control.gotoSlideIndex.assert_called_once_with(0)
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.time.sleep')
+@patch('opal.plugins.presentations.lib.libreofficeserver.time.sleep')
 def test_next_step_when_paused(mocked_sleep):
     """
     Test the next_step() method when paused
@@ -874,7 +874,7 @@ def test_next_step_when_paused(mocked_sleep):
     mocked_control.gotoPreviousEffect.assert_called_once_with()
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.time.sleep')
+@patch('opal.plugins.presentations.lib.libreofficeserver.time.sleep')
 def test_next_step(mocked_sleep):
     """
     Test the next_step() method when paused
@@ -945,7 +945,7 @@ def test_get_slide_notes():
     assert result == 'Installing is a drag-and-drop affair'
 
 
-@patch('openlp.plugins.presentations.lib.libreofficeserver.Daemon')
+@patch('opal.plugins.presentations.lib.libreofficeserver.Daemon')
 def test_main(MockedDaemon):
     """
     Test the main() function

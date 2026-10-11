@@ -23,13 +23,13 @@ This module contains tests for the report_song_list function.
 """
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.reporting import report_song_list
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.reporting import report_song_list
 
 
-@patch('openlp.plugins.songs.reporting.csv')
-@patch('openlp.plugins.songs.reporting.FileDialog')
+@patch('opal.plugins.songs.reporting.csv')
+@patch('opal.plugins.songs.reporting.FileDialog')
 def test_report_song_list(mock_file_dialog: MagicMock, mocked_csv: MagicMock, registry: Registry,
                           settings: Settings):
     """
@@ -91,8 +91,8 @@ def test_report_song_list(mock_file_dialog: MagicMock, mocked_csv: MagicMock, re
     })
 
 
-@patch('openlp.plugins.songs.reporting.log')
-@patch('openlp.plugins.songs.reporting.FileDialog')
+@patch('opal.plugins.songs.reporting.log')
+@patch('opal.plugins.songs.reporting.FileDialog')
 def test_report_song_list_error_reading(mock_file_dialog: MagicMock, mock_log: MagicMock, registry: Registry,
                                         settings: Settings):
     """
@@ -118,7 +118,7 @@ def test_report_song_list_error_reading(mock_file_dialog: MagicMock, mock_log: M
     mock_log.exception.assert_called_once()
 
 
-@patch('openlp.plugins.songs.reporting.FileDialog')
+@patch('opal.plugins.songs.reporting.FileDialog')
 def test_report_song_list_cancel(mock_file_dialog: MagicMock, registry: Registry, settings: Settings):
     """
     Test that report song list does not crash if no file location was specified

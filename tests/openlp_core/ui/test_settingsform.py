@@ -19,19 +19,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.settingsform package.
+Package to test the opal.core.ui.settingsform package.
 """
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtGui
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.servicetab import ServiceTab
-from openlp.core.ui.settingsform import SettingsForm
-from openlp.core.ui.fluenticons import service_icon
-from openlp.core.ui.icons import UiIcons
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.servicetab import ServiceTab
+from opal.core.ui.settingsform import SettingsForm
+from opal.core.ui.fluenticons import service_icon
+from opal.core.ui.icons import UiIcons
 
 
 class MockTab(QtWidgets.QWidget):
@@ -217,7 +217,7 @@ def test_get_ordered_tabs_places_general_first_advanced_last(registry: Registry,
     inactive_plugin.settings_tab = MockTab(None, 'songs', 'Songs', ':/icon/opal-presenter.png')
     inactive_plugin.is_active.return_value = False
 
-    with patch('openlp.core.ui.settingsform.State') as mocked_state:
+    with patch('opal.core.ui.settingsform.State') as mocked_state:
         projector_plugin = MagicMock(settings_tab=settings_form.projector_tab)
         projector_plugin.is_active.return_value = False
         remote_plugin = MagicMock(settings_tab=settings_form.api_tab)

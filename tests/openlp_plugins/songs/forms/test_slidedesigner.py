@@ -4,11 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6 import QtCore, QtGui
-from openlp.core.common import ThemeLevel
-from openlp.core.common.registry import Registry
-from openlp.core.lib.theme import Theme
-from openlp.core.lib.slidelayouts import slide_design, visual_design
-from openlp.plugins.songs.forms.editsongform import EditSongForm
+from opal.core.common import ThemeLevel
+from opal.core.common.registry import Registry
+from opal.core.lib.theme import Theme
+from opal.core.lib.slidelayouts import slide_design, visual_design
+from opal.plugins.songs.forms.editsongform import EditSongForm
 
 
 def load_editable_design(designer, value):
@@ -27,7 +27,7 @@ def designer(settings):
     manager.get_theme_names.return_value = ['Global', 'Song', 'Service']
     Registry().register('theme_manager', manager)
     form = EditSongForm(MagicMock(), None, MagicMock())
-    with patch('openlp.plugins.slide_designer.forms.designer.ScreenList') as screens:
+    with patch('opal.plugins.slide_designer.forms.designer.ScreenList') as screens:
         screens.return_value.current.display_geometry.size.return_value = QtCore.QSize(1920, 1080)
         load_editable_design(form.verse_form.slide_designer, {})
         form.verse_form.slide_designer.select_object('lyrics')
@@ -85,7 +85,7 @@ def test_canvas_text_box_edit_is_one_undo_and_flushes_before_save(designer):
 
 
 def test_canvas_lyrics_edit_preserves_other_pages_tags_and_undo(designer, settings):
-    from openlp.plugins.songs.songsplugin import song_footer
+    from opal.plugins.songs.songsplugin import song_footer
     settings.extend_default_settings(song_footer)
     form = designer.source_form
     source = '---[Verse:1]---\n{st}Repeat 😀\nRepeat 😀{/st}\n[--}{--]\nNext slide\n---[Chorus:1]---\nChorus'
@@ -159,7 +159,7 @@ def test_preview_selection_targets_formatting_instead_of_sidebar_cursor(designer
 @pytest.mark.parametrize('action', ['st', 'it', 'clear', 'style'])
 @pytest.mark.parametrize('edited', [False, True])
 def test_preview_text_box_formatting_uses_its_selection_and_keeps_lyrics(designer, action, edited):
-    from openlp.plugins.slide_designer.forms.textediting import visible_text
+    from opal.plugins.slide_designer.forms.textediting import visible_text
     designer.source_form.verse_text_edit.setPlainText('Lyrics stay unchanged')
     designer.add_element('text')
     identifier = designer.selected
@@ -263,7 +263,7 @@ def test_preview_uses_unsaved_verse_and_design(designer):
     designer.display._is_initialised = True
     designer.display.format_slide.return_value = ['New lyrics']
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         theme = Theme()
     designer.theme_manager.get_theme_data.return_value = theme
@@ -286,7 +286,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
         return renderer
 
     with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
-            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+            patch('opal.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
                   side_effect=create_renderer) as create:
         designer.showEvent(QtGui.QShowEvent())
         designer.showEvent(QtGui.QShowEvent())
@@ -301,7 +301,7 @@ def test_preview_creation_survives_reentrant_show_event(designer):
 
 def test_preview_creation_can_retry_after_failure(designer):
     with patch.object(designer, 'resolve_theme', return_value=MagicMock(spec=Theme)), \
-            patch('openlp.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
+            patch('opal.plugins.slide_designer.forms.designer.ThemePreviewRenderer',
                   side_effect=[RuntimeError('Startup failed'), MagicMock()]) as create:
         with pytest.raises(RuntimeError, match='Startup failed'):
             designer.showEvent(QtGui.QShowEvent())
@@ -318,7 +318,7 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
     designer.display._is_initialised = True
     designer.display.format_slide.return_value = ['Lyrics']
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
     designer.fit_canvas()
@@ -346,7 +346,7 @@ def test_aspect_preview_stays_frozen_until_latest_render_is_ready(designer):
 def test_frozen_preview_preserves_surrounding_canvas_background(designer, settings, dark):
     import fluentqt
     from PySide6 import QtWidgets
-    from openlp.plugins.songs.songsplugin import song_footer
+    from opal.plugins.songs.songsplugin import song_footer
 
     settings.extend_default_settings(song_footer)
     original_theme = fluentqt.currentTheme()
@@ -393,7 +393,7 @@ def test_frozen_preview_preserves_surrounding_canvas_background(designer, settin
 def test_formatting_preview_is_covered_before_pagination_until_render_finishes(designer):
     designer.display = MagicMock(_is_initialised=True)
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
 
@@ -415,7 +415,7 @@ def test_formatting_preview_is_covered_before_pagination_until_render_finishes(d
 def test_new_refresh_requested_during_pagination_keeps_cover_and_schedules_latest_render(designer):
     designer.display = MagicMock(_is_initialised=True)
     designer.isVisible = lambda: True
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.theme_manager.get_theme_data.return_value = Theme()
     revisions = []
@@ -452,7 +452,7 @@ def test_failed_preview_render_releases_frozen_image(designer):
 
 
 def test_designer_only_belongs_to_inner_edit_dialog(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = designer.source_form.design_owner
     assert not hasattr(owner, 'slide_designer')
     assert owner.verse_form.slide_designer is designer
@@ -477,7 +477,7 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
         dialog.slide_designer.set_property('x', 35)
         return int(accepted)
 
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', new=edit_and_finish):
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', new=edit_and_finish):
         designer.source_form.exec()
     assert slide_design(owner.slide_design, designer.footer_key())['lyrics']['x'] == (35 if accepted else 10)
     if not accepted:
@@ -486,7 +486,7 @@ def test_inner_dialog_commits_only_on_accept(designer, accepted):
 
 
 def test_bulk_preview_follows_section_selection(designer, settings):
-    from openlp.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
+    from opal.plugins.songs.lib.sectioncolors import DEFAULT_SECTION_COLORS
     settings.extend_default_settings({'songs/section color ' + key: colour
                                       for key, colour in DEFAULT_SECTION_COLORS.items()})
     settings.extend_default_settings({'songs/section background opacity minimum': 10,
@@ -590,7 +590,7 @@ def test_properties_header_stays_fixed_and_pane_can_resize(designer, qtbot):
 
 
 def test_custom_sidebar_commands_still_insert_slides(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     dialog = owner.edit_slide_form
     dialog.set_text('First')
@@ -614,13 +614,13 @@ def test_default_theme_has_a_label_without_changing_inheritance(designer):
         assert dialog.designer_theme_name() == ''
         return 1
 
-    with patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', new=accept):
+    with patch('opal.plugins.slide_designer.forms.window.exec_designer_window', new=accept):
         designer.source_form.exec()
     assert owner.theme_combo_box.currentText() == ''
 
 
 def test_layers_include_slide_text_and_new_objects_start_at_front(designer):
-    from openlp.core.lib.slidedesign import layer_order
+    from opal.core.lib.slidedesign import layer_order
     designer.add_element('rectangle')
     shape = designer.selected
     assert layer_order(designer.design) == ['lyrics', shape]
@@ -840,7 +840,7 @@ def test_multiple_properties_show_mixed_values_and_edit_applicable_objects_toget
 
 
 def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(designer):
-    from openlp.core.lib.slidelayouts import slide_design
+    from opal.core.lib.slidelayouts import slide_design
     designer.add_element('text')
     identifier = designer.selected
     with patch.object(designer, 'prompt_layout_name', return_value=('Welcome', True)):
@@ -858,7 +858,7 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
     assert designer.document['masters'][master]['design'] == master_before
     assert slide_design(designer.document, 'v2:0:0') == master_before
     original = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
+    with patch('opal.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_design()
@@ -873,7 +873,7 @@ def test_slide_edits_do_not_change_master_or_other_slides_and_reset_stays_local(
 
 
 def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer):
-    from openlp.core.lib.slidelayouts import set_slide_design, layout_for_slide
+    from opal.core.lib.slidelayouts import set_slide_design, layout_for_slide
     load_editable_design(designer, {'version': 1, 'lyrics': {'font_size': 40}, 'elements': []})
     document = set_slide_design(designer.document, 'v1:0:0', {'version': 1, 'lyrics': {'font_size': 60}})
     document = set_slide_design(document, 'v2:0:0', {'version': 1, 'lyrics': {'font_size': 80}})
@@ -885,7 +885,7 @@ def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer)
         designer.switch_design_context()
         assert designer.reset_button.isEnabled()
     document = copy.deepcopy(designer.document)
-    with patch('openlp.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
+    with patch('opal.plugins.slide_designer.forms.designer.QtWidgets.ContentDialog') as dialog:
         dialog.return_value.ResultPrimary = 1
         dialog.return_value.exec.return_value = 0
         designer.reset_button.click()
@@ -909,7 +909,7 @@ def test_reset_all_assigns_theme_keeps_saved_layouts_and_supports_undo(designer)
 
 
 def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
-    from openlp.core.lib.slidelayouts import slide_design
+    from opal.core.lib.slidelayouts import slide_design
     load_editable_design(designer, {'version': 1, 'masters': {'welcome': {'name': 'Welcome', 'design': {
         'version': 1, 'lyrics': {'font_size': 72}, 'elements': []}}},
         'assignments': {'v1:0:0': 'welcome', 'v2:0:0': 'welcome'}})
@@ -924,8 +924,8 @@ def test_deleting_a_master_keeps_all_assigned_slides_appearance(designer):
     ('song', 'Amazing Grace', 'Amazing Grace - Opal Presenter'), ('song', '', 'New Song - Opal Presenter'),
     ('custom', 'Welcome', 'Welcome - Opal Presenter'), ('custom', '  ', 'New Custom Slide - Opal Presenter')])
 def test_designer_uses_independent_nonmodal_fluent_window_and_restores_editor_layout(designer, kind, title, expected):
-    from openlp.plugins.slide_designer.forms.window import exec_designer_window, DesignerWindow
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.plugins.slide_designer.forms.window import exec_designer_window, DesignerWindow
+    from opal.core.widgets import fluent as QtWidgets
     editor = designer.source_form
     editor.design_kind = kind
     editor.design_owner.title_edit.setText(title)
@@ -1111,7 +1111,7 @@ def test_footer_visibility_is_per_verse_split_and_page_with_undo(designer):
 
 
 def test_custom_footer_uses_outer_slide_number_and_survives_reorder_delete(designer):
-    from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+    from opal.plugins.custom.forms.editcustomform import EditCustomForm
     owner = EditCustomForm(MagicMock(), None, MagicMock())
     owner.slide_list_view.addItems(['First', 'Second', 'Third'])
     owner.slide_design = {'version': 1, 'hidden_footers': ['custom-2:0:0']}
@@ -1147,7 +1147,7 @@ def test_repeated_preview_switches_preserve_existing_slide_size(designer):
 @pytest.mark.parametrize('accepted', [True, False])
 def test_layout_name_content_dialog_has_header_and_rejects_blank_names(designer, accepted):
     import fluentqt
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
 
     def inspect(dialog):
         assert dialog.title() == 'New layout'
@@ -1173,7 +1173,7 @@ def test_layout_name_content_dialog_has_header_and_rejects_blank_names(designer,
 
 def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
     import fluentqt
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
 
     def inspect(dialog):
         assert dialog.title() == 'Rename layout'
@@ -1191,7 +1191,7 @@ def test_rename_layout_content_dialog_has_header_and_existing_name(designer):
 @pytest.mark.parametrize('host_width', [1000, 360])
 @pytest.mark.parametrize('action', ['enter', 'create', 'escape', 'cancel'])
 def test_layout_name_prompt_fits_and_submits_through_visible_actions(designer, qtbot, monkeypatch, host_width, action):
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(host_width, 320)
@@ -1353,15 +1353,15 @@ def test_preview_output_profiles_persist_rename_and_delete(designer):
 
 
 def test_preview_output_connected_displays_refresh(designer):
-    from openlp.core.display.screens import Screen
+    from opal.core.display.screens import Screen
     output = designer.preview_output
     screen = Screen(1, QtCore.QRect(0, 0, 1920, 1200))
-    with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[screen]):
+    with patch('opal.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[screen]):
         output.refresh_outputs()
         output.combo.setCurrentIndex(output.index(('display', 1, 1920, 1200)))
         assert output.output_size() == QtCore.QSize(1728, 1080)
         assert '16:10' in output.combo.currentText()
-    with patch('openlp.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[]):
+    with patch('opal.plugins.slide_designer.forms.previewoutput.ScreenList', return_value=[]):
         output.refresh_outputs()
     assert output.combo.currentData() == ('preset', 1920, 1080)
 
@@ -1375,7 +1375,7 @@ def test_preview_output_ignores_invalid_profiles(designer):
 
 
 def test_preview_output_fits_design_and_maps_gestures_back_to_canvas(designer):
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.base_theme = Theme()
     designer.add_element('rectangle')
@@ -1397,7 +1397,7 @@ def test_preview_output_fits_design_and_maps_gestures_back_to_canvas(designer):
 
 @pytest.mark.parametrize('submit', ['enter', 'mouse', 'cancel'])
 def test_preview_profile_dialog_validation_and_submission(designer, qtbot, submit):
-    from openlp.core.widgets import fluent as QtWidgets
+    from opal.core.widgets import fluent as QtWidgets
     designer.setParent(None)
     with patch.object(type(designer), 'showEvent', lambda self, event: None):
         designer.show()
@@ -1457,7 +1457,7 @@ def test_portrait_preview_keeps_output_controls_reachable(designer):
 @pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)])
 @pytest.mark.parametrize('custom_layout', [False, True])
 def test_same_aspect_preview_keeps_reference_geometry_and_typography(designer, width, height, custom_layout):
-    with patch('openlp.core.lib.theme.ScreenList') as screens:
+    with patch('opal.core.lib.theme.ScreenList') as screens:
         screens.return_value.current.display_geometry = QtCore.QRect(0, 0, 1920, 1080)
         designer.base_theme = Theme()
     theme = designer.base_theme

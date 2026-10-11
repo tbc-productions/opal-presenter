@@ -25,10 +25,10 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.settings import Settings
-from openlp.plugins.custom.forms.editcustomform import EditCustomForm
+from opal.core.common.settings import Settings
+from opal.plugins.custom.forms.editcustomform import EditCustomForm
 
 
 @pytest.fixture()
@@ -73,8 +73,8 @@ def test_on_add_button_clicked(form: EditCustomForm):
     Test the on_add_button_clicked_test method / add_button button.
     """
     # GIVEN: A mocked QDialog.exec() method
-    with patch('openlp.core.widgets.fluent.QDialog.exec'), \
-            patch('openlp.plugins.slide_designer.forms.window.exec_designer_window', return_value=1):
+    with patch('opal.core.widgets.fluent.QDialog.exec'), \
+            patch('opal.plugins.slide_designer.forms.window.exec_designer_window', return_value=1):
         # WHEN: Add a new slide.
         form.add_action.trigger()
 
@@ -87,7 +87,7 @@ def test_validate_not_valid_part1(form: EditCustomForm):
     Test the _validate() method.
     """
     # GIVEN: Mocked methods.
-    with patch('openlp.plugins.custom.forms.editcustomform.critical_error_message_box') as \
+    with patch('opal.plugins.custom.forms.editcustomform.critical_error_message_box') as \
             mocked_critical_error_message_box:
         form.title_edit.displayText = MagicMock(return_value='')
         mocked_setFocus = MagicMock()
@@ -107,7 +107,7 @@ def test_validate_not_valid_part2(form: EditCustomForm):
     Test the _validate() method.
     """
     # GIVEN: Mocked methods.
-    with patch('openlp.plugins.custom.forms.editcustomform.critical_error_message_box') as \
+    with patch('opal.plugins.custom.forms.editcustomform.critical_error_message_box') as \
             mocked_critical_error_message_box:
         form.title_edit.displayText = MagicMock(return_value='something')
         form.slide_list_view.count = MagicMock(return_value=0)

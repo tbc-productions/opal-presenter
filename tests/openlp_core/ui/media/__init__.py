@@ -21,5 +21,5 @@
 """
 :mod: `tests.openlp_core.ui.media` module
 
-Tests modules/files for module openlp.core.ui.media
+Tests modules/files for module opal.core.ui.media
 """

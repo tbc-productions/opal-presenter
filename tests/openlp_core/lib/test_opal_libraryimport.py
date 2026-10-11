@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-from openlp.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
-from openlp.core.lib.opal_libraryimport import copy_opal_library
+from opal.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
+from opal.core.lib.opal_libraryimport import copy_opal_library
 
 
 @pytest.fixture
@@ -81,7 +81,7 @@ def test_opal_failed_copy_is_removed(opal_source, tmp_path, opal_failure):
             opal_database.execute('INSERT INTO media_files (id, file_name, type) VALUES (1, ?, ?)',
                                   (str(tmp_path / 'missing.mp3'), 'audio'))
     opal_before = (opal_source / 'songs/songs.sqlite').read_bytes() if opal_failure != 'empty' else None
-    with patch('openlp.core.lib.opal_libraryimport.shutil.copytree', side_effect=OSError('disk full')) \
+    with patch('opal.core.lib.opal_libraryimport.shutil.copytree', side_effect=OSError('disk full')) \
             if opal_failure == 'copy' else nullcontext():
         with pytest.raises((OSError, ValueError, sqlite3.DatabaseError)):
             copy_opal_library(opal_source, tmp_path / 'opal')
@@ -97,9 +97,9 @@ def test_opal_rejects_recursive_copy(opal_source):
 
 
 def test_opal_copied_legacy_songs_upgrade(settings, opal_source, tmp_path):
-    from openlp.core.db.manager import DBManager
-    from openlp.plugins.songs.lib import upgrade
-    from openlp.plugins.songs.lib.db import Song, init_schema
+    from opal.core.db.manager import DBManager
+    from opal.plugins.songs.lib import upgrade
+    from opal.plugins.songs.lib.db import Song, init_schema
     opal_destination = copy_opal_library(opal_source, tmp_path / 'opal')
     settings.setValue('advanced/data path', opal_destination)
     opal_manager = DBManager('songs', init_schema, upgrade_mod=upgrade)
@@ -113,9 +113,9 @@ def test_opal_copied_legacy_songs_upgrade(settings, opal_source, tmp_path):
 
 
 def test_opal_copied_legacy_images_upgrade(settings, opal_source, tmp_path):
-    from openlp.core.db.manager import DBManager
-    from openlp.plugins.images.lib import upgrade
-    from openlp.plugins.images.lib.db import Item, init_schema
+    from opal.core.db.manager import DBManager
+    from opal.plugins.images.lib import upgrade
+    from opal.plugins.images.lib.db import Item, init_schema
     (opal_source / 'images').mkdir()
     opal_image = opal_source / 'images/photo.png'
     opal_image.write_bytes(b'image')

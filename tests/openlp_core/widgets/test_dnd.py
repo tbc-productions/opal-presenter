@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.core.lib import ServiceItemContext
-from openlp.core.lib.serviceitem import ServiceItem
-from openlp.core.ui.fluenticons import service_icon
-from openlp.core.ui.icons import UiIcons
-from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
-from openlp.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
-from openlp.core.widgets.views import ListWidgetWithDnD
+from opal.core.common.registry import Registry
+from opal.core.lib import ServiceItemContext
+from opal.core.lib.serviceitem import ServiceItem
+from opal.core.ui.fluenticons import service_icon
+from opal.core.ui.icons import UiIcons
+from opal.core.ui.slidecontroller import SlideController
+from opal.core.widgets.dnd import ItemDragData, ThemeDragData, execute_drag
+from opal.core.widgets.fluent_tooltips import FluentToolTip, install_fluent_tooltips
+from opal.core.widgets.views import ListWidgetWithDnD
 
 pytestmark = pytest.mark.usefixtures('qapp')
 
@@ -77,7 +77,7 @@ def test_all_library_drags_paint_the_coloured_icon_and_use_a_plain_cursor(librar
     library.plugin.name = name
     library.get_library_tab_icon = lambda: service_icon(getattr(UiIcons(), icon), name)
     mime = ItemDragData(library=library)
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         execute_drag(library.list_view, mime)
     pixmap = drag.return_value.setPixmap.call_args.args[0]
     image = pixmap.toImage()
@@ -118,7 +118,7 @@ def test_drag_clears_hover_feedback_on_drop_cancel_and_failure(library, result):
             raise RuntimeError('Drag failed')
         return result
 
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         drag.return_value.exec.side_effect = native_drag
         if result is RuntimeError:
             with pytest.raises(RuntimeError, match='Drag failed'):
@@ -330,7 +330,7 @@ def test_drag_card_uses_shared_theme_and_font_despite_source_styling(library, da
     try:
         mime = ItemDragData(library=library)
         mime.title = 'A very long label ' * 20
-        with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+        with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
             execute_drag(library.list_view, mime)
             first = drag.return_value.setPixmap.call_args.args[0].toImage()
             font = library.list_view.font()

@@ -19,15 +19,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.authorsform package.
+Package to test the opal.plugins.songs.forms.authorsform package.
 """
 import pytest
 from unittest.mock import patch
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.forms.authorsform import AuthorsForm
+from opal.core.common.registry import Registry
+from opal.plugins.songs.forms.authorsform import AuthorsForm
 
 
 @pytest.fixture()
@@ -133,7 +133,7 @@ def test_set_display_name_property(form):
     assert form.display_edit.text() == display_name, 'The display name should be set correctly'
 
 
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.exec')
+@patch('opal.plugins.songs.forms.authorsform.QtWidgets.FormDialog.exec')
 def test_exec(mocked_exec, form):
     """
     Test the exec() method
@@ -228,7 +228,7 @@ def test_last_name_edited_no_auto(form):
     assert mocked_display_edit_setText.call_count == 0
 
 
-@patch('openlp.plugins.songs.forms.authorsform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.authorsform.critical_error_message_box')
 def test_accept_no_first_name(mocked_critical_error, form):
     """
     Test the accept() method with no first name
@@ -248,7 +248,7 @@ def test_accept_no_first_name(mocked_critical_error, form):
     mocked_first_name_edit_setFocus.assert_called_once_with()
 
 
-@patch('openlp.plugins.songs.forms.authorsform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.authorsform.critical_error_message_box')
 def test_accept_no_last_name(mocked_critical_error, form):
     """
     Test the accept() method with no last name
@@ -271,7 +271,7 @@ def test_accept_no_last_name(mocked_critical_error, form):
     mocked_last_name_edit_setFocus.assert_called_once_with()
 
 
-@patch('openlp.plugins.songs.forms.authorsform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.authorsform.critical_error_message_box')
 def test_accept_no_display_name_no_combine(mocked_critical_error, form):
     """
     Test the accept() method with no display name and no combining
@@ -300,8 +300,8 @@ def test_accept_no_display_name_no_combine(mocked_critical_error, form):
     mocked_display_edit_setFocus.assert_called_once_with()
 
 
-@patch('openlp.plugins.songs.forms.authorsform.critical_error_message_box')
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
+@patch('opal.plugins.songs.forms.authorsform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
 def test_accept_no_display_name(mocked_accept, mocked_critical_error, form):
     """
     Test the accept() method with no display name and auto-combine
@@ -332,7 +332,7 @@ def test_accept_no_display_name(mocked_accept, mocked_critical_error, form):
     mocked_accept.assert_called_once_with(form)
 
 
-@patch('openlp.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
+@patch('opal.plugins.songs.forms.authorsform.QtWidgets.FormDialog.accept')
 def test_accept(mocked_accept, form):
     """
     Test the accept() method

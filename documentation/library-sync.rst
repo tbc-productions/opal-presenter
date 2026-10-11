@@ -279,7 +279,7 @@ excluded. For advanced multi-folder configuration, use ``read_profile`` and
 Adding a provider
 -----------------
 
-``CloudProvider`` in ``openlp/plugins/librarysync/lib/provider.py`` defines the
+``CloudProvider`` in ``opal/plugins/librarysync/lib/provider.py`` defines the
 account cache identity, change cursor/feed, folder, paged listing, name lookup,
 preview, streaming, download, upload, rename,
 move and deletion operations. Return ``CloudItem``

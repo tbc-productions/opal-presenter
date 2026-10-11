@@ -21,7 +21,7 @@
 """
 This module contains tests for the plugin class Bibles plugin.
 """
-from openlp.plugins.bibles.bibleplugin import BiblePlugin
+from opal.plugins.bibles.bibleplugin import BiblePlugin
 
 
 def test_plugin_about():

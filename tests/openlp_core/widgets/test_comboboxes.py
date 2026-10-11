@@ -19,11 +19,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-This module contains tests for the openlp.core.widgets.buttons module
+This module contains tests for the opal.core.widgets.buttons module
 """
 from unittest.mock import MagicMock
 
-from openlp.core.widgets.comboboxes import LazyComboBox
+from opal.core.widgets.comboboxes import LazyComboBox
 
 
 def test_lazy_loading(mock_settings: MagicMock):

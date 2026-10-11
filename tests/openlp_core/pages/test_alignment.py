@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.pages.alignment package.
+Package to test the opal.core.pages.alignment package.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.lib.theme import HorizontalType, VerticalType, TransitionType, TransitionSpeed, TransitionDirection
-from openlp.core.pages.alignment import AlignmentTransitionsPage
+from opal.core.lib.theme import HorizontalType, VerticalType, TransitionType, TransitionSpeed, TransitionDirection
+from opal.core.pages.alignment import AlignmentTransitionsPage
 
 
 def test_init_(settings):

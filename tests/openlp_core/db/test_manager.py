@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.lib package.
+Package to test the opal.core.lib package.
 """
 from sqlite3 import OperationalError as SQLiteOperationalError
 from unittest.mock import MagicMock, patch
@@ -27,13 +27,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.exc import InvalidRequestError, OperationalError as SQLAlchemyOperationalError
 
-from openlp.core.common.settings import Settings
-from openlp.core.db.manager import DBManager
-from openlp.plugins.songs.lib.db import Song
+from opal.core.common.settings import Settings
+from opal.core.db.manager import DBManager
+from opal.plugins.songs.lib.db import Song
 
 
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.upgrade_db')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.upgrade_db')
 def test_manager_init(mocked_upgrade_db: MagicMock, mocked_init_url: MagicMock, temp_folder: str,
                       settings: Settings):
     """Test the initialisation of the DB manager"""
@@ -58,7 +58,7 @@ def test_manager_init(mocked_upgrade_db: MagicMock, mocked_init_url: MagicMock, 
     mocked_upgrade_db.assert_called_once_with(mocked_db_url, mocked_upgrade_mod)
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_init_with_session(mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the initialisation of the DB manager with a provided session"""
     # GIVEN: A bunch of mocked out functions and objects
@@ -78,8 +78,8 @@ def test_manager_init_with_session(mocked_init_url: MagicMock, temp_folder: str,
     mocked_init_schema.assert_not_called()
 
 
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.handle_db_error')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.handle_db_error')
 def test_manager_init_session_error(mocked_handle_db_error: MagicMock, mocked_init_url: MagicMock,
                                     temp_folder: str, settings: Settings):
     """Test the initialisation of the DB manager when there's an error creating the session"""
@@ -101,9 +101,9 @@ def test_manager_init_session_error(mocked_handle_db_error: MagicMock, mocked_in
     mocked_handle_db_error.assert_called_once_with('test', 'test_db.sqlite')
 
 
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.upgrade_db')
-@patch('openlp.core.db.manager.handle_db_error')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.upgrade_db')
+@patch('opal.core.db.manager.handle_db_error')
 def test_manager_init_upgrade_error(mocked_handle_db_error: MagicMock, mocked_upgrade_db: MagicMock,
                                     mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the initialisation of the DB manager when there's an error upgrading"""
@@ -126,9 +126,9 @@ def test_manager_init_upgrade_error(mocked_handle_db_error: MagicMock, mocked_up
     mocked_handle_db_error.assert_called_once_with('test', 'test_db.sqlite')
 
 
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.upgrade_db')
-@patch('openlp.core.db.manager.critical_error_message_box')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.upgrade_db')
+@patch('opal.core.db.manager.critical_error_message_box')
 def test_manager_init_upgrade_version_mismatch(mocked_critical_error_message_box: MagicMock,
                                                mocked_upgrade_db: MagicMock, mocked_init_url: MagicMock,
                                                temp_folder: str, settings: Settings):
@@ -153,7 +153,7 @@ def test_manager_init_upgrade_version_mismatch(mocked_critical_error_message_box
     )
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_object(mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the save_object method of the DB manager"""
     # GIVEN: A db Manager object
@@ -173,7 +173,7 @@ def test_manager_save_object(mocked_init_url: MagicMock, temp_folder: str, setti
     assert result is True
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_object_with_retry(mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the save_object method of the DB manager with a retry on OperationalError"""
     # GIVEN: A db Manager object
@@ -198,7 +198,7 @@ def test_manager_save_object_with_retry(mocked_init_url: MagicMock, temp_folder:
     assert mocked_session.rollback.call_count == 3
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_object_with_invalid_request_error(mocked_init_url: MagicMock, temp_folder: str,
                                                         settings: Settings):
     """Test the save_object method of the DB manager with an InvalidRequestError"""
@@ -220,7 +220,7 @@ def test_manager_save_object_with_invalid_request_error(mocked_init_url: MagicMo
     assert mocked_session.rollback.call_count == 1
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_object_with_other_exception(mocked_init_url: MagicMock, temp_folder: str,
                                                   settings: Settings):
     """Test the save_object method of the DB manager with any other exception"""
@@ -245,7 +245,7 @@ def test_manager_save_object_with_other_exception(mocked_init_url: MagicMock, te
     assert mocked_session.rollback.call_count == 1
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_objects(mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the save_objects method of the DB manager"""
     # GIVEN: A db Manager object
@@ -265,7 +265,7 @@ def test_manager_save_objects(mocked_init_url: MagicMock, temp_folder: str, sett
     assert result is True
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_objects_with_retry(mocked_init_url: MagicMock, temp_folder: str, settings: Settings):
     """Test the save_objects method of the DB manager with a retry on OperationalError"""
     # GIVEN: A db Manager object
@@ -290,7 +290,7 @@ def test_manager_save_objects_with_retry(mocked_init_url: MagicMock, temp_folder
     assert mocked_session.rollback.call_count == 3
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_objects_with_invalid_request_error(mocked_init_url: MagicMock, temp_folder: str,
                                                          settings: Settings):
     """Test the save_objects method of the DB manager with an InvalidRequestError"""
@@ -312,7 +312,7 @@ def test_manager_save_objects_with_invalid_request_error(mocked_init_url: MagicM
     assert mocked_session.rollback.call_count == 1
 
 
-@patch('openlp.core.db.manager.init_url')
+@patch('opal.core.db.manager.init_url')
 def test_manager_save_objects_with_other_exception(mocked_init_url: MagicMock, temp_folder: str,
                                                    settings: Settings):
     """Test the save_objects method of the DB manager with any other exception"""
@@ -337,9 +337,9 @@ def test_manager_save_objects_with_other_exception(mocked_init_url: MagicMock, t
     assert mocked_session.rollback.call_count == 1
 
 
-@patch('openlp.core.db.manager.text')
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.create_engine')
+@patch('opal.core.db.manager.text')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.create_engine')
 def test_manager_finalise_exception(mocked_create_engine: MagicMock, mocked_init_url: MagicMock,
                                     mocked_text: MagicMock, temp_folder: str, settings: Settings):
     """Test that the finalise method silently fails on an exception"""
@@ -366,9 +366,9 @@ def test_manager_finalise_exception(mocked_create_engine: MagicMock, mocked_init
     mocked_create_engine.return_value.connect.return_value.execute.assert_called_once_with('vacuum')
 
 
-@patch('openlp.core.db.manager.text')
-@patch('openlp.core.db.manager.init_url')
-@patch('openlp.core.db.manager.create_engine')
+@patch('opal.core.db.manager.text')
+@patch('opal.core.db.manager.init_url')
+@patch('opal.core.db.manager.create_engine')
 def test_manager_finalise(mocked_create_engine: MagicMock, mocked_init_url: MagicMock, mocked_text: MagicMock,
                           temp_folder: str, settings: Settings):
     """Test that the finalise method works correctly"""

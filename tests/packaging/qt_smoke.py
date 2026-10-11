@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-import openlp.core.app  # noqa: F401 -- exercise the application's full startup imports
+import opal.core.app  # noqa: F401 -- exercise the application's full startup imports
 from PySide6 import QtCore, QtGui, QtMultimedia, QtWebEngineWidgets, QtWidgets
 
 

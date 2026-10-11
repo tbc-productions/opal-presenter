@@ -30,15 +30,15 @@ from unittest.mock import MagicMock, call, patch
 
 from sqlalchemy import create_engine, select, table, column
 
-from openlp.core.common.settings import ProxyMode
-from openlp.core.db.upgrades import upgrade_db
-from openlp.plugins.bibles.lib import upgrade
+from opal.core.common.settings import ProxyMode
+from opal.core.db.upgrades import upgrade_db
+from opal.plugins.bibles.lib import upgrade
 from tests.utils.constants import RESOURCE_PATH
 
 
 @pytest.fixture()
 def mock_message_box():
-    patched_message_box = patch('openlp.plugins.bibles.lib.upgrade.QtWidgets.QMessageBox')
+    patched_message_box = patch('opal.plugins.bibles.lib.upgrade.QtWidgets.QMessageBox')
     mocked_message_box = patched_message_box.start()
     mocked_no_button = MagicMock()
     mocked_http_button = MagicMock()

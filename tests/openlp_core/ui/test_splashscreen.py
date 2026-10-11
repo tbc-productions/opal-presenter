@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui package.
+Package to test the opal.core.ui package.
 """
 import hashlib
 import json
@@ -34,8 +34,8 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 import fluentqt
 
-from openlp.core.ui.splashscreen import SplashScreen, SplashScreenProcess
-from openlp.core.resources import qInitResources
+from opal.core.ui.splashscreen import SplashScreen, SplashScreenProcess
+from opal.core.resources import qInitResources
 
 
 def test_splashscreen(mock_settings: MagicMock, qtbot):
@@ -114,7 +114,7 @@ def test_splashscreen_loading_status(mock_settings: MagicMock, qtbot):
     """A startup stage refreshes the UI while retaining indeterminate progress."""
     splash = SplashScreen()
     qtbot.addWidget(splash)
-    with patch('openlp.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
+    with patch('opal.core.ui.splashscreen.QtWidgets.QApplication.processEvents') as process_events:
         splash.set_status('Loading components')
 
     assert splash.text() == 'Loading components'
@@ -227,7 +227,7 @@ def test_empty_stage_preserves_overall_percentage(mock_settings: MagicMock, qtbo
 
 def _run_observed_splash(*args, samples_file):
     """Observe painted frames in the helper without servicing the parent's Qt events."""
-    from openlp.core.ui.splashscreen import _run_splash
+    from opal.core.ui.splashscreen import _run_splash
 
     class ObservedSplash(SplashScreen):
         def __init__(self):
@@ -257,7 +257,7 @@ def _run_observed_splash(*args, samples_file):
             with open(samples_file, 'a') as output:
                 output.write(json.dumps(sample) + '\n')
 
-    with patch('openlp.core.ui.splashscreen.SplashScreen', ObservedSplash):
+    with patch('opal.core.ui.splashscreen.SplashScreen', ObservedSplash):
         _run_splash(*args)
 
 
@@ -265,7 +265,7 @@ def test_splash_animates_during_blocked_startup(mock_settings, qtbot, tmp_path):
     """Painted ring frames keep changing during synchronous work in the parent."""
     samples_file = tmp_path / 'splash-frames.jsonl'
     target = partial(_run_observed_splash, samples_file=str(samples_file))
-    with patch('openlp.core.ui.splashscreen._run_splash', target):
+    with patch('opal.core.ui.splashscreen._run_splash', target):
         splash = SplashScreenProcess()
     qtbot.addWidget(splash)
     process = splash._process
@@ -338,7 +338,7 @@ def test_foreground_splash_yields_to_startup_dialog(mock_settings, qtbot):
 
 def test_splash_cleans_up_failed_launch(mock_settings):
     """A helper that never starts must release both pipe endpoints."""
-    with patch('openlp.core.ui.splashscreen.multiprocessing.get_context') as get_context:
+    with patch('opal.core.ui.splashscreen.multiprocessing.get_context') as get_context:
         context = get_context.return_value
         parent, child = MagicMock(), MagicMock()
         context.Pipe.return_value = (parent, child)
@@ -364,7 +364,7 @@ def test_native_splash_follows_parent_foreground(mock_settings, qtbot, tmp_path)
     qtbot.addWidget(competing)
     samples_file = tmp_path / 'foreground.jsonl'
     target = partial(_run_observed_splash, samples_file=str(samples_file))
-    with patch('openlp.core.ui.splashscreen._run_splash', target):
+    with patch('opal.core.ui.splashscreen._run_splash', target):
         splash = SplashScreenProcess()
     qtbot.addWidget(splash)
     try:
@@ -414,8 +414,8 @@ def test_native_splash_webengine_accessibility():
     # QApplication used elsewhere in the suite. No user settings are loaded.
     code = """
 from PySide6 import QtCore, QtWidgets, QtWebEngineWidgets
-from openlp.core.resources import qInitResources
-from openlp.core.ui.splashscreen import SplashScreen
+from opal.core.resources import qInitResources
+from opal.core.ui.splashscreen import SplashScreen
 import fluentqt
 app = QtWidgets.QApplication([])
 qInitResources()

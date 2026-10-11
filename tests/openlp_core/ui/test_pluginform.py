@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.lib.plugin import PluginStatus
-from openlp.core.ui.pluginform import PluginForm
-from openlp.plugins.projector.projectorplugin import ProjectorPlugin
-from openlp.plugins.projector import projectorplugin
+from opal.core.lib.plugin import PluginStatus
+from opal.core.ui.pluginform import PluginForm
+from opal.plugins.projector.projectorplugin import ProjectorPlugin
+from opal.plugins.projector import projectorplugin
 
 
 def make_plugin(name, status=PluginStatus.Inactive, **metadata):
@@ -25,7 +25,7 @@ def make_plugin(name, status=PluginStatus.Inactive, **metadata):
 @pytest.fixture
 def plugin_form(mock_settings, qtbot):
     plugins = []
-    with patch('openlp.core.ui.pluginform.State') as state:
+    with patch('opal.core.ui.pluginform.State') as state:
         state.return_value.list_plugins.return_value = plugins
         form = PluginForm()
         qtbot.addWidget(form)
@@ -197,7 +197,7 @@ def test_long_details_scroll_in_narrow_host(mock_settings, qtbot):
     host.resize(680, 500)
     plugin = make_plugin('A plugin with a long name', developer='An organisation and its contributors ' * 5,
                          about=lambda: '<p>' + 'A long description. ' * 200 + '</p>')
-    with patch('openlp.core.ui.pluginform.State') as state:
+    with patch('opal.core.ui.pluginform.State') as state:
         state.return_value.list_plugins.return_value = [plugin]
         form = PluginForm(host)
         qtbot.addWidget(form)
@@ -235,7 +235,7 @@ def test_open_community_folder_keeps_manager_open(plugin_form, community_folder,
     form.setAnimationEnabled(False)
     form.show()
     assert form.open_folder_button.toolTip() == str(folder)
-    with patch('openlp.core.ui.pluginform.QtGui.QDesktopServices.openUrl', return_value=True) as open_url:
+    with patch('opal.core.ui.pluginform.QtGui.QDesktopServices.openUrl', return_value=True) as open_url:
         if interaction == 'mouse':
             qtbot.mouseClick(form.open_folder_button, QtCore.Qt.MouseButton.LeftButton)
         else:
@@ -265,8 +265,8 @@ def test_open_plugin_folder_failure_is_reported(plugin_form, community_folder, d
     form.load()
     if deleted_folder:
         folder.rmdir()
-    with patch('openlp.core.ui.pluginform.QtGui.QDesktopServices.openUrl', return_value=False) as open_url, \
-            patch('openlp.core.ui.pluginform.QtWidgets.QMessageBox.warning') as warning:
+    with patch('opal.core.ui.pluginform.QtGui.QDesktopServices.openUrl', return_value=False) as open_url, \
+            patch('opal.core.ui.pluginform.QtWidgets.QMessageBox.warning') as warning:
         form.on_open_folder_clicked()
         assert open_url.call_count == (0 if deleted_folder else 1)
         warning.assert_called_once()

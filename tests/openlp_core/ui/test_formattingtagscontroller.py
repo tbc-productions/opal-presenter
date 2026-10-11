@@ -19,11 +19,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.ui.formattingtagscontroller package.
+Package to test the opal.core.ui.formattingtagscontroller package.
 """
 import pytest
 
-from openlp.core.ui.formattingtagcontroller import FormattingTagController
+from opal.core.ui.formattingtagcontroller import FormattingTagController
 
 
 @pytest.fixture()

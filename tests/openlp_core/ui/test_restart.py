@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.app import OpenLP
-from openlp.core.common.registry import Registry
-from openlp.core.common.restart import show_restart_message
-from openlp.core.ui.mainwindow import MainWindow
-from openlp.core.widgets import fluent
+from opal.core.app import OpenLP
+from opal.core.common.registry import Registry
+from opal.core.common.restart import show_restart_message
+from opal.core.ui.mainwindow import MainWindow
+from opal.core.widgets import fluent
 
 
 @pytest.mark.parametrize('restart', [False, True])
@@ -89,17 +89,17 @@ def test_restart_releases_locks_before_relaunch(qapp, restart):
 
 @pytest.mark.parametrize('frozen', [False, True])
 def test_restart_relaunch_command(qapp, frozen):
-    with patch('openlp.core.app.sys') as sys_mock, \
-            patch('openlp.core.app.os.getcwd', return_value='/working directory'), \
-            patch('openlp.core.app.QtCore.QProcess') as process_class:
+    with patch('opal.core.app.sys') as sys_mock, \
+            patch('opal.core.app.os.getcwd', return_value='/working directory'), \
+            patch('opal.core.app.QtCore.QProcess') as process_class:
         process = process_class.return_value
         process.startDetached.return_value = True
         sys_mock.frozen = frozen
         sys_mock.executable = '/path with spaces/openlp'
         sys_mock.argv = ['openlp', '--portable']
-        sys_mock.orig_argv = ['python', '-m', 'openlp', '--portable']
+        sys_mock.orig_argv = ['python', '-m', 'opal', '--portable']
         OpenLP()._restart_process()
-    arguments = ['--portable'] if frozen else ['-m', 'openlp', '--portable']
+    arguments = ['--portable'] if frozen else ['-m', 'opal', '--portable']
     process.setProgram.assert_called_once_with('/path with spaces/openlp')
     process.setArguments.assert_called_once_with(arguments)
     process.setWorkingDirectory.assert_called_once_with('/working directory')
@@ -110,8 +110,8 @@ def test_restart_relaunch_command(qapp, frozen):
 
 
 def test_restart_failure_shows_manual_relaunch_message(qapp):
-    with patch('openlp.core.app.QtCore.QProcess') as process_class, \
-            patch('openlp.core.app.QtWidgets.QMessageBox.critical') as message:
+    with patch('opal.core.app.QtCore.QProcess') as process_class, \
+            patch('opal.core.app.QtWidgets.QMessageBox.critical') as message:
         process_class.return_value.startDetached.return_value = False
         OpenLP()._restart_process()
     message.assert_called_once_with(
@@ -125,7 +125,7 @@ def test_restart_process_with_real_qprocess(qapp, qtbot, tmp_path, monkeypatch):
     monkeypatch.setattr(sys, 'frozen', False, raising=False)
     monkeypatch.setattr(sys, 'orig_argv', [sys.executable, '-c', script])
 
-    with patch('openlp.core.app.QtWidgets.QMessageBox.critical') as message:
+    with patch('opal.core.app.QtWidgets.QMessageBox.critical') as message:
         OpenLP()._restart_process()
 
     qtbot.waitUntil(marker.exists, timeout=5000)

@@ -21,7 +21,7 @@
 """
 This module contains tests for the plugin class Custom plugin.
 """
-from openlp.plugins.custom.customplugin import CustomPlugin
+from opal.plugins.custom.customplugin import CustomPlugin
 
 
 def test_plugin_about():

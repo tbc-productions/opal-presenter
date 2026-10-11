@@ -25,10 +25,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.lib.importers.songimport import SongImport
-from openlp.plugins.songs.lib.importers.zionworx import ZionWorxImport
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.lib.importers.songimport import SongImport
+from opal.plugins.songs.lib.importers.zionworx import ZionWorxImport
 from tests.helpers.songfileimport import SongImportTestHelper
 from tests.utils.constants import RESOURCE_PATH
 
@@ -36,7 +36,7 @@ from tests.utils.constants import RESOURCE_PATH
 TEST_PATH = RESOURCE_PATH / 'songs' / 'zionworx'
 
 
-@patch('openlp.plugins.songs.lib.importers.zionworx.SongImport')
+@patch('opal.plugins.songs.lib.importers.zionworx.SongImport')
 def test_create_importer(MockSongImport: MagicMock, registry: Registry, settings: Settings):
     """
     Test creating an instance of the ZionWorx file importer

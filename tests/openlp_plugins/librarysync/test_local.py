@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openlp.plugins.librarysync.lib.local import LocalStorageProvider
-from openlp.plugins.librarysync.lib.profile import deserialize_profile, serialize_profile, validate_profile
-from openlp.plugins.librarysync.lib.provider import CATEGORIES, SyncError
-from openlp.plugins.librarysync.lib.worker import PROVIDERS, SyncWorker
+from opal.plugins.librarysync.lib.local import LocalStorageProvider
+from opal.plugins.librarysync.lib.profile import deserialize_profile, serialize_profile, validate_profile
+from opal.plugins.librarysync.lib.provider import CATEGORIES, SyncError
+from opal.plugins.librarysync.lib.worker import PROVIDERS, SyncWorker
 
 
 @pytest.fixture

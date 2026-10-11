@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.songmaintenanceform package.
+Package to test the opal.plugins.songs.forms.songmaintenanceform package.
 """
 import pytest
 import os
@@ -27,14 +27,14 @@ import os
 from unittest.mock import MagicMock, call, create_autospec, patch, ANY
 
 from PySide6 import QtCore
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.db.manager import DBManager
-from openlp.plugins.songs.lib.db import init_schema, Author, AuthorSong, SongBook, Song, SongBookEntry
-from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
+from opal.core.common.i18n import UiStrings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.db.manager import DBManager
+from opal.plugins.songs.lib.db import init_schema, Author, AuthorSong, SongBook, Song, SongBookEntry
+from opal.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
 
 from sqlalchemy.sql import and_
 
@@ -98,7 +98,7 @@ def test_section_commands_and_navigation_layout(maintenance_form, section, item,
         form.close()
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.QtWidgets.QDialog.exec')
+@patch('opal.plugins.songs.forms.songmaintenanceform.QtWidgets.QDialog.exec')
 def test_exec(mocked_exec: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the song maintenance form being executed
@@ -159,7 +159,7 @@ def test_get_current_item_id(maintenance_form: SongMaintenanceForm):
     assert result == 7
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
 def test_delete_item_no_item_id(mocked_critical_error_message_box: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the _delete_item() method when there is no item selected
@@ -183,7 +183,7 @@ def test_delete_item_no_item_id(mocked_critical_error_message_box: MagicMock, ma
     mocked_critical_error_message_box.assert_called_once_with(dialog_title, UiStrings().NISs)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
 def test_delete_item_invalid_item(mocked_critical_error_message_box: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the _delete_item() method when the item doesn't exist in the database
@@ -208,7 +208,7 @@ def test_delete_item_invalid_item(mocked_critical_error_message_box: MagicMock, 
     mocked_critical_error_message_box.assert_called_once_with(dialog_title, error_text)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
 def test_delete_item(mocked_critical_error_message_box: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the _delete_item() method
@@ -239,7 +239,7 @@ def test_delete_item(mocked_critical_error_message_box: MagicMock, maintenance_f
     mocked_reset_func.assert_called_once_with()
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
 def test_delete_book_assigned(mocked_critical_error_message_box: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the _delete_item() method
@@ -270,8 +270,8 @@ def test_delete_book_assigned(mocked_critical_error_message_box: MagicMock, main
     mocked_reset_func.assert_not_called()
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.Author')
+@patch('opal.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
+@patch('opal.plugins.songs.forms.songmaintenanceform.Author')
 def test_reset_authors(MockedAuthor: MagicMock, MockedQListWidgetItem: MagicMock,
                        maintenance_form: SongMaintenanceForm):
     """
@@ -309,8 +309,8 @@ def test_reset_authors(MockedAuthor: MagicMock, MockedQListWidgetItem: MagicMock
         call(mocked_author_item1), call(mocked_author_item2)])
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.Topic')
+@patch('opal.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
+@patch('opal.plugins.songs.forms.songmaintenanceform.Topic')
 def test_reset_topics(MockedTopic: MagicMock, MockedQListWidgetItem: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the reset_topics() method
@@ -336,8 +336,8 @@ def test_reset_topics(MockedTopic: MagicMock, MockedQListWidgetItem: MagicMock, 
     mocked_topic_list_widget.addItem.assert_called_once_with(mocked_topic_item)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.SongBook')
+@patch('opal.plugins.songs.forms.songmaintenanceform.QtWidgets.QListWidgetItem')
+@patch('opal.plugins.songs.forms.songmaintenanceform.SongBook')
 def test_reset_song_books(MockedBook: MagicMock, MockedQListWidgetItem: MagicMock,
                           maintenance_form: SongMaintenanceForm):
     """
@@ -365,8 +365,8 @@ def test_reset_song_books(MockedBook: MagicMock, MockedQListWidgetItem: MagicMoc
     mocked_song_book_list_widget.addItem.assert_called_once_with(mocked_song_book_item)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.and_')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.Author')
+@patch('opal.plugins.songs.forms.songmaintenanceform.and_')
+@patch('opal.plugins.songs.forms.songmaintenanceform.Author')
 def test_check_author_exists(MockedAuthor: MagicMock, mocked_and: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the check_author_exists() method
@@ -395,7 +395,7 @@ def test_check_author_exists(MockedAuthor: MagicMock, mocked_and: MagicMock, mai
     assert result is True
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.Topic')
+@patch('opal.plugins.songs.forms.songmaintenanceform.Topic')
 def test_check_topic_exists(MockedTopic: MagicMock, maintenance_form: SongMaintenanceForm):
     """
     Test the check_topic_exists() method
@@ -418,8 +418,8 @@ def test_check_topic_exists(MockedTopic: MagicMock, maintenance_form: SongMainte
     assert result is True
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.and_')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.SongBook')
+@patch('opal.plugins.songs.forms.songmaintenanceform.and_')
+@patch('opal.plugins.songs.forms.songmaintenanceform.SongBook')
 def test_check_song_book_exists(MockedBook: MagicMock, mocked_and: MagicMock, maintenance_form):
     """
     Test the check_song_book_exists() method
@@ -658,8 +658,8 @@ def test_merge_authors(request, registry: Registry, settings: Settings, temp_fol
     mock_init_on_load.assert_any_call(force_song_detail_recalculation=True)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.translate')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.translate')
 def test_on_edit_author_button_clicked_new_author(mock_translate, mock_critical_error, maintenance_form):
     """
     Test the on_edit_author_button_clicked method without any conflict
@@ -688,7 +688,7 @@ def test_on_edit_author_button_clicked_new_author(mock_translate, mock_critical_
     maintenance_form.reset_authors = MagicMock()
     maintenance_form.from_song_edit = False
 
-    with patch('openlp.plugins.songs.forms.songmaintenanceform.Registry') as mock_registry:
+    with patch('opal.plugins.songs.forms.songmaintenanceform.Registry') as mock_registry:
         registry_instance = mock_registry.return_value
         registry_instance.execute = MagicMock()
 
@@ -705,8 +705,8 @@ def test_on_edit_author_button_clicked_new_author(mock_translate, mock_critical_
     author.songs[0].init_on_load.assert_called_once_with(force_song_detail_recalculation=True)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.translate')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.translate')
 def test_on_edit_author_button_clicked_author_exists_and_merge(mock_translate, mock_critical_error, maintenance_form):
     """
     Test the on_edit_author_button_clicked method when the author exists and the user chooses to merge
@@ -739,8 +739,8 @@ def test_on_edit_author_button_clicked_author_exists_and_merge(mock_translate, m
                                                             maintenance_form.reset_authors)
 
 
-@patch('openlp.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
-@patch('openlp.plugins.songs.forms.songmaintenanceform.translate')
+@patch('opal.plugins.songs.forms.songmaintenanceform.critical_error_message_box')
+@patch('opal.plugins.songs.forms.songmaintenanceform.translate')
 def test_on_edit_author_button_clicked_author_exists_and_user_declines_merge(mock_translate, mock_critical_error,
                                                                              maintenance_form):
     """

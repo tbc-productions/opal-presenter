@@ -33,10 +33,10 @@ from pytestqt.qt_compat import qt_api
 
 from PySide6 import QtCore, QtWidgets  # noqa
 
-from openlp.core.app import OpenLP
-from openlp.core.state import State
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
+from opal.core.app import OpenLP
+from opal.core.state import State
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
 
 
 @pytest.fixture(autouse=True)

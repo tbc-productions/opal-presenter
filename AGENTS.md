@@ -2,8 +2,8 @@
 
 Before adding or changing operator dialogs, read
 [the dialog design pattern](documentation/dialogs.rst). The shared implementations
-are in `openlp/core/widgets/fluent_dialogs.py`, exported through
-`openlp.core.widgets.fluent`.
+are in `opal/core/widgets/fluent_dialogs.py`, exported through
+`opal.core.widgets.fluent`.
 
 - Use the shared `ContentDialog` for compact prompts and confirmations, or
   `FormDialog` for forms with existing button-box validation. Larger editors,

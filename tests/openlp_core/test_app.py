@@ -28,11 +28,11 @@ from unittest.mock import DEFAULT, MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtWidgets
 
-from openlp.core.app import parse_options, backup_if_version_changed, main as app_main, setup_portable_settings
-from openlp.core.common.platform import is_win
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.core.ui.style import UiThemes
+from opal.core.app import parse_options, backup_if_version_changed, main as app_main, setup_portable_settings
+from opal.core.common.platform import is_win
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.core.ui.style import UiThemes
 
 
 @pytest.mark.parametrize('helper_error', [None, OSError('Cannot start splash helper')])
@@ -41,13 +41,13 @@ def test_run_splash_lifecycle(qapp, mock_settings, helper_error, foreground):
     """Startup forwards progress and closes the helper, with a usable local fallback."""
     qapp.settings = mock_settings
     mock_settings.value.side_effect = lambda key: key == 'core/has run wizard'
-    with patch.multiple('openlp.core.app', SplashScreenProcess=DEFAULT, SplashScreen=DEFAULT,
+    with patch.multiple('opal.core.app', SplashScreenProcess=DEFAULT, SplashScreen=DEFAULT,
                         ScreenList=DEFAULT, State=DEFAULT, set_default_theme=DEFAULT, loader=DEFAULT,
                         MainWindow=DEFAULT, begin_layout_startup=DEFAULT,
                         get_application_stylesheet=DEFAULT, refine_modern_layout=DEFAULT,
                         apply_mica=DEFAULT, is_macosx=DEFAULT) as mocks, \
             patch.object(qapp, 'backup_on_upgrade'), patch.object(qapp, 'exec', return_value=0), \
-            patch('openlp.core.app.QtCore.QTimer.singleShot'):
+            patch('opal.core.app.QtCore.QTimer.singleShot'):
         mocks['SplashScreenProcess'].side_effect = helper_error
         mocks['begin_layout_startup'].return_value = False
         mocks['get_application_stylesheet'].return_value = ''
@@ -88,12 +88,12 @@ def test_native_startup_focus_handoff(qapp, mock_settings, qtbot, switch_away):
             qtbot.waitUntil(lambda: not qapp.splash.is_foreground())
 
     Registry().register_function('bootstrap_post_set_up', loading_work)
-    with patch.multiple('openlp.core.app', ScreenList=DEFAULT, State=DEFAULT, set_default_theme=DEFAULT,
+    with patch.multiple('opal.core.app', ScreenList=DEFAULT, State=DEFAULT, set_default_theme=DEFAULT,
                         loader=DEFAULT, MainWindow=DEFAULT, begin_layout_startup=DEFAULT,
                         get_application_stylesheet=DEFAULT, refine_modern_layout=DEFAULT,
                         apply_mica=DEFAULT) as mocks, \
             patch.object(qapp, 'backup_on_upgrade'), patch.object(qapp, 'exec', return_value=0), \
-            patch('openlp.core.app.QtCore.QTimer.singleShot'):
+            patch('opal.core.app.QtCore.QTimer.singleShot'):
         mocks['MainWindow'].return_value = main_window
         mocks['begin_layout_startup'].return_value = False
         mocks['get_application_stylesheet'].return_value = ''
@@ -111,26 +111,26 @@ def test_native_startup_focus_handoff(qapp, mock_settings, qtbot, switch_away):
 
 @pytest.fixture
 def mocked_qapp():
-    patcher = patch('openlp.core.app.QtWidgets.QApplication')
+    patcher = patch('opal.core.app.QtWidgets.QApplication')
     yield patcher.start()
     patcher.stop()
 
 
 @pytest.fixture
 def app_main_env(mocked_qapp):
-    with patch('openlp.core.app.OpenLPApplication', mocked_qapp), \
-            patch('openlp.core.app.Settings') as mock_settings, \
-            patch('openlp.core.app.Registry') as mock_registry, \
-            patch('openlp.core.app.AppLocation') as mock_apploc, \
-            patch('openlp.core.app.LanguageManager'), \
-            patch('openlp.core.app.qInitResources'), \
-            patch('openlp.core.app.parse_options') as mocked_parse_options, \
-            patch('openlp.core.app.QtWidgets.QMessageBox.warning') as mock_warn, \
-            patch('openlp.core.app.QtWidgets.QMessageBox.information'), \
-            patch('openlp.core.app.OpenLP') as mock_openlp, \
-            patch('openlp.core.app.Server') as mock_server, \
-            patch('openlp.core.app.sys'), \
-            patch('openlp.core.app.FileLock'):
+    with patch('opal.core.app.OpenLPApplication', mocked_qapp), \
+            patch('opal.core.app.Settings') as mock_settings, \
+            patch('opal.core.app.Registry') as mock_registry, \
+            patch('opal.core.app.AppLocation') as mock_apploc, \
+            patch('opal.core.app.LanguageManager'), \
+            patch('opal.core.app.qInitResources'), \
+            patch('opal.core.app.parse_options') as mocked_parse_options, \
+            patch('opal.core.app.QtWidgets.QMessageBox.warning') as mock_warn, \
+            patch('opal.core.app.QtWidgets.QMessageBox.information'), \
+            patch('opal.core.app.OpenLP') as mock_openlp, \
+            patch('opal.core.app.Server') as mock_server, \
+            patch('opal.core.app.sys'), \
+            patch('opal.core.app.FileLock'):
         mock_registry.return_value = MagicMock()
         mock_settings.return_value = MagicMock()
         openlp_server = MagicMock()
@@ -298,8 +298,8 @@ def test_parse_options_file_and_debug():
     assert args.rargs == ['dummy_temp'], 'The service file should not be blank'
 
 
-@patch('openlp.core.app.QtWidgets.QMessageBox.critical')
-@patch('openlp.core.app.QtWidgets.QMessageBox.StandardButton')
+@patch('opal.core.app.QtWidgets.QMessageBox.critical')
+@patch('opal.core.app.QtWidgets.QMessageBox.StandardButton')
 def test_is_already_running_is_running_continue(MockedStandardButton, mocked_critical, qapp):
     """
     Test the is_already_running() method when OpenLP IS running and the user chooses to continue
@@ -317,7 +317,7 @@ def test_is_already_running_is_running_continue(MockedStandardButton, mocked_cri
                                             'Opal Presenter is already running on this machine. \nClosing this instance', 0)
 
 
-@patch('openlp.core.app.QtWidgets.QApplication.processEvents')
+@patch('opal.core.app.QtWidgets.QApplication.processEvents')
 def test_process_events(mocked_processEvents, qapp):
     """
     Test that the app.process_events() method simply calls the Qt method
@@ -330,14 +330,14 @@ def test_process_events(mocked_processEvents, qapp):
     mocked_processEvents.assert_called_once_with()
 
 
-@patch('openlp.core.app.QtWidgets.QApplication.setOverrideCursor')
-@patch('openlp.core.app.QtWidgets.QApplication.processEvents')
+@patch('opal.core.app.QtWidgets.QApplication.setOverrideCursor')
+@patch('opal.core.app.QtWidgets.QApplication.processEvents')
 def test_set_busy_cursor(mocked_processEvents, mocked_setOverrideCursor, qapp):
     """
     Test that the set_busy_cursor() method sets the cursor
     """
     # GIVEN: An app and reset cursor count
-    from openlp.core.app import OpenLP
+    from opal.core.app import OpenLP
     OpenLP.busy_cursor_count = 0
 
     # WHEN: set_busy_cursor() is called
@@ -348,14 +348,14 @@ def test_set_busy_cursor(mocked_processEvents, mocked_setOverrideCursor, qapp):
     mocked_processEvents.assert_called_once_with()
 
 
-@patch('openlp.core.app.QtWidgets.QApplication.restoreOverrideCursor')
-@patch('openlp.core.app.QtWidgets.QApplication.processEvents')
+@patch('opal.core.app.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('opal.core.app.QtWidgets.QApplication.processEvents')
 def test_set_normal_cursor(mocked_restoreOverrideCursor, mocked_processEvents, qapp):
     """
     Test that the set_normal_cursor() method resets the cursor after a matching set_busy_cursor()
     """
     # GIVEN: An app with a busy cursor pushed
-    from openlp.core.app import OpenLP
+    from opal.core.app import OpenLP
     OpenLP.busy_cursor_count = 1
 
     # WHEN: set_normal_cursor() is called
@@ -366,15 +366,15 @@ def test_set_normal_cursor(mocked_restoreOverrideCursor, mocked_processEvents, q
     mocked_processEvents.assert_called_once_with()
 
 
-@patch('openlp.core.app.QtWidgets.QApplication.restoreOverrideCursor')
-@patch('openlp.core.app.QtWidgets.QApplication.processEvents')
+@patch('opal.core.app.QtWidgets.QApplication.restoreOverrideCursor')
+@patch('opal.core.app.QtWidgets.QApplication.processEvents')
 def test_set_normal_cursor_without_busy_cursor_is_noop(mocked_processEvents, mocked_restoreOverrideCursor, qapp):
     """
     Test that set_normal_cursor() does nothing when no busy cursor was pushed, so it can't pop an
     unrelated override cursor set by other code.
     """
     # GIVEN: An app with no busy cursor pushed
-    from openlp.core.app import OpenLP
+    from opal.core.app import OpenLP
     OpenLP.busy_cursor_count = 0
 
     # WHEN: set_normal_cursor() is called
@@ -385,8 +385,8 @@ def test_set_normal_cursor_without_busy_cursor_is_noop(mocked_processEvents, moc
     mocked_processEvents.assert_not_called()
 
 
-@patch('openlp.core.app.get_version')
-@patch('openlp.core.app.QtWidgets.QMessageBox.question')
+@patch('opal.core.app.get_version')
+@patch('opal.core.app.QtWidgets.QMessageBox.question')
 def test_backup_on_upgrade_first_install(mocked_question, mocked_get_version, qapp, settings):
     """
     Test that we don't try to backup on a new install
@@ -410,8 +410,8 @@ def test_backup_on_upgrade_first_install(mocked_question, mocked_get_version, qa
     assert mocked_question.call_count == 0, 'No question should have been asked!'
 
 
-@patch('openlp.core.app.get_version')
-@patch('openlp.core.app.QtWidgets.QMessageBox.question')
+@patch('opal.core.app.get_version')
+@patch('opal.core.app.QtWidgets.QMessageBox.question')
 def test_backup_on_upgrade(mocked_question, mocked_get_version, qapp, settings):
     """
     Test that we try to backup on a new install
@@ -441,15 +441,15 @@ def test_backup_on_upgrade(mocked_question, mocked_get_version, qapp, settings):
 
 @pytest.mark.parametrize('device_pixel_ratio', [1.0, 1.25, 1.5, 2.0, 3.0])
 @pytest.mark.parametrize('saved_hidpi_mode', [0, 1, 2])
-@patch('openlp.core.app.FirstTimeLanguageForm')
-@patch('openlp.core.app.OpenLP')
-@patch('openlp.core.app.sys')
-@patch('openlp.core.app.backup_if_version_changed')
-@patch('openlp.core.app.set_up_web_engine_cache')
-@patch('openlp.core.app.set_up_logging')
-@patch('openlp.core.app.check_for_variant_migration')
-@patch('openlp.core.app.is_ui_theme')
-@patch('openlp.core.app.is_ui_theme_dark')
+@patch('opal.core.app.FirstTimeLanguageForm')
+@patch('opal.core.app.OpenLP')
+@patch('opal.core.app.sys')
+@patch('opal.core.app.backup_if_version_changed')
+@patch('opal.core.app.set_up_web_engine_cache')
+@patch('opal.core.app.set_up_logging')
+@patch('opal.core.app.check_for_variant_migration')
+@patch('opal.core.app.is_ui_theme')
+@patch('opal.core.app.is_ui_theme_dark')
 def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, mock_chk_var_migr: MagicMock,
               mock_logging: MagicMock, mock_web_cache: MagicMock, mock_backup: MagicMock, mock_sys: MagicMock,
               mock_openlp: MagicMock, mock_ftlang_form: MagicMock, mocked_qapp: MagicMock, app_main_env: MagicMock,
@@ -473,7 +473,7 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
         saved_hidpi_mode if key == 'advanced/hidpi mode' else MagicMock())
 
     # WHEN: the main method is run
-    with patch('openlp.core.app.is_win', return_value=True):
+    with patch('opal.core.app.is_win', return_value=True):
         app_main()
 
     # THEN: Check the application is run and exited with logging and web cache path set
@@ -493,15 +493,15 @@ def test_main(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock, moc
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on windows')
-@patch('openlp.core.app.FirstTimeLanguageForm')
-@patch('openlp.core.app.OpenLP')
-@patch('openlp.core.app.sys')
-@patch('openlp.core.app.backup_if_version_changed')
-@patch('openlp.core.app.set_up_web_engine_cache')
-@patch('openlp.core.app.set_up_logging')
-@patch('openlp.core.app.check_for_variant_migration')
-@patch('openlp.core.app.is_ui_theme')
-@patch('openlp.core.app.is_ui_theme_dark')
+@patch('opal.core.app.FirstTimeLanguageForm')
+@patch('opal.core.app.OpenLP')
+@patch('opal.core.app.sys')
+@patch('opal.core.app.backup_if_version_changed')
+@patch('opal.core.app.set_up_web_engine_cache')
+@patch('opal.core.app.set_up_logging')
+@patch('opal.core.app.check_for_variant_migration')
+@patch('opal.core.app.is_ui_theme')
+@patch('opal.core.app.is_ui_theme_dark')
 def test_main_windows_darkmode_light(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock,
                                      mock_chk_var_migr: MagicMock, mock_logging: MagicMock, mock_web_cache: MagicMock,
                                      mock_backup: MagicMock, mock_sys: MagicMock, mock_openlp: MagicMock,
@@ -531,15 +531,15 @@ def test_main_windows_darkmode_light(mock_is_ui_theme_dark: MagicMock, mock_is_u
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on windows')
-@patch('openlp.core.app.FirstTimeLanguageForm')
-@patch('openlp.core.app.OpenLP')
-@patch('openlp.core.app.sys')
-@patch('openlp.core.app.backup_if_version_changed')
-@patch('openlp.core.app.set_up_web_engine_cache')
-@patch('openlp.core.app.set_up_logging')
-@patch('openlp.core.app.check_for_variant_migration')
-@patch('openlp.core.app.is_ui_theme')
-@patch('openlp.core.app.is_ui_theme_dark')
+@patch('opal.core.app.FirstTimeLanguageForm')
+@patch('opal.core.app.OpenLP')
+@patch('opal.core.app.sys')
+@patch('opal.core.app.backup_if_version_changed')
+@patch('opal.core.app.set_up_web_engine_cache')
+@patch('opal.core.app.set_up_logging')
+@patch('opal.core.app.check_for_variant_migration')
+@patch('opal.core.app.is_ui_theme')
+@patch('opal.core.app.is_ui_theme_dark')
 def test_main_windows_darkmode_automatic_light(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock,
                                                mock_chk_var_migr: MagicMock, mock_logging: MagicMock,
                                                mock_web_cache: MagicMock, mock_backup: MagicMock, mock_sys: MagicMock,
@@ -570,15 +570,15 @@ def test_main_windows_darkmode_automatic_light(mock_is_ui_theme_dark: MagicMock,
 
 
 @pytest.mark.skipif(not is_win(), reason='This test only works on windows')
-@patch('openlp.core.app.FirstTimeLanguageForm')
-@patch('openlp.core.app.OpenLP')
-@patch('openlp.core.app.sys')
-@patch('openlp.core.app.backup_if_version_changed')
-@patch('openlp.core.app.set_up_web_engine_cache')
-@patch('openlp.core.app.set_up_logging')
-@patch('openlp.core.app.check_for_variant_migration')
-@patch('openlp.core.app.is_ui_theme')
-@patch('openlp.core.app.is_ui_theme_dark')
+@patch('opal.core.app.FirstTimeLanguageForm')
+@patch('opal.core.app.OpenLP')
+@patch('opal.core.app.sys')
+@patch('opal.core.app.backup_if_version_changed')
+@patch('opal.core.app.set_up_web_engine_cache')
+@patch('opal.core.app.set_up_logging')
+@patch('opal.core.app.check_for_variant_migration')
+@patch('opal.core.app.is_ui_theme')
+@patch('opal.core.app.is_ui_theme_dark')
 def test_main_windows_darkmode_dark(mock_is_ui_theme_dark: MagicMock, mock_is_ui_theme: MagicMock,
                                     mock_chk_var_migr: MagicMock, mock_logging: MagicMock, mock_web_cache: MagicMock,
                                     mock_backup: MagicMock, mock_sys: MagicMock, mock_openlp: MagicMock,
@@ -607,10 +607,10 @@ def test_main_windows_darkmode_dark(mock_is_ui_theme_dark: MagicMock, mock_is_ui
     assert 'windows:darkmode=2' in args_passed
 
 
-@patch('openlp.core.app.QtWidgets.QMessageBox.warning')
-@patch('openlp.core.app.get_version')
-@patch('openlp.core.app.AppLocation.get_data_path')
-@patch('openlp.core.app.move')
+@patch('opal.core.app.QtWidgets.QMessageBox.warning')
+@patch('opal.core.app.get_version')
+@patch('opal.core.app.AppLocation.get_data_path')
+@patch('opal.core.app.move')
 def test_main_future_settings(mock_move: MagicMock, mock_get_path: MagicMock, mock_version: MagicMock,
                               mock_warn: MagicMock, app_main_env: None, settings: Settings):
     """
@@ -654,8 +654,8 @@ else:
                          [('settings', str(Path(p_prefix + '/openlp/settings/Data/OpalPresenter.ini'))),
                           (None, str(Path(p_prefix + '/Data/OpalPresenter.ini'))),
                           (p_prefix + '/openlp/settings/', str(Path(p_prefix + '/openlp/settings/Data/OpalPresenter.ini')))])
-@patch('openlp.core.app.Settings')
-@patch('openlp.core.app.AppLocation')
+@patch('opal.core.app.Settings')
+@patch('opal.core.app.AppLocation')
 def test_setup_portable_settings(MockAppLocation: MagicMock, MockSettings: MagicMock, portable_path: str,
                                  settings_path: str):
     """Test that the setup_portable_settings() function correctly creates the portable settings."""

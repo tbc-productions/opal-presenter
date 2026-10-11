@@ -19,7 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.core.common.path package.
+Package to test the opal.core.common.path package.
 """
 import os
 import pytest
@@ -27,7 +27,7 @@ from pathlib import Path
 
 from unittest.mock import MagicMock, patch
 
-from openlp.core.common.path import create_paths, files_to_paths, path_to_str, replace_params, str_to_path, which, \
+from opal.core.common.path import create_paths, files_to_paths, path_to_str, replace_params, str_to_path, which, \
     resolve
 
 
@@ -67,12 +67,12 @@ def test_replace_params_params():
 
 def test_which_no_command():
     """
-    Test :func:`openlp.core.common.path.which` when the command is not found.
+    Test :func:`opal.core.common.path.which` when the command is not found.
     """
     # GIVEN: A mocked :func:`shutil.which` when the command is not found.
-    with patch('openlp.core.common.path.shutil.which', return_value=None) as mocked_shutil_which:
+    with patch('opal.core.common.path.shutil.which', return_value=None) as mocked_shutil_which:
 
-        # WHEN: Calling :func:`openlp.core.common.path.which` with a command that does not exist.
+        # WHEN: Calling :func:`opal.core.common.path.which` with a command that does not exist.
         result = which('no_command')
 
         # THEN: :func:`shutil.which` should have been called with the command, and :func:`which` should return None.
@@ -82,13 +82,13 @@ def test_which_no_command():
 
 def test_which_command():
     """
-    Test :func:`openlp.core.common.path.which` when a command has been found.
+    Test :func:`opal.core.common.path.which` when a command has been found.
     """
     # GIVEN: A mocked :func:`shutil.which` when the command is found.
-    with patch('openlp.core.common.path.shutil.which',
+    with patch('opal.core.common.path.shutil.which',
                return_value=os.path.join('path', 'to', 'command')) as mocked_shutil_which:
 
-        # WHEN: Calling :func:`openlp.core.common.path.which` with a command that exists.
+        # WHEN: Calling :func:`opal.core.common.path.which` with a command that exists.
         result = which('command')
 
         # THEN: :func:`shutil.which` should have been called with the command, and :func:`which` should return a
@@ -209,7 +209,7 @@ def test_create_paths_dir_doesnt_exists():
     mocked_path.mkdir.assert_called_once_with(parents=True)
 
 
-@patch('openlp.core.common.path.log')
+@patch('opal.core.common.path.log')
 def test_create_paths_dir_io_error(mocked_logger):
     """
     Test the create_paths() when an OSError is raised
@@ -256,7 +256,7 @@ def test_files_to_paths():
     assert result == [Path('/tmp/openlp/file1.txt'), Path('/tmp/openlp/file2.txt')]
 
 
-@patch('openlp.core.common.path.is_win')
+@patch('opal.core.common.path.is_win')
 def test_resolve_posix(mocked_is_win):
     """Test the resolve() method correctly resolves POSIX paths"""
     # GIVEN: A mocked PosixPath class
@@ -270,9 +270,9 @@ def test_resolve_posix(mocked_is_win):
     mocked_path.resolve.assert_called_once_with(strict=False)
 
 
-@patch('openlp.core.common.path.is_win')
-@patch('openlp.core.common.path.os.path.realpath')
-@patch('openlp.core.common.path.Path')
+@patch('opal.core.common.path.is_win')
+@patch('opal.core.common.path.os.path.realpath')
+@patch('opal.core.common.path.Path')
 def test_resolve_windows(MockPath, mocked_realpath, mocked_is_win):
     """Test the resolve() method correctly resolves Windows paths"""
     # GIVEN: A mocked WindowsPath class

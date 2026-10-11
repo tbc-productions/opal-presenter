@@ -19,14 +19,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.topicsform package.
+Package to test the opal.plugins.songs.forms.topicsform package.
 """
 import pytest
 
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.registry import Registry
-from openlp.plugins.songs.forms.topicsform import TopicsForm
+from opal.core.common.registry import Registry
+from opal.plugins.songs.forms.topicsform import TopicsForm
 
 
 @pytest.fixture()
@@ -77,7 +77,7 @@ def test_set_name_property(form):
 def test_native_primary_and_enter_keep_validation(form, monkeypatch):
     from PySide6 import QtCore, QtTest
     errors = []
-    monkeypatch.setattr('openlp.plugins.songs.forms.topicsform.critical_error_message_box',
+    monkeypatch.setattr('opal.plugins.songs.forms.topicsform.critical_error_message_box',
                         lambda **kwargs: errors.append(kwargs))
     form.setAnimationEnabled(False)
     form.open()

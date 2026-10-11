@@ -26,9 +26,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.plugins.media.forms.streamselectorform import StreamSelectorForm
+from opal.plugins.media.forms.streamselectorform import StreamSelectorForm
 
 
 # This mocks the callback function BackgroundPage.set_stream() in core/pages/background.py
@@ -57,9 +57,9 @@ def stream_selector_form(settings):
     audio2.description.return_value = "Audio 2"
     audio2.deviceName.return_value = "Audio 2 device"
 
-    with patch('openlp.plugins.media.forms.streamselectordialog.QMediaDevices.videoInputs',
+    with patch('opal.plugins.media.forms.streamselectordialog.QMediaDevices.videoInputs',
                return_value=[camera1, camera2]), \
-            patch('openlp.plugins.media.forms.streamselectordialog.QMediaDevices.audioInputs',
+            patch('opal.plugins.media.forms.streamselectordialog.QMediaDevices.audioInputs',
                   return_value=[audio1, audio2]):
         form = StreamSelectorForm(main_window, setstream)
 
@@ -107,7 +107,7 @@ def test_set_stream_call(stream_selector_form):
 
 
 def test_enter_commits_network_url_before_saving(settings, qtbot):
-    from openlp.plugins.media.forms.networkstreamselectorform import NetworkStreamSelectorForm
+    from opal.plugins.media.forms.networkstreamselectorform import NetworkStreamSelectorForm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.resize(900, 600)

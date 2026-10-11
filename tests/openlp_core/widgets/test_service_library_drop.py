@@ -6,21 +6,21 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6 import QtCore, QtGui
 
-from openlp.core.common.applocation import AppLocation
-from openlp.core.common.registry import Registry
-from openlp.core.db.manager import DBManager
-from openlp.core.lib.mediamanageritem import MediaManagerItem
-from openlp.core.lib.serviceitem import ItemCapabilities, ServiceItem
-from openlp.core.ui.library import FolderLibraryItem
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.dnd import ItemDragData
-from openlp.core.widgets.docks import MediaToolBox
-from openlp.core.widgets.libraryview import LibraryView
-from openlp.core.widgets.views import ListWidgetWithDnD, TreeWidgetWithDnD
-from openlp.plugins.custom.lib.customxmlhandler import CustomXML
-from openlp.plugins.custom.lib.mediaitem import CustomMediaItem
-from openlp.plugins.songs.lib.mediaitem import SongMediaItem
-from openlp.plugins.songs.lib.openlyricsxml import OpenLyrics
+from opal.core.common.applocation import AppLocation
+from opal.core.common.registry import Registry
+from opal.core.db.manager import DBManager
+from opal.core.lib.mediamanageritem import MediaManagerItem
+from opal.core.lib.serviceitem import ItemCapabilities, ServiceItem
+from opal.core.ui.library import FolderLibraryItem
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.dnd import ItemDragData
+from opal.core.widgets.docks import MediaToolBox
+from opal.core.widgets.libraryview import LibraryView
+from opal.core.widgets.views import ListWidgetWithDnD, TreeWidgetWithDnD
+from opal.plugins.custom.lib.customxmlhandler import CustomXML
+from opal.plugins.custom.lib.mediaitem import CustomMediaItem
+from opal.plugins.songs.lib.mediaitem import SongMediaItem
+from opal.plugins.songs.lib.openlyricsxml import OpenLyrics
 from tests.utils.constants import RESOURCE_PATH
 
 
@@ -34,7 +34,7 @@ def libraries(settings, tmp_path, qtbot, monkeypatch):
     result = {}
     for category in ('songs', 'custom', 'media', 'images', 'presentations'):
         (tmp_path / 'data' / category).mkdir(parents=True)
-        db = importlib.import_module(f'openlp.plugins.{category}.lib.db')
+        db = importlib.import_module(f'opal.plugins.{category}.lib.db')
         manager = DBManager(category, db.init_schema, db_url='sqlite:///' + str(tmp_path / f'{category}.sqlite'))
         plugin = SimpleNamespace(name=category, manager=manager, db_manager=manager)
         with patch.object(MediaManagerItem, '_setup'), patch.object(MediaManagerItem, 'setup_item'), \
@@ -96,7 +96,7 @@ def test_text_drop_adds_native_content_and_overwrites_only_when_confirmed(librar
     before = original.lyrics if category == 'songs' else original.text
     item.theme = 'Replacement theme'
     item.slide_design['lyrics']['font_size'] = 64
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Cancel) as prompt:
         assert not library.import_service_item(item)
         prompt.assert_called_once()
@@ -105,7 +105,7 @@ def test_text_drop_adds_native_content_and_overwrites_only_when_confirmed(librar
         assert box.button(QtWidgets.QMessageBox.StandardButton.Yes).text() == 'Overwrite'
         assert box.button(QtWidgets.QMessageBox.StandardButton.No) is None
     assert library.plugin.manager.get_all_objects(record_type)[0].theme_name == 'Service theme'
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
         assert library.import_service_item(item)
     records = library.plugin.manager.get_all_objects(record_type)
@@ -133,11 +133,11 @@ def test_file_drop_copies_service_files_and_preserves_original_on_cancel(librari
     replacement.parent.mkdir()
     replacement.write_bytes(b'replacement data')
     item = file_item(category, replacement)
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Cancel):
         assert not library.import_service_item(item)
     assert record.file_path == str(stored) and stored.read_bytes() == b'original data'
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
         assert library.import_service_item(item)
     records = library.manager.get_all_objects(library.item_class)
@@ -223,7 +223,7 @@ def test_grouped_image_duplicate_choices(libraries, tmp_path, choice):
     item = file_item('images', first)
     item.add_from_image(second, second.stem)
     item.add_from_image(third, third.stem)
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=choice) as prompt:
         assert library.import_service_item(item) is (choice != QtWidgets.QMessageBox.StandardButton.Cancel)
     box = prompt.call_args.args[0]
@@ -252,7 +252,7 @@ def test_skipping_all_duplicates_or_cancelling_after_skip_saves_nothing(librarie
         path.write_bytes(b'replacement')
     item = file_item('images', first)
     item.add_from_image(second, second.stem)
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                side_effect=[QtWidgets.QMessageBox.StandardButton.No, last_choice]), \
             patch.object(library, '_copy_file_to_library_storage') as copy_file:
         assert library.import_service_item(item) is (last_choice == QtWidgets.QMessageBox.StandardButton.No)
@@ -298,7 +298,7 @@ def test_media_stream_drop_uses_stream_descriptor_and_duplicate_prompt(libraries
     item.add_from_command('networkstream:Camera&&http://example.com/video&&:network-caching=1000',
                           'Camera', QtGui.QIcon())
     assert library.import_service_item(item)
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Cancel):
         assert not library.import_service_item(item)
     assert len(library.manager.get_all_objects(library.item_class)) == 1
@@ -358,7 +358,7 @@ def test_song_drop_keeps_audio_and_can_overwrite_from_the_same_managed_file(libr
     stored = song.media_files[0].file_path
     assert stored != audio and stored.read_bytes() == b'backing track'
     item.background_audio = [(stored, 'hash')]
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
         assert library.import_service_item(item)
         item.background_audio = []
@@ -382,7 +382,7 @@ def test_file_drop_into_folder_and_replacement_keep_the_folder(libraries, tmp_pa
     child = QtWidgets.QTreeWidgetItem(row, ['Background.png'])
     child.setData(0, QtCore.Qt.ItemDataRole.UserRole, record)
     assert folder.id == record.id
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes):
         assert library.import_service_item(item)
     assert record.folder_id == folder.id
@@ -441,7 +441,7 @@ def test_native_drop_imports_custom_slides_and_cancel_keeps_service_and_library(
     assert drop()
     assert box.currentWidget() is libraries['custom']
     item.theme = 'Changed theme'
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Cancel):
         assert not drop()
     records = libraries['custom'].plugin.manager.get_all_objects(libraries['custom'].record_class)
@@ -462,7 +462,7 @@ def test_conflicting_names_in_one_image_item_prompt_before_any_files_are_saved(l
     item.title = 'Images'
     item.add_from_image(first, 'Same name')
     item.add_from_image(second, 'Same name')
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True, return_value=choice):
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True, return_value=choice):
         assert library.import_service_item(item) is (choice != QtWidgets.QMessageBox.StandardButton.Cancel)
     records = library.manager.get_all_objects(library.item_class)
     assert len(records) == int(choice != QtWidgets.QMessageBox.StandardButton.Cancel)
@@ -482,7 +482,7 @@ def test_failed_file_save_keeps_existing_record_and_removes_uncommitted_copy(lib
     stored = record.file_path
     source.write_bytes(b'replacement')
     monkeypatch.setattr(library.manager.session, 'commit', MagicMock(side_effect=InvalidRequestError('Save failed')))
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes), pytest.raises(RuntimeError, match='saved'):
         library.import_service_item(item)
     assert record.file_path == stored and Path(stored).read_bytes() == b'original'
@@ -496,7 +496,7 @@ def test_legacy_file_title_with_extension_finds_existing_library_item(libraries,
     item = file_item('media', source)
     assert library.import_service_item(item)
     item.title = 'Clip.mp4'
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Cancel) as prompt:
         assert not library.import_service_item(item)
         prompt.assert_called_once()
@@ -513,7 +513,7 @@ def test_failed_song_overwrite_does_not_continue_saving_service_metadata(librari
     commit = library.plugin.manager.session.commit
     failed = MagicMock(side_effect=[InvalidRequestError('Save failed'), commit])
     monkeypatch.setattr(library.plugin.manager.session, 'commit', failed)
-    with patch('openlp.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
+    with patch('opal.core.lib.mediamanageritem.QtWidgets.QMessageBox.exec', autospec=True,
                return_value=QtWidgets.QMessageBox.StandardButton.Yes), pytest.raises(RuntimeError, match='saved'):
         library.import_service_item(item)
     assert failed.call_count == 1 and song.theme_name == 'Service theme'

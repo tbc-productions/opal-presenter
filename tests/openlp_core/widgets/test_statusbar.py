@@ -3,8 +3,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from fluentqt import FontRole, font_for_role
 from fluentqt.design import Spacing
 
-from openlp.core.widgets.fluent import QProgressBar
-from openlp.core.widgets.statusbar import FooterStatusBar
+from opal.core.widgets.fluent import QProgressBar
+from opal.core.widgets.statusbar import FooterStatusBar
 
 
 def test_footer_message_and_progress_layout(qapp, qtbot):

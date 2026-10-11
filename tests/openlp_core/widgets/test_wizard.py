@@ -1,6 +1,6 @@
 """Fluent wizard pages keep Qt validation and navigation accessible on smaller hosts."""
 from PySide6 import QtCore, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
 
 def test_wizard_scrolls_long_content_and_keeps_footer_order(qapp, qtbot):
@@ -77,7 +77,7 @@ def test_wizard_enter_respects_validation_and_help_keeps_page_open(qapp, qtbot):
 def test_song_import_layouts_own_their_spacers(settings, registry, qtbot):
     """Sharing a spacer across format layouts double-deletes it when the wizard closes."""
     from unittest.mock import MagicMock
-    from openlp.plugins.songs.forms.songimportform import SongImportForm
+    from opal.plugins.songs.forms.songimportform import SongImportForm
     parent = QtWidgets.QWidget()
     qtbot.addWidget(parent)
     parent.clipboard = MagicMock()

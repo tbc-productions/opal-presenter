@@ -8,13 +8,13 @@ from fluentqt import Breadcrumb, Button, CommandBar, GridView
 from fluentqt.design import Spacing
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from openlp.core.app import OpenLP
-from openlp.core.common.settings import Settings
-from openlp.core.ui.icons import UiIcons
-from openlp.core.widgets.libraryview import LibraryView
-from openlp.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
-from openlp.core.widgets.views import TreeWidgetWithDnD
-from openlp.plugins.images.lib.db import Folder, Item
+from opal.core.app import OpenLP
+from opal.core.common.settings import Settings
+from opal.core.ui.icons import UiIcons
+from opal.core.widgets.libraryview import LibraryView
+from opal.core.widgets.fluent_tree import LIBRARY_FOLDER_ROLE
+from opal.core.widgets.views import TreeWidgetWithDnD
+from opal.plugins.images.lib.db import Folder, Item
 
 
 @pytest.fixture(scope='session')
@@ -340,7 +340,7 @@ def test_folder_icons_use_theme_chart7_without_hierarchy_guides(browser, theme):
 def test_grid_drag_uses_library_mime_and_import_target(browser):
     browser.grid_button.click()
     browser.grid.setCurrentRow(1)
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         browser.grid.startDrag(QtCore.Qt.DropAction.CopyAction)
     mime = drag.return_value.setMimeData.call_args.args[0]
     assert mime.text() == browser.library.plugin.name
@@ -367,7 +367,7 @@ def test_grid_drag_uses_library_mime_and_import_target(browser):
 
 def test_tree_drag_keeps_library_owner_after_being_reparented(browser):
     browser.tree.setCurrentItem(browser.tree.topLevelItem(0).child(0))
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         browser.tree.startDrag(QtCore.Qt.DropAction.CopyAction)
     mime = drag.return_value.setMimeData.call_args.args[0]
     assert mime.library is browser.library
@@ -377,9 +377,9 @@ def test_tree_drag_keeps_library_owner_after_being_reparented(browser):
 
 @pytest.mark.parametrize('plugin_name', ['songs', 'custom'])
 def test_item_count_footer_tracks_search_reload_and_deletion(qtbot, registry, settings, monkeypatch, plugin_name):
-    from openlp.core.lib.mediamanageritem import MediaManagerItem
-    from openlp.core.widgets import fluent
-    from openlp.plugins.songs.lib.mediaitem import SongListWidget
+    from opal.core.lib.mediamanageritem import MediaManagerItem
+    from opal.core.widgets import fluent
+    from opal.plugins.songs.lib.mediaitem import SongListWidget
 
     plugin = MagicMock()
     plugin.name = plugin_name
@@ -427,7 +427,7 @@ def test_grid_mouse_drag_starts_native_transfer_of_selected_item(qtbot, browser,
         grid.item(2).setSelected(True)
     point = grid.visualItemRect(grid.item(1)).center()
     moved = point + QtCore.QPoint(QtWidgets.QApplication.startDragDistance() + 1, 0)
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         qtbot.mousePress(grid.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
         QtWidgets.QApplication.sendEvent(grid.viewport(), QtGui.QMouseEvent(
             QtCore.QEvent.Type.MouseMove, QtCore.QPointF(moved),
@@ -451,7 +451,7 @@ def test_grid_short_clicks_and_disabled_drag_do_not_start_a_transfer(qtbot, brow
     grid.setDragEnabled(enabled)
     point = grid.visualItemRect(grid.item(1)).center()
     moved = point + QtCore.QPoint(distance, 0)
-    with patch('openlp.core.widgets.dnd.QtGui.QDrag') as drag:
+    with patch('opal.core.widgets.dnd.QtGui.QDrag') as drag:
         qtbot.mousePress(grid.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=point)
         QtWidgets.QApplication.sendEvent(grid.viewport(), QtGui.QMouseEvent(
             QtCore.QEvent.Type.MouseMove, QtCore.QPointF(moved),

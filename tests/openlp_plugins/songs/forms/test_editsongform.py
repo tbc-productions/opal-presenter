@@ -19,21 +19,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 """
-Package to test the openlp.plugins.songs.forms.editsongform package.
+Package to test the opal.plugins.songs.forms.editsongform package.
 """
 import pytest
 from unittest.mock import MagicMock, patch
 
 from PySide6 import QtTest, QtCore
 import fluentqt
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
-from openlp.core.common.i18n import UiStrings
-from openlp.core.common.registry import Registry
-from openlp.core.common.settings import Settings
-from openlp.plugins.songs.forms.editsongform import EditSongForm
-from openlp.plugins.songs.lib.db import Author, AuthorType
-from openlp.plugins.songs.lib.ui import SongStrings
+from opal.core.common.i18n import UiStrings
+from opal.core.common.registry import Registry
+from opal.core.common.settings import Settings
+from opal.plugins.songs.forms.editsongform import EditSongForm
+from opal.plugins.songs.lib.db import Author, AuthorType
+from opal.plugins.songs.lib.ui import SongStrings
 
 
 @pytest.fixture()
@@ -67,7 +67,7 @@ def test_ui_defaults(form: EditSongForm):
 
 def test_song_editor_exec_opens_and_closes(form: EditSongForm):
     """With Slide Designer disabled, retain the original Fluent dialog lifecycle."""
-    from openlp.core.common.enum import PluginStatus
+    from opal.core.common.enum import PluginStatus
     form.settings.setValue('slide_designer/status', PluginStatus.Inactive)
     parent = form.parentWidget()
     parent.resize(1200, 900)
@@ -91,7 +91,7 @@ def test_song_editor_exec_opens_and_closes(form: EditSongForm):
 @pytest.mark.parametrize('child_name', ['author_form', 'topic_form', 'song_book_form'])
 def test_maintenance_dialog_uses_current_editor_window(form, qtbot, relocated, child_name):
     """Maintenance and its edit dialogs open in the designer's window and refresh song choices on close."""
-    from openlp.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
+    from opal.plugins.songs.forms.songmaintenanceform import SongMaintenanceForm
     parent = form.parentWidget()
     parent.resize(1200, 900)
     parent.show()
@@ -353,7 +353,7 @@ def test_no_help_button(settings: Settings):
     assert edit_song_form.button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Help) is None
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_adds_multiple_authors_from_delimited_text(mocked_question, form: EditSongForm):
     """Delimited author text should prompt once, create missing authors, and avoid duplicates."""
     existing_author = Author(first_name='John', last_name='Newton', display_name='John Newton')
@@ -385,7 +385,7 @@ def test_on_author_add_button_clicked_adds_multiple_authors_from_delimited_text(
     assert form.authors_list_view.item(1).text() == 'Jane Doe'
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_adds_multiple_authors_from_comma_delimited_text(mocked_question,
                                                                                       form: EditSongForm):
     """Comma-delimited author text should be handled by the multi-author add flow."""
@@ -413,7 +413,7 @@ def test_on_author_add_button_clicked_adds_multiple_authors_from_comma_delimited
     assert form.authors_list_view.count() == 2
 
 
-@patch('openlp.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
+@patch('opal.plugins.songs.forms.editsongform.QtWidgets.QMessageBox.question')
 def test_on_author_add_button_clicked_declined_multiple_authors_does_not_add(mocked_question, form: EditSongForm):
     """Declining the multi-author prompt should fall back to adding the full text as one author."""
     existing_author = Author(first_name='John', last_name='Newton', display_name='John Newton')

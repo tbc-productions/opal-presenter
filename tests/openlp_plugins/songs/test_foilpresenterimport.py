@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openlp.plugins.songs.lib.importers.foilpresenter import FoilPresenter
+from opal.plugins.songs.lib.importers.foilpresenter import FoilPresenter
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def test_no_encoding_declaration(foil_presenter: FoilPresenter):
     assert result == '<foilpresenterfolie>'
 
 
-@patch('openlp.plugins.songs.lib.importers.foilpresenter.SongXML')
+@patch('opal.plugins.songs.lib.importers.foilpresenter.SongXML')
 def test_process_lyrics_no_verses(MockSongXML: MagicMock, foil_presenter: FoilPresenter):
     """
     Test that _process_lyrics handles song files that have no verses.

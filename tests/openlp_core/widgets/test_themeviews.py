@@ -5,8 +5,8 @@ import fluentqt
 from PySide6 import QtCore, QtGui, QtTest
 import pytest
 
-from openlp.core.widgets import fluent as QtWidgets
-from openlp.core.widgets.themeviews import ThemeViews
+from opal.core.widgets import fluent as QtWidgets
+from opal.core.widgets.themeviews import ThemeViews
 
 
 def test_theme_views_share_items_selection_and_wrap(qapp):
@@ -71,7 +71,7 @@ def test_theme_drag_payload(qapp, settings, surface):
     view.addItem('Theme (default)')
     view.item(0).setData(QtCore.Qt.ItemDataRole.UserRole, 'Theme')
     view.setCurrentRow(0)
-    with patch('openlp.core.widgets.themeviews.execute_drag') as drag:
+    with patch('opal.core.widgets.themeviews.execute_drag') as drag:
         getattr(view, surface).startDrag(QtCore.Qt.DropAction.CopyAction)
     mime = drag.call_args.args[1]
     assert mime.text() == 'themes'
@@ -98,7 +98,7 @@ def test_theme_mouse_drag_uses_shared_payload(qapp, qtbot, settings, surface):
     move = QtGui.QMouseEvent(
         QtCore.QEvent.Type.MouseMove, QtCore.QPointF(end), QtCore.QPointF(target.viewport().mapToGlobal(end)),
         QtCore.Qt.MouseButton.NoButton, QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier)
-    with patch('openlp.core.widgets.themeviews.execute_drag') as drag:
+    with patch('opal.core.widgets.themeviews.execute_drag') as drag:
         QtWidgets.QApplication.sendEvent(target.viewport(), move)
     qtbot.mouseRelease(target.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=end)
     assert drag.call_count == 1

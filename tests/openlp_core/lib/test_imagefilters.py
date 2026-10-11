@@ -2,7 +2,7 @@
 import pytest
 from PySide6 import QtGui
 
-from openlp.core.lib.imagefilters import apply_filters, add_shadow
+from opal.core.lib.imagefilters import apply_filters, add_shadow
 
 
 def _image(colour='#804020', size=20):

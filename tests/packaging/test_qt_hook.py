@@ -10,7 +10,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
 
-from openlp.__pyinstaller import get_hook_dirs
+from opal.__pyinstaller import get_hook_dirs
 
 
 class QtHookTest(unittest.TestCase):
@@ -25,7 +25,7 @@ class QtHookTest(unittest.TestCase):
         modules = {'PyInstaller.compat': compat, 'PyInstaller.utils.hooks': hooks,
                    'PyInstaller.utils.hooks.qt': qt}
         with patch.dict(sys.modules, modules):
-            return runpy.run_path(str(Path(get_hook_dirs()[0]) / 'hook-openlp.core.py'))
+            return runpy.run_path(str(Path(get_hook_dirs()[0]) / 'hook-opal.core.py'))
 
     def test_does_not_collect_windows_runtime_on_other_platforms(self):
         self.assertEqual(self.run_hook('/not-installed', windows=False)['binaries'], [])

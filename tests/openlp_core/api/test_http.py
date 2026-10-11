@@ -21,7 +21,7 @@
 import pytest
 from flask import Response
 
-from openlp.core.api.http import check_auth, authenticate
+from opal.core.api.http import check_auth, authenticate
 
 
 @pytest.mark.parametrize('auth,result', [((None, 'b3BlbmxwOnBhc3N3b3Jk'), True),

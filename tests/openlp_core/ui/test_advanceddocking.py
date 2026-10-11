@@ -3,12 +3,12 @@ import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from PySide6 import QtCore, QtGui, QtTest
-from openlp.core.widgets import fluent as QtWidgets
+from opal.core.widgets import fluent as QtWidgets
 
 
 @pytest.fixture
 def workspace(settings):
-    from openlp.core.ui.advanceddocking import AdvancedDockingMixin, AdvancedDockWidget
+    from opal.core.ui.advanceddocking import AdvancedDockingMixin, AdvancedDockWidget
 
     class Workspace(AdvancedDockingMixin, QtWidgets.QMainWindow):
         pass
@@ -122,7 +122,7 @@ def test_tab_group_in_floating_window_round_trip(workspace):
 
 @pytest.mark.parametrize('floating_pane', ['service', 'library', 'themes'])
 def test_live_preset_redocks_floating_library_panes(workspace, floating_pane):
-    from openlp.core.ui.mainwindow import MainWindow
+    from opal.core.ui.mainwindow import MainWindow
     window, (service, library, themes, _) = workspace
     window.service_manager_dock = service
     window.media_manager_dock = library
@@ -161,7 +161,7 @@ def test_modal_prompt_restores_only_previously_visible_floating_panes(workspace,
 
 @pytest.mark.parametrize('cancel', [False, True])
 def test_main_window_exit_hides_locked_floating_panes_only_after_confirmation(workspace, cancel):
-    from openlp.core.ui.mainwindow import MainWindow
+    from opal.core.ui.mainwindow import MainWindow
     window, (service, library, themes, _) = workspace
     service.setFloating(True)
     window.tabifyDockWidget(service, library)

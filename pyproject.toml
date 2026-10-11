@@ -127,10 +127,10 @@ test = [
 ]
 
 [project.scripts]
-opal-presenter = "openlp.__main__:start"
+opal-presenter = "opal.__main__:start"
 
 [project.entry-points.pyinstaller40]
-hook-dirs = "openlp.__pyinstaller:get_hook_dirs"
+hook-dirs = "opal.__pyinstaller:get_hook_dirs"
 
 [project.urls]
 Homepage = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
@@ -141,17 +141,17 @@ Issues = "https://git.tbcproductions.net/tbcproductions/opal-presenter/issues"
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "openlp/.version"
+version-file = "opal/.version"
 template = "{version}"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/openlp",
+    "/opal",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "openlp",
+    "opal",
 ]
 
 [tool.hatch.envs.default]
@@ -177,7 +177,7 @@ dependencies = [
 [tool.hatch.envs.test.scripts]
 run = "pytest tests {args}"
 run_selected = "pytest {args}"
-cov = "pytest tests --cov openlp --cov-report html {args}"
+cov = "pytest tests --cov opal --cov-report html {args}"
 debug = "pytest tests --pudb {args}"
 ci = "pytest tests --color=no --disable-warnings {args}"
 

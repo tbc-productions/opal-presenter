@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from PySide6 import QtGui
 
-from openlp.core.lib.formattingtags import FormattingTags
-from openlp.core.lib.serviceprint import print_color, prepare_print_document, render_print_text, white_contrast
+from opal.core.lib.formattingtags import FormattingTags
+from opal.core.lib.serviceprint import print_color, prepare_print_document, render_print_text, white_contrast
 
 
 @pytest.mark.parametrize('source', [
