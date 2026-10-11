@@ -66,7 +66,7 @@ def test_worker_start(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
@@ -93,7 +93,7 @@ def test_worker_start_fail(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_not_called()
@@ -120,7 +120,7 @@ def test_worker_start_dev_version(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.1.3 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
@@ -147,7 +147,7 @@ def test_worker_start_nightly_version(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.1.0+git2345 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     mock_new_version.emit.assert_called_once_with('2.4.6')
@@ -174,7 +174,7 @@ def test_worker_empty_response(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.1+git2345 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_once_with(expected_download_url, headers=expected_headers)
     assert mock_new_version.emit.call_count == 0
@@ -201,7 +201,7 @@ def test_worker_start_connection_error(mock_get_web_page, mock_platform):
         worker.start()
 
     # THEN: The check completes and the signal is emitted
-    expected_download_url = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+    expected_download_url = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
     expected_headers = {'User-Agent': 'Opal Presenter/2.0 Linux/4.12.0-1-amd64; '}
     mock_get_web_page.assert_called_with(expected_download_url, headers=expected_headers)
     assert mock_get_web_page.call_count == 3

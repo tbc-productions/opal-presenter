@@ -53,7 +53,7 @@ LIBRARIES = OrderedDict([
     ('PyEnchant', ('enchant',)),
     ('Mako', ('mako',)),
 ])
-RELEASES_URL = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter/releases/latest'
+RELEASES_URL = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
 
 
 class VersionWorker(ThreadWorker):
@@ -87,9 +87,8 @@ class VersionWorker(ThreadWorker):
         """
         log.debug('VersionWorker - Start')
         headers = {
-            'User-Agent': 'Opal Presenter/{version} {system}/{release}; '.format(version=self.current_version['full'],
-                                                                         system=platform.system(),
-                                                                         release=platform.release())
+            'User-Agent': 'Opal Presenter/{version} {system}/{release}; '.format(
+                version=self.current_version['full'], system=platform.system(), release=platform.release())
         }
         remote_version = None
         retries = 0
@@ -204,8 +203,8 @@ def get_version():
         'build': build_number
     }
     if APPLICATION_VERSION['build']:
-        log.info('Opal Presenter version {version} build {build}'.format(version=APPLICATION_VERSION['version'],
-                                                                 build=APPLICATION_VERSION['build']))
+        log.info('Opal Presenter version {version} build {build}'.format(
+            version=APPLICATION_VERSION['version'], build=APPLICATION_VERSION['build']))
     else:
         log.info('Opal Presenter version {version}'.format(version=APPLICATION_VERSION['version']))
     return APPLICATION_VERSION

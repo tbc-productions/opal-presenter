@@ -22,13 +22,24 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from opal.core.api.deploy import REMOTE_URL, deploy_zipfile, download_version_info, download_and_install, \
     get_installed_version
 
 
-CONFIG_FILE = '{"tag_name":"0.1","draft":false,"prerelease":false,"assets":[{"name":"opal-presenter-web-remote.zip","size":854039,"browser_download_url":"https://git.tbcproductions.net/tbcproductions/opal-presenter-web-remote/releases/download/0.1/opal-presenter-web-remote.zip"}]}'
-CONFIG_DICT = {'latest': {'version': '0.1', 'filename': 'opal-presenter-web-remote.zip', 'size': 854039,
-                         'url': json.loads(CONFIG_FILE)['assets'][0]['browser_download_url']}}
+CONFIG_FILE = json.dumps({
+    'tag_name': '0.1', 'draft': False, 'prerelease': False,
+    'assets': [{
+        'name': 'opal-presenter-web-remote.zip', 'size': 854039,
+        'browser_download_url': (
+            'https://github.com/tchris3/opal-presenter-web-remote/releases/download/0.1/'
+            'opal-presenter-web-remote.zip')
+    }]
+})
+CONFIG_DICT = {'latest': {
+    'version': '0.1', 'filename': 'opal-presenter-web-remote.zip', 'size': 854039,
+    'url': json.loads(CONFIG_FILE)['assets'][0]['browser_download_url']}}
 
 
 @patch('opal.core.api.deploy.ZipFile')
@@ -98,6 +109,27 @@ def test_download_version_info(mocked_get_web_page, mocked_get_openlp_user_agent
 
     # THEN: The result should be Nonw
     assert result == CONFIG_DICT, 'download_version_info() should return a dictionary of version information'
+    assert REMOTE_URL == 'https://api.github.com/repos/tchris3/opal-presenter-web-remote/releases/latest'
+    mocked_get_web_page.assert_called_once_with(
+        REMOTE_URL, headers={'User-Agent': 'OpenLP'}, retries=None, session=None)
+
+
+@pytest.mark.parametrize('url', [
+    'http://github.com/tchris3/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
+    'https://github.com/another/project/releases/download/0.1/bundle.zip',
+    'https://github.com.example.invalid/tchris3/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
+    'https://github.com/tchris3/opal-presenter-web-remote-extra/releases/download/0.1/bundle.zip',
+    None, 123
+])
+@patch('opal.core.api.deploy.get_web_page')
+@patch('opal.core.api.deploy.get_openlp_user_agent', return_value='Opal Presenter/test')
+def test_remote_release_rejects_untrusted_downloads(mocked_user_agent, mocked_get_web_page, url):
+    """Only install bundles from the public Opal Web Remote repository."""
+    release = json.loads(CONFIG_FILE)
+    release['assets'][0]['browser_download_url'] = url
+    mocked_get_web_page.return_value = json.dumps(release)
+
+    assert download_version_info() is None
 
 
 @patch('opal.core.api.deploy.log.warning')

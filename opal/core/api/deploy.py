@@ -35,7 +35,7 @@ from opal.core.common.registry import Registry
 from opal.core.threading import ThreadWorker, run_thread
 from opal.core.lib.nativefile import validate_archive
 
-REMOTE_URL = 'https://git.tbcproductions.net/api/v1/repos/tbcproductions/opal-presenter-web-remote/releases/latest'
+REMOTE_URL = 'https://api.github.com/repos/tchris3/opal-presenter-web-remote/releases/latest'
 LOCAL_VERSION = re.compile(r'appVersion.*=.*[\'"](.*?)[\'"];?')
 
 log = logging.getLogger(__name__)
@@ -122,7 +122,8 @@ def download_version_info(timeout=None, retries=None, session=None):
             return None
         if not isinstance(asset.get('size'), int) or asset['size'] < 0:
             raise ValueError('Invalid remote bundle size.')
-        if not asset['browser_download_url'].startswith('https://git.tbcproductions.net/'):
+        if not isinstance(asset['browser_download_url'], str) or not asset['browser_download_url'].startswith(
+                'https://github.com/tchris3/opal-presenter-web-remote/releases/download/'):
             raise ValueError('Invalid remote bundle download URL.')
         return {'latest': {'version': release['tag_name'].removeprefix('v'), 'filename': asset['name'],
                            'size': asset['size'], 'url': asset['browser_download_url']}}
