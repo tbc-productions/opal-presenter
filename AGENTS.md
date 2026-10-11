@@ -1,7 +1,7 @@
 # UI guidance for agents
 
 Before adding or changing operator dialogs, read
-[the dialog design pattern](documentation/dialogs.rst). The shared implementations
+[the dialog design pattern](documentation/dialogs.md). The shared implementations
 are in `opal/core/widgets/fluent_dialogs.py`, exported through
 `opal.core.widgets.fluent`.
 

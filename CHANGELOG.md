@@ -1,5 +1,6 @@
-OpenLP 3.1.2
-============
+# Changelog
+
+## OpenLP 3.1.2
 
 * Import additional planning center data
 * Add "Apply UPPERCASE globally" function to songs plugin
@@ -22,21 +23,19 @@ OpenLP 3.1.2
 * Fix missing translations
 
 
-OpenLP 3.1.1
-============
+## OpenLP 3.1.1
 
 * Fix path to QtWebEngineProcess binary
 * Use Python's version comparison, not Qt's
 * Always open downloaded songs as utf-8
 * Update translations
 
-OpenLP 3.1.0
-============
+## OpenLP 3.1.0
 
 * Change bug reporting email address to differentiate between affected versions
 * Update translations
 * Set the app's desktop file name
-* tests: add ``assert_`` prefix to a bunch of asserts missing it
+* tests: add `assert_` prefix to a bunch of asserts missing it
 * Invalidate the service item cache when the theme changes
 * Replace appdirs with platformdirs
 * Fix a PermissionError that occurs on Windows 10/11 when qtawesome tries to look at its own fonts
@@ -45,14 +44,12 @@ OpenLP 3.1.0
 * Fix #1323 for the Projector Manager
 * Made the wordproject import more robust
 
-OpenLP 3.1.0rc4
-===============
+## OpenLP 3.1.0rc4
 
 * Fix a loop in the First Time Wizard on Windows
 * Fix portable builds by re-arranging when the settings are created
 
-OpenLP 3.1.0rc3
-===============
+## OpenLP 3.1.0rc3
 
 * Fix the coverage badge on GitLab by producing an XML report
 * Fix irregular service theme saving (closes #1723)
@@ -76,15 +73,13 @@ OpenLP 3.1.0rc3
 * Do not start the same presentation again when it's already live.
 * Prevent key error when unblank screen at start of presentation.
 
-OpenLP 3.1.0rc2
-===============
+## OpenLP 3.1.0rc2
 
 * Revert the Registry behaviour
 * Fix the multiselect in the images plugin
 * Spoof the songselect webengine user agent
 
-OpenLP 3.1.0rc1
-===============
+## OpenLP 3.1.0rc1
 
 * Don't build manual, use online manual instead
 * Update AppVeyor for Mac to install Pyro5 instead of Pyro4
@@ -172,8 +167,7 @@ OpenLP 3.1.0rc1
 * Remove WebOb -- we don't need it
 * Add a grid view to themes manager
 
-OpenLP 3.0.2
-============
+## OpenLP 3.0.2
 
 * Only show hash if song book number exists
 * FIX: Missing looping for theme background videos
@@ -193,8 +187,7 @@ OpenLP 3.0.2
 * Fix an issue where the websockets server would try to shut down even when -w is supplied
 * Use a simpler approach when creating a tmp file when saving service files
 
-OpenLP 2.5.1
-============
+## OpenLP 2.5.1
 
 * Fixed a bug where the author type upgrade was being ignore because it was looking at the wrong table
 * Fixed a bug where the songs_songbooks table was not being created because the if expression was the wrong way round

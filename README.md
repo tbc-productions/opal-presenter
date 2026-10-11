@@ -57,7 +57,7 @@ Some features need additional software or configuration:
 - **Library Sync:** uploads and downloads need a folder available on the computer.
   For shared libraries, sync the folder using your desktop storage app. No cloud
   API setup or credentials are required. See the
-  [Library Sync guide](documentation/library-sync.rst).
+  [Library Sync guide](documentation/library-sync.md).
 - **Planning Center:** service plan imports need account credentials.
 - **OBS Studio:** scene control needs OBS Studio and its Advanced Scene Switcher
   plugin.
@@ -69,7 +69,7 @@ Some features need additional software or configuration:
 - Git and pip, plus a C++ compiler for the native interface build.
 - Matching **Qt C++ SDK, PySide6 and Shiboken 6.11.1**, with CMake and Ninja.
 - Opal Presenter's pinned FluentQt wheel, built using
-  [the FluentQt build guide](documentation/fluentqt.rst).
+  [the FluentQt build guide](documentation/fluentqt.md).
 - ICU development libraries and `pkg-config` on macOS/Linux for PyICU, plus any
   platform prerequisites needed by the dependencies in [pyproject.toml](pyproject.toml).
 
@@ -131,7 +131,7 @@ platform, use the source instructions below.
    .venv\Scripts\activate.bat
    ```
 
-3. Follow the [FluentQt build guide](documentation/fluentqt.rst) to install the
+3. Follow the [FluentQt build guide](documentation/fluentqt.md) to install the
    matching build tools and Qt SDK, then build and install the pinned wheel in
    this environment. Windows builds need an MSVC developer terminal. Complete
    this step before installing Opal Presenter; the standard upstream FluentQt
@@ -171,15 +171,15 @@ Opal Presenter will restart after importing the library through this menu.
 
 OpenLP services, songs, custom slides, themes and settings can also be imported
 individually; new saves use Opal formats. See the
-[document compatibility guide](documentation/opal-formats.rst) for details.
+[document compatibility guide](documentation/opal-formats.md) for details.
 
 ## Documentation and licence
 
-- [Slide Designer](documentation/slide-designer.rst)
-- [Library Sync](documentation/library-sync.rst)
-- [Opal document formats and compatibility](documentation/opal-formats.rst)
-- [Source build: FluentQt](documentation/fluentqt.rst)
-- [Windows packaging](documentation/windows-packaging.rst)
+- [Slide Designer](documentation/slide-designer.md)
+- [Library Sync](documentation/library-sync.md)
+- [Opal document formats and compatibility](documentation/opal-formats.md)
+- [Source build: FluentQt](documentation/fluentqt.md)
+- [Windows packaging](documentation/windows-packaging.md)
 - [Upstream OpenLP documentation](https://wiki.openlp.org/) for shared functionality;
   Opal-specific behaviour may differ.
 
