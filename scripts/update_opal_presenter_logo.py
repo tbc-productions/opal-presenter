@@ -41,10 +41,55 @@ def poster(logo, size):
     draw = ImageDraw.Draw(image)
     font_path = Path('/System/Library/Fonts/Supplemental/Arial Bold.ttf')
     font_size = max(10, min(40, size[0] // 12))
-    font = ImageFont.truetype(str(font_path), font_size) if font_path.exists() else ImageFont.load_default(size=font_size)
+    font = (ImageFont.truetype(str(font_path), font_size) if font_path.exists()
+            else ImageFont.load_default(size=font_size))
     draw.text((size[0] // 2, size[1] * 9 // 10), 'Opal Presenter', font=font, fill='white', anchor='mm',
               stroke_width=max(1, font_size // 20), stroke_fill='#001448')
     return image
+
+
+def update_packaging(logo, package):
+    """Keep installer artwork clear of native text and drag-and-drop icons."""
+    from PySide6 import QtCore, QtGui, QtSvg
+    from PIL.ImageQt import fromqimage
+
+    renderer = QtSvg.QSvgRenderer(str(ROOT / 'resources/images/opal-presenter-icon.svg'))
+    if not renderer.isValid():
+        raise ValueError('The small Opal icon is not a valid SVG')
+    image = QtGui.QImage(256, 256, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtCore.Qt.GlobalColor.transparent)
+    painter = QtGui.QPainter(image)
+    renderer.render(painter)
+    painter.end()
+    icon = fromqimage(image)
+    small_icons = [icon.resize((size, size), Image.Resampling.LANCZOS) for size in SIZES if size <= 128]
+    logo.save(package / 'macos/OpalPresenter.icns', append_images=small_icons)
+    windows = package / 'windows'
+    portable = windows / 'OpalPresenterPortable'
+    for path in (windows / 'OpalPresenter.ico', windows / 'service_file.ico',
+                 portable / 'App/Appinfo/appicon.ico', portable / 'Other/Help/Images/Favicon.ico'):
+        logo.resize((256, 256), Image.Resampling.LANCZOS).save(
+            path, sizes=[(size, size) for size in SIZES if size <= 256], append_images=small_icons)
+    for size in (16, 32):
+        icon.resize((size, size), Image.Resampling.LANCZOS).save(portable / f'App/Appinfo/appicon_{size}.png')
+    icon.save(windows / 'service_file.png')
+    (portable / 'Other/Help/Images/OpalPresenterIcon.svg').write_bytes(
+        (ROOT / 'resources/images/opal-presenter-icon.svg').read_bytes())
+
+    background = Image.open(ROOT / 'branding/OpalBackground.jpg').convert('RGB')
+    dmg = ImageOps.fit(background, (530, 360), method=Image.Resampling.LANCZOS)
+    dmg.save(package / 'macos/OpalPresenter-Background.tiff')
+
+    main = Image.new('RGB', (493, 312), 'white')
+    main.paste(ImageOps.fit(background, (164, 312), method=Image.Resampling.LANCZOS), (0, 0))
+    mark = logo.resize((128, 128), Image.Resampling.LANCZOS)
+    main.paste(mark, (18, 80), mark)
+    banner = Image.new('RGB', (493, 58), 'white')
+    mark = icon.resize((44, 44), Image.Resampling.LANCZOS)
+    banner.paste(mark, (439, 7), mark)
+    for name, artwork in (('WizardMain', main), ('WizardBanner', banner)):
+        for suffix in ('bmp', 'png'):
+            artwork.save(windows / f'{name}.{suffix}')
 
 
 def main():
@@ -71,18 +116,7 @@ def main():
     for name in ('opal-presenter-background.png', 'opal-presenter-splash.png'):
         (display / name).write_bytes((images / name).read_bytes())
     if args.packaging:
-        package = args.packaging
-        (package / 'macos/OpalPresenter.icns').write_bytes((images / 'OpalPresenter.icns').read_bytes())
-        poster(logo, (530, 360)).save(package / 'macos/OpalPresenter-Background.tiff')
-        for path in (package / 'windows').rglob('*'):
-            if path.suffix.lower() not in ('.ico', '.bmp', '.png'):
-                continue
-            if path.suffix.lower() == '.ico':
-                logo.save(path, sizes=[(size, size) for size in SIZES if size <= 256])
-            else:
-                size = Image.open(path).size
-                image = logo.resize(size, Image.Resampling.LANCZOS) if path.name.startswith('appicon') else poster(logo, size)
-                image.save(path)
+        update_packaging(logo, args.packaging)
     if args.remote:
         logo.save(args.remote / 'src/assets/favicon.ico', sizes=[(16, 16), (32, 32), (48, 48)])
         logo.resize((256, 256), Image.Resampling.LANCZOS).save(args.remote / 'src/assets/opal-presenter.png')
