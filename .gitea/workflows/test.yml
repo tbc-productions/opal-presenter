@@ -2,10 +2,14 @@ name: Tests
 
 on:
   push:
-    branches: [master, '4.0.3']
-  pull_request:
     branches: [master]
+  workflow_dispatch:
   workflow_call:
+    inputs:
+      opal_ref:
+        description: 'Release tag to test'
+        required: false
+        type: string
 
 jobs:
   windows-qt-packaging:
@@ -13,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.opal_ref || github.ref }}
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -56,6 +61,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.opal_ref || github.ref }}
           fetch-depth: 0
 
       - name: Install system deps
