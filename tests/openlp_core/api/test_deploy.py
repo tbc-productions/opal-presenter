@@ -33,7 +33,7 @@ CONFIG_FILE = json.dumps({
     'assets': [{
         'name': 'opal-presenter-web-remote.zip', 'size': 854039,
         'browser_download_url': (
-            'https://github.com/tchris3/opal-presenter-web-remote/releases/download/0.1/'
+            'https://github.com/tbc-productions/opal-presenter-web-remote/releases/download/0.1/'
             'opal-presenter-web-remote.zip')
     }]
 })
@@ -109,16 +109,16 @@ def test_download_version_info(mocked_get_web_page, mocked_get_openlp_user_agent
 
     # THEN: The result should be Nonw
     assert result == CONFIG_DICT, 'download_version_info() should return a dictionary of version information'
-    assert REMOTE_URL == 'https://api.github.com/repos/tchris3/opal-presenter-web-remote/releases/latest'
+    assert REMOTE_URL == 'https://api.github.com/repos/tbc-productions/opal-presenter-web-remote/releases/latest'
     mocked_get_web_page.assert_called_once_with(
         REMOTE_URL, headers={'User-Agent': 'OpenLP'}, retries=None, session=None)
 
 
 @pytest.mark.parametrize('url', [
-    'http://github.com/tchris3/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
+    'http://github.com/tbc-productions/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
     'https://github.com/another/project/releases/download/0.1/bundle.zip',
-    'https://github.com.example.invalid/tchris3/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
-    'https://github.com/tchris3/opal-presenter-web-remote-extra/releases/download/0.1/bundle.zip',
+    'https://github.com.example.invalid/tbc-productions/opal-presenter-web-remote/releases/download/0.1/bundle.zip',
+    'https://github.com/tbc-productions/opal-presenter-web-remote-extra/releases/download/0.1/bundle.zip',
     None, 123
 ])
 @patch('opal.core.api.deploy.get_web_page')

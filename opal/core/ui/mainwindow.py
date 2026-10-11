@@ -856,7 +856,7 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         """
         version_text = translate('OpenLP.MainWindow', 'Version {new} of Opal Presenter is now available for download (you are '
                                  'currently running version {current}). \n\nYou can download the latest version from '
-                                 'https://github.com/tchris3/opal-presenter/releases.').format(
+                                 'https://github.com/tbc-productions/opal-presenter/releases.').format(
                                      new=version, current=get_version()[u'full'])
         QtWidgets.QMessageBox.question(self, translate('OpenLP.MainWindow', 'Opal Presenter Version Updated'), version_text)
 

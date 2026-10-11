@@ -3556,7 +3556,7 @@ Processing has terminated and no changes have been made.</source>
     <message>
         <source>Version {new} of Opal Presenter is now available for download (you are currently running version {current}).&#32;
 
-You can download the latest version from https://github.com/tchris3/opal-presenter/releases.</source>
+You can download the latest version from https://github.com/tbc-productions/opal-presenter/releases.</source>
         <translation type="unfinished"/>
     </message>
 </context>
@@ -9600,7 +9600,7 @@ Processing has terminated and no changes have been made.</source>
         <translation>έκδοση {version}</translation>
     </message>
     <message>
-        <source>&lt;p&gt;Opal Presenter {{version}}{{revision}} - Open Source Lyrics Projection&lt;/p&gt;&lt;p&gt;Opal Presenter is a fork of OpenLP.&lt;/p&gt;&lt;p&gt;Opal Presenter project: &lt;a href="https://github.com/tchris3/opal-presenter"&gt;https://github.com/tchris3/opal-presenter&lt;/a&gt;&lt;/p&gt;&lt;hr&gt;&lt;p&gt;Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors&lt;/p&gt;&lt;p&gt;OpenLP project: &lt;a href="https://openlp.org/"&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href="https://www.gnu.org/licenses/"&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
+        <source>&lt;p&gt;Opal Presenter {{version}}{{revision}} - Open Source Lyrics Projection&lt;/p&gt;&lt;p&gt;Opal Presenter is a fork of OpenLP.&lt;/p&gt;&lt;p&gt;Opal Presenter project: &lt;a href="https://github.com/tbc-productions/opal-presenter"&gt;https://github.com/tbc-productions/opal-presenter&lt;/a&gt;&lt;/p&gt;&lt;hr&gt;&lt;p&gt;Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors&lt;/p&gt;&lt;p&gt;OpenLP project: &lt;a href="https://openlp.org/"&gt;https://openlp.org/&lt;/a&gt;&lt;/p&gt;&lt;p&gt;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.&lt;/p&gt;&lt;p&gt;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.&lt;/p&gt;&lt;p&gt;You should have received a copy of the GNU General Public License along with this program.  If not, see &lt;a href="https://www.gnu.org/licenses/"&gt;https://www.gnu.org/licenses/&lt;/a&gt;.&lt;/p&gt;</source>
         <translation type="unfinished"/>
     </message>
     <message>

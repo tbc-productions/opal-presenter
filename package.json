@@ -2,12 +2,12 @@
   "name": "opal-presenter",
   "version": "4.0.4",
   "description": "Opal Presenter is free church worship presentation software",
-  "homepage": "https://github.com/tchris3/opal-presenter",
+  "homepage": "https://github.com/tbc-productions/opal-presenter",
   "license": "GPL-3.0-or-later",
   "author": "Opal Presenter Developers and OpenLP contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tchris3/opal-presenter.git"
+    "url": "https://github.com/tbc-productions/opal-presenter.git"
   },
   "directories": {
     "test": "tests"

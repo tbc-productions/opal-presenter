@@ -53,7 +53,7 @@ LIBRARIES = OrderedDict([
     ('PyEnchant', ('enchant',)),
     ('Mako', ('mako',)),
 ])
-RELEASES_URL = 'https://api.github.com/repos/tchris3/opal-presenter/releases/latest'
+RELEASES_URL = 'https://api.github.com/repos/tbc-productions/opal-presenter/releases/latest'
 
 
 class VersionWorker(ThreadWorker):

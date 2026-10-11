@@ -9,9 +9,9 @@ Built on the OpenLP project, Opal Presenter adds a Fluent interface and visual
 slide design. Its Library Sync feature lets you upload and download library items
 to and from cloud storage.
 
-[Download releases](https://github.com/tchris3/opal-presenter/releases)
-· [Source code](https://github.com/tchris3/opal-presenter)
-· [Report an issue](https://github.com/tchris3/opal-presenter/issues)
+[Download releases](https://github.com/tbc-productions/opal-presenter/releases)
+· [Source code](https://github.com/tbc-productions/opal-presenter)
+· [Report an issue](https://github.com/tbc-productions/opal-presenter/issues)
 
 ## Main features
 
@@ -80,7 +80,7 @@ requirements apply when running a checkout yourself.
 
 ### Install a packaged release
 
-1. Open the [releases page](https://github.com/tchris3/opal-presenter/releases)
+1. Open the [releases page](https://github.com/tbc-productions/opal-presenter/releases)
    and choose a release with a build for your computer. Source-code archives are
    intended for the source installation below.
 2. Follow the release notes and install the appropriate package:
@@ -111,7 +111,7 @@ platform, use the source instructions below.
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/tchris3/opal-presenter.git
+   git clone https://github.com/tbc-productions/opal-presenter.git
    cd opal-presenter
    ```
 
