@@ -1095,7 +1095,7 @@ def test_drawer_refit_reflows_following_sections(interactive_theme_form, qtbot):
     assert form.position_section.y() > form.background_section.geometry().bottom()
 
 
-def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_theme_form):
+def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_theme_form, qtbot):
     from PySide6 import QtTest
     form = interactive_theme_form
     form.can_update_theme = False
@@ -1106,13 +1106,8 @@ def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_t
     for section in sections:
         section.setExpanded(True)
     QtTest.QTest.qWait(350)
-    heights = {}
-    for background in ('solid', 'gradient', 'image', 'video', 'stream', 'transparent', 'gradient', 'solid'):
-        form.background_page.background_type = background
-        form.area_overlay.select_area('footer' if background == 'gradient' else 'main')
-        form.transitions_page.is_transition_enabled = True
-        form.transitions_page.transition_type = 'fade' if background == 'solid' else 'slide'
-        QtTest.QTest.qWait(60)
+
+    def assert_sections_fit():
         for section in sections:
             content = section.contentWidget()
             assert not section._height_timer.isActive(), section.headerText()
@@ -1122,16 +1117,30 @@ def test_drawers_fit_dynamic_contents_and_scroll_when_all_expanded(interactive_t
         for first, second in zip(sections, sections[1:]):
             assert first.geometry().bottom() < second.y()
         assert form.sidebar_scroll.verticalScrollBar().maximum() > 0
+
+    heights = {}
+    for background in ('solid', 'gradient', 'image', 'video', 'stream', 'transparent', 'gradient', 'solid'):
+        form.background_page.background_type = background
+        form.area_overlay.select_area('footer' if background == 'gradient' else 'main')
+        form.transitions_page.is_transition_enabled = True
+        form.transitions_page.transition_type = 'fade' if background == 'solid' else 'slide'
+        qtbot.wait(1)
+        qtbot.waitUntil(assert_sections_fit, timeout=1000)
         heights[background] = form.background_section.height()
     assert heights['gradient'] > heights['solid'] > heights['transparent']
     assert form.background_page.background_label.isHidden()
     assert form.background_page.background_type_group_box.isHidden()
     form.background_section.setExpanded(False)
-    QtTest.QTest.qWait(300)
+    qtbot.waitUntil(lambda: form.background_section.contentWidget().parentWidget().height() == 0, timeout=1000)
     form.background_page.background_type = 'gradient'
+    form.area_overlay.select_area('footer')
     form.background_section.setExpanded(True)
-    QtTest.QTest.qWait(300)
-    assert form.background_section.height() == heights['gradient']
+
+    def assert_background_restored():
+        assert_sections_fit()
+        assert form.background_section.height() == heights['gradient']
+
+    qtbot.waitUntil(assert_background_restored, timeout=1000)
 
 
 @pytest.mark.parametrize('width,height', [(1280, 720), (1920, 1080), (3840, 2160)])

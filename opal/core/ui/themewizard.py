@@ -149,6 +149,7 @@ class _ThemePropertySection(fluentqt.Expander):
         if parent is not None:
             parent_layout = QtWidgets.QWidget.layout(parent)
             if parent_layout is not None:
+                parent_layout.invalidate()
                 parent_layout.activate()
 
 
