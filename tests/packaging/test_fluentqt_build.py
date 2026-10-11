@@ -1,1 +1,34 @@
-IiIiVGhlIEZsdWVudFF0IHNvdXJjZSBwYXRjaGVzIG11c3Qgd29yayB3aXRoIFdpbmRvd3MnIGxlZ2FjeSBkZWZhdWx0IGVuY29kaW5nLiIiIgppbXBvcnQgcnVucHkKaW1wb3J0IHRlbXBmaWxlCmltcG9ydCB1bml0dGVzdApmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKZnJvbSB1bml0dGVzdC5tb2NrIGltcG9ydCBwYXRjaAoKCmNsYXNzIEZsdWVudFF0QnVpbGRUZXN0KHVuaXR0ZXN0LlRlc3RDYXNlKToKICAgIGRlZiB0ZXN0X3NvdXJjZV9wYXRjaF9wcmVzZXJ2ZXNfdXRmOF93aXRoX2NwMTI1Ml9kZWZhdWx0KHNlbGYpOgogICAgICAgIGJ1aWxkID0gcnVucHkucnVuX3BhdGgoc3RyKFBhdGgoX19maWxlX18pLnJlc29sdmUoKS5wYXJlbnRzWzJdIC8gJ3NjcmlwdHMvYnVpbGRfZmx1ZW50cXQucHknKSkKICAgICAgICByZWFkX3RleHQsIHdyaXRlX3RleHQgPSBQYXRoLnJlYWRfdGV4dCwgUGF0aC53cml0ZV90ZXh0CgogICAgICAgIGRlZiB3aW5kb3dzX3JlYWQocGF0aCwgKmFyZ3MsICoqa3dhcmdzKToKICAgICAgICAgICAga3dhcmdzLnNldGRlZmF1bHQoJ2VuY29kaW5nJywgJ2NwMTI1MicpCiAgICAgICAgICAgIHJldHVybiByZWFkX3RleHQocGF0aCwgKmFyZ3MsICoqa3dhcmdzKQoKICAgICAgICBkZWYgd2luZG93c193cml0ZShwYXRoLCB0ZXh0LCAqYXJncywgKiprd2FyZ3MpOgogICAgICAgICAgICBrd2FyZ3Muc2V0ZGVmYXVsdCgnZW5jb2RpbmcnLCAnY3AxMjUyJykKICAgICAgICAgICAga3dhcmdzLnNldGRlZmF1bHQoJ25ld2xpbmUnLCAnXHJcbicpCiAgICAgICAgICAgIHJldHVybiB3cml0ZV90ZXh0KHBhdGgsIHRleHQsICphcmdzLCAqKmt3YXJncykKCiAgICAgICAgd2l0aCB0ZW1wZmlsZS5UZW1wb3JhcnlEaXJlY3RvcnkoKSBhcyBkaXJlY3Rvcnk6CiAgICAgICAgICAgIHNvdXJjZSA9IFBhdGgoZGlyZWN0b3J5KSAvICdRdENvbXBhdC5oJwogICAgICAgICAgICBvcmlnaW5hbCA9ICcvLyBcdTIwMWNGbHVlbnRRdFx1MjAxZCBjb3B5cmlnaHRcblFJY29uOjpOb3JtYWxcbicKICAgICAgICAgICAgc291cmNlLndyaXRlX2J5dGVzKG9yaWdpbmFsLmVuY29kZSgndXRmLTgnKSkKICAgICAgICAgICAgd2l0aCBwYXRjaC5vYmplY3QoUGF0aCwgJ3JlYWRfdGV4dCcsIHdpbmRvd3NfcmVhZCksIHBhdGNoLm9iamVjdChQYXRoLCAnd3JpdGVfdGV4dCcsIHdpbmRvd3Nfd3JpdGUpOgogICAgICAgICAgICAgICAgYnVpbGRbJ3JlcGxhY2UnXShzb3VyY2UsICdRSWNvbjo6Tm9ybWFsJywgJ1FJY29uOjpEaXNhYmxlZCcpCiAgICAgICAgICAgICAgICBidWlsZFsncmVwbGFjZSddKHNvdXJjZSwgJ1FJY29uOjpOb3JtYWwnLCAnUUljb246OkRpc2FibGVkJykKICAgICAgICAgICAgc2VsZi5hc3NlcnRFcXVhbChzb3VyY2UucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpLCBvcmlnaW5hbC5yZXBsYWNlKCdRSWNvbjo6Tm9ybWFsJywgJ1FJY29uOjpEaXNhYmxlZCcpKQoKCmlmIF9fbmFtZV9fID09ICdfX21haW5fXyc6CiAgICB1bml0dGVzdC5tYWluKCkK
+"""The FluentQt source patches must work with Windows' legacy default encoding."""
+import runpy
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+class FluentQtBuildTest(unittest.TestCase):
+    def test_source_patch_preserves_utf8_with_cp1252_default(self):
+        build = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'scripts/build_fluentqt.py'))
+        read_text, write_text = Path.read_text, Path.write_text
+
+        def windows_read(path, *args, **kwargs):
+            kwargs.setdefault('encoding', 'cp1252')
+            return read_text(path, *args, **kwargs)
+
+        def windows_write(path, text, *args, **kwargs):
+            kwargs.setdefault('encoding', 'cp1252')
+            kwargs.setdefault('newline', '\r\n')
+            return write_text(path, text, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'QtCompat.h'
+            original = '// \u201cFluentQt\u201d copyright\nQIcon::Normal\n'
+            source.write_bytes(original.encode('utf-8'))
+            with patch.object(Path, 'read_text', windows_read), patch.object(Path, 'write_text', windows_write):
+                build['replace'](source, 'QIcon::Normal', 'QIcon::Disabled')
+                build['replace'](source, 'QIcon::Normal', 'QIcon::Disabled')
+            self.assertEqual(source.read_text(encoding='utf-8'), original.replace('QIcon::Normal', 'QIcon::Disabled'))
+
+
+if __name__ == '__main__':
+    unittest.main()
