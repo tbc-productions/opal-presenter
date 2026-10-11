@@ -2,8 +2,8 @@ FluentQt and Python 3.14
 =======================
 
 Opal Presenter uses the native ``calvinhxx/Fluent-Qt`` library. Upstream's published
-1.8.2 wheels do not support Python 3.14. OpenLP builds a pinned source revision
-as ``FluentQt 1.9.3+openlp.1`` instead. This is an OpenLP build, not an upstream
+1.8.2 wheels do not support Python 3.14. Opal builds a pinned source revision
+as ``FluentQt 1.9.3+openlp.1`` instead. This is an Opal build, not an upstream
 Python compatibility guarantee. Python remains 3.14; Qt, PySide6 and Shiboken
 must all be 6.11.1 to match PySide6-QtAds.
 
@@ -115,11 +115,11 @@ The Python 3.14 wheel and native application have been verified on macOS arm64.
 Windows/Linux source builds and frozen application bundles still need platform
 verification before release.
 
-The OpenLP wheel also fixes native FluentQt QIcon painting: disabled Button
+The Opal wheel also fixes native FluentQt QIcon painting: disabled Button
 and CommandBar overflow presenters request QIcon.Disabled rather than the
 normal icon image. QAction enabled state remains owned by FluentQt.
 
-The OpenLP wheel guards FluentQt's global accessibility factories with Qt widget
+The Opal wheel guards FluentQt's global accessibility factories with Qt widget
 metadata before attempting C++ RTTI casts. QtWebEngine's private Quick objects
 can be compiled without RTTI; casting those objects from the progress factory
 previously crashed macOS startup when the renderer received focus. Native

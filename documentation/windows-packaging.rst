@@ -1,14 +1,12 @@
 Windows Qt runtime packaging
 ============================
 
-Opal Presenter 4.0.1 was found installed with PySide6's Python extension modules but
-without the Qt6 DLLs and Windows platform plugin. This fails at the first
-``from PySide6 import QtCore`` import, before application logging starts.
-Opal Presenter 4.0.2 included the Qt DLLs but failed when the media player tried to
-add a nonexistent ``_internal/Lib/site-packages/PySide6`` directory to the
-Windows DLL search path. The media player now uses the location of the loaded
-``QtCore`` extension module, which works in both a Python environment and the
-frozen application.
+Frozen Windows builds require PySide6's Python extension modules, the matching
+Qt6 DLLs and the Windows platform plugin. Missing Qt runtime files can cause
+``from PySide6 import QtCore`` to fail before application logging starts.
+The media player uses the location of the loaded ``QtCore`` extension module
+for the Windows DLL search path, which works in both a Python environment and
+the frozen application.
 
 Opal registers a PyInstaller hook through the ``pyinstaller40`` entry point.
 Install this source checkout in the build environment before running PyInstaller
@@ -32,7 +30,7 @@ Windows smoke test, from the repository root::
 
 Run these commands in a disposable PowerShell session. A minimal PATH also
 prevents unrelated developer tools' DLLs from being collected at build time.
-The probe loads the OpenLP startup imports, including the media player, plus
+The probe loads the Opal startup imports, including the media player, plus
 QtCore, GUI, multimedia and WebEngine bindings. It creates a QApplication using
 the Windows platform plugin and checks required bundled files. A successful
 probe does not replace testing the final MSI and portable application on a

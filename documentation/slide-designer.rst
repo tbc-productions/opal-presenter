@@ -192,8 +192,10 @@ Portability
 -----------
 
 Songs store a versioned design document in the songs database. OpenLyrics XML
-exports include it in an ``olp:design`` extension with namespace
-``https://openlp.org/ns/slide-design/1``. Custom items store the same extension
+exports include it in an ``opal:design`` extension with namespace
+``urn:net.tbcproductions.OpalPresenter:slide-design:1``. Imports also accept the
+legacy ``https://openlp.org/ns/slide-design/1`` namespace.
+Custom items store the same extension
 inside their existing XML and preserve it through their native Opal package export
 and import route. Service headers also retain the design.
 Layer order is saved with the design and used by the projection renderer. Older

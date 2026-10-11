@@ -45,6 +45,6 @@ window frame using the documented DWM system-backdrop API. Content remains
 opaque. Earlier Windows versions and unsuccessful backdrop calls retain solid
 window rendering. The operating system controls material fallbacks.
 
-The Live status badge reports OpenLP's output state: Ready, Live, Blank,
-Theme, Logo or Desktop. Live requires a loaded item, an OpenLP display window
+The Live status badge reports Opal's output state: Ready, Live, Blank,
+Theme, Logo or Desktop. Live requires a loaded item, an Opal display window
 and no active hide mode. It does not confirm physical projector connectivity.
