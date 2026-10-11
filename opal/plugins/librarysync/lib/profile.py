@@ -16,7 +16,7 @@ def validate_local_profile(value):
     """Local profiles carry a folder location, never credentials or arbitrary item paths."""
     name, path = value.get('name'), value.get('path')
     if not isinstance(name, str) or not name.strip() or len(name) > 200:
-        raise SyncError('Invalid connection name.')
+        raise SyncError('Invalid library name.')
     if not isinstance(path, str) or not path or len(path) > 4096 or '\x00' in path or not Path(path).is_absolute():
         raise SyncError('Choose an absolute path to a local storage folder.')
     return {'version': 1, 'provider': 'local-cloud', 'name': name.strip(), 'path': str(Path(path)),

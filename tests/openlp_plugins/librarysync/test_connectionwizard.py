@@ -45,6 +45,8 @@ def test_provider_and_unique_name_are_required_before_next(wizard, qtbot):
     assert wizard.currentId() == 0
     assert wizard.provider_combo.currentData() is None
     assert wizard.connection_name.isEnabled()
+    assert wizard.connection_name.accessibleName() == 'Library name'
+    assert wizard.buttonText(QtWidgets.QWizard.WizardButton.FinishButton) == 'Save library'
     assert not next_button.isEnabled()
     wizard.connection_name.setText('North Campus Library')
     assert not next_button.isEnabled()
@@ -54,12 +56,14 @@ def test_provider_and_unique_name_are_required_before_next(wizard, qtbot):
     assert next_button.isEnabled()
     wizard.connection_name.clear()
     assert not next_button.isEnabled()
+    assert wizard.name_error() == 'Enter a library name.'
     wizard.connection_name.setText('   ')
     assert not next_button.isEnabled()
     wizard.existing_names = {'north campus library'}
     wizard.connection_name.setText('  NORTH Campus Library  ')
     assert not next_button.isEnabled()
     assert not wizard.connection_error.isHidden()
+    assert wizard.name_error() == 'This library name is already in use.'
     assert not wizard.validateCurrentPage()
     wizard.connection_name.setText('South Campus Library')
     assert next_button.isEnabled()

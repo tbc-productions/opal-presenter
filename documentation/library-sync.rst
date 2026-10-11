@@ -21,10 +21,10 @@ No API credentials or cloud API setup are required.
    storage app. Make it available offline when needed without an internet connection.
 3. In Cloud Library, choose **Set up connection**, or
    **Connection → Set up connection**. Select **Local Cloud Storage** and enter
-   a unique connection name.
+   a unique library name.
 4. Choose **Next**, then **Browse…** and select the shared folder on this computer.
    Each computer selects its own synced copy; the folder paths can differ.
-5. Review the location and choose **Save connection**. Opal opens the folder
+5. Review the location and choose **Save library**. Opal opens the folder
    automatically and remembers it across restarts. Connect is disabled for local storage.
 
 An ordinary local folder or a folder synced by another desktop storage app also

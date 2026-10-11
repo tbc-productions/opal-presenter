@@ -60,9 +60,9 @@ def test_serialized_settings_use_the_same_portable_format(profile):
 
 
 @pytest.mark.parametrize('name', ['', '  ', None, 'x' * 201])
-def test_connection_name_must_be_a_short_nonempty_label(profile, name):
+def test_library_name_must_be_a_short_nonempty_label(profile, name):
     profile['name'] = name
-    with pytest.raises(SyncError, match='connection name'):
+    with pytest.raises(SyncError, match='library name'):
         validate_profile(profile)
 
 

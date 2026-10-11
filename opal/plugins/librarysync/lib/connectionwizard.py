@@ -118,11 +118,11 @@ class ConnectionWizard(QtWidgets.QWizard):
             self.button(button).hide()
         self.setButtonText(self.WizardButton.NextButton, tr('Next'))
         self.setButtonText(self.WizardButton.BackButton, tr('Back'))
-        self.setButtonText(self.WizardButton.FinishButton, tr('Save connection'))
+        self.setButtonText(self.WizardButton.FinishButton, tr('Save library'))
 
         connection = ConnectionPage(self)
         layout = self.add_page(connection, tr('Choose your cloud provider'), tr(
-            'Choose a provider and enter a unique connection name.'), 1)
+            'Choose a provider and name your library.'), 1)
         form = QtWidgets.QFormLayout()
         form.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         form.setHorizontalSpacing(16)
@@ -132,7 +132,7 @@ class ConnectionWizard(QtWidgets.QWizard):
         self.connection_name = QtWidgets.QLineEdit(connection)
         self.connection_name.setMaxLength(200)
         add_field(form, tr('Cloud provider'), self.provider_combo)
-        add_field(form, tr('Connection name'), self.connection_name)
+        add_field(form, tr('Library name'), self.connection_name)
         layout.addLayout(form)
         self.connection_error = self.add_error(connection, layout)
         layout.addStretch()
@@ -194,9 +194,9 @@ class ConnectionWizard(QtWidgets.QWizard):
     def name_error(self):
         name = self.connection_name.text().strip()
         if not name:
-            return tr('Enter a connection name.')
+            return tr('Enter a library name.')
         if name.casefold() in self.existing_names:
-            return tr('This connection name is already in use. Choose a different name.')
+            return tr('This library name is already in use.')
         return ''
 
     def connection_changed(self):
