@@ -302,9 +302,10 @@ class CloudLibrary(QtWidgets.QWidget):
         self.install_drop_targets()
 
     def set_profile(self, profile, save=True):
+        profile = validate_profile(profile) if profile is not None else None
         self.auto_refresh_timer.stop()
         self.pending_view = None
-        self.profile = validate_profile(profile)
+        self.profile = profile
         self.connected = False
         self.out_of_date = False
         self.cache_checked = True
@@ -313,14 +314,20 @@ class CloudLibrary(QtWidgets.QWidget):
         self.generation += 1
         self.cache.clear()
         self.folder, self.history, self.page_token = None, [], ''
+        for window in list(self.preview_windows):
+            window.reject()
         for tree in self.trees.values():
             tree.clear()
+        self.search.clear()
+        self.more_button.hide()
+        self.footer.set_count(0)
         with QtCore.QSignalBlocker(self.roots):
             self.roots.clear()
-            for folder in self.profile['folders']:
+            for folder in self.profile['folders'] if self.profile else []:
                 self.roots.addItem(folder['name'], folder)
         if save:
-            self.plugin.settings.setValue('librarysync/profile', serialize_profile(self.profile))
+            self.plugin.settings.setValue('librarysync/profile',
+                                          serialize_profile(self.profile) if self.profile else '')
             self.plugin.settings.sync()
         self.update_breadcrumbs()
         self.update_actions()
@@ -337,6 +344,10 @@ class CloudLibrary(QtWidgets.QWidget):
         export.setEnabled(bool(self.profile) and self.connected and self.profile['provider'] != 'local-cloud')
         menu.addSeparator()
         menu.addAction(UiIcons().plus, tr('Set up connection…'), self.setup_connection)
+        edit = menu.addAction(UiIcons().edit, tr('Edit library…'), self.edit_library)
+        edit.setEnabled(bool(self.profile) and self.profile['provider'] == 'local-cloud')
+        remove = menu.addAction(UiIcons().delete, tr('Remove library…'), self.remove_library)
+        remove.setEnabled(bool(self.profile))
         disconnect = menu.addAction(UiIcons().plug_disconnected, tr('Disconnect…'), self.disconnect)
         disconnect.setEnabled(bool(self.profile) and self.connected and self.profile['provider'] != 'local-cloud')
         menu.exec(QtGui.QCursor.pos())
@@ -362,12 +373,44 @@ class CloudLibrary(QtWidgets.QWidget):
             except (OSError, SyncError) as error:
                 self.set_status(str(error), error=True)
 
-    def setup_connection(self):
-        wizard = ConnectionWizard(self, existing_names=[self.profile['name']] if self.profile else [])
+    def setup_connection(self, checked=False, *, edit=False):
+        if self.jobs or edit and (not self.profile or self.profile['provider'] != 'local-cloud'):
+            return
+        wizard = ConnectionWizard(self, existing_names=[self.profile['name']] if self.profile and not edit else [])
+        if edit:
+            wizard.setWindowTitle(tr('Edit library'))
+            wizard.provider_combo.setCurrentIndex(wizard.provider_combo.findData(self.profile['provider']))
+            wizard.connection_name.setText(self.profile['name'])
+            wizard.provider_pages['local-cloud'].folder_path.setText(self.profile['path'])
         if wizard.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.set_profile(wizard.profile)
-            self.set_status(tr('Connection saved'))
+            self.set_status(tr('Library saved'))
             self.browse()
+
+    def edit_library(self):
+        self.setup_connection(edit=True)
+
+    def remove_library(self):
+        if not self.profile or self.jobs:
+            return
+        dialog = QtWidgets.ContentDialog(self.window())
+        dialog.setTitle(tr('Remove library?'))
+        message = QtWidgets.QLabel(tr('Remove “{name}” from Opal? Files will be kept.').format(
+            name=self.profile['name']))
+        message.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+        message.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
+        message.setWordWrap(True)
+        dialog.setContent(message)
+        dialog.setPrimaryButtonText(tr('Remove'))
+        dialog.setCloseButtonText(tr('Cancel'))
+        dialog.setDefaultButton(QtWidgets.fluentqt.ContentDialogButton.Close)
+        try:
+            if dialog.exec() != dialog.ResultPrimary:
+                return
+        finally:
+            dialog.deleteLater()
+        self.set_profile(None)
+        self.set_status(tr('Library removed'))
 
     def export_connection(self):
         if not self.profile or not self.connected or self.profile['provider'] == 'local-cloud':
@@ -740,7 +783,7 @@ class CloudLibrary(QtWidgets.QWidget):
         self.connect_action.setToolTip(self.connect_action.text())
         self.settings_action.setEnabled(not self.jobs)
         self.roots.setEnabled(bool(self.roots.count()) and not busy and not browsing)
-        self.sections.setEnabled(not busy and not browsing)
+        self.sections.setEnabled(bool(self.profile) and not busy and not browsing)
         for tree in self.trees.values():
             tree.setEnabled(self.connected)
         self.search.setEnabled(self.connected)

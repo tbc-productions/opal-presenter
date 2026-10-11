@@ -191,6 +191,7 @@ def test_no_connections_shows_setup_infobar_and_disables_connect(panel, qtbot, m
     assert not empty.import_info.isHidden()
     assert not empty.connect_action.isEnabled()
     assert not empty.roots.isEnabled()
+    assert not empty.sections.isEnabled()
     assert all(not tree.isEnabled() for tree in empty.trees.values())
     assert not empty.search.isEnabled()
     assert empty.navigation.isHidden()
@@ -892,12 +893,13 @@ def test_connection_menu_order_icons_and_separator(panel, monkeypatch):
         actions = menu.actions()
         assert [action.text() for action in actions] == [
             'Open storage', '', 'Import connection…', 'Export connection…', '',
-            'Set up connection…', 'Disconnect…']
+            'Set up connection…', 'Edit library…', 'Remove library…', 'Disconnect…']
         assert actions[1].isSeparator() and actions[4].isSeparator()
         assert [action.icon().name() for action in actions if not action.isSeparator()] == [
             'ic_fluent_folder_open_24_regular', 'ic_fluent_arrow_import_24_regular',
             'ic_fluent_arrow_export_24_regular',
-            'ic_fluent_add_24_regular', 'ic_fluent_plug_disconnected_24_regular']
+            'ic_fluent_add_24_regular', 'ic_fluent_document_edit_24_regular', 'ic_fluent_delete_24_regular',
+            'ic_fluent_plug_disconnected_24_regular']
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.configure()
 
@@ -1412,6 +1414,141 @@ def test_setup_connection_checks_existing_name_before_saving(panel, monkeypatch)
     assert panel.profile['name'] == 'Church Library'
 
 
+@pytest.mark.parametrize('change', ['name', 'folder', 'cancel'])
+def test_edit_library_prefills_validates_and_saves_local_details(panel, tmp_path, qtbot, monkeypatch, change):
+    from opal.plugins.librarysync.lib.connectionwizard import ConnectionWizard
+    from opal.plugins.librarysync.lib.profile import deserialize_profile
+    original = dict(panel.profile)
+    original_file = tmp_path / 'keep.txt'
+    original_file.write_text('Keep this file')
+    (tmp_path / 'Songs').mkdir()
+    (tmp_path / 'Songs' / 'Existing.xml').write_text('<song/>')
+    replacement = tmp_path / 'Another folder'
+    (replacement / 'Songs').mkdir(parents=True)
+    (replacement / 'Songs' / 'Welcome.xml').write_text('<song/>')
+
+    def edit(wizard):
+        assert wizard.existing_names == set()
+        assert wizard.connection_name.text() == original['name']
+        assert wizard.provider_combo.currentData() == 'local-cloud'
+        page = wizard.provider_pages['local-cloud']
+        assert page.folder_path.text() == original['path']
+        wizard.resize(460, 380)
+        wizard.show()
+        if change == 'name':
+            wizard.connection_name.setText('  Renamed Library  ')
+        next_button = wizard.button(QtWidgets.QWizard.WizardButton.NextButton)
+        next_button.setFocus()
+        qtbot.keyClick(next_button, QtCore.Qt.Key.Key_Return)
+        assert wizard.currentPage() is page
+        if change == 'folder':
+            page.folder_path.setText(str(tmp_path / 'missing'))
+            qtbot.mouseClick(next_button, QtCore.Qt.MouseButton.LeftButton)
+            assert wizard.currentPage() is page and not page.error.isHidden()
+        if change != 'name':
+            page.folder_path.setText(str(replacement))
+        if change == 'cancel':
+            qtbot.keyClick(wizard, QtCore.Qt.Key.Key_Escape)
+            return wizard.result()
+        qtbot.mouseClick(next_button, QtCore.Qt.MouseButton.LeftButton)
+        assert wizard.currentPage() is wizard.share_page
+        qtbot.mouseClick(wizard.button(QtWidgets.QWizard.WizardButton.FinishButton),
+                         QtCore.Qt.MouseButton.LeftButton)
+        return wizard.result()
+
+    monkeypatch.setattr(ConnectionWizard, 'exec', edit)
+    panel.edit_library()
+    qtbot.waitUntil(lambda: not panel.jobs, timeout=5000)
+    saved = deserialize_profile(panel.plugin.settings.value('librarysync/profile'))
+    if change == 'cancel':
+        assert panel.profile == original == saved
+    else:
+        assert panel.profile == saved
+        assert panel.profile['name'] == ('Renamed Library' if change == 'name' else original['name'])
+        assert panel.profile['path'] == (original['path'] if change == 'name' else str(replacement))
+        assert panel.roots.currentText() == panel.profile['name']
+        assert panel.connected and panel.sections.isEnabled()
+        assert panel.tree.topLevelItem(0).text(0) == ('Existing' if change == 'name' else 'Welcome')
+    assert original_file.read_text() == 'Keep this file'
+
+
+@pytest.mark.parametrize('response', ['remove', 'cancel', 'enter', 'escape'])
+def test_remove_library_confirms_and_keeps_files(panel, tmp_path, qtbot, monkeypatch, response):
+    original = dict(panel.profile)
+    saved = panel.plugin.settings.value('librarysync/profile')
+    source = tmp_path / 'keep.txt'
+    source.write_text('Keep this file')
+    panel.connected = True
+    panel.search.setText('old filter')
+    panel.more_button.show()
+    panel.footer.set_count(4)
+    panel.cache['old listing'] = object()
+    panel.auto_refresh_timer.start(10000)
+    window = MagicMock()
+    window.reject.side_effect = lambda: panel.preview_windows.discard(window)
+    panel.preview_windows.add(window)
+    panel.resize(460, 380)
+    panel.show()
+
+    def respond(dialog):
+        assert dialog.title() == 'Remove library?'
+        assert dialog.primaryButtonText() == 'Remove' and dialog.closeButtonText() == 'Cancel'
+        assert dialog.defaultButton() == QtWidgets.fluentqt.ContentDialogButton.Close
+        assert 'Church Library' in dialog.content().text() and 'Files will be kept' in dialog.content().text()
+        assert panel.profile == original
+        dialog.setAnimationEnabled(False)
+        dialog.open()
+        QtWidgets.QApplication.processEvents()
+        if response in ('remove', 'cancel'):
+            qtbot.mouseClick(dialog._native_commands['primary' if response == 'remove' else 'close'],
+                             QtCore.Qt.MouseButton.LeftButton)
+        else:
+            qtbot.keyClick(dialog, QtCore.Qt.Key.Key_Return if response == 'enter' else QtCore.Qt.Key.Key_Escape)
+        QtWidgets.QApplication.processEvents()
+        assert not dialog.isOpen()
+        return dialog.result()
+
+    monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', respond)
+    panel.remove_library()
+    assert source.read_text() == 'Keep this file'
+    if response == 'remove':
+        assert panel.profile is None and not panel.connected
+        assert panel.plugin.settings.value('librarysync/profile') == ''
+        assert not panel.auto_refresh_timer.isActive()
+        assert panel.roots.count() == 0 and not panel.cache
+        assert not panel.sections.isEnabled() and not panel.import_info.isHidden()
+        assert panel.folder is None and not panel.history and not panel.page_token
+        assert panel.search.text() == '' and panel.more_button.isHidden()
+        assert panel.footer.count_label.text() == '0 items'
+        window.reject.assert_called_once()
+        panel.browse = MagicMock()
+        panel.install_drop_targets = MagicMock()
+        panel.startup()
+        panel.browse.assert_not_called()
+    else:
+        assert panel.profile == original and panel.connected
+        assert panel.plugin.settings.value('librarysync/profile') == saved
+        window.reject.assert_not_called()
+        panel.preview_windows.clear()
+
+
+@pytest.mark.parametrize('configured,busy', [(False, False), (True, True)])
+def test_library_edit_and_remove_ignore_missing_profile_or_active_work(panel, monkeypatch, configured, busy):
+    if not configured:
+        panel.set_profile(None)
+    if busy:
+        panel.jobs['upload'] = {'kind': 'upload', 'generation': panel.generation}
+    wizard = MagicMock()
+    dialog = MagicMock()
+    monkeypatch.setattr('opal.plugins.librarysync.lib.panel.ConnectionWizard', wizard)
+    monkeypatch.setattr(QtWidgets.ContentDialog, 'exec', dialog)
+    panel.edit_library()
+    panel.remove_library()
+    wizard.assert_not_called()
+    dialog.assert_not_called()
+    panel.jobs.clear()
+
+
 @pytest.mark.parametrize('source', ['setup', 'import'])
 def test_local_folder_opens_automatically_after_configuration(panel, tmp_path, qtbot, monkeypatch, source):
     from opal.plugins.librarysync.lib.profile import write_profile
@@ -1480,7 +1617,9 @@ def test_local_connection_menu_keeps_session_and_export_actions_disabled(panel, 
         actions = menu.actions()
         assert actions[0].isEnabled()
         assert not actions[3].isEnabled()
-        assert not actions[6].isEnabled()
+        assert actions[6].isEnabled()
+        assert actions[7].isEnabled()
+        assert not actions[8].isEnabled()
 
     monkeypatch.setattr(QtWidgets.QMenu, 'exec', inspect)
     panel.connected = True

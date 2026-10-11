@@ -27,6 +27,11 @@ No API credentials or cloud API setup are required.
 5. Review the location and choose **Save library**. Opal opens the folder
    automatically and remembers it across restarts. Connect is disabled for local storage.
 
+Choose **Connection → Edit library…** to rename the library or select another
+folder. Choose **Connection → Remove library…** to clear its setup from Opal.
+Removing a library keeps its files.
+Category navigation is disabled until a library is set up.
+
 An ordinary local folder or a folder synced by another desktop storage app also
 works. Use the actual storage folder rather than a filesystem symbolic link.
 Opal excludes hidden files and symbolic links within the selected folder.
