@@ -73,7 +73,8 @@ else:
                 payload = json.loads(request[request.index('-d') + 1])
                 self.assertEqual(payload['inputs']['opal_tag'], 'v4.0.3')
                 self.assertEqual(payload['inputs']['build_flatpak'], flatpak)
-                self.assertTrue(request[-1].endswith('/opal-presenter-packaging/actions/workflows/build.yml/dispatches'))
+                self.assertTrue(request[-1].endswith(
+                    '/opal-presenter-packaging/actions/workflows/build.yml/dispatches'))
                 self.assertIn('--fail-with-body', request)
 
     def test_dispatch_failure_stops_workflow(self):
