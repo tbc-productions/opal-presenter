@@ -122,7 +122,9 @@ class AboutForm(QtWidgets.QDialog):
             translate('OpenLP.AboutForm',
                       '<p>Opal Presenter {{version}}{{revision}} - Open Source Lyrics Projection</p>'
                       '<p>Opal Presenter is a fork of OpenLP.</p>'
-                      '<p>Opal Presenter project: <a href="https://git.tbcproductions.net/tbcproductions/opal-presenter">https://git.tbcproductions.net/tbcproductions/opal-presenter</a></p>'
+                      '<p>Opal Presenter project: '
+                      '<a href="https://git.tbcproductions.net/tbcproductions/opal-presenter">'
+                      'https://git.tbcproductions.net/tbcproductions/opal-presenter</a></p>'
                       '<hr>'
                       '<p>Copyright {crs} 2004-{yr} OpenLP Developers and OpenLP contributors</p>'
                       '<p>OpenLP project: '
@@ -139,9 +141,10 @@ class AboutForm(QtWidgets.QDialog):
         self.about_notebook.setTabText(self.about_notebook.indexOf(self.about_tab), UiStrings().About)
         developers = translate('OpenLP.AboutForm',
                                'Opal Presenter is based on <a href="https://openlp.org/">OpenLP</a>. '
+                               'We thank the OpenLP developers and contributors for their work. '
                                'The buttons below let you donate or contribute to OpenLP.')
         built_with = translate('OpenLP.AboutForm', 'Opal Presenter would not be possible without '
-                       'the following software '
+                               'the following software '
                                'libraries:')
         build_tech = ('<ul>'
                       '<li><a href="https://www.python.org/">Python</a> (PSFL)</li>'

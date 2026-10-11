@@ -43,6 +43,8 @@ class FluentLibrarySelectorBar(QtWidgets.fluentqt.SelectorBar):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._icons = []
+        # Release Python icon engines before cyclic GC clears their wrappers.
+        self.destroyed.connect(lambda: self._icons.clear())
         self.setOverflowBehavior(self.OverflowBehavior.MoreButton)
         self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
         self.setMinimumWidth(0)
@@ -103,6 +105,7 @@ class MediaToolBox(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._items = []
+        self.destroyed.connect(self._items.clear)
         self._current_index = -1
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

@@ -206,7 +206,8 @@ def test_validate_song_one_audio(mocked_error_message, edit_song_form_with_ui: E
     assert song_valid is True
 
 
-def test_edit_all_parses_pasted_section_headings(edit_song_form_with_ui: EditSongForm, settings: Settings):
+@pytest.mark.parametrize('line_ending', ['\n', '\r\n', '\r'])
+def test_edit_all_parses_pasted_section_headings(edit_song_form_with_ui: EditSongForm, settings: Settings, line_ending):
     """Plain headings in a pasted song become separate, correctly tagged slides."""
     settings.extend_default_settings({'songs/section color {key}'.format(key=key): color
                                       for key, color in DEFAULT_SECTION_COLORS.items()})
@@ -216,11 +217,12 @@ def test_edit_all_parses_pasted_section_headings(edit_song_form_with_ui: EditSon
     lyrics = ('Verse 1\nFirst verse\n\nChorus 1\nFirst chorus\n\n'
               'Ending\nFinal line\n\nChorus 2\nSecond chorus\n\n'
               'Bridge\nBridge line\n\nVerse 4\nFourth verse')
+    lyrics = lyrics.replace('\n', line_ending)
 
     def paste_lyrics():
         clipboard = QtCore.QMimeData()
         clipboard.setText(lyrics)
-        form.verse_form.verse_text_edit.insertFromMimeData(clipboard)
+        form.verse_form.slide_grid.active_text_editor().insertFromMimeData(clipboard)
         assert form.verse_form.verse_text_edit.toPlainText().startswith('---[Verse:1]---\nFirst verse')
         assert '---[Chorus:2]---\nSecond chorus' in form.verse_form.verse_text_edit.toPlainText()
         return 1

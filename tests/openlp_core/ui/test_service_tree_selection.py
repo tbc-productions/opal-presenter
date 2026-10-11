@@ -259,4 +259,5 @@ def test_service_mouse_and_keyboard_extended_selection(qapp, qtbot):
                        pos=view.visualItemRect(rows[0]).center())
     view.setCurrentItem(rows[0])
     qtbot.keyClick(view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ShiftModifier)
+    qtbot.keyRelease(view, QtCore.Qt.Key.Key_Shift)
     assert view.selectedItems() == rows[:2]

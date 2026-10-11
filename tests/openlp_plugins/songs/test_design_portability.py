@@ -1,4 +1,5 @@
 """Round-trip designs through song XML and custom-slide XML, without source images."""
+import base64
 import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -21,6 +22,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     image.fill(QtGui.QColor('#123456'))
     assert image.save(str(path))
     uri, _ = image_to_png_uri(path)
+    theme_uri = 'data:image/png;base64,' + base64.b64encode(path.read_bytes()).decode('ascii')
     theme = Theme()
     theme.background_type = 'image'
     theme.background_filename = path
@@ -45,7 +47,7 @@ def test_song_xml_embeds_images_and_base_theme(settings, registry, monkeypatch, 
     exported = handler.song_to_xml(song)
     root = etree.fromstring(exported.encode() if isinstance(exported, str) else exported)
     stored = json.loads(root.find('{' + DESIGN_NAMESPACE + '}design').text)
-    assert stored['theme']['background_filename'] == uri
+    assert stored['theme']['background_filename'] == theme_uri
     assert str(path) not in (exported if isinstance(exported, str) else exported.decode())
     assert 'theme' not in json.loads(song.slide_design), 'Export must not freeze the library theme'
     path.unlink()

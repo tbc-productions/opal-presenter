@@ -34,15 +34,22 @@ from pytestqt.qt_compat import qt_api
 from PySide6 import QtCore, QtWidgets  # noqa
 
 from opal.core.app import OpenLP
+from opal.core.resources import qInitResources
 from opal.core.state import State
+from opal.core.common.actions import ActionList
 from opal.core.common.registry import Registry
 from opal.core.common.settings import Settings
+
+
+qInitResources()
 
 
 @pytest.fixture(autouse=True)
 def _qt_deferred_delete_and_gc():
     """Drain Qt DeferredDelete events and collect cycles between tests."""
     yield
+    ActionList.instance = None
+    ActionList.shortcut_map.clear()
     app = QtWidgets.QApplication.instance()
     if app is not None:
         # Release Python-owned MIME data before Qt's clipboard outlives the interpreter.

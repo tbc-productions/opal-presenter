@@ -23,16 +23,32 @@ Tests for Library dock tab behavior.
 """
 
 from unittest.mock import patch
+import weakref
 
-from PySide6 import QtGui
+from PySide6 import QtCore, QtGui
 from opal.core.widgets import fluent as QtWidgets
 
 from opal.core.widgets.docks import MediaToolBox
+from opal.core.ui.fluenticons import fluent_icon
 
 
 def _add_item(media_tool_box, label):
     widget = QtWidgets.QWidget()
     media_tool_box.addItem(widget, QtGui.QIcon(), label)
+
+
+def test_library_destruction_releases_rebuilt_selector_icons(qapp):
+    """Destroying Qt hosts releases both Python references to the latest icons."""
+    box = MediaToolBox()
+    box.addItem(QtWidgets.QWidget(), fluent_icon('ic_fluent_add_24_regular'), 'Songs')
+    box.setItemIcon(0, fluent_icon('ic_fluent_music_note_2_24_regular'))
+    selector = box._selector
+    reference = weakref.ref(selector._icons[0])
+    box.deleteLater()
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    assert box._items == []
+    assert selector._icons == []
+    assert reference() is None
 
 
 def test_library_drag_filter_is_not_installed_on_application(qapp, qtbot):

@@ -713,7 +713,7 @@ def test_export_menu_has_separate_presentation_formats(request, monkeypatch):
     assert [call.args[0] for call in calls] == ['.pptx', '.odp']
 
 
-def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(tmp_path):
+def test_pptx_keeps_editable_design_layers_effects_and_embedded_images(settings, tmp_path):
     import base64
     from pptx import Presentation
     from PySide6.QtCore import QSize

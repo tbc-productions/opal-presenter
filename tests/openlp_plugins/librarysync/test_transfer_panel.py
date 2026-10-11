@@ -1,4 +1,6 @@
 """Cloud transfers validate inputs and keep UI updates on the main thread."""
+import gc
+import weakref
 import zipfile
 import time
 from pathlib import Path
@@ -53,6 +55,19 @@ def test_cloud_panel_has_simple_disconnected_state(panel):
     assert [panel.sections.itemText(index) for index in range(panel.sections.count())] == [
         'Songs', 'Presentations', 'Images', 'Media', 'Custom Slides', 'Themes']
     assert not hasattr(panel, 'preview_text') and not hasattr(panel, 'preview_image')
+
+
+def test_cloud_panel_icons_can_be_garbage_collected(settings):
+    """Collect selector icon cycles after Qt destroys their host without crashing."""
+    for _ in range(20):
+        widget = CloudLibrary(SimpleNamespace(settings=settings), None)
+        reference = weakref.ref(widget)
+        widget.shutdown()
+        widget.deleteLater()
+        QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        del widget
+        gc.collect()
+        assert reference() is None
 
 
 def test_transfer_progress_shares_footer_and_starts_indeterminate(panel, monkeypatch):

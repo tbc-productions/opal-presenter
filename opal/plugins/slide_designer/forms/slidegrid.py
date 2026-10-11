@@ -11,7 +11,7 @@ from opal.core.common.i18n import translate
 from opal.core.ui.fluenticons import fluent_icon
 from opal.core.widgets import fluent as QtWidgets
 from opal.core.widgets.edits import FormattingTagDelegate
-from opal.plugins.songs.forms.editversedialog import SongLyricsTextEdit
+from opal.plugins.songs.forms.editversedialog import PLAIN_VERSE_LINE_REGEX, SongLyricsTextEdit
 from opal.plugins.songs.lib import VerseType
 from opal.plugins.songs.lib.sectioncolors import (
     DEFAULT_SECTION_COLORS, color_from_settings, opacity_from_verse_number, section_key_from_verse_tag)
@@ -206,6 +206,14 @@ class SlideCellEditor(SongLyricsTextEdit):
     def insertFromMimeData(self, source):
         if hasattr(self, 'slide_grid') and self.slide_grid.paste_grid(source):
             return
+        if self.song_headings:
+            text = source.text().replace('\r\n', '\n').replace('\r', '\n')
+            converted_text = '\n'.join(PLAIN_VERSE_LINE_REGEX.sub(
+                lambda match: match.group(0) if match.group(2) else match.group(1) + ' 1', line)
+                for line in text.split('\n'))
+            if converted_text != text:
+                source = QtCore.QMimeData()
+                source.setText(converted_text)
         if self.song_headings and heading_identity(source.text().split('\n')[0]):
             existing = self.toPlainText().partition('\n')
             if heading_identity(existing[0]) and not existing[2].strip():
