@@ -3,11 +3,23 @@ name: Release
 on:
   push:
     tags: ['[0-9]*', 'v*']
+  workflow_dispatch:
+    inputs:
+      opal_tag:
+        description: 'Existing release tag to rebuild'
+        required: true
+      build_flatpak:
+        description: 'Build Flatpak (requires a runner labelled flatpak-builder)'
+        required: false
+        default: 'false'
 
 jobs:
   release:
     name: Create release and notify packaging
     runs-on: ubuntu-22.04
+    env:
+      OPAL_TAG: ${{ github.event.inputs.opal_tag || github.ref_name }}
+      OPAL_BUILD_FLATPAK: ${{ github.event.inputs.build_flatpak || 'false' }}
     steps:
       - name: Create Gitea release
         shell: bash
@@ -15,7 +27,7 @@ jobs:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${OPAL_TAG}"
           BODY=$(printf '{"tag_name":"%s","name":"Opal Presenter %s","body":"Opal Presenter %s introduces an independent application identity and native document formats. Legacy OpenLP files remain importable. Install alongside the previous app; profiles are independent. See documentation/opal-formats.rst for compatibility details.","draft":true,"prerelease":false}' "$TAG" "$TAG" "$TAG")
           HTTP_CODE=$(curl -sS -o /tmp/release_response.json -w '%{http_code}' -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
@@ -27,7 +39,9 @@ jobs:
           echo
           case "$HTTP_CODE" in
             2??)  echo "Release created for ${TAG}." ;;
-            409)  echo "Release for ${TAG} already exists; continuing." ;;
+            409)  curl -fsS -H "Authorization: token ${CI_TOKEN}" \
+                    "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" > /dev/null
+                  echo "Release for ${TAG} already exists; continuing." ;;
             *)    echo "Failed to create release (HTTP ${HTTP_CODE})." >&2; exit 1 ;;
           esac
 
@@ -37,9 +51,9 @@ jobs:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          PAYLOAD=$(printf '{"ref":"main","inputs":{"opal_tag":"%s","create_release":"true","build_macos":"true","build_windows":"true","build_flatpak":"true"}}' "$TAG")
-          curl -fsSL -X POST \
+          TAG="${OPAL_TAG}"
+          PAYLOAD=$(printf '{"ref":"main","inputs":{"opal_tag":"%s","create_release":"true","build_macos":"true","build_windows":"true","build_flatpak":"%s"}}' "$TAG" "$OPAL_BUILD_FLATPAK")
+          curl -sSL --fail-with-body -X POST \
             -H "Authorization: token ${CI_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD" \
