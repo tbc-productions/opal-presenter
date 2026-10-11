@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 
-@unittest.skipUnless(shutil.which('bash'), 'Release steps require Bash')
+@unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'Release steps run on Linux')
 class OpalReleaseWorkflowTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
