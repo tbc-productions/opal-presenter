@@ -59,6 +59,15 @@ else:
                 request = json.loads(self.calls.read_text().splitlines()[-1])
                 self.assertTrue(request[-1].endswith('/releases/tags/v4.0.3'))
 
+    def test_release_channel_matches_tag(self):
+        for tag, prerelease in [('4.0.4a2', True), ('4.0.4b1', True), ('4.0.4rc1', True), ('4.0.4', False)]:
+            with self.subTest(tag=tag):
+                self.environment['OPAL_TAG'] = tag
+                result = self.run_step('Create Gitea release')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                request = json.loads(self.calls.read_text().splitlines()[-1])
+                self.assertEqual(json.loads(request[request.index('-d') + 1])['prerelease'], prerelease)
+
     def test_release_error_stops_workflow(self):
         self.environment['OPAL_POST_STATUS'] = '403'
         self.assertNotEqual(self.run_step('Create Gitea release').returncode, 0)
