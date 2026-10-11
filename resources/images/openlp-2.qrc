@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icon">
+    <file>opal-presenter-icon.svg</file>
     <file>opal-presenter.png</file>
     <file>opal-presenter-logo-512x512.png</file>
   </qresource>

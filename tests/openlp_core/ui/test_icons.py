@@ -71,4 +71,4 @@ def test_uiicons_init(mocked_get_directory: MagicMock, mocked_load_icons: MagicM
     mocked_qta.load_font.assert_called_once_with('op', 'OpenLP.ttf', 'openlp-charmap.json', directory=expected_dir)
     mocked_qta.set_defaults.assert_called_once_with(**icons._default_icon_colors)
     mocked_load_icons.assert_called_once_with(icons._icon_list)
-    mocked_build_icon.assert_called_once_with(':/icon/opal-presenter.png')
+    mocked_build_icon.assert_called_once_with(':/icon/opal-presenter-icon.svg')

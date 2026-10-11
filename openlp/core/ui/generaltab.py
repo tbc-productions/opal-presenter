@@ -49,7 +49,7 @@ class GeneralTab(SettingsTab):
         Initialise the general settings tab
         """
         self.logo_background_color = '#ffffff'
-        self.icon_path = ':/icon/opal-presenter.png'
+        self.icon_path = ':/icon/opal-presenter-icon.svg'
         general_translated = translate('OpenLP.GeneralTab', 'General')
         super(GeneralTab, self).__init__(parent, 'Core', general_translated)
 

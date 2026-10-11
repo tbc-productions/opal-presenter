@@ -23,11 +23,12 @@ Package to test the openlp.core.ui.generaltab package.
 """
 import pytest
 
+from openlp.core.resources import qInitResources
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.settingsform import SettingsForm
 from openlp.core.ui.style import UiThemes
 
-from PySide6 import QtCore, QtTest
+from PySide6 import QtCore, QtGui, QtTest
 
 
 def test_creation(settings):
@@ -35,6 +36,7 @@ def test_creation(settings):
     Test that General Tab is created.
     """
     # GIVEN: A new General Tab
+    qInitResources()
     settings_form = SettingsForm(None)
 
     # WHEN: I create an general tab
@@ -42,6 +44,12 @@ def test_creation(settings):
 
     # THEN:
     assert "Core" == general_tab.tab_title, 'The tab title should be Core'
+    assert general_tab.icon_path == ':/icon/opal-presenter-icon.svg'
+    settings_form.insert_tab(general_tab)
+    for icon in (settings_form.windowIcon(), settings_form.setting_list_widget.item(0).icon()):
+        image = icon.pixmap(22, 22).toImage()
+        assert not image.isNull()
+        assert image.pixelColor(11, 11) == QtGui.QColor('#4D79B9')
 
 
 def test_change_search_as_type(settings):

@@ -235,7 +235,7 @@ class UiIcons(metaclass=Singleton):
             'volume_off': {'icon': 'ic_fluent_speaker_off_24_regular'}
         }
         self.load_icons(self._icon_list)
-        self.main_icon = build_icon(':/icon/opal-presenter.png')
+        self.main_icon = build_icon(':/icon/opal-presenter-icon.svg')
 
     @staticmethod
     def _build_icon(name, **colors):

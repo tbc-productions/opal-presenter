@@ -73,7 +73,7 @@ class SplashScreen(fluentqt.SplashScreen):
         painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
         painter.drawPixmap(self.rect(), self._artwork)
         painter.scale(self.width() / 793, self.height() / 496)
-        painter.drawPixmap(QtCore.QRect(115, 102, 226, 226), self._logo)
+        painter.drawPixmap(QtCore.QRect(85, 116, 226, 226), self._logo)
         painter.setFont(self._title_font)
         painter.setPen(QtCore.Qt.GlobalColor.white)
         title = self.windowTitle()
