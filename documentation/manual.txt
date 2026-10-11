@@ -4,4 +4,4 @@ Opal Presenter Manual
 If you're reading this file, you're probably looking for the Opal Presenter manual. Opal Presenter is based on
 OpenLP, whose upstream manual is hosted at https://manual.openlp.org/. For
 Opal Presenter source, releases, and issues, see
-https://git.tbcproductions.net/tbcproductions/opal-presenter.
+https://github.com/tchris3/opal-presenter.

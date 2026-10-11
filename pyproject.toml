@@ -132,9 +132,9 @@ opal-presenter = "opal.__main__:start"
 hook-dirs = "opal.__pyinstaller:get_hook_dirs"
 
 [project.urls]
-Homepage = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
-Source = "https://git.tbcproductions.net/tbcproductions/opal-presenter"
-Issues = "https://git.tbcproductions.net/tbcproductions/opal-presenter/issues"
+Homepage = "https://github.com/tchris3/opal-presenter"
+Source = "https://github.com/tchris3/opal-presenter"
+Issues = "https://github.com/tchris3/opal-presenter/issues"
 
 [tool.hatch.version]
 source = "vcs"
