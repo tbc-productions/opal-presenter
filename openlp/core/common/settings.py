@@ -1177,7 +1177,7 @@ class Settings(QtCore.QSettings):
             log.exception('Could not export settings')
             return False
 
-    def import_settings(self, import_file_path):
+    def import_settings(self, import_file_path, opal_copy_library_files=None):
         """Import native settings or legacy INI/ZIP backups without modifying the source."""
         import hashlib
         import shutil
@@ -1244,6 +1244,8 @@ class Settings(QtCore.QSettings):
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(logo, destination)
                     values['core/logo file'] = destination
+                if opal_copy_library_files:
+                    opal_copy_library_files(values)
                 for key, value in values.items():
                     self.setValue(key, value)
                 self.setValue('SettingsImport/type', 'OpalPresenter_settings_export')

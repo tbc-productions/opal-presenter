@@ -86,6 +86,7 @@ def upgrade_3(session: Session, metadata: MetaData):
     Version 3 upgrade - add sha256 hash
     """
     log.debug('Starting upgrade_3 for adding sha256 hashes')
+    metadata.clear()
     op = get_upgrade_op(session)
     conn = op.get_bind()
     # Check if the table exists
@@ -98,11 +99,12 @@ def upgrade_3(session: Session, metadata: MetaData):
         op = get_upgrade_op(session)
         with op.batch_alter_table('image_filenames') as batch_op:
             batch_op.add_column(Column('file_hash', Unicode(128)))
+        images_table.append_column(Column('file_hash', Unicode(128)))
         conn = op.get_bind()
         results = conn.execute(select(images_table))
         thumb_path = AppLocation.get_data_path() / 'images' / 'thumbnails'
         for row in results.fetchall():
-            file_path = json.loads(row.file_path, cls=OpenLPJSONDecoder)
+            file_path = json.loads(row.file_path, cls=OpenLPJSONDecoder, base_path=AppLocation.get_data_path())
             if file_path.exists():
                 hash_ = sha256_file_hash(file_path)
             else:
@@ -110,6 +112,8 @@ def upgrade_3(session: Session, metadata: MetaData):
                 # set a fake "hash" to allow for the upgrade to go through. The image will be marked as invalid
                 hash_ = None
             conn.execute(images_table.update().where(images_table.c.id == row.id).values(file_hash=hash_))
+            if hash_ is None:
+                continue
             # rename thumbnail to use file hash
             ext = file_path.suffix.lower()
             old_thumb = thumb_path / '{name:d}{ext}'.format(name=row.id, ext=ext)
@@ -127,6 +131,7 @@ def upgrade_4(session: Session, metadata: MetaData):
     Version 4 upgrade - convert to the common folders/items model
     """
     log.debug('Starting upgrade_4 for converting to common folders/items model')
+    metadata.clear()
     op = get_upgrade_op(session)
     conn = op.get_bind()
     # Check if the folder table exists
@@ -166,7 +171,7 @@ def upgrade_4(session: Session, metadata: MetaData):
     op.bulk_insert(new_folder_table, folders)
     items = []
     for old_item in conn.execute(old_item_table.select()).fetchall():
-        file_path = json.loads(old_item.file_path, cls=OpenLPJSONDecoder)
+        file_path = json.loads(old_item.file_path, cls=OpenLPJSONDecoder, base_path=AppLocation.get_data_path())
         items.append({'id': old_item.id, 'name': file_path.name, 'file_path': str(file_path),
                       'file_hash': old_item.file_hash, 'folder_id': old_item.group_id})
     op.bulk_insert(new_item_table, items)

@@ -880,6 +880,7 @@ def test_on_first_time_wizard_clicked_show_projectors_after(mocked_warning, Mock
     # GIVEN: Main_window, patched things, patched "Yes" as confirmation to re-run wizard, settings to True.
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
+    MockWizard.return_value.opal_imported_library = None
     main_window.settings.setValue('projector/show after wizard', True)
     Registry().set_flag('projector_disabled', False)
 
@@ -901,6 +902,7 @@ def test_on_first_time_wizard_clicked_hide_projectors_after(mocked_warning, Mock
     # GIVEN: Main_window, patched things, patched "Yes" as confirmation to re-run wizard, settings to False.
     mocked_warning.return_value = QtWidgets.QMessageBox.StandardButton.Yes
     MockWizard.return_value.was_cancelled = False
+    MockWizard.return_value.opal_imported_library = None
     main_window.settings.setValue('projector/show after wizard', False)
 
     # WHEN: on_first_time_wizard_clicked is called
@@ -910,6 +912,30 @@ def test_on_first_time_wizard_clicked_hide_projectors_after(mocked_warning, Mock
 
     # THEN: projector_manager_dock.setVisible should had been called once
     mocked_dock.setVisible.assert_called_once_with(False)
+
+
+def test_opal_wizard_library_switch_waits_for_shutdown(main_window, tmp_path):
+    opal_current_path = tmp_path / 'current'
+    opal_imported_path = tmp_path / 'imported'
+    main_window.settings.setValue('advanced/data path', opal_current_path)
+    with patch('openlp.core.ui.mainwindow.FirstTimeForm') as opal_wizard, \
+            patch.object(QtWidgets.QMessageBox, 'warning', return_value=QtWidgets.QMessageBox.StandardButton.Yes), \
+            patch.object(QtWidgets.QMessageBox, 'information'), \
+            patch.object(main_window.application, 'request_restart') as opal_restart, \
+            patch.object(main_window, 'theme_manager_contents') as opal_themes:
+        opal_wizard.return_value.exec.return_value = QtWidgets.QDialog.DialogCode.Accepted
+        opal_wizard.return_value.opal_imported_library = opal_imported_path
+        main_window.on_first_time_wizard_clicked()
+    assert main_window.new_data_path == opal_imported_path
+    assert not main_window.copy_data
+    assert not main_window.settings_replaced
+    assert main_window.settings.value('advanced/data path') == opal_current_path
+    opal_restart.assert_called_once()
+    opal_themes.load_themes.assert_not_called()
+    with patch('openlp.core.ui.mainwindow.shutil.copytree') as opal_copy:
+        main_window.change_data_directory()
+    opal_copy.assert_not_called()
+    assert main_window.settings.value('advanced/data path') == opal_imported_path
 
 
 def test_increment_progress_bar_default_increment(main_window):

@@ -21,6 +21,8 @@
 """
 The UI widgets for the first time wizard.
 """
+from pathlib import Path
+
 from openlp.core.widgets import fluent as QtWidgets
 from openlp.core.common.i18n import translate
 from openlp.core.display.screens import ScreenList
@@ -37,7 +39,7 @@ class FirstTimePage:
 
 class ImportSettingsPage(QtWidgets.QWizardPage):
     """
-    A page for importing settings from a backup file (.opal-settings, .conf or .zip)
+    Optional library and settings imports from an existing installation.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -48,14 +50,37 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(15)
 
-        self.info_label = QtWidgets.QLabel(self)
-        self.info_label.setWordWrap(True)
-        self.info_label.setFluentTypography(QtWidgets.fluentqt.FontRole.Body)
-        self.info_label.setObjectName('info_label')
-        self.layout.addWidget(self.info_label)
+        self.opal_source_layout = QtWidgets.QHBoxLayout()
+        self.opal_source_combo = QtWidgets.QComboBox(self)
+        self.opal_source_label = QtWidgets.QLabel(self)
+        self.opal_source_label.setBuddy(self.opal_source_combo)
+        self.opal_source_layout.addWidget(self.opal_source_label)
+        self.opal_source_layout.addWidget(self.opal_source_combo, 1)
+        self.layout.addLayout(self.opal_source_layout)
 
-        self.group_layout = QtWidgets.QFormLayout()
+        self.opal_library_card = QtWidgets.Card(self)
+        self.opal_library_card_layout = QtWidgets.QVBoxLayout(self.opal_library_card)
+        self.opal_library_card_layout.setContentsMargins(16, 16, 16, 16)
+        self.opal_library_card_layout.setSpacing(12)
+        self.opal_library_radio = QtWidgets.QRadioButton(self.opal_library_card)
+        self.opal_library_card_layout.addWidget(self.opal_library_radio)
+        self.opal_library_layout = QtWidgets.QHBoxLayout()
+        self.opal_library_edit = QtWidgets.QLineEdit(self)
+        self.opal_library_edit.setClearButtonEnabled(True)
+        self.opal_library_layout.addWidget(self.opal_library_edit, 1)
+        self.opal_library_button = QtWidgets.QPushButton(self)
+        self.opal_library_button.setIcon(UiIcons().open)
+        self.opal_library_edit.setMinimumHeight(self.opal_library_button.sizeHint().height())
+        self.opal_library_layout.addWidget(self.opal_library_button)
+        self.opal_library_card_layout.addLayout(self.opal_library_layout)
+        self.layout.addWidget(self.opal_library_card)
 
+        self.opal_settings_card = QtWidgets.Card(self)
+        self.opal_settings_card_layout = QtWidgets.QVBoxLayout(self.opal_settings_card)
+        self.opal_settings_card_layout.setContentsMargins(16, 16, 16, 16)
+        self.opal_settings_card_layout.setSpacing(12)
+        self.opal_settings_radio = QtWidgets.QRadioButton(self.opal_settings_card)
+        self.opal_settings_card_layout.addWidget(self.opal_settings_radio)
         self.file_layout = QtWidgets.QHBoxLayout()
         self.file_edit = QtWidgets.QLineEdit(self)
         self.file_edit.setClearButtonEnabled(True)
@@ -68,34 +93,49 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
         self.file_edit.setMinimumHeight(self.browse_button.sizeHint().height())
         self.file_layout.addWidget(self.browse_button)
 
-        self.file_label = QtWidgets.QLabel(self)
-        self.file_label.setObjectName('file_label')
-        self.file_label.setBuddy(self.file_edit)
-        self.group_layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.group_layout.addRow(self.file_label, self.file_layout)
-        self.layout.addLayout(self.group_layout)
+        self.opal_settings_card_layout.addLayout(self.file_layout)
+        self.layout.addWidget(self.opal_settings_card)
         self.layout.addStretch()
+        self.opal_import_group = QtWidgets.QButtonGroup(self)
+        self.opal_import_group.addButton(self.opal_library_radio)
+        self.opal_import_group.addButton(self.opal_settings_radio)
+        self.opal_library_radio.setChecked(True)
 
         # Connect signals
         self.browse_button.clicked.connect(self.on_browse_clicked)
         self.file_edit.textChanged.connect(lambda _text: self.completeChanged.emit())
-
-        # Set initial states
-        self.file_edit.setEnabled(True)
-        self.browse_button.setEnabled(True)
+        self.opal_library_edit.textChanged.connect(lambda _text: self.completeChanged.emit())
+        self.opal_library_button.clicked.connect(self.opal_browse_library)
+        self.opal_source_combo.currentIndexChanged.connect(self.opal_update_source)
+        self.opal_library_radio.toggled.connect(self.opal_update_source)
+        self.opal_settings_radio.toggled.connect(self.opal_update_source)
 
     def retranslate_ui(self):
-        self.setTitle(translate('OpenLP.FirstTimeWizard', 'Import Settings'))
-        self.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Import settings from a previous backup.'))
-        self.info_label.setText(
-            translate('OpenLP.FirstTimeWizard',
-                      'If you have a previously exported settings file (.opal-settings, .conf or .zip), '
-                      'you can select it now. '
-                      'This will restore your configuration, including plugins, theme selections, '
-                      'and other preferences.\n\n'
-                      'Alternatively, you can leave this blank to configure Opal Presenter manually.'))
+        self.setTitle(translate('Opal.FirstTimeWizard', 'Import existing data'))
+        if not self.opal_source_combo.count():
+            self.opal_source_combo.addItems([translate('Opal.FirstTimeWizard', 'None'), 'Opal Presenter', 'OpenLP'])
+        self.opal_source_label.setText(translate('Opal.FirstTimeWizard', 'Import from'))
+        self.opal_library_radio.setText(translate('Opal.FirstTimeWizard', 'Library'))
+        self.opal_library_edit.setPlaceholderText(translate('Opal.FirstTimeWizard', 'Select a library folder'))
+        self.opal_library_edit.setAccessibleName(translate('Opal.FirstTimeWizard', 'Library folder'))
+        self.opal_library_button.setText(translate('Opal.FirstTimeWizard', 'Open…'))
         self.browse_button.setText(translate('OpenLP.FirstTimeWizard', 'Open…'))
-        self.file_label.setText(translate('OpenLP.FirstTimeWizard', 'Settings File'))
+        self.opal_settings_radio.setText(translate('Opal.FirstTimeWizard', 'Settings only'))
+        self.file_edit.setPlaceholderText(translate('Opal.FirstTimeWizard', 'Select a settings backup'))
+        self.file_edit.setAccessibleName(translate('Opal.FirstTimeWizard', 'Settings backup'))
+        self.opal_update_source()
+
+    def opal_update_source(self):
+        opal_source = self.opal_source_combo.currentIndex()
+        if opal_source == 2:
+            self.opal_library_radio.setChecked(True)
+        self.opal_library_card.setVisible(opal_source != 0)
+        self.opal_settings_card.setVisible(opal_source == 1)
+        self.opal_library_edit.setEnabled(opal_source != 0 and self.opal_library_radio.isChecked())
+        self.opal_library_button.setEnabled(self.opal_library_edit.isEnabled())
+        self.file_edit.setEnabled(opal_source == 1 and self.opal_settings_radio.isChecked())
+        self.browse_button.setEnabled(self.file_edit.isEnabled())
+        self.completeChanged.emit()
 
     def on_browse_clicked(self):
         from openlp.core.widgets.dialogs import FileDialog
@@ -108,8 +148,20 @@ class ImportSettingsPage(QtWidgets.QWizardPage):
             self.file_edit.setText(str(file_path))
 
     def isComplete(self):
-        # Optional, so always complete
-        return True
+        if self.opal_source_combo.currentIndex() == 0:
+            return True
+        if self.opal_source_combo.currentIndex() == 1 and self.opal_settings_radio.isChecked():
+            opal_path = self.file_edit.text().strip()
+            return bool(opal_path) and Path(opal_path).is_file()
+        opal_path = self.opal_library_edit.text().strip()
+        return bool(opal_path) and Path(opal_path).is_dir()
+
+    def opal_browse_library(self):
+        from openlp.core.widgets.dialogs import FileDialog
+        opal_path = FileDialog.getExistingDirectory(
+            self, translate('Opal.FirstTimeWizard', 'Select the library data folder'))
+        if opal_path:
+            self.opal_library_edit.setText(str(opal_path))
 
 
 class UiFirstTimeWizard:
@@ -207,9 +259,8 @@ class UiFirstTimeWizard:
         self.welcome_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Welcome to Opal Presenter'))
         self.welcome_page.setSubTitle(translate('OpenLP.FirstTimeWizard', 'Set up your presentation workspace.'))
         self.information_label.setText(translate(
-            'OpenLP.FirstTimeWizard', 'Choose the features and display you want to use, or restore a settings backup. '
-            'Songs, Bibles and themes can be imported from your own files after setup.\n\n'
-            'Opal Presenter is an independent project and is not endorsed by OpenLP.'))
+            'Opal.FirstTimeWizard', 'Thank you for installing Opal Presenter. Let\'s get you set up.\n\n'
+            'You can import an existing Opal Presenter (or OpenLP) library during setup.'))
         self.plugin_page.setTitle(translate('OpenLP.FirstTimeWizard', 'Choose your features'))
         self.plugin_page.setSubTitle(
             translate('OpenLP.FirstTimeWizard', 'You can change these choices in Settings later.'))

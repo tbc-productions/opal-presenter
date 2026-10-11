@@ -67,4 +67,9 @@ def test_image_filenames_table(db_url, settings):
         engine = create_engine(db_url)
         conn = engine.connect()
         md = table('metadata', column('key'), column('value'))
-        assert conn.execute(select(md.c.value).where(md.c.key == 'version')).scalar() == '2'
+        assert conn.execute(select(md.c.value).where(md.c.key == 'version')).scalar() == str(upgrade.__version__)
+        opal_items = table('item', column('id'), column('file_path'))
+        assert conn.execute(select(opal_items.c.file_path).order_by(opal_items.c.id)).all() == [
+            ('/test/image1.jpg',), ('/test/dir/image2.jpg',), ('/test/dir/subdir/image3.jpg',)]
+        conn.close()
+        engine.dispose()

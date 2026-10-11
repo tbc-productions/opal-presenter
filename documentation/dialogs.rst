@@ -131,7 +131,29 @@ Settings tooltips continue to explain fields locally. Validation prompts belong
 to the active wizard and disable its navigation until dismissed.
 
 First-time setup configures plugins and displays locally and can restore a
-settings backup. It does not contact OpenLP servers or download songs, Bibles,
+settings backup or copy an existing data folder into a separate Opal library.
+The final import page defaults to None, with no import cards. Opal Presenter shows
+Library and Settings only cards; OpenLP shows only Library. Each card contains its
+folder or backup picker. Shared radio buttons make the Opal imports mutually
+exclusive, with Library selected initially. Only the selected card's input and
+browse button are enabled. Finish setup requires an existing folder for Library
+or an existing file for Settings only; None allows setup to finish immediately.
+Hidden and unselected fields are
+ignored. The plugin and display choices
+made in the wizard take priority over an imported settings backup. A successful
+import shows a confirmation before setup closes; failed imports show a ContentDialog
+and leave setup open for corrections.
+Library import copies songs, Bibles, custom slides, themes, designer assets and
+stored image, media and presentation files, preserving both the original and
+current libraries. Close the source application before importing. Linked external
+files are copied into the imported library, including image and song audio
+references and theme backgrounds. Settings-only imports copy linked media and
+presentation files into current Opal storage without
+switching libraries. Missing files stop the import. Settings backups use the separate field
+on the same page. Failed copies are removed and leave setup open. On re-running
+setup, the data folder switches only after plugins close, and the application
+requests a restart through its normal save
+and close flow. It does not contact OpenLP servers or download songs, Bibles,
 themes, thumbnails or the web remote. Built-in themes are installed from local
 files on first startup. Re-running setup preserves the current theme unless a
 settings backup changes it. Opal Presenter is independent and is not endorsed by OpenLP.

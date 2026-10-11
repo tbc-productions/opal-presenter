@@ -964,6 +964,14 @@ class MainWindow(AdvancedDockingMixin, QtWidgets.QMainWindow, Ui_MainWindow, Log
         first_run_wizard.initialize(ScreenList())
         if first_run_wizard.exec() == QtWidgets.QDialog.DialogCode.Rejected:
             return
+        if first_run_wizard.opal_imported_library:
+            self.new_data_path = first_run_wizard.opal_imported_library
+            self.set_copy_data(False)
+            QtWidgets.QMessageBox.information(
+                self, translate('Opal.FirstTimeWizard', 'Library imported'),
+                translate('Opal.FirstTimeWizard', 'Your library is ready. Opal Presenter will now restart.'))
+            self.application.request_restart()
+            return
         self.application.set_busy_cursor()
         self.theme_manager_contents.load_themes()
         # Check if Projectors panel should be visible or not after wizard.
