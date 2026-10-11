@@ -17,6 +17,7 @@ class FluentQtBuildTest(unittest.TestCase):
 
         def windows_write(path, text, *args, **kwargs):
             kwargs.setdefault('encoding', 'cp1252')
+            kwargs.setdefault('newline', '\r\n')
             return write_text(path, text, *args, **kwargs)
 
         with tempfile.TemporaryDirectory() as directory:
@@ -26,7 +27,7 @@ class FluentQtBuildTest(unittest.TestCase):
             with patch.object(Path, 'read_text', windows_read), patch.object(Path, 'write_text', windows_write):
                 build['replace'](source, 'QIcon::Normal', 'QIcon::Disabled')
                 build['replace'](source, 'QIcon::Normal', 'QIcon::Disabled')
-            self.assertEqual(source.read_bytes().decode('utf-8'), original.replace('QIcon::Normal', 'QIcon::Disabled'))
+            self.assertEqual(source.read_text(encoding='utf-8'), original.replace('QIcon::Normal', 'QIcon::Disabled'))
 
 
 if __name__ == '__main__':
