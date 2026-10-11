@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "opal-presenter"
 dynamic = ["version"]
 description = "Open-source church presentation and lyrics projection application."
-readme = "README.rst"
+readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.14,<3.15"
 authors = [
