@@ -14,8 +14,14 @@ on:
         default: 'false'
 
 jobs:
+  checks:
+    uses: ./.gitea/workflows/test.yml
+    with:
+      opal_ref: ${{ github.event.inputs.opal_tag || github.ref_name }}
+
   release:
     name: Create release and notify packaging
+    needs: checks
     runs-on: ubuntu-22.04
     env:
       OPAL_TAG: ${{ github.event.inputs.opal_tag || github.ref_name }}
