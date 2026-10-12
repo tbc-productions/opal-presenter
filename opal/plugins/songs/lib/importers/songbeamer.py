@@ -22,6 +22,7 @@
 The :mod:`songbeamer` module provides the functionality for importing SongBeamer songs into the OpenLP database.
 """
 import base64
+import html
 import logging
 import math
 import os
@@ -71,27 +72,27 @@ class SongBeamerImport(SongImport):
     written.
     """
     HTML_TAG_PAIRS = [
-        (re.compile('<b>'), '{st}'),
-        (re.compile('</b>'), '{/st}'),
-        (re.compile('<i>'), '{it}'),
-        (re.compile('</i>'), '{/it}'),
-        (re.compile('<u>'), '{u}'),
-        (re.compile('</u>'), '{/u}'),
-        (re.compile('<p>'), '{p}'),
-        (re.compile('</p>'), '{/p}'),
-        (re.compile('<super>'), '{su}'),
-        (re.compile('</super>'), '{/su}'),
-        (re.compile('<sub>'), '{sb}'),
-        (re.compile('</sub>'), '{/sb}'),
-        (re.compile('<br.*?>'), '{br}'),
-        (re.compile('<[/]?wordwrap>'), ''),
-        (re.compile('<[/]?strike>'), ''),
-        (re.compile('<[/]?h.*?>'), ''),
-        (re.compile('<[/]?s.*?>'), ''),
-        (re.compile('<[/]?linespacing.*?>'), ''),
-        (re.compile('<[/]?c.*?>'), ''),
-        (re.compile('<align.*?>'), ''),
-        (re.compile('<valign.*?>'), '')
+        (re.compile('<b>', re.IGNORECASE), '{st}'),
+        (re.compile('</b>', re.IGNORECASE), '{/st}'),
+        (re.compile('<i>', re.IGNORECASE), '{it}'),
+        (re.compile('</i>', re.IGNORECASE), '{/it}'),
+        (re.compile('<u>', re.IGNORECASE), '{u}'),
+        (re.compile('</u>', re.IGNORECASE), '{/u}'),
+        (re.compile('<p>', re.IGNORECASE), '{p}'),
+        (re.compile('</p>', re.IGNORECASE), '{/p}'),
+        (re.compile('<super>', re.IGNORECASE), '{su}'),
+        (re.compile('</super>', re.IGNORECASE), '{/su}'),
+        (re.compile('<sub>', re.IGNORECASE), '{sb}'),
+        (re.compile('</sub>', re.IGNORECASE), '{/sb}'),
+        (re.compile('<br.*?>', re.IGNORECASE), '{br}'),
+        (re.compile('<[/]?wordwrap>', re.IGNORECASE), ''),
+        (re.compile('<[/]?strike>', re.IGNORECASE), ''),
+        (re.compile('<[/]?h.*?>', re.IGNORECASE), ''),
+        (re.compile('<[/]?s.*?>', re.IGNORECASE), ''),
+        (re.compile('<[/]?linespacing.*?>', re.IGNORECASE), ''),
+        (re.compile('<[/]?c.*?>', re.IGNORECASE), ''),
+        (re.compile('<align.*?>', re.IGNORECASE), ''),
+        (re.compile('<valign.*?>', re.IGNORECASE), '')
     ]
 
     def __init__(self, manager, **kwargs):
@@ -217,6 +218,8 @@ class SongBeamerImport(SongImport):
         """
         for pair in SongBeamerImport.HTML_TAG_PAIRS:
             self.current_verse = pair[0].sub(pair[1], self.current_verse)
+        # Imported HTML must remain text after supported formatting has been converted.
+        self.current_verse = html.escape(html.unescape(self.current_verse), quote=False)
 
     def parse_tags(self, line):
         """

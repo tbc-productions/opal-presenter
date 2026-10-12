@@ -148,6 +148,10 @@ describe("The function", function () {
     expect(_nl2br(text)).toEqual("Amazing grace, how sweet the sound<br>That saved a wretch like me");
   });
 
+  it("_nl2br should convert every mixed newline", function () {
+    expect(_nl2br("one\r\ntwo\nthree\rfour")).toEqual("one<br>two<br>three<br>four");
+  });
+
   it("_prepareText should turn verse text into a paragraph", function () {
     var text = "Amazing grace, how sweet the sound\nThat saved a wretch like me";
     expect(_prepareText(text)).toEqual("<p>Amazing grace, how sweet the sound<br>That saved a wretch like me</p>");
@@ -155,6 +159,32 @@ describe("The function", function () {
 });
 
 describe("The Display object", function () {
+
+  it("escaped imported HTML should display as text", function () {
+    var slide = Display._createTextSlide('v1', '&lt;IMG SRC=x ONERROR="alert(1)"&gt;');
+    expect(slide.querySelector('img')).toBeNull();
+    expect(slide.textContent).toBe('<IMG SRC=x ONERROR="alert(1)">');
+  });
+
+  it("logo URLs should preserve quotes, backslashes and newlines", function () {
+    var previousLogo = Display._logoScreen;
+    var previousImage = Display._logoScreenImage;
+    var logo = document.createElement('div');
+    var expected = document.createElement('div');
+    expected.style.backgroundImage = 'url("https://example.test/logo\\5c \\22 \\a .png")';
+    try {
+      Display._logoScreen = logo;
+      Display._logoScreenImage = null;
+      Display._setLogoScreenBackground('#000', 'https://example.test/logo\\"\n.png', 'cover');
+      expect(logo.style.backgroundImage).not.toBe('');
+      expect(logo.style.backgroundImage).toBe(expected.style.backgroundImage);
+      expect(logo.style.backgroundColor).toBe('rgb(0, 0, 0)');
+    }
+    finally {
+      Display._logoScreen = previousLogo;
+      Display._logoScreenImage = previousImage;
+    }
+  });
 
   it("should start with a blank _slides object", function () {
     expect(Display._slides).toEqual({});
@@ -1679,7 +1709,7 @@ describe("Reveal slidechanged event", function () {
     }
     Display.setTextSlides(slides);
 
-    var currentSlide = Display._slidesContainer.querySelector('*:nth-child(2)');
+    var currentSlide = Display._slidesContainer.querySelector('section[data-slide="1"]');
     currentSlide.id = '1';
     Display._onSlideChanged({currentSlide: currentSlide});
   });

@@ -240,7 +240,7 @@ function _getStyle(element, style) {
  * @returns {string} The text now with <br> tags
  */
 function _nl2br(text) {
-  return text.replace("\r\n", "\n").replace("\n", "<br>");
+  return text.replace(/\r\n|\r|\n/g, "<br>");
 }
 
 /**
@@ -1920,7 +1920,7 @@ var Display = {
     Display._logoScreen.style.backgroundRepeat = fit.repeat;
     Display._logoScreen.style.backgroundPosition = fit.position;
     if (image) {
-      Display._logoScreen.style.backgroundImage = 'url("' + image.replace(/"/g, '\\"') + '")';
+      Display._logoScreen.style.backgroundImage = 'url("' + CSS.escape(image) + '")';
     }
     else {
       Display._logoScreen.style.backgroundImage = "none";

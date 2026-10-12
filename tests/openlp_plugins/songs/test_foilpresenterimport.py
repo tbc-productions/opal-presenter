@@ -24,8 +24,25 @@ This module contains tests for the SongShow Plus song importer.
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lxml import objectify
 
 from opal.plugins.songs.lib.importers.foilpresenter import FoilPresenter
+from opal.plugins.songs.lib.openlyricsxml import SongXML
+
+
+@pytest.mark.parametrize('key,verse_type,label', [
+    ('V3', 'v', '3'), ('Ref2', 'c', '2'), ('Bridge10', 'b', '10'), ('Pre-Chorus4', 'p', '4')
+])
+def test_explicit_verse_numbers_are_preserved(foil_presenter, key, verse_type, label):
+    folie = objectify.fromstring(
+        f'<foilpresenterfolie><strophen><strophe><key>{key}</key><sortnr>0</sortnr>'
+        '</strophe></strophen></foilpresenterfolie>'.encode())
+    song = MagicMock()
+    foil_presenter._process_lyrics(folie, song)
+    verses = SongXML().get_verses(song.lyrics)
+    assert verses[0][0]['type'] == verse_type
+    assert verses[0][0]['label'] == label
+    assert song.verse_order == verse_type + label
 
 
 @pytest.fixture

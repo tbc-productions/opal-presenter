@@ -435,7 +435,7 @@ class FoilPresenter(object):
                 verse_type = VerseType.tags[VerseType.Intro]
             else:
                 verse_type = VerseType.tags[VerseType.Other]
-            verse_number = re.compile('[a-zA-Z.+-_ ]*').sub('', verse_name)
+            verse_number = re.compile('[a-zA-Z.+_ -]*').sub('', verse_name)
             # Foilpresenter allows e. g. "C", but we need "C1".
             if not verse_number:
                 verse_number = str(verse_count[verse_type])

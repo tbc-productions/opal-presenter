@@ -49,6 +49,8 @@ class ObsStudioAPI:
         self.__auth()
 
     def __build_auth_string(self, salt, challenge):
+        # OBS requires SHA-256 challenge-response authentication, not a stored password hash.
+        # https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#creating-an-authentication-string
         secret = base64.b64encode(
             hashlib.sha256(
                 (self.__password + salt).encode('utf-8')

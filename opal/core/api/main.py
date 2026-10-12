@@ -21,9 +21,8 @@
 Main API views for OpenLP.
 """
 
-import os
-
 from flask import Blueprint, send_from_directory
+from werkzeug.exceptions import NotFound
 from opal.core.common.applocation import AppLocation
 from opal.core.common.mime import get_mime_type
 
@@ -42,11 +41,12 @@ def index(path):
     :rtype: flask.Response
     """
     directory = AppLocation.get_section_data_path('remotes')
-    if os.path.isfile(directory / path):
+    try:
         return send_from_directory(str(directory),
                                    path, mimetype=get_mime_type(path))
-    return send_from_directory(str(directory),
-                               'index.html', mimetype='text/html')
+    except NotFound:
+        return send_from_directory(str(directory),
+                                   'index.html', mimetype='text/html')
 
 
 @main_views.route('/assets/<path:path>')
@@ -90,8 +90,8 @@ def stages(path):
     :rtype: flask.Response
     """
     directory = AppLocation.get_section_data_path('stages')
-    return send_from_directory(str(directory / path),
-                               'stage.html', mimetype='text/html')
+    return send_from_directory(str(directory),
+                               f'{path}/stage.html', mimetype='text/html')
 
 
 @main_views.route('/stage/<path:path>/<file>')
@@ -107,5 +107,5 @@ def stage_assets(path, file):
     :rtype: flask.Response
     """
     directory = AppLocation.get_section_data_path('stages')
-    return send_from_directory(str(directory / path),
-                               file, mimetype=get_mime_type(file))
+    return send_from_directory(str(directory),
+                               f'{path}/{file}', mimetype=get_mime_type(file))

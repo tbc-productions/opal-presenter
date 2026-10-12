@@ -35,6 +35,20 @@ from tests.utils.constants import RESOURCE_PATH
 TEST_PATH = RESOURCE_PATH / 'songs' / 'songbeamer'
 
 
+@pytest.mark.parametrize('text,expected', [
+    ('<B>Bold</b><BR><i>Italic</I>', '{st}Bold{/st}{br}{it}Italic{/it}'),
+    ('<IMG SRC=x ONERROR="alert(1)">', '&lt;IMG SRC=x ONERROR="alert(1)"&gt;'),
+    ('<SCRIPT>alert(1)</SCRIPT>', 'alert(1)'),
+    ('&lt;img src=x onerror=alert(1)&gt;', '&lt;img src=x onerror=alert(1)&gt;'),
+    ('Grace &amp; peace < 3', 'Grace &amp; peace &lt; 3'),
+    ('<STRIKE>Words</STRIKE>', 'Words')
+])
+def test_imported_html_is_converted_or_escaped(importer, text, expected):
+    importer.current_verse = text
+    importer.replace_html_tags()
+    assert importer.current_verse == expected
+
+
 @pytest.fixture
 def importer(registry: Registry, settings: Settings):
     # with patch('opal.plugins.songs.lib.importers.songbeamer.SongImport'):

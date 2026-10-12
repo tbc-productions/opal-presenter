@@ -26,6 +26,17 @@ import pytest
 from opal.core.ui.formattingtagcontroller import FormattingTagController
 
 
+@pytest.mark.parametrize('comment', ['<!-- comment -->', '<!-- comment --!>'])
+def test_html_comments_do_not_change_tag_balance(comment):
+    controller = FormattingTagController()
+    assert controller.start_html_to_end_html(comment + '<b>') == '</b>'
+    assert controller.start_html_to_end_html(comment + '<b></b>') == ''
+
+
+def test_unclosed_html_comment_is_invalid():
+    assert FormattingTagController().start_html_to_end_html('<!-- comment <b>') is None
+
+
 @pytest.fixture()
 def services(registry, qapp):
     return FormattingTagController()
