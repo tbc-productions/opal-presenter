@@ -210,3 +210,27 @@ Library destination before the import begins. Existing overwrite confirmations
 still apply. Cancelling an import stops the remaining items and retains items
 already imported. Delete removes all selected service items, using the existing
 confirmation preference.
+
+## CI build caches
+
+The test and release workflows use `scripts/cache_fluentqt.py` to reuse validated
+wheels and Qt SDKs. The packaging repository carries the same helper, including
+when building older application tags. Both use `~/.cache/opal-presenter` outside
+the checkout, so jobs running under the same account on the same host share
+their wheels across repositories.
+
+Set `OPAL_CACHE_DIR` in the runner environment to use another shared directory.
+It must be writable by the runner accounts and support file locking. Separate
+hosts need a shared filesystem to reuse this location; repository Actions cache
+keys alone do not provide cross-repository wheel sharing.
+
+Wheel keys include the build script and cache helper contents, Python version
+and ABI, Qt version, operating system, architecture, compiler and build flags.
+A hit skips the build tools and SDK installation. A miss builds in a temporary
+directory and publishes the wheel only after the existing binding tests pass.
+Qt SDKs have their own version and architecture keys and are reused when source
+patches change. A file lock prevents concurrent jobs from publishing partial
+cache entries. Corrupt wheels are rebuilt. Delete the relevant cache directory
+to force a rebuild; the cache is disposable.
+
+The workflows still run the application tests and frozen Qt probe on cache hits.
