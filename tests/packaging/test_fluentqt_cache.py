@@ -64,6 +64,14 @@ class OpalFluentQtCacheTest(unittest.TestCase):
                 patch.dict(cache.os.environ, VCToolsVersion='new compiler'):
             self.assertNotEqual(key, cache.wheel_key(self.script, '6.11.1'))
 
+    def test_checkout_line_endings_do_not_change_wheel_key(self):
+        key = cache.wheel_key(self.script, '6.11.1')
+        helper = self.root / 'cache_fluentqt.py'
+        helper.write_bytes(Path(cache.__file__).read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+        self.script.write_bytes(self.script.read_bytes().replace(b'\n', b'\r\n'))
+        with patch.object(cache, '__file__', str(helper)):
+            self.assertEqual(key, cache.wheel_key(self.script, '6.11.1'))
+
     def test_failed_build_does_not_publish_wheel(self):
         def fail_build(*args):
             if '--work-dir' in args:

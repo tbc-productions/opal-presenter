@@ -234,3 +234,8 @@ cache entries. Corrupt wheels are rebuilt. Delete the relevant cache directory
 to force a rebuild; the cache is disposable.
 
 The workflows still run the application tests and frozen Qt probe on cache hits.
+
+Manual test runs accept an optional `opal_ref` branch or tag. When an older tag
+predates the cache helper, the test and release workflows load it from the already
+fetched Gitea `origin/master` ref. Build-script and helper hashes normalise checkout
+line endings so this also shares wheels with the packaging repository on Windows.

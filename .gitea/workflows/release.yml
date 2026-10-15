@@ -37,6 +37,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe -m pip install pyinstaller
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Older release tags predate the shared cache helper.
+          if (-not (Test-Path scripts/cache_fluentqt.py)) {
+            .venv/Scripts/python.exe -c "from pathlib import Path; import subprocess; Path('scripts/cache_fluentqt.py').write_bytes(subprocess.check_output(['git', 'show', 'origin/master:scripts/cache_fluentqt.py']))"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           .venv/Scripts/python.exe scripts/cache_fluentqt.py scripts/build_fluentqt.py --install
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           .venv/Scripts/python.exe -m pip install -e .
@@ -82,6 +87,10 @@ jobs:
           export PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           "$PY" -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
+          # Older release tags predate the shared cache helper.
+          if [ ! -f scripts/cache_fluentqt.py ]; then
+            .venv/bin/python -c "from pathlib import Path; import subprocess; Path('scripts/cache_fluentqt.py').write_bytes(subprocess.check_output(['git', 'show', 'origin/master:scripts/cache_fluentqt.py']))"
+          fi
           .venv/bin/python scripts/cache_fluentqt.py scripts/build_fluentqt.py --install
           .venv/bin/python -m pip install -e '.[darkstyle,mysql,odbc,postgresql,spellcheck,sword-bibles,test]'
 

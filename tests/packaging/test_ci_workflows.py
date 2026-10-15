@@ -11,7 +11,7 @@ class OpalCiWorkflowTest(unittest.TestCase):
         self.assertNotIn('  pull_request:', triggers)
         self.assertIn('  workflow_dispatch:\n', triggers)
         self.assertIn('  workflow_call:\n    inputs:\n      opal_ref:\n', triggers)
-        self.assertEqual(workflow.count('          ref: ${{ inputs.opal_ref || github.ref }}\n'), 2)
+        self.assertEqual(workflow.count('          ref: ${{ inputs.opal_ref || github.event.inputs.opal_ref || github.ref }}\n'), 2)
 
     def test_release_waits_for_checks_on_the_requested_tag(self):
         workflow = (Path(__file__).resolve().parents[2] / '.gitea/workflows/release.yml').read_text(encoding='utf-8')

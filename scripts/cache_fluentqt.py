@@ -51,7 +51,8 @@ def cache_lock(root):
 def wheel_key(build_script, qt_version):
     compiler = (os.environ['VCToolsVersion'] if os.name == 'nt' else
                 subprocess.check_output(['clang' if sys.platform == 'darwin' else 'c++', '--version'], text=True))
-    inputs = [sha256(build_script.read_bytes()).hexdigest(), sha256(Path(__file__).read_bytes()).hexdigest(),
+    inputs = [sha256(build_script.read_text(encoding='utf-8').encode()).hexdigest(),
+              sha256(Path(__file__).read_text(encoding='utf-8').encode()).hexdigest(),
               sys.platform, platform.machine(), platform.release(), sys.version,
               sysconfig.get_config_var('SOABI'), qt_version, compiler,
               os.environ.get('VSCMD_ARG_TGT_ARCH', ''), os.environ.get('MACOSX_DEPLOYMENT_TARGET', ''),
