@@ -68,7 +68,7 @@ class OpalFluentQtCacheTest(unittest.TestCase):
         key = cache.wheel_key(self.script, '6.11.1')
         helper = self.root / 'cache_fluentqt.py'
         helper.write_bytes(Path(cache.__file__).read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
-        self.script.write_bytes(self.script.read_bytes().replace(b'\n', b'\r\n'))
+        self.script.write_bytes(self.script.read_text().encode().replace(b'\n', b'\r\n'))
         with patch.object(cache, '__file__', str(helper)):
             self.assertEqual(key, cache.wheel_key(self.script, '6.11.1'))
 
