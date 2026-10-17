@@ -57,7 +57,7 @@ sys.modules.setdefault('openlp.core.common.enum', sys.modules['opal.core.common.
 sys.modules.setdefault('openlp.core.ui.style', sys.modules['opal.core.ui.style'])
 sys.modules.setdefault('openlp.core.common.settings', sys.modules[__name__])
 
-__version__ = 8
+__version__ = 9
 
 
 class ProxyMode(IntEnum):
@@ -763,6 +763,14 @@ class Settings(QtCore.QSettings):
         ('servicemanager/theme color image', '', []),
         ('servicemanager/theme color media', '', []),
         ('servicemanager/theme color custom slide', '', [])
+    ]
+
+    # Replace retired built-in artwork while preserving custom projection images.
+    __setting_upgrade_9__ = [
+        ('core/logo file', 'core/logo file', [
+            (Path(':/graphics/opal-presenter-background.png'), Path(f':/graphics/{name}'))
+            for name in ('openlp-logo-background.svg', 'openlp-splash-screen.png', 'opal-presenter-splash.png')
+        ])
     ]
 
     @staticmethod

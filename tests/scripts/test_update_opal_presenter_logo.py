@@ -1,7 +1,26 @@
-"""Installer artwork preserves native content and unrelated portable images."""
+"""Projection and installer artwork keep their intended branding."""
+from io import BytesIO
+
 from PIL import Image, ImageOps
+from PySide6 import QtCore
 
 from scripts.update_opal_presenter_logo import ROOT, update_packaging
+
+
+def test_projection_artwork_is_plain_wallpaper():
+    """Both display copies and the compiled Qt resource must contain no logo."""
+    wallpaper = Image.open(ROOT / 'branding/OpalBackground.jpg').convert('RGB')
+    expected = wallpaper.resize((1920, 1080), Image.Resampling.LANCZOS)
+    resource = QtCore.QFile(':/graphics/opal-presenter-background.png')
+    assert resource.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+    copies = [bytes(resource.readAll())]
+    resource.close()
+    copies.extend((ROOT / directory / 'opal-presenter-background.png').read_bytes()
+                  for directory in ('resources/images', 'opal/core/display/html'))
+    for data in copies:
+        with Image.open(BytesIO(data)) as artwork:
+            assert artwork.size == expected.size
+            assert artwork.convert('RGB').tobytes() == expected.tobytes()
 
 
 def test_packaging_branding(tmp_path):

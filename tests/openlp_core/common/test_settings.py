@@ -596,6 +596,26 @@ def test_service_colours_upgrade(settings, monkeypatch):
     assert settings.value('advanced/delete service item confirmation') is False
 
 
+@pytest.mark.parametrize('image', [
+    ':/graphics/openlp-logo-background.svg', ':/graphics/openlp-splash-screen.png',
+    ':/graphics/opal-presenter-splash.png', ':/graphics/opal-presenter-background.png',
+    '/custom/logo.png', 'C:/Church/logo.png', None
+])
+def test_projection_background_upgrade(settings, image):
+    """Upgrade built-in logo artwork without replacing custom images or an empty choice."""
+    settings.setValue('settings/version', 8)
+    path = Path(image) if image else None
+    settings.setValue('core/logo file', path)
+    settings.setValue('core/logo fit', 'contain')
+
+    settings.upgrade_settings()
+
+    expected = Path(':/graphics/opal-presenter-background.png') if image and image.startswith(':') else path
+    assert settings.value('settings/version') == 9
+    assert settings.value('core/logo file') == expected
+    assert settings.value('core/logo fit') == 'contain'
+
+
 def test_legacy_settings_import_preserves_profile(settings, tmp_path):
     source = tmp_path / 'legacy.conf'
     source.write_text('[SettingsImport]\ntype=OpenLP_settings_export\n[settings]\nversion=8\n'

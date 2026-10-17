@@ -1,5 +1,10 @@
 # Changelog
 
+## Opal Presenter 4.0.4a4
+
+* Fix the logo background on Windows to show the plain wallpaper instead of the splash artwork.
+* Migrate saved built-in background choices to the wallpaper while preserving custom images.
+
 ## OpenLP 3.1.2
 
 * Import additional planning center data

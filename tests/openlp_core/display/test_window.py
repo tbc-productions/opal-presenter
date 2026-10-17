@@ -360,7 +360,6 @@ def test_set_startup_screen(display_window_env, mock_settings):
     else:
         image_path = '/my/image.png'
         expect_image_path = image_path
-    display_window.openlp_splash_screen_path = Path('/default/splash_screen.png')
     settings = {
         'core/logo background color': 'red',
         'core/logo file': Path(image_path),
@@ -379,32 +378,36 @@ def test_set_startup_screen(display_window_env, mock_settings):
                                                           'contain')
 
 
-def test_set_startup_screen_default_image(display_window_env, mock_settings):
-    """
-    Test that the startup screen get set correctly
-    """
+@pytest.mark.parametrize('resource', [
+    'opal-presenter-background.png', 'opal-presenter-splash.png',
+    'openlp-logo-background.svg', 'openlp-splash-screen.png', 'missing.png'
+])
+@pytest.mark.parametrize('startup', [True, False])
+@pytest.mark.parametrize('separator', ['/', '\\'])
+def test_builtin_logo_uses_wallpaper(display_window_env, mock_settings, resource, startup, separator):
+    """Startup and logo mode always use plain wallpaper for built-in artwork."""
     # GIVEN: A display window and mocked settings with logo path
     display_window = DisplayWindow()
     display_window._is_initialised = True
     display_window.run_in_display = MagicMock()
-    splash_screen_path = 'openlp://display/opal-presenter-splash.png'
-    expect_splash_screen_path = splash_screen_path
-    display_window.openlp_splash_screen_path = splash_screen_path
     settings = {
         'core/logo background color': 'blue',
-        'core/logo file': Path(':/graphics/opal-presenter-splash.png'),
+        'core/logo file': Path(f':{separator}graphics{separator}{resource}'),
         'core/logo fit': 'contain',
-        'core/logo hide on startup': False
+        'core/logo hide on startup': False,
+        'themes/item transitions': False
     }
     mock_settings.value.side_effect = lambda key: settings[key]
 
-    # WHEN: set_startup_screen is run
-    display_window.set_startup_screen()
+    if startup:
+        display_window.set_startup_screen()
+    else:
+        display_window.hide_display(HideMode.Logo)
 
     # THEN: javascript should be run
-    display_window.run_in_display.assert_called_with('setStartupSplashScreen', 'blue',
-                                                     "{path}".format(path=expect_splash_screen_path),
-                                                     'contain')
+    arguments = ('setStartupSplashScreen' if startup else 'toLogo', 'blue',
+                 'openlp://display/opal-presenter-background.png', 'contain')
+    display_window.run_in_display.assert_called_once_with(*(arguments if startup else arguments + (True,)))
 
 
 def test_set_startup_screen_missing(display_window_env, mock_settings):
@@ -415,7 +418,6 @@ def test_set_startup_screen_missing(display_window_env, mock_settings):
     display_window = DisplayWindow()
     display_window._is_initialised = True
     display_window.run_in_display = MagicMock()
-    display_window.openlp_splash_screen_path = Path('/default/splash_screen.png')
     settings = {
         'core/logo background color': 'green',
         'core/logo file': None,
@@ -439,7 +441,6 @@ def test_set_startup_screen_hide(display_window_env, mock_settings):
     display_window = DisplayWindow()
     display_window._is_initialised = True
     display_window.run_in_display = MagicMock()
-    display_window.openlp_splash_screen_path = Path('/default/splash_screen.png')
     settings = {
         'core/logo background color': 'orange',
         'core/logo file': Path('/my/image.png'),
