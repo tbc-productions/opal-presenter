@@ -349,6 +349,9 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
     preview_renderer.geometry = MagicMock(return_value=QtCore.QRect(0, 0, 800, 600))
     preview_renderer.webview = MagicMock()
     preview_renderer.webview.size = MagicMock(return_value=MagicMock())
+    preview_renderer.display_watcher = MagicMock()
+    preview_renderer._has_captured_frame = True
+    preview_renderer.run_in_display = MagicMock()
 
     # Mock a HiDPI screen
     mocked_screen = MagicMock()
@@ -367,13 +370,47 @@ def test_theme_preview_renderer_save_screenshot_uses_grab(settings):
         preview_renderer.setVisible.assert_has_calls([call(True), call(False)])
         preview_renderer.setGeometry.assert_called()
         mocked_qapplication_instance.return_value.processEvents.assert_called_once_with()
+        # ... after waiting for the page to report a painted frame, bounded by the previous one second delay
+        preview_renderer.run_in_display.assert_called_once_with(
+            'waitForDesignPreview', 0, return_event_name='screenshotFrameReady')
         mocked_wait_for.assert_called_once()
         wait_for_args, wait_for_kwargs = mocked_wait_for.call_args
-        assert callable(wait_for_args[0])
-        assert wait_for_kwargs == {'timeout': 1}
+        assert wait_for_args[0]() is False
+        preview_renderer.display_watcher.register_event_listener.call_args.args[1](0)
+        assert wait_for_args[0]() is True
+        assert wait_for_kwargs['timeout'] == 1
+        preview_renderer.display_watcher.unregister_event_listener.assert_called_once_with('screenshotFrameReady')
         preview_renderer.grab.assert_called_once_with()
         preview_renderer.webview.render.assert_not_called()
         assert result == mocked_pixmap
+
+
+def test_theme_preview_renderer_first_capture_keeps_full_settle(settings):
+    """
+    Test that the first capture on a renderer settles for the full second, and later ones wait for the page only.
+    """
+    # GIVEN: A ThemePreviewRenderer that has not captured a frame yet
+    with patch('opal.core.display.render.ThemePreviewRenderer.__init__') as init_fn:
+        init_fn.return_value = None
+        preview_renderer = ThemePreviewRenderer()
+    preview_renderer.display_watcher = MagicMock()
+    preview_renderer.run_in_display = MagicMock()
+
+    with patch('opal.core.display.render.wait_for') as mocked_wait_for, \
+            patch('opal.core.display.render.QtCore.QTimer.singleShot') as mocked_single_shot, \
+            patch('opal.core.display.render.QtCore.QEventLoop') as MockedEventLoop:
+        # WHEN: Two frames are waited for
+        preview_renderer._wait_for_painted_frame()
+        first_wait_calls = mocked_wait_for.call_count
+        preview_renderer._wait_for_painted_frame()
+
+    # THEN: Only the first uses the fixed settle; the second asks the page for a painted frame
+    mocked_single_shot.assert_called_once_with(1000, MockedEventLoop.return_value.quit)
+    MockedEventLoop.return_value.exec.assert_called_once_with()
+    assert first_wait_calls == 0
+    preview_renderer.run_in_display.assert_called_once_with(
+        'waitForDesignPreview', 0, return_event_name='screenshotFrameReady')
+    mocked_wait_for.assert_called_once()
 
 
 def test_theme_preview_renderer_save_screenshot_uses_webview_render_standard_dpi(settings):
@@ -437,6 +474,8 @@ def test_generate_preview_does_not_add_artificial_timeout(mocked_set_theme, mock
     preview_renderer.webview = MagicMock()
     preview_renderer.webview.size = MagicMock(return_value=MagicMock())
     preview_renderer.run_in_display = MagicMock(return_value={})
+    preview_renderer.display_watcher = MagicMock()
+    preview_renderer._has_captured_frame = True
 
     # Mock a HiDPI screen so generate_preview consistently uses the grab() screenshot branch.
     mocked_screen = MagicMock()
@@ -481,6 +520,8 @@ def test_generate_preview_disables_theme_transitions_during_screenshot(
     preview_renderer.webview = MagicMock()
     preview_renderer.webview.size = MagicMock(return_value=MagicMock())
     preview_renderer.run_in_display = MagicMock(return_value={})
+    preview_renderer.display_watcher = MagicMock()
+    preview_renderer._has_captured_frame = True
     allow_theme_transitions_seen = []
 
     def capture_transition_state(*args, **kwargs):

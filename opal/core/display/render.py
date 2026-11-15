@@ -987,6 +987,30 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
         does_text_fit = self.run_in_display('doesContentFit', is_sync=True)
         return does_text_fit
 
+    def _wait_for_painted_frame(self):
+        """
+        Wait until the newly shown page has painted, rather than always sleeping for a fixed second.
+
+        Chromium suspends painting while the window is hidden, so a capture taken straight after showing it can be
+        blank. The page reports once its images, fonts and layout have settled; one second remains the upper bound.
+        """
+        if not getattr(self, '_has_captured_frame', False):
+            # The first exposure also creates the native surface, and the page can report frames before Qt has
+            # received one. Keep the full settle once per renderer; later captures only wait for the page.
+            self._has_captured_frame = True
+            settle = QtCore.QEventLoop()
+            QtCore.QTimer.singleShot(1000, settle.quit)
+            settle.exec()
+            return
+        ready = []
+        event = 'screenshotFrameReady'
+        self.display_watcher.register_event_listener(event, lambda value: ready.append(True))
+        try:
+            self.run_in_display('waitForDesignPreview', 0, return_event_name=event)
+            wait_for(lambda: bool(ready), error_message='Timed out waiting for the preview to paint', timeout=1)
+        finally:
+            self.display_watcher.unregister_event_listener(event)
+
     def save_screenshot(self, fname=None):
         """
         Save a screenshot, either returning it or saving it to file.
@@ -1010,7 +1034,7 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             self.setGeometry(offscreen_x, offscreen_y, previous_geometry.width(), previous_geometry.height())
             self.setVisible(True)
             QtWidgets.QApplication.instance().processEvents()
-            wait_for(lambda: False, timeout=1)
+            self._wait_for_painted_frame()
             pixmap = self.grab()
             self.setVisible(False)
             self.setGeometry(previous_geometry)
@@ -1023,7 +1047,7 @@ class ThemePreviewRenderer(DisplayWindow, LogMixin):
             try:
                 self.setVisible(True)
                 QtWidgets.QApplication.instance().processEvents()
-                wait_for(lambda: False, timeout=1)
+                self._wait_for_painted_frame()
                 pixmap = self.grab()
                 self.setVisible(False)
             except RuntimeError:
