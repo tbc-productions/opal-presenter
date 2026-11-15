@@ -89,6 +89,9 @@ class OpenLP(QtCore.QObject, LogMixin):
     settings = None
     busy_cursor_count = 0
     restart_requested = False
+    _exception_reported = QtCore.Signal(str)
+    _exception_report_connected = False
+    _showing_exception_report = False
 
     def request_restart(self):
         """Restart only if the main window's normal save/close confirmation succeeds."""
@@ -293,18 +296,44 @@ class OpenLP(QtCore.QObject, LogMixin):
         :param traceback: A traceback object with the details of where the exception occurred.
         """
         # We can't log.exception here because the last exception no longer exists, we're actually busy handling it.
-        log.critical(''.join(format_exception(exc_type, value, traceback)))
-        if not hasattr(self, 'exception_form'):
-            self.exception_form = ExceptionForm()
-        self.exception_form.exception_text_edit.setPlainText(''.join(format_exception(exc_type, value, traceback)))
-        self.set_normal_cursor(force=True)
-        is_splash_visible = False
-        if hasattr(self, 'splash') and self.splash.isVisible():
-            is_splash_visible = True
-            self.splash.hide()
-        self.exception_form.exec()
-        if is_splash_visible:
-            self.splash.show()
+        message = ''.join(format_exception(exc_type, value, traceback))
+        log.critical(message)
+        application = QtCore.QCoreApplication.instance()
+        if application is not None and QtCore.QThread.currentThread() is not application.thread():
+            # Python calls this hook in the thread that raised. Widgets may only be created and shown in the GUI
+            # thread, so hand the report over instead of building the dialog here and crashing.
+            if not self._exception_report_connected:
+                self._exception_reported.connect(self._show_exception_report,
+                                                 QtCore.Qt.ConnectionType.QueuedConnection)
+                self._exception_report_connected = True
+            self._exception_reported.emit(message)
+            return
+        self._show_exception_report(message)
+
+    def _show_exception_report(self, message):
+        """
+        Show the exception dialog. Must be called in the GUI thread.
+
+        :param message: The formatted traceback to show.
+        """
+        if self._showing_exception_report:
+            # The dialog is already open. The new traceback is in the log; do not nest another event loop.
+            return
+        self._showing_exception_report = True
+        try:
+            if not hasattr(self, 'exception_form'):
+                self.exception_form = ExceptionForm()
+            self.exception_form.exception_text_edit.setPlainText(message)
+            self.set_normal_cursor(force=True)
+            is_splash_visible = False
+            if hasattr(self, 'splash') and self.splash.isVisible():
+                is_splash_visible = True
+                self.splash.hide()
+            self.exception_form.exec()
+            if is_splash_visible:
+                self.splash.show()
+        finally:
+            self._showing_exception_report = False
 
     def backup_on_upgrade(self, has_run_wizard, can_show_splash):
         """

@@ -681,7 +681,11 @@ class ServiceLoadWorker(ThreadWorker):
                     'servicefile_version': servicefile_version,
                     'is_broken_file': is_broken_file
                 })
-        except (NameError, OSError, ValueError, ValidationError, zipfile.BadZipFile):
+        except Exception:
+            # A damaged or unsupported archive can raise far more than BadZipFile (zlib.error for a corrupt
+            # stream, RuntimeError for an encrypted entry, NotImplementedError for an unknown compression
+            # method). Nothing may escape this worker: the GUI would be left waiting on the load forever.
+            self.log_exception(f'Unable to load service file {self.file_path}')
             self.failed.emit(str(self.file_path))
         finally:
             self.quit.emit()

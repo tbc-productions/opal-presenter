@@ -52,6 +52,26 @@ if is_win():
     _pyside6_dll_directory = os.add_dll_directory(str(Path(QtCore.__file__).parent))
 
 
+class _FFmpegErrorRelay(QtCore.QObject):
+    """
+    Carries FFmpeg decode errors from the Qt message handler to the GUI thread.
+
+    Qt calls the message handler in whichever thread logged the message, which for FFmpeg is usually a
+    decoder thread, and may do so while Qt is in the middle of other work. The error handling shows a
+    message box and changes widgets, so it is always queued to the GUI thread's event loop instead of
+    being run from inside the handler.
+    """
+    reported = QtCore.Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.reported.connect(self._deliver, QtCore.Qt.ConnectionType.QueuedConnection)
+
+    @QtCore.Slot(str)
+    def _deliver(self, text: str) -> None:
+        MediaPlayer._notify_ffmpeg_error(text)
+
+
 class MediaPlayer(MediaBase, LogMixin):
     """
     A specialised version of the MediaPlayer class, which provides an media player for media when the main media class
@@ -71,6 +91,7 @@ class MediaPlayer(MediaBase, LogMixin):
     # Class-level Qt message handler state
     _qt_handler_installed = False
     _qt_previous_handler = None
+    _ffmpeg_error_relay = None
     _registered_players = set()
 
     @classmethod
@@ -258,10 +279,18 @@ class MediaPlayer(MediaBase, LogMixin):
         if cls._qt_handler_installed:
             return
 
+        # Created here, in the GUI thread, so that queued reports are delivered to the GUI thread.
+        cls._ffmpeg_error_relay = _FFmpegErrorRelay(QtCore.QCoreApplication.instance())
+
         def _handler(msg_type, context, message):
-            text = str(message)
-            if cls._looks_like_ffmpeg_decode_error(text):
-                cls._notify_ffmpeg_error(text)
+            # This runs in the thread that logged the message. Only hand the text over; never touch the GUI.
+            try:
+                text = str(message)
+                if cls._looks_like_ffmpeg_decode_error(text):
+                    cls._ffmpeg_error_relay.reported.emit(text)
+            except RuntimeError:
+                # The relay has been deleted with the application during shutdown.
+                pass
             if cls._qt_previous_handler:
                 cls._qt_previous_handler(msg_type, context, message)
 

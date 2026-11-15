@@ -21,6 +21,7 @@
 
 import logging
 import os
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -77,12 +78,21 @@ class ThumbnailGeneratorWorker(ThreadWorker):
         """
         super().__init__()
         self.items_with_paths = items_with_paths
+        self._cancelled = threading.Event()
+
+    def stop(self):
+        """
+        Ask the worker to finish after the thumbnail it is currently generating.
+        """
+        self._cancelled.set()
 
     def start(self):
         """
         Generate thumbnails for all pending items in background.
         """
         for file_path, thumbnail_path, media_item in self.items_with_paths:
+            if self._cancelled.is_set():
+                break
             try:
                 # Skip if file doesn't exist
                 if not Path(file_path).exists():
@@ -103,19 +113,23 @@ class MediaLengthWorker(ThreadWorker):
     """
     Worker thread for obtaining media duration without blocking the UI thread.
     """
-    media_length_ready = QtCore.Signal(int)
+    # Emitted with (service_item_id, media_length, media_path). The worker carries the service item
+    # identifier itself so that the result can be delivered to a bound slot on the GUI thread; a lambda
+    # connected to a worker signal runs in the worker thread.
+    media_length_ready = QtCore.Signal(object, int, object)
 
-    def __init__(self, media_path: str):
+    def __init__(self, media_path: str, service_item_id=None):
         super().__init__()
         self.media_path = media_path
+        self.service_item_id = service_item_id
 
     def start(self):
         try:
             media_length = media_info().get_media_duration(self.media_path)
-            self.media_length_ready.emit(media_length)
+            self.media_length_ready.emit(self.service_item_id, media_length, self.media_path)
         except Exception as e:
             log.exception(f'Failed to read media length for {self.media_path}: {e}')
-            self.media_length_ready.emit(0)
+            self.media_length_ready.emit(self.service_item_id, 0, self.media_path)
         finally:
             self.quit.emit()
 
@@ -127,6 +141,7 @@ class MediaMediaItem(FolderLibraryItem):
     media_go_live = QtCore.Signal(list)
     media_add_to_service = QtCore.Signal(list)
     pending_thumbnail_role = QtCore.Qt.ItemDataRole.UserRole + 1
+    _thumbnail_generator_run = 0
     thumbnail_updated = QtCore.Signal(str)  # Emitted with file_path when thumbnail is generated
     log.info('{name} MediaMediaItem loaded'.format(name=__name__))
 
@@ -349,12 +364,10 @@ class MediaMediaItem(FolderLibraryItem):
         Read media length in a worker thread and update the existing service item when finished.
         """
         thread_name = f'media_length_{service_item.unique_identifier}_{QtCore.QDateTime.currentMSecsSinceEpoch()}'
-        worker = MediaLengthWorker(filename)
-        worker.media_length_ready.connect(
-            lambda media_length, unique_id=service_item.unique_identifier, media_path=filename:
-            self._apply_media_length_probe_result(unique_id, media_length, media_path)
-        )
-        run_thread(worker, thread_name, can_start=True)
+        worker = MediaLengthWorker(filename, service_item.unique_identifier)
+        # The result updates the service list, so it must be delivered to the GUI thread.
+        run_thread(worker, thread_name, can_start=True, queued_connections=[
+            (worker.media_length_ready, self._apply_media_length_probe_result)])
 
     def _apply_media_length_probe_result(self, service_item_id, media_length, media_path=None):
         """
@@ -546,22 +559,25 @@ class MediaMediaItem(FolderLibraryItem):
         if not pending_items:
             return
         
-        # Stop any existing worker
+        # Ask any existing worker to stop. It stays registered until its thread has finished, so the
+        # replacement needs its own thread name; reusing the name makes run_thread() raise a KeyError.
         if self.thumbnail_generator_thread_name:
             app = Registry().get('application')
-            if self.thumbnail_generator_thread_name in app.worker_threads:
+            worker_info = app.worker_threads.get(self.thumbnail_generator_thread_name)
+            if worker_info:
                 try:
-                    worker_info = app.worker_threads[self.thumbnail_generator_thread_name]
-                    worker_info['worker'].quit.emit()
-                except Exception as e:
+                    worker_info['worker'].stop()
+                except (AttributeError, RuntimeError) as e:
                     log.warning(f'Failed to stop existing thumbnail worker: {e}')
-        
-        # Create and start new worker
-        thread_name = f'media_thumbnail_generator_{id(self)}'
+
+        # Create and start new worker. Thumbnails the old worker did not reach are still pending in the
+        # tree, so they are part of pending_items for this one.
+        self._thumbnail_generator_run += 1
+        thread_name = f'media_thumbnail_generator_{id(self)}_{self._thumbnail_generator_run}'
         self.thumbnail_generator_worker = ThumbnailGeneratorWorker(pending_items)
-        self.thumbnail_generator_worker.thumbnail_generated.connect(self._on_thumbnail_generated)
         self.thumbnail_generator_thread_name = thread_name
-        run_thread(self.thumbnail_generator_worker, thread_name, can_start=True)
+        run_thread(self.thumbnail_generator_worker, thread_name, can_start=True, queued_connections=[
+            (self.thumbnail_generator_worker.thumbnail_generated, self._on_thumbnail_generated)])
 
     def _on_thumbnail_generated(self, file_path, thumbnail_path):
         """
