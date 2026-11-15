@@ -20,3 +20,11 @@ are in `opal/core/widgets/fluent_dialogs.py`, exported through
 
 - Use Opal for all new internal names, including environment variables,
   identifiers and namespaces. Do not introduce new OpenLP names.
+
+# Release notes
+
+- Write release notes in simplified, plain language aimed at operators and end
+  users rather than developers. Focus on user-visible improvements and fixes,
+  and avoid overly technical implementation details (such as internal class or
+  method names, library names, signals/threads or commit hashes).
+- Use Australian English.
