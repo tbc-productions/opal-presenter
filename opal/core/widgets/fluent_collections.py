@@ -168,7 +168,11 @@ class ListItemsMixin:
         self.setItemWidget(item, None)
 
     def clear(self):
+        # Keep Python wrappers alive until Qt finishes destroying QListWidgetItemWrapper
+        # instances inside QListWidget::clear(), avoiding Shiboken use-after-free.
+        items = [self._item_store.item(i) for i in range(self._item_store.count())]
         self._item_store.clear()
+        del items
 
 
 class FluentListWidget(ListItemsMixin, QListView):

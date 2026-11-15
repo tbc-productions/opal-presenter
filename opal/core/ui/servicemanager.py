@@ -1060,14 +1060,31 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self._show_loading_status(
             translate('OpenLP.ServiceManager', 'Loading service: {file_name}').format(file_name=file_path.name))
         worker = ServiceLoadWorker(file_path, self.service_path)
-        worker.progress_max.connect(self.main_window.display_progress_bar)
-        worker.progress_increment.connect(self.main_window.increment_progress_bar)
+        worker.progress_max.connect(self._on_load_worker_progress_max)
+        worker.progress_increment.connect(self._on_load_worker_progress_increment)
         worker.status.connect(self._show_loading_status)
         worker.loaded.connect(self._on_load_file_worker_loaded)
         worker.failed.connect(self._on_load_file_worker_failed)
         thread_name = f'service-load-{datetime.now().timestamp()}'
         run_thread(worker, thread_name, can_start=True)
         return True
+
+    def _on_load_worker_progress_max(self, size: int):
+        """Update the progress bar maximum from the background worker without nested processEvents()."""
+        if getattr(self.main_window, 'load_progress_bar', None) is not None:
+            self.main_window.load_progress_bar.show()
+            self.main_window.load_progress_bar.setMaximum(size)
+            self.main_window.load_progress_bar.setValue(0)
+        else:
+            self.main_window.display_progress_bar(size)
+
+    def _on_load_worker_progress_increment(self, increment: int = 1):
+        """Advance the progress bar from the background worker without nested processEvents()."""
+        bar = getattr(self.main_window, 'load_progress_bar', None)
+        if bar is not None:
+            bar.setValue(int(bar.value() + increment))
+        else:
+            self.main_window.increment_progress_bar(increment)
 
     def _on_load_file_worker_loaded(self, payload):
         """

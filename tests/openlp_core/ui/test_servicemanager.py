@@ -3386,3 +3386,36 @@ def test_cancel_service_batch_drag_keeps_selection_and_source_items(drag_service
     assert _service_orders(manager) == (['A', 'B', 'C'], ['A', 'B', 'C'])
     assert manager.selected_service_indexes() == [0, 1]
     assert not manager.is_modified()
+
+
+def test_load_worker_progress_handlers_update_bar_without_process_events(drag_service):
+    """Test background load progress handlers update load_progress_bar directly without nested process_events()."""
+    manager = drag_service
+    bar = MagicMock()
+    bar.value.return_value = 3
+    manager.main_window.load_progress_bar = bar
+
+    manager._on_load_worker_progress_max(10)
+    bar.show.assert_called_once_with()
+    bar.setMaximum.assert_called_once_with(10)
+    bar.setValue.assert_called_once_with(0)
+    manager.main_window.display_progress_bar.assert_not_called()
+
+    bar.setValue.reset_mock()
+    manager._on_load_worker_progress_increment(2)
+    bar.setValue.assert_called_once_with(5)
+    manager.main_window.increment_progress_bar.assert_not_called()
+
+
+def test_fluent_list_widget_clear_preserves_item_wrappers_during_destruction(qapp):
+    """Test clearing a populated FluentListWidget across multiple cycles does not use-after-free item wrappers."""
+    widget = QtWidgets.QListWidget()
+    for cycle in range(3):
+        for index in range(15):
+            item = QtWidgets.QListWidgetItem(f'Slide {cycle}-{index}')
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, index)
+            widget.addItem(item)
+        assert widget.count() == 15
+        widget.clear()
+        assert widget.count() == 0
+
