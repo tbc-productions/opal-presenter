@@ -32,6 +32,7 @@ from PySide6 import QtCore, QtGui
 from opal.core.widgets import fluent as QtWidgets
 
 from opal.core.common.i18n import UiStrings, translate
+from opal.core.common.path import ensure_local_file
 
 log = logging.getLogger(__name__ + '.__init__')
 
@@ -208,6 +209,8 @@ def get_text_file_string(text_file_path):
     """
     if not text_file_path.is_file():
         return False
+    if not ensure_local_file(text_file_path):
+        return None
     content = None
     try:
         with text_file_path.open('r', encoding='utf-8') as file_handle:
@@ -282,6 +285,7 @@ def image_to_data_uri(image_path):
     """
     Converts a image into a base64 data uri
     """
+    ensure_local_file(image_path)
     extension = image_path.suffix.replace('.', '')
     with open(image_path, 'rb') as image_file:
         image_bytes = image_file.read()
@@ -300,6 +304,7 @@ def create_thumb(image_path, thumb_path, return_icon=True, size=None):
                  from DEFAULT_THUMBNAIL_HEIGHT.
     :return: The final icon.
     """
+    ensure_local_file(image_path)
     reader = QtGui.QImageReader(str(image_path))
     if size is None:
         # No size given; use default height of 88
@@ -365,6 +370,7 @@ def resize_image(image_path, width, height, background='#000000', ignore_aspect_
     :param background: The background colour. Defaults to black.
     """
     log.debug('resize_image - start')
+    ensure_local_file(image_path)
     reader = QtGui.QImageReader(image_path)
     # The image's ratio.
     image_ratio = reader.size().width() / reader.size().height()

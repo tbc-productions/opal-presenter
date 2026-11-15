@@ -95,3 +95,14 @@ def test_get_media_duration_waits_for_duration_after_loaded_status(qapp):
         duration = probe.get_media_duration('C:/video.mp4')
 
     assert duration == 5000
+
+
+def test_media_info_handles_unhydrated_cloud_placeholder():
+    """Duration, support, and thumbnail probes should fail gracefully if cloud hydration fails."""
+    probe = media_info()
+    with patch('opal.core.ui.media.mediainfo.ensure_local_file', return_value=False):
+        assert probe.get_media_duration('/cloud/video.mp4') == 0
+        supported, message = probe.is_media_supported('/cloud/video.mp4')
+        assert supported is False
+        assert 'cloud storage' in message
+        assert probe.create_media_thumbnail('/cloud/video.mp4', '/tmp/thumb.png') is False

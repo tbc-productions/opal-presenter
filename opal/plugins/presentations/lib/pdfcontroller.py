@@ -27,6 +27,7 @@ from PySide6.QtPdf import QPdfDocument
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QImage, QPainter
 
+from opal.core.common.path import ensure_local_file
 from opal.core.common.registry import Registry
 from opal.core.display.screens import ScreenList
 from opal.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument
@@ -111,13 +112,17 @@ class PdfDocument(PresentationDocument):
                     self.image_files.append(image_path)
             self.num_pages = len(self.image_files)
             return True
+        if not ensure_local_file(self.file_path):
+            return False
         size = ScreenList().current.display_geometry
         # load pdf
         self.presentation = QPdfDocument(Registry().get('application'))
         self.presentation.load(str(self.file_path))
         # wait for loading to complete
-        while self.presentation.status() != QPdfDocument.Status.Ready:
+        while self.presentation.status() == QPdfDocument.Status.Loading:
             QtWidgets.QApplication.processEvents()
+        if self.presentation.status() != QPdfDocument.Status.Ready:
+            return False
         # Generate images from PDF that will fit the frame.
         if not temp_dir_path.is_dir():
             temp_dir_path.mkdir(parents=True)

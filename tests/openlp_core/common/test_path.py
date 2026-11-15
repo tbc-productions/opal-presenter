@@ -27,8 +27,11 @@ from pathlib import Path
 
 from unittest.mock import MagicMock, patch
 
-from opal.core.common.path import create_paths, files_to_paths, path_to_str, replace_params, str_to_path, which, \
-    resolve
+from opal.core.common.path import (
+    _MACOS_SF_DATALESS, _WINDOWS_CLOUD_ATTRIBUTES,
+    create_paths, ensure_local_file, files_to_paths, is_cloud_placeholder, path_to_str,
+    replace_params, resolve, str_to_path, which
+)
 
 
 def test_replace_params_no_params():
@@ -287,3 +290,72 @@ def test_resolve_windows(MockPath, mocked_realpath, mocked_is_win):
     # THEN: the Path.resolve() method should have been called
     mocked_realpath.assert_called_once_with(mocked_path)
     mocked_path.lstat.assert_called_once_with()
+
+
+def test_is_cloud_placeholder_detects_macos_and_windows_flags(tmp_path):
+    """Test is_cloud_placeholder() for macOS SF_DATALESS and Windows Files On-Demand attributes."""
+    sample = tmp_path / 'service.osz'
+    sample.write_bytes(b'local data')
+    assert is_cloud_placeholder(sample) is False
+    assert is_cloud_placeholder(None) is False
+
+    class _FakeStat:
+        def __init__(self, st_flags=0, st_file_attributes=0):
+            self.st_mode = 0o100644
+            self.st_flags = st_flags
+            self.st_file_attributes = st_file_attributes
+
+    with patch.object(Path, 'stat', return_value=_FakeStat(st_flags=_MACOS_SF_DATALESS)):
+        assert is_cloud_placeholder(sample) is True
+    with patch.object(Path, 'stat', return_value=_FakeStat(st_file_attributes=_WINDOWS_CLOUD_ATTRIBUTES)):
+        assert is_cloud_placeholder(sample) is True
+
+
+def test_ensure_local_file_hydrates_cloud_placeholder(tmp_path):
+    """Test ensure_local_file() reads a cloud placeholder to EOF until its dataless flag clears."""
+    sample = tmp_path / 'cloud_service.osz'
+    sample.write_bytes(b'x' * 4096)
+    real_stat = sample.stat()
+
+    class _State:
+        dataless = True
+
+    class _FakeStat:
+        st_mode = real_stat.st_mode
+        st_size = real_stat.st_size
+        st_mtime = real_stat.st_mtime
+        st_file_attributes = 0
+
+        @property
+        def st_flags(self):
+            return _MACOS_SF_DATALESS if _State.dataless else 0
+
+    real_open = Path.open
+
+    def _hydrating_open(self, *args, **kwargs):
+        handle = real_open(self, *args, **kwargs)
+        _State.dataless = False
+        return handle
+
+    with patch.object(Path, 'stat', return_value=_FakeStat()), \
+            patch.object(Path, 'open', _hydrating_open):
+        assert ensure_local_file(sample, timeout=2.0) is True
+        assert _State.dataless is False
+
+
+def test_ensure_local_file_returns_false_when_hydration_fails(tmp_path):
+    """Test ensure_local_file() returns False when a cloud placeholder stays dataless or raises OSError."""
+    sample = tmp_path / 'offline_service.osz'
+    sample.write_bytes(b'placeholder')
+    real_stat = sample.stat()
+
+    class _FakeStat:
+        st_mode = real_stat.st_mode
+        st_size = real_stat.st_size
+        st_mtime = real_stat.st_mtime
+        st_flags = _MACOS_SF_DATALESS
+        st_file_attributes = 0
+
+    with patch.object(Path, 'stat', return_value=_FakeStat()), \
+            patch.object(Path, 'open', side_effect=OSError('Offline')):
+        assert ensure_local_file(sample, timeout=0.5) is False

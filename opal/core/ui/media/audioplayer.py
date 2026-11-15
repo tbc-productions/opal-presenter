@@ -24,6 +24,7 @@ The :mod:`~opal.core.ui.media.audioplayer` module for secondary background audio
 import logging
 
 from opal.core.common.mixins import LogMixin
+from opal.core.common.path import ensure_local_file
 from opal.core.common.registry import Registry
 from opal.core.display.window import DisplayWindow
 from opal.core.ui.slidecontroller import SlideController
@@ -112,6 +113,8 @@ class AudioPlayer(MediaBase, LogMixin):
         self.log_debug("load audio in Audio Player")
         # The media player moved here to clear the playlist between uses.
         if self.controller.media_play_item.audio_file:
+            if not ensure_local_file(self.controller.media_play_item.audio_file):
+                return False
             self.media_player.setSource(QUrl.fromLocalFile(str(self.controller.media_play_item.audio_file)))
             return True
         return False

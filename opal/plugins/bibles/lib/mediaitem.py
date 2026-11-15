@@ -26,6 +26,8 @@ from enum import IntEnum, unique
 from typing import Any
 
 import mako
+import mako.exceptions
+import mako.template
 from PySide6 import QtCore
 from opal.core.widgets import fluent as QtWidgets
 from opal.core.widgets.toolbar import OpenLPToolbar

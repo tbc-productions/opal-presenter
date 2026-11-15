@@ -275,9 +275,10 @@ def sha256_file_hash(filename):
     :param filename: Name of the file to hash
     :returns: str
     """
+    from opal.core.common.path import ensure_local_file
     log.debug('sha256_file_hash(filename="{filename}")'.format(filename=filename))
     hash_obj = hashlib.sha256()
-    if not filename.exists():
+    if not filename.exists() or not ensure_local_file(filename):
         return None
     try:
         with filename.open('rb') as f:
@@ -470,8 +471,10 @@ def get_file_encoding(file_path):
     :return: The name of the encoding detected
     :rtype: str
     """
+    from opal.core.common.path import ensure_local_file
     detector = UniversalDetector()
     try:
+        ensure_local_file(file_path)
         with file_path.open('rb') as detect_file:
             while not detector.done:
                 chunk = detect_file.read(1024)

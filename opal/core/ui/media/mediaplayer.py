@@ -34,6 +34,7 @@ from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtCore import QUrl
 
 from opal.core.common.mixins import LogMixin
+from opal.core.common.path import ensure_local_file
 from opal.core.common.platform import is_win
 from opal.core.common.registry import Registry
 from opal.core.display.window import DisplayWindow
@@ -316,6 +317,8 @@ class MediaPlayer(MediaBase, LogMixin):
         """
         self.log_debug("load external media stream in Media Player")
         if self.controller.media_play_item.media_file:
+            if not ensure_local_file(self.controller.media_play_item.media_file):
+                return False
             self._apply_audio_output_setting()
             self.media_capture_session.setVideoOutput(None)
             self.media_capture_session.setAudioOutput(None)

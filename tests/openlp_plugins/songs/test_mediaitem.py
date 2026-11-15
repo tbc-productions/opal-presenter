@@ -1379,3 +1379,24 @@ def test_song_menu_retains_separators_and_clone_after_export(media_item, qtbot):
     media_item.clone_context_action.trigger()
     media_item.on_clone_click.assert_called_once()
     media_item.menu.close()
+
+
+def test_generate_footer_renders_mako_template_without_alembic(media_item: SongMediaItem, settings: Settings):
+    """Test that generate_footer() renders the Mako footer template without raising AttributeError."""
+    song = Song()
+    song.title = 'Live For The Kingdom'
+    song.alternate_title = ''
+    song.copyright = '2020 Rob Smith'
+    song.ccli_number = '7123456'
+    song.authors_songs = []
+    song.songbook_entries = []
+    song.topics = []
+    service_item = ServiceItem(None)
+    authors = media_item._get_music_authors(song)
+    mako_vars = media_item._get_mako_vars(song, authors, [])
+
+    media_item.generate_footer(service_item, song, authors, [], mako_vars)
+
+    assert any('Live For The Kingdom' in line for line in service_item.raw_footer)
+    assert service_item.footer_html is not None
+    assert 'Live For The Kingdom' in service_item.footer_html

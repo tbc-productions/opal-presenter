@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from PySide6 import QtCore
 
+from opal.core.common.path import ensure_local_file
 from opal.core.common.platform import is_win
 from opal.core.common.i18n import translate
 
@@ -191,6 +192,9 @@ def export_to_pdf(controller_name, source, *, keynote_app=None, com_name=None, o
     """Return a new PDF beside the source, preserving existing files even when names collide."""
     _check_cancelled(cancel_event)
     source = Path(source).resolve()
+    if not ensure_local_file(source):
+        raise OSError(translate('PresentationPlugin.PdfExport',
+                                'The presentation could not be downloaded from cloud storage.'))
     name = Path(output_name).with_suffix('.pdf').name if output_name else source.with_suffix('.pdf').name
     named_destination = source.parent / name
     with TemporaryDirectory(prefix='openlp-pdf-') as directory:

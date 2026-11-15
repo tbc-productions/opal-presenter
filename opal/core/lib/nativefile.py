@@ -28,16 +28,19 @@ def read_document(value, file_type):
 def validate_archive(archive):
     """Reject ambiguous members, traversal and links before importing."""
     members = archive.infolist()
-    names = set()
+    seen = {}
     for member in members:
         name = member.filename
         path = PurePosixPath(name)
+        signature = (member.CRC, member.file_size)
+        is_metadata = name == 'manifest.json' or name.lower().endswith(('.osj', '.json', '.xml'))
         if (not name or '\\' in name or path.is_absolute() or '..' in path.parts
-                or any(':' in part for part in path.parts) or name in names
+                or any(':' in part for part in path.parts)
+                or (name in seen and (is_metadata or seen[name] != signature))
                 or path.as_posix() != name.rstrip('/')
                 or stat.S_ISLNK(member.external_attr >> 16)):
             raise ValueError('The archive contains an unsafe or duplicate file path.')
-        names.add(name)
+        seen[name] = signature
 
 
 def write_manifest(archive, file_type, payload):

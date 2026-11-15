@@ -31,32 +31,37 @@ from opal.core.widgets import fluent as QtWidgets
 from PySide6.QtCore import QObject, QUrl
 from PySide6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer, QVideoSink
 
+from opal.core.common.i18n import translate
+from opal.core.common.path import ensure_local_file
+
 log = logging.getLogger(__name__)
 
 
 class media_info(QObject):
 
     @staticmethod
-    def _scaled_thumb(pixmap: QtGui.QPixmap) -> QtGui.QPixmap:
+    def _scaled_thumb(image: QtGui.QImage | QtGui.QPixmap) -> QtGui.QImage:
+        if isinstance(image, QtGui.QPixmap):
+            image = image.toImage()
         thumb_width = 88
         thumb_height = 50
-        scaled = pixmap.scaled(thumb_width, thumb_height,
-                               QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                               QtCore.Qt.TransformationMode.SmoothTransformation)
-        canvas = QtGui.QPixmap(thumb_width, thumb_height)
+        scaled = image.scaled(thumb_width, thumb_height,
+                              QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                              QtCore.Qt.TransformationMode.SmoothTransformation)
+        canvas = QtGui.QImage(thumb_width, thumb_height, QtGui.QImage.Format.Format_ARGB32)
         canvas.fill(QtCore.Qt.GlobalColor.black)
         x = (thumb_width - scaled.width()) // 2
         y = (thumb_height - scaled.height()) // 2
         painter = QtGui.QPainter(canvas)
-        painter.drawPixmap(x, y, scaled)
+        painter.drawImage(x, y, scaled)
         painter.end()
         return canvas
 
     @staticmethod
-    def _save_thumb(pixmap: QtGui.QPixmap, thumb_file: str) -> bool:
-        if pixmap.isNull():
+    def _save_thumb(image: QtGui.QImage | QtGui.QPixmap, thumb_file: str) -> bool:
+        if image.isNull():
             return False
-        target = media_info._scaled_thumb(pixmap)
+        target = media_info._scaled_thumb(image)
         thumb_path = Path(thumb_file)
         thumb_path.parent.mkdir(parents=True, exist_ok=True)
         return target.save(str(thumb_path), 'PNG')
@@ -74,35 +79,40 @@ class media_info(QObject):
         return metadata.value(key)
 
     @staticmethod
-    def _pixmap_from_metadata_value(value) -> QtGui.QPixmap:
+    def _pixmap_from_metadata_value(value) -> QtGui.QImage:
         if value is None:
-            return QtGui.QPixmap()
-        if isinstance(value, QtGui.QPixmap):
-            return value
+            return QtGui.QImage()
         if isinstance(value, QtGui.QImage):
-            return QtGui.QPixmap.fromImage(value)
+            return value
+        if isinstance(value, QtGui.QPixmap):
+            return value.toImage()
         if isinstance(value, QUrl):
             if value.isLocalFile():
-                return QtGui.QPixmap(value.toLocalFile())
-            return QtGui.QPixmap()
+                local_file = value.toLocalFile()
+                if not ensure_local_file(local_file):
+                    return QtGui.QImage()
+                return QtGui.QImage(local_file)
+            return QtGui.QImage()
         if isinstance(value, str):
-            return QtGui.QPixmap(value)
-        return QtGui.QPixmap()
+            if not ensure_local_file(value):
+                return QtGui.QImage()
+            return QtGui.QImage(value)
+        return QtGui.QImage()
 
     @staticmethod
-    def _extract_embedded_poster(media_player: QMediaPlayer) -> QtGui.QPixmap:
+    def _extract_embedded_poster(media_player: QMediaPlayer) -> QtGui.QImage:
         metadata = media_player.metaData()
         # Prefer direct image metadata first.
         for key_name in ('ThumbnailImage', 'CoverArtImage', 'PosterImage'):
-            pixmap = media_info._pixmap_from_metadata_value(media_info._metadata_value(metadata, key_name))
-            if not pixmap.isNull():
-                return pixmap
+            image = media_info._pixmap_from_metadata_value(media_info._metadata_value(metadata, key_name))
+            if not image.isNull():
+                return image
         # Fallback to URL metadata if image fields are missing.
         for key_name in ('ThumbnailUrl', 'CoverArtUrlLarge', 'CoverArtUrlSmall'):
-            pixmap = media_info._pixmap_from_metadata_value(media_info._metadata_value(metadata, key_name))
-            if not pixmap.isNull():
-                return pixmap
-        return QtGui.QPixmap()
+            image = media_info._pixmap_from_metadata_value(media_info._metadata_value(metadata, key_name))
+            if not image.isNull():
+                return image
+        return QtGui.QImage()
 
     def __init__(self):
         super().__init__()
@@ -125,6 +135,8 @@ class media_info(QObject):
         self.duration = 0
         self.loaded_media = False
         self.error_message = ''
+        if not ensure_local_file(media_file):
+            return 0
         self.media_player = QMediaPlayer(None)
         self.media_player.errorOccurred.connect(self.error_event)
         self.media_player.durationChanged.connect(self.duration_changed_event)
@@ -135,6 +147,8 @@ class media_info(QObject):
             loops += 1
             sleep(0.01)
             QtWidgets.QApplication.instance().processEvents()
+        if hasattr(self.media_player, 'stop'):
+            self.media_player.stop()
         return self.duration
 
     def is_media_supported(self, media_file: str) -> tuple[bool, str]:
@@ -149,6 +163,11 @@ class media_info(QObject):
         self.duration = 0
         self.loaded_media = False
         self.error_message = ''
+        if not ensure_local_file(media_file):
+            return (
+                False,
+                translate('OpenLP.MediaController', 'The media file could not be downloaded from cloud storage.')
+            )
         self.media_player = QMediaPlayer(None)
         self.media_player.errorOccurred.connect(self.error_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
@@ -158,6 +177,8 @@ class media_info(QObject):
             loops += 1
             sleep(0.01)
             QtWidgets.QApplication.instance().processEvents()
+        if hasattr(self.media_player, 'stop'):
+            self.media_player.stop()
         return (not self.error_occurred, self.error_message)
 
     def create_media_thumbnail(self, media_file: str, thumb_file: str) -> bool:
@@ -170,6 +191,8 @@ class media_info(QObject):
         """
         self.error_occurred = False
         self.error_message = ''
+        if not ensure_local_file(media_file):
+            return False
         frame_captured = False
         media_player = QMediaPlayer(None)
         audio_output = QAudioOutput()
@@ -200,8 +223,7 @@ class media_info(QObject):
             image = video_frame.toImage()
             if image.isNull():
                 return
-            pixmap = QtGui.QPixmap.fromImage(image)
-            if self._save_thumb(pixmap, thumb_file):
+            if self._save_thumb(image, thumb_file):
                 frame_captured = True
                 media_player.stop()
 

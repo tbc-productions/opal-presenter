@@ -22,6 +22,8 @@ from collections import namedtuple
 import logging
 import json
 import mako
+import mako.exceptions
+import mako.template
 import os
 from pathlib import Path
 from shutil import copyfile

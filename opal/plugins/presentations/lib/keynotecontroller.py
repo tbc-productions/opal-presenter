@@ -34,6 +34,7 @@ except ImportError:
 from opal.plugins.presentations.lib.applescriptbasecontroller import AppleScriptBaseController, \
     AppleScriptBaseDocument
 from opal.plugins.presentations.lib.applicationdiscovery import find_macos_application, macos_application_version
+from opal.core.common.path import ensure_local_file
 from opal.core.common.platform import is_macosx
 from opal.core.display.screens import ScreenList
 
@@ -45,6 +46,7 @@ KEYNOTE_BUNDLE_IDS = {'com.apple.iWork.Keynote', 'com.apple.Keynote'}
 
 def _open_keynote_document(document_path, application_path):
     """Import through Launch Services so Keynote receives access to the file."""
+    ensure_local_file(document_path)
     subprocess.run(['/usr/bin/open', '-g', '-a', str(application_path), str(document_path)],
                    check=True, capture_output=True, text=True)
 

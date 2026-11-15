@@ -37,7 +37,7 @@ from opal.core.common import delete_file
 from opal.core.common.applocation import AppLocation
 from opal.core.common.i18n import UiStrings, get_locale_key, translate
 from opal.core.common.mixins import LogMixin, RegistryProperties
-from opal.core.common.path import create_paths
+from opal.core.common.path import create_paths, ensure_local_file
 from opal.core.common.registry import Registry, RegistryBase
 from opal.core.common.utils import wait_for
 from opal.core.lib import build_icon, check_item_selected, create_thumb, get_text_file_string, validate_thumb
@@ -1013,6 +1013,8 @@ class ThemeManager(QtWidgets.QWidget, RegistryBase, Ui_ThemeManager, LogMixin, R
         json_theme = False
         theme_name = ""
         try:
+            if not ensure_local_file(file_path):
+                raise OSError(f'Theme file has not finished downloading from cloud storage: {file_path}')
             with zipfile.ZipFile(file_path) as theme_zip:
                 manifest = read_manifest(theme_zip, 'theme', required=file_path.suffix.lower() == '.opal-theme')
                 json_file = ([manifest['payload']] if manifest else [name for name in theme_zip.namelist()

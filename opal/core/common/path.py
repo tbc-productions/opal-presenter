@@ -21,12 +21,168 @@
 import logging
 import os
 import shutil
+import stat
+import threading
+import time
 from pathlib import Path
 
 from opal.core.common.platform import is_win
 
 
 log = logging.getLogger(__name__)
+
+# macOS FileProvider dataless flag (stat.SF_DATALESS = 0x40000000)
+_MACOS_SF_DATALESS = getattr(stat, 'SF_DATALESS', 0x40000000)
+# Windows OneDrive Files On-Demand attributes (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+_WINDOWS_CLOUD_ATTRIBUTES = 0x00001000 | 0x00400000
+_HYDRATION_CHUNK_SIZE = 1024 * 1024
+
+
+def _stat_is_cloud_placeholder(stat_result) -> bool:
+    """Return True when a stat result indicates an unhydrated cloud-storage placeholder."""
+    flags = getattr(stat_result, 'st_flags', 0)
+    if isinstance(flags, int) and bool(flags & _MACOS_SF_DATALESS):
+        return True
+    file_attributes = getattr(stat_result, 'st_file_attributes', 0)
+    if isinstance(file_attributes, int) and bool(file_attributes & _WINDOWS_CLOUD_ATTRIBUTES):
+        return True
+    return False
+
+
+def _cloud_placeholder_targets(path) -> list[Path]:
+    """Return the list of unhydrated cloud placeholder files for a file or bundle path."""
+    if not path:
+        return []
+    try:
+        path_obj = Path(os.fspath(path))
+        st = path_obj.stat()
+    except (OSError, TypeError, ValueError):
+        return []
+    mode = getattr(st, 'st_mode', 0)
+    if isinstance(mode, int) and stat.S_ISDIR(mode):
+        if path_obj.suffix.lower() != '.key':
+            return []
+        targets = []
+        try:
+            for root, _, files in os.walk(path_obj):
+                for file_name in files:
+                    candidate = Path(root) / file_name
+                    try:
+                        if _stat_is_cloud_placeholder(candidate.stat()):
+                            targets.append(candidate)
+                    except OSError:
+                        continue
+        except OSError:
+            return []
+        return targets
+    if _stat_is_cloud_placeholder(st):
+        return [path_obj]
+    return []
+
+
+def is_cloud_placeholder(path) -> bool:
+    """
+    Return True when ``path`` is a cloud-storage placeholder (such as an unsynced OneDrive or iCloud Drive file)
+    whose contents have not yet been downloaded locally.
+    """
+    return bool(_cloud_placeholder_targets(path))
+
+
+def _hydrate_file_contents(target: Path) -> None:
+    """Sequentially read ``target`` to EOF so the OS FileProvider materialises the full file locally."""
+    with target.open('rb') as handle:
+        while handle.read(_HYDRATION_CHUNK_SIZE):
+            pass
+
+
+def ensure_local_file(path, timeout: float = 120.0) -> bool:
+    """
+    Ensure that a cloud-backed file (such as an unsynced OneDrive or iCloud Drive placeholder) is downloaded locally
+    before callers open, seek or probe it.
+
+    For normal local files (and test doubles) this returns ``True`` immediately after a single ``stat`` check.
+    When called on the Qt GUI thread for an unhydrated cloud file, hydration runs on a background thread while the
+    Qt event loop continues processing paint/timer events.
+    """
+    targets = _cloud_placeholder_targets(path)
+    if not targets:
+        return True
+    path_obj = Path(os.fspath(path))
+    log.info('Materialising cloud placeholder file: %s', path_obj)
+
+    def _hydrate_all():
+        for target in targets:
+            _hydrate_file_contents(target)
+
+    qt_app = None
+    on_gui_thread = False
+    try:
+        from PySide6 import QtCore
+        qt_app = QtCore.QCoreApplication.instance()
+        on_gui_thread = qt_app is not None and QtCore.QThread.currentThread() is qt_app.thread()
+    except Exception:
+        on_gui_thread = False
+
+    if not on_gui_thread:
+        try:
+            _hydrate_all()
+        except OSError:
+            log.exception('Failed to materialise cloud file %s', path_obj)
+            return False
+        return not is_cloud_placeholder(path_obj)
+
+    done = threading.Event()
+    errors = []
+
+    def _worker():
+        try:
+            _hydrate_all()
+        except Exception as exc:
+            errors.append(exc)
+        finally:
+            done.set()
+
+    opal_app = None
+    main_window = None
+    try:
+        from opal.core.common.i18n import translate
+        from opal.core.common.registry import Registry
+        opal_app = Registry().get('application')
+        main_window = Registry().get('main_window')
+        if opal_app and hasattr(opal_app, 'set_busy_cursor'):
+            opal_app.set_busy_cursor()
+        if main_window and hasattr(main_window, 'show_status_message'):
+            main_window.show_status_message(
+                translate('OpenLP', 'Downloading from cloud storage: {file_name}…').format(file_name=path_obj.name))
+    except Exception:
+        pass
+
+    thread = threading.Thread(target=_worker, name=f'opal-cloud-hydrate-{path_obj.name}', daemon=True)
+    thread.start()
+    deadline = time.monotonic() + timeout if timeout and timeout > 0 else None
+    try:
+        from PySide6 import QtCore
+        while not done.wait(0.02):
+            if deadline is not None and time.monotonic() >= deadline:
+                log.warning('Timed out waiting for cloud file %s to materialise', path_obj)
+                return False
+            qt_app.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+    finally:
+        if opal_app and hasattr(opal_app, 'set_normal_cursor'):
+            try:
+                opal_app.set_normal_cursor()
+            except Exception:
+                pass
+        if main_window and hasattr(main_window, 'show_status_message'):
+            try:
+                main_window.show_status_message('')
+            except Exception:
+                pass
+
+    if errors:
+        log.error('Failed to materialise cloud file %s: %s', path_obj, errors[0])
+        return False
+    return not is_cloud_placeholder(path_obj)
 
 
 def replace_params(args, kwargs, params):

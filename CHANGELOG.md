@@ -8,6 +8,9 @@
   file from leaving the load waiting forever.
 * Fix media length and thumbnail updates being applied from background threads.
 * Fix mixed path separators on Windows for Planning Center and SongSelect files.
+* Materialise cloud-backed files (such as unsynced OneDrive and iCloud Drive placeholders) before opening
+  services, media, presentations, images and themes, and fix Mako template and duplicate archive asset
+  errors when loading service files.
 
 ## Opal Presenter 4.0.4a4
 

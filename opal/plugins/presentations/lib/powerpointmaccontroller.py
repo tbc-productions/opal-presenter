@@ -48,6 +48,7 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtMultimedia import QMediaCaptureSession, QVideoSink, QWindowCapture
 
 from opal.core.common.i18n import translate
+from opal.core.common.path import ensure_local_file
 from opal.core.common.platform import is_macosx
 from opal.core.common.mac_permissions import (
     accessibility_target_name, has_post_event_access, request_post_event_access)
@@ -77,6 +78,7 @@ def _open_powerpoint_document(document_path):
     each library copy. Launch Services delivers the document as a normal open
     event, including macOS's access grant for that file.
     """
+    ensure_local_file(document_path)
     subprocess.run(['/usr/bin/open', '-g', '-b', 'com.microsoft.Powerpoint', str(document_path)],
                    check=True, capture_output=True, text=True)
 
@@ -183,6 +185,8 @@ def _read_slide_advance_times(presentation_path):
     the native show in manual mode and scheduling its slide jumps itself.
     """
     if presentation_path.suffix.lower() not in ('.pptx', '.ppsx', '.pptm'):
+        return []
+    if not ensure_local_file(presentation_path):
         return []
     presentation_ns = '{http://schemas.openxmlformats.org/presentationml/2006/main}'
     relationship_ns = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'

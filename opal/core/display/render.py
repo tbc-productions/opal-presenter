@@ -24,6 +24,8 @@ The :mod:`~opal.core.display.render` module contains functions for rendering.
 import html
 import logging
 import mako
+import mako.exceptions
+import mako.template
 import math
 import os
 import re

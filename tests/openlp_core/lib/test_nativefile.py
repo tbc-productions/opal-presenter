@@ -149,3 +149,34 @@ def test_incomplete_service_slide_is_rejected(change):
         value.update(change)
     with pytest.raises(ValueError):
         validate_service([{'openlp_core': {'openlp-servicefile-version': 3}}, {'serviceitem': value}])
+
+
+def test_validate_archive_allows_identical_duplicate_assets_and_rejects_conflicting_duplicates():
+    """OpenLP 3 .osz archives with duplicate identical asset entries load, while conflicting duplicates fail."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as archive:
+        archive.writestr('service_data.osj', '[]')
+        archive.writestr('ab12cd.png', b'identical-png-bytes')
+        archive.writestr('ab12cd.png', b'identical-png-bytes')
+    buf.seek(0)
+    with zipfile.ZipFile(buf, 'r') as archive:
+        assert service_payload(archive) == 'service_data.osj'
+
+    conflict_buf = io.BytesIO()
+    with zipfile.ZipFile(conflict_buf, 'w') as archive:
+        archive.writestr('service_data.osj', '[]')
+        archive.writestr('ab12cd.png', b'first-version')
+        archive.writestr('ab12cd.png', b'different-version')
+    conflict_buf.seek(0)
+    with zipfile.ZipFile(conflict_buf, 'r') as archive:
+        with pytest.raises(ValueError):
+            service_payload(archive)
+
+    dup_meta_buf = io.BytesIO()
+    with zipfile.ZipFile(dup_meta_buf, 'w') as archive:
+        archive.writestr('service_data.osj', '[]')
+        archive.writestr('service_data.osj', '[]')
+    dup_meta_buf.seek(0)
+    with zipfile.ZipFile(dup_meta_buf, 'r') as archive:
+        with pytest.raises(ValueError):
+            service_payload(archive)

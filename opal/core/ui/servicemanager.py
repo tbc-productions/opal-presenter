@@ -41,6 +41,7 @@ from opal.core.common.enum import LayoutStyle, ServiceItemType
 from opal.core.common.i18n import UiStrings, format_time, translate
 from opal.core.common.json import OpenLPJSONDecoder, OpenLPJSONEncoder
 from opal.core.common.mixins import LogMixin, RegistryProperties
+from opal.core.common.path import ensure_local_file, is_cloud_placeholder
 from opal.core.common.registry import Registry, RegistryBase
 from opal.core.display.render import remove_tags
 from opal.core.lib import build_icon, create_thumb, ItemCapabilities, validate_thumb
@@ -632,6 +633,12 @@ class ServiceLoadWorker(ThreadWorker):
 
     def start(self):
         try:
+            if is_cloud_placeholder(self.file_path):
+                self.status.emit(
+                    translate('OpenLP.ServiceManager', 'Downloading service from cloud storage: {file_name}')
+                    .format(file_name=self.file_path.name))
+            if not ensure_local_file(self.file_path):
+                raise OSError(f'Service file has not finished downloading from cloud storage: {self.file_path}')
             with zipfile.ZipFile(str(self.file_path)) as zip_file:
                 payload_name = service_payload(
                     zip_file, required=self.file_path.suffix.lower().startswith('.opal-'),
@@ -658,6 +665,7 @@ class ServiceLoadWorker(ThreadWorker):
                         servicefile_version = item.get('openlp-servicefile-version', 2)
                         break
                 is_broken_file = False
+                extracted_names = set()
                 for zip_info in zip_infos:
                     if zip_info.filename == 'manifest.json':
                         continue
@@ -674,7 +682,9 @@ class ServiceLoadWorker(ThreadWorker):
                         if not ext and os.path.basename(fname).startswith('.'):
                             zip_info.filename = fname.replace('/', '')
                             is_broken_file = True
-                    zip_file.extract(zip_info, str(self.service_path))
+                    if zip_info.filename not in extracted_names:
+                        zip_file.extract(zip_info, str(self.service_path))
+                        extracted_names.add(zip_info.filename)
                     self.progress_increment.emit(zip_info.compress_size // 1024)
                 self.loaded.emit({
                     'items': items,
@@ -1300,8 +1310,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                         write_media(zip_file, service)
                     self.main_window.increment_progress_bar(service_content_size / total_size * 1000)
                     # Finally add all the listed media files.
+                    written_zip_names = set()
                     for local_file_item, zip_file_item in write_list:
-                        zip_file.write(str(local_file_item), str(zip_file_item))
+                        zip_member_name = str(zip_file_item)
+                        if zip_member_name not in written_zip_names:
+                            zip_file.write(str(local_file_item), zip_member_name)
+                            written_zip_names.add(zip_member_name)
                         self.main_window.increment_progress_bar(local_file_item.stat().st_size / total_size * 1000)
                 Path(tmp_file_path).replace(file_path)
                 self.settings.setValue('servicemanager/last directory', file_path.parent)
@@ -1686,7 +1700,7 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 frame['thumbnail'] = thumb_path
 
     def _regenerate_media_thumbnails(self, service_item):
-        from opal.core.ui.media import media_info
+        from opal.core.ui.media.mediainfo import media_info
         thumb_dir = AppLocation.get_section_data_path(service_item.name) / 'thumbnails'
         thumb_dir.mkdir(parents=True, exist_ok=True)
         for frame in service_item.get_frames():

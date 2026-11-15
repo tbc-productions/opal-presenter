@@ -30,6 +30,7 @@ except ImportError:
     APPLESCRIPT_AVAILABLE = False
 
 
+from opal.core.common.path import ensure_local_file
 from opal.core.common.platform import is_macosx
 from opal.core.display.screens import ScreenList
 from opal.plugins.presentations.lib.presentationcontroller import PresentationController, PresentationDocument
@@ -130,6 +131,9 @@ class AppleScriptBaseDocument(PresentationDocument):
             self.presentation_loaded = True
             return self.presentation_loaded
         try:
+            if not ensure_local_file(self.file_path):
+                self.presentation_loaded = False
+                return False
             self.controller.applescript.call('create_thumbs', str(self.file_path), str(self.get_thumbnail_folder()))
             self.presentation_loaded = True
         except Exception:
@@ -230,6 +234,8 @@ class AppleScriptBaseDocument(PresentationDocument):
         """
         log.debug('start_presentation')
         try:
+            if not ensure_local_file(self.file_path):
+                return
             fullscreen = (ScreenList().current.custom_geometry is None)
             size = ScreenList().current.display_geometry
             self.controller.applescript.call('start_presentation', str(self.file_path), size.top(), size.left(),
