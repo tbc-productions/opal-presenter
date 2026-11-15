@@ -11,7 +11,7 @@ on:
       build_flatpak:
         description: 'Build Flatpak (requires a runner labelled flatpak-builder)'
         required: false
-        default: 'false'
+        default: 'true'
 
 jobs:
   windows-qt-packaging:
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       OPAL_TAG: ${{ github.event.inputs.opal_tag || github.ref_name }}
-      OPAL_BUILD_FLATPAK: ${{ github.event.inputs.build_flatpak || 'false' }}
+      OPAL_BUILD_FLATPAK: ${{ github.event.inputs.build_flatpak || 'true' }}
     steps:
       - name: Create Gitea release
         shell: bash
