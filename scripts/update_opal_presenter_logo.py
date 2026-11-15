@@ -77,7 +77,9 @@ def update_packaging(logo, package):
         (ROOT / 'resources/images/opal-presenter-icon.svg').read_bytes())
 
     background = Image.open(ROOT / 'branding/OpalBackground.jpg').convert('RGB')
-    dmg = ImageOps.fit(background, (530, 360), method=Image.Resampling.LANCZOS)
+    # Finder renders DMG icon labels in dark text, so keep the wallpaper light for contrast.
+    dmg_wallpaper = ImageOps.fit(background, (530, 360), method=Image.Resampling.LANCZOS)
+    dmg = Image.blend(Image.new('RGB', (530, 360), '#F5F7FA'), dmg_wallpaper, 0.16)
     dmg.save(package / 'macos/OpalPresenter-Background.tiff')
 
     main = Image.new('RGB', (493, 312), 'white')

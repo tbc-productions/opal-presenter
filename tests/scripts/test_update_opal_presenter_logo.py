@@ -37,8 +37,10 @@ def test_packaging_branding(tmp_path):
     assert donation.read_bytes() == b'Unrelated portable artwork'
     with Image.open(tmp_path / 'macos/OpalPresenter-Background.tiff') as artwork:
         wallpaper = Image.open(ROOT / 'branding/OpalBackground.jpg').convert('RGB')
-        expected = ImageOps.fit(wallpaper, (530, 360), method=Image.Resampling.LANCZOS)
+        fitted = ImageOps.fit(wallpaper, (530, 360), method=Image.Resampling.LANCZOS)
+        expected = Image.blend(Image.new('RGB', (530, 360), '#F5F7FA'), fitted, 0.16)
         assert artwork.tobytes() == expected.tobytes()
+        assert min(low for low, _ in artwork.getextrema()) >= 190
     with Image.open(tmp_path / 'windows/WizardMain.bmp') as artwork:
         assert artwork.size == (493, 312)
         assert artwork.crop((164, 0, 493, 312)).getextrema() == ((255, 255),) * 3
