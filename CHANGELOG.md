@@ -1,5 +1,14 @@
 # Changelog
 
+## Opal Presenter 4.0.4a5
+
+* Generate theme thumbnails faster by waiting for a painted frame instead of a fixed second.
+* Start faster by loading the database upgrade tools only when an upgrade runs.
+* Show errors from background work in the main window instead of crashing, and stop a damaged service
+  file from leaving the load waiting forever.
+* Fix media length and thumbnail updates being applied from background threads.
+* Fix mixed path separators on Windows for Planning Center and SongSelect files.
+
 ## Opal Presenter 4.0.4a4
 
 * Fix the logo background on Windows to show the plain wallpaper instead of the splash artwork.
