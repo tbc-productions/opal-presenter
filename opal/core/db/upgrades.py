@@ -23,10 +23,8 @@ The :mod:`~opal.core.db.upgrades` module contains the database upgrade functiona
 """
 import logging
 from types import ModuleType
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
 from sqlalchemy import Column
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.orm import Session, declarative_base
@@ -34,15 +32,21 @@ from sqlalchemy.types import Unicode, UnicodeText
 
 from opal.core.db.helpers import database_exists, init_db
 
+if TYPE_CHECKING:
+    from alembic.operations import Operations
+
 log = logging.getLogger(__name__)
 
 
-def get_upgrade_op(session: Session) -> Operations:
+def get_upgrade_op(session: Session) -> 'Operations':
     """
     Create a migration context and an operations object for performing upgrades.
 
     :param session: The SQLAlchemy session object.
     """
+    # Alembic loads every database dialect on import, so only pay for it when a schema upgrade actually runs.
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
     context = MigrationContext.configure(session.bind.connect())
     return Operations(context)
 

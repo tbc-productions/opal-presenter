@@ -31,8 +31,8 @@ def test_get_upgrade_op():
     Test that the ``get_upgrade_op`` function creates a MigrationContext and an Operations object
     """
     # GIVEN: Mocked out alembic classes and a mocked out SQLAlchemy session object
-    with patch('opal.core.db.upgrades.MigrationContext') as MockedMigrationContext, \
-            patch('opal.core.db.upgrades.Operations') as MockedOperations:
+    with patch('alembic.migration.MigrationContext') as MockedMigrationContext, \
+            patch('alembic.operations.Operations') as MockedOperations:
         mocked_context = MagicMock()
         mocked_op = MagicMock()
         mocked_connection = MagicMock()
